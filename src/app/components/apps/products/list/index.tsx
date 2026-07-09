@@ -187,8 +187,11 @@ const ProductList = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [assignCategoryOpen, setAssignCategoryOpen] = useState(false);
   const [assignProjectOpen, setAssignProjectOpen] = useState(false);
-  const [selectedCategoryToAssign, setSelectedCategoryToAssign] = useState<any>(null);
-  const [selectedProjectToAssign, setSelectedProjectToAssign] = useState<any[]>([]);
+  const [selectedCategoryToAssign, setSelectedCategoryToAssign] =
+    useState<any>(null);
+  const [selectedProjectToAssign, setSelectedProjectToAssign] = useState<any[]>(
+    [],
+  );
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [currency, setCurrency] = useState("");
@@ -232,6 +235,11 @@ const ProductList = () => {
   const [draftCategories, setDraftCategories] = useState<any[]>([]);
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [openCategoryModal, setOpenCategoryModal] = useState(false);
+
+  const [rowProjects, setRowProjects] = useState<Record<string, any[]>>({});
+  const [draftProjects, setDraftProjects] = useState<any[]>([]);
+  const [editingProjectRowId, setEditingProjectRowId] = useState<string | null>(null);
+  const [openProjectModal, setOpenProjectModal] = useState(false);
 
   const [conflictOpen, setConflictOpen] = useState(false);
   const [conflictProducts, setConflictProducts] = useState<any[]>([]);
@@ -492,7 +500,7 @@ const ProductList = () => {
         setCategories(res.data.categories);
       }
       const projectRes = await api.get(
-        `project/get?company_id=${user.company_id}`
+        `project/get?company_id=${user.company_id}`,
       );
       if (projectRes.data) {
         setProjects(projectRes.data.projects || projectRes.data.info || []);
@@ -863,6 +871,67 @@ const ProductList = () => {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleEditProjects = (item: any) => {
+    setEditingProjectRowId(item.id);
+
+    let initialProjects: any[] = [];
+
+    if (rowProjects[item.id]) {
+      initialProjects = rowProjects[item.id];
+    } else if (Array.isArray(item.project_names)) {
+      initialProjects = item.project_names;
+    } else if (typeof item.project_names === "string") {
+      initialProjects = item.project_names
+        .split(",")
+        .map((name: string) => ({ name: name.trim() }));
+    }
+
+    const selectedIds = item.project_ids
+      ? item.project_ids.split(",").map((id: string) => Number(id))
+      : [];
+    initialProjects = projects.filter((proj) =>
+      selectedIds.includes(proj.id),
+    );
+
+    setDraftProjects(initialProjects);
+    setOpenProjectModal(true);
+  };
+
+  const updateProjects = async (id: string, selected: any[]) => {
+    try {
+      const payload = {
+        product_ids: [Number(id)],
+        project_ids: selected.map((p) => p.id),
+      };
+      const res = await api.post("products/bulk-assign-projects", payload);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message || "Updated projects");
+        setData((prev: any[]) =>
+          prev.map((p) => {
+            if (p.id === Number(id)) {
+              return {
+                ...p,
+                project_ids: selected.map((proj) => proj.id).join(","),
+                project_names: selected,
+              };
+            }
+            return p;
+          }),
+        );
+        setRowProjects((prev) => ({
+          ...prev,
+          [id]: selected,
+        }));
+        setOpenProjectModal(false);
+      } else {
+        toast.error(res.data.message || "Failed to update projects");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update projects");
     }
   };
 
@@ -1326,6 +1395,51 @@ const ProductList = () => {
               {selectedForRow.length
                 ? selectedForRow.map((c) => c.name).join(", ")
                 : item.product_categories || "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row.project_names, {
+      id: "projects",
+      header: () => "Projects",
+      cell: ({ row }) => {
+        const item = row.original;
+        const selectedForRow = rowProjects[item.id] || [];
+
+        return (
+          <Stack
+            sx={{ cursor: canEdit ? "pointer" : "default" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (canEdit) handleEditProjects(item);
+            }}
+          >
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  border: "1px solid #1976d2",
+                },
+              }}
+            >
+              {selectedForRow.length
+                ? selectedForRow.map((c: any) => c.name).join(", ")
+                : item.project_names || "-"}
             </Typography>
           </Stack>
         );
@@ -1876,6 +1990,65 @@ const ProductList = () => {
           </DialogActions>
         </Dialog>
 
+        {/* for handling projects update */}
+        <Dialog
+          open={openProjectModal}
+          onClose={() => setOpenProjectModal(false)}
+        >
+          <DialogTitle>Select Projects</DialogTitle>
+          <DialogContent>
+            <Autocomplete
+              multiple
+              className="project_selection"
+              options={projects || []}
+              getOptionLabel={(option) => option.name}
+              value={Array.isArray(draftProjects) ? draftProjects : []}
+              onChange={(_, newValue) => {
+                setDraftProjects(newValue);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder={
+                    draftProjects.length === 0 ? "Select projects" : ""
+                  }
+                />
+              )}
+              size="small"
+              sx={{ width: 400 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setOpenProjectModal(false);
+                setDraftProjects([]);
+              }}
+              color="error"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (editingProjectRowId) {
+                  setRowProjects((prev) => ({
+                    ...prev,
+                    [editingProjectRowId]: draftProjects,
+                  }));
+
+                  updateProjects(editingProjectRowId, draftProjects);
+                }
+
+                setOpenProjectModal(false);
+              }}
+              variant="contained"
+              color="primary"
+            >
+              Submit
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* for handling image upload */}
         <Dialog
           open={openImageManager}
@@ -2370,14 +2543,21 @@ const ProductList = () => {
                   ))}
               </FormGroup>
             </Popover>
-            <Dialog open={assignCategoryOpen} onClose={() => setAssignCategoryOpen(false)} maxWidth="sm" fullWidth>
+            <Dialog
+              open={assignCategoryOpen}
+              onClose={() => setAssignCategoryOpen(false)}
+              maxWidth="sm"
+              fullWidth
+            >
               <DialogTitle>Assign Category</DialogTitle>
               <DialogContent>
                 <Autocomplete
                   options={categories || []}
                   getOptionLabel={(option: any) => option.name || ""}
                   value={selectedCategoryToAssign}
-                  onChange={(event, newValue) => setSelectedCategoryToAssign(newValue)}
+                  onChange={(event, newValue) =>
+                    setSelectedCategoryToAssign(newValue)
+                  }
                   renderInput={(params) => (
                     <TextField
                       {...params}
@@ -2390,7 +2570,13 @@ const ProductList = () => {
                 />
               </DialogContent>
               <DialogActions>
-                <Button onClick={() => setAssignCategoryOpen(false)} variant="outlined" color="error">Cancel</Button>
+                <Button
+                  onClick={() => setAssignCategoryOpen(false)}
+                  variant="outlined"
+                  color="error"
+                >
+                  Cancel
+                </Button>
                 <Button
                   onClick={async () => {
                     if (!selectedCategoryToAssign) {
@@ -2402,14 +2588,21 @@ const ProductList = () => {
                         product_ids: Array.from(selectedRowIds),
                         category_id: selectedCategoryToAssign.id,
                       };
-                      const response = await api.post("products/bulk-assign-categories", payload);
-                      if(response.data.IsSuccess) {
-                        toast.success(response.data.message || "Assigned Successfully");
+                      const response = await api.post(
+                        "products/bulk-assign-categories",
+                        payload,
+                      );
+                      if (response.data.IsSuccess) {
+                        toast.success(
+                          response.data.message || "Assigned Successfully",
+                        );
                         setAssignCategoryOpen(false);
                         setSelectedRowIds(new Set());
                         fetchProducts();
                       } else {
-                        toast.error(response.data.message || "Failed to assign category");
+                        toast.error(
+                          response.data.message || "Failed to assign category",
+                        );
                       }
                     } catch (error) {
                       toast.error("Failed to assign category");
@@ -2423,7 +2616,12 @@ const ProductList = () => {
               </DialogActions>
             </Dialog>
 
-            <Dialog open={assignProjectOpen} onClose={() => setAssignProjectOpen(false)} maxWidth="sm" fullWidth>
+            <Dialog
+              open={assignProjectOpen}
+              onClose={() => setAssignProjectOpen(false)}
+              maxWidth="sm"
+              fullWidth
+            >
               <DialogTitle>Assign Project</DialogTitle>
               <DialogContent>
                 <Autocomplete
@@ -2431,7 +2629,9 @@ const ProductList = () => {
                   options={projects || []}
                   getOptionLabel={(option: any) => option.name || ""}
                   value={selectedProjectToAssign}
-                  onChange={(event, newValue) => setSelectedProjectToAssign(newValue)}
+                  onChange={(event, newValue) =>
+                    setSelectedProjectToAssign(newValue)
+                  }
                   renderInput={(params) => (
                     <TextField
                       {...params}
@@ -2444,27 +2644,45 @@ const ProductList = () => {
                 />
               </DialogContent>
               <DialogActions>
-                <Button onClick={() => setAssignProjectOpen(false)} variant="outlined" color="error">Cancel</Button>
+                <Button
+                  onClick={() => setAssignProjectOpen(false)}
+                  variant="outlined"
+                  color="error"
+                >
+                  Cancel
+                </Button>
                 <Button
                   onClick={async () => {
-                    if (!selectedProjectToAssign || selectedProjectToAssign.length === 0) {
+                    if (
+                      !selectedProjectToAssign ||
+                      selectedProjectToAssign.length === 0
+                    ) {
                       toast.error("Please select at least one project");
                       return;
                     }
                     try {
                       const payload = {
                         product_ids: Array.from(selectedRowIds),
-                        project_ids: selectedProjectToAssign.map((p: any) => p.id),
+                        project_ids: selectedProjectToAssign.map(
+                          (p: any) => p.id,
+                        ),
                       };
-                      const response = await api.post("products/bulk-assign-projects", payload);
-                      if(response.data.IsSuccess) {
-                        toast.success(response.data.message || "Assigned Successfully");
+                      const response = await api.post(
+                        "products/bulk-assign-projects",
+                        payload,
+                      );
+                      if (response.data.IsSuccess) {
+                        toast.success(
+                          response.data.message || "Assigned Successfully",
+                        );
                         setAssignProjectOpen(false);
                         setSelectedRowIds(new Set());
                         setSelectedProjectToAssign([]);
                         fetchProducts();
                       } else {
-                        toast.error(response.data.message || "Failed to assign project");
+                        toast.error(
+                          response.data.message || "Failed to assign project",
+                        );
                       }
                     } catch (error) {
                       toast.error("Failed to assign project");
@@ -2795,12 +3013,25 @@ const ProductList = () => {
                 </Link>
               </MenuItem>
               {selectedRowIds.size > 0 && (
-                <MenuItem onClick={() => { handleClose(); setAssignCategoryOpen(true); }}>
+                <MenuItem
+                  onClick={() => {
+                    handleClose();
+                    setAssignCategoryOpen(true);
+                  }}
+                >
                   <Link
                     color="body1"
                     href="#"
-                    onClick={(e) => { e.preventDefault(); }}
-                    style={{ width: "100%", color: "#11142D", textTransform: "none", display: "flex", alignItems: "center" }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                    }}
+                    style={{
+                      width: "100%",
+                      color: "#11142D",
+                      textTransform: "none",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
                   >
                     <ListItemIcon>
                       <IconLayersIntersect width={18} />
@@ -2810,12 +3041,25 @@ const ProductList = () => {
                 </MenuItem>
               )}
               {selectedRowIds.size > 0 && (
-                <MenuItem onClick={() => { handleClose(); setAssignProjectOpen(true); }}>
+                <MenuItem
+                  onClick={() => {
+                    handleClose();
+                    setAssignProjectOpen(true);
+                  }}
+                >
                   <Link
                     color="body1"
                     href="#"
-                    onClick={(e) => { e.preventDefault(); }}
-                    style={{ width: "100%", color: "#11142D", textTransform: "none", display: "flex", alignItems: "center" }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                    }}
+                    style={{
+                      width: "100%",
+                      color: "#11142D",
+                      textTransform: "none",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
                   >
                     <ListItemIcon>
                       <IconLayersIntersect width={18} />

@@ -53,11 +53,8 @@ import {
   Chip,
 } from "@mui/material";
 import {
-  IconChartPie,
   IconMapPin,
-  IconPencil,
   IconPlus,
-  IconSettings,
   IconSearch,
   IconDotsVertical,
   IconNotes,
@@ -67,6 +64,7 @@ import {
   IconEye,
   IconBookmark,
 } from "@tabler/icons-react";
+import Autocomplete from "@mui/material/Autocomplete";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import api from "@/utils/axios";
@@ -159,6 +157,10 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   const limit = 10;
 
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [historyProjectId, setHistoryProjectId] = useState<number | "all">(
+    "all",
+  );
+  const [allProjects, setAllProjects] = useState<any[]>([]);
 
   const [productDrawer, setProductDrawer] = useState(false);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
@@ -266,7 +268,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const res = await api.post("project/update", formData);
+      const res = await api.put("project/update", formData);
       if (res.data.IsSuccess) {
         toast.success(res.data.message || "Project updated successfully");
         setEditDrawerOpen(false);
@@ -280,13 +282,17 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
     }
   };
 
-  const fetchHistories = async (currentPage: number) => {
-    if (!activeProjectId) return;
+  const fetchHistories = async (
+    currentPage: number,
+    projectId: number | "all",
+  ) => {
     try {
       setHistoryLoading(true);
-      const res = await api.get(
-        `project/get-history?project_id=${activeProjectId}&page=${currentPage}&limit=${limit}`,
-      );
+      let url = `project/get-history?page=${currentPage}&limit=${limit}&company_id=${user?.company_id}`;
+      if (projectId !== "all") {
+        url += `&project_id=${projectId}`;
+      }
+      const res = await api.get(url);
       if (res.data?.info) {
         const newData = res.data.info || [];
         setHistory((prev) =>
@@ -302,15 +308,23 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   };
 
   useEffect(() => {
-    if (openDrawer && activeProjectId) {
-      fetchHistories(page);
+    if (openDrawer) {
+      fetchHistories(page, historyProjectId);
     }
-  }, [openDrawer, activeProjectId, page]);
+  }, [openDrawer, historyProjectId, page]);
+
+  useEffect(() => {
+    if (openDrawer && allProjects.length === 0) {
+      api.get(`project/get?company_id=${user?.company_id}`).then((res) => {
+        setAllProjects(res.data?.info || []);
+      });
+    }
+  }, [openDrawer]);
 
   const handleSeeMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);
-    fetchHistories(nextPage);
+    fetchHistories(nextPage, historyProjectId);
   };
 
   const formatDate = (date: string | undefined) => {
@@ -610,15 +624,6 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
               ),
             }}
           />
-          <Tooltip title="Activity">
-            <Button
-              color="primary"
-              variant="outlined"
-              onClick={() => setOpenDrawer}
-            >
-              Activity
-            </Button>
-          </Tooltip>
           {/* <Tooltip title="Chart">
             <IconButton color="primary" onClick={() => setDetailsOpen(true)}>
               <IconChartPie size={24} />
@@ -632,12 +637,20 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
         </Box>
 
         <Box display="flex" alignItems="center">
+          <Button
+            color="primary"
+            variant="outlined"
+            onClick={() => setOpenDrawer(true)}
+          >
+            Activity
+          </Button>
           {selectedRowIds.size > 0 && (
             <Button
               variant="outlined"
               color="error"
               startIcon={<IconTrash width={18} />}
               onClick={() => setOpenDialog(true)}
+              sx={{ ml: 2 }}
             >
               Archive
             </Button>
@@ -1025,7 +1038,10 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
         <Box sx={{ position: "relative", p: 2 }}>
           <IconButton
             aria-label="close"
-            onClick={() => setOpenDrawer(false)}
+            onClick={() => {
+              setOpenDrawer(false);
+              setHistoryProjectId("all");
+            }}
             size="small"
             sx={{
               position: "absolute",
@@ -1048,7 +1064,12 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
               alignItems="center"
               flexWrap="wrap"
             >
-              <IconButton onClick={() => setOpenDrawer(false)}>
+              <IconButton
+                onClick={() => {
+                  setOpenDrawer(false);
+                  setHistoryProjectId("all");
+                }}
+              >
                 <IconArrowLeft />
               </IconButton>
               <Typography variant="h6" fontWeight={700}>
@@ -1056,7 +1077,32 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
               </Typography>
             </Box>
 
-            {historyLoading && history.length === 0 ? (
+            <Box px={2} mt={2}>
+              <Autocomplete
+                size="small"
+                options={allProjects}
+                getOptionLabel={(option) => option.name || ""}
+                value={
+                  historyProjectId === "all"
+                    ? null
+                    : allProjects.find((p) => p.id === historyProjectId) || null
+                }
+                onChange={(e, newValue) => {
+                  setHistoryProjectId(newValue ? newValue.id : "all");
+                  setPage(1);
+                  setHistory([]);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Filter by Project"
+                    variant="outlined"
+                  />
+                )}
+              />
+            </Box>
+
+            {historyLoading ? (
               <Box display="flex" justifyContent="center" mt={4}>
                 <CircularProgress />
               </Box>

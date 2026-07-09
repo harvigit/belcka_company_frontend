@@ -28,7 +28,7 @@ const Logo = () => {
             alt="logo"
             height={TopbarHeight}
             width={150}
-            style={{ marginLeft: 2 }}
+            style={{ marginLeft: 19 }}
             priority
           />
         )}
@@ -52,7 +52,7 @@ const Logo = () => {
           src={"/images/logos/belcka.svg"}
           alt="logo"
           height={TopbarHeight}
-          style={{ marginLeft: 2 }}
+          style={{ marginLeft: 19 }}
           width={150}
           priority
         />

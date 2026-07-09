@@ -49,7 +49,6 @@ const Profile = () => {
       >
         <Avatar
           src={user?.user_image || "/default-avatar.png"}
-          // src={"/images/logos/belcka_logo.png"}
           alt={user?.first_name || "User"}
           sx={{
             width: 30,
