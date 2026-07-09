@@ -209,6 +209,7 @@ const TablePagination = () => {
     const fetchData = async () => {
         if (!userId) return;
         setLoading(true);
+        let isRedirecting = false;
         try {
             let url = `user/get-user-lists?user_id=${userId}`;
             if (isRemovedUser) {
@@ -217,50 +218,60 @@ const TablePagination = () => {
                 url = `${url}&is_archived_user=true`;
             }
 
-            const res = await api.get(url);
+            const res = await api.get(url, { skipToast: true } as any);
 
-            if (!res.data?.IsSuccess) {
+            if (!res.data?.IsSuccess || !res.data?.info?.length) {
+                isRedirecting = true;
                 router.replace('/apps/users/list');
                 return;
             }
 
-            if (res.data?.info) {
-                const data = res.data.info[0];
-                setData(res.data.info[0]);
-                setEnabled(data?.is_check_in ?? false);
+            const data = res.data.info[0];
+            setData(data);
+            setEnabled(data?.is_check_in ?? false);
 
-                const ext = data?.extension || '';
-                const number = data?.phone || '';
-                const userInfo = data;
-                setOriginalPhone({
-                    phone: userInfo.phone || '',
-                    extension: userInfo.extension || '',
-                });
+            const ext = data?.extension || '';
+            const number = data?.phone || '';
+            const userInfo = data;
+            setOriginalPhone({
+                phone: userInfo.phone || '',
+                extension: userInfo.extension || '',
+            });
 
-                setFormData({
-                    first_name: userInfo.first_name || '',
-                    last_name: userInfo.last_name || '',
-                    email: userInfo.email || '',
-                    extension: ext,
-                    phone: number,
-                    user_code: userInfo.user_code,
-                    expired_at: userInfo.expired_at ? userInfo.expired_at.split('T')[0] : '',
-                    account_id: userInfo.account_id || 0,
-                });
-                if (ext && number) {
-                    const combined = ext.replace('+', '') + number;
-                    setPhone(combined);
-                }
+            setFormData({
+                first_name: userInfo.first_name || '',
+                last_name: userInfo.last_name || '',
+                email: userInfo.email || '',
+                extension: ext,
+                phone: number,
+                user_code: userInfo.user_code,
+                expired_at: userInfo.expired_at ? userInfo.expired_at.split('T')[0] : '',
+                account_id: userInfo.account_id || 0,
+            });
+            if (ext && number) {
+                const combined = ext.replace('+', '') + number;
+                setPhone(combined);
             }
         } catch (err: any) {
-            const message = err?.response?.data?.message;
-            if (message === 'Access denied.') {
+            const status = err?.response?.status;
+            const errorCode = err?.response?.data?.error_code;
+            if (
+                status === 403 ||
+                status === 404 ||
+                errorCode === 'ACCESS_DENIED' ||
+                errorCode === 'USER_NOT_FOUND' ||
+                errorCode === 'INVALID_USER_ID'
+            ) {
+                isRedirecting = true;
                 router.replace('/apps/users/list');
                 return;
             }
             console.error('Failed to fetch users', err);
+        } finally {
+            if (!isRedirecting) {
+                setLoading(false);
+            }
         }
-        setLoading(false);
     };
 
     useEffect(() => {
