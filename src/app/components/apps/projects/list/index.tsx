@@ -1,96 +1,4 @@
 "use client";
-import React, {
-  ChangeEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import {
-  Typography,
-  Box,
-  Grid,
-  Button,
-  Divider,
-  IconButton,
-  Stack,
-  TextField,
-  InputAdornment,
-  DialogActions,
-  DialogTitle,
-  DialogContent,
-  Dialog,
-  Tabs,
-  Tab,
-  Drawer,
-  Autocomplete,
-  CircularProgress,
-  ListItem,
-  ListItemButton,
-  List,
-  MenuItem,
-  Menu,
-  ListItemIcon,
-  Popover,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-  Tooltip,
-} from "@mui/material";
-import {
-  IconChartPie,
-  IconChevronRight,
-  IconDotsVertical,
-  IconFilter,
-  IconPencil,
-  IconPlus,
-  IconSearch,
-  IconX,
-  IconArrowLeft,
-  IconTrash,
-  IconLocation,
-  IconEye,
-  IconSettings,
-} from "@tabler/icons-react";
-import dayjs from "dayjs";
-import customParseFormat from "dayjs/plugin/customParseFormat";
-import { useSession } from "next-auth/react";
-import { User } from "next-auth";
-import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
-import AddressesList from "./addresses-list";
-import TasksList from "./tasks-list";
-import toast from "react-hot-toast";
-import api from "@/utils/axios";
-import Cookies from "js-cookie";
-import CreateProjectTask from "../tasks";
-import "react-day-picker/dist/style.css";
-import "../../../../global.css";
-import DynamicGantt from "@/app/components/DynamicGantt";
-import ArchiveAddress from "./archive-address-list";
-import CreateProject from "../create";
-import {
-  Circle,
-  GoogleMap,
-  Marker,
-  useJsApiLoader,
-} from "@react-google-maps/api";
-import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRangeSlider";
-import EditProject from "../edit";
-import ArchiveProject from "./archive-project-list";
-import PermissionGuard from "@/app/auth/PermissionGuard";
-import MapGantt from "../zone-map/MapGantt";
-import { IconMapPin } from "@tabler/icons-react";
-import Link from "next/link";
-import Image from "next/image";
-import { IconNotes } from "@tabler/icons-react";
-import { IconDatabase } from "@tabler/icons-react";
-import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { Chip } from "@mui/material";
-import Setting from "@/app/components/apps/projects/setting";
-import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
-
-dayjs.extend(customParseFormat);
-
 export type ProjectList = {
   id: number;
   company_id: number;
@@ -112,148 +20,165 @@ export type ProjectList = {
   editedBy?: string | null;
 };
 
-interface ProjectListingProps {
-  projectId: number | null;
-}
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Box,
+  Button,
+  Grid,
+  IconButton,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tooltip,
+  TextField,
+  InputAdornment,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  Typography,
+  Drawer,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+  FormControlLabel,
+  Checkbox,
+  Popover,
+  FormGroup,
+  Chip,
+} from "@mui/material";
+import {
+  IconChartPie,
+  IconMapPin,
+  IconPencil,
+  IconPlus,
+  IconSettings,
+  IconSearch,
+  IconDotsVertical,
+  IconNotes,
+  IconTrash,
+  IconX,
+  IconEdit,
+  IconEye,
+  IconBookmark,
+} from "@tabler/icons-react";
+import IconArrowLeft from "@mui/icons-material/ArrowBack";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import api from "@/utils/axios";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
+import toast from "react-hot-toast";
+import { useServerTable } from "@/hooks/useServerTable";
+import { flexRender, createColumnHelper } from "@tanstack/react-table";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
+import Image from "next/image";
+import CreateProject from "../create";
+import EditProject from "../edit";
 
-export interface TradeList {
-  id: number;
-  name: string;
-}
+// Drawers
+import DynamicGantt from "@/app/components/DynamicGantt";
+import MapGantt from "../zone-map/MapGantt";
+import Setting from "@/app/components/apps/projects/setting";
+import ArchiveProject from "../../addresses/list/archive-project-list";
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+dayjs.extend(customParseFormat);
 
-interface Boundary {
-  lat: number;
-  lng: number;
-  radius: number;
-}
+const columnHelper = createColumnHelper<any>();
 
-interface ProjectFormData {
-  name: string;
-  address: string;
-  budget: string;
-  description?: string;
-  code: number;
-  shift_ids: string;
-  team_ids: string;
-  company_id: number;
-  workzone_ids?: string;
-}
+const ProjectList = ({ projectId }: { projectId?: number | null }) => {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
 
-type PostcoderAddress = {
-  summaryline: string;
-  addressline1: string;
-  addressline2: string;
-  posttown: string;
-  postcode: string;
-};
-
-type GooglePrediction = google.maps.places.AutocompletePrediction;
-
-type UnifiedPrediction =
-  | ({ source: "google" } & GooglePrediction)
-  | ({ source: "postcoder" } & PostcoderAddress);
-
-const TablePagination: React.FC<ProjectListingProps> = ({}) => {
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const isIEPostcode = (value: string) =>
-    /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
-
-  const isAUPostcode = (value: string) => /^\d{4}$/.test(value.trim());
-
-  const isNZPostcode = (value: string) => /^\d{4}$/.test(value.trim());
-  const handleSelectedRows = (ids: number[]) => {
-    setSelectedIds(ids);
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
   };
 
-  const [openDialog, setOpenDialog] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filters, setFilters] = useState({
-    status: "",
-    sortOrder: "",
-    supplier: "",
-    category: "",
-  });
-  const [tempFilters, setTempFilters] = useState(filters);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [value, setValue] = useState(0);
-  const [open, setOpen] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [archiveList, setArchiveList] = useState<boolean>(false);
-  const [archiveProjectList, setArchiveProjectList] = useState<boolean>(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [projectOpen, setProjectOpen] = useState(false);
-  const [projectEditOpen, setProjectEditOpen] = useState(false);
-  const [editingProject, setEditingProject] = useState<ProjectList | null>(
-    null,
-  );
-  const [trade, setTrade] = useState<TradeList[]>([]);
-  const [data, setData] = useState<ProjectList[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [project, setProject] = useState<ProjectList[]>([]);
-  const [openDrawer, setOpenDrawer] = useState(false);
-  const [productDrawer, setProductDrawer] = useState(false);
-  const [isFetchingFavorites, setIsFetchingFavorites] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState<any>(null);
-  const [history, setHistory] = useState<any[]>([]);
-  const [page, setPage] = useState(1);
-  const [productPage, setProductPage] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = React.useState(false);
 
-  const limit = 20;
-  const productLimit = 50;
+  React.useEffect(() => {
+    const checkScroll = () => {
+      if (tableContainerRef.current) {
+        setIsScrollable(
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
+        );
+      }
+    };
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+
+    const observer = new MutationObserver(checkScroll);
+    if (tableContainerRef.current) {
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    }
+
+    return () => {
+      window.removeEventListener("resize", checkScroll);
+      observer.disconnect();
+    };
+  }, []);
+
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
-  const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
-  const [mapOpen, setMapOpen] = useState<boolean>(false);
-  const [projectId, setProjectId] = useState<number | null>(null);
-  const [favoriteProjectId, setFavoriteProjectId] = useState<number | null>(
-    null,
-  );
-  const [processedIds, setProcessedIds] = useState<number[]>([]);
-  const [shouldRefresh, setShouldRefresh] = useState(false);
-  const openMenu = Boolean(anchorEl);
-  const status = ["Completed", "To Do", "In Progress"];
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [sidebar, setSidebar] = useState(false);
-  const COOKIE_PREFIX = "project_";
-  const projectID = Cookies.get(COOKIE_PREFIX + user.id + user.company_id);
-  const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
-  const [search, setSearch] = useState("");
-  const [columnVisibility, setColumnVisibilityState] = useState<
-    Record<string, boolean>
-  >({});
-  const [update, setUpdate] = useState(0);
-  const [currentTable, setCurrentTable] = useState<any>(null);
-  const circleRef = useRef<google.maps.Circle | null>(null);
-  const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
-  const lastRadiusRef = useRef<number | null>(null);
 
-  const [selectedLocation, setSelectedLocation] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-  const [predictions, setPredictions] = useState<UnifiedPrediction[]>([]);
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const [mapOpen, setMapOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [settingOpen, setSettingOpen] = useState(false);
+  const [openDrawer, setOpenDrawer] = useState(false);
+  const [archiveListOpen, setArchiveListOpen] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+
+  const [history, setHistory] = useState<any[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [page, setPage] = useState(1);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const limit = 10;
+
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+
+  const [productDrawer, setProductDrawer] = useState(false);
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
   const [searchProduct, setSearchProduct] = useState("");
-
-  const [radius, setRadius] = useState(100);
-  const [typedAddress, setTypedAddress] = useState(false);
-  const [formData, setFormData] = useState<any>({
-    project_id: Number(projectID),
-    company_id: user.company_id,
-    name: "",
-  });
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [selectAll, setSelectAll] = useState(false);
-  const [openFilter, setOpenFilter] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [isFetchingFavorites, setIsFetchingFavorites] = useState(false);
+  const [productPage, setProductPage] = useState(1);
+  const productLimit = 50;
 
-  const [settingOpen, setSettingOpen] = useState(false);
+  const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
+  const [search, setSearch] = useState("");
 
-  // For create
-  const initialCreateState: ProjectFormData = {
+  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl2(event.currentTarget);
+  };
+  const handlePopoverClose = () => setAnchorEl2(null);
+
+  const initialFormData = {
     name: "",
     address: "",
     budget: "",
@@ -261,141 +186,157 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     code: 0,
     shift_ids: "",
     team_ids: "",
-    company_id: user.company_id || 0,
+    company_id: user?.company_id || 0,
     workzone_ids: "",
   };
 
-  // For edit
-  const initialEditState: ProjectFormData = {
-    ...initialCreateState,
-  };
+  const [formData, setFormData] = useState<any>(initialFormData);
 
-  const [createFormData, setCreateFormData] =
-    useState<ProjectFormData>(initialCreateState);
-  const [editFormData, setEditFormData] =
-    useState<ProjectFormData>(initialEditState);
-
-  const triggerRefresh = () => {
-    setShouldRefresh((prev) => !prev);
-  };
-
-  const handleRowClick = () => {
-    setDetailsOpen(true);
-  };
-
-  const closeDetails = () => {
-    setDetailsOpen(false);
-  };
-
-  const handleTabChange = (event: any, newValue: any) => {
-    setValue(newValue);
-  };
-
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleSettingOpen = () => {
-    setSettingOpen(true);
-  };
-
-  const handleSettingClose = async () => {
-    setSettingOpen(false);
-
+  const fetchProjects = async () => {
+    if (!user?.company_id) return;
     try {
-    } catch (error) {}
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleAddressClose = () => {
-    setSidebar(false);
-    setTypedAddress(false);
-  };
-  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl2(event.currentTarget);
-  };
-  const handlePopoverClose = () => setAnchorEl2(null);
-
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
-        );
-        if (res.data) setTrade(res.data.info);
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
+      setLoading(true);
+      let url = `project/get?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (searchTerm) {
+        url += `&search=${searchTerm}`;
       }
-    };
-    if (drawerOpen == true) {
-      fetchTrades();
-    }
-  }, [drawerOpen !== false]);
-
-  useEffect(() => {
-    if (projectId) {
-      setFormData((prev: any) => ({
-        ...prev,
-        project_id: projectId,
-      }));
-    }
-  }, [projectId]);
-
-  const handleProductToggle = (id: any) => {
-    setSelectedProducts((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-    );
-  };
-
-  const fetchResources = async () => {
-    try {
-      const res = await api.get(
-        `get-inventory-resources?company_id=${user.company_id}&is_web=true`,
-      );
+      const res = await api.get(url);
       if (res.data) {
-        setProducts(res.data.products);
-        setSuppliers(res.data.suppliers);
-        setCategories(res.data.categories);
+        const responseData = res.data.info || [];
+        setData(responseData);
+
+        const pagMeta =
+          res.data.data?.totalPages !== undefined ||
+          res.data.data?.totalItems !== undefined
+            ? res.data.data
+            : res.data.info && res.data.info.totalPages !== undefined
+              ? res.data.info
+              : res.data.data || {};
+
+        if (pagMeta.totalItems !== undefined) {
+          setTotalRows(pagMeta.totalItems);
+        } else if (pagMeta.total !== undefined) {
+          setTotalRows(pagMeta.total);
+        } else {
+          setTotalRows(responseData.length);
+        }
+
+        if (pagMeta.totalPages !== undefined) {
+          setPageCount(pagMeta.totalPages);
+        } else if (pagMeta.last_page !== undefined) {
+          setPageCount(pagMeta.last_page);
+        }
       }
     } catch (err) {
-      console.error("Failed to fetch inventory resource", err);
+      console.error("Failed to fetch projects", err);
+    } finally {
+      setLoading(false);
     }
   };
-  const handleSaveProducts = async () => {
+
+  const handleEdit = (project: any) => {
+    setSelectedProject(project);
+    setEditDrawerOpen(true);
+  };
+
+  const handleCreate = () => {
+    setFormData({ ...initialFormData, company_id: user?.company_id || 0 });
+    setDrawerOpen(true);
+  };
+
+  const handleProjectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
     try {
-      setIsSaving(true);
-
-      const productIdsString = selectedProducts.join(",");
-
-      const currentId = favoriteProjectId ?? projectId ?? projectID;
-      const response = await api.post("project/favorite-products", {
-        id: Number(currentId),
-        product_ids: productIdsString,
-      });
-
-      if (response.data.IsSuccess) {
-        toast.success(response.data.message);
-        setProductDrawer(false);
+      const res = await api.post("project/create", formData);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message || "Project created successfully");
+        setDrawerOpen(false);
+        fetchProjects();
+      } else {
       }
-    } catch (error) {
-      console.error("Save failed:", error);
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const fetchFavoriteProducts = async (currentId?: number) => {
-    const idToUse = currentId ?? projectId ?? projectID;
-    if (!idToUse) return;
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const res = await api.post("project/update", formData);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message || "Project updated successfully");
+        setEditDrawerOpen(false);
+        fetchProjects();
+      } else {
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const fetchHistories = async (currentPage: number) => {
+    if (!activeProjectId) return;
+    try {
+      setHistoryLoading(true);
+      const res = await api.get(
+        `project/get-history?project_id=${activeProjectId}&page=${currentPage}&limit=${limit}`,
+      );
+      if (res.data?.info) {
+        const newData = res.data.info || [];
+        setHistory((prev) =>
+          currentPage === 1 ? newData : [...prev, ...newData],
+        );
+        setTotalItems(res.data.data?.totalItems || 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch history", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (openDrawer && activeProjectId) {
+      fetchHistories(page);
+    }
+  }, [openDrawer, activeProjectId, page]);
+
+  const handleSeeMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchHistories(nextPage);
+  };
+
+  const formatDate = (date: string | undefined) => {
+    return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
+  };
+
+  const fetchResources = async () => {
+    try {
+      const res = await api.get(
+        `get-inventory-resources?company_id=${user?.company_id}&is_web=true`,
+      );
+      if (res.data) {
+        setProducts(res.data.products || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch inventory resource", err);
+    }
+  };
+
+  const fetchFavoriteProducts = async () => {
+    if (!activeProjectId) return;
     setIsFetchingFavorites(true);
     try {
       const response = await api.get(
-        `project/get-favorite?company_id=${user.company_id}&project_id=${idToUse}`,
+        `project/get-favorite?company_id=${user?.company_id}&project_id=${activeProjectId}`,
       );
-
       if (response.data?.IsSuccess) {
         const savedIds =
           response.data?.info[0]?.products?.map(
@@ -410,458 +351,55 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     }
   };
 
+  const handleSaveProducts = async () => {
+    try {
+      setIsSaving(true);
+      const productIdsString = selectedProducts.join(",");
+      const response = await api.post("project/favorite-products", {
+        id: activeProjectId,
+        product_ids: productIdsString,
+      });
+      if (response.data.IsSuccess) {
+        toast.success(response.data.message || "Favorites saved.");
+        setProductDrawer(false);
+      } else {
+        toast.error(response.data.message || "Failed to save favorites.");
+      }
+    } catch (error) {
+      console.error("Save failed:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleCloseProductDrawer = () => {
-    setFavoriteProjectId(null);
-    fetchFavoriteProducts();
     setSearchProduct("");
-    setFilters({ status: "", sortOrder: "", supplier: "", category: "" });
-    setTempFilters({ status: "", sortOrder: "", supplier: "", category: "" });
     setSelectAll(false);
     setProductPage(1);
     setProductDrawer(false);
   };
 
-  const fetchProjects = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get(`project/get?company_id=${user.company_id}`);
-      if (res.data?.info) {
-        setProject(res.data.info);
-        const cookieProjectId = Cookies.get(
-          COOKIE_PREFIX + user.id + user.company_id,
-        );
-        const validProjectId = res.data.info.some(
-          (p: any) => p.id === Number(cookieProjectId),
-        )
-          ? Number(cookieProjectId)
-          : res.data.info[0]?.id;
-        setProjectId(validProjectId);
-      }
-    } catch (err) {
-      console.error("Failed to fetch projects", err);
+  useEffect(() => {
+    if (user?.company_id) {
+      fetchResources();
     }
-    setLoading(false);
-  };
+  }, [user?.company_id]);
 
   useEffect(() => {
-    if (user.company_id) {
-      fetchProjects();
-      fetchResources();
+    if (productDrawer && activeProjectId) {
       fetchFavoriteProducts();
     }
-  }, [projectID]);
+  }, [productDrawer, activeProjectId]);
 
-  useEffect(() => {
-    if (projectId && user?.id) {
-      Cookies.set(
-        COOKIE_PREFIX + user.id + user.company_id,
-        projectId.toString(),
-        { expires: 30 },
-      );
-    }
-  }, [projectId, user?.id, user.company_id]);
-
-  const fetchAddresses = async () => {
-    if (!projectID) return;
-    setLoading(true);
-    try {
-      const res = await api.get(
-        `address/get?project_id=${Number(projectID)}&hide_completed_address=true`,
-      );
-      if (res.data) {
-        setData(res.data.info);
-      }
-    } catch (err) {
-      console.error("Failed to fetch addresses", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (projectID) {
-      fetchAddresses();
-    }
-  }, [value]);
-
-  const fetchHistories = async (currentPage: number) => {
-    try {
-      const res = await api.get(
-        `project/get-history?project_id=${Number(projectID)}&page=${currentPage}&limit=${limit}`,
-      );
-      if (res.data?.info) {
-        const newData = res.data.info || [];
-
-        setHistory((prev) =>
-          currentPage === 1 ? newData : [...prev, ...newData],
-        );
-        setTotalItems(res.data.data?.totalItems || 0);
-      }
-    } catch (err) {
-      console.error("Failed to fetch history", err);
-    }
-  };
-
-  useEffect(() => {
-    if (!Number.isNaN(projectID) && projectID !== null && openDrawer == true) {
-      fetchHistories(page);
-    }
-  }, [openDrawer == true && !Number.isNaN(projectID)]);
-
-  const handleOpenCreateDrawer = () => {
-    setFormData({
-      address_id: null,
-      type_of_work_id: null,
-      location_id: null,
-      trade_id: null,
-      company_id: user?.company_id || 0,
-      duration: 0,
-      rate: 0,
-      is_attchment: true,
-      tasks: [],
-    });
-    setDrawerOpen(true);
-  };
-
-  const handleTaskSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...formData,
-        project_id: projectId,
-      };
-      const result = await api.post("company-tasks/create", payload);
-      if (result.data.IsSuccess === true) {
-        toast.success(result.data.message);
-        setDrawerOpen(false);
-        setLoading(true);
-        triggerRefresh();
-        setTimeout(() => {
-          setLoading(false);
-        }, 100);
-        setFormData({
-          address_id: null,
-          type_of_work_id: null,
-          location_id: null,
-          trade_id: null,
-          company_id: user?.company_id || 0,
-          duration: 0,
-          rate: 0,
-          is_attchment: true,
-          tasks: [],
-        });
-      } else {
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error("Error creating task:", error);
-      setLoading(false);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      let payload = {
-        ...formData,
-        project_id: projectId,
-        type: "circle",
-      };
-      if (!payload.boundary && selectedLocation) {
-        payload.boundary = JSON.stringify({
-          lat: selectedLocation.lat,
-          lng: selectedLocation.lng,
-          radius,
-        });
-      }
-
-      const result = await api.post("address/create", payload);
-      if (result.data.IsSuccess === true) {
-        toast.success(result.data.message);
-        setSidebar(false);
-        setLoading(true);
-        triggerRefresh();
-        setTimeout(() => {
-          setLoading(false);
-        }, 100);
-        setRadius(100);
-        setFormData({
-          project_id: Number(projectID),
-          company_id: user.company_id,
-          name: "",
-        });
-      } else {
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error("Error creating address:", error);
-      setLoading(false);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  async function archiveProjectApi(id: number) {
-    try {
-      const payload = { id: id };
-      const result = await api.post("project/archive", payload);
-      if (result.data.IsSuccess == true) {
-        toast.success(result.data.message);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  const handleProjectSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...createFormData,
-        company_id: user.company_id,
-        budget: Number(createFormData.budget),
-      };
-
-      const result = await api.post("project/create", payload);
-
-      if (result.data.IsSuccess) {
-        toast.success(result.data.message);
-        setCreateFormData({
-          ...initialCreateState,
-          company_id: user.company_id ?? 0,
-        });
-        fetchProjects();
-        setProjectOpen(false);
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleEditProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...editFormData,
-        company_id: user.company_id,
-        budget: Number(editFormData.budget),
-      };
-
-      const result = await api.put("project/update", payload);
-
-      if (result.data.IsSuccess) {
-        toast.success(result.data.message);
-        setEditFormData({
-          ...initialEditState,
-          company_id: user.company_id ?? 0,
-        });
-        fetchProjects();
-        setProjectEditOpen(false);
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  useEffect(() => {
-    if (projectOpen) {
-      setFormData({
-        name: "",
-        address: "",
-        budget: "",
-        description: "",
-        code: "",
-        shift_ids: "",
-        team_ids: "",
-        company_id: user.company_id,
-        is_pricework: false,
-        repeatable_job: false,
-      });
-    }
-  });
-
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  useEffect(() => {
-    if (tabRefs.current[value]) {
-      tabRefs.current[value]?.scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-      });
-    }
-  }, [value]);
-
-  useEffect(() => {
-    if (projectId && archiveList == false) {
-      triggerRefresh();
-    }
-  }, [project, archiveList, projectId]);
-
-  const formatDate = (date: string | undefined) => {
-    return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
-  };
-
-  const { isLoaded } = useJsApiLoader({
-    ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
-  });
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, name: e.target.value });
-  };
-
-  const handleSearchClick = async () => {
-    const query = formData.name.trim();
-    if (!query) {
-      setPredictions([]);
-      return;
-    }
-
-    setTypedAddress(true);
-
-    try {
-      let country = "UK";
-
-      if (isIEPostcode(query)) country = "IE";
-      else if (isAUPostcode(query)) country = "AU";
-      else if (isNZPostcode(query)) country = "NZ";
-
-      const res = await fetch(
-        `https://ws.postcoder.com/pcw/${
-          process.env.NEXT_PUBLIC_POSTCODER_KEY
-        }/address/${country}/${encodeURIComponent(query)}?format=json`,
-      );
-
-      const data = await res.json();
-      setPredictions(data || []);
-      return;
-    } catch (err) {
-      console.error("Postcoder failed, falling back to Google", err);
-    }
-
-    const service = new google.maps.places.AutocompleteService();
-
-    service.getPlacePredictions({ input: query }, (results, status) => {
-      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-        setPredictions(
-          results.map((r) => ({
-            ...r,
-            source: "google",
-          })),
-        );
-      } else {
-        setPredictions([]);
-      }
-    });
-  };
-  const selectGooglePrediction = (
-    item: { source: "google" } & google.maps.places.AutocompletePrediction,
-  ) => {
-    const service = new google.maps.places.PlacesService(
-      document.createElement("div"),
+  const handleProductToggle = (id: any) => {
+    setSelectedProducts((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
-
-    service.getDetails({ placeId: item.place_id }, (place, status) => {
-      if (
-        status === google.maps.places.PlacesServiceStatus.OK &&
-        place?.geometry?.location
-      ) {
-        const lat = place.geometry.location.lat();
-        const lng = place.geometry.location.lng();
-
-        const boundary: Boundary = {
-          lat,
-          lng,
-          radius,
-        };
-
-        setFormData({
-          ...formData,
-          name: place.formatted_address || "",
-          lat,
-          lng,
-          boundary: JSON.stringify(boundary),
-        });
-
-        setSelectedLocation({ lat, lng });
-        setPredictions([]);
-      }
-    });
   };
-
-  const selectPostcoderPrediction = (
-    item: { source: "postcoder" } & PostcoderAddress,
-  ) => {
-    const geocoder = new google.maps.Geocoder();
-
-    geocoder.geocode({ address: item.postcode }, (results, status) => {
-      if (status === "OK" && results?.[0]?.geometry?.location) {
-        const lat = results[0].geometry.location.lat();
-        const lng = results[0].geometry.location.lng();
-
-        const boundary: Boundary = {
-          lat,
-          lng,
-          radius,
-        };
-
-        setFormData({
-          ...formData,
-          name: item.summaryline,
-          lat,
-          lng,
-          boundary: JSON.stringify(boundary),
-        });
-
-        setSelectedLocation({ lat, lng });
-        setPredictions([]);
-      }
-    });
-  };
-
-  const handleRadiusChange = (event: Event, newValue: number | number[]) => {
-    const value = Array.isArray(newValue) ? newValue[0] : newValue;
-    setRadius(value);
-    if (selectedLocation) {
-      const newBoundary: Boundary = {
-        lat: selectedLocation.lat,
-        lng: selectedLocation.lng,
-        radius: value,
-      };
-      setFormData({
-        ...formData,
-        boundary: JSON.stringify(newBoundary),
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (!sidebar) {
-      setFormData((prev: any) => ({
-        ...prev,
-        name: "",
-        boundary: "",
-        lat: null,
-        lng: null,
-      }));
-      setSelectedLocation(null);
-    }
-  }, [sidebar]);
 
   const filteredData = useMemo(() => {
     let result = products.filter((item) => {
       const search = searchProduct.toLowerCase();
-
       let matchesSearch = true;
       if (search) {
         matchesSearch =
@@ -871,18 +409,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           item.uuid?.toLowerCase().includes(search) ||
           item.name?.toLowerCase().includes(search);
       }
-
-      let matchesSupplier = true;
-      if (filters.supplier && filters.supplier !== "All") {
-        matchesSupplier = item.supplier_name === filters.supplier;
-      }
-
-      let matchesCategory = true;
-      if (filters.category && filters.category !== "All") {
-        matchesCategory = item.product_categories?.includes(filters.category);
-      }
-
-      return matchesSearch && matchesSupplier && matchesCategory;
+      return matchesSearch;
     });
 
     result.sort((a, b) => {
@@ -894,1510 +421,615 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     });
 
     return result;
-  }, [
-    products,
-    searchProduct,
-    filters.supplier,
-    filters.category,
-    selectedProducts,
-  ]);
+  }, [products, searchProduct, selectedProducts]);
+
+  const paginatedProduct =
+    filteredData?.slice(0, productPage * productLimit) || [];
+
+  const columns = useMemo(
+    () => [
+      {
+        id: "select",
+        header: ({ table }: any) => (
+          <Stack direction="row" alignItems="center">
+            <CustomCheckbox
+              className="header-checkbox"
+              checked={selectedRowIds.size === data.length && data.length > 0}
+              indeterminate={
+                selectedRowIds.size > 0 && selectedRowIds.size < data.length
+              }
+              onClick={(e: any) => e.stopPropagation()}
+              onChange={(e: any) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const isChecked = e.target.checked;
+                if (isChecked) {
+                  setSelectedRowIds(new Set(data.map((row) => row.id)));
+                } else {
+                  setSelectedRowIds(new Set());
+                }
+              }}
+            />
+          </Stack>
+        ),
+        cell: ({ row }: any) => {
+          const item = row.original;
+          const isChecked = selectedRowIds.has(item.id);
+          const isHovered = hoveredRow === item.id;
+          const showCheckbox = isChecked || isHovered;
+
+          return (
+            <Stack direction="row" alignItems="center" sx={{ pl: 1 }}>
+              <CustomCheckbox
+                checked={isChecked}
+                onClick={(e: any) => e.stopPropagation()}
+                onChange={(e: any) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const newSelected = new Set(selectedRowIds);
+                  if (isChecked) {
+                    newSelected.delete(item.id);
+                  } else {
+                    newSelected.add(item.id);
+                  }
+                  setSelectedRowIds(newSelected);
+                }}
+                sx={{
+                  opacity: showCheckbox ? 1 : 0,
+                  pointerEvents: showCheckbox ? "auto" : "none",
+                  transition: "opacity 0.2s ease",
+                }}
+              />
+            </Stack>
+          );
+        },
+      },
+
+      columnHelper.accessor("name", {
+        header: "Name",
+        cell: (info) => info.getValue(),
+      }),
+
+      columnHelper.accessor((row) => row?.teams, {
+        id: "teams",
+        header: () => "Teams",
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <Typography textTransform="capitalize" className="f-14">
+              {item.teams?.length
+                ? item.teams.map((shift: any) => shift.name).join(", ")
+                : "-"}
+            </Typography>
+          );
+        },
+      }),
+
+      columnHelper.accessor((row) => row?.shifts, {
+        id: "shifts",
+        header: () => "Shifts",
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <Typography textTransform="capitalize" className="f-14">
+              {item.shifts?.length
+                ? item.shifts.map((shift: any) => shift.name).join(", ")
+                : "-"}
+            </Typography>
+          );
+        },
+      }),
+
+      columnHelper.accessor("budget", {
+        header: "Budget",
+        cell: (info) => info.getValue() || "-",
+      }),
+
+      columnHelper.display({
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <Stack direction="row" spacing={1}>
+              <Tooltip title="Edit">
+                <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(item);
+                  }}
+                  color="primary"
+                >
+                  <IconEdit size={18} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Favorite Products">
+                <IconButton
+                  color="success"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveProjectId(item.id);
+                    setProductDrawer(true);
+                  }}
+                >
+                  <IconBookmark size={18} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          );
+        },
+      }),
+    ],
+    [data, selectedRowIds, hoveredRow],
+  );
+
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+  } = useServerTable({
+    data: data,
+    columns,
+    fetchData: fetchProjects,
+    debounceDependencies: [searchTerm, user?.company_id],
+  });
 
   useEffect(() => {
-    setProductPage(1);
-  }, [searchProduct, filters.supplier, filters.category]);
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [searchTerm]);
 
-  const paginatedProduct = filteredData?.slice(0, productPage * productLimit) || [];
+  const simpleColumns = columns.map((column: any) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
 
-  const handleSeeMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchHistories(nextPage);
-  };
-  const hasMore = history.length < totalItems;
   return (
-    <PermissionGuard permission="Projects">
-      <Box p={2} pt={1}>
-        <Stack
-          mb={2}
-          direction={{ xs: "column", sm: "row", xl: "row" }}
-          justifyContent="space-between"
-          alignItems={"flex-start"}
-        >
-          <Grid
-            container
-            size={{ xs: 12, sm: 12 }}
-            gap={1}
-            alignItems="center"
-            justifyContent={{ xs: "flex-start", sm: "flex-start" }}
-            flexWrap="wrap"
-            className="project_wrapper"
-          >
-            <Autocomplete
-              id="project_id"
-              options={[]}
-              open={false}
-              onOpen={() => setDialogOpen(true)}
-              value={
-                project.find((project) => project.id === projectId) ?? null
-              }
-              getOptionLabel={(option) => option.name}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              sx={{ flex: { xs: "1 1 100%", sm: "0 0 auto" }, minWidth: 150 }}
-              renderInput={(params) => (
-                <CustomTextField
-                  {...params}
-                  InputProps={{
-                    ...params.InputProps,
-                    readOnly: true,
-                    style: { caretColor: "transparent" },
-                  }}
-                  placeholder="Projects"
-                  className="project-selection"
-                  onClick={() => setDialogOpen(true)}
-                />
-              )}
-            />
-
-            <Box
-              sx={{
-                display: "flex",
-                flex: { xs: "1 1 100%", sm: "0 0 auto" },
-                mt: { xs: 1, sm: 0 },
-              }}
-            >
-              <Tabs
-                value={value}
-                onChange={handleTabChange}
-                aria-label="minimal-tabs"
-                sx={{
-                  minHeight: 36,
-                  "& .MuiTabs-indicator": {
-                    backgroundColor: "#007bff",
-                    height: 2,
-                  },
-                  "& .MuiTab-root": {
-                    minHeight: 36,
-                    textTransform: "none",
-                    fontSize: 14,
-                    fontWeight: 400,
-                    color: "#555",
-                    padding: "0 8px",
-                  },
-                  "& .Mui-selected": {
-                    color: "#007bff",
-                    fontWeight: 600,
-                  },
-                  flexWrap: "wrap",
-                }}
-              >
-                <Tab label="Addresses" />
-                <Tab label="Tasks" />
-              </Tabs>
-            </Box>
-
-            <TextField
-              id="search"
-              type="text"
-              size="small"
-              variant="outlined"
-              placeholder="Search..."
-              className="project_search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconSearch size={16} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{ width: { xs: "90%", sm: "50%", md: "30%", lg: "25%" } }}
-            />
-
-            <Button
-              variant="contained"
-              onClick={() => setOpen(true)}
-              sx={{ mt: { xs: 1, sm: 0 } }}
-            >
-              <IconFilter width={18} />
-            </Button>
-
+    <Box p={2}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+        spacing={2}
+      >
+        <Box display="flex" gap={1} alignItems="center">
+          <TextField
+            size="small"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconSearch size={16} />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Tooltip title="Activity">
             <Button
               color="primary"
               variant="outlined"
-              onClick={() => setOpenDrawer(true)}
-              sx={{ mt: { xs: 1, sm: 0 } }}
+              onClick={() => setOpenDrawer}
             >
               Activity
             </Button>
-
-            <IconButton
-              onClick={() => handleRowClick()}
-              sx={{ mt: { xs: 1, sm: 0 } }}
-            >
+          </Tooltip>
+          {/* <Tooltip title="Chart">
+            <IconButton color="primary" onClick={() => setDetailsOpen(true)}>
               <IconChartPie size={24} />
             </IconButton>
-
-            <IconButton
-              onClick={() => setMapOpen(true)}
-              sx={{ mt: { xs: 1, sm: 0 } }}
-            >
+          </Tooltip> */}
+          <Tooltip title="Map">
+            <IconButton color="primary" onClick={() => setMapOpen(true)}>
               <IconMapPin size={24} />
             </IconButton>
-          </Grid>
-          <Stack
-            display="flex"
-            justifyContent="flex-end"
-            direction="row"
-            gap={1}
-            flexWrap="wrap"
-            mt={{ xs: 2, sm: 0 }}
+          </Tooltip>
+        </Box>
+
+        <Box display="flex" alignItems="center">
+          {selectedRowIds.size > 0 && (
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<IconTrash width={18} />}
+              onClick={() => setOpenDialog(true)}
+            >
+              Archive
+            </Button>
+          )}
+
+          {/* <Tooltip title="Settings">
+            <IconButton
+              color="primary"
+              size="small"
+              onClick={() => setSettingOpen(true)}
+            >
+              <IconSettings size={24} />
+            </IconButton>
+          </Tooltip> */}
+          <IconButton
+            onClick={handlePopoverOpen}
+            sx={{ ml: 1 }}
+            color="primary"
           >
-            <Box display={"flex"}>
-              {selectedIds.length > 0 && (
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<IconTrash width={18} />}
-                  onClick={() => setOpenDialog(true)}
-                >
-                  Archive
-                </Button>
-              )}
+            <IconEye />
+          </IconButton>
+          <Popover
+            open={Boolean(anchorEl2)}
+            anchorEl={anchorEl2}
+            onClose={handlePopoverClose}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+          >
+            <TextField
+              size="small"
+              placeholder="Search"
+              fullWidth
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              sx={{ mb: 1 }}
+            />
+            <FormGroup>
+              {table
+                .getAllLeafColumns()
+                .filter((col: any) => {
+                  const excludedColumns = ["conflicts", "select"];
+                  if (excludedColumns.includes(col.id)) return false;
 
-              <Tooltip title="Settings">
-                <IconButton
-                  onClick={handleSettingOpen}
-                  color="primary"
-                  size="small"
-                >
-                  <IconSettings size={20} />
-                </IconButton>
-              </Tooltip>
-
-              <Setting settingOpen={settingOpen} onClose={handleSettingClose} />
-
-              <IconButton
-                onClick={handlePopoverOpen}
-                sx={{ ml: 1 }}
-                color="primary"
-              >
-                <IconEye />
-              </IconButton>
-              <Popover
-                open={Boolean(anchorEl2)}
-                anchorEl={anchorEl2}
-                onClose={handlePopoverClose}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
-                PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
-              >
-                <TextField
-                  size="small"
-                  placeholder="Search"
-                  fullWidth
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  sx={{ mb: 1 }}
-                />
-
-                <FormGroup>
-                  {currentTable
-                    ?.getAllLeafColumns()
-                    .filter(
-                      (col: any) => !["conflicts", "select"].includes(col.id),
-                    ) // Exclude conflicts
-                    .filter(
-                      (col: any) =>
-                        col.id.toLowerCase().includes(search.toLowerCase()), // Filter by search term
-                    )
-                    .map((col: any) => (
-                      <FormControlLabel
-                        key={col.id}
-                        control={
-                          <Checkbox
-                            checked={
-                              columnVisibility[col.id] ?? col.getIsVisible()
-                            } // Bind checkbox state to local visibility state
-                            onChange={(e) => {
-                              if (!currentTable) return;
-
-                              const newVisibility = {
-                                ...columnVisibility,
-                                [col.id]: e.target.checked, // Update the visibility of this column
-                              };
-
-                              setColumnVisibilityState(newVisibility); // Update the local visibility state
-                              currentTable.setColumnVisibility(newVisibility); // Apply it to the table
-                              setUpdate((u) => u + 1); // Trigger re-render to update the UI
-                            }}
-                            disabled={col.id === "conflicts"} // Optionally disable some columns
-                          />
-                        }
-                        label={
-                          col.columnDef.meta?.label ||
-                          (typeof col.columnDef.header === "string"
-                            ? col.columnDef.header
-                            : col.id
-                                .replace(/([A-Z])/g, " $1")
-                                .replace(/^./, (str: string) =>
-                                  str.toUpperCase(),
-                                )
-                                .trim())
-                        }
+                  return col.id.toLowerCase().includes(search.toLowerCase());
+                })
+                .map((col: any) => (
+                  <FormControlLabel
+                    key={col.id}
+                    control={
+                      <CustomCheckbox
+                        checked={col.getIsVisible()}
+                        onChange={col.getToggleVisibilityHandler()}
+                        disabled={col.id === "conflicts"}
                       />
-                    ))}
-                </FormGroup>
-              </Popover>
+                    }
+                    sx={{ textTransform: "none" }}
+                    label={
+                      col.columnDef.meta?.label ||
+                      (typeof col.columnDef.header === "string" &&
+                      col.columnDef.header.trim() !== ""
+                        ? col.columnDef.header
+                        : col.id
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (str: string) => str.toUpperCase())
+                            .trim())
+                    }
+                  />
+                ))}
+            </FormGroup>
+          </Popover>
 
-              <IconButton onClick={handleClick} size="small">
-                <IconDotsVertical width={18} />
-              </IconButton>
-            </Box>
+          <IconButton onClick={handleClick} size="small">
+            <IconDotsVertical width={20} />
+          </IconButton>
+          <Menu anchorEl={anchorEl} open={openMenu} onClose={handleClose}>
+            <MenuItem onClick={handleCreate}>
+              <ListItemIcon>
+                <IconPlus width={18} />
+              </ListItemIcon>
+              Add Project
+            </MenuItem>
 
-            <Menu
-              id="basic-menu"
-              anchorEl={anchorEl}
-              open={openMenu}
-              onClose={handleClose}
-              slotProps={{
-                list: {
-                  "aria-labelledby": "basic-button",
-                },
+            <MenuItem
+              onClick={() => {
+                handleClose();
+                setArchiveListOpen(true);
               }}
             >
-              <MenuItem onClick={handleClose}>
-                <Link
-                  color="body1"
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleOpenCreateDrawer();
-                  }}
-                  style={{
-                    width: "100%",
-                    color: "#11142D",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyItems: "center",
-                  }}
-                >
-                  <ListItemIcon>
-                    <IconPlus width={18} />
-                  </ListItemIcon>
-                  Add Task
-                </Link>
-              </MenuItem>
-              <MenuItem onClick={handleClose}>
-                <Link
-                  color="body1"
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setSidebar(true);
-                  }}
-                  style={{
-                    color: "#11142D",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <ListItemIcon>
-                    <IconLocation width={18} />
-                  </ListItemIcon>
-                  Add Address
-                </Link>
-              </MenuItem>
-              <MenuItem onClick={handleClose}>
-                <Link
-                  color="body1"
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setArchiveList(true);
-                  }}
-                  style={{
-                    width: "100%",
-                    color: "#11142D",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyItems: "center",
-                  }}
-                >
-                  <ListItemIcon>
-                    <IconNotes width={18} />
-                  </ListItemIcon>
-                  Archived address list
-                </Link>
-              </MenuItem>
-              <MenuItem onClick={handleClose}>
-                <Link
-                  color="body1"
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setArchiveProjectList(true);
-                  }}
-                  style={{
-                    width: "100%",
-                    color: "#11142D",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyItems: "center",
-                  }}
-                >
-                  <ListItemIcon>
-                    <IconNotes width={18} />
-                  </ListItemIcon>
-                  Archived project list
-                </Link>
-              </MenuItem>
-            </Menu>
+              <ListItemIcon>
+                <IconNotes width={18} />
+              </ListItemIcon>
+              Archived project list
+            </MenuItem>
+          </Menu>
+        </Box>
+      </Stack>
 
-            {/* Filter Dialog */}
-            <Dialog
-              open={open}
-              onClose={() => setOpen(false)}
-              fullWidth
-              maxWidth="sm"
-            >
-              <DialogTitle
-                sx={{ m: 0, position: "relative", overflow: "visible" }}
-              >
-                Filters
-                <IconButton
-                  aria-label="close"
-                  onClick={() => setOpen(false)}
-                  size="large"
-                  sx={{
-                    position: "absolute",
-                    right: 12,
-                    top: 8,
-                    color: (theme) => theme.palette.grey[900],
-                    backgroundColor: "transparent",
-                    zIndex: 10,
-                    width: 50,
-                    height: 50,
-                  }}
-                >
-                  <IconX size={40} style={{ width: 40, height: 40 }} />
-                </IconButton>
-              </DialogTitle>
-              <DialogContent>
-                <Stack spacing={2} mt={1}>
-                  <TextField
-                    select
-                    label="Status"
-                    value={tempFilters.status}
-                    onChange={(e) =>
-                      setTempFilters({ ...tempFilters, status: e.target.value })
-                    }
-                    fullWidth
+      <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+        <TableContainer ref={tableContainerRef}>
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const isActive = header.column.getIsSorted();
+                    const isAsc = header.column.getIsSorted() === "asc";
+                    const isSortable = header.column.getCanSort();
+
+                    return (
+                      <TableCell
+                        key={header.id}
+                        align="center"
+                        sx={{
+                          paddingTop: "10px",
+                          paddingBottom: "10px",
+                          width: header.column.id === "select" ? 30 : "auto",
+
+                          ...(header.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 3,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
+                      >
+                        <Box
+                          onClick={
+                            isSortable
+                              ? header.column.getToggleSortingHandler()
+                              : undefined
+                          }
+                          sx={{
+                            cursor: isSortable ? "pointer" : "default",
+                            display: "flex",
+                            alignItems: "center",
+                            "&:hover": {
+                              color: isSortable ? "#888" : "inherit",
+                            },
+                            "&:hover .hoverIcon": { opacity: 1 },
+                          }}
+                        >
+                          <Typography variant="subtitle2">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                          </Typography>
+                          {isSortable && (
+                            <Box
+                              component="span"
+                              className="hoverIcon"
+                              ml={0.5}
+                              sx={{
+                                transition: "opacity 0.2s",
+                                opacity: isActive ? 1 : 0,
+                                fontSize: "0.9rem",
+                                color: isActive ? "#000" : "#888",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={simpleColumns.length}
+                />
+              ) : table.getRowModel().rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/no-data.png"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    hover
+                    sx={{ cursor: "pointer" }}
+                    onMouseEnter={() => setHoveredRow(row.original.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    onClick={() => {
+                      const newSelected = new Set(selectedRowIds);
+                      if (newSelected.has(row.original.id)) {
+                        newSelected.delete(row.original.id);
+                      } else {
+                        newSelected.add(row.original.id);
+                      }
+                      setSelectedRowIds(newSelected);
+                    }}
                   >
-                    <MenuItem value="All">All</MenuItem>
-                    {status.map((statusItem, i) => (
-                      <MenuItem key={i} value={statusItem}>
-                        {statusItem}
-                      </MenuItem>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        sx={{
+                          padding: "10px",
+                          ...(cell.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 1,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
                     ))}
-                  </TextField>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+      <Box mt={2}>
+        <TablePaginationFooter table={table} totalRows={totalRows} />
+      </Box>
 
-                  <TextField
-                    select
-                    label="Sort A-Z"
-                    value={tempFilters.sortOrder}
-                    onChange={(e) =>
-                      setTempFilters({
-                        ...tempFilters,
-                        sortOrder: e.target.value,
-                      })
-                    }
-                    fullWidth
-                  >
-                    <MenuItem value="">None</MenuItem>
-                    <MenuItem value="asc">A-Z</MenuItem>
-                    <MenuItem value="desc">Z-A</MenuItem>
-                  </TextField>
-                </Stack>
-              </DialogContent>
+      {/* Dialogs and Drawers */}
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+        <DialogTitle>Confirm Archive</DialogTitle>
+        <DialogContent>
+          <Typography color="textSecondary">
+            Are you sure you want to archive {selectedRowIds.size} project(s)?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setOpenDialog(false)}
+            variant="outlined"
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              try {
+                let allSuccess = true;
+                for (const id of Array.from(selectedRowIds)) {
+                  const res = await api.post("project/archive", { id });
+                  if (
+                    !res.data.IsSuccess &&
+                    !res.data.isSuccess &&
+                    !res.data.success &&
+                    !(res.status >= 200 && res.status < 300)
+                  ) {
+                    allSuccess = false;
+                  }
+                }
+                if (allSuccess) {
+                  toast.success("Projects archived successfully.");
+                } else {
+                  toast.error("Some projects failed to archive.");
+                }
+                fetchProjects();
+                setSelectedRowIds(new Set());
+              } catch (error) {
+                console.error(error);
+                toast.error("Error archiving projects.");
+              }
+              setOpenDialog(false);
+            }}
+            variant="outlined"
+            color="error"
+          >
+            Archive
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-              <DialogActions>
-                <Button
-                  onClick={() => {
-                    setTempFilters({
-                      supplier: "",
-                      category: "",
-                      status: "",
-                      sortOrder: "",
-                    });
-                    setFilters({
-                      supplier: "",
-                      category: "",
-                      status: "",
-                      sortOrder: "",
-                    });
-                    setOpen(false);
-                  }}
-                  color="inherit"
-                >
-                  Clear
-                </Button>
+      <ArchiveProject
+        open={archiveListOpen}
+        companyId={Number(user?.company_id)}
+        onClose={() => setArchiveListOpen(false)}
+        onWorkUpdated={fetchProjects}
+      />
 
-                <Button
-                  variant="contained"
-                  onClick={() => {
-                    setFilters(tempFilters);
-                    setOpen(false);
-                  }}
-                >
-                  Apply
-                </Button>
-              </DialogActions>
-            </Dialog>
-          </Stack>
-        </Stack>
+      <Setting
+        settingOpen={settingOpen}
+        onClose={() => setSettingOpen(false)}
+      />
 
-        <Divider />
-
-        {/* Add task drawer */}
-        <CreateProjectTask
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          formData={formData}
-          setFormData={setFormData}
-          handleTaskSubmit={handleTaskSubmit}
-          trade={trade}
-          isSaving={isSaving}
-          address_id={null}
-          projectId={projectId}
+      <Drawer
+        anchor="bottom"
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            height: "95vh",
+            boxShadow: "none",
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            overflow: "hidden",
+          },
+        }}
+      >
+        <DynamicGantt
+          open={detailsOpen}
+          onClose={() => setDetailsOpen(false)}
+          projectId={activeProjectId}
+          companyId={user?.company_id ?? null}
         />
+      </Drawer>
 
-        {/* Add Address Drawer */}
-        <Drawer
-          anchor="right"
-          open={sidebar}
-          onClose={() => handleAddressClose()}
-          sx={{
+      <Drawer
+        anchor="bottom"
+        open={mapOpen}
+        onClose={() => setMapOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            height: "95vh",
+            boxShadow: "none",
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            overflow: "hidden",
+          },
+        }}
+      >
+        <MapGantt
+          open={mapOpen}
+          onClose={() => setMapOpen(false)}
+          onUpdate={fetchProjects}
+          projectId={activeProjectId}
+          companyId={user?.company_id ?? null}
+        />
+      </Drawer>
+
+      <Drawer
+        anchor="right"
+        open={openDrawer}
+        onClose={() => setOpenDrawer(false)}
+        PaperProps={{
+          sx: {
             width: 500,
-            flexShrink: 0,
+            maxWidth: "100%",
             "& .MuiDrawer-paper": {
               width: 500,
               padding: 2,
               backgroundColor: "#f9f9f9",
             },
-          }}
-        >
-          <Box display="flex" flexDirection="column" height="100%">
-            <Box height={"100%"}>
-              <form onSubmit={handleSubmit} className="address-form">
-                <Grid container>
-                  <Grid size={{ xs: 12 }}>
-                    <Box
-                      display={"flex"}
-                      alignContent={"center"}
-                      alignItems={"center"}
-                      flexWrap={"wrap"}
-                    >
-                      <IconButton onClick={() => handleAddressClose()}>
-                        <IconArrowLeft />
-                      </IconButton>
-                      <Typography variant="h6" color="inherit" fontWeight={700}>
-                        Add Address
-                      </Typography>
-                    </Box>
-
-                    <Typography variant="h5" mt={3}></Typography>
-                    <Box
-                      display={"flex"}
-                      justifyContent={"space-between"}
-                      gap={3}
-                    >
-                      <TextField
-                        label="Enter address"
-                        id="name"
-                        name="name"
-                        placeholder="Search for address.."
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        variant="outlined"
-                        fullWidth
-                      />
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleSearchClick}
-                      >
-                        Search
-                      </Button>
-                    </Box>
-
-                    {typedAddress && predictions.length > 0 && (
-                      <List
-                        sx={{
-                          border: "1px solid #ccc",
-                          maxHeight: 200,
-                          overflow: "auto",
-                          mt: 1,
-                        }}
-                      >
-                        {predictions.map((item, index) => (
-                          <ListItem key={index} disablePadding>
-                            <ListItemButton
-                              onClick={() =>
-                                item.source === "google"
-                                  ? selectGooglePrediction(item)
-                                  : selectPostcoderPrediction(item)
-                              }
-                            >
-                              {item.source === "google"
-                                ? item.description
-                                : item.summaryline}
-                            </ListItemButton>
-                          </ListItem>
-                        ))}
-                      </List>
-                    )}
-
-                    {selectedLocation && (
-                      <Box
-                        sx={{ marginTop: 3 }}
-                        width={"98%"}
-                        className="slider_wrapper"
-                      >
-                        <Typography variant="h6">
-                          Area size [{radius} Meter]
-                        </Typography>
-                        <CustomRangeSlider
-                          value={radius}
-                          onChange={handleRadiusChange}
-                          min={0}
-                          max={100}
-                          step={1}
-                          sx={{ height: "1px" }}
-                        />
-
-                        <GoogleMap
-                          zoom={17}
-                          center={selectedLocation}
-                          mapContainerStyle={{
-                            width: "100%",
-                            height: "400px",
-                            marginTop: "20px",
-                          }}
-                        >
-                          <Marker
-                            position={selectedLocation}
-                            draggable
-                            onDragEnd={(e) => {
-                              const lat = e.latLng?.lat();
-                              const lng = e.latLng?.lng();
-
-                              if (!lat || !lng) return;
-
-                              setSelectedLocation({ lat, lng });
-
-                              setFormData((prev: any) => ({
-                                ...prev,
-                                lat,
-                                lng,
-                                boundary: JSON.stringify({
-                                  lat,
-                                  lng,
-                                  radius,
-                                }),
-                              }));
-                            }}
-                          />
-
-                          <Circle
-                            center={selectedLocation}
-                            radius={radius}
-                            options={{
-                              draggable: true,
-                              editable: true,
-                              fillColor: formData.color || "#000000",
-                              fillOpacity: 0.3,
-                              strokeColor: formData.color || "#000000",
-                              strokeOpacity: 1,
-                              strokeWeight: 1,
-                            }}
-                            onCenterChanged={() => {
-                              if (!circleRef.current) return;
-
-                              const center = circleRef.current.getCenter();
-                              if (!center) return;
-
-                              const lat = center.lat();
-                              const lng = center.lng();
-                              if (
-                                lastCenterRef.current &&
-                                lastCenterRef.current.lat === lat &&
-                                lastCenterRef.current.lng === lng
-                              ) {
-                                return;
-                              }
-
-                              lastCenterRef.current = { lat, lng };
-
-                              setSelectedLocation({ lat, lng });
-
-                              setFormData((prev: any) => ({
-                                ...prev,
-                                lat,
-                                lng,
-                                boundary: JSON.stringify({
-                                  lat,
-                                  lng,
-                                  radius,
-                                }),
-                              }));
-                            }}
-                            onRadiusChanged={() => {
-                              if (!circleRef.current) return;
-
-                              const newRadius = Math.round(
-                                circleRef.current.getRadius(),
-                              );
-
-                              if (lastRadiusRef.current === newRadius) return;
-
-                              lastRadiusRef.current = newRadius;
-
-                              setRadius(newRadius);
-
-                              setFormData((prev: any) => ({
-                                ...prev,
-                                boundary: JSON.stringify({
-                                  lat: selectedLocation.lat,
-                                  lng: selectedLocation.lng,
-                                  radius: newRadius,
-                                }),
-                              }));
-                            }}
-                            onLoad={(circle) => {
-                              circleRef.current = circle;
-                            }}
-                          />
-                        </GoogleMap>
-                        <Box mt={2}>
-                          <Typography>Zone Color</Typography>
-                          <input
-                            type="color"
-                            value={formData.color || "#000000"}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                color: e.target.value,
-                              })
-                            }
-                            style={{
-                              width: "100%",
-                              height: "40px",
-                              border: "none",
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                    )}
-                  </Grid>
-                </Grid>
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "start",
-                    gap: 2,
-                    marginTop: 3,
-                  }}
-                >
-                  <Button
-                    color="primary"
-                    variant="contained"
-                    size="large"
-                    type="submit"
-                    sx={{ borderRadius: 3 }}
-                    className="drawer_buttons"
-                    disabled={isSaving}
-                  >
-                    {isSaving ? "Saving..." : "Save"}
-                  </Button>
-                  <Button
-                    color="inherit"
-                    onClick={() => handleAddressClose()}
-                    variant="contained"
-                    size="large"
-                    sx={{
-                      backgroundColor: "transparent",
-                      borderRadius: 3,
-                      color: "GrayText",
-                    }}
-                  >
-                    Close
-                  </Button>
-                </Box>
-              </form>
-            </Box>
-          </Box>
-        </Drawer>
-
-        {/* Tab Content - Addresses and Tasks */}
-        {value === 0 && (
-          <AddressesList
-            projectId={Number(projectID)}
-            searchTerm={searchTerm}
-            filters={filters}
-            onSelectionChange={handleSelectedRows}
-            processedIds={processedIds}
-            shouldRefresh={shouldRefresh}
-            onTableReady={(tableInstance: any) =>
-              setCurrentTable(tableInstance)
-            }
-          />
-        )}
-        {value === 1 && (
-          <TasksList
-            projectId={projectId}
-            searchTerm={searchTerm}
-            filters={filters}
-            shouldRefresh={shouldRefresh}
-            onUpdate={triggerRefresh}
-            onTableReady={(tableInstance: any) =>
-              setCurrentTable(tableInstance)
-            }
-          />
-        )}
-
-        {/* Gantt Chart Drawer */}
-        <Drawer
-          anchor="bottom"
-          open={detailsOpen}
-          onClose={closeDetails}
-          PaperProps={{
-            sx: {
-              borderRadius: 0,
-              height: "95vh",
-              boxShadow: "none",
-              borderTopLeftRadius: 12,
-              borderTopRightRadius: 12,
-              overflow: "hidden",
-            },
-          }}
-        >
-          <DynamicGantt
-            open={detailsOpen}
-            onClose={closeDetails}
-            projectId={projectId}
-            companyId={user.company_id ?? null}
-          />
-        </Drawer>
-
-        {/* Location Drawer */}
-        <Drawer
-          anchor="bottom"
-          open={mapOpen}
-          onClose={() => setMapOpen(false)}
-          PaperProps={{
-            sx: {
-              borderRadius: 0,
-              height: "95vh",
-              boxShadow: "none",
-              borderTopLeftRadius: 12,
-              borderTopRightRadius: 12,
-              overflow: "hidden",
-            },
-          }}
-        >
-          <MapGantt
-            open={mapOpen}
-            onClose={() => setMapOpen(false)}
-            onUpdate={triggerRefresh}
-            projectId={projectId}
-            companyId={user.company_id ?? null}
-          />
-        </Drawer>
-
-        {/* Archive Address Confirmation Dialog */}
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-          <DialogTitle>Confirm Archive</DialogTitle>
-          <DialogContent>
-            <Typography color="textSecondary">
-              Are you sure you want to archive selected addresses?
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => setOpenDialog(false)}
-              variant="outlined"
-              color="primary"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                try {
-                  const payload = {
-                    address_ids: selectedIds.join(","),
-                  };
-                  const response = await api.post(
-                    "address/archive-addresses",
-                    payload,
-                  );
-                  toast.success(response.data.message);
-                  setProcessedIds((prev) => [...prev, ...selectedIds]);
-                  setSelectedIds([]);
-                  await fetchAddresses();
-                } catch (error) {
-                } finally {
-                  setOpenDialog(false);
-                }
-              }}
-              variant="outlined"
-              color="error"
-            >
-              Archive
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Archive Address List */}
-        <ArchiveAddress
-          open={archiveList}
-          projectId={projectId}
-          onClose={() => setArchiveList(false)}
-          onWorkUpdated={fetchAddresses}
-        />
-
-        {/* Archive Project List */}
-        <ArchiveProject
-          open={archiveProjectList}
-          companyId={Number(user.company_id)}
-          onClose={() => setArchiveProjectList(false)}
-          onWorkUpdated={fetchProjects}
-        />
-
-        {/* Project Selection Drawer */}
-        <Drawer
-          anchor="left"
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-          PaperProps={{
-            sx: {
-              width: 400,
-              maxWidth: "100%",
-            },
-          }}
-        >
-          <Box sx={{ position: "relative", p: 2 }}>
-            {/* Add Project Button */}
-            <Button
-              color="primary"
-              variant="outlined"
-              onClick={() => {
-                setProjectOpen(true);
-              }}
-              startIcon={<IconPlus size={18} />}
-              sx={{ mb: 1, ml: 2 }}
-            >
-              Add Project
-            </Button>
-
-            {/* Delete Project Confirmation Dialog */}
-            <Dialog
-              open={deleteDialogOpen}
-              onClose={() => setDeleteDialogOpen(false)}
-            >
-              <DialogTitle>
-                <Typography>Archive Project</Typography>
-                <IconButton
-                  onClick={() => setDeleteDialogOpen(false)}
-                  sx={{
-                    position: "absolute",
-                    right: 12,
-                    top: 8,
-                  }}
-                >
-                  <IconX size={40} />
-                </IconButton>
-              </DialogTitle>
-              <DialogContent>
-                <Typography color="textSecondary">
-                  Are you sure you want to archive{" "}
-                  <b>{projectToDelete?.name}</b>?
-                </Typography>
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setDeleteDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  color="error"
-                  variant="contained"
-                  onClick={async () => {
-                    if (projectToDelete) {
-                      try {
-                        await archiveProjectApi(projectToDelete.id);
-                        setProject((prev: any) =>
-                          prev.filter((p: any) => p.id !== projectToDelete.id),
-                        );
-                      } catch (err) {
-                        console.error("Archive failed", err);
-                      }
-                    }
-                    setDeleteDialogOpen(false);
-                  }}
-                >
-                  Archive
-                </Button>
-              </DialogActions>
-            </Dialog>
-
-            {/* Project List */}
-            <Grid container spacing={2} display="block">
-              {project.map((project) => (
-                <Grid
-                  mt={2}
-                  key={project.id}
-                  display="flex"
-                  textAlign="start"
-                  alignItems="center"
-                >
-                  <Box
-                    onClick={() => {
-                      setProjectId(project.id);
-                      setDialogOpen(false);
-                    }}
-                    sx={{
-                      boxShadow: "0px 1px 4px 0px #00000040",
-                      borderRadius: "9px",
-                      height: "45px",
-                      width: "100%",
-                      "&:hover": {
-                        cursor: "pointer",
-                      },
-                    }}
-                    display="flex"
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Typography
-                      variant="subtitle1"
-                      ml={1}
-                      className="multi-ellipsis"
-                      lineHeight={1.25}
-                      maxWidth={"180px"}
-                    >
-                      {project.name}
-                    </Typography>
-                    <IconChevronRight style={{ color: "GrayText" }} />
-                  </Box>
-                  <IconButton
-                    color="primary"
-                    sx={{ ml: 2 }}
-                    onClick={() => {
-                      setEditingProject(project);
-                      setProjectEditOpen(true);
-                    }}
-                  >
-                    <IconPencil size={18} />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    onClick={() => {
-                      setProjectToDelete(project);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <IconTrash size={18} />
-                  </IconButton>
-                  <IconButton
-                    color="success"
-                    onClick={() => {
-                      setFavoriteProjectId(project.id);
-                      fetchFavoriteProducts(project.id);
-                      setDialogOpen(false);
-                      setProductDrawer(true);
-                    }}
-                  >
-                    <IconDatabase size={18} />
-                  </IconButton>
-                </Grid>
-              ))}
-            </Grid>
-            <CreateProject
-              open={projectOpen}
-              onClose={() => setProjectOpen(false)}
-              formData={createFormData}
-              setFormData={setCreateFormData}
-              handleSubmit={handleProjectSubmit}
-              isSaving={isSaving}
-            />
-
-            <EditProject
-              open={projectEditOpen}
-              onClose={() => setProjectEditOpen(false)}
-              onBudgetSaved={fetchProjects}
-              formData={editFormData}
-              setFormData={setEditFormData}
-              project={editingProject}
-              handleSubmit={handleEditProject}
-              isSaving={isSaving}
-            />
-          </Box>
-        </Drawer>
-
-        {/* Project Activity History Drawer */}
-        <Drawer
-          anchor="right"
-          open={openDrawer}
-          onClose={() => setOpenDrawer(false)}
-          PaperProps={{
-            sx: {
-              width: 500,
-              maxWidth: "100%",
-              "& .MuiDrawer-paper": {
-                width: 500,
-                padding: 2,
-                backgroundColor: "#f9f9f9",
-              },
-            },
-          }}
-        >
-          <Box sx={{ position: "relative", p: 2 }}>
-            {/* Close Button */}
-            <IconButton
-              aria-label="close"
-              onClick={() => setOpenDrawer(false)}
-              size="small"
-              sx={{
-                position: "absolute",
-                right: 0,
-                top: 8,
-                color: (theme) => theme.palette.grey[900],
-                backgroundColor: "transparent",
-                zIndex: 10,
-                width: 50,
-                height: 50,
-              }}
-            >
-              <IconX size={18} />
-            </IconButton>
-
-            {/* Activity History List */}
-            <Grid container spacing={2} display="block">
-              <Box
-                display={"flex"}
-                alignContent={"center"}
-                alignItems={"center"}
-                flexWrap={"wrap"}
-              >
-                <IconButton onClick={() => setOpenDrawer(false)}>
-                  <IconArrowLeft />
-                </IconButton>
-                <Typography variant="h6" fontWeight={700}>
-                  Project Activities
-                </Typography>
-              </Box>
-
-              {loading && history.length === 0 ? (
-                <Box display="flex" justifyContent="center" mt={4}>
-                  <CircularProgress />
-                </Box>
-              ) : history.length > 0 ? (
-                <Box mt={1}>
-                  <Box
-                    sx={{
-                      maxHeight: history.length > 3 ? "auto" : "auto",
-                      overflow: history.length > 3 ? "auto" : "visible",
-                      pr: 0,
-                    }}
-                  >
-                    {history.map((addr, index) => {
-                      return (
-                        <Box
-                          key={addr.id ?? index}
-                          mb={index === data.length - 1 ? 0 : 2}
-                          pl={2}
-                          pr={2}
-                          mt={2}
-                          position="relative"
-                          display="flex"
-                          alignItems="center"
-                          sx={{
-                            width: "100%",
-                            lineHeight: "10px",
-                            height: "100px",
-                            borderRadius: "25px",
-                            boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
-                            border: "1px solid rgb(240 240 240)",
-                          }}
-                        >
-                          <Box
-                            position="absolute"
-                            top="-10px"
-                            left="15px"
-                            bgcolor={
-                              addr.request_type === 102 && addr.status_int == 3
-                                ? "#7d54f0ff"
-                                : addr.request_type === 102 &&
-                                    addr.status_int == 4
-                                  ? "#f53c3cff"
-                                  : "#FF7F00"
-                            }
-                            px={1.5}
-                            borderRadius="10px"
-                            zIndex={1}
-                          >
-                            <Typography
-                              variant="caption"
-                              fontWeight={700}
-                              fontSize={"12px !important"}
-                              color="#fff"
-                            >
-                              {addr.request_type === 102 && addr.status_int == 3
-                                ? "Start shift"
-                                : addr.request_type === 102 &&
-                                    addr.status_int == 4
-                                  ? "Stop shift"
-                                  : addr.type_name}
-                            </Typography>
-                          </Box>
-                          <Box display="initial" width="100%" textAlign="start">
-                            <Typography
-                              fontSize="14px"
-                              className="multi-ellipsis"
-                            >
-                              <b>{addr.user_name}:</b> {addr.message}
-                            </Typography>
-                            <p
-                              style={{
-                                fontSize: "12px",
-                                textAlign: "end",
-                                color: "GrayText",
-                                margin: 0,
-                              }}
-                              color="textSecondary"
-                            >
-                              {formatDate(addr.date_added)}
-                            </p>
-                          </Box>
-                        </Box>
-                      );
-                    })}
-                  </Box>
-
-                  {hasMore && (
-                    <Box display="flex" justifyContent="center" my={2}>
-                      <Button
-                        variant="outlined"
-                        disabled={loading}
-                        onClick={handleSeeMore}
-                        startIcon={loading && <CircularProgress size={16} />}
-                      >
-                        See More
-                      </Button>
-                    </Box>
-                  )}
-                </Box>
-              ) : (
-                <>
-                  <Typography mt={2} ml={2} variant="h5">
-                    No activities are found for this project!!
-                  </Typography>
-                </>
-              )}
-            </Grid>
-          </Box>
-        </Drawer>
-
-        {/* Product list */}
-        <Drawer
-          anchor="right"
-          open={productDrawer}
-          onClose={handleCloseProductDrawer}
-          PaperProps={{
-            sx: {
-              width: 550,
-              maxWidth: "100%",
-              "& .MuiDrawer-paper": {
-                width: 550,
-                padding: 2,
-                backgroundColor: "#f9f9f9",
-                display: "flex",
-                flexDirection: "column",
-              },
-            },
-          }}
-        >
-          <Box
-            display={"flex"}
-            alignContent={"center"}
-            alignItems={"center"}
-            flexWrap={"wrap"}
-            p={2}
-            pb={0}
-          >
-            <Box display={"flex"} alignContent={"center"} alignItems={"center"}>
-              <IconButton onClick={handleCloseProductDrawer}>
-                <IconArrowLeft />
-              </IconButton>
-              <Typography variant="h6" fontWeight={700}>
-                Favorite products{" "}
-                {searchProduct ||
-                (filters.supplier && filters.supplier !== "All") ||
-                (filters.category && filters.category !== "All")
-                  ? (() => {
-                      const selectedInFilterCount = filteredData.filter((p) =>
-                        selectedProducts.includes(p.id),
-                      ).length;
-                      return selectedInFilterCount > 0
-                        ? `(${selectedInFilterCount})`
-                        : "";
-                    })()
-                  : selectedProducts.length > 0
-                    ? `(${selectedProducts.length})`
-                    : ""}
-              </Typography>
-            </Box>
-            {/* Close Button */}
-            <IconButton
-              aria-label="close"
-              onClick={handleCloseProductDrawer}
-              size="small"
-              sx={{
-                position: "absolute",
-                right: 0,
-                top: 8,
-                color: (theme) => theme.palette.grey[900],
-                backgroundColor: "transparent",
-                zIndex: 10,
-                width: 50,
-                height: 50,
-              }}
-            >
-              <IconX size={18} />
-            </IconButton>
-          </Box>
-          <Grid display="flex" alignItems={"center"} mr={1}>
-            <TextField
-              id="search"
-              type="text"
-              size="small"
-              variant="outlined"
-              placeholder="Search..."
-              value={searchProduct}
-              fullWidth
-              sx={{
-                width: "90%",
-                ml: 2,
-              }}
-              onChange={(e) => setSearchProduct(e.target.value)}
-              slotProps={{
-                input: {
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconSearch size={"16"} />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-            {products.length > 0 && (
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={selectAll}
-                    onChange={(e) => {
-                      const isChecked = e.target.checked;
-                      setSelectAll(isChecked);
-                      if (isChecked) {
-                        const newSelected = [...selectedProducts];
-                        paginatedProduct.forEach((p) => {
-                          if (!newSelected.includes(p.id))
-                            newSelected.push(p.id);
-                        });
-                        setSelectedProducts(newSelected);
-                      } else {
-                        const visibleIds = paginatedProduct.map((p) => p.id);
-                        setSelectedProducts(
-                          selectedProducts.filter(
-                            (id) => !visibleIds.includes(id),
-                          ),
-                        );
-                      }
-                    }}
-                  />
-                }
-                label="Select All"
-                sx={{ width: "30%", m: 0 }}
-              />
-            )}
-
-            <Button
-              variant="contained"
-              onClick={() => setOpenFilter(true)}
-              sx={{ mt: { xs: 1, sm: 0 } }}
-            >
-              <IconFilter width={18} />
-            </Button>
-          </Grid>
-          <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
-            {/* Product List */}
-            <Grid container spacing={2} display="block" mt={1}>
-              {isFetchingFavorites ? (
-                <Box display="flex" justifyContent="center" alignItems="center" my={5}>
-                  <CircularProgress />
-                </Box>
-              ) : filteredData.length > 0 ? (
-                <Box>
-                  {paginatedProduct.map((product) => (
-                    <Box
-                      key={product.id}
-                      mt={1}
-                      p={1}
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      sx={{
-                        border: "1px solid #e7e3e3ff",
-                        borderRadius: "10px",
-                        background: "#fff",
-                      }}
-                    >
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <CustomCheckbox
-                          checked={selectedProducts.includes(product.id)}
-                          onChange={() => handleProductToggle(product.id)}
-                        />
-                        <Box
-                          sx={{
-                            border: "1px dashed #d1d5db",
-                            borderRadius: 2,
-                            p: 1,
-                            textAlign: "center",
-                          }}
-                        >
-                          <Image
-                            src={
-                              product.image_url ||
-                              "/images/products/product.svg"
-                            }
-                            alt={"product"}
-                            width={50}
-                            height={50}
-                            style={{ objectFit: "contain" }}
-                          />
-                        </Box>
-                        <Stack mt={2} spacing={1}>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              display: "-webkit-box",
-                              WebkitBoxOrient: "vertical",
-                              WebkitLineClamp: 3,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              lineHeight: 1.25,
-                              maxWidth: 350,
-                              wordBreak: "break-word",
-                            }}
-                          >
-                            {product.short_name ?? product.name}{" "}
-                            {product.uuid && (
-                              <Chip
-                                label={product.uuid}
-                                size="small"
-                                sx={{ ml: 1 }}
-                              />
-                            )}
-                            <Typography variant="body2">
-                              Supplier Code: {product.supplier_code}
-                            </Typography>
-                          </Typography>
-                        </Stack>
-                      </Box>
-                    </Box>
-                  ))}
-                  {paginatedProduct.length < filteredData.length && (
-                    <Box display="flex" justifyContent="center" my={2}>
-                      <Button
-                        variant="outlined"
-                        startIcon={
-                          loading ? (
-                            <CircularProgress size={16} color="inherit" />
-                          ) : null
-                        }
-                        onClick={() => setProductPage((prev) => prev + 1)}
-                        disabled={loading}
-                      >
-                        See More
-                      </Button>
-                    </Box>
-                  )}
-                </Box>
-              ) : (
-                <Typography mt={2} textAlign={"center"}>
-                  No products found
-                </Typography>
-              )}
-            </Grid>
-          </Box>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "start",
-              gap: 2,
-              m: 2,
-              pl: 2,
-            }}
-          >
-            <Button
-              color="primary"
-              onClick={handleSaveProducts}
-              variant="contained"
-              size="large"
-              type="submit"
-              sx={{ borderRadius: 3 }}
-              className="drawer_buttons"
-            >
-              {isSaving ? "Saving..." : "Save"}
-            </Button>
-            <Button
-              color="inherit"
-              onClick={handleCloseProductDrawer}
-              variant="contained"
-              size="large"
-              sx={{
-                backgroundColor: "transparent",
-                borderRadius: 3,
-                color: "GrayText",
-              }}
-            >
-              Cancel
-            </Button>
-          </Box>
-        </Drawer>
-      </Box>
-      {/* Filter Dialog */}
-      <Dialog
-        open={openFilter}
-        onClose={() => setOpenFilter(false)}
-        fullWidth
-        maxWidth="sm"
+          },
+        }}
       >
-        <DialogTitle sx={{ m: 0, position: "relative", overflow: "visible" }}>
-          Filters
+        <Box sx={{ position: "relative", p: 2 }}>
           <IconButton
             aria-label="close"
-            onClick={() => setOpenFilter(false)}
-            size="large"
+            onClick={() => setOpenDrawer(false)}
+            size="small"
             sx={{
               position: "absolute",
-              right: 12,
+              right: 0,
               top: 8,
               color: (theme) => theme.palette.grey[900],
               backgroundColor: "transparent",
@@ -2406,88 +1038,385 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
               height: 50,
             }}
           >
-            <IconX size={40} style={{ width: 40, height: 40 }} />
+            <IconX size={18} />
           </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} mt={1}>
-            <TextField
-              select
-              label="Suppliers"
-              value={tempFilters.supplier}
-              onChange={(e) => {
-                setTempFilters({
-                  ...tempFilters,
-                  supplier: e.target.value,
-                });
-              }}
-              fullWidth
-            >
-              <MenuItem value="All">All</MenuItem>
-              {suppliers.map((item, i) => (
-                <MenuItem key={i} value={item.name}>
-                  {item.name}
-                </MenuItem>
-              ))}
-            </TextField>
 
-            <TextField
-              select
-              label="Category"
-              value={tempFilters.category}
-              onChange={(e) =>
-                setTempFilters({
-                  ...tempFilters,
-                  category: e.target.value,
-                })
+          <Grid container spacing={2} display="block">
+            <Box
+              display="flex"
+              alignContent="center"
+              alignItems="center"
+              flexWrap="wrap"
+            >
+              <IconButton onClick={() => setOpenDrawer(false)}>
+                <IconArrowLeft />
+              </IconButton>
+              <Typography variant="h6" fontWeight={700}>
+                Project Activities
+              </Typography>
+            </Box>
+
+            {historyLoading && history.length === 0 ? (
+              <Box display="flex" justifyContent="center" mt={4}>
+                <CircularProgress />
+              </Box>
+            ) : history.length > 0 ? (
+              <Box mt={1}>
+                <Box sx={{ maxHeight: "auto", overflow: "visible", pr: 0 }}>
+                  {history.map((addr, index) => {
+                    return (
+                      <Box
+                        key={addr.id ?? index}
+                        mb={2}
+                        pl={2}
+                        pr={2}
+                        mt={2}
+                        position="relative"
+                        display="flex"
+                        alignItems="center"
+                        sx={{
+                          width: "100%",
+                          lineHeight: "10px",
+                          height: "100px",
+                          borderRadius: "25px",
+                          boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
+                          border: "1px solid rgb(240 240 240)",
+                        }}
+                      >
+                        <Box
+                          position="absolute"
+                          top="-10px"
+                          left="15px"
+                          bgcolor={
+                            addr.request_type === 102 && addr.status_int == 3
+                              ? "#7d54f0ff"
+                              : addr.request_type === 102 &&
+                                  addr.status_int == 4
+                                ? "#f53c3cff"
+                                : "#FF7F00"
+                          }
+                          px={1.5}
+                          borderRadius="10px"
+                          zIndex={1}
+                        >
+                          <Typography
+                            variant="caption"
+                            fontWeight={700}
+                            fontSize="12px !important"
+                            color="#fff"
+                          >
+                            {addr.request_type === 102 && addr.status_int == 3
+                              ? "Start shift"
+                              : addr.request_type === 102 &&
+                                  addr.status_int == 4
+                                ? "Stop shift"
+                                : addr.type_name}
+                          </Typography>
+                        </Box>
+                        <Box display="initial" width="100%" textAlign="start">
+                          <Typography
+                            fontSize="14px"
+                            className="multi-ellipsis"
+                          >
+                            <b>{addr.user_name}:</b> {addr.message}
+                          </Typography>
+                          <p
+                            style={{
+                              fontSize: "12px",
+                              textAlign: "end",
+                              color: "GrayText",
+                              margin: 0,
+                            }}
+                          >
+                            {formatDate(addr.date_added)}
+                          </p>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
+                {history.length < totalItems && (
+                  <Box display="flex" justifyContent="center" my={2}>
+                    <Button
+                      variant="outlined"
+                      disabled={historyLoading}
+                      onClick={handleSeeMore}
+                      startIcon={
+                        historyLoading && <CircularProgress size={16} />
+                      }
+                    >
+                      See More
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+            ) : (
+              <Typography mt={2} ml={2} variant="h5">
+                No activities are found for this project!!
+              </Typography>
+            )}
+          </Grid>
+        </Box>
+      </Drawer>
+
+      <Drawer
+        anchor="right"
+        open={productDrawer}
+        onClose={handleCloseProductDrawer}
+        PaperProps={{
+          sx: {
+            width: 550,
+            maxWidth: "100%",
+            "& .MuiDrawer-paper": {
+              width: 550,
+              padding: 2,
+              backgroundColor: "#f9f9f9",
+              display: "flex",
+              flexDirection: "column",
+            },
+          },
+        }}
+      >
+        <Box
+          display="flex"
+          alignContent="center"
+          alignItems="center"
+          flexWrap="wrap"
+          p={2}
+          pb={0}
+        >
+          <Box display="flex" alignContent="center" alignItems="center">
+            <IconButton onClick={handleCloseProductDrawer}>
+              <IconArrowLeft />
+            </IconButton>
+            <Typography variant="h6" fontWeight={700}>
+              Favorite products{" "}
+              {selectedProducts.length > 0
+                ? `(${selectedProducts.length})`
+                : ""}
+            </Typography>
+          </Box>
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseProductDrawer}
+            size="small"
+            sx={{
+              position: "absolute",
+              right: 0,
+              top: 8,
+              color: (theme) => theme.palette.grey[900],
+              backgroundColor: "transparent",
+              zIndex: 10,
+              width: 50,
+              height: 50,
+            }}
+          >
+            <IconX size={18} />
+          </IconButton>
+        </Box>
+
+        <Grid display="flex" alignItems="center" mr={1}>
+          <TextField
+            id="search"
+            type="text"
+            size="small"
+            variant="outlined"
+            placeholder="Search..."
+            value={searchProduct}
+            fullWidth
+            sx={{ width: "90%", ml: 2 }}
+            onChange={(e) => setSearchProduct(e.target.value)}
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconSearch size="16" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+          {products.length > 0 && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={selectAll}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    setSelectAll(isChecked);
+                    if (isChecked) {
+                      const newSelected = [...selectedProducts];
+                      paginatedProduct.forEach((p) => {
+                        if (!newSelected.includes(p.id)) newSelected.push(p.id);
+                      });
+                      setSelectedProducts(newSelected);
+                    } else {
+                      const visibleIds = paginatedProduct.map((p) => p.id);
+                      setSelectedProducts(
+                        selectedProducts.filter(
+                          (id) => !visibleIds.includes(id),
+                        ),
+                      );
+                    }
+                  }}
+                />
               }
-              fullWidth
-            >
-              <MenuItem value="All">All</MenuItem>
-              {categories.map((item, i) => (
-                <MenuItem key={i} value={item.name}>
-                  {item.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Stack>
-        </DialogContent>
+              label="Select All"
+              sx={{ width: "30%", m: 0 }}
+            />
+          )}
+        </Grid>
 
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setTempFilters({
-                status: "",
-                sortOrder: "",
-                supplier: "",
-                category: "",
-              });
-              setFilters({
-                status: "",
-                sortOrder: "",
-                supplier: "",
-                category: "",
-              });
-              setOpenFilter(false);
-            }}
-            color="inherit"
-          >
-            Clear
-          </Button>
+        <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
+          <Grid container spacing={2} display="block" mt={1}>
+            {isFetchingFavorites ? (
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                my={5}
+              >
+                <CircularProgress />
+              </Box>
+            ) : filteredData.length > 0 ? (
+              <Box>
+                {paginatedProduct.map((product) => (
+                  <Box
+                    key={product.id}
+                    mt={1}
+                    p={1}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{
+                      border: "1px solid #e7e3e3ff",
+                      borderRadius: "10px",
+                      background: "#fff",
+                    }}
+                  >
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <CustomCheckbox
+                        checked={selectedProducts.includes(product.id)}
+                        onChange={() => handleProductToggle(product.id)}
+                      />
+                      <Box
+                        sx={{
+                          border: "1px dashed #d1d5db",
+                          borderRadius: 2,
+                          p: 1,
+                          textAlign: "center",
+                        }}
+                      >
+                        <Image
+                          src={
+                            product.image_url || "/images/products/product.svg"
+                          }
+                          alt="product"
+                          width={50}
+                          height={50}
+                          style={{ objectFit: "contain" }}
+                        />
+                      </Box>
+                      <Stack mt={2} spacing={1}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            display: "-webkit-box",
+                            WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: 3,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            lineHeight: 1.25,
+                            maxWidth: 350,
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {product.short_name ?? product.name}{" "}
+                          {product.uuid && (
+                            <Chip
+                              label={product.uuid}
+                              size="small"
+                              sx={{ ml: 1 }}
+                            />
+                          )}
+                          <br />
+                          Supplier Code: {product.supplier_code}
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  </Box>
+                ))}
+                {paginatedProduct.length < filteredData.length && (
+                  <Box display="flex" justifyContent="center" my={2}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setProductPage((prev) => prev + 1)}
+                    >
+                      See More
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+            ) : (
+              <Typography mt={2} textAlign="center">
+                No products found
+              </Typography>
+            )}
+          </Grid>
+        </Box>
 
+        <Box
+          sx={{ display: "flex", justifyContent: "start", gap: 2, m: 2, pl: 2 }}
+        >
           <Button
+            color="primary"
+            onClick={handleSaveProducts}
             variant="contained"
-            onClick={() => {
-              setFilters(tempFilters);
-              setOpenFilter(false);
+            size="large"
+            sx={{ borderRadius: 3 }}
+          >
+            {isSaving ? "Saving..." : "Save"}
+          </Button>
+          <Button
+            color="inherit"
+            onClick={handleCloseProductDrawer}
+            variant="contained"
+            size="large"
+            sx={{
+              backgroundColor: "transparent",
+              borderRadius: 3,
+              color: "GrayText",
             }}
           >
-            Apply
+            Cancel
           </Button>
-        </DialogActions>
-      </Dialog>
-    </PermissionGuard>
+        </Box>
+      </Drawer>
+
+      {drawerOpen && (
+        <CreateProject
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          formData={formData}
+          setFormData={setFormData}
+          handleSubmit={handleProjectSubmit}
+          isSaving={isSaving}
+        />
+      )}
+
+      {editDrawerOpen && (
+        <EditProject
+          open={editDrawerOpen}
+          onClose={() => setEditDrawerOpen(false)}
+          formData={formData}
+          setFormData={setFormData}
+          handleSubmit={handleEditSubmit}
+          isSaving={isSaving}
+          project={selectedProject}
+        />
+      )}
+    </Box>
   );
 };
 
-export default TablePagination;
+export default ProjectList;

@@ -223,13 +223,13 @@ const ArchiveProject: React.FC<ArchiveProjectProps> = ({
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>
           {selectedItem?.action === "restore"
-            ? "Restore Task"
+            ? "Restore Project"
             : "Confirm Deletion"}
         </DialogTitle>
         <DialogContent>
           <Typography color="textSecondary">
             Are you sure you want to <strong>{selectedItem?.action}</strong>{" "}
-            this task?
+            this project?
           </Typography>
         </DialogContent>
         <DialogActions>

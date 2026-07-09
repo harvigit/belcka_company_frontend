@@ -23,6 +23,7 @@ interface ProductInformationProps {
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   isSaving: boolean;
   isCategory?: boolean;
+  canEdit?: boolean;
 }
 
 type GalleryImage = {
@@ -40,6 +41,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
   setFormData,
   isSaving,
   isCategory,
+  canEdit,
 }) => {
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [galleryPreview, setGalleryPreview] = useState<GalleryImage[]>([]);
@@ -338,9 +340,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
         <Grid size={{ xs: 12, md: 4 }}>
           {/* PRODUCT IMAGE */}
           <Box display="flex" justifyContent={"flex-end"} mb={1}>
-            <Button variant="contained" onClick={() => setEditDrawerOpen(true)}>
-              Edit
-            </Button>
+            {canEdit !== false && <Button variant="contained" onClick={() => setEditDrawerOpen(true)}>Edit</Button>}
           </Box>
           <Box
             sx={{

@@ -33,10 +33,7 @@ import {
   CircularProgress,
   Autocomplete,
 } from "@mui/material";
-import {
-  flexRender,
-  createColumnHelper,
-} from "@tanstack/react-table";
+import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import {
   IconFileExport,
   IconFileImport,
@@ -129,7 +126,46 @@ const ProductList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & {
+    company_id?: number | null;
+    id: number;
+    user_role_id: number;
+  };
+
+  const [productPermission, setProductPermission] = useState<string | null>(
+    null,
+  );
+
+  const fetchProductPermission = async () => {
+    try {
+      const res = await api.get(
+        `setting/payrate-users?company_id=${user.company_id}`,
+      );
+      if (res.data.IsSuccess) {
+        const currentUserData = res.data.info.find(
+          (u: any) => u.user_id === user.id || u.id === user.id,
+        );
+        if (currentUserData) {
+          setProductPermission(currentUserData.product_permission);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch product permission", err);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.company_id && user?.id && user?.user_role_id !== 1) {
+      fetchProductPermission();
+    }
+  }, [user?.company_id, user?.id, user?.user_role_id]);
+
+  const isAdmin = user?.user_role_id === 1;
+  const canView =
+    isAdmin ||
+    productPermission === "view" ||
+    productPermission === "view_edit";
+  const canEdit = isAdmin || productPermission === "view_edit";
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -148,6 +184,11 @@ const ProductList = () => {
   const [tempFilters, setTempFilters] = useState(filters);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [assignCategoryOpen, setAssignCategoryOpen] = useState(false);
+  const [assignProjectOpen, setAssignProjectOpen] = useState(false);
+  const [selectedCategoryToAssign, setSelectedCategoryToAssign] = useState<any>(null);
+  const [selectedProjectToAssign, setSelectedProjectToAssign] = useState<any[]>([]);
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [currency, setCurrency] = useState("");
@@ -277,7 +318,7 @@ const ProductList = () => {
 
   const downloadSampleFile = () => {
     const link = document.createElement("a");
-    link.href = "/files/products_export.xlsx";
+    link.href = "/files/products_import.xlsx";
     link.download = "sample-file.xlsx";
     link.click();
   };
@@ -450,6 +491,12 @@ const ProductList = () => {
         setSuppliers(res.data.suppliers);
         setCategories(res.data.categories);
       }
+      const projectRes = await api.get(
+        `project/get?company_id=${user.company_id}`
+      );
+      if (projectRes.data) {
+        setProjects(projectRes.data.projects || projectRes.data.info || []);
+      }
     } catch (err) {
       console.error("Failed to fetch inventory resource", err);
     }
@@ -459,7 +506,7 @@ const ProductList = () => {
   const fetchProducts = async (restorePage?: number) => {
     setFetchProduct(true);
     try {
-      let url = `products/get?company_id=${user.company_id}&is_products=true&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      let url = `products/get?company_id=${user.company_id}&is_products=true&is_web=true&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
         url += `&search=${searchTerm}`;
       }
@@ -487,7 +534,8 @@ const ProductList = () => {
         setData(responseData);
 
         const pagMeta =
-          res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
+          res.data.data?.totalPages !== undefined ||
+          res.data.data?.totalItems !== undefined
             ? res.data.data
             : res.data.info && res.data.info.totalPages !== undefined
               ? res.data.info
@@ -545,7 +593,7 @@ const ProductList = () => {
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = `products_export.xlsx`;
+      a.download = `products_import.xlsx`;
       document.body.appendChild(a);
       a.click();
 
@@ -1101,16 +1149,18 @@ const ProductList = () => {
                 setOpenPreview(true);
               }}
             />
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedRow(item);
-                setOpenImageManager(true);
-              }}
-            >
-              <AddCircleOutlineIcon fontSize="small" />
-            </IconButton>
+            {canEdit && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedRow(item);
+                  setOpenImageManager(true);
+                }}
+              >
+                <AddCircleOutlineIcon fontSize="small" />
+              </IconButton>
+            )}
           </Stack>
         );
       },
@@ -1246,10 +1296,10 @@ const ProductList = () => {
 
         return (
           <Stack
-            sx={{ cursor: "pointer" }}
+            sx={{ cursor: canEdit ? "pointer" : "default" }}
             onClick={(e) => {
               e.stopPropagation();
-              handleEditCategories(item);
+              if (canEdit) handleEditCategories(item);
             }}
           >
             <Typography
@@ -1363,6 +1413,7 @@ const ProductList = () => {
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (!canEdit) return;
                   setEditing({ id: item.id, field: "max_stock" });
                   const initVal =
                     item.max_stock !== null && item.max_stock !== undefined
@@ -1504,6 +1555,7 @@ const ProductList = () => {
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (!canEdit) return;
                   setEditing({ id: item.id, field: "price" });
                   const initVal =
                     item.price !== null && item.price !== undefined
@@ -1634,6 +1686,7 @@ const ProductList = () => {
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (!canEdit) return;
                   setEditing({ id: item.id, field: "market_price" });
                   const initVal =
                     item.market_price !== null &&
@@ -1686,6 +1739,7 @@ const ProductList = () => {
           >
             <IOSSwitch
               checked={Boolean(item.is_sub_qty)}
+              disabled={!canEdit}
               onChange={async (e) => {
                 const checked = e.target.checked;
                 await updateSubQty(item.id, checked);
@@ -2316,6 +2370,113 @@ const ProductList = () => {
                   ))}
               </FormGroup>
             </Popover>
+            <Dialog open={assignCategoryOpen} onClose={() => setAssignCategoryOpen(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>Assign Category</DialogTitle>
+              <DialogContent>
+                <Autocomplete
+                  options={categories || []}
+                  getOptionLabel={(option: any) => option.name || ""}
+                  value={selectedCategoryToAssign}
+                  onChange={(event, newValue) => setSelectedCategoryToAssign(newValue)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Select Category"
+                      variant="outlined"
+                      fullWidth
+                      margin="normal"
+                    />
+                  )}
+                />
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setAssignCategoryOpen(false)} variant="outlined" color="error">Cancel</Button>
+                <Button
+                  onClick={async () => {
+                    if (!selectedCategoryToAssign) {
+                      toast.error("Please select a category");
+                      return;
+                    }
+                    try {
+                      const payload = {
+                        product_ids: Array.from(selectedRowIds),
+                        category_id: selectedCategoryToAssign.id,
+                      };
+                      const response = await api.post("products/bulk-assign-categories", payload);
+                      if(response.data.IsSuccess) {
+                        toast.success(response.data.message || "Assigned Successfully");
+                        setAssignCategoryOpen(false);
+                        setSelectedRowIds(new Set());
+                        fetchProducts();
+                      } else {
+                        toast.error(response.data.message || "Failed to assign category");
+                      }
+                    } catch (error) {
+                      toast.error("Failed to assign category");
+                    }
+                  }}
+                  variant="contained"
+                  color="primary"
+                >
+                  Assign
+                </Button>
+              </DialogActions>
+            </Dialog>
+
+            <Dialog open={assignProjectOpen} onClose={() => setAssignProjectOpen(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>Assign Project</DialogTitle>
+              <DialogContent>
+                <Autocomplete
+                  multiple
+                  options={projects || []}
+                  getOptionLabel={(option: any) => option.name || ""}
+                  value={selectedProjectToAssign}
+                  onChange={(event, newValue) => setSelectedProjectToAssign(newValue)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Select Projects"
+                      variant="outlined"
+                      fullWidth
+                      margin="normal"
+                    />
+                  )}
+                />
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setAssignProjectOpen(false)} variant="outlined" color="error">Cancel</Button>
+                <Button
+                  onClick={async () => {
+                    if (!selectedProjectToAssign || selectedProjectToAssign.length === 0) {
+                      toast.error("Please select at least one project");
+                      return;
+                    }
+                    try {
+                      const payload = {
+                        product_ids: Array.from(selectedRowIds),
+                        project_ids: selectedProjectToAssign.map((p: any) => p.id),
+                      };
+                      const response = await api.post("products/bulk-assign-projects", payload);
+                      if(response.data.IsSuccess) {
+                        toast.success(response.data.message || "Assigned Successfully");
+                        setAssignProjectOpen(false);
+                        setSelectedRowIds(new Set());
+                        setSelectedProjectToAssign([]);
+                        fetchProducts();
+                      } else {
+                        toast.error(response.data.message || "Failed to assign project");
+                      }
+                    } catch (error) {
+                      toast.error("Failed to assign project");
+                    }
+                  }}
+                  variant="contained"
+                  color="primary"
+                >
+                  Assign
+                </Button>
+              </DialogActions>
+            </Dialog>
             <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
               <DialogTitle>Confirm Archive</DialogTitle>
               <DialogContent>
@@ -2546,7 +2707,10 @@ const ProductList = () => {
               aria-controls={openMenu ? "basic-menu" : undefined}
               aria-haspopup="true"
               aria-expanded={openMenu ? "true" : undefined}
-              onClick={handleClick}
+              onClick={(e) => {
+                if (canEdit) handleClick(e);
+                else toast.error("You do not have permission to do this.");
+              }}
             >
               <IconDotsVertical width={18} />
             </IconButton>
@@ -2630,6 +2794,36 @@ const ProductList = () => {
                   Archived Product list
                 </Link>
               </MenuItem>
+              {selectedRowIds.size > 0 && (
+                <MenuItem onClick={() => { handleClose(); setAssignCategoryOpen(true); }}>
+                  <Link
+                    color="body1"
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); }}
+                    style={{ width: "100%", color: "#11142D", textTransform: "none", display: "flex", alignItems: "center" }}
+                  >
+                    <ListItemIcon>
+                      <IconLayersIntersect width={18} />
+                    </ListItemIcon>
+                    Assign Category
+                  </Link>
+                </MenuItem>
+              )}
+              {selectedRowIds.size > 0 && (
+                <MenuItem onClick={() => { handleClose(); setAssignProjectOpen(true); }}>
+                  <Link
+                    color="body1"
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); }}
+                    style={{ width: "100%", color: "#11142D", textTransform: "none", display: "flex", alignItems: "center" }}
+                  >
+                    <ListItemIcon>
+                      <IconLayersIntersect width={18} />
+                    </ListItemIcon>
+                    Assign Project
+                  </Link>
+                </MenuItem>
+              )}
             </Menu>
 
             {/* Filter Dialog */}
@@ -2759,6 +2953,7 @@ const ProductList = () => {
           handleSubmit={handleSubmit}
           isSaving={isSaving}
           companyId={user?.company_id ?? null}
+          canEdit={canEdit}
         />
 
         {/* Archive Product List */}
@@ -2789,174 +2984,195 @@ const ProductList = () => {
           onClose={handlePriceClose}
           product={selectedProduct}
         />
+        {!canView && !isAdmin && productPermission == null ? (
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              overflow: "auto",
+              textAlign: "center",
+              mt: "20%",
+            }}
+          >
+            <Typography variant="h5">
+              You don't have permission to view products.
+            </Typography>
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              overflow: "auto",
+            }}
+          >
+            <TableContainer ref={tableContainerRef}>
+              <Table stickyHeader aria-label="sticky table">
+                <TableHead>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => {
+                        const isActive = header.column.getIsSorted();
+                        const isAsc = header.column.getIsSorted() === "asc";
+                        const isSortable = header.column.getCanSort();
 
-        <Box
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            overflow: "auto",
-          }}
-        >
-          <TableContainer ref={tableContainerRef}>
-            <Table stickyHeader aria-label="sticky table">
-              <TableHead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      const isActive = header.column.getIsSorted();
-                      const isAsc = header.column.getIsSorted() === "asc";
-                      const isSortable = header.column.getCanSort();
-
-                      return (
-                        <TableCell
-                          key={header.id}
-                          sx={{
-                            paddingTop: "10px",
-                            paddingBottom: "10px",
-                            width:
-                              header.column.id === "actions" ||
-                              header.column.id === "price" ||
-                              header.column.id === "barcode"
-                                ? 80
-                                : header.column.id === "QrCode"
-                                  ? 120
-                                  : header.column.id === "supplierCode"
-                                    ? 140
-                                    : header.column.id === "select"
-                                      ? 30
-                                      : "auto",
-
-                            ...(header.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 3,
-                              boxShadow: isScrollable
-                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                                : "none",
-                            }),
-                          }}
-                        >
-                          <Box
-                            onClick={header.column.getToggleSortingHandler()}
-                            p={0}
+                        return (
+                          <TableCell
+                            key={header.id}
                             sx={{
-                              cursor: isSortable ? "pointer" : "default",
-                              border: "2px solid transparent",
-                              borderRadius: "6px",
-                              display: "flex",
-                              justifyContent: "flex-start",
-                              "&:hover": { color: "#888" },
-                              "&:hover .hoverIcon": { opacity: 1 },
+                              paddingTop: "10px",
+                              paddingBottom: "10px",
+                              width:
+                                header.column.id === "actions" ||
+                                header.column.id === "price" ||
+                                header.column.id === "barcode"
+                                  ? 80
+                                  : header.column.id === "QrCode"
+                                    ? 120
+                                    : header.column.id === "supplierCode"
+                                      ? 140
+                                      : header.column.id === "select"
+                                        ? 30
+                                        : "auto",
+
+                              ...(header.column.id === "actions" && {
+                                position: "sticky",
+                                right: 0,
+                                backgroundColor: "background.paper",
+                                zIndex: 3,
+                                boxShadow: isScrollable
+                                  ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                  : "none",
+                              }),
                             }}
                           >
-                            <Typography variant="subtitle2">
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext(),
-                              )}
-                            </Typography>
-                            {isSortable && (
-                              <Box
-                                component="span"
-                                className="hoverIcon"
-                                ml={0.5}
-                                sx={{
-                                  transition: "opacity 0.2s",
-                                  opacity: isActive ? 1 : 0,
-                                  fontSize: "0.9rem",
-                                  color: isActive ? "#000" : "#888",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                              </Box>
-                            )}
-                          </Box>
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-              </TableHead>
-              <TableBody>
-                {fetchProduct ? (
-                  <SkeletonLoader
-                    columns={simpleColumns}
-                    rowCount={simpleColumns.length}
-                  />
-                ) : data.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          height: "calc(50vh - 100px)",
-                        }}
-                      >
-                        <Image
-                          src="/images/no-data.png"
-                          alt="No data"
-                          style={{
-                            maxWidth: "100%",
-                            maxHeight: "100%",
-                          }}
-                          width={200}
-                          height={200}
-                        />
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  table.getRowModel().rows.map((row) => {
-                    const item = row.original;
-
-                    return (
-                      <TableRow
-                        key={row.id}
-                        hover
-                        sx={{
-                          cursor: "pointer",
-                        }}
-                      >
-                        {row.getVisibleCells().map((cell) => {
-                          return (
-                            <TableCell
-                              key={cell.id}
+                            <Box
+                              onClick={header.column.getToggleSortingHandler()}
+                              p={0}
                               sx={{
-                                ...(cell.column.id === "actions" && {
-                                  position: "sticky",
-                                  right: 0,
-                                  backgroundColor: "background.paper",
-                                  zIndex: 1,
-                                  boxShadow: isScrollable
-                                    ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                                    : "none",
-                                }),
+                                cursor: isSortable ? "pointer" : "default",
+                                border: "2px solid transparent",
+                                borderRadius: "6px",
+                                display: "flex",
+                                justifyContent: "flex-start",
+                                "&:hover": { color: "#888" },
+                                "&:hover .hoverIcon": { opacity: 1 },
                               }}
                             >
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext(),
+                              <Typography variant="subtitle2">
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext(),
+                                )}
+                              </Typography>
+                              {isSortable && (
+                                <Box
+                                  component="span"
+                                  className="hoverIcon"
+                                  ml={0.5}
+                                  sx={{
+                                    transition: "opacity 0.2s",
+                                    opacity: isActive ? 1 : 0,
+                                    fontSize: "0.9rem",
+                                    color: isActive ? "#000" : "#888",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                  }}
+                                >
+                                  {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                                </Box>
                               )}
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          {data.length ? <Divider /> : <></>}
-        </Box>
-        <Divider />
-        <TablePaginationFooter table={table} totalRows={totalRows} />
+                            </Box>
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableHead>
+                <TableBody>
+                  {fetchProduct ? (
+                    <SkeletonLoader
+                      columns={simpleColumns}
+                      rowCount={simpleColumns.length}
+                    />
+                  ) : data.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={columns.length}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            height: "calc(50vh - 100px)",
+                          }}
+                        >
+                          <Image
+                            src="/images/no-data.png"
+                            alt="No data"
+                            style={{
+                              maxWidth: "100%",
+                              maxHeight: "100%",
+                            }}
+                            width={200}
+                            height={200}
+                          />
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    table.getRowModel().rows.map((row) => {
+                      const item = row.original;
+
+                      return (
+                        <TableRow
+                          key={row.id}
+                          hover
+                          sx={{
+                            cursor: "pointer",
+                          }}
+                        >
+                          {row.getVisibleCells().map((cell) => {
+                            return (
+                              <TableCell
+                                key={cell.id}
+                                sx={{
+                                  ...(cell.column.id === "actions" && {
+                                    position: "sticky",
+                                    right: 0,
+                                    backgroundColor: "background.paper",
+                                    zIndex: 1,
+                                    boxShadow: isScrollable
+                                      ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                      : "none",
+                                  }),
+                                }}
+                              >
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext(),
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {data.length ? <Divider /> : <></>}
+          </Box>
+        )}
+        {!canView && !isAdmin && productPermission == null ? (
+          <></>
+        ) : (
+          <>
+            <Divider />
+            <TablePaginationFooter table={table} totalRows={totalRows} />
+          </>
+        )}
         <Settings
           settingOpen={settingOpen}
           onClose={() => setSettingOpen(false)}

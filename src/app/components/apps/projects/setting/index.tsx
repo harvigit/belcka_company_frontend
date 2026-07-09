@@ -15,10 +15,10 @@ import {
 import CreateWork from './menus/tasks/list';
 import LocationList from './menus/locations/list';
 
-const menuItems = [
-    { icon: <IconNotebook size={18} />, label: "Templates" },
-    { icon: <IconMap size={18} />, label: "Locations" },
-];
+// const menuItems = [
+//     { icon: <IconNotebook size={18} />, label: "Templates" },
+//     { icon: <IconMap size={18} />, label: "Locations" },
+// ];
 
 interface SettingsProps {
     settingOpen: boolean;
@@ -101,7 +101,7 @@ const Index: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                             },
                         }}
                     >
-                        {menuItems.map((item, i) => (
+                        {/* {menuItems.map((item, i) => (
                             <Box
                                 key={i}
                                 sx={{
@@ -121,7 +121,7 @@ const Index: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                                 {item.icon}
                                 {item.label}
                             </Box>
-                        ))}
+                        ))} */}
                     </Box>
 
                     <Box
@@ -132,12 +132,12 @@ const Index: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                             overflow: "hidden",
                         }}
                     >
-                        {activeMenuItem === "Templates" && (
+                        {/* {activeMenuItem === "Templates" && (
                             <CreateWork />
                         )}
                         {activeMenuItem === "Locations" && (
                             <LocationList />
-                        )}
+                        )} */}
                     </Box>
                 </Box>
             </Drawer>

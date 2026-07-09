@@ -906,7 +906,7 @@ const OtherProductsDrawer = ({
                 href="#"
                 onClick={() => {
                   const link = document.createElement("a");
-                  link.href = "/files/other_products_export.xlsx";
+                  link.href = "/files/other_products_import.xlsx";
                   link.download = "sample-file.xlsx";
                   link.click();
                 }}

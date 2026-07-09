@@ -1,29 +1,27 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Box,
-  Drawer,
-  Typography,
-} from "@mui/material";
+import { Box, Drawer, Typography } from "@mui/material";
 import {
   IconSettings,
   IconCoin,
   IconBuildingStore,
   IconRulerMeasure,
   IconDatabase,
-} from '@tabler/icons-react';
+} from "@tabler/icons-react";
 
 import TeamPricing from "@/app/components/apps/team-pricing/index";
 import StoreSettings from "@/app/components/apps/settings/store-settings";
 import UnitList from "../../units/list";
 import StoreLimit from "./store-limit";
+import ProductSetting from "../../timesheet/setting/product-settings";
 
 const menuItems = [
   { icon: <IconCoin size={18} />, label: "Team Pricing" },
   { icon: <IconBuildingStore size={18} />, label: "Store Settings" },
   { icon: <IconDatabase size={18} />, label: "Store Limit" },
   { icon: <IconRulerMeasure size={18} />, label: "Units" },
+  { icon: <IconSettings size={18} />, label: "Product Permissions" },
 ];
 
 interface SettingsProps {
@@ -60,10 +58,10 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
           justifyContent="center"
           alignItems="center"
           sx={{
-            borderBottom: '1px solid #e0e0e0',
+            borderBottom: "1px solid #e0e0e0",
             p: 2,
             gap: 1,
-            color: '#7D92A9',
+            color: "#7D92A9",
             position: "sticky",
             top: 0,
             zIndex: 1000,
@@ -75,11 +73,7 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
         </Box>
 
         {/* Main Content */}
-        <Box
-          display="flex"
-          flex="1"
-          sx={{ overflow: "hidden" }}
-        >
+        <Box display="flex" flex="1" sx={{ overflow: "hidden" }}>
           <Box
             sx={{
               width: 240,
@@ -87,18 +81,18 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
               p: 1,
               overflowY: "auto",
               bgcolor: "#fff",
-              '&::-webkit-scrollbar': {
-                width: '6px',
+              "&::-webkit-scrollbar": {
+                width: "6px",
               },
-              '&::-webkit-scrollbar-track': {
-                background: 'transparent',
+              "&::-webkit-scrollbar-track": {
+                background: "transparent",
               },
-              '&::-webkit-scrollbar-thumb': {
-                background: '#c1c1c1',
-                borderRadius: '3px',
+              "&::-webkit-scrollbar-thumb": {
+                background: "#c1c1c1",
+                borderRadius: "3px",
               },
-              '&::-webkit-scrollbar-thumb:hover': {
-                background: '#a8a8a8',
+              "&::-webkit-scrollbar-thumb:hover": {
+                background: "#a8a8a8",
               },
             }}
           >
@@ -109,13 +103,14 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                   p: 1,
                   borderRadius: 1,
                   cursor: "pointer",
-                  bgcolor: activeMenuItem === item.label ? "#eaf5ff" : "transparent",
+                  bgcolor:
+                    activeMenuItem === item.label ? "#eaf5ff" : "transparent",
                   display: "flex",
                   alignItems: "center",
                   gap: 1,
                   "&:hover": { bgcolor: "#f6f7f7" },
                   fontSize: 14,
-                  color: activeMenuItem === item.label ? '#203040' : '#7D92A9',
+                  color: activeMenuItem === item.label ? "#203040" : "#7D92A9",
                 }}
                 onClick={() => handleMenuItemClick(item.label)}
               >
@@ -133,18 +128,11 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
               overflow: "hidden",
             }}
           >
-            {activeMenuItem === "Team Pricing" && (
-              <TeamPricing />
-            )}
-            {activeMenuItem === "Store Settings" && (
-              <StoreSettings />
-            )}
-            {activeMenuItem === "Store Limit" && (
-              <StoreLimit />
-            )}
-            {activeMenuItem === "Units" && (
-              <UnitList />
-            )}
+            {activeMenuItem === "Team Pricing" && <TeamPricing />}
+            {activeMenuItem === "Store Settings" && <StoreSettings />}
+            {activeMenuItem === "Store Limit" && <StoreLimit />}
+            {activeMenuItem === "Units" && <UnitList />}
+            {activeMenuItem === "Product Permissions" && <ProductSetting />}
           </Box>
         </Box>
       </Drawer>

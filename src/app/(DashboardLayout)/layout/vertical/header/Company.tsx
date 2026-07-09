@@ -1,12 +1,16 @@
 "use client";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useEffect } from "react";
-import { Box, Grid } from "@mui/system";
+import { Box, Grid, Stack } from "@mui/system";
 import {
   Avatar,
   Badge,
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   Drawer,
   IconButton,
@@ -24,6 +28,7 @@ import toast from "react-hot-toast";
 import {
   IconArrowLeft,
   IconBell,
+  IconFilter,
   IconNotes,
   IconPlus,
   IconSpeakerphone,
@@ -111,8 +116,18 @@ const Company = () => {
   const limit = 20;
   const [loadingFeeds, setLoadingFeeds] = useState(false);
   const [openCompanyDrawer, setOpenCompanyDrawer] = useState(false);
+  const [teams, setTeams] = useState<any[]>([]);
+  const [trade, setTrade] = useState<any[]>([]);
 
-  const user = session.data?.user as User & { company_id?: string | number | null } & {
+  const [open, setOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    team: "",
+    trade: "",
+  });
+  const [tempFilters, setTempFilters] = useState(filters);
+  const user = session.data?.user as User & {
+    company_id?: string | number | null;
+  } & {
     company_name?: string | null;
   } & {
     company_image?: string | null;
@@ -162,6 +177,42 @@ const Company = () => {
     fetchCompanies();
   }, [user?.company_id, user?.id]);
 
+  useEffect(() => {
+    const fetchTrades = async () => {
+      try {
+        const res = await api.get(
+          `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
+        );
+        if (res.data) setTrade(res.data.info);
+      } catch (err) {
+        console.error("Failed to fetch trades", err);
+      }
+    };
+
+    const fetchTeams = async () => {
+      try {
+        const res = await api.get(
+          `get-company-resources?flag=teamList&company_id=${user.company_id}`,
+        );
+        if (res.data) setTeams(res.data.info);
+      } catch (err) {
+        console.error("Failed to fetch teams", err);
+      }
+    };
+    fetchTeams();
+    fetchTrades();
+  }, [user?.company_id]);
+
+  const uniqueTeams = useMemo(
+    () => [...new Set(teams.map((item) => item.name).filter(Boolean))],
+    [teams],
+  );
+
+  const uniqueTrades = useMemo(
+    () => [...new Set(trade.map((item) => item.name).filter(Boolean))],
+    [trade],
+  );
+
   const fetchFeeds = async () => {
     if (!user?.company_id || !user?.id) return;
     setLoadingFeeds(true);
@@ -169,9 +220,22 @@ const Company = () => {
       const dateRange = loadRequestDateRange();
 
       let url = `get-feeds?company_id=${user.company_id}&user_id=${user.id}`;
-      if (dateRange?.startDate && dateRange?.endDate) {
-        url += `&start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`;
+
+      if (filters.team && filters.team !== "All") {
+        const teamsId = teams.find((c) => c.name === filters.team)?.id;
+        if (teamsId) {
+          url += `&team_id=${teamsId}`;
+        }
       }
+      if (filters.trade && filters.trade !== "All") {
+        const tradeId = trade.find((c) => c.name === filters.trade)?.id;
+        if (tradeId) {
+          url += `&trade_id=${tradeId}`;
+        }
+      }
+      // if (dateRange?.startDate && dateRange?.endDate) {
+      //   url += `&start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`;
+      // }
       const res = await api.get(url);
 
       const feeds = res.data?.info ?? [];
@@ -191,15 +255,10 @@ const Company = () => {
     setLoadingFeeds(true);
   };
 
-  const hasFetched = useRef(false);
-
   useEffect(() => {
     if (!user?.company_id || !user?.id) return;
-    if (hasFetched.current) return;
-
-    hasFetched.current = true;
     fetchFeeds();
-  }, [user?.company_id, user?.id]);
+  }, [user?.company_id, user?.id, filters]);
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -571,7 +630,108 @@ const Company = () => {
                       <MenuItem value="Zone">Zone</MenuItem>
                       <MenuItem value="Order">Order</MenuItem>
                     </TextField>
+
+                    <Button variant="contained" onClick={() => setOpen(true)} sx={{ ml: 2}}>
+                      <IconFilter width={18} />
+                    </Button>
                   </Box>
+
+                  <Dialog
+                    open={open}
+                    onClose={() => setOpen(false)}
+                    fullWidth
+                    maxWidth="sm"
+                  >
+                    <DialogTitle
+                      sx={{ m: 0, position: "relative", overflow: "visible" }}
+                    >
+                      Filters
+                      <IconButton
+                        aria-label="close"
+                        onClick={() => setOpen(false)}
+                        size="large"
+                        sx={{
+                          position: "absolute",
+                          right: 12,
+                          top: 8,
+                          color: (theme) => theme.palette.grey[900],
+                          backgroundColor: "transparent",
+                          zIndex: 10,
+                          width: 50,
+                          height: 50,
+                        }}
+                      >
+                        <IconX size={40} style={{ width: 40, height: 40 }} />
+                      </IconButton>
+                    </DialogTitle>
+
+                    <DialogContent>
+                      <Stack spacing={2} mt={1}>
+                        <TextField
+                          select
+                          label="Team"
+                          value={tempFilters.team}
+                          onChange={(e) =>
+                            setTempFilters({
+                              ...tempFilters,
+                              team: e.target.value,
+                            })
+                          }
+                        >
+                          <MenuItem value="All">All</MenuItem>
+                          {uniqueTeams.map((team) => (
+                            <MenuItem key={team} value={team}>
+                              {team}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                        <TextField
+                          select
+                          label="Trade"
+                          value={tempFilters.trade}
+                          onChange={(e) =>
+                            setTempFilters({
+                              ...tempFilters,
+                              trade: e.target.value,
+                            })
+                          }
+                        >
+                          <MenuItem value="All">All</MenuItem>
+                          {uniqueTrades.map((team) => (
+                            <MenuItem key={team} value={team}>
+                              {team}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                      </Stack>
+                    </DialogContent>
+
+                    <DialogActions>
+                      <Button
+                        onClick={() => {
+                          setTempFilters({
+                            team: "",
+                            trade: "",
+                          });
+                          setFilters({ team: "", trade: "" });
+                          setOpen(false);
+                        }}
+                        color="inherit"
+                      >
+                        Clear
+                      </Button>
+                      <Button
+                        variant="contained"
+                        onClick={() => {
+                          setFilters(tempFilters);
+                          setOpen(false);
+                        }}
+                      >
+                        Apply
+                      </Button>
+                    </DialogActions>
+                  </Dialog>
+
                   <Box
                     display="flex"
                     width={"100%"}
@@ -634,10 +794,10 @@ const Company = () => {
                               } else if (item.request_name === "Shift") {
                                 const dateAdded = item.date
                                   ? parse(
-                                    item.date,
-                                    "d MMMM yyyy HH:mm",
-                                    new Date(),
-                                  )
+                                      item.date,
+                                      "d MMMM yyyy HH:mm",
+                                      new Date(),
+                                    )
                                   : undefined;
 
                                 const formattedDate = dateAdded
@@ -655,10 +815,10 @@ const Company = () => {
                               } else if (item.request_name === "Expense") {
                                 const dateAdded = item.date_added
                                   ? parse(
-                                    item.date_added,
-                                    "d MMMM yyyy HH:mm",
-                                    new Date(),
-                                  )
+                                      item.date_added,
+                                      "d MMMM yyyy HH:mm",
+                                      new Date(),
+                                    )
                                   : undefined;
 
                                 const formattedDate = dateAdded
@@ -676,10 +836,10 @@ const Company = () => {
                               } else if (item.request_name === "Leave") {
                                 const dateAdded = item.date_added
                                   ? parse(
-                                    item.date_added,
-                                    "d MMMM yyyy HH:mm",
-                                    new Date(),
-                                  )
+                                      item.date_added,
+                                      "d MMMM yyyy HH:mm",
+                                      new Date(),
+                                    )
                                   : undefined;
 
                                 const formattedDate = dateAdded

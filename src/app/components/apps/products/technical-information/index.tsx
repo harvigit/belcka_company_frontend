@@ -27,6 +27,7 @@ interface Props {
   productId?: number | null;
   attachments?: any[];
   onWorkUpdated?: () => void;
+  canEdit?: boolean;
 }
 
 interface UploadedFile {
@@ -39,6 +40,7 @@ export default function ProductTechnicalInformation({
   productId,
   attachments = [],
   onWorkUpdated,
+  canEdit,
 }: Props) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [existingFiles, setExistingFiles] = useState<any[]>([]);
@@ -193,8 +195,9 @@ export default function ProductTechnicalInformation({
         size="small"
         onClick={(e) => {
           e.stopPropagation();
-          onDelete();
-        }}
+          if (canEdit !== false) onDelete();
+        }} 
+        disabled={canEdit === false}
         sx={{
           position: "absolute",
           top: 6,
@@ -215,28 +218,32 @@ export default function ProductTechnicalInformation({
 
       {/* Upload */}
       <Box>
-        <input
-          hidden
-          id="upload-file"
-          type="file"
-          multiple
-          accept=".jpg,.jpeg,.png,.pdf"
-          onChange={handleFileSelect}
-        />
+        {canEdit !== false && (
+          <>
+            <input
+              hidden
+              id="upload-file"
+              type="file"
+              multiple
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={handleFileSelect}
+            />
 
-        <label htmlFor="upload-file">
-          <Button
-            component="span"
-            variant="outlined"
-            startIcon={<IconUpload size={18} />}
-          >
-            Upload Files
-          </Button>
-        </label>
+            <label htmlFor="upload-file">
+              <Button
+                component="span"
+                variant="outlined"
+                startIcon={<IconUpload size={18} />}
+              >
+                Upload Files
+              </Button>
+            </label>
 
-        <Typography variant="caption" display="block" mt={1}>
-          jpg, jpeg, png, pdf allowed
-        </Typography>
+            <Typography variant="caption" display="block" mt={1}>
+              jpg, jpeg, png, pdf allowed
+            </Typography>
+          </>
+        )}
       </Box>
 
       {/* Existing */}
@@ -292,7 +299,7 @@ export default function ProductTechnicalInformation({
       )}
 
       {/* Save */}
-      {hasChanges && (
+      {hasChanges && canEdit !== false && (
         <Box pt={2}>
           <Button
             variant="contained"

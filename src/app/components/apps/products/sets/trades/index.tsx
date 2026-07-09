@@ -17,11 +17,13 @@ import { User } from "next-auth";
 interface ProductTradesProps {
   companyId: number | null;
   productId?: number | null;
+  canEdit?: boolean;
 }
 
 const ProductTrades: React.FC<ProductTradesProps> = ({
   companyId,
   productId,
+  canEdit,
 }) => {
   const [trades, setTrades] = useState<any[]>([]);
   const [product, setProducts] = useState<any[]>([]);
@@ -116,7 +118,7 @@ const ProductTrades: React.FC<ProductTradesProps> = ({
           variant="contained"
           color="primary"
           onClick={handleSave}
-          disabled={loading}
+          disabled={loading || canEdit === false}
         >
           {loading ? "Saving..." : "Save"}
         </Button>
@@ -170,7 +172,8 @@ const ProductTrades: React.FC<ProductTradesProps> = ({
                 control={
                   <CustomCheckbox
                     checked={selectedIds.includes(trade.id)}
-                    onChange={() => handleCheckboxChange(trade.id)}
+                    onChange={() => { if (canEdit !== false) handleCheckboxChange(trade.id); }}
+                    disabled={canEdit === false}
                   />
                 }
               />
