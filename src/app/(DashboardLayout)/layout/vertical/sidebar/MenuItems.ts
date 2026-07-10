@@ -21,6 +21,7 @@ import {
   IconUsers,
   IconArrowsShuffle,
   IconReport,
+  IconDoorExit,
   IconHome2,
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
@@ -61,6 +62,13 @@ const MenuItems: NavGroup[] = [
     slug: "bookkeper",
     icon: IconTicket,
     href: "/apps/timesheet/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Leaves",
+    slug: "leaves",
+    icon: IconDoorExit,
+    href: "/apps/leaves/list",
   },
   {
     id: uniqueId(),
