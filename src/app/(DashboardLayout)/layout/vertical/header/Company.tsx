@@ -224,13 +224,13 @@ const Company = () => {
       if (filters.team && filters.team !== "All") {
         const teamsId = teams.find((c) => c.name === filters.team)?.id;
         if (teamsId) {
-          url += `&team_id=${teamsId}`;
+          url += `&team_ids=${teamsId}`;
         }
       }
       if (filters.trade && filters.trade !== "All") {
         const tradeId = trade.find((c) => c.name === filters.trade)?.id;
         if (tradeId) {
-          url += `&trade_id=${tradeId}`;
+          url += `&trade_ids=${tradeId}`;
         }
       }
       // if (dateRange?.startDate && dateRange?.endDate) {

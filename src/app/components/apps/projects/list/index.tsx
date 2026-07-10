@@ -18,6 +18,9 @@ export type ProjectList = {
   edited_by?: string | null;
   edited_at?: string | null;
   editedBy?: string | null;
+  project_name: string | null;
+  case_id: string | null;
+  ref: string | null;
 };
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -51,6 +54,7 @@ import {
   Popover,
   FormGroup,
   Chip,
+  Divider,
 } from "@mui/material";
 import {
   IconMapPin,
@@ -86,6 +90,7 @@ import Setting from "@/app/components/apps/projects/setting";
 import ArchiveProject from "../../addresses/list/archive-project-list";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import PermissionGuard from "@/app/auth/PermissionGuard";
 dayjs.extend(customParseFormat);
 
 const columnHelper = createColumnHelper<any>();
@@ -569,6 +574,19 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                   <IconBookmark size={18} />
                 </IconButton>
               </Tooltip>
+
+              <Tooltip title="Map">
+                <IconButton
+                  color="error"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveProjectId(item.id);
+                    setMapOpen(true);
+                  }}
+                >
+                  <IconMapPin size={18} />
+                </IconButton>
+              </Tooltip>
             </Stack>
           );
         },
@@ -602,61 +620,64 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   }));
 
   return (
-    <Box p={2}>
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-        alignItems="center"
-        mb={3}
-        spacing={2}
+    <PermissionGuard permission="Projects">
+      <Box
+        sx={{
+          height: "calc(100vh - 100px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
       >
-        <Box display="flex" gap={1} alignItems="center">
-          <TextField
-            size="small"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconSearch size={16} />
-                </InputAdornment>
-              ),
-            }}
-          />
-          {/* <Tooltip title="Chart">
+        <Stack
+          mr={2}
+          ml={2}
+          mb={2}
+          justifyContent="space-between"
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 1, sm: 2, md: 4 }}
+        >
+          <Box display="flex" gap={1} alignItems="center">
+            <TextField
+              size="small"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconSearch size={16} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            {/* <Tooltip title="Chart">
             <IconButton color="primary" onClick={() => setDetailsOpen(true)}>
               <IconChartPie size={24} />
             </IconButton>
           </Tooltip> */}
-          <Tooltip title="Map">
-            <IconButton color="primary" onClick={() => setMapOpen(true)}>
-              <IconMapPin size={24} />
-            </IconButton>
-          </Tooltip>
-        </Box>
+          </Box>
 
-        <Box display="flex" alignItems="center">
-          <Button
-            color="primary"
-            variant="outlined"
-            onClick={() => setOpenDrawer(true)}
-          >
-            Activity
-          </Button>
-          {selectedRowIds.size > 0 && (
+          <Box display="flex" alignItems="center">
             <Button
+              color="primary"
               variant="outlined"
-              color="error"
-              startIcon={<IconTrash width={18} />}
-              onClick={() => setOpenDialog(true)}
-              sx={{ ml: 2 }}
+              onClick={() => setOpenDrawer(true)}
             >
-              Archive
+              Activity
             </Button>
-          )}
+            {selectedRowIds.size > 0 && (
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<IconTrash width={18} />}
+                onClick={() => setOpenDialog(true)}
+                sx={{ ml: 2 }}
+              >
+                Archive
+              </Button>
+            )}
 
-          {/* <Tooltip title="Settings">
+            {/* <Tooltip title="Settings">
             <IconButton
               color="primary"
               size="small"
@@ -665,803 +686,812 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
               <IconSettings size={24} />
             </IconButton>
           </Tooltip> */}
-          <IconButton
-            onClick={handlePopoverOpen}
-            sx={{ ml: 1 }}
-            color="primary"
-          >
-            <IconEye />
-          </IconButton>
-          <Popover
-            open={Boolean(anchorEl2)}
-            anchorEl={anchorEl2}
-            onClose={handlePopoverClose}
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-            transformOrigin={{ vertical: "top", horizontal: "right" }}
-            PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
-          >
-            <TextField
-              size="small"
-              placeholder="Search"
-              fullWidth
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              sx={{ mb: 1 }}
-            />
-            <FormGroup>
-              {table
-                .getAllLeafColumns()
-                .filter((col: any) => {
-                  const excludedColumns = ["conflicts", "select"];
-                  if (excludedColumns.includes(col.id)) return false;
-
-                  return col.id.toLowerCase().includes(search.toLowerCase());
-                })
-                .map((col: any) => (
-                  <FormControlLabel
-                    key={col.id}
-                    control={
-                      <CustomCheckbox
-                        checked={col.getIsVisible()}
-                        onChange={col.getToggleVisibilityHandler()}
-                        disabled={col.id === "conflicts"}
-                      />
-                    }
-                    sx={{ textTransform: "none" }}
-                    label={
-                      col.columnDef.meta?.label ||
-                      (typeof col.columnDef.header === "string" &&
-                      col.columnDef.header.trim() !== ""
-                        ? col.columnDef.header
-                        : col.id
-                            .replace(/([A-Z])/g, " $1")
-                            .replace(/^./, (str: string) => str.toUpperCase())
-                            .trim())
-                    }
-                  />
-                ))}
-            </FormGroup>
-          </Popover>
-
-          <IconButton onClick={handleClick} size="small">
-            <IconDotsVertical width={20} />
-          </IconButton>
-          <Menu anchorEl={anchorEl} open={openMenu} onClose={handleClose}>
-            <MenuItem onClick={handleCreate}>
-              <ListItemIcon>
-                <IconPlus width={18} />
-              </ListItemIcon>
-              Add Project
-            </MenuItem>
-
-            <MenuItem
-              onClick={() => {
-                handleClose();
-                setArchiveListOpen(true);
-              }}
+            <IconButton
+              onClick={handlePopoverOpen}
+              sx={{ ml: 1 }}
+              color="primary"
             >
-              <ListItemIcon>
-                <IconNotes width={18} />
-              </ListItemIcon>
-              Archived project list
-            </MenuItem>
-          </Menu>
-        </Box>
-      </Stack>
+              <IconEye />
+            </IconButton>
+            <Popover
+              open={Boolean(anchorEl2)}
+              anchorEl={anchorEl2}
+              onClose={handlePopoverClose}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+              PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+            >
+              <TextField
+                size="small"
+                placeholder="Search"
+                fullWidth
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                sx={{ mb: 1 }}
+              />
+              <FormGroup>
+                {table
+                  .getAllLeafColumns()
+                  .filter((col: any) => {
+                    const excludedColumns = ["conflicts", "select"];
+                    if (excludedColumns.includes(col.id)) return false;
 
-      <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-        <TableContainer ref={tableContainerRef}>
-          <Table stickyHeader aria-label="sticky table">
-            <TableHead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const isActive = header.column.getIsSorted();
-                    const isAsc = header.column.getIsSorted() === "asc";
-                    const isSortable = header.column.getCanSort();
+                    return col.id.toLowerCase().includes(search.toLowerCase());
+                  })
+                  .map((col: any) => (
+                    <FormControlLabel
+                      key={col.id}
+                      control={
+                        <CustomCheckbox
+                          checked={col.getIsVisible()}
+                          onChange={col.getToggleVisibilityHandler()}
+                          disabled={col.id === "conflicts"}
+                        />
+                      }
+                      sx={{ textTransform: "none" }}
+                      label={
+                        col.columnDef.meta?.label ||
+                        (typeof col.columnDef.header === "string" &&
+                        col.columnDef.header.trim() !== ""
+                          ? col.columnDef.header
+                          : col.id
+                              .replace(/([A-Z])/g, " $1")
+                              .replace(/^./, (str: string) => str.toUpperCase())
+                              .trim())
+                      }
+                    />
+                  ))}
+              </FormGroup>
+            </Popover>
 
-                    return (
-                      <TableCell
-                        key={header.id}
-                        align="center"
-                        sx={{
-                          paddingTop: "10px",
-                          paddingBottom: "10px",
-                          width: header.column.id === "select" ? 30 : "auto",
+            <IconButton onClick={handleClick} size="small">
+              <IconDotsVertical width={20} />
+            </IconButton>
+            <Menu anchorEl={anchorEl} open={openMenu} onClose={handleClose}>
+              <MenuItem onClick={handleCreate}>
+                <ListItemIcon>
+                  <IconPlus width={18} />
+                </ListItemIcon>
+                Add Project
+              </MenuItem>
 
-                          ...(header.column.id === "actions" && {
-                            position: "sticky",
-                            right: 0,
-                            backgroundColor: "background.paper",
-                            zIndex: 3,
-                            boxShadow: isScrollable
-                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                              : "none",
-                          }),
-                        }}
-                      >
-                        <Box
-                          onClick={
-                            isSortable
-                              ? header.column.getToggleSortingHandler()
-                              : undefined
-                          }
+              <MenuItem
+                onClick={() => {
+                  handleClose();
+                  setArchiveListOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <IconNotes width={18} />
+                </ListItemIcon>
+                Archived project list
+              </MenuItem>
+            </Menu>
+          </Box>
+        </Stack>
+        <Divider />
+
+        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+          <TableContainer ref={tableContainerRef}>
+            <Table stickyHeader aria-label="sticky table">
+              <TableHead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const isActive = header.column.getIsSorted();
+                      const isAsc = header.column.getIsSorted() === "asc";
+                      const isSortable = header.column.getCanSort();
+
+                      return (
+                        <TableCell
+                          key={header.id}
+                          align="center"
                           sx={{
-                            cursor: isSortable ? "pointer" : "default",
-                            display: "flex",
-                            alignItems: "center",
-                            "&:hover": {
-                              color: isSortable ? "#888" : "inherit",
-                            },
-                            "&:hover .hoverIcon": { opacity: 1 },
+                            paddingTop: "10px",
+                            paddingBottom: "10px",
+                            width: header.column.id === "select" ? 30 : "auto",
+
+                            ...(header.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 3,
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
                           }}
                         >
-                          <Typography variant="subtitle2">
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
-                          </Typography>
-                          {isSortable && (
-                            <Box
-                              component="span"
-                              className="hoverIcon"
-                              ml={0.5}
-                              sx={{
-                                transition: "opacity 0.2s",
-                                opacity: isActive ? 1 : 0,
-                                fontSize: "0.9rem",
-                                color: isActive ? "#000" : "#888",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <SkeletonLoader
-                  columns={simpleColumns}
-                  rowCount={simpleColumns.length}
-                />
-              ) : table.getRowModel().rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={columns.length}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "calc(50vh - 100px)",
-                      }}
-                    >
-                      <Image
-                        src="/images/no-data.png"
-                        alt="No data"
-                        style={{
-                          maxWidth: "100%",
-                          maxHeight: "100%",
-                        }}
-                        width={200}
-                        height={200}
-                      />
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    hover
-                    sx={{ cursor: "pointer" }}
-                    onMouseEnter={() => setHoveredRow(row.original.id)}
-                    onMouseLeave={() => setHoveredRow(null)}
-                    onClick={() => {
-                      const newSelected = new Set(selectedRowIds);
-                      if (newSelected.has(row.original.id)) {
-                        newSelected.delete(row.original.id);
-                      } else {
-                        newSelected.add(row.original.id);
-                      }
-                      setSelectedRowIds(newSelected);
-                    }}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        sx={{
-                          padding: "10px",
-                          ...(cell.column.id === "actions" && {
-                            position: "sticky",
-                            right: 0,
-                            backgroundColor: "background.paper",
-                            zIndex: 1,
-                            boxShadow: isScrollable
-                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                              : "none",
-                          }),
-                        }}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
-      <Box mt={2}>
-        <TablePaginationFooter table={table} totalRows={totalRows} />
-      </Box>
-
-      {/* Dialogs and Drawers */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Confirm Archive</DialogTitle>
-        <DialogContent>
-          <Typography color="textSecondary">
-            Are you sure you want to archive {selectedRowIds.size} project(s)?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setOpenDialog(false)}
-            variant="outlined"
-            color="primary"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={async () => {
-              try {
-                let allSuccess = true;
-                for (const id of Array.from(selectedRowIds)) {
-                  const res = await api.post("project/archive", { id });
-                  if (
-                    !res.data.IsSuccess &&
-                    !res.data.isSuccess &&
-                    !res.data.success &&
-                    !(res.status >= 200 && res.status < 300)
-                  ) {
-                    allSuccess = false;
-                  }
-                }
-                if (allSuccess) {
-                  toast.success("Projects archived successfully.");
-                } else {
-                  toast.error("Some projects failed to archive.");
-                }
-                fetchProjects();
-                setSelectedRowIds(new Set());
-              } catch (error) {
-                console.error(error);
-                toast.error("Error archiving projects.");
-              }
-              setOpenDialog(false);
-            }}
-            variant="outlined"
-            color="error"
-          >
-            Archive
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <ArchiveProject
-        open={archiveListOpen}
-        companyId={Number(user?.company_id)}
-        onClose={() => setArchiveListOpen(false)}
-        onWorkUpdated={fetchProjects}
-      />
-
-      <Setting
-        settingOpen={settingOpen}
-        onClose={() => setSettingOpen(false)}
-      />
-
-      <Drawer
-        anchor="bottom"
-        open={detailsOpen}
-        onClose={() => setDetailsOpen(false)}
-        PaperProps={{
-          sx: {
-            borderRadius: 0,
-            height: "95vh",
-            boxShadow: "none",
-            borderTopLeftRadius: 12,
-            borderTopRightRadius: 12,
-            overflow: "hidden",
-          },
-        }}
-      >
-        <DynamicGantt
-          open={detailsOpen}
-          onClose={() => setDetailsOpen(false)}
-          projectId={activeProjectId}
-          companyId={user?.company_id ?? null}
-        />
-      </Drawer>
-
-      <Drawer
-        anchor="bottom"
-        open={mapOpen}
-        onClose={() => setMapOpen(false)}
-        PaperProps={{
-          sx: {
-            borderRadius: 0,
-            height: "95vh",
-            boxShadow: "none",
-            borderTopLeftRadius: 12,
-            borderTopRightRadius: 12,
-            overflow: "hidden",
-          },
-        }}
-      >
-        <MapGantt
-          open={mapOpen}
-          onClose={() => setMapOpen(false)}
-          onUpdate={fetchProjects}
-          projectId={activeProjectId}
-          companyId={user?.company_id ?? null}
-        />
-      </Drawer>
-
-      <Drawer
-        anchor="right"
-        open={openDrawer}
-        onClose={() => setOpenDrawer(false)}
-        PaperProps={{
-          sx: {
-            width: 500,
-            maxWidth: "100%",
-            "& .MuiDrawer-paper": {
-              width: 500,
-              padding: 2,
-              backgroundColor: "#f9f9f9",
-            },
-          },
-        }}
-      >
-        <Box sx={{ position: "relative", p: 2 }}>
-          <IconButton
-            aria-label="close"
-            onClick={() => {
-              setOpenDrawer(false);
-              setHistoryProjectId("all");
-            }}
-            size="small"
-            sx={{
-              position: "absolute",
-              right: 0,
-              top: 8,
-              color: (theme) => theme.palette.grey[900],
-              backgroundColor: "transparent",
-              zIndex: 10,
-              width: 50,
-              height: 50,
-            }}
-          >
-            <IconX size={18} />
-          </IconButton>
-
-          <Grid container spacing={2} display="block">
-            <Box
-              display="flex"
-              alignContent="center"
-              alignItems="center"
-              flexWrap="wrap"
-            >
-              <IconButton
-                onClick={() => {
-                  setOpenDrawer(false);
-                  setHistoryProjectId("all");
-                }}
-              >
-                <IconArrowLeft />
-              </IconButton>
-              <Typography variant="h6" fontWeight={700}>
-                Project Activities
-              </Typography>
-            </Box>
-
-            <Box px={2} mt={2}>
-              <Autocomplete
-                size="small"
-                options={allProjects}
-                getOptionLabel={(option) => option.name || ""}
-                value={
-                  historyProjectId === "all"
-                    ? null
-                    : allProjects.find((p) => p.id === historyProjectId) || null
-                }
-                onChange={(e, newValue) => {
-                  setHistoryProjectId(newValue ? newValue.id : "all");
-                  setPage(1);
-                  setHistory([]);
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Filter by Project"
-                    variant="outlined"
-                  />
-                )}
-              />
-            </Box>
-
-            {historyLoading ? (
-              <Box display="flex" justifyContent="center" mt={4}>
-                <CircularProgress />
-              </Box>
-            ) : history.length > 0 ? (
-              <Box mt={1}>
-                <Box sx={{ maxHeight: "auto", overflow: "visible", pr: 0 }}>
-                  {history.map((addr, index) => {
-                    return (
-                      <Box
-                        key={addr.id ?? index}
-                        mb={2}
-                        pl={2}
-                        pr={2}
-                        mt={2}
-                        position="relative"
-                        display="flex"
-                        alignItems="center"
-                        sx={{
-                          width: "100%",
-                          lineHeight: "10px",
-                          height: "100px",
-                          borderRadius: "25px",
-                          boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
-                          border: "1px solid rgb(240 240 240)",
-                        }}
-                      >
-                        <Box
-                          position="absolute"
-                          top="-10px"
-                          left="15px"
-                          bgcolor={
-                            addr.request_type === 102 && addr.status_int == 3
-                              ? "#7d54f0ff"
-                              : addr.request_type === 102 &&
-                                  addr.status_int == 4
-                                ? "#f53c3cff"
-                                : "#FF7F00"
-                          }
-                          px={1.5}
-                          borderRadius="10px"
-                          zIndex={1}
-                        >
-                          <Typography
-                            variant="caption"
-                            fontWeight={700}
-                            fontSize="12px !important"
-                            color="#fff"
-                          >
-                            {addr.request_type === 102 && addr.status_int == 3
-                              ? "Start shift"
-                              : addr.request_type === 102 &&
-                                  addr.status_int == 4
-                                ? "Stop shift"
-                                : addr.type_name}
-                          </Typography>
-                        </Box>
-                        <Box display="initial" width="100%" textAlign="start">
-                          <Typography
-                            fontSize="14px"
-                            className="multi-ellipsis"
-                          >
-                            <b>{addr.user_name}:</b> {addr.message}
-                          </Typography>
-                          <p
-                            style={{
-                              fontSize: "12px",
-                              textAlign: "end",
-                              color: "GrayText",
-                              margin: 0,
+                          <Box
+                            onClick={
+                              isSortable
+                                ? header.column.getToggleSortingHandler()
+                                : undefined
+                            }
+                            sx={{
+                              cursor: isSortable ? "pointer" : "default",
+                              display: "flex",
+                              alignItems: "center",
+                              "&:hover": {
+                                color: isSortable ? "#888" : "inherit",
+                              },
+                              "&:hover .hoverIcon": { opacity: 1 },
                             }}
                           >
-                            {formatDate(addr.date_added)}
-                          </p>
-                        </Box>
-                      </Box>
-                    );
-                  })}
-                </Box>
-                {history.length < totalItems && (
-                  <Box display="flex" justifyContent="center" my={2}>
-                    <Button
-                      variant="outlined"
-                      disabled={historyLoading}
-                      onClick={handleSeeMore}
-                      startIcon={
-                        historyLoading && <CircularProgress size={16} />
-                      }
-                    >
-                      See More
-                    </Button>
-                  </Box>
-                )}
-              </Box>
-            ) : (
-              <Typography mt={2} ml={2} variant="h5">
-                No activities are found for this project!!
-              </Typography>
-            )}
-          </Grid>
-        </Box>
-      </Drawer>
-
-      <Drawer
-        anchor="right"
-        open={productDrawer}
-        onClose={handleCloseProductDrawer}
-        PaperProps={{
-          sx: {
-            width: 550,
-            maxWidth: "100%",
-            "& .MuiDrawer-paper": {
-              width: 550,
-              padding: 2,
-              backgroundColor: "#f9f9f9",
-              display: "flex",
-              flexDirection: "column",
-            },
-          },
-        }}
-      >
-        <Box
-          display="flex"
-          alignContent="center"
-          alignItems="center"
-          flexWrap="wrap"
-          p={2}
-          pb={0}
-        >
-          <Box display="flex" alignContent="center" alignItems="center">
-            <IconButton onClick={handleCloseProductDrawer}>
-              <IconArrowLeft />
-            </IconButton>
-            <Typography variant="h6" fontWeight={700}>
-              Favorite products{" "}
-              {selectedProducts.length > 0
-                ? `(${selectedProducts.length})`
-                : ""}
-            </Typography>
-          </Box>
-          <IconButton
-            aria-label="close"
-            onClick={handleCloseProductDrawer}
-            size="small"
-            sx={{
-              position: "absolute",
-              right: 0,
-              top: 8,
-              color: (theme) => theme.palette.grey[900],
-              backgroundColor: "transparent",
-              zIndex: 10,
-              width: 50,
-              height: 50,
-            }}
-          >
-            <IconX size={18} />
-          </IconButton>
-        </Box>
-
-        <Grid display="flex" alignItems="center" mr={1}>
-          <TextField
-            id="search"
-            type="text"
-            size="small"
-            variant="outlined"
-            placeholder="Search..."
-            value={searchProduct}
-            fullWidth
-            sx={{ width: "90%", ml: 2 }}
-            onChange={(e) => setSearchProduct(e.target.value)}
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconSearch size="16" />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-          {products.length > 0 && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={selectAll}
-                  onChange={(e) => {
-                    const isChecked = e.target.checked;
-                    setSelectAll(isChecked);
-                    if (isChecked) {
-                      const newSelected = [...selectedProducts];
-                      paginatedProduct.forEach((p) => {
-                        if (!newSelected.includes(p.id)) newSelected.push(p.id);
-                      });
-                      setSelectedProducts(newSelected);
-                    } else {
-                      const visibleIds = paginatedProduct.map((p) => p.id);
-                      setSelectedProducts(
-                        selectedProducts.filter(
-                          (id) => !visibleIds.includes(id),
-                        ),
+                            <Typography variant="subtitle2">
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                            </Typography>
+                            {isSortable && (
+                              <Box
+                                component="span"
+                                className="hoverIcon"
+                                ml={0.5}
+                                sx={{
+                                  transition: "opacity 0.2s",
+                                  opacity: isActive ? 1 : 0,
+                                  fontSize: "0.9rem",
+                                  color: isActive ? "#000" : "#888",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                              </Box>
+                            )}
+                          </Box>
+                        </TableCell>
                       );
-                    }
-                  }}
-                />
-              }
-              label="Select All"
-              sx={{ width: "30%", m: 0 }}
-            />
-          )}
-        </Grid>
-
-        <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
-          <Grid container spacing={2} display="block" mt={1}>
-            {isFetchingFavorites ? (
-              <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                my={5}
-              >
-                <CircularProgress />
-              </Box>
-            ) : filteredData.length > 0 ? (
-              <Box>
-                {paginatedProduct.map((product) => (
-                  <Box
-                    key={product.id}
-                    mt={1}
-                    p={1}
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{
-                      border: "1px solid #e7e3e3ff",
-                      borderRadius: "10px",
-                      background: "#fff",
-                    }}
-                  >
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <CustomCheckbox
-                        checked={selectedProducts.includes(product.id)}
-                        onChange={() => handleProductToggle(product.id)}
-                      />
+                    })}
+                  </TableRow>
+                ))}
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  <SkeletonLoader
+                    columns={simpleColumns}
+                    rowCount={simpleColumns.length}
+                  />
+                ) : table.getRowModel().rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length}>
                       <Box
                         sx={{
-                          border: "1px dashed #d1d5db",
-                          borderRadius: 2,
-                          p: 1,
-                          textAlign: "center",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "calc(50vh - 100px)",
                         }}
                       >
                         <Image
-                          src={
-                            product.image_url || "/images/products/product.svg"
-                          }
-                          alt="product"
-                          width={50}
-                          height={50}
-                          style={{ objectFit: "contain" }}
+                          src="/images/no-data.png"
+                          alt="No data"
+                          style={{
+                            maxWidth: "100%",
+                            maxHeight: "100%",
+                          }}
+                          width={200}
+                          height={200}
                         />
                       </Box>
-                      <Stack mt={2} spacing={1}>
-                        <Typography
-                          variant="body2"
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      hover
+                      sx={{ cursor: "pointer" }}
+                      onMouseEnter={() => setHoveredRow(row.original.id)}
+                      onMouseLeave={() => setHoveredRow(null)}
+                      onClick={() => {
+                        const newSelected = new Set(selectedRowIds);
+                        if (newSelected.has(row.original.id)) {
+                          newSelected.delete(row.original.id);
+                        } else {
+                          newSelected.add(row.original.id);
+                        }
+                        setSelectedRowIds(newSelected);
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
                           sx={{
-                            display: "-webkit-box",
-                            WebkitBoxOrient: "vertical",
-                            WebkitLineClamp: 3,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            lineHeight: 1.25,
-                            maxWidth: 350,
-                            wordBreak: "break-word",
+                            padding: "10px",
+                            ...(cell.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 1,
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
                           }}
                         >
-                          {product.short_name ?? product.name}{" "}
-                          {product.uuid && (
-                            <Chip
-                              label={product.uuid}
-                              size="small"
-                              sx={{ ml: 1 }}
-                            />
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
                           )}
-                          <br />
-                          Supplier Code: {product.supplier_code}
-                        </Typography>
-                      </Stack>
-                    </Box>
-                  </Box>
-                ))}
-                {paginatedProduct.length < filteredData.length && (
-                  <Box display="flex" justifyContent="center" my={2}>
-                    <Button
-                      variant="outlined"
-                      onClick={() => setProductPage((prev) => prev + 1)}
-                    >
-                      See More
-                    </Button>
-                  </Box>
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
                 )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+        <Divider />
+        <TablePaginationFooter table={table} totalRows={totalRows} />
+        {/* Dialogs and Drawers */}
+        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+          <DialogTitle>Confirm Archive</DialogTitle>
+          <DialogContent>
+            <Typography color="textSecondary">
+              Are you sure you want to archive {selectedRowIds.size} project(s)?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setOpenDialog(false)}
+              variant="outlined"
+              color="primary"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  let allSuccess = true;
+                  for (const id of Array.from(selectedRowIds)) {
+                    const res = await api.post("project/archive", { id });
+                    if (
+                      !res.data.IsSuccess &&
+                      !res.data.isSuccess &&
+                      !res.data.success &&
+                      !(res.status >= 200 && res.status < 300)
+                    ) {
+                      allSuccess = false;
+                    }
+                  }
+                  if (allSuccess) {
+                    toast.success("Projects archived successfully.");
+                  } else {
+                    toast.error("Some projects failed to archive.");
+                  }
+                  fetchProjects();
+                  setSelectedRowIds(new Set());
+                } catch (error) {
+                  console.error(error);
+                  toast.error("Error archiving projects.");
+                }
+                setOpenDialog(false);
+              }}
+              variant="outlined"
+              color="error"
+            >
+              Archive
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <ArchiveProject
+          open={archiveListOpen}
+          companyId={Number(user?.company_id)}
+          onClose={() => setArchiveListOpen(false)}
+          onWorkUpdated={fetchProjects}
+        />
+
+        <Setting
+          settingOpen={settingOpen}
+          onClose={() => setSettingOpen(false)}
+        />
+
+        <Drawer
+          anchor="bottom"
+          open={detailsOpen}
+          onClose={() => setDetailsOpen(false)}
+          PaperProps={{
+            sx: {
+              borderRadius: 0,
+              height: "95vh",
+              boxShadow: "none",
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              overflow: "hidden",
+            },
+          }}
+        >
+          <DynamicGantt
+            open={detailsOpen}
+            onClose={() => setDetailsOpen(false)}
+            projectId={activeProjectId}
+            companyId={user?.company_id ?? null}
+          />
+        </Drawer>
+
+        <Drawer
+          anchor="bottom"
+          open={mapOpen}
+          onClose={() => setMapOpen(false)}
+          PaperProps={{
+            sx: {
+              borderRadius: 0,
+              height: "95vh",
+              boxShadow: "none",
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              overflow: "hidden",
+            },
+          }}
+        >
+          <MapGantt
+            open={mapOpen}
+            onClose={() => setMapOpen(false)}
+            onUpdate={fetchProjects}
+            projectId={activeProjectId}
+            companyId={user?.company_id ?? null}
+          />
+        </Drawer>
+
+        <Drawer
+          anchor="right"
+          open={openDrawer}
+          onClose={() => setOpenDrawer(false)}
+          PaperProps={{
+            sx: {
+              width: 500,
+              maxWidth: "100%",
+              "& .MuiDrawer-paper": {
+                width: 500,
+                padding: 2,
+                backgroundColor: "#f9f9f9",
+              },
+            },
+          }}
+        >
+          <Box sx={{ position: "relative", p: 2 }}>
+            <IconButton
+              aria-label="close"
+              onClick={() => {
+                setOpenDrawer(false);
+                setHistoryProjectId("all");
+              }}
+              size="small"
+              sx={{
+                position: "absolute",
+                right: 0,
+                top: 8,
+                color: (theme) => theme.palette.grey[900],
+                backgroundColor: "transparent",
+                zIndex: 10,
+                width: 50,
+                height: 50,
+              }}
+            >
+              <IconX size={18} />
+            </IconButton>
+
+            <Grid container spacing={2} display="block">
+              <Box
+                display="flex"
+                alignContent="center"
+                alignItems="center"
+                flexWrap="wrap"
+              >
+                <IconButton
+                  onClick={() => {
+                    setOpenDrawer(false);
+                    setHistoryProjectId("all");
+                  }}
+                >
+                  <IconArrowLeft />
+                </IconButton>
+                <Typography variant="h6" fontWeight={700}>
+                  Project Activities
+                </Typography>
               </Box>
-            ) : (
-              <Typography mt={2} textAlign="center">
-                No products found
+
+              <Box px={2} mt={2}>
+                <Autocomplete
+                  size="small"
+                  options={allProjects}
+                  getOptionLabel={(option) => option.name || ""}
+                  value={
+                    historyProjectId === "all"
+                      ? null
+                      : allProjects.find((p) => p.id === historyProjectId) ||
+                        null
+                  }
+                  onChange={(e, newValue) => {
+                    setHistoryProjectId(newValue ? newValue.id : "all");
+                    setPage(1);
+                    setHistory([]);
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Filter by Project"
+                      variant="outlined"
+                    />
+                  )}
+                />
+              </Box>
+
+              {historyLoading ? (
+                <Box display="flex" justifyContent="center" mt={4}>
+                  <CircularProgress />
+                </Box>
+              ) : history.length > 0 ? (
+                <Box mt={1}>
+                  <Box sx={{ maxHeight: "auto", overflow: "visible", pr: 0 }}>
+                    {history.map((addr, index) => {
+                      return (
+                        <Box
+                          key={addr.id ?? index}
+                          mb={2}
+                          pl={2}
+                          pr={2}
+                          mt={2}
+                          position="relative"
+                          display="flex"
+                          alignItems="center"
+                          sx={{
+                            width: "100%",
+                            lineHeight: "10px",
+                            height: "100px",
+                            borderRadius: "25px",
+                            boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
+                            border: "1px solid rgb(240 240 240)",
+                          }}
+                        >
+                          <Box
+                            position="absolute"
+                            top="-10px"
+                            left="15px"
+                            bgcolor={
+                              addr.request_type === 102 && addr.status_int == 3
+                                ? "#7d54f0ff"
+                                : addr.request_type === 102 &&
+                                    addr.status_int == 4
+                                  ? "#f53c3cff"
+                                  : "#FF7F00"
+                            }
+                            px={1.5}
+                            borderRadius="10px"
+                            zIndex={1}
+                          >
+                            <Typography
+                              variant="caption"
+                              fontWeight={700}
+                              fontSize="12px !important"
+                              color="#fff"
+                            >
+                              {addr.request_type === 102 && addr.status_int == 3
+                                ? "Start shift"
+                                : addr.request_type === 102 &&
+                                    addr.status_int == 4
+                                  ? "Stop shift"
+                                  : addr.type_name}
+                            </Typography>
+                          </Box>
+                          <Box display="initial" width="100%" textAlign="start">
+                            <Typography
+                              fontSize="14px"
+                              className="multi-ellipsis"
+                            >
+                              <b>{addr.user_name}:</b> {addr.message}
+                            </Typography>
+                            <p
+                              style={{
+                                fontSize: "12px",
+                                textAlign: "end",
+                                color: "GrayText",
+                                margin: 0,
+                              }}
+                            >
+                              {formatDate(addr.date_added)}
+                            </p>
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                  {history.length < totalItems && (
+                    <Box display="flex" justifyContent="center" my={2}>
+                      <Button
+                        variant="outlined"
+                        disabled={historyLoading}
+                        onClick={handleSeeMore}
+                        startIcon={
+                          historyLoading && <CircularProgress size={16} />
+                        }
+                      >
+                        See More
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+              ) : (
+                <Typography mt={2} ml={2} variant="h5">
+                  No activities are found for this project!!
+                </Typography>
+              )}
+            </Grid>
+          </Box>
+        </Drawer>
+
+        <Drawer
+          anchor="right"
+          open={productDrawer}
+          onClose={handleCloseProductDrawer}
+          PaperProps={{
+            sx: {
+              width: 550,
+              maxWidth: "100%",
+              "& .MuiDrawer-paper": {
+                width: 550,
+                padding: 2,
+                backgroundColor: "#f9f9f9",
+                display: "flex",
+                flexDirection: "column",
+              },
+            },
+          }}
+        >
+          <Box
+            display="flex"
+            alignContent="center"
+            alignItems="center"
+            flexWrap="wrap"
+            p={2}
+            pb={0}
+          >
+            <Box display="flex" alignContent="center" alignItems="center">
+              <IconButton onClick={handleCloseProductDrawer}>
+                <IconArrowLeft />
+              </IconButton>
+              <Typography variant="h6" fontWeight={700}>
+                Favorite products{" "}
+                {selectedProducts.length > 0
+                  ? `(${selectedProducts.length})`
+                  : ""}
               </Typography>
+            </Box>
+            <IconButton
+              aria-label="close"
+              onClick={handleCloseProductDrawer}
+              size="small"
+              sx={{
+                position: "absolute",
+                right: 0,
+                top: 8,
+                color: (theme) => theme.palette.grey[900],
+                backgroundColor: "transparent",
+                zIndex: 10,
+                width: 50,
+                height: 50,
+              }}
+            >
+              <IconX size={18} />
+            </IconButton>
+          </Box>
+
+          <Grid display="flex" alignItems="center" mr={1}>
+            <TextField
+              id="search"
+              type="text"
+              size="small"
+              variant="outlined"
+              placeholder="Search..."
+              value={searchProduct}
+              fullWidth
+              sx={{ width: "90%", ml: 2 }}
+              onChange={(e) => setSearchProduct(e.target.value)}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconSearch size="16" />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
+            {products.length > 0 && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={selectAll}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      setSelectAll(isChecked);
+                      if (isChecked) {
+                        const newSelected = [...selectedProducts];
+                        paginatedProduct.forEach((p) => {
+                          if (!newSelected.includes(p.id))
+                            newSelected.push(p.id);
+                        });
+                        setSelectedProducts(newSelected);
+                      } else {
+                        const visibleIds = paginatedProduct.map((p) => p.id);
+                        setSelectedProducts(
+                          selectedProducts.filter(
+                            (id) => !visibleIds.includes(id),
+                          ),
+                        );
+                      }
+                    }}
+                  />
+                }
+                label="Select All"
+                sx={{ width: "30%", m: 0 }}
+              />
             )}
           </Grid>
-        </Box>
 
-        <Box
-          sx={{ display: "flex", justifyContent: "start", gap: 2, m: 2, pl: 2 }}
-        >
-          <Button
-            color="primary"
-            onClick={handleSaveProducts}
-            variant="contained"
-            size="large"
-            sx={{ borderRadius: 3 }}
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </Button>
-          <Button
-            color="inherit"
-            onClick={handleCloseProductDrawer}
-            variant="contained"
-            size="large"
+          <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
+            <Grid container spacing={2} display="block" mt={1}>
+              {isFetchingFavorites ? (
+                <Box
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
+                  my={5}
+                >
+                  <CircularProgress />
+                </Box>
+              ) : filteredData.length > 0 ? (
+                <Box>
+                  {paginatedProduct.map((product) => (
+                    <Box
+                      key={product.id}
+                      mt={1}
+                      p={1}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      sx={{
+                        border: "1px solid #e7e3e3ff",
+                        borderRadius: "10px",
+                        background: "#fff",
+                      }}
+                    >
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <CustomCheckbox
+                          checked={selectedProducts.includes(product.id)}
+                          onChange={() => handleProductToggle(product.id)}
+                        />
+                        <Box
+                          sx={{
+                            border: "1px dashed #d1d5db",
+                            borderRadius: 2,
+                            p: 1,
+                            textAlign: "center",
+                          }}
+                        >
+                          <Image
+                            src={
+                              product.image_url ||
+                              "/images/products/product.svg"
+                            }
+                            alt="product"
+                            width={50}
+                            height={50}
+                            style={{ objectFit: "contain" }}
+                          />
+                        </Box>
+                        <Stack mt={2} spacing={1}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              display: "-webkit-box",
+                              WebkitBoxOrient: "vertical",
+                              WebkitLineClamp: 3,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              lineHeight: 1.25,
+                              maxWidth: 350,
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {product.short_name ?? product.name}{" "}
+                            {product.uuid && (
+                              <Chip
+                                label={product.uuid}
+                                size="small"
+                                sx={{ ml: 1 }}
+                              />
+                            )}
+                            <br />
+                            Supplier Code: {product.supplier_code}
+                          </Typography>
+                        </Stack>
+                      </Box>
+                    </Box>
+                  ))}
+                  {paginatedProduct.length < filteredData.length && (
+                    <Box display="flex" justifyContent="center" my={2}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => setProductPage((prev) => prev + 1)}
+                      >
+                        See More
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+              ) : (
+                <Typography mt={2} textAlign="center">
+                  No products found
+                </Typography>
+              )}
+            </Grid>
+          </Box>
+
+          <Box
             sx={{
-              backgroundColor: "transparent",
-              borderRadius: 3,
-              color: "GrayText",
+              display: "flex",
+              justifyContent: "start",
+              gap: 2,
+              m: 2,
+              pl: 2,
             }}
           >
-            Cancel
-          </Button>
-        </Box>
-      </Drawer>
+            <Button
+              color="primary"
+              onClick={handleSaveProducts}
+              variant="contained"
+              size="large"
+              sx={{ borderRadius: 3 }}
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+            <Button
+              color="inherit"
+              onClick={handleCloseProductDrawer}
+              variant="contained"
+              size="large"
+              sx={{
+                backgroundColor: "transparent",
+                borderRadius: 3,
+                color: "GrayText",
+              }}
+            >
+              Cancel
+            </Button>
+          </Box>
+        </Drawer>
 
-      {drawerOpen && (
-        <CreateProject
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          formData={formData}
-          setFormData={setFormData}
-          handleSubmit={handleProjectSubmit}
-          isSaving={isSaving}
-        />
-      )}
+        {drawerOpen && (
+          <CreateProject
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            formData={formData}
+            setFormData={setFormData}
+            handleSubmit={handleProjectSubmit}
+            isSaving={isSaving}
+          />
+        )}
 
-      {editDrawerOpen && (
-        <EditProject
-          open={editDrawerOpen}
-          onClose={() => setEditDrawerOpen(false)}
-          formData={formData}
-          setFormData={setFormData}
-          handleSubmit={handleEditSubmit}
-          isSaving={isSaving}
-          project={selectedProject}
-        />
-      )}
-    </Box>
+        {editDrawerOpen && (
+          <EditProject
+            open={editDrawerOpen}
+            onClose={() => setEditDrawerOpen(false)}
+            formData={formData}
+            setFormData={setFormData}
+            handleSubmit={handleEditSubmit}
+            isSaving={isSaving}
+            project={selectedProject}
+          />
+        )}
+      </Box>
+    </PermissionGuard>
   );
 };
 

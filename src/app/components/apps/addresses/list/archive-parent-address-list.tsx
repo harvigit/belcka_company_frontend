@@ -14,55 +14,56 @@ import {
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
-import { IconArrowBackUp, IconTrash } from "@tabler/icons-react";
+import { IconArrowBackUp } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 
-interface ArchiveAddressProps {
+interface ArchiveParentAddressProps {
   open: boolean;
   onClose: () => void;
   onWorkUpdated?: () => void;
-  projectId?: number | null;
-}
-export interface TradeList {
-  trade_id: number;
-  name: string;
+  companyId?: number | null;
 }
 
-export type TeamList = {
+export type ParentAddressList = {
   id: number;
   name: string;
 };
 
-const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
+const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
   open,
   onClose,
   onWorkUpdated,
-  projectId,
+  companyId,
 }) => {
-  const [data, setData] = useState<TeamList[]>([]);
+  const [data, setData] = useState<ParentAddressList[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{
     id: number;
-    action: "restore" | "delete";
+    action: "restore";
   } | null>(null);
+
   // Fetch data
-  const fetchTeams = useCallback(async () => {
-    if (!projectId) return;
+  const fetchAddresses = useCallback(async () => {
+    if (!companyId) return;
 
     try {
-      const res = await api.get(`address/archive-list?project_id=${projectId}`);
+      const res = await api.get(
+        `address/parent-archive-list?company_id=${companyId}`,
+      );
 
       if (res.data) {
-        setData(res.data.info);
+        setData(res.data.info || res.data.data || []);
       }
     } catch (err) {
-      console.error("Failed to fetch trades", err);
+      console.error("Failed to fetch archived parent addresses", err);
     }
-  }, [projectId]);
+  }, [companyId]);
 
   useEffect(() => {
-    fetchTeams();
-  }, [open]);
+    if (open) {
+      fetchAddresses();
+    }
+  }, [open, fetchAddresses]);
 
   const handleConfirmAction = async () => {
     if (!selectedItem) return;
@@ -73,25 +74,16 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
       };
 
       if (selectedItem.action === "restore") {
-        const response = await api.post("address/unarchive", payload);
+        const response = await api.post("address/parent-unarchive", payload);
         if (response.data.IsSuccess) {
-          toast.success(response.data.message);
-          fetchTeams();
-          onWorkUpdated?.();
-          onClose?.();
-        }
-      } else if (selectedItem.action === "delete") {
-        const response = await api.delete(
-          `/address/delete?id=${selectedItem.id}`
-        );
-        if (response.data.IsSuccess) {
-          toast.success(response.data.message);
-          fetchTeams();
+          toast.success(response.data.message || "Unarchived successfully");
+          fetchAddresses();
           onWorkUpdated?.();
         }
       }
     } catch (err) {
       console.error("Action failed", err);
+      toast.error("Action failed");
     }
   };
 
@@ -127,7 +119,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archived Task List
+                  Archived Parent Addresses
                 </Typography>
               </Box>
 
@@ -185,16 +177,6 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
                       >
                         <IconArrowBackUp />
                       </IconButton>
-                      <IconButton
-                        color="error"
-                        size="small"
-                        onClick={() => {
-                          setSelectedItem({ id: item.id, action: "delete" });
-                          setOpenDialog(true);
-                        }}
-                      >
-                        <IconTrash />
-                      </IconButton>
                     </Box>
                   </Box>
                 </Box>
@@ -221,15 +203,10 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
       </Box>
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>
-          {selectedItem?.action === "restore"
-            ? "Restore Task"
-            : "Confirm Deletion"}
-        </DialogTitle>
+        <DialogTitle>Restore Parent Address</DialogTitle>
         <DialogContent>
           <Typography color="textSecondary">
-            Are you sure you want to <strong>{selectedItem?.action}</strong>{" "}
-            this task?
+            Are you sure you want to restore this parent address?
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -241,14 +218,14 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
             Cancel
           </Button>
           <Button
-            color="error"
+            color="primary"
             variant="contained"
             onClick={() => {
               handleConfirmAction();
               setOpenDialog(false);
             }}
           >
-            {selectedItem?.action === "restore" ? "Confirm" : "Delete"}
+            Confirm
           </Button>
         </DialogActions>
       </Dialog>
@@ -256,4 +233,4 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
   );
 };
 
-export default ArchiveAddress;
+export default ArchiveParentAddress;

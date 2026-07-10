@@ -180,7 +180,11 @@ const ProductList = () => {
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
-  const [filters, setFilters] = useState({ supplier: "", category: "" });
+  const [filters, setFilters] = useState<{
+    supplier: string;
+    category: string;
+    projects: any[];
+  }>({ supplier: "", category: "", projects: [] });
   const [tempFilters, setTempFilters] = useState(filters);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -238,7 +242,9 @@ const ProductList = () => {
 
   const [rowProjects, setRowProjects] = useState<Record<string, any[]>>({});
   const [draftProjects, setDraftProjects] = useState<any[]>([]);
-  const [editingProjectRowId, setEditingProjectRowId] = useState<string | null>(null);
+  const [editingProjectRowId, setEditingProjectRowId] = useState<string | null>(
+    null,
+  );
   const [openProjectModal, setOpenProjectModal] = useState(false);
 
   const [conflictOpen, setConflictOpen] = useState(false);
@@ -533,6 +539,10 @@ const ProductList = () => {
         } else {
           url += `&supplier=${encodeURIComponent(filters.supplier)}`;
         }
+      }
+      if (filters.projects && filters.projects.length > 0) {
+        const projectIds = filters.projects.map((p: any) => p.id).join(",");
+        url += `&project_ids=${projectIds}`;
       }
 
       const res = await api.get(url);
@@ -892,9 +902,7 @@ const ProductList = () => {
     const selectedIds = item.project_ids
       ? item.project_ids.split(",").map((id: string) => Number(id))
       : [];
-    initialProjects = projects.filter((proj) =>
-      selectedIds.includes(proj.id),
-    );
+    initialProjects = projects.filter((proj) => selectedIds.includes(proj.id));
 
     setDraftProjects(initialProjects);
     setOpenProjectModal(true);
@@ -3140,6 +3148,22 @@ const ProductList = () => {
                       </MenuItem>
                     ))}
                   </TextField>
+
+                  <Autocomplete
+                    multiple
+                    options={projects || []}
+                    getOptionLabel={(option) => option.name}
+                    value={tempFilters.projects || []}
+                    onChange={(_, newValue) => {
+                      setTempFilters({
+                        ...tempFilters,
+                        projects: newValue,
+                      });
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Projects" />
+                    )}
+                  />
                 </Stack>
               </DialogContent>
 
@@ -3149,10 +3173,12 @@ const ProductList = () => {
                     setTempFilters({
                       supplier: "",
                       category: "",
+                      projects: [],
                     });
                     setFilters({
                       supplier: "",
                       category: "",
+                      projects: [],
                     });
                     setOpen(false);
                   }}

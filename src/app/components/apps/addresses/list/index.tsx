@@ -29,6 +29,9 @@ import {
   TableRow,
   TableCell,
   TableBody,
+  Menu,
+  ListItemIcon,
+  Autocomplete,
 } from "@mui/material";
 import {
   IconFilter,
@@ -36,7 +39,12 @@ import {
   IconX,
   IconTrash,
   IconEye,
+  IconEdit,
   IconFileImport,
+  IconDotsVertical,
+  IconNotes,
+  IconPlus,
+  IconArrowLeft,
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -51,7 +59,9 @@ import { useJsApiLoader } from "@react-google-maps/api";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import Link from "next/link";
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
-import { FileDownload } from "@mui/icons-material";
+import FileDownload from "@mui/icons-material/FileDownload";
+import ArchiveParentAddress from "./archive-parent-address-list";
+import AllocateAddressesDrawer from "./allocate-addresses-drawer";
 import { useDropzone } from "react-dropzone";
 import { IconFileExport } from "@tabler/icons-react";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
@@ -62,6 +72,7 @@ import { useServerTable } from "@/hooks/useServerTable";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconExclamationCircle } from "@tabler/icons-react";
 import AddressesList from "./addresses-list";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 
 dayjs.extend(customParseFormat);
 const columnHelper = createColumnHelper<any>();
@@ -117,14 +128,10 @@ type UnifiedPrediction =
   | ({ source: "postcoder" } & PostcoderAddress);
 
 const TablePagination: React.FC<ProjectListingProps> = ({}) => {
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({
     status: "",
-    sortOrder: "",
-    supplier: "",
-    category: "",
   });
   const [tempFilters, setTempFilters] = useState(filters);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -166,7 +173,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     name: "",
   });
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
   const [isImport, setIsImport] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -180,6 +192,102 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [selectedParentAddressId, setSelectedParentAddressId] = useState<
     number | null
   >(null);
+  const [archiveListOpen, setArchiveListOpen] = useState(false);
+  const [allocateDrawerOpen, setAllocateDrawerOpen] = useState(false);
+  const [parentAddressDrawerOpen, setParentAddressDrawerOpen] = useState(false);
+  const [editingParentAddress, setEditingParentAddress] = useState<any>(null);
+  const [parentAddressName, setParentAddressName] = useState("");
+  const [parentAddressPostcode, setParentAddressPostcode] = useState("");
+  const [postcodeQuery, setPostcodeQuery] = useState("");
+  const [addressOptions, setAddressOptions] = useState<any[]>([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [conflictPopoverAnchor, setConflictPopoverAnchor] =
+    useState<null | HTMLElement>(null);
+  const [conflictItem, setConflictItem] = useState<any>(null);
+
+  const isIEPostcode = (value: string) =>
+    /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
+  const isAUPostcode = (value: string) => /^\d{4}$/.test(value.trim());
+  const isNZPostcode = (value: string) => /^\d{4}$/.test(value.trim());
+
+  const fetchPostcoderAddresses = async (query: string) => {
+    try {
+      setLoadingAddresses(true);
+      let country = "UK";
+      if (isIEPostcode(query)) country = "IE";
+      else if (isAUPostcode(query)) country = "AU";
+      else if (isNZPostcode(query)) country = "NZ";
+
+      const res = await fetch(
+        `https://ws.postcoder.com/pcw/${process.env.NEXT_PUBLIC_POSTCODER_KEY}/address/${country}/${encodeURIComponent(query)}?format=json`,
+      );
+      const data = await res.json();
+      setAddressOptions(data || []);
+    } catch (error) {
+      console.error("Postcode lookup failed", error);
+      setAddressOptions([]);
+    } finally {
+      setLoadingAddresses(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (postcodeQuery.length >= 3) fetchPostcoderAddresses(postcodeQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [postcodeQuery]);
+
+  const handleOpenParentAddressDrawer = (address?: any) => {
+    if (address && address.id) {
+      setEditingParentAddress(address);
+      setParentAddressName(address.name || "");
+      setParentAddressPostcode(address.pincode || address.pin_code || "");
+    } else {
+      setEditingParentAddress(null);
+      setParentAddressName("");
+      setParentAddressPostcode("");
+    }
+    setAddressOptions([]);
+    setParentAddressDrawerOpen(true);
+  };
+
+  const handleSaveParentAddress = async (e: any) => {
+    e.preventDefault();
+
+    if (!parentAddressName) {
+      toast.error("Address name is required");
+      return;
+    }
+    try {
+      const payload = {
+        company_id: user?.company_id,
+        name: parentAddressName,
+        pin_code: parentAddressPostcode,
+      };
+
+      let res;
+      if (editingParentAddress) {
+        res = await api.put("address/parent-update", {
+          ...payload,
+          id: editingParentAddress.id,
+        });
+      } else {
+        res = await api.post("address/parent-create", payload);
+      }
+
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        setParentAddressDrawerOpen(false);
+        fetchAddresses();
+      } else {
+        toast.error(res.data.message);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save address");
+    }
+  };
 
   React.useEffect(() => {
     const checkScroll = () => {
@@ -333,18 +441,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     }
   };
 
-  useEffect(() => {
-    if (projectID) {
-      fetchAddresses();
-    }
-  }, [value]);
-
   const handleModelOpen = () => {
     setPreview(null);
     setOpenModel(true);
   };
   const handleModelClose = () => setOpenModel(false);
-
+  const closeDrawer = () => {
+    setSelectedRowIds(new Set());
+    setAllocateDrawerOpen(false);
+  };
   const handleFileChange = (acceptedFiles: File[]) => {
     const selectedFile = acceptedFiles[0];
     setFile(selectedFile);
@@ -420,7 +525,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = `address_import.xlsx`;
+      a.download = `address_export.xlsx`;
       document.body.appendChild(a);
       a.click();
 
@@ -492,9 +597,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           <Stack direction="row" alignItems="center">
             <CustomCheckbox
               className="header-checkbox"
-              checked={selectedRowIds.size === data.length && data.length > 0}
+              checked={
+                selectedRowIds.size === currentFilteredData.length &&
+                currentFilteredData.length > 0
+              }
               indeterminate={
-                selectedRowIds.size > 0 && selectedRowIds.size < data.length
+                selectedRowIds.size > 0 &&
+                selectedRowIds.size < currentFilteredData.length
               }
               onClick={(e: any) => e.stopPropagation()}
               onChange={(e: any) => {
@@ -502,7 +611,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 e.preventDefault();
                 const isChecked = e.target.checked;
                 if (isChecked) {
-                  setSelectedRowIds(new Set(data.map((row) => row.id)));
+                  setSelectedRowIds(
+                    new Set(currentFilteredData.map((row) => row.id)),
+                  );
                 } else {
                   setSelectedRowIds(new Set());
                 }
@@ -542,6 +653,46 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           );
         },
       },
+
+      columnHelper.accessor("conflicts", {
+        id: "conflicts",
+        header: () => (
+          <span style={{ display: "block", textAlign: "center" }} />
+        ),
+        cell: ({ row }) => {
+          const item = row.original;
+          if (!item.is_conflict) return;
+
+          return (
+            <Stack direction="row" alignItems="center" justifyContent="center">
+              <IconButton
+                size="small"
+                color="error"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConflictPopoverAnchor(e.currentTarget);
+                  setConflictItem(item);
+                }}
+                sx={{
+                  p: 0.5,
+                  "&:hover": {
+                    backgroundColor: "error.light",
+                    color: "error.dark",
+                    opacity: 0.9,
+                  },
+                }}
+              >
+                <IconExclamationCircle size={20} />
+              </IconButton>
+            </Stack>
+          );
+        },
+        size: 2,
+        enableSorting: false,
+        enableHiding: false,
+        meta: { align: "center" },
+      }),
+
       columnHelper.accessor("name", {
         header: "Name",
         cell: ({ row }: any) => {
@@ -549,60 +700,75 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
           return (
             <Box display="flex" alignItems="center">
-              {item.is_conflict ? (
-                <Box gap={1} display={"flex"} alignItems={"center"}>
-                  <IconButton
-                    size="small"
-                    color="error"
-                    disableRipple
-                    sx={{
-                      p: 0,
-                      width: 18,
-                      height: 18,
-                      "&:hover": {
-                        backgroundColor: "transparent",
-                      },
-                    }}
-                  >
-                    <IconExclamationCircle size={18} stroke={2} />
-                  </IconButton>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      cursor: "pointer",
-                      "&:hover": {
-                        color: "primary.main",
-                      },
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedParentAddressId(item.id);
-                      setAddressListDrawerOpen(true);
-                    }}
-                  >
-                    {item.name}
-                  </Typography>
-                </Box>
-              ) : (
-                <Typography
-                  variant="body2"
-                  ml={3}
-                  sx={{
-                    cursor: "pointer",
-                    "&:hover": {
-                      color: "primary.main",
-                    },
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedParentAddressId(item.id);
-                    setAddressListDrawerOpen(true);
-                  }}
-                >
-                  {item.name}
-                </Typography>
-              )}
+              <Typography
+                variant="body2"
+                sx={{
+                  cursor: "pointer",
+                  "&:hover": {
+                    color: "primary.main",
+                  },
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedParentAddressId(item.id);
+                  setAddressListDrawerOpen(true);
+                }}
+              >
+                {item.name}
+              </Typography>
             </Box>
+          );
+        },
+      }),
+
+      columnHelper.accessor("cases", {
+        header: "Cases",
+        cell: (info) => <Typography px={1.5}>{info.getValue()}</Typography>,
+      }),
+
+      {
+        header: "Progress",
+        accessorKey: "progress",
+        cell: ({ row }: any) => {
+          const item = row.original.progress;
+          const status_int = row.original.status;
+          let color = "text.primary";
+
+          if (status_int === 13) color = "#999999";
+          else if (status_int === 4) color = "#32A852";
+          else if (status_int === 3) color = "#FF7F00";
+          return (
+            <Typography
+              className="f-14"
+              sx={{ px: 1.5 }}
+              color={color}
+              fontWeight={500}
+            >
+              {item}%
+            </Typography>
+          );
+        },
+      },
+
+      columnHelper.accessor("status_text", {
+        id: "statusText",
+        header: () => "Status",
+        cell: (info) => {
+          const statusInt = info.row.original.status;
+          let color = "textPrimary";
+          if (statusInt === 13) color = "#999999";
+          else if (statusInt === 4) color = "#32A852";
+          else if (statusInt === 3) color = "#FF7F00";
+
+          return (
+            <Typography
+              className="f-14"
+              color={color}
+              fontWeight={500}
+              sx={{ px: 1.5 }}
+            >
+              {info.getValue() ?? "-"}
+            </Typography>
           );
         },
       }),
@@ -611,9 +777,37 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         header: "Pin Code",
         cell: (info) => info.getValue(),
       }),
+      columnHelper.accessor("id", {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }: any) => {
+          return (
+            <IconButton
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenParentAddressDrawer(row.original);
+              }}
+            >
+              <IconEdit width={18} />
+            </IconButton>
+          );
+        },
+      }),
     ],
     [data, selectedRowIds, hoveredRow],
   );
+
+  const currentFilteredData = useMemo(() => {
+    let filtered = data.filter((item) => {
+      const matchesStatus = filters.status
+        ? item.status_text === filters.status
+        : true;
+      return matchesStatus;
+    });
+
+    return filtered;
+  }, [data, filters, searchTerm]);
 
   const {
     table,
@@ -624,10 +818,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     totalRows,
     setTotalRows,
   } = useServerTable({
-    data: data,
+    data: currentFilteredData,
     columns,
     fetchData: fetchAddresses,
-    debounceDependencies: [searchTerm, user?.company_id],
+    debounceDependencies: [searchTerm, user?.company_id, filters],
   });
 
   useEffect(() => {
@@ -640,13 +834,21 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   }));
 
   return (
-    <PermissionGuard permission="Projects">
-      <Box p={2} pt={1}>
+    <PermissionGuard permission="Addresses">
+      <Box
+        sx={{
+          height: "calc(100vh - 100px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Stack
+          mr={2}
+          ml={2}
           mb={2}
-          direction={{ xs: "column", sm: "row", xl: "row" }}
           justifyContent="space-between"
-          alignItems={"flex-start"}
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 1, sm: 2, md: 4 }}
         >
           <Grid
             container
@@ -682,10 +884,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
             >
               <IconFilter width={18} />
             </Button>
+
             <Button
               variant="contained"
               onClick={() => handleModelOpen()}
-              sx={{ mt: { xs: 1, sm: 0 }, mr: 1 }}
+              sx={{ mt: { xs: 1, sm: 0 } }}
               startIcon={<IconFileImport width={18} />}
             >
               Import
@@ -707,7 +910,18 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
             mt={{ xs: 2, sm: 0 }}
           >
             <Box display={"flex"}>
-              {selectedIds.length > 0 && (
+              {selectedRowIds.size > 0 && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  sx={{ mr: 2 }}
+                  onClick={() => setAllocateDrawerOpen(true)}
+                >
+                  Allocate
+                </Button>
+              )}
+
+              {selectedRowIds.size > 0 && (
                 <Button
                   variant="outlined"
                   color="error"
@@ -789,6 +1003,73 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     ))}
                 </FormGroup>
               </Popover>
+              <IconButton
+                sx={{ margin: "0px" }}
+                id="basic-button"
+                aria-controls={openMenu ? "basic-menu" : undefined}
+                aria-haspopup="true"
+                aria-expanded={openMenu ? "true" : undefined}
+                onClick={handleClick}
+              >
+                <IconDotsVertical width={18} />
+              </IconButton>
+              <Menu
+                id="basic-menu"
+                anchorEl={anchorEl}
+                open={openMenu}
+                onClose={handleClose}
+                slotProps={{
+                  list: {
+                    "aria-labelledby": "basic-button",
+                  },
+                }}
+              >
+                <MenuItem
+                  onClick={() => {
+                    handleClose();
+                    handleOpenParentAddressDrawer();
+                  }}
+                >
+                  <Box
+                    style={{
+                      width: "100%",
+                      color: "#11142D",
+                      textTransform: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyItems: "center",
+                    }}
+                  >
+                    <ListItemIcon>
+                      <IconPlus width={18} />
+                    </ListItemIcon>
+                    Add Parent Address
+                  </Box>
+                </MenuItem>
+                <MenuItem onClick={handleClose}>
+                  <Link
+                    color="body1"
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setArchiveListOpen(true);
+                    }}
+                    style={{
+                      width: "100%",
+                      color: "#11142D",
+                      textTransform: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyItems: "center",
+                    }}
+                  >
+                    <ListItemIcon>
+                      <IconNotes width={18} />
+                    </ListItemIcon>
+                    Archive Address List
+                  </Link>
+                </MenuItem>
+              </Menu>
             </Box>
 
             {/* Filter Dialog */}
@@ -838,23 +1119,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       </MenuItem>
                     ))}
                   </TextField>
-
-                  <TextField
-                    select
-                    label="Sort A-Z"
-                    value={tempFilters.sortOrder}
-                    onChange={(e) =>
-                      setTempFilters({
-                        ...tempFilters,
-                        sortOrder: e.target.value,
-                      })
-                    }
-                    fullWidth
-                  >
-                    <MenuItem value="">None</MenuItem>
-                    <MenuItem value="asc">A-Z</MenuItem>
-                    <MenuItem value="desc">Z-A</MenuItem>
-                  </TextField>
                 </Stack>
               </DialogContent>
 
@@ -862,16 +1126,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 <Button
                   onClick={() => {
                     setTempFilters({
-                      supplier: "",
-                      category: "",
                       status: "",
-                      sortOrder: "",
                     });
                     setFilters({
-                      supplier: "",
-                      category: "",
                       status: "",
-                      sortOrder: "",
                     });
                     setOpen(false);
                   }}
@@ -893,8 +1151,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
             </Dialog>
           </Stack>
         </Stack>
+        <Divider />
 
-        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: "auto",
+          }}
+        >
           <TableContainer ref={tableContainerRef}>
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
@@ -912,7 +1177,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                           sx={{
                             paddingTop: "10px",
                             paddingBottom: "10px",
-                            width: header.column.id === "select" ? 30 : "auto",
+                            width:
+                              header.column.id === "select"
+                                ? 10
+                                : header.column.id === "conflicts"
+                                  ? 3
+                                  : "auto",
 
                             ...(header.column.id === "actions" && {
                               position: "sticky",
@@ -1050,9 +1320,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           </TableContainer>
         </Box>
         <Divider />
-        <Box mt={2}>
-          <TablePaginationFooter table={table} totalRows={totalRows} />
-        </Box>
+        <TablePaginationFooter table={table} totalRows={totalRows} />
         {/* Modal for File Upload */}
         <Modal open={openModel} onClose={handleModelClose} disableEscapeKeyDown>
           <Box
@@ -1180,7 +1448,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         </Modal>
 
         {/* Add Address Drawer */}
-
         <Drawer
           anchor="bottom"
           open={addressListDrawerOpen}
@@ -1197,8 +1464,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
             {projectId && selectedParentAddressId && (
               <AddressesList
                 projectId={projectId}
-                searchTerm=""
-                filters={{ status: "", sortOrder: "" }}
                 onSelectionChange={() => {}}
                 processedIds={[]}
                 shouldRefresh={false}
@@ -1210,6 +1475,284 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
             )}
           </Box>
         </Drawer>
+
+        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+          <DialogTitle>Confirm Archive</DialogTitle>
+          <DialogContent>
+            <Typography color="textSecondary">
+              Are you sure you want to archive {selectedRowIds.size} parent
+              addresses?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setOpenDialog(false)}
+              variant="outlined"
+              color="primary"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  const payload = {
+                    address_ids: Array.from(selectedRowIds).join(","),
+                  };
+                  const res = await api.post("address/parent-archive", payload);
+
+                  if (res.data.IsSuccess) {
+                    toast.success("Parent addresses archived successfully.");
+                  }
+                  fetchAddresses();
+                  setSelectedRowIds(new Set());
+                } catch (error) {
+                  console.error(error);
+                  toast.error("Error archiving parent addresses.");
+                }
+                setOpenDialog(false);
+              }}
+              variant="outlined"
+              color="error"
+            >
+              Archive
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Drawer
+          anchor="right"
+          open={parentAddressDrawerOpen}
+          onClose={() => setParentAddressDrawerOpen(false)}
+          sx={{
+            width: 400,
+            "& .MuiDrawer-paper": { width: 400, backgroundColor: "#f9f9f9" },
+          }}
+        >
+          <Box display="flex" flexDirection="column" height="100%" p={2}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
+              <Box display={"flex"} alignItems={"center"}>
+                <IconButton onClick={() => setParentAddressDrawerOpen(false)}>
+                  <IconArrowLeft />
+                </IconButton>
+                <Typography variant="h6" fontWeight={700}>
+                  {editingParentAddress
+                    ? "Edit Parent Address"
+                    : "Add Parent Address"}
+                </Typography>
+              </Box>
+              <IconButton onClick={() => setParentAddressDrawerOpen(false)}>
+                <IconX />
+              </IconButton>
+            </Box>
+            <Box height="100%" px={2}>
+              <form
+                onSubmit={handleSaveParentAddress}
+                onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+                className="category-form"
+              >
+                <Box className="form_inputs">
+                  <Grid container spacing={3}>
+                    <Grid size={{ xs: 12 }}>
+                      <Typography variant="subtitle2" mb={1}>
+                        Pin Code
+                      </Typography>
+                      <CustomTextField
+                        name="pin_code"
+                        fullWidth
+                        value={parentAddressPostcode}
+                        onChange={(e: any) => {
+                          let value = e.target.value
+                            .replace(/[^a-zA-Z0-9]/g, "")
+                            .slice(0, 10);
+                          setParentAddressPostcode(value);
+                          if (value.length >= 3) {
+                            setPostcodeQuery(value);
+                          }
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Typography variant="subtitle2" mb={1}>
+                        Address
+                      </Typography>
+                      <Autocomplete
+                        fullWidth
+                        freeSolo
+                        options={addressOptions || []}
+                        loading={loadingAddresses}
+                        value={parentAddressName}
+                        getOptionLabel={(o: any) =>
+                          typeof o === "string"
+                            ? o
+                            : o.summaryline ||
+                              `${o.addressline1}, ${o.posttown}`
+                        }
+                        isOptionEqualToValue={(o: any, v: any) =>
+                          typeof o !== "string" &&
+                          typeof v !== "string" &&
+                          o.addressline1 === v.addressline1 &&
+                          o.postcode === v.postcode
+                        }
+                        onInputChange={(
+                          event: any,
+                          value: any,
+                          reason: any,
+                        ) => {
+                          if (reason === "input") {
+                            setPostcodeQuery(value);
+                            setParentAddressName(value);
+                          }
+                        }}
+                        onChange={(_, value: any) => {
+                          if (!value) {
+                            setParentAddressName("");
+                            setParentAddressPostcode("");
+                            return;
+                          }
+
+                          if (typeof value === "string") {
+                            setParentAddressName(value);
+                          } else {
+                            const fullAddress =
+                              value.summaryline ||
+                              [
+                                value.addressline1,
+                                value.addressline2,
+                                value.addressline3,
+                                value.posttown,
+                                value.postcode,
+                              ]
+                                .filter(Boolean)
+                                .join(", ");
+
+                            setParentAddressName(fullAddress);
+                            setParentAddressPostcode(value.postcode || "");
+                          }
+                        }}
+                        renderInput={(params: any) => (
+                          <CustomTextField
+                            {...params}
+                            placeholder="Select or type address"
+                            InputProps={{
+                              ...params.InputProps,
+                              endAdornment: (
+                                <>
+                                  {loadingAddresses ? (
+                                    <CircularProgress size={20} />
+                                  ) : null}
+                                  {params.InputProps.endAdornment}
+                                </>
+                              ),
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+                <Box mt={2} display="flex" justifyContent="start" gap={2}>
+                  <Button
+                    color="primary"
+                    variant="contained"
+                    size="large"
+                    type="submit"
+                    sx={{ borderRadius: 3 }}
+                    className="drawer_buttons"
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    color="inherit"
+                    onClick={() => setParentAddressDrawerOpen(false)}
+                    variant="contained"
+                    size="large"
+                    sx={{
+                      backgroundColor: "transparent",
+                      borderRadius: 3,
+                      color: "GrayText",
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </Box>
+              </form>
+            </Box>
+          </Box>
+        </Drawer>
+
+        <ArchiveParentAddress
+          open={archiveListOpen}
+          onClose={() => setArchiveListOpen(false)}
+          onWorkUpdated={fetchAddresses}
+          companyId={user.company_id}
+        />
+
+        <AllocateAddressesDrawer
+          open={allocateDrawerOpen}
+          onClose={() => closeDrawer()}
+          selectedAddresses={data.filter((item: any) =>
+            selectedRowIds.has(item.id),
+          )}
+          projects={project}
+          companyId={user.company_id}
+          onSuccess={() => {
+            setSelectedRowIds(new Set());
+            fetchAddresses();
+          }}
+        />
+        <Dialog
+          open={Boolean(conflictItem)}
+          onClose={(e: any) => {
+            e.stopPropagation();
+            setConflictItem(null);
+          }}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle sx={{ color: "error.main", fontWeight: 500 }}>
+            Conflict Detected
+          </DialogTitle>
+
+          <DialogContent>
+            <Typography variant="body1">
+              This address under postcode{" "}
+              <b>{conflictItem ? conflictItem.pin_code : ""}</b> are still
+              awaiting verification. Please verify them to continue.
+            </Typography>
+          </DialogContent>
+
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button
+              variant="contained"
+              onClick={(e) => {
+                e.stopPropagation();
+
+                if (conflictItem) {
+                  handleOpenParentAddressDrawer(conflictItem);
+                }
+
+                setConflictItem(null);
+              }}
+            >
+              Verify or Edit
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={(e) => {
+                e.stopPropagation();
+                setConflictItem(null);
+              }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </PermissionGuard>
   );

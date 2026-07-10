@@ -1,0 +1,783 @@
+"use client";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Typography,
+  Box,
+  TextField,
+  InputAdornment,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  CircularProgress,
+  Chip,
+  IconButton,
+  Popover,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Stack,
+  Divider,
+  Grid,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  MenuItem,
+  Autocomplete,
+} from "@mui/material";
+import { IconSearch, IconEye, IconFilter, IconX } from "@tabler/icons-react";
+import Link from "next/link";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import dayjs from "dayjs";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
+import api from "@/utils/axios";
+import PermissionGuard from "@/app/auth/PermissionGuard";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { flexRender } from "@tanstack/react-table";
+import { useServerTable } from "@/hooks/useServerTable";
+import Image from "next/image";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
+
+interface CaseSummary {
+  id: number;
+  name: string;
+  cases: number;
+  status: number;
+  latest_start: string | null;
+  finish_date: string | null;
+}
+
+const CasesList = () => {
+  const [data, setData] = useState<CaseSummary[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    status: "",
+    project_id: "",
+    parent_address_id: "",
+  });
+  const [tempFilters, setTempFilters] = useState(filters);
+  const [projectList, setProjectList] = useState<any[]>([]);
+  const [parentAddressList, setParentAddressList] = useState<any[]>([]);
+
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+  const [columnVisibility, setColumnVisibilityState] = useState<
+    Record<string, boolean>
+  >({});
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = React.useState(false);
+
+  const session = useSession();
+  const user = session.data?.user as User & { company_id?: number | null };
+
+  React.useEffect(() => {
+    const checkScroll = () => {
+      if (tableContainerRef.current) {
+        setIsScrollable(
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
+        );
+      }
+    };
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+
+    const observer = new MutationObserver(checkScroll);
+    if (tableContainerRef.current) {
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    }
+
+    return () => {
+      window.removeEventListener("resize", checkScroll);
+      observer.disconnect();
+    };
+  }, []);
+
+  const fetchProjectsAndAddresses = async () => {
+    if (!user?.company_id) return;
+    try {
+      const [projRes, addrRes] = await Promise.all([
+        api.get(`project/get?company_id=${user.company_id}`),
+        api.get(
+          `address/get-parent?company_id=${user.company_id}&page=1&limit=1000`,
+        ),
+      ]);
+      if (projRes.data?.info) setProjectList(projRes.data.info);
+
+      const addrData =
+        addrRes.data?.info?.data ||
+        addrRes.data?.info ||
+        addrRes.data?.data ||
+        [];
+      setParentAddressList(addrData);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const formatDate = (date: string | undefined) => {
+    return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
+  };
+
+  useEffect(() => {
+    fetchProjectsAndAddresses();
+  }, [user?.company_id]);
+
+  const fetchCases = async () => {
+    if (!user?.company_id) return;
+    setLoading(true);
+    try {
+      let url = `address/get?&company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (filters.status && filters.status !== "All")
+        url += `&status_text=${filters.status}`;
+      if (filters.project_id) url += `&project_id=${filters.project_id}`;
+      if (filters.parent_address_id)
+        url += `&parent_address_id=${filters.parent_address_id}`;
+      if (search) url += `&search=${search}`;
+
+      const res = await api.get(url);
+
+      if (res.data) {
+        const responseData =
+          res.data.info?.data || res.data.info || res.data.data || [];
+        setData(responseData);
+        const pagMeta =
+          res.data.data?.totalPages !== undefined ||
+          res.data.data?.totalItems !== undefined
+            ? res.data.data
+            : res.data.info && res.data.info.totalPages !== undefined
+              ? res.data.info
+              : res.data.data || {};
+
+        if (pagMeta.totalItems !== undefined) {
+          setTotalRows(pagMeta.totalItems);
+        } else if (pagMeta.total !== undefined) {
+          setTotalRows(pagMeta.total);
+        } else {
+          setTotalRows(responseData.length);
+        }
+
+        if (pagMeta.totalPages !== undefined) {
+          setPageCount(pagMeta.totalPages);
+        } else if (pagMeta.last_page !== undefined) {
+          setPageCount(pagMeta.last_page);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchCases();
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [search, page, limit, user?.company_id, filters]);
+
+  const getStatusText = (status: number) => {
+    switch (status) {
+      case 13:
+        return "To Do";
+      case 3:
+        return "In Progress";
+      case 4:
+        return "Completed";
+      default:
+        return "Unknown";
+    }
+  };
+
+  const getStatusColor = (status: number) => {
+    switch (status) {
+      case 13:
+        return "default";
+      case 3:
+        return "warning";
+      case 4:
+        return "success";
+      default:
+        return "default";
+    }
+  };
+
+  const columns = useMemo(
+    () => [
+      {
+        id: "select",
+        header: () => (
+          <Stack direction="row" alignItems="center">
+            <CustomCheckbox
+              className="header-checkbox"
+              checked={data.length > 0 && selectedRowIds.size === data.length}
+              indeterminate={
+                selectedRowIds.size > 0 && selectedRowIds.size < data.length
+              }
+              onClick={(e: any) => e.stopPropagation()}
+              onChange={(e: any) => {
+                e.stopPropagation();
+                e.preventDefault();
+
+                if (e.target.checked) {
+                  setSelectedRowIds(new Set(data.map((item: any) => item.id)));
+                } else {
+                  setSelectedRowIds(new Set());
+                }
+              }}
+            />
+          </Stack>
+        ),
+        cell: ({ row }: any) => {
+          const item = row.original;
+          const isChecked = selectedRowIds.has(item.id);
+          const isHovered = hoveredRow === item.id;
+          const showCheckbox = isChecked || isHovered;
+
+          return (
+            <Stack
+              direction="row"
+              alignItems="center"
+              onMouseEnter={() => setHoveredRow(item.id)}
+              onMouseLeave={() => setHoveredRow(null)}
+              sx={{ pl: 1 }}
+            >
+              <CustomCheckbox
+                checked={isChecked}
+                onClick={(e: any) => e.stopPropagation()}
+                onChange={(e: any) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+
+                  const newSelected = new Set(selectedRowIds);
+
+                  if (isChecked) {
+                    newSelected.delete(item.id);
+                  } else {
+                    newSelected.add(item.id);
+                  }
+
+                  setSelectedRowIds(newSelected);
+                }}
+                sx={{
+                  opacity: showCheckbox ? 1 : 0,
+                  pointerEvents: showCheckbox ? "auto" : "none",
+                  transition: "opacity .2s ease",
+                }}
+              />
+            </Stack>
+          );
+        },
+      },
+
+      {
+        header: "Cases",
+        accessorKey: "name",
+        cell: ({ row }: any) => {
+          const item = row.original;
+
+          return (
+            <Typography variant="body2" sx={{ px: 1.5 }}>
+              {item.name}
+            </Typography>
+          );
+        },
+      },
+
+      {
+        header: "Projects",
+        accessorKey: "project_names",
+        cell: ({ row }: any) => {
+          const item = row.original;
+
+          return (
+            <Typography variant="body2" sx={{ px: 1.5 }}>
+              {item.project_names ? item.project_names : "-"}
+            </Typography>
+          );
+        },
+      },
+
+      {
+        header: "Status",
+        accessorKey: "status",
+        cell: ({ row }: any) => {
+          const status = row.original.status_text;
+          const status_int = row.original.status_int;
+          let color = "text.primary";
+
+          if (status_int === 13) color = "#999999";
+          else if (status_int === 4) color = "#32A852";
+          else if (status_int === 3) color = "#FF7F00";
+
+          return (
+            <Typography
+              className="f-14"
+              color={color}
+              fontWeight={500}
+              sx={{ px: 1.5 }}
+            >
+              {status}
+            </Typography>
+          );
+        },
+      },
+
+      {
+        header: "Latest Start",
+        accessorKey: "start_date",
+        cell: ({ getValue }: any) => (
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+            {formatDate(getValue())}
+          </Typography>
+        ),
+      },
+
+      {
+        header: "Finish Date",
+        accessorKey: "end_date",
+        cell: ({ getValue }: any) => (
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+            {formatDate(getValue())}
+          </Typography>
+        ),
+      },
+    ],
+    [data, selectedRowIds, hoveredRow],
+  );
+  const simpleColumns = columns.map((column: any) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+  } = useServerTable({
+    data: data,
+    columns,
+    fetchData: fetchCases,
+    debounceDependencies: [user?.company_id, search, filters],
+  });
+
+  return (
+    <PermissionGuard permission="Cases">
+      <Box
+        sx={{
+          height: "calc(100vh - 100px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <Stack
+          mr={2}
+          ml={2}
+          mb={2}
+          justifyContent="space-between"
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 1, sm: 2, md: 4 }}
+        >
+          <Grid
+            container
+            size={{ xs: 12, sm: 12 }}
+            gap={1}
+            alignItems="center"
+            justifyContent={{ xs: "flex-start", sm: "flex-start" }}
+            flexWrap="wrap"
+            className="project_wrapper"
+          >
+            <Box display="flex" alignItems="center" gap={1}>
+              <TextField
+                size="small"
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                  setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <IconSearch size="20" />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ width: { xs: "100%", sm: 300 } }}
+              />
+
+              <Button
+                variant="contained"
+                onClick={() => setOpen(true)}
+                sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}
+              >
+                <IconFilter width={18} />
+              </Button>
+            </Box>
+          </Grid>
+
+          <Stack
+            display="flex"
+            justifyContent="flex-end"
+            direction="row"
+            gap={1}
+            flexWrap="wrap"
+            mt={{ xs: 2, sm: 0 }}
+          >
+            <Box display={"flex"}>
+              <IconButton onClick={handleClick} sx={{ ml: 1 }} color="primary">
+                <IconEye />
+              </IconButton>
+              <Popover
+                id="basic-menu"
+                anchorEl={anchorEl}
+                open={openMenu}
+                onClose={handleClose}
+                anchorOrigin={{
+                  vertical: "bottom",
+                  horizontal: "right",
+                }}
+                transformOrigin={{
+                  vertical: "top",
+                  horizontal: "right",
+                }}
+              >
+                <FormGroup sx={{ p: 2 }}>
+                  {table.getAllLeafColumns().map((column) => {
+                    if (column.id === "select" || column.id === "actions")
+                      return null;
+                    return (
+                      <FormControlLabel
+                        key={column.id}
+                        control={
+                          <Checkbox
+                            checked={column.getIsVisible()}
+                            onChange={column.getToggleVisibilityHandler()}
+                          />
+                        }
+                        label={
+                          typeof column.columnDef.header === "string"
+                            ? column.columnDef.header
+                            : column.id
+                        }
+                      />
+                    );
+                  })}
+                </FormGroup>
+              </Popover>
+            </Box>
+            {/* Filter Dialog */}
+            <Dialog
+              open={open}
+              onClose={() => setOpen(false)}
+              fullWidth
+              maxWidth="sm"
+            >
+              <DialogTitle
+                sx={{ m: 0, position: "relative", overflow: "visible" }}
+              >
+                Filters
+                <IconButton
+                  aria-label="close"
+                  onClick={() => setOpen(false)}
+                  size="large"
+                  sx={{
+                    position: "absolute",
+                    right: 12,
+                    top: 8,
+                    color: (theme) => theme.palette.grey[900],
+                    backgroundColor: "transparent",
+                    zIndex: 10,
+                    width: 50,
+                    height: 50,
+                  }}
+                >
+                  <IconX size={40} style={{ width: 40, height: 40 }} />
+                </IconButton>
+              </DialogTitle>
+              <DialogContent>
+                <Stack spacing={2} mt={1}>
+                  <TextField
+                    select
+                    label="Status"
+                    value={tempFilters.status}
+                    onChange={(e) =>
+                      setTempFilters({ ...tempFilters, status: e.target.value })
+                    }
+                    fullWidth
+                  >
+                    <MenuItem value="All">All</MenuItem>
+                    <MenuItem value="Completed">Completed</MenuItem>
+                    <MenuItem value="To Do">To Do</MenuItem>
+                    <MenuItem value="In Progress">In Progress</MenuItem>
+                  </TextField>
+
+                  <Autocomplete
+                    options={projectList}
+                    getOptionLabel={(option) => option.name || ""}
+                    value={
+                      projectList.find(
+                        (p) => p.id === tempFilters.project_id,
+                      ) || null
+                    }
+                    onChange={(e, value) => {
+                      setTempFilters({
+                        ...tempFilters,
+                        project_id: value ? value.id : "",
+                      });
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Project" fullWidth />
+                    )}
+                  />
+
+                  <Autocomplete
+                    options={parentAddressList}
+                    getOptionLabel={(option) => option.name || ""}
+                    value={
+                      parentAddressList.find(
+                        (p) => p.id === tempFilters.parent_address_id,
+                      ) || null
+                    }
+                    onChange={(e, value) => {
+                      setTempFilters({
+                        ...tempFilters,
+                        parent_address_id: value ? value.id : "",
+                      });
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Parent Address" fullWidth />
+                    )}
+                  />
+                </Stack>
+              </DialogContent>
+
+              <DialogActions>
+                <Button
+                  onClick={() => {
+                    setTempFilters({
+                      status: "",
+                      project_id: "",
+                      parent_address_id: "",
+                    });
+                    setFilters({
+                      status: "",
+                      project_id: "",
+                      parent_address_id: "",
+                    });
+                    setOpen(false);
+                    setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
+                  }}
+                  color="inherit"
+                >
+                  Clear
+                </Button>
+
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    setFilters(tempFilters);
+                    setOpen(false);
+                    setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
+                  }}
+                >
+                  Apply
+                </Button>
+              </DialogActions>
+            </Dialog>
+          </Stack>
+        </Stack>
+        <Divider />
+        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const isActive = header.column.getIsSorted();
+                      const isAsc = header.column.getIsSorted() === "asc";
+                      const isSortable = header.column.getCanSort();
+
+                      return (
+                        <TableCell
+                          key={header.id}
+                          align="center"
+                          sx={{
+                            paddingTop: "10px",
+                            paddingBottom: "10px",
+                            width: header.column.id === "select" ? 30 : "auto",
+
+                            ...(header.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 3,
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
+                        >
+                          <Box
+                            onClick={
+                              isSortable
+                                ? header.column.getToggleSortingHandler()
+                                : undefined
+                            }
+                            sx={{
+                              cursor: isSortable ? "pointer" : "default",
+                              display: "flex",
+                              alignItems: "center",
+                              "&:hover": {
+                                color: isSortable ? "#888" : "inherit",
+                              },
+                              "&:hover .hoverIcon": { opacity: 1 },
+                            }}
+                          >
+                            <Typography variant="subtitle2">
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                            </Typography>
+                            {isSortable && (
+                              <Box
+                                component="span"
+                                className="hoverIcon"
+                                ml={0.5}
+                                sx={{
+                                  transition: "opacity 0.2s",
+                                  opacity: isActive ? 1 : 0,
+                                  fontSize: "0.9rem",
+                                  color: isActive ? "#000" : "#888",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                              </Box>
+                            )}
+                          </Box>
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  <SkeletonLoader
+                    columns={simpleColumns}
+                    rowCount={simpleColumns.length}
+                  />
+                ) : table.getRowModel().rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "calc(50vh - 100px)",
+                        }}
+                      >
+                        <Image
+                          src="/images/no-data.png"
+                          alt="No data"
+                          style={{
+                            maxWidth: "100%",
+                            maxHeight: "100%",
+                          }}
+                          width={200}
+                          height={200}
+                        />
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      hover
+                      sx={{ cursor: "pointer" }}
+                      onMouseEnter={() => setHoveredRow(row.original.id)}
+                      onMouseLeave={() => setHoveredRow(null)}
+                      onClick={() => {
+                        const newSelected = new Set(selectedRowIds);
+                        if (newSelected.has(row.original.id)) {
+                          newSelected.delete(row.original.id);
+                        } else {
+                          newSelected.add(row.original.id);
+                        }
+                        setSelectedRowIds(newSelected);
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          sx={{
+                            padding: "10px",
+                            ...(cell.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 1,
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+        <Divider />
+
+        <TablePaginationFooter table={table} totalRows={totalRows} />
+      </Box>
+    </PermissionGuard>
+  );
+};
+
+export default CasesList;

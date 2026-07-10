@@ -33,6 +33,11 @@ import {
   ListItemButton,
   Tooltip,
   Autocomplete,
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import { useServerTable } from "@/hooks/useServerTable";
@@ -43,12 +48,13 @@ import {
   IconNote,
   IconPointFilled,
   IconProgress,
+  IconSearch,
+  IconTrash,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-// import { ProjectList } from "./index";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import Link from "next/link";
 import { IconPlus } from "@tabler/icons-react";
@@ -67,16 +73,12 @@ import { DocumentsTab } from "./address-sidebar-tab/documents-tab";
 import { TradesTab } from "./address-sidebar-tab/trades-tab";
 import { ProjectList } from "../../projects/list";
 import { IconX } from "@tabler/icons-react";
+import { IconFilter } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
 interface AddressesListProps {
   projectId: number | null;
-  searchTerm: string;
-  filters: {
-    status: string;
-    sortOrder: string;
-  };
   onProjectUpdated?: () => void;
   onSelectionChange: (ids: number[]) => void;
   processedIds: number[];
@@ -123,8 +125,6 @@ type UnifiedPrediction =
 
 const AddressesList = ({
   projectId,
-  searchTerm,
-  filters,
   onProjectUpdated,
   onSelectionChange,
   onTableReady,
@@ -152,7 +152,9 @@ const AddressesList = ({
   const [radius, setRadius] = useState(0);
   const fetched = useRef(false);
   const [progress, setProgress] = useState(false);
-
+  const status = ["Completed", "To Do", "In Progress"];
+  const [open, setOpen] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
   const isIEPostcode = (value: string) =>
     /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
 
@@ -173,8 +175,13 @@ const AddressesList = ({
   const lastRadiusRef = useRef<number | null>(null);
 
   const [typedAddress, setTypedAddress] = useState(false);
-
+  const [searchTerm, setSearchTerm] = useState("");
   const openMenu = Boolean(anchorEl);
+  const [filters, setFilters] = useState({
+    status: "",
+    project: "",
+  });
+  const [tempFilters, setTempFilters] = useState(filters);
 
   const [formData, setFormData] = useState<any>({});
   const session = useSession();
@@ -250,9 +257,14 @@ const AddressesList = ({
     if (!projectId) return;
     setFetchAddress(true);
     try {
-      let url = `address/get?project_id=${projectId}&company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      let url = `address/get?&company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (parentAddressId) {
         url += `&parent_address_id=${parentAddressId}`;
+      } else {
+        url += `project_id=${projectId}`;
+      }
+      if (searchTerm) {
+        url += `&search=${searchTerm}`;
       }
       const res = await api.get(url);
       if (res.data) {
@@ -298,7 +310,7 @@ const AddressesList = ({
     if (projectId) {
       fetchAddresses();
     }
-  }, [projectId, processedIds, shouldRefresh, parentAddressId]);
+  }, [projectId, processedIds, shouldRefresh, parentAddressId, searchTerm]);
 
   useEffect(() => {
     if (sidebarData !== null) {
@@ -355,18 +367,15 @@ const AddressesList = ({
       const matchesStatus = filters.status
         ? item.status_text === filters.status
         : true;
+      const matchesProject = filters.project
+        ? item?.project_name === filters.project
+        : true;
       const search = searchTerm.toLowerCase();
       const matchesSearch =
         item.name.toLowerCase().includes(search) ||
         item.progress.toLowerCase().includes(search);
-      return matchesStatus && matchesSearch;
+      return matchesStatus && matchesSearch && matchesProject;
     });
-
-    if (filters.sortOrder === "asc") {
-      filtered = filtered.sort((a, b) => a.name?.localeCompare(b.name));
-    } else if (filters.sortOrder === "desc") {
-      filtered = filtered.sort((a, b) => b.name?.localeCompare(a.name));
-    }
 
     return filtered;
   }, [data, filters, searchTerm]);
@@ -968,6 +977,16 @@ const AddressesList = ({
         },
       }),
 
+      columnHelper.accessor("project_name", {
+        id: "project",
+        header: () => "Project",
+        cell: (info) => (
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+            {info.getValue()}
+          </Typography>
+        ),
+      }),
+
       columnHelper.accessor("progress", {
         id: "progress",
         header: () => "Progress",
@@ -996,6 +1015,26 @@ const AddressesList = ({
             fontWeight={700}
             sx={{ px: 1.5 }}
           >
+            {info.getValue() ?? "-"}
+          </Typography>
+        ),
+      }),
+
+      columnHelper.accessor("case_id", {
+        id: "caseID",
+        header: () => "Case Id",
+        cell: (info) => (
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+            {info.getValue() ?? "-"}
+          </Typography>
+        ),
+      }),
+
+      columnHelper.accessor("ref", {
+        id: "reference",
+        header: () => "Reference",
+        cell: (info) => (
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
             {info.getValue() ?? "-"}
           </Typography>
         ),
@@ -1099,12 +1138,54 @@ const AddressesList = ({
           justifyContent="space-between"
           alignItems={"center"}
         >
-          <Typography variant="h5">Cases</Typography>
+          <Box display={"flex"} gap={1} alignItems={"center"}>
+            <IconButton onClick={() => onClose()}>
+              <IconArrowLeft />
+            </IconButton>
+            <Typography variant="h6" fontWeight={600}>
+              Tasks
+            </Typography>
+            <TextField
+              id="search"
+              type="text"
+              size="small"
+              variant="outlined"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconSearch size={"16"} />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
+            <Button
+              variant="contained"
+              onClick={() => setOpen(true)}
+              sx={{ mt: { xs: 1, sm: 0 } }}
+            >
+              <IconFilter width={18} />
+            </Button>
+          </Box>
           <Box>
+            {selectedRowIds.size > 0 && (
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<IconTrash width={18} />}
+                onClick={() => setOpenDialog(true)}
+              >
+                Archive
+              </Button>
+            )}
             <IconButton onClick={handleClick} size="small">
               <IconDotsVertical width={18} />
             </IconButton>
-            <IconButton onClick={() => onClose}>
+            <IconButton onClick={() => onClose()}>
               <IconX />
             </IconButton>
           </Box>
@@ -1121,6 +1202,7 @@ const AddressesList = ({
                 handleClose();
                 setFormData({
                   project_ids: [Number(projectId)],
+                  parent_address_id: parentAddressId ? parentAddressId : null,
                   company_id: user.company_id,
                   name: "",
                   radius: 50,
@@ -1131,7 +1213,7 @@ const AddressesList = ({
               <ListItemIcon>
                 <IconPlus width={18} />
               </ListItemIcon>
-              Add Case
+              Add Task
             </MenuItem>
             <MenuItem
               onClick={() => {
@@ -1142,7 +1224,7 @@ const AddressesList = ({
               <ListItemIcon>
                 <IconNote width={18} />
               </ListItemIcon>
-              Archive Cases
+              Archive Tasks
             </MenuItem>
           </Menu>
         </Box>
@@ -1461,6 +1543,104 @@ const AddressesList = ({
           )}
         </Box>
       </Drawer>
+
+      {/* Filter Dialog */}
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ m: 0, position: "relative", overflow: "visible" }}>
+          Filters
+          <IconButton
+            aria-label="close"
+            onClick={() => setOpen(false)}
+            size="large"
+            sx={{
+              position: "absolute",
+              right: 12,
+              top: 8,
+              color: (theme) => theme.palette.grey[900],
+              backgroundColor: "transparent",
+              zIndex: 10,
+              width: 50,
+              height: 50,
+            }}
+          >
+            <IconX size={40} style={{ width: 40, height: 40 }} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <TextField
+              select
+              label="Status"
+              value={tempFilters.status}
+              onChange={(e) =>
+                setTempFilters({ ...tempFilters, status: e.target.value })
+              }
+              fullWidth
+            >
+              <MenuItem value="All">All</MenuItem>
+              {status.map((statusItem, i) => (
+                <MenuItem key={i} value={statusItem}>
+                  {statusItem}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            {projects && (
+              <TextField
+                select
+                label="Project"
+                value={tempFilters.project}
+                onChange={(e) =>
+                  setTempFilters({ ...tempFilters, project: e.target.value })
+                }
+                fullWidth
+              >
+                <MenuItem value="All">All</MenuItem>
+                {projects?.map((p, i) => (
+                  <MenuItem key={i} value={p.name}>
+                    {p.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          </Stack>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setTempFilters({
+                project: "",
+                status: "",
+              });
+              setFilters({
+                project: "",
+                status: "",
+              });
+              setOpen(false);
+            }}
+            color="inherit"
+          >
+            Clear
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={() => {
+              setFilters(tempFilters);
+              setOpen(false);
+            }}
+          >
+            Apply
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Drawer
         anchor="right"
         open={progressDrawerOpen}
@@ -1594,7 +1774,7 @@ const AddressesList = ({
                       <IconArrowLeft />
                     </IconButton>
                     <Typography variant="h6" color="inherit" fontWeight={700}>
-                      Edit Address
+                      Edit Task
                     </Typography>
                   </Box>
 
@@ -1883,6 +2063,7 @@ const AddressesList = ({
           </Box>
         </Box>
       </Drawer>
+
       <Drawer
         anchor="right"
         open={addCaseDrawerOpen}
@@ -1912,7 +2093,7 @@ const AddressesList = ({
                       <IconArrowLeft />
                     </IconButton>
                     <Typography variant="h6" color="inherit" fontWeight={700}>
-                      Add Case
+                      Add Task
                     </Typography>
                   </Box>
 
@@ -2208,6 +2389,52 @@ const AddressesList = ({
         onClose={() => setArchiveList(false)}
         onWorkUpdated={fetchAddresses}
       />
+
+      {/* Dialogs and Drawers */}
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+        <DialogTitle>Confirm Archive</DialogTitle>
+        <DialogContent>
+          <Typography color="textSecondary">
+            Are you sure you want to archive {selectedRowIds.size} tasks?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setOpenDialog(false)}
+            variant="outlined"
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              try {
+                const payload = {
+                  address_ids: Array.from(selectedRowIds).join(","),
+                };
+                const res = await api.post(
+                  "address/archive-addresses",
+                  payload,
+                );
+
+                if (res.data.IsSuccess) {
+                  toast.success("Tasks archived successfully.");
+                }
+                fetchAddresses();
+                setSelectedRowIds(new Set());
+              } catch (error) {
+                console.error(error);
+                toast.error("Error archiving addresses.");
+              }
+              setOpenDialog(false);
+            }}
+            variant="outlined"
+            color="error"
+          >
+            Archive
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

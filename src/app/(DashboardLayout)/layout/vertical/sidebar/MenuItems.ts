@@ -21,6 +21,7 @@ import {
   IconUsers,
   IconArrowsShuffle,
   IconReport,
+  IconHome2,
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
@@ -86,8 +87,15 @@ const MenuItems: NavGroup[] = [
     id: uniqueId(),
     title: "Addresses",
     slug: "addresses",
-    icon: IconLocation, // Adding IconLocation assuming it's available or we can use another one
+    icon: IconHome2,
     href: "/apps/addresses/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Cases",
+    slug: "cases",
+    icon: IconFiles,
+    href: "/apps/cases/list",
   },
   {
     id: uniqueId(),

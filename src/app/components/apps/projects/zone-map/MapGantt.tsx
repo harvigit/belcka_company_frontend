@@ -534,6 +534,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                     params: {
                         company_id: user.company_id,
                         is_project: true,
+                        project_id: projectId
                     }
                 });
                 setGeofences(res.data.info ?? []);
@@ -541,6 +542,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                 const res: AxiosResponse<any> = await api.get('address/zones', {
                     params: {
                         company_id: user.company_id,
+                        project_id: projectId
                     }
                 });
                 setGeofences(res.data.info?.zones ?? []);
