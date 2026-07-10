@@ -64,6 +64,7 @@ import {
   IconChevronUp,
   IconChevronDown,
   IconLock,
+  IconSettings,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -85,6 +86,7 @@ import { AxiosResponse } from "axios";
 import Cookies from "js-cookie";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import UserSettingDrawer from "./user-setting-drawer";
 
 dayjs.extend(customParseFormat);
 
@@ -151,6 +153,7 @@ const TablePagination = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchUser, setFetchUser] = useState<boolean>(false);
   const [visibleColumnsCount, setVisibleColumnsCount] = useState(0);
+  const [columnAccessLoaded, setColumnAccessLoaded] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
@@ -174,6 +177,7 @@ const TablePagination = () => {
   const user = session.data?.user as User & { id: number } & {
     company_id?: string | null;
   } & { user_role_id: number };
+  const isAuthenticatedUserAdmin = Number(user?.user_role_id) === 1;
   const [inviteUser, setInviteUser] = useState(false);
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
@@ -197,6 +201,7 @@ const TablePagination = () => {
   const openMenu = Boolean(anchorEl);
   // Permissions drawer state
   const [permissionsDrawerOpen, setPermissionsDrawerOpen] = useState(false);
+  const [userSettingDrawerOpen, setUserSettingDrawerOpen] = useState(false);
   const [selectedUserPermissions, setSelectedUserPermissions] =
     useState<UserList | null>(null);
   const [permissionSearch, setPermissionSearch] = useState("");
@@ -278,6 +283,7 @@ const TablePagination = () => {
         setIsAdmin(res.data.is_admin);
         setHasPermissionUser(res.data.has_permission_user || false);
         setPermissionUserType(res.data.permission_user_type || "");
+        setColumnAccessLoaded(true);
 
         const pagMeta =
           res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
@@ -635,6 +641,10 @@ const TablePagination = () => {
     userId ? `columnVisibility_${userId}` : "columnVisibility";
 
   const columnVisibilityKey = getColumnVisibilityKey(userId);
+  const canShowAllColumns =
+    isAdmin ||
+    (hasPermissionUser &&
+      (permissionUserType === "view" || permissionUserType === "view_edit"));
 
   const columnHelper = createColumnHelper<UserList>();
 
@@ -1183,22 +1193,29 @@ const TablePagination = () => {
   });
 
   useEffect(() => {
-    const savedVisibility = Cookies.get("columnVisibility")
-      ? JSON.parse(Cookies.get("columnVisibility")!)
-      : {};
+    if (!userId || !columnAccessLoaded) return;
 
-    table.setColumnVisibility(savedVisibility);
-  }, [table]);
+    if (canShowAllColumns) {
+      const savedVisibility = Cookies.get(columnVisibilityKey)
+        ? JSON.parse(Cookies.get(columnVisibilityKey)!)
+        : {};
+      table.setColumnVisibility(savedVisibility);
+      return;
+    }
 
-  useEffect(() => {
-    if (!userId) return;
-
-    const savedVisibility = Cookies.get(columnVisibilityKey)
-      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
-      : {};
-
-    table.setColumnVisibility(savedVisibility);
-  }, [table, userId]);
+    const limitedColumns = new Set(["name", "user_code", "email", "phone"]);
+    const limitedVisibility: Record<string, boolean> = {};
+    table.getAllLeafColumns().forEach((column) => {
+      limitedVisibility[column.id] = limitedColumns.has(column.id);
+    });
+    table.setColumnVisibility(limitedVisibility);
+  }, [
+    table,
+    userId,
+    columnVisibilityKey,
+    columnAccessLoaded,
+    canShowAllColumns,
+  ]);
 
   useEffect(() => {
     const eligibleColumns = table
@@ -1260,20 +1277,6 @@ const TablePagination = () => {
       [colId]: value,
     }));
   };
-
-  useEffect(() => {
-    if (!userId) return;
-
-    const saved = Cookies.get(columnVisibilityKey)
-      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
-      : {};
-
-    if (saved.selectAll !== undefined) {
-      setSelectAll(saved.selectAll);
-    }
-
-    table.setColumnVisibility(saved);
-  }, [userId, table]);
 
   useEffect(() => {
     table.setPageIndex(0);
@@ -1449,13 +1452,24 @@ const TablePagination = () => {
               <IconDotsVertical width={18} />
             </IconButton>
 
-            <IconButton
-              onClick={handlePopoverOpen}
-              sx={{ ml: 1 }}
-              color="primary"
-            >
-              <IconEye />
-            </IconButton>
+            {canShowAllColumns && (
+              <IconButton
+                onClick={handlePopoverOpen}
+                sx={{ ml: 1 }}
+                color="primary"
+              >
+                <IconEye />
+              </IconButton>
+            )}
+            {isAuthenticatedUserAdmin && (
+                <IconButton
+                  onClick={() => setUserSettingDrawerOpen(true)}
+                  color="primary"
+                  aria-label="Open user permission settings"
+                >
+                  <IconSettings />
+                </IconButton>
+            )}
             <Popover
               open={Boolean(anchorEl2)}
               anchorEl={anchorEl2}
@@ -1628,6 +1642,11 @@ const TablePagination = () => {
           </Stack>
         </Stack>
         <Divider />
+
+        <UserSettingDrawer
+          open={isAuthenticatedUserAdmin && userSettingDrawerOpen}
+          onClose={() => setUserSettingDrawerOpen(false)}
+        />
 
         {/* Permissions Drawer */}
         <Drawer

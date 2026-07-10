@@ -29,6 +29,7 @@ import {
     Menu,
     ListItemIcon, Tooltip,
     Badge,
+    CircularProgress,
 } from '@mui/material';
 import {
     IconSearch,
@@ -52,7 +53,22 @@ import {
     flexRender,
     VisibilityState
 } from '@tanstack/react-table';
-import {format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays} from 'date-fns';
+import {
+    addDays,
+    addMonths,
+    endOfMonth,
+    endOfWeek,
+    format,
+    isSameDay,
+    isSameMonth,
+    isValid,
+    parse,
+    parseISO,
+    startOfDay,
+    startOfMonth,
+    startOfWeek,
+    subMonths,
+} from 'date-fns';
 import {AxiosResponse} from 'axios';
 
 import api from '@/utils/axios';
@@ -75,7 +91,7 @@ import LeaveLists from './time-clock-details/leaves';
 import Conflicts from '@/app/components/apps/time-clock/time-clock-details/conflicts/conflicts';
 import {ConflictDetail} from '@/app/components/apps/time-clock/types/timeClock';
 import ConfirmationDialog from './components/ConfirmationDialog';
-import { IconEye } from '@tabler/icons-react';
+import { IconCalendar, IconEye } from '@tabler/icons-react';
 import Settings from '../timesheet/setting/settings';
 import BookkeeperHistory from './history';
 import RecoverWorklogs from './recover-worklogs';
@@ -329,6 +345,7 @@ const TimeClock = ({ queryParams }: Props) => {
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
     const [addWorklogSidebar, setAddWorklogSidebar] = useState<boolean>(false);
     const [openLeaves, setOpenLeaves] = useState(false);
+    
     // Conflict sidebar
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
     const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);

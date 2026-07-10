@@ -82,6 +82,8 @@ const TablePagination = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
     const [archiveLoading, setArchiveLoading] = useState<boolean>(false);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [userPermissionType, setUserPermissionType] = useState<'' | 'view' | 'view_edit'>('');
     const [isPhoneUpdate, setIsPhoneUpdate] = useState<boolean>(false);
     const router = useRouter();
     const [supervisorReplacementOpen, setSupervisorReplacementOpen] = useState(false);
@@ -134,6 +136,7 @@ const TablePagination = () => {
 
     const param = useParams();
     const userId = param?.id;
+    const canEditUserDetails = isAdmin || userPermissionType === 'view_edit' || Number(user?.id) === Number(userId);
     const [value, setValue] = useState<number>(0);
     const [openImageDialog, setOpenImageDialog] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -222,12 +225,23 @@ const TablePagination = () => {
 
             if (!res.data?.IsSuccess || !res.data?.info?.length) {
                 isRedirecting = true;
+                if (
+                    res.data?.error_code === 'ACCESS_DENIED' ||
+                    res.data?.message?.toLowerCase().includes('access denied') ||
+                    res.data?.message?.toLowerCase().includes('not authorized')
+                ) {
+                    toast.error('You are not authorized to view this page', {
+                        id: 'user-details-unauthorized',
+                    });
+                }
                 router.replace('/apps/users/list');
                 return;
             }
 
             const data = res.data.info[0];
             setData(data);
+            setIsAdmin(!!res.data.is_admin);
+            setUserPermissionType(res.data.permission_user_type || '');
             setEnabled(data?.is_check_in ?? false);
 
             const ext = data?.extension || '';
@@ -255,14 +269,14 @@ const TablePagination = () => {
         } catch (err: any) {
             const status = err?.response?.status;
             const errorCode = err?.response?.data?.error_code;
-            if (
-                status === 403 ||
-                status === 404 ||
-                errorCode === 'ACCESS_DENIED' ||
-                errorCode === 'USER_NOT_FOUND' ||
-                errorCode === 'INVALID_USER_ID'
-            ) {
+            if (status === 403 || status === 404 ||
+                errorCode === 'ACCESS_DENIED' || errorCode === 'USER_NOT_FOUND' || errorCode === 'INVALID_USER_ID') {
                 isRedirecting = true;
+                if (status === 403 || errorCode === 'ACCESS_DENIED') {
+                    toast.error('You are not authorized to view this page', {
+                        id: 'user-details-unauthorized',
+                    });
+                }
                 router.replace('/apps/users/list');
                 return;
             }
@@ -661,7 +675,7 @@ const TablePagination = () => {
                                         }
                                         alt={data?.first_name}
                                         sx={{ width: 60, height: 60, cursor: 'pointer' }}
-                                        onClick={() => setOpenImageDialog(true)}
+                                        onClick={() => canEditUserDetails && setOpenImageDialog(true)}
                                     />
                                 </Badge>
 
@@ -695,7 +709,7 @@ const TablePagination = () => {
                                 </Box>
                             </Box>
                             <Box display={'flex'} gap={2}>
-                                {!isReadOnlyUserView && data?.is_working && user.user_role_id == 1 && (
+                                {canEditUserDetails && !isReadOnlyUserView && data?.is_working && user.user_role_id == 1 && (
                                     <Button
                                         variant="outlined"
                                         color="success"
@@ -705,7 +719,7 @@ const TablePagination = () => {
                                     </Button>
                                 )}
 
-                                {!isReadOnlyUserView && data?.user_role_id == 2 && user.user_role_id == 1 && (
+                                {canEditUserDetails && !isReadOnlyUserView && data?.user_role_id == 2 && user.user_role_id == 1 && (
                                     <Button
                                         variant="outlined"
                                         color="primary"
@@ -717,7 +731,7 @@ const TablePagination = () => {
                                     </Button>
                                 )}
 
-                                {!data?.is_company_owner && data?.user_role_id == 1 && companyUsers.find((u: any) => Number(u.id) === Number(user.id))?.is_company_owner && (
+                                {canEditUserDetails && !data?.is_company_owner && data?.user_role_id == 1 && companyUsers.find((u: any) => Number(u.id) === Number(user.id))?.is_company_owner && (
                                     <Button
                                         variant="outlined"
                                         color="error"
@@ -801,6 +815,7 @@ const TablePagination = () => {
                                             handleFieldChange('first_name', e.target.value)
                                         }
                                         inputProps={{ maxLength: 25 }}
+                                        disabled={!canEditUserDetails}
                                         fullWidth
                                     />
 
@@ -817,6 +832,7 @@ const TablePagination = () => {
                                             handleFieldChange('last_name', e.target.value)
                                         }
                                         inputProps={{ maxLength: 25 }}
+                                        disabled={!canEditUserDetails}
                                         fullWidth
                                     />
 
@@ -834,6 +850,7 @@ const TablePagination = () => {
                                         }}
                                         inputClass="phone-input"
                                         enableSearch
+                                        disabled={!canEditUserDetails}
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
@@ -849,6 +866,7 @@ const TablePagination = () => {
                                             handleFieldChange('email', e.target.value)
                                         }
                                         fullWidth
+                                        disabled={!canEditUserDetails}
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
@@ -864,6 +882,7 @@ const TablePagination = () => {
                                             handleFieldChange('user_code', e.target.value.toUpperCase())
                                         }
                                         inputProps={{ maxLength: 10 }}
+                                        disabled={!canEditUserDetails}
                                         fullWidth
                                     />
 
@@ -882,6 +901,7 @@ const TablePagination = () => {
                                             handleFieldChange('account_id', value)
                                         }}
                                         inputProps={{ maxLength: 10 }}
+                                        disabled={!canEditUserDetails}
                                         fullWidth
                                     />
 
@@ -895,6 +915,7 @@ const TablePagination = () => {
                                         placeholder="Choose Expiry date"
                                         fullWidth
                                         value={formData.expired_at}
+                                        disabled={!canEditUserDetails}
                                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                             const newDate = e.target.value;
                                             setFormData((prev) => ({
@@ -904,7 +925,7 @@ const TablePagination = () => {
                                         }}
                                     />
                                 </form>
-                                {!isReadOnlyUserView && (
+                                {canEditUserDetails && !isReadOnlyUserView && (
                                     <Box mt={2}>
                                         <Button
                                             variant="contained"
@@ -919,7 +940,7 @@ const TablePagination = () => {
                             </Box>
                         </BlankCard>
 
-                        {!isReadOnlyUserView && (
+                        {canEditUserDetails && !isReadOnlyUserView && (
                             <Card sx={{ mt: 3 }}>
                                 <Box
                                     display="flex"
@@ -936,7 +957,7 @@ const TablePagination = () => {
                             </Card>
                         )}
 
-                        {!isReadOnlyUserView && (userRole === 1 || Number(user?.id) === Number(userId)) && (
+                        {canEditUserDetails && !isReadOnlyUserView && (userRole === 1 || Number(user?.id) === Number(userId)) && (
                             <Card sx={{ mt: 3 }}>
                                 <Box sx={{ m: 3 }}>
                                     <Button
@@ -963,7 +984,16 @@ const TablePagination = () => {
                         sx={{ boxShadow: (theme) => theme.shadows[8] }}
                     >
                         <BlankCard>
-                            <Box>
+                            <Box
+                                sx={!canEditUserDetails ? {
+                                    '& button:not(.MuiTab-root), & input, & textarea, & [role="switch"], & .MuiSelect-select': {
+                                        pointerEvents: 'none',
+                                    },
+                                    '& button:not(.MuiTab-root)': {
+                                        display: 'none',
+                                    },
+                                } : undefined}
+                            >
                                 <Tabs
                                     variant="scrollable"
                                     scrollButtons="auto"

@@ -812,26 +812,26 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                 </Select>
                             </Box>
 
-                            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                                <Typography variant="body2" mb={1}>
-                                    Maximum leaves allowed per year
-                                </Typography>
-                    
-                                <TextField
-                                    type="text"
-                                    value={settings.leave_limit}
-                                    onChange={handleLeaveLimitChange}
-                                    onBlur={handleLeaveLimitBlur}
-                                    inputProps={{
-                                        min: 0,
-                                        max: 365,
-                                        step: 1,
-                                        inputMode: "numeric",
-                                    }}
-                                    sx={{ width: "22%" }}
-                                    placeholder="Enter leave limit"
-                                />
-                            </Box>
+                            {/*<Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>*/}
+                            {/*    <Typography variant="body2" mb={1}>*/}
+                            {/*        Maximum leaves allowed per year*/}
+                            {/*    </Typography>*/}
+                            
+                            {/*    <TextField*/}
+                            {/*        type="text"*/}
+                            {/*        value={settings.leave_limit}*/}
+                            {/*        onChange={handleLeaveLimitChange}*/}
+                            {/*        onBlur={handleLeaveLimitBlur}*/}
+                            {/*        inputProps={{*/}
+                            {/*            min: 0,*/}
+                            {/*            max: 365,*/}
+                            {/*            step: 1,*/}
+                            {/*            inputMode: "numeric",*/}
+                            {/*        }}*/}
+                            {/*        sx={{ width: "22%" }}*/}
+                            {/*        placeholder="Enter leave limit"*/}
+                            {/*    />*/}
+                            {/*</Box>*/}
                         </Box>
                     </Box>
                 </Box>

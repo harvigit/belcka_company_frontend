@@ -35,8 +35,8 @@ const menuItems = [
     { icon: <IconCoinPound size={18} />, label: "Rate Settings" },
     { icon: <IconMapPinCog size={18} />, label: "Penalty Setting" },
     { icon: <IconUserCog size={18} />, label: "Bookkeeper Setting" },
-    { icon: <IconDoorExit size={18} />, label: "Leaves" },
-    { icon: <IconCalendarOff size={18} />, label: "Holidays" },
+    // { icon: <IconDoorExit size={18} />, label: "Leaves" },
+    // { icon: <IconCalendarOff size={18} />, label: "Holidays" },
     { icon: <IconCategoryPlus size={18} />, label: "Expense Category" },
 ];
 
@@ -155,12 +155,12 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                         {activeMenuItem === "General" && (
                             <GeneralSetting onSaveSuccess={handleSaveSuccess} />
                         )}
-                        {activeMenuItem === "Leaves" && (
-                            <LeaveList />
-                        )}
-                        {activeMenuItem === "Holidays" && (
-                            <HolidayList />
-                        )}
+                        {/*{activeMenuItem === "Leaves" && (*/}
+                        {/*    <LeaveList />*/}
+                        {/*)}*/}
+                        {/*{activeMenuItem === "Holidays" && (*/}
+                        {/*    <HolidayList />*/}
+                        {/*)}*/}
                         {activeMenuItem === "Shift" && (
                             <ShiftLists />
                         )}
