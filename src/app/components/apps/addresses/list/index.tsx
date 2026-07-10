@@ -145,6 +145,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [data, setData] = useState<ProjectList[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [project, setProject] = useState<ProjectList[]>([]);
+  const [allProjects, SetAllProjects] = useState<any[]>([]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [projectId, setProjectId] = useState<number | null>(null);
@@ -383,10 +384,24 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     setLoading(false);
   };
 
+  const getData = async () => {
+    try {
+      const res = await api.get(
+        `get-modules?company_id=${user.company_id}&is_web=true`,
+      );
+      if (res.data) {
+        SetAllProjects(res.data.projects);
+      }
+    } catch (err) {
+      console.error("Failed to fetch projects", err);
+    }
+  };
+
   useEffect(() => {
     if (user.company_id) {
       fetchProjects();
       fetchResources();
+      getData();
     }
   }, [projectID]);
 
@@ -1698,7 +1713,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           selectedAddresses={data.filter((item: any) =>
             selectedRowIds.has(item.id),
           )}
-          projects={project}
+          projects={allProjects}
           companyId={user.company_id}
           onSuccess={() => {
             setSelectedRowIds(new Set());

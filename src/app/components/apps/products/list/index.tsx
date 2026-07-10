@@ -520,7 +520,7 @@ const ProductList = () => {
   const fetchProducts = async (restorePage?: number) => {
     setFetchProduct(true);
     try {
-      let url = `products/get?company_id=${user.company_id}&is_products=true&is_web=true&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      let url = `products/get?company_id=${user.company_id}&is_products=true&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
         url += `&search=${searchTerm}`;
       }
@@ -2294,14 +2294,15 @@ const ProductList = () => {
             >
               <IconFileExport width={18} /> Export
             </Button>
-
-            <Button
-              variant="contained"
-              startIcon={<IconFileImport width={18} />}
-              onClick={handleModelOpen}
-            >
-              Import
-            </Button>
+            {canView && (
+              <Button
+                variant="contained"
+                startIcon={<IconFileImport width={18} />}
+                onClick={handleModelOpen}
+              >
+                Import
+              </Button>
+            )}
           </Grid>
           {/* file Import model */}
 
@@ -2487,15 +2488,17 @@ const ProductList = () => {
             >
               <IconEye />
             </IconButton>
-            <Tooltip title="Settings">
-              <IconButton
-                color="primary"
-                onClick={() => setSettingOpen(true)}
-                sx={{ ml: 1 }}
-              >
-                <IconSettings width={18} />
-              </IconButton>
-            </Tooltip>
+            {canView && (
+              <Tooltip title="Settings">
+                <IconButton
+                  color="primary"
+                  onClick={() => setSettingOpen(true)}
+                  sx={{ ml: 1 }}
+                >
+                  <IconSettings width={18} />
+                </IconButton>
+              </Tooltip>
+            )}
             <Popover
               open={Boolean(anchorEl2)}
               anchorEl={anchorEl2}
@@ -2926,20 +2929,21 @@ const ProductList = () => {
                 </Button>
               </DialogActions>
             </Dialog>
-
-            <IconButton
-              sx={{ margin: "0px" }}
-              id="basic-button"
-              aria-controls={openMenu ? "basic-menu" : undefined}
-              aria-haspopup="true"
-              aria-expanded={openMenu ? "true" : undefined}
-              onClick={(e) => {
-                if (canEdit) handleClick(e);
-                else toast.error("You do not have permission to do this.");
-              }}
-            >
-              <IconDotsVertical width={18} />
-            </IconButton>
+            {canView && (
+              <IconButton
+                sx={{ margin: "0px" }}
+                id="basic-button"
+                aria-controls={openMenu ? "basic-menu" : undefined}
+                aria-haspopup="true"
+                aria-expanded={openMenu ? "true" : undefined}
+                onClick={(e) => {
+                  if (canEdit) handleClick(e);
+                  else toast.error("You do not have permission to do this.");
+                }}
+              >
+                <IconDotsVertical width={18} />
+              </IconButton>
+            )}
             <Menu
               id="basic-menu"
               anchorEl={anchorEl}
