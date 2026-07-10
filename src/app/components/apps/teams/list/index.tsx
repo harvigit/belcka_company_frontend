@@ -587,7 +587,7 @@ const TablePagination = () => {
           direction={{ xs: "column", sm: "row" }}
           spacing={{ xs: 1, sm: 2, md: 4 }}
         >
-          <Grid display="flex" gap={1} alignItems={"center"}>
+          <Grid display="flex" alignItems={"center"}>
             <TextField
               id="search"
               type="text"
@@ -606,7 +606,7 @@ const TablePagination = () => {
                 },
               }}
             />
-            <Button variant="contained" onClick={() => setOpen(true)}>
+            <Button variant="contained" onClick={() => setOpen(true)} sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}>
               <IconFilter width={18} />
             </Button>
             <Dialog

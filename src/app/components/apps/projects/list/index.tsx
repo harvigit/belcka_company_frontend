@@ -91,6 +91,7 @@ import ArchiveProject from "../../addresses/list/archive-project-list";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import PermissionGuard from "@/app/auth/PermissionGuard";
+import AddressesList from "../../addresses/list/addresses-list";
 dayjs.extend(customParseFormat);
 
 const columnHelper = createColumnHelper<any>();
@@ -101,6 +102,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
+  const [addressListDrawerOpen, setAddressListDrawerOpen] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -506,7 +508,15 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
 
       columnHelper.accessor("name", {
         header: "Name",
-        cell: (info) => info.getValue(),
+        cell: ({ row }: any) => {
+          const item = row.original;
+
+          return (
+            <Box display="flex" alignItems="center">
+              <Typography variant="body2">{item.name}</Typography>
+            </Box>
+          );
+        },
       }),
 
       columnHelper.accessor((row) => row?.teams, {
@@ -899,6 +909,11 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveProjectId(row.original.id);
+                            setAddressListDrawerOpen(true);
+                          }}
                           key={cell.id}
                           sx={{
                             padding: "10px",
@@ -1490,6 +1505,34 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
             project={selectedProject}
           />
         )}
+
+        {/* Add Address Drawer */}
+        <Drawer
+          anchor="bottom"
+          open={addressListDrawerOpen}
+          onClose={() => setAddressListDrawerOpen(false)}
+          PaperProps={{
+            sx: {
+              height: "90vh",
+              backgroundColor: "#fff",
+              borderRadius: "20px 20px 0 0",
+            },
+          }}
+        >
+          <Box p={3} sx={{ height: "100%", overflowY: "auto" }}>
+            {activeProjectId && (
+              <AddressesList
+                projectId={activeProjectId}
+                onSelectionChange={() => {}}
+                processedIds={[]}
+                shouldRefresh={false}
+                onTableReady={() => {}}
+                projects={data}
+                onClose={() => setAddressListDrawerOpen(false)}
+              />
+            )}
+          </Box>
+        </Drawer>
       </Box>
     </PermissionGuard>
   );

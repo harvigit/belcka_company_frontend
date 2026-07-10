@@ -323,7 +323,7 @@ export const DocumentsTab = ({
         >
           <IconDownload size={18} />
         </IconButton>
-        <Button variant="contained">
+        <Button variant="contained" sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}>
           <IconFilter width={18} />
         </Button>
       </Stack>

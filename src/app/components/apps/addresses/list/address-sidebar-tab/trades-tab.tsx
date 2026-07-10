@@ -117,7 +117,7 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
                     }}
                     sx={{ width: { xs: "100%", sm: "80%" }, mb: { xs: 2, sm: 0 } }}
                 />
-                <Button variant="contained" onClick={() => setOpen(true)}>
+                <Button variant="contained" onClick={() => setOpen(true)}  sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}>
                     <IconFilter width={18} />
                 </Button>
             </Stack>

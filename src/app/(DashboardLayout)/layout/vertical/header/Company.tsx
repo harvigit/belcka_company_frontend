@@ -631,7 +631,7 @@ const Company = () => {
                       <MenuItem value="Order">Order</MenuItem>
                     </TextField>
 
-                    <Button variant="contained" onClick={() => setOpen(true)} sx={{ ml: 2}}>
+                    <Button variant="contained" onClick={() => setOpen(true)}  sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}>
                       <IconFilter width={18} />
                     </Button>
                   </Box>

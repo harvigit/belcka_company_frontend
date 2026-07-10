@@ -38,6 +38,7 @@ const AllocateAddressesDrawer: React.FC<AllocateAddressesDrawerProps> = ({
 }) => {
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
   const [addressData, setAddressData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -97,6 +98,7 @@ const AllocateAddressesDrawer: React.FC<AllocateAddressesDrawerProps> = ({
   };
 
   const handleSave = async () => {
+    setLoading(true);
     if (!selectedProject) {
       toast.error("Please select a project.");
       return;
@@ -122,6 +124,7 @@ const AllocateAddressesDrawer: React.FC<AllocateAddressesDrawerProps> = ({
     } catch (err) {
       console.error(err);
     }
+    setLoading(false);
   };
 
   return (
@@ -228,6 +231,7 @@ const AllocateAddressesDrawer: React.FC<AllocateAddressesDrawerProps> = ({
             color="primary"
             variant="contained"
             size="large"
+            disabled={loading}
             onClick={handleSave}
             sx={{ borderRadius: 3, width: "10% !important" }}
             className="drawer_buttons"

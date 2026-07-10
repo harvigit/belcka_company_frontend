@@ -11,8 +11,6 @@ import {
   TableRow,
   TableCell,
   TableBody,
-  CircularProgress,
-  Chip,
   IconButton,
   Popover,
   FormGroup,
@@ -28,9 +26,18 @@ import {
   DialogActions,
   MenuItem,
   Autocomplete,
+  Menu,
+  ListItemIcon,
+  Tooltip,
 } from "@mui/material";
-import { IconSearch, IconEye, IconFilter, IconX } from "@tabler/icons-react";
-import Link from "next/link";
+import {
+  IconSearch,
+  IconEye,
+  IconFilter,
+  IconX,
+  IconTrash,
+  IconNote,
+} from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import dayjs from "dayjs";
 import { useSession } from "next-auth/react";
@@ -42,6 +49,9 @@ import { flexRender } from "@tanstack/react-table";
 import { useServerTable } from "@/hooks/useServerTable";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import { IconDotsVertical } from "@tabler/icons-react";
+import toast from "react-hot-toast";
+import ArchiveAddress from "../../addresses/list/archive-address-list";
 
 interface CaseSummary {
   id: number;
@@ -68,22 +78,25 @@ const CasesList = () => {
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-  const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
-  const [columnVisibility, setColumnVisibilityState] = useState<
-    Record<string, boolean>
-  >({});
+  const openMenu2 = Boolean(anchorEl2);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [archiveList, setArchiveList] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
   const handleClose = () => {
+    setAnchorEl2(null);
     setAnchorEl(null);
   };
+
+  const handleClickMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl2(event.currentTarget);
+  };
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [totalCount, setTotalCount] = useState(0);
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -199,33 +212,7 @@ const CasesList = () => {
       fetchCases();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [search, page, limit, user?.company_id, filters]);
-
-  const getStatusText = (status: number) => {
-    switch (status) {
-      case 13:
-        return "To Do";
-      case 3:
-        return "In Progress";
-      case 4:
-        return "Completed";
-      default:
-        return "Unknown";
-    }
-  };
-
-  const getStatusColor = (status: number) => {
-    switch (status) {
-      case 13:
-        return "default";
-      case 3:
-        return "warning";
-      case 4:
-        return "success";
-      default:
-        return "default";
-    }
-  };
+  }, [search, page, user?.company_id, filters]);
 
   const columns = useMemo(
     () => [
@@ -302,9 +289,26 @@ const CasesList = () => {
           const item = row.original;
 
           return (
-            <Typography variant="body2" sx={{ px: 1.5 }}>
-              {item.name}
-            </Typography>
+            <Tooltip title={item.name ? item.name : "-"}>
+              <Typography
+                variant="body2"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 2,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  px: 1.5,
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {item.name}
+              </Typography>
+            </Tooltip>
           );
         },
       },
@@ -316,7 +320,22 @@ const CasesList = () => {
           const item = row.original;
 
           return (
-            <Typography variant="body2" sx={{ px: 1.5 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                px: 1.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+              }}
+            >
               {item.project_names ? item.project_names : "-"}
             </Typography>
           );
@@ -341,8 +360,37 @@ const CasesList = () => {
               color={color}
               fontWeight={500}
               sx={{ px: 1.5 }}
+              width={100}
             >
               {status}
+            </Typography>
+          );
+        },
+      },
+
+      {
+        header: "Case Id",
+        accessorKey: "case_id",
+        cell: ({ row }: any) => {
+          const item = row.original;
+
+          return (
+            <Typography variant="body2" sx={{ px: 1.5 }}>
+              {item.case_id ?? "-"}
+            </Typography>
+          );
+        },
+      },
+
+      {
+        header: "Reference",
+        accessorKey: "reference",
+        cell: ({ row }: any) => {
+          const item = row.original;
+
+          return (
+            <Typography variant="body2" sx={{ px: 1.5 }}>
+              {item.ref ?? "-"}
             </Typography>
           );
         },
@@ -415,7 +463,7 @@ const CasesList = () => {
             flexWrap="wrap"
             className="project_wrapper"
           >
-            <Box display="flex" alignItems="center" gap={1}>
+            <Box display="flex" alignItems="center">
               <TextField
                 size="small"
                 placeholder="Search..."
@@ -454,13 +502,17 @@ const CasesList = () => {
             mt={{ xs: 2, sm: 0 }}
           >
             <Box display={"flex"}>
-              <IconButton onClick={handleClick} sx={{ ml: 1 }} color="primary">
+              <IconButton
+                onClick={handleClickMenu}
+                sx={{ ml: 1 }}
+                color="primary"
+              >
                 <IconEye />
               </IconButton>
               <Popover
                 id="basic-menu"
-                anchorEl={anchorEl}
-                open={openMenu}
+                anchorEl={anchorEl2}
+                open={openMenu2}
                 onClose={handleClose}
                 anchorOrigin={{
                   vertical: "bottom",
@@ -494,6 +546,40 @@ const CasesList = () => {
                   })}
                 </FormGroup>
               </Popover>
+            </Box>
+            <Box>
+              {selectedRowIds.size > 0 && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<IconTrash width={18} />}
+                  onClick={() => setOpenDialog(true)}
+                >
+                  Archive
+                </Button>
+              )}
+              <IconButton onClick={handleClick} size="small">
+                <IconDotsVertical width={18} />
+              </IconButton>
+
+              <Menu
+                id="basic-menu-cases"
+                anchorEl={anchorEl}
+                open={openMenu}
+                onClose={handleClose}
+              >
+                <MenuItem
+                  onClick={() => {
+                    handleClose();
+                    setArchiveList(true);
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconNote width={18} />
+                  </ListItemIcon>
+                  Archive Cases
+                </MenuItem>
+              </Menu>
             </Box>
             {/* Filter Dialog */}
             <Dialog
@@ -616,6 +702,58 @@ const CasesList = () => {
             </Dialog>
           </Stack>
         </Stack>
+
+        <ArchiveAddress
+          open={archiveList}
+          onClose={() => setArchiveList(false)}
+          onWorkUpdated={fetchCases}
+        />
+
+        {/* Dialogs and Drawers */}
+        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+          <DialogTitle>Confirm Archive</DialogTitle>
+          <DialogContent>
+            <Typography color="textSecondary">
+              Are you sure you want to archive {selectedRowIds.size} case?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setOpenDialog(false)}
+              variant="outlined"
+              color="primary"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  const payload = {
+                    address_ids: Array.from(selectedRowIds).join(","),
+                  };
+                  const res = await api.post(
+                    "address/archive-addresses",
+                    payload,
+                  );
+
+                  if (res.data.IsSuccess) {
+                    toast.success("Cases archived successfully.");
+                  }
+                  fetchCases();
+                  setSelectedRowIds(new Set());
+                } catch (error) {
+                  console.error(error);
+                  toast.error("Error archiving addresses.");
+                }
+                setOpenDialog(false);
+              }}
+              variant="outlined"
+              color="error"
+            >
+              Archive
+            </Button>
+          </DialogActions>
+        </Dialog>
         <Divider />
         <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
           <TableContainer>

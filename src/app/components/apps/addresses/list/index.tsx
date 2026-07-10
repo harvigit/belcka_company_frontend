@@ -644,26 +644,28 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
           return (
             <Stack direction="row" alignItems="center" sx={{ pl: 1 }}>
-              <CustomCheckbox
-                checked={isChecked}
-                onClick={(e: any) => e.stopPropagation()}
-                onChange={(e: any) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  const newSelected = new Set(selectedRowIds);
-                  if (isChecked) {
-                    newSelected.delete(item.id);
-                  } else {
-                    newSelected.add(item.id);
-                  }
-                  setSelectedRowIds(newSelected);
-                }}
-                sx={{
-                  opacity: showCheckbox ? 1 : 0,
-                  pointerEvents: showCheckbox ? "auto" : "none",
-                  transition: "opacity 0.2s ease",
-                }}
-              />
+              {!item.is_conflict && (
+                <CustomCheckbox
+                  checked={isChecked}
+                  onClick={(e: any) => e.stopPropagation()}
+                  onChange={(e: any) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const newSelected = new Set(selectedRowIds);
+                    if (isChecked) {
+                      newSelected.delete(item.id);
+                    } else {
+                      newSelected.add(item.id);
+                    }
+                    setSelectedRowIds(newSelected);
+                  }}
+                  sx={{
+                    opacity: showCheckbox ? 1 : 0,
+                    pointerEvents: showCheckbox ? "auto" : "none",
+                    transition: "opacity 0.2s ease",
+                  }}
+                />
+              )}
             </Stack>
           );
         },
@@ -895,7 +897,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
             <Button
               variant="contained"
               onClick={() => setOpen(true)}
-              sx={{ mt: { xs: 1, sm: 0 } }}
+              sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
             >
               <IconFilter width={18} />
             </Button>

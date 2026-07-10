@@ -239,20 +239,6 @@ const AddressesList = ({
     }
   }, [drawerOpen]);
 
-  const handleOpenCreateDrawer = () => {
-    setFormData({
-      address_id: null,
-      type_of_work_id: 0,
-      location_id: null,
-      trade_id: null,
-      company_id: user?.company_id || 0,
-      duration: 0,
-      rate: 0,
-      is_attchment: true,
-    });
-    setDrawerOpen(true);
-  };
-
   const fetchAddresses = async (restorePage?: number) => {
     if (!projectId) return;
     setFetchAddress(true);
@@ -261,7 +247,7 @@ const AddressesList = ({
       if (parentAddressId) {
         url += `&parent_address_id=${parentAddressId}`;
       } else {
-        url += `project_id=${projectId}`;
+        url += `&project_id=${projectId}`;
       }
       if (searchTerm) {
         url += `&search=${searchTerm}`;
@@ -1143,7 +1129,7 @@ const AddressesList = ({
               <IconArrowLeft />
             </IconButton>
             <Typography variant="h6" fontWeight={600}>
-              Tasks
+              Cases
             </Typography>
             <TextField
               id="search"
@@ -1166,7 +1152,7 @@ const AddressesList = ({
             <Button
               variant="contained"
               onClick={() => setOpen(true)}
-              sx={{ mt: { xs: 1, sm: 0 } }}
+               sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
             >
               <IconFilter width={18} />
             </Button>
@@ -1213,7 +1199,7 @@ const AddressesList = ({
               <ListItemIcon>
                 <IconPlus width={18} />
               </ListItemIcon>
-              Add Task
+              Add Case
             </MenuItem>
             <MenuItem
               onClick={() => {
@@ -1224,7 +1210,7 @@ const AddressesList = ({
               <ListItemIcon>
                 <IconNote width={18} />
               </ListItemIcon>
-              Archive Tasks
+              Archive Cases
             </MenuItem>
           </Menu>
         </Box>
@@ -2395,7 +2381,7 @@ const AddressesList = ({
         <DialogTitle>Confirm Archive</DialogTitle>
         <DialogContent>
           <Typography color="textSecondary">
-            Are you sure you want to archive {selectedRowIds.size} tasks?
+            Are you sure you want to archive {selectedRowIds.size} case?
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -2418,7 +2404,7 @@ const AddressesList = ({
                 );
 
                 if (res.data.IsSuccess) {
-                  toast.success("Tasks archived successfully.");
+                  toast.success("Cases archived successfully.");
                 }
                 fetchAddresses();
                 setSelectedRowIds(new Set());

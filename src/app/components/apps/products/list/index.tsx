@@ -1379,31 +1379,39 @@ const ProductList = () => {
               if (canEdit) handleEditCategories(item);
             }}
           >
-            <Typography
-              textTransform="capitalize"
-              className="f-14"
-              sx={{
-                display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 2,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                wordBreak: "break-word",
-                px: 1,
-                py: 0.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                border: "1px solid transparent",
-                transition: "all 0.2s ease",
-                "&:hover": {
-                  border: "1px solid #1976d2",
-                },
-              }}
+            <Tooltip
+              title={
+                selectedForRow.length
+                  ? selectedForRow.map((c) => c.name).join(", ")
+                  : item.product_categories || ""
+              }
             >
-              {selectedForRow.length
-                ? selectedForRow.map((c) => c.name).join(", ")
-                : item.product_categories || "-"}
-            </Typography>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 2,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    border: "1px solid #1976d2",
+                  },
+                }}
+              >
+                {selectedForRow.length
+                  ? selectedForRow.map((c) => c.name).join(", ")
+                  : item.product_categories || "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },
@@ -1424,31 +1432,39 @@ const ProductList = () => {
               if (canEdit) handleEditProjects(item);
             }}
           >
-            <Typography
-              textTransform="capitalize"
-              className="f-14"
-              sx={{
-                display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 2,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                wordBreak: "break-word",
-                px: 1,
-                py: 0.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                border: "1px solid transparent",
-                transition: "all 0.2s ease",
-                "&:hover": {
-                  border: "1px solid #1976d2",
-                },
-              }}
+            <Tooltip
+              title={
+                selectedForRow.length
+                  ? selectedForRow.map((c: any) => c.name).join(", ")
+                  : item.project_names || "-"
+              }
             >
-              {selectedForRow.length
-                ? selectedForRow.map((c: any) => c.name).join(", ")
-                : item.project_names || "-"}
-            </Typography>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 3,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    border: "1px solid #1976d2",
+                  },
+                }}
+              >
+                {selectedForRow.length
+                  ? selectedForRow.map((c: any) => c.name).join(", ")
+                  : item.project_names || "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },
