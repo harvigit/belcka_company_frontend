@@ -32,6 +32,7 @@ import {
   Menu,
   ListItemIcon,
   Autocomplete,
+  Tooltip,
 } from "@mui/material";
 import {
   IconFilter,
@@ -717,22 +718,34 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
           return (
             <Box display="flex" alignItems="center">
-              <Typography
-                variant="body2"
-                sx={{
-                  cursor: "pointer",
-                  "&:hover": {
-                    color: "primary.main",
-                  },
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedParentAddressId(item.id);
-                  setAddressListDrawerOpen(true);
-                }}
-              >
-                {item.name}
-              </Typography>
+              <Tooltip title={item.name}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": {
+                      color: "primary.main",
+                    },
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    wordBreak: "break-word",
+                    px: 1.5,
+                    borderRadius: 1,
+                    border: "1px solid transparent",
+                    transition: "all 0.2s ease",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedParentAddressId(item.id);
+                    setAddressListDrawerOpen(true);
+                  }}
+                >
+                  {item.name}
+                </Typography>
+              </Tooltip>
             </Box>
           );
         },

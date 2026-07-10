@@ -225,13 +225,13 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>
           {selectedItem?.action === "restore"
-            ? "Restore Task"
+            ? "Restore Case"
             : "Confirm Deletion"}
         </DialogTitle>
         <DialogContent>
           <Typography color="textSecondary">
             Are you sure you want to <strong>{selectedItem?.action}</strong>{" "}
-            this task?
+            this case?
           </Typography>
         </DialogContent>
         <DialogActions>

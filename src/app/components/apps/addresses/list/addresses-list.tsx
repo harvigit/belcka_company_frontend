@@ -1152,7 +1152,7 @@ const AddressesList = ({
             <Button
               variant="contained"
               onClick={() => setOpen(true)}
-               sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
+              sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
             >
               <IconFilter width={18} />
             </Button>
@@ -2079,7 +2079,7 @@ const AddressesList = ({
                       <IconArrowLeft />
                     </IconButton>
                     <Typography variant="h6" color="inherit" fontWeight={700}>
-                      Add Task
+                      Add Case
                     </Typography>
                   </Box>
 

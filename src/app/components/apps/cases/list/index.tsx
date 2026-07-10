@@ -213,6 +213,28 @@ const CasesList = () => {
     }, 500);
     return () => clearTimeout(delayDebounceFn);
   }, [search, page, user?.company_id, filters]);
+  const fallbackCopy = (text: string) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+
+      textArea.focus();
+      textArea.select();
+      textArea.setSelectionRange(0, textArea.value.length);
+
+      const successful = (document as any).execCommand("copy");
+      document.body.removeChild(textArea);
+
+      if (successful) toast.success("Copied!");
+      else toast.error("Copy failed!");
+    } catch (err) {
+      console.error("Fallback copy failed:", err);
+      toast.error("Failed to copy!");
+    }
+  };
 
   const columns = useMemo(
     () => [
@@ -295,7 +317,7 @@ const CasesList = () => {
                 sx={{
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 2,
+                  WebkitLineClamp: 1,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   wordBreak: "break-word",
@@ -320,24 +342,26 @@ const CasesList = () => {
           const item = row.original;
 
           return (
-            <Typography
-              variant="body2"
-              sx={{
-                display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 2,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                wordBreak: "break-word",
-                px: 1.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                border: "1px solid transparent",
-                transition: "all 0.2s ease",
-              }}
-            >
-              {item.project_names ? item.project_names : "-"}
-            </Typography>
+            <Tooltip title={item.project_names ?? ""}>
+              <Typography
+                variant="body2"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  px: 1.5,
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {item.project_names ? item.project_names : "-"}
+              </Typography>
+            </Tooltip>
           );
         },
       },
@@ -372,12 +396,47 @@ const CasesList = () => {
         header: "Case Id",
         accessorKey: "case_id",
         cell: ({ row }: any) => {
-          const item = row.original;
+          const case_id = row.original.case_id ? row.original.case_id : "";
 
           return (
-            <Typography variant="body2" sx={{ px: 1.5 }}>
-              {item.case_id ?? "-"}
-            </Typography>
+            <Tooltip title={case_id}>
+              <Typography
+                variant="body2"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  px: 1.5,
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                }}
+                onClick={() => {
+                  if (!case_id) {
+                    toast.error("No case id to copy!");
+                    return;
+                  }
+
+                  if (navigator?.clipboard?.writeText) {
+                    navigator.clipboard
+                      .writeText(case_id)
+                      .then(() => toast.success("Copied!"))
+                      .catch((err) => {
+                        console.error("Clipboard API failed:", err);
+                        fallbackCopy(case_id);
+                      });
+                  } else {
+                    fallbackCopy(case_id);
+                  }
+                }}
+              >
+                {case_id}
+              </Typography>
+            </Tooltip>
           );
         },
       },
@@ -389,9 +448,26 @@ const CasesList = () => {
           const item = row.original;
 
           return (
-            <Typography variant="body2" sx={{ px: 1.5 }}>
-              {item.ref ?? "-"}
-            </Typography>
+            <Tooltip title={item.ref ?? ""}>
+              <Typography
+                variant="body2"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  px: 1.5,
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {item.ref ?? "-"}
+              </Typography>
+            </Tooltip>
           );
         },
       },
@@ -865,22 +941,7 @@ const CasesList = () => {
                   </TableRow>
                 ) : (
                   table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      hover
-                      sx={{ cursor: "pointer" }}
-                      onMouseEnter={() => setHoveredRow(row.original.id)}
-                      onMouseLeave={() => setHoveredRow(null)}
-                      onClick={() => {
-                        const newSelected = new Set(selectedRowIds);
-                        if (newSelected.has(row.original.id)) {
-                          newSelected.delete(row.original.id);
-                        } else {
-                          newSelected.add(row.original.id);
-                        }
-                        setSelectedRowIds(newSelected);
-                      }}
-                    >
+                    <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
