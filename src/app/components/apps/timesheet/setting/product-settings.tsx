@@ -301,11 +301,13 @@ const ProductSetting = () => {
               onChange={(e) => setSelectedUser(e.target.value)}
               label="Select User"
             >
-              {users.map((user) => (
-                <MenuItem key={user.id} value={user.id}>
-                  {user.name}
-                </MenuItem>
-              ))}
+              {users
+                .filter((user) => user.role_id !== 1)
+                .map((user) => (
+                  <MenuItem key={user.id} value={user.id}>
+                    {user.name}
+                  </MenuItem>
+                ))}
             </Select>
           </FormControl>
 
