@@ -88,6 +88,10 @@ type LeaveOverviewRow = {
     role_name?: string | null;
     user_image?: string | null;
     user_thumb_image?: string | null;
+    is_working: boolean;
+    is_on_break: boolean;
+    current_break?: {break_start_time: string; break_end_time: string} | null;
+    user_status_color: string;
     paid?: number;
     unpaid?: number;
     holiday?: number;
@@ -928,8 +932,12 @@ const Leaves = () => {
                                     variant="dot"
                                     sx={{
                                         '& .MuiBadge-badge': {
-                                            backgroundColor: row?.user_status_color,
-                                            color: row?.user_status_color,
+                                            backgroundColor:
+                                                row?.user_status_color ??
+                                                (row?.is_working ? '#22bf22' : '#df2626'),
+                                            color:
+                                                row?.user_status_color ??
+                                                (row?.is_working ? '#22bf22' : '#df2626'),
                                             width: 8,
                                             height: 8,
                                             borderRadius: '50%',
