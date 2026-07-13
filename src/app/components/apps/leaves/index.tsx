@@ -2,7 +2,7 @@
 
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
-    Avatar,
+    Avatar, Badge,
     Box,
     Button,
     Checkbox,
@@ -75,6 +75,9 @@ import AddLeave from '@/app/components/apps/time-clock/time-clock-details/leaves
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import GeneralSetting from '@/app/components/apps/leaves/settings/general';
+import Link from 'next/link';
+import SkeletonLoader from '@/app/components/SkeletonLoader';
+import Image from 'next/image';
 
 const LEAVE_STORAGE_KEY = 'leave-module-range';
 
@@ -482,8 +485,15 @@ function LeaveDetailsDrawer({
     onClose: () => void;
     title: string;
     leaves: any[];
-    onOpenUser: (leave: any) => void;
+                            onOpenUser: (leave: any) => void;
 }) {
+    const sortedLeaves = [...leaves].sort((first, second) => {
+        const firstDate = parseLeaveDate(first.start_date ?? first.date ?? first.date_formatted);
+        const secondDate = parseLeaveDate(second.start_date ?? second.date ?? second.date_formatted);
+
+        return (secondDate?.getTime() ?? 0) - (firstDate?.getTime() ?? 0);
+    });
+
     return (
         <Drawer
             anchor="right"
@@ -504,18 +514,18 @@ function LeaveDetailsDrawer({
                 <IconButton onClick={onClose}><IconX/></IconButton>
             </Stack>
 
-            {leaves.length ? (
+            {sortedLeaves.length ? (
                 <Stack spacing={1.25}>
-                    {leaves.map((leave, index) => (
+                    {sortedLeaves.map((leave, index) => (
                         <Box
                             key={`${leave.id || leave.user_leave_id || index}`}
-                            onClick={() => !leave.is_holiday && onOpenUser(leave)}
+                            onClick={() => !leave.is_holiday && !leave.is_absence && onOpenUser(leave)}
                             sx={{
                                 border: '1px solid #e5e7eb',
                                 borderRadius: 2,
                                 p: 1.5,
-                                cursor: leave.is_holiday ? 'default' : 'pointer',
-                                '&:hover': {bgcolor: '#f8fafc'},
+                                cursor: leave.is_holiday || leave.is_absence ? 'default' : 'pointer',
+                                '&:hover': leave.is_holiday || leave.is_absence ? {} : {bgcolor: '#f8fafc'},
                             }}
                         >
                             <Stack direction="row" alignItems="center" spacing={1}>
@@ -769,8 +779,10 @@ const Leaves = () => {
     const openUserLeaveDetails = (userId: number, leave?: any) => {
         if (startDate && endDate) saveDateRangeToStorage(startDate, endDate, columnVisibility);
 
-        const leaveStart = leave?.start_date ? parse(leave.start_date, 'dd/MM/yyyy', new Date()) : null;
-        const query = leaveStart && isValid(leaveStart) ? `?tab=leave&start_date=${format(leaveStart, 'yyyy-MM-dd')}` : '?tab=leave';
+        const leaveDate = parseLeaveDate(leave?.start_date ?? leave?.date ?? leave?.date_formatted);
+        const query = leaveDate
+            ? `?tab=leave&leave_start=${format(startOfWeek(leaveDate), 'yyyy-MM-dd')}&leave_end=${format(endOfWeek(leaveDate), 'yyyy-MM-dd')}`
+            : '?tab=leave';
 
         router.push(`/apps/users/${userId}${query}`);
     };
@@ -891,34 +903,76 @@ const Leaves = () => {
         }),
         columnHelper.accessor('user_name', {
             id: 'user_name',
-            size: 200,
             header: 'Name',
-            meta: {label: 'Name'},
-            cell: (info) => {
+            cell: (info: any) => {
                 const row = info.row.original;
+
                 return (
                     <Stack direction="row" alignItems="center" spacing={4}>
-                        <Avatar
-                            src={row.user_thumb_image || row.user_image || '/images/users/user.png'}
-                            alt={row.user_name || 'User'}
-                            sx={{width: 36, height: 36, cursor: 'pointer'}}
-                        />
-                        <Box>
-                            <Typography
-                                className="f-14"
-                                color="textPrimary"
-                                sx={{
-                                    cursor: 'pointer',
-                                    width: 150,
-                                    '&:hover': {color: '#173f98'},
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={4}
+                            sx={{cursor: 'pointer'}}
+                        >
+                            <Link
+                                href={{
+                                    pathname: `/apps/users/${row?.user_id}`,
                                 }}
+                                passHref
+                                onClick={(e) => e.stopPropagation()}
                             >
-                                {row.user_name || 'User'}
-                            </Typography>
-                            <Typography color="textSecondary" variant="subtitle1" width={150} noWrap>
-                                {row.trade_name || row.role_name || '-'}
-                            </Typography>
-                        </Box>
+                                <Badge
+                                    overlap="circular"
+                                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                    variant="dot"
+                                    sx={{
+                                        '& .MuiBadge-badge': {
+                                            backgroundColor: row?.user_status_color,
+                                            color: row?.user_status_color,
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: '50%',
+                                            boxShadow: '0 0 0 2px white',
+                                            cursor: 'pointer',
+                                        },
+                                    }}
+                                >
+                                    <Avatar
+                                        src={
+                                            row?.user_thumb_image
+                                                ? row.user_thumb_image
+                                                : '/images/users/user.png'
+                                        }
+                                        alt={row?.user_name}
+                                        sx={{width: 36, height: 36, cursor: 'pointer'}}
+                                    />
+                                </Badge>
+                            </Link>
+                            <Box>
+                                <Typography
+                                    className="f-14"
+                                    color="textPrimary"
+                                    sx={{
+                                        cursor: 'pointer',
+                                        '&:hover': {color: '#173f98'},
+                                        width: 150,
+                                    }}
+                                >
+                                    {row.user_name}
+                                </Typography>
+                                <Tooltip title={row.trade_name ?? '-'} placement="top" arrow>
+                                    <Typography
+                                        color="textSecondary"
+                                        variant="subtitle1"
+                                        width={150}
+                                        noWrap
+                                    >
+                                        {row.trade_name}
+                                    </Typography>
+                                </Tooltip>
+                            </Box>
+                        </Stack>
                     </Stack>
                 );
             },
@@ -998,13 +1052,20 @@ const Leaves = () => {
     const selectedDateLeaves = leavesForDate(selectedCalendarDate);
     const calendarWeekCount = Math.ceil(calendarDays.length / 7);
 
+    const simpleColumns = columns.map((column) => ({
+        name: column.id ?? 'Unnamed Column',
+        width: 'auto',
+    }));
+    
     return (
         <Box sx={{
-            height: 'calc(100vh - 170px)',
-            minHeight: 640,
+            // Keep scrolling inside the table, matching the Time Clock screen.
+            // This lets MUI's sticky table header remain anchored while rows scroll.
+            height: 'calc(100vh - 100px)',
             display: 'flex',
             flexDirection: 'column',
-            bgcolor: '#fff'
+            bgcolor: '#fff',
+            overflow: 'hidden',
         }}>
             <Box sx={{px: 2, py: 1.5}}>
                 <Stack direction={{xs: 'column', lg: 'row'}} spacing={1.5} justifyContent="space-between">
@@ -1092,127 +1153,140 @@ const Leaves = () => {
                     ))}
                 </FormGroup>
             </Popover>
-
-            {loading && (
-                <Box display="flex" justifyContent="center" py={2}>
-                    <CircularProgress size={24}/>
-                </Box>
-            )}
-
-            <Box sx={{flex: 1, minHeight: 0, overflow: 'hidden'}}>
-                <TableContainer
+            
+            <TableContainer
+                sx={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowX: 'auto',
+                    overflowY: 'auto',
+                }}
+            >
+                <Table
+                    stickyHeader
                     sx={{
-                        flex: 1,
-                        minHeight: 0,
-                        overflowX: 'auto',
-                        overflowY: 'auto',
+                        minWidth: 1600,
+                        tableLayout: 'auto',
                     }}
                 >
-                    <Table
-                        stickyHeader
-                        sx={{
-                            width: '100%',
-                            minWidth: 1000,
-                            tableLayout: 'fixed',
-                        }}
-                    >
-                        <TableHead>
-                            {table.getHeaderGroups().map((headerGroup) => (
-                                <TableRow key={headerGroup.id}>
-                                    {headerGroup.headers.map((header) => {
-                                        const isActive = header.column.getIsSorted();
-                                        const isAsc = header.column.getIsSorted() === 'asc';
-                                        const isSortable = header.column.getCanSort();
-                                        return (
-                                            <TableCell
-                                                key={header.id}
-                                                align="left"
+                    <TableHead>
+                        {table.getHeaderGroups().map((headerGroup) => (
+                            <TableRow key={headerGroup.id}>
+                                {headerGroup.headers.map((header) => {
+                                    const isActive = header.column.getIsSorted();
+                                    const isAsc = header.column.getIsSorted() === 'asc';
+                                    const isSortable = header.column.getCanSort();
+                                    return (
+                                        <TableCell
+                                            key={header.id}
+                                            align="left"
+                                            sx={{
+                                                position: 'sticky',
+                                                top: 0,
+                                                zIndex: 11,
+                                                p: 0,
+                                                width: header.getSize(),
+                                                whiteSpace: 'nowrap',
+                                            }}
+                                        >
+                                            <Box
+                                                onClick={header.column.getToggleSortingHandler()}
                                                 sx={{
-                                                    position: 'sticky',
-                                                    top: 0,
-                                                    zIndex: 11,
-                                                    p: 0,
-                                                    width: header.getSize(),
-                                                    whiteSpace: 'nowrap',
+                                                    cursor: isSortable ? 'pointer' : 'default',
+                                                    border: '2px solid transparent',
+                                                    borderRadius: '6px',
+                                                    py: 1.5,
+                                                    ml: 0.5,
+                                                    fontWeight: isActive ? 600 : 500,
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    '&:hover': {color: '#888'},
+                                                    '&:hover .hoverIcon': {opacity: 1},
                                                 }}
                                             >
-                                                <Box
-                                                    onClick={header.column.getToggleSortingHandler()}
-                                                    sx={{
-                                                        cursor: isSortable ? 'pointer' : 'default',
-                                                        border: '2px solid transparent',
-                                                        borderRadius: '6px',
-                                                        py: 1.5,
-                                                        ml: 0.5,
-                                                        fontWeight: isActive ? 600 : 500,
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        '&:hover': {color: '#888'},
-                                                        '&:hover .hoverIcon': {opacity: 1},
-                                                    }}
-                                                >
-                                                    <Typography variant="body2">
-                                                        {flexRender(header.column.columnDef.header, header.getContext())}
-                                                    </Typography>
-                                                    {isSortable && (
-                                                        <Box
-                                                            component="span"
-                                                            className="hoverIcon"
-                                                            ml={0.5}
-                                                            sx={{
-                                                                transition: 'opacity 0.2s',
-                                                                opacity: isActive ? 1 : 0,
-                                                                fontSize: '0.9rem',
-                                                                color: isActive ? '#000' : '#888',
-                                                            }}
-                                                        >
-                                                            {isActive ? (isAsc ? '↑' : '↓') : '↑'}
-                                                        </Box>
-                                                    )}
-                                                </Box>
-                                            </TableCell>
-                                        );
-                                    })}
-                                </TableRow>
-                            ))}
-                        </TableHead>
-                        <TableBody>
-                            {!loading && table.getRowModel().rows.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={table.getVisibleLeafColumns().length}>
-                                        <Typography color="text.secondary" textAlign="center" py={5}>No leaves
-                                            found.</Typography>
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                table.getRowModel().rows.map((row) => (
-                                    <TableRow
-                                        hover
-                                        key={row.id}
-                                        onMouseEnter={() => setHoveredRow(row.original.user_id)}
-                                        onMouseLeave={() => setHoveredRow(null)}
-                                        onClick={() => openUserLeaveDetails(row.original.user_id)}
-                                        sx={{cursor: 'pointer', transition: 'background-color 0.2s ease'}}
+                                                <Typography variant="body2">
+                                                    {flexRender(header.column.columnDef.header, header.getContext())}
+                                                </Typography>
+                                                {isSortable && (
+                                                    <Box
+                                                        component="span"
+                                                        className="hoverIcon"
+                                                        ml={0.5}
+                                                        sx={{
+                                                            transition: 'opacity 0.2s',
+                                                            opacity: isActive ? 1 : 0,
+                                                            fontSize: '0.9rem',
+                                                            color: isActive ? '#000' : '#888',
+                                                        }}
+                                                    >
+                                                        {isActive ? (isAsc ? '↑' : '↓') : '↑'}
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                        </TableCell>
+                                    );
+                                })}
+                            </TableRow>
+                        ))}
+                    </TableHead>
+                    <TableBody>
+                        {loading ? (
+                            <SkeletonLoader
+                                columns={simpleColumns}
+                                rowCount={simpleColumns.length}
+                            />
+                        ) : data.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={columns.length}>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            height: 'calc(50vh - 100px)',
+                                        }}
                                     >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell
-                                                key={cell.id}
-                                                sx={{padding: '10px'}}
-                                                align="left"
-                                            >
-                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-                {filteredSummaryRows.length ? <Divider/> : <></>}
-            </Box>
-
+                                        <Image
+                                            src="/images/no-data.png"
+                                            alt="No data"
+                                            style={{
+                                                maxWidth: '100%',
+                                                maxHeight: '100%',
+                                            }}
+                                            width={200}
+                                            height={200}
+                                        />
+                                    </Box>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            table.getRowModel().rows.map((row) => (
+                                <TableRow
+                                    hover
+                                    key={row.id}
+                                    onMouseEnter={() => setHoveredRow(row.original.user_id)}
+                                    onMouseLeave={() => setHoveredRow(null)}
+                                    onClick={() => openUserLeaveDetails(row.original.user_id)}
+                                    sx={{cursor: 'pointer', transition: 'background-color 0.2s ease'}}
+                                >
+                                    {row.getVisibleCells().map((cell) => (
+                                        <TableCell
+                                            key={cell.id}
+                                            sx={{padding: '10px'}}
+                                            align="left"
+                                        >
+                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+            {filteredSummaryRows.length ? <Divider/> : <></>}
+            
             <TablePaginationFooter table={table} totalRows={filteredSummaryRows.length}/>
 
             <Drawer

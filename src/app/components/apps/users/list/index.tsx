@@ -214,7 +214,6 @@ const TablePagination = () => {
   });
 
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-  const [isPermission, setIsPermission] = useState(true);
   const [search, setSearch] = useState("");
   const [selectAll, setSelectAll] = useState(false);
 
@@ -474,7 +473,14 @@ const TablePagination = () => {
 
   // Check if user can edit permissions
   const canEditPermissions = () => {
-    return isAdmin || (hasPermissionUser && permissionUserType === "view_edit");
+    // A specific access-list entry is more restrictive than the user's role.
+    // For example, an admin explicitly set to "View only" must not edit user
+    // permissions from this drawer.
+    if (hasPermissionUser) {
+      return permissionUserType === "view_edit";
+    }
+
+    return isAdmin;
   };
 
   const handleOpenPermissionsDrawer = (userPermission: UserList) => {
@@ -489,8 +495,6 @@ const TablePagination = () => {
     });
 
     setTempPermissions({ web, app });
-    const permission = canEditPermissions();
-    setIsPermission(permission);
     setPermissionSearch("");
     setPermissionsDrawerOpen(true);
   };
@@ -499,6 +503,8 @@ const TablePagination = () => {
     permissionId: number,
     type: "web" | "app",
   ) => {
+    if (!canEditPermissions()) return;
+
     setTempPermissions((prev) => {
       const updated = new Set(prev[type]);
       updated.has(permissionId)
@@ -510,6 +516,8 @@ const TablePagination = () => {
   };
 
   const handleSelectAll = (type: "web" | "app") => {
+    if (!canEditPermissions()) return;
+
     const allSelected = filteredPermissions.every((p) =>
       tempPermissions[type].has(p.id),
     );
@@ -528,6 +536,11 @@ const TablePagination = () => {
   };
 
   const handleSavePermissions = async () => {
+    if (!canEditPermissions()) {
+      toast.error("You have view-only access and cannot edit user permissions.");
+      return;
+    }
+
     if (!selectedUserPermissions || !user.company_id) return;
 
     try {
@@ -1708,7 +1721,7 @@ const TablePagination = () => {
             </Box>
 
             {/* Permission mode indicator */}
-            {!isPermission && (
+            {!canEditPermissions() && (
               <Box
                 sx={{
                   mb: 2,
@@ -1823,14 +1836,14 @@ const TablePagination = () => {
                       <IOSSwitch
                         checked={allWebSelected}
                         onChange={() => handleSelectAll("web")}
-                        disabled={loading || !isPermission}
+                        disabled={loading || !canEditPermissions()}
                       />
                     </td>
                     <td style={{ padding: "8px 8px", textAlign: "center" }}>
                       <IOSSwitch
                         checked={allAppSelected}
                         onChange={() => handleSelectAll("app")}
-                        disabled={loading || !isPermission}
+                        disabled={loading || !canEditPermissions()}
                       />
                     </td>
                   </tr>
@@ -1861,7 +1874,7 @@ const TablePagination = () => {
                             onChange={() =>
                               handlePermissionToggle(permission.id, "web")
                             }
-                            disabled={loading || !isPermission}
+                            disabled={loading || !canEditPermissions()}
                           />
                         )}
                       </td>
@@ -1873,7 +1886,7 @@ const TablePagination = () => {
                             onChange={() =>
                               handlePermissionToggle(permission.id, "app")
                             }
-                            disabled={loading || !isPermission}
+                            disabled={loading || !canEditPermissions()}
                           />
                         )}
                       </td>
@@ -1884,7 +1897,7 @@ const TablePagination = () => {
             </Box>
 
             {/* Save/Cancel Buttons */}
-            {isPermission && (
+            {canEditPermissions() && (
               <Box
                 mb={1}
                 display="flex"

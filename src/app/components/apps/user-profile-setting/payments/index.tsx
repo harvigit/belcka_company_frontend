@@ -12,7 +12,8 @@ interface PayslipListingProps {
   active: boolean;
   userId: any;
   isShow: boolean;
-    disableDateFilter?: boolean;
+  disableDateFilter?: boolean;
+  readOnly?: boolean;
 }
 
 const Payments: React.FC<PayslipListingProps> = ({
@@ -21,6 +22,7 @@ const Payments: React.FC<PayslipListingProps> = ({
                                                      userId,
                                                      isShow,
                                                      disableDateFilter = false,
+                                                     readOnly = false,
                                                  }) => {
     const [activeTab, setActiveTab] = useState(0);
 
@@ -50,9 +52,9 @@ const Payments: React.FC<PayslipListingProps> = ({
                 <Divider />
 
                 <Box mt={2}>
-                    {activeTab === 0 && <PayslipsList userId={userId} isShow={isShow} disableDateFilter={disableDateFilter} />}
+                    {activeTab === 0 && <PayslipsList userId={userId} isShow={isShow} disableDateFilter={disableDateFilter} readOnly={readOnly} />}
                     {activeTab === 1 && <PaymentsList userId={userId} isShow={isShow} disableDateFilter={disableDateFilter} />}
-                    {activeTab === 2 && <InvoicesList userId={userId} isShow={isShow} disableDateFilter={disableDateFilter} />}
+                    {activeTab === 2 && <InvoicesList userId={userId} isShow={isShow} disableDateFilter={disableDateFilter} readOnly={readOnly} />}
                 </Box>
             </Box>
         </PermissionGuard>

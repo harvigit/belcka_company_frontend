@@ -136,7 +136,12 @@ const TablePagination = () => {
 
     const param = useParams();
     const userId = param?.id;
-    const canEditUserDetails = isAdmin || userPermissionType === 'view_edit' || Number(user?.id) === Number(userId);
+    
+    const canEditUserDetails = userPermissionType
+        ? userPermissionType === 'view_edit'
+        : isAdmin || Number(user?.id) === Number(userId);
+  
+    const canModifyUserDetails = canEditUserDetails && !isReadOnlyUserView;
     const [value, setValue] = useState<number>(0);
     const [openImageDialog, setOpenImageDialog] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -166,6 +171,7 @@ const TablePagination = () => {
     };
 
     const handleToggle = async (overrideStatus?: boolean) => {
+        if (!canModifyUserDetails) return;
         const newStatus = overrideStatus ?? !enabled;
 
         setEnabled(newStatus);
@@ -293,6 +299,7 @@ const TablePagination = () => {
     }, [userId, isRemovedUser, isArchivedUser]);
 
     const updateProfile = async () => {
+        if (!canModifyUserDetails) return;
         const payload = { user_id: userId, ...formData };
         const res = await api.post('user/update-profile', payload);
 
@@ -324,7 +331,7 @@ const TablePagination = () => {
     };
 
     const handleUpdatePersonalDetails = async () => {
-        if (!userId) return;
+        if (!userId || !canModifyUserDetails) return;
 
         const phoneChanged =
             formData.phone !== originalPhone.phone ||
@@ -434,6 +441,7 @@ const TablePagination = () => {
     };
 
     const handleConfirmAdmin = async () => {
+        if (!canModifyUserDetails) return;
         setLoading(true);
         try {
             const payload = {
@@ -471,6 +479,7 @@ const TablePagination = () => {
     };
 
     const handleRemoveAdmin = async () => {
+        if (!canModifyUserDetails) return;
         setLoading(true);
         try {
             const payload = {
@@ -511,6 +520,7 @@ const TablePagination = () => {
     };
 
     const handleUserStopWork = async () => {
+        if (!canModifyUserDetails) return;
         setLoading(true);
         try {
             const payload = {
@@ -562,7 +572,13 @@ const TablePagination = () => {
                 default:
                     setValue(0);
             }
-            router.replace(`/apps/users/${userId}`);
+            
+            const leaveStart = searchParams?.get('leave_start');
+            const leaveEnd = searchParams?.get('leave_end');
+            const leaveRangeQuery = leaveStart && leaveEnd
+                ? `?leave_start=${encodeURIComponent(leaveStart)}&leave_end=${encodeURIComponent(leaveEnd)}`
+                : '';
+            router.replace(`/apps/users/${userId}${leaveRangeQuery}`);
         }
     }, [searchParams]);
 
@@ -675,7 +691,7 @@ const TablePagination = () => {
                                         }
                                         alt={data?.first_name}
                                         sx={{ width: 60, height: 60, cursor: 'pointer' }}
-                                        onClick={() => canEditUserDetails && setOpenImageDialog(true)}
+                                        onClick={() => canModifyUserDetails && setOpenImageDialog(true)}
                                     />
                                 </Badge>
 
@@ -709,7 +725,7 @@ const TablePagination = () => {
                                 </Box>
                             </Box>
                             <Box display={'flex'} gap={2}>
-                                {canEditUserDetails && !isReadOnlyUserView && data?.is_working && user.user_role_id == 1 && (
+                                {canModifyUserDetails && data?.is_working && user.user_role_id == 1 && (
                                     <Button
                                         variant="outlined"
                                         color="success"
@@ -719,7 +735,7 @@ const TablePagination = () => {
                                     </Button>
                                 )}
 
-                                {canEditUserDetails && !isReadOnlyUserView && data?.user_role_id == 2 && user.user_role_id == 1 && (
+                                {canModifyUserDetails && data?.user_role_id == 2 && user.user_role_id == 1 && (
                                     <Button
                                         variant="outlined"
                                         color="primary"
@@ -731,7 +747,7 @@ const TablePagination = () => {
                                     </Button>
                                 )}
 
-                                {canEditUserDetails && !data?.is_company_owner && data?.user_role_id == 1 && companyUsers.find((u: any) => Number(u.id) === Number(user.id))?.is_company_owner && (
+                                {canModifyUserDetails && !data?.is_company_owner && data?.user_role_id == 1 && companyUsers.find((u: any) => Number(u.id) === Number(user.id))?.is_company_owner && (
                                     <Button
                                         variant="outlined"
                                         color="error"
@@ -815,7 +831,7 @@ const TablePagination = () => {
                                             handleFieldChange('first_name', e.target.value)
                                         }
                                         inputProps={{ maxLength: 25 }}
-                                        disabled={!canEditUserDetails}
+                                        disabled={!canModifyUserDetails}
                                         fullWidth
                                     />
 
@@ -832,7 +848,7 @@ const TablePagination = () => {
                                             handleFieldChange('last_name', e.target.value)
                                         }
                                         inputProps={{ maxLength: 25 }}
-                                        disabled={!canEditUserDetails}
+                                        disabled={!canModifyUserDetails}
                                         fullWidth
                                     />
 
@@ -850,7 +866,7 @@ const TablePagination = () => {
                                         }}
                                         inputClass="phone-input"
                                         enableSearch
-                                        disabled={!canEditUserDetails}
+                                        disabled={!canModifyUserDetails}
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
@@ -866,7 +882,7 @@ const TablePagination = () => {
                                             handleFieldChange('email', e.target.value)
                                         }
                                         fullWidth
-                                        disabled={!canEditUserDetails}
+                                        disabled={!canModifyUserDetails}
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
@@ -882,7 +898,7 @@ const TablePagination = () => {
                                             handleFieldChange('user_code', e.target.value.toUpperCase())
                                         }
                                         inputProps={{ maxLength: 10 }}
-                                        disabled={!canEditUserDetails}
+                                        disabled={!canModifyUserDetails}
                                         fullWidth
                                     />
 
@@ -901,7 +917,7 @@ const TablePagination = () => {
                                             handleFieldChange('account_id', value)
                                         }}
                                         inputProps={{ maxLength: 10 }}
-                                        disabled={!canEditUserDetails}
+                                        disabled={!canModifyUserDetails}
                                         fullWidth
                                     />
 
@@ -915,7 +931,7 @@ const TablePagination = () => {
                                         placeholder="Choose Expiry date"
                                         fullWidth
                                         value={formData.expired_at}
-                                        disabled={!canEditUserDetails}
+                                        disabled={!canModifyUserDetails}
                                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                             const newDate = e.target.value;
                                             setFormData((prev) => ({
@@ -925,7 +941,7 @@ const TablePagination = () => {
                                         }}
                                     />
                                 </form>
-                                {canEditUserDetails && !isReadOnlyUserView && (
+                                {canModifyUserDetails && (
                                     <Box mt={2}>
                                         <Button
                                             variant="contained"
@@ -940,7 +956,7 @@ const TablePagination = () => {
                             </Box>
                         </BlankCard>
 
-                        {canEditUserDetails && !isReadOnlyUserView && (
+                        {canModifyUserDetails && (
                             <Card sx={{ mt: 3 }}>
                                 <Box
                                     display="flex"
@@ -957,7 +973,7 @@ const TablePagination = () => {
                             </Card>
                         )}
 
-                        {canEditUserDetails && !isReadOnlyUserView && (userRole === 1 || Number(user?.id) === Number(userId)) && (
+                        {canModifyUserDetails && (userRole === 1 || Number(user?.id) === Number(userId)) && (
                             <Card sx={{ mt: 3 }}>
                                 <Box sx={{ m: 3 }}>
                                     <Button
@@ -984,16 +1000,7 @@ const TablePagination = () => {
                         sx={{ boxShadow: (theme) => theme.shadows[8] }}
                     >
                         <BlankCard>
-                            <Box
-                                sx={!canEditUserDetails ? {
-                                    '& button:not(.MuiTab-root), & input, & textarea, & [role="switch"], & .MuiSelect-select': {
-                                        pointerEvents: 'none',
-                                    },
-                                    '& button:not(.MuiTab-root)': {
-                                        display: 'none',
-                                    },
-                                } : undefined}
-                            >
+                            <Box>
                                 <Tabs
                                     variant="scrollable"
                                     scrollButtons="auto"
@@ -1026,7 +1033,32 @@ const TablePagination = () => {
                                     ))}
                                 </Tabs>
                             </Box>
-                            <Box>
+                            <Box
+                                aria-readonly={!canModifyUserDetails}
+                                sx={!canModifyUserDetails ? {
+                                    '& fieldset button.MuiButton-root': {
+                                        display: 'none',
+                                    },
+                                    '& fieldset .MuiInputBase-root, & fieldset .react-tel-input': {
+                                        cursor: 'default',
+                                        pointerEvents: 'none',
+                                    },
+                                    '& fieldset .MuiInputBase-input': {
+                                        WebkitTextFillColor: 'rgba(0, 0, 0, 0.38)',
+                                    },
+                                    '& fieldset .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(0, 0, 0, 0.23) !important',
+                                    },
+                                    '& [role="combobox"], & [role="switch"], & .MuiSelect-select': {
+                                        cursor: 'default',
+                                        pointerEvents: 'none',
+                                    },
+                                } : undefined}
+                            >
+                                <fieldset
+                                    disabled={!canModifyUserDetails}
+                                    style={{ border: 0, margin: 0, minWidth: 0, padding: 0 }}
+                                >
                                 {isReadOnlyUserView ? (
                                     <>
                                         <Box hidden={value !== 0}>
@@ -1047,20 +1079,16 @@ const TablePagination = () => {
                                             />
                                         </Box>
 
-                                        <Box hidden={value !== 2}>
-                                            <Payments
-                                                companyId={Number(user.company_id)}
-                                                active={value === 2}
-                                                userId={Number(userId)}
-                                                isShow={false}
-                                                disableDateFilter={true}
-                                            />
-                                        </Box>
                                     </>
                                 ) : (
                                     <>
                                         <Box hidden={value !== 0}>
-                                            <HealthInfo userId={Number(userId)} active={value === 0} />
+                                            <HealthInfo
+                                                userId={Number(userId)}
+                                                active={value === 0}
+                                                canEdit={canModifyUserDetails}
+                                                readOnly={!canModifyUserDetails}
+                                            />
                                         </Box>
                                         <Box hidden={value !== 1}>
                                             <UserActivity
@@ -1099,15 +1127,6 @@ const TablePagination = () => {
                                                 userId={Number(userId)}
                                             />
                                         </Box>
-                                        <Box hidden={value !== 6}>
-                                            <Payments
-                                                companyId={Number(user.company_id)}
-                                                active={value === 6}
-                                                userId={Number(userId)}
-                                                isShow={false}
-                                                disableDateFilter={true}
-                                            />
-                                        </Box>
                                         <Box hidden={value !== 7}>
                                             <GeofencePenalty
                                                 companyId={Number(user.company_id)}
@@ -1116,6 +1135,30 @@ const TablePagination = () => {
                                             />
                                         </Box>
                                     </>
+                                )}
+                                </fieldset>
+                                {isReadOnlyUserView ? (
+                                    <Box hidden={value !== 2}>
+                                        <Payments
+                                            companyId={Number(user.company_id)}
+                                            active={value === 2}
+                                            userId={Number(userId)}
+                                            isShow={false}
+                                            disableDateFilter={true}
+                                            readOnly={!canModifyUserDetails}
+                                        />
+                                    </Box>
+                                ) : (
+                                    <Box hidden={value !== 6}>
+                                        <Payments
+                                            companyId={Number(user.company_id)}
+                                            active={value === 6}
+                                            userId={Number(userId)}
+                                            isShow={false}
+                                            disableDateFilter={true}
+                                            readOnly={!canModifyUserDetails}
+                                        />
+                                    </Box>
                                 )}
                             </Box>
                         </BlankCard>
@@ -1181,6 +1224,7 @@ const TablePagination = () => {
                             color="primary"
                             disabled={!selectedFile}
                             onClick={async () => {
+                                if (!canModifyUserDetails) return;
                                 if (selectedFile) {
                                     const formData = new FormData();
                                     formData.append('user_image', selectedFile);
@@ -1255,6 +1299,7 @@ const TablePagination = () => {
                         <Button
                             disabled={archiveLoading}
                             onClick={async () => {
+                                if (!canModifyUserDetails) return;
                                 const supervisorTeamId = data?.supervisor_team_id;
 
                                 if (supervisorTeamId) {
@@ -1354,6 +1399,7 @@ const TablePagination = () => {
                         </Button>
                         <Button
                             onClick={async () => {
+                                if (!canModifyUserDetails) return;
                                 if (!newSupervisorId) {
                                     toast.error('Please select a new supervisor');
                                     return;

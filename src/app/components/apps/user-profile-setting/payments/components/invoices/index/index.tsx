@@ -70,6 +70,7 @@ interface Props {
     userId: number;
     isShow: boolean;
     disableDateFilter?: boolean;
+    readOnly?: boolean;
 }
 
 const STORAGE_KEY = 'invoice-range';
@@ -209,7 +210,7 @@ const InvoiceAmountCell = ({item, startDate, endDate, fetchInvoices,}: {
     );
 };
 
-const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = false}) => {
+const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = false, readOnly = false}) => {
     const [data, setData] = useState<any[]>([]);
     const [fetchPayslip, setFetchPayslip] = useState<boolean>(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -413,6 +414,7 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
     };
 
     const handleOpenCreateDrawer = () => {
+        if (readOnly) return;
         setFormData({
             id: 0,
             company_id: user?.company_id,
@@ -430,6 +432,7 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (readOnly) return;
         setIsSaving(true);
 
         try {
@@ -917,7 +920,7 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
                                 ))}
                         </FormGroup>
                     </Popover>
-                    <IconButton
+                    {!readOnly && <IconButton
                         sx={{margin: '0px'}}
                         id="basic-button"
                         aria-controls={openMenu ? 'basic-menu' : undefined}
@@ -926,7 +929,7 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
                         onClick={handleClick}
                     >
                         <IconDotsVertical width={18}/>
-                    </IconButton>
+                    </IconButton>}
                     <Menu
                         id="basic-menu"
                         anchorEl={anchorEl}

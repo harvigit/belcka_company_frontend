@@ -21,7 +21,8 @@ import { User } from "next-auth";
 interface ProjectListingProps {
   userId: number;
   active: boolean;
-  //  someFunc?: () => void;
+  canEdit?: boolean;
+  readOnly?: boolean;
 }
 
 interface EmergencyContact {
@@ -60,6 +61,8 @@ interface HealthInfoData {
 const HealthInfoComponent: React.FC<ProjectListingProps> = ({
   userId,
   active,
+  canEdit,
+  readOnly = false,
 }) => {
   const [loading, setLoading] = useState(true);
   const [healthInfo, setHealthInfo] = useState<HealthInfoData | null>(null);
@@ -72,6 +75,9 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
   const user = session.data?.user as User & { user_role_id?: number | null } & {
     id: number;
   };
+  const hasStandardEditAccess = user.id === userId || user.user_role_id === 1;
+  const canEditHealthInfo = !readOnly && (canEdit ?? hasStandardEditAccess);
+  const canViewHealthInfo = readOnly || canEditHealthInfo;
 
   useEffect(() => {
     const fetchHealthInfo = async () => {
@@ -167,7 +173,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
   }, [userId, active]);
 
   const handleFieldChange = (field: keyof EmergencyContact, value: string) => {
-    if (!healthInfo) return;
+    if (!healthInfo || !canEditHealthInfo) return;
     setHealthInfo((prev) =>
       prev
         ? {
@@ -182,7 +188,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
   };
 
   const handleOtherInfoChange = (field: "height" | "weight", value: string) => {
-    if (!healthInfo) return;
+    if (!healthInfo || !canEditHealthInfo) return;
     setHealthInfo((prev) =>
       prev
         ? {
@@ -198,7 +204,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
     key: "is_check" | "comment",
     value: any,
   ) => {
-    if (!healthInfo) return;
+    if (!healthInfo || !canEditHealthInfo) return;
 
     const updatedIssues = [...healthInfo.health_issues];
     if (key === "is_check") {
@@ -221,7 +227,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
   };
 
   const handleSaveOrUpdate = async () => {
-    if (!healthInfo) return;
+    if (!healthInfo || !canEditHealthInfo) return;
 
     const payload = {
       user_id: Number(userId),
@@ -276,6 +282,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
   }, [healthInfo]);
 
   const handlePhoneInputChange = (value: string, country: any) => {
+    if (!canEditHealthInfo) return;
     setPhone(value);
 
     const ext = "+" + country.dialCode;
@@ -312,7 +319,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
 
   return (
     <Box m={2} p={2} pt={0} mt={2} ml={5}>
-      {user.id === userId || user.user_role_id === 1 ? (
+      {canViewHealthInfo ? (
         <Box ml={5} p={2} className="health_info_wrapper">
           <Typography
             color="#487bb3ff"
@@ -336,6 +343,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                         .replace(/_/g, " ")
                         .replace(/\b\w/g, (c) => c.toUpperCase())}
                       value={(healthInfo.emergency_contact as any)[key] || ""}
+                      disabled={!canEditHealthInfo}
                       onChange={(e) =>
                         handleFieldChange(
                           key as keyof EmergencyContact,
@@ -359,6 +367,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                   borderColor: "#c0d1dc9c",
                 }}
                 enableSearch
+                disabled={!canEditHealthInfo}
                 inputProps={{ required: true }}
               />
             </Grid>
@@ -382,6 +391,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                 inputMode="numeric"
                 label="Height (cm)"
                 value={healthInfo.height}
+                disabled={!canEditHealthInfo}
                 inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
                 onChange={(e) => {
                   const value = e.target.value.replace(/[^0-9]/g, "");
@@ -396,6 +406,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                 className="custom_color"
                 label="Weight (kg)"
                 value={healthInfo.weight}
+                disabled={!canEditHealthInfo}
                 inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
                 onChange={(e) => {
                   const value = e.target.value.replace(/[^0-9]/g, "");
@@ -427,6 +438,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                     <input
                       type="radio"
                       checked={issue.is_check === true}
+                      disabled={!canEditHealthInfo}
                       onChange={() =>
                         handleHealthIssueChange(index, "is_check", true)
                       }
@@ -438,6 +450,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                     <input
                       type="radio"
                       checked={issue.is_check === false}
+                      disabled={!canEditHealthInfo}
                       onChange={() =>
                         handleHealthIssueChange(index, "is_check", false)
                       }
@@ -453,6 +466,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                     rows={2}
                     label="Detail"
                     value={issue.comment || ""}
+                    disabled={!canEditHealthInfo}
                     required
                     onChange={(e) =>
                       handleHealthIssueChange(index, "comment", e.target.value)
@@ -464,7 +478,11 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
             ))}
           </Box>
 
-          <Button variant="contained" onClick={handleSaveOrUpdate}>
+          <Button
+            variant="contained"
+            onClick={handleSaveOrUpdate}
+            disabled={!canEditHealthInfo}
+          >
             {hasExistingInfo ? "Update" : "Save"}
           </Button>
         </Box>

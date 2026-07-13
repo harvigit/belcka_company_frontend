@@ -72,6 +72,7 @@ interface Props {
     userId: number,
     isShow: boolean,
     disableDateFilter?: boolean;
+    readOnly?: boolean;
 }
 
 const STORAGE_KEY = 'payslip-date-range';
@@ -211,7 +212,7 @@ const AmountCell = ({
     );
 };
 
-const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
+const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readOnly = false}) => {
     const [data, setData] = useState<any[]>([]);
     const [fetchPayslip, setFetchPayslip] = useState<boolean>(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -412,6 +413,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
     };
 
     const handleOpenCreateDrawer = () => {
+        if (readOnly) return;
         setFormData({
             id: 0,
             company_id: user?.company_id,
@@ -427,6 +429,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (readOnly) return;
         setIsSaving(true);
 
         try {
@@ -464,6 +467,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
 
     const editPayslip = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (readOnly) return;
         setIsSaving(true);
 
         try {
@@ -514,6 +518,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
 
     // UseCallback to memoize these functions
     const handleEdit = useCallback((item: any) => {
+        if (readOnly) return;
         setSelectedTaskId(item.id);
         setEditPayslipData(item);
         setEditDrawerOpen(true);
@@ -787,11 +792,11 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
                 const item = row.original;
                 return (
                     <Stack direction="row" spacing={1}>
-                        <Tooltip title="Edit">
+                        {!readOnly && <Tooltip title="Edit">
                             <IconButton onClick={() => handleEdit(item)} color="primary">
                                 <IconEdit size={18}/>
                             </IconButton>
-                        </Tooltip>
+                        </Tooltip>}
                     </Stack>
                 );
             },
@@ -881,7 +886,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
                     alignItems="center"
                     sx={{flexShrink: 0}}
                 >
-                    {selectedRowIds.size > 0 && (
+                    {!readOnly && selectedRowIds.size > 0 && (
                         <Button
                             variant="outlined"
                             color="error"
@@ -953,7 +958,8 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
                                 ))}
                         </FormGroup>
                     </Popover>
-                    <IconButton
+                    
+                    {!readOnly &&<IconButton
                         sx={{margin: '0px'}}
                         id="basic-button"
                         aria-controls={openMenu ? 'basic-menu' : undefined}
@@ -962,7 +968,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
                         onClick={handleClick}
                     >
                         <IconDotsVertical width={18}/>
-                    </IconButton>
+                    </IconButton>}
                     <Menu
                         id="basic-menu"
                         anchorEl={anchorEl}
@@ -1018,6 +1024,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
                             </Button>
                             <Button
                                 onClick={async () => {
+                                    if (readOnly) return;
                                     try {
                                         const payload = {
                                             ids: usersToDelete.join(','),
