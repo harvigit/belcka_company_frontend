@@ -21,7 +21,7 @@ interface ArchiveAddressProps {
   open: boolean;
   onClose: () => void;
   onWorkUpdated?: () => void;
-  projectId?: number | null;
+  parentAddressId?: number | null;
 }
 export interface TradeList {
   trade_id: number;
@@ -37,7 +37,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
   open,
   onClose,
   onWorkUpdated,
-  projectId,
+  parentAddressId,
 }) => {
   const [data, setData] = useState<TeamList[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
@@ -49,8 +49,8 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
   const fetchCases = async () => {
     try {
       let url = "address/archive-list";
-      if (projectId) {
-        url += `?project_id=${projectId}`;
+      if (parentAddressId) {
+        url += `?parent_address_id=${parentAddressId}`;
       }
       const res = await api.get(url);
 

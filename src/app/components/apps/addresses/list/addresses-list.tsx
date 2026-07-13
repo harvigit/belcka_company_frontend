@@ -2371,7 +2371,7 @@ const AddressesList = ({
 
       <ArchiveAddress
         open={archiveList}
-        projectId={projectId}
+        parentAddressId={parentAddressId}
         onClose={() => setArchiveList(false)}
         onWorkUpdated={fetchAddresses}
       />
