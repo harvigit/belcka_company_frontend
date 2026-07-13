@@ -33,6 +33,9 @@ import {
   ListItemIcon,
   Autocomplete,
   Tooltip,
+  List,
+  ListItem,
+  ListItemButton,
 } from "@mui/material";
 import {
   IconFilter,
@@ -233,6 +236,86 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     }
   };
 
+  const handleSearchClick = async () => {
+    const query = parentAddressName.trim();
+    if (!query) {
+      setPredictions([]);
+      return;
+    }
+
+    setTypedAddress(true);
+
+    try {
+      let country = "UK";
+
+      if (isIEPostcode(query)) country = "IE";
+      else if (isAUPostcode(query)) country = "AU";
+      else if (isNZPostcode(query)) country = "NZ";
+
+      const res = await fetch(
+        `https://ws.postcoder.com/pcw/${
+          process.env.NEXT_PUBLIC_POSTCODER_KEY
+        }/address/${country}/${encodeURIComponent(query)}?format=json`,
+      );
+
+      const data = await res.json();
+      setPredictions(data || []);
+      return;
+    } catch (err) {
+      console.error("Postcoder failed, falling back to Google", err);
+    }
+
+    const service = new google.maps.places.AutocompleteService();
+
+    service.getPlacePredictions({ input: query }, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+        setPredictions(
+          results.map((r) => ({
+            ...r,
+            source: "google",
+          })),
+        );
+      } else {
+        setPredictions([]);
+      }
+    });
+  };
+
+  const selectGooglePrediction = (
+    item: { source: "google" } & google.maps.places.AutocompletePrediction,
+  ) => {
+    const service = new google.maps.places.PlacesService(
+      document.createElement("div"),
+    );
+
+    service.getDetails({ placeId: item.place_id }, (place, status) => {
+      if (
+        status === google.maps.places.PlacesServiceStatus.OK &&
+        place?.geometry?.location
+      ) {
+        let postcode = "";
+        place.address_components?.forEach((component) => {
+          if (component.types.includes("postal_code")) {
+            postcode = component.long_name;
+          }
+        });
+
+        setParentAddressName(place.formatted_address || "");
+        setParentAddressPostcode(postcode);
+
+        setPredictions([]);
+      }
+    });
+  };
+
+  const selectPostcoderPrediction = (
+    item: { source: "postcoder" } & PostcoderAddress,
+  ) => {
+    setParentAddressName(item.summaryline);
+    setParentAddressPostcode(item.postcode || "");
+    setPredictions([]);
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (postcodeQuery.length >= 3) fetchPostcoderAddresses(postcodeQuery);
@@ -283,11 +366,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         setParentAddressDrawerOpen(false);
         fetchAddresses();
       } else {
-        toast.error(res.data.message);
       }
     } catch (err) {
       console.error(err);
-      toast.error("Failed to save address");
     }
   };
 
@@ -1554,8 +1635,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           open={parentAddressDrawerOpen}
           onClose={() => setParentAddressDrawerOpen(false)}
           sx={{
-            width: 400,
-            "& .MuiDrawer-paper": { width: 400, backgroundColor: "#f9f9f9" },
+            width: 450,
+            "& .MuiDrawer-paper": { width: 450, backgroundColor: "#f9f9f9" },
           }}
         >
           <Box display="flex" flexDirection="column" height="100%" p={2}>
@@ -1589,6 +1670,53 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   <Grid container spacing={3}>
                     <Grid size={{ xs: 12 }}>
                       <Typography variant="subtitle2" mb={1}>
+                        Address
+                      </Typography>
+                      <Box display={"flex"} justifyContent={"space-between"} gap={2}>
+                        <TextField
+                          placeholder="Search for address.."
+                          value={parentAddressName}
+                          onChange={(e) => setParentAddressName(e.target.value)}
+                          variant="outlined"
+                          fullWidth
+                        />
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={handleSearchClick}
+                        >
+                          Search
+                        </Button>
+                      </Box>
+                      {typedAddress && predictions.length > 0 && (
+                        <List
+                          sx={{
+                            border: "1px solid #ccc",
+                            maxHeight: 200,
+                            overflow: "auto",
+                            mt: 1,
+                          }}
+                        >
+                          {predictions.map((item, index) => (
+                            <ListItem key={index} disablePadding>
+                              <ListItemButton
+                                onClick={() =>
+                                  item.source === "google"
+                                    ? selectGooglePrediction(item)
+                                    : selectPostcoderPrediction(item)
+                                }
+                              >
+                                {item.source === "google"
+                                  ? item.description
+                                  : item.summaryline}
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                        </List>
+                      )}
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Typography variant="subtitle2" mb={1}>
                         Pin Code
                       </Typography>
                       <CustomTextField
@@ -1604,83 +1732,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                             setPostcodeQuery(value);
                           }
                         }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                      <Typography variant="subtitle2" mb={1}>
-                        Address
-                      </Typography>
-                      <Autocomplete
-                        fullWidth
-                        freeSolo
-                        options={addressOptions || []}
-                        loading={loadingAddresses}
-                        value={parentAddressName}
-                        getOptionLabel={(o: any) =>
-                          typeof o === "string"
-                            ? o
-                            : o.summaryline ||
-                              `${o.addressline1}, ${o.posttown}`
-                        }
-                        isOptionEqualToValue={(o: any, v: any) =>
-                          typeof o !== "string" &&
-                          typeof v !== "string" &&
-                          o.addressline1 === v.addressline1 &&
-                          o.postcode === v.postcode
-                        }
-                        onInputChange={(
-                          event: any,
-                          value: any,
-                          reason: any,
-                        ) => {
-                          if (reason === "input") {
-                            setPostcodeQuery(value);
-                            setParentAddressName(value);
-                          }
-                        }}
-                        onChange={(_, value: any) => {
-                          if (!value) {
-                            setParentAddressName("");
-                            setParentAddressPostcode("");
-                            return;
-                          }
-
-                          if (typeof value === "string") {
-                            setParentAddressName(value);
-                          } else {
-                            const fullAddress =
-                              value.summaryline ||
-                              [
-                                value.addressline1,
-                                value.addressline2,
-                                value.addressline3,
-                                value.posttown,
-                                value.postcode,
-                              ]
-                                .filter(Boolean)
-                                .join(", ");
-
-                            setParentAddressName(fullAddress);
-                            setParentAddressPostcode(value.postcode || "");
-                          }
-                        }}
-                        renderInput={(params: any) => (
-                          <CustomTextField
-                            {...params}
-                            placeholder="Select or type address"
-                            InputProps={{
-                              ...params.InputProps,
-                              endAdornment: (
-                                <>
-                                  {loadingAddresses ? (
-                                    <CircularProgress size={20} />
-                                  ) : null}
-                                  {params.InputProps.endAdornment}
-                                </>
-                              ),
-                            }}
-                          />
-                        )}
                       />
                     </Grid>
                   </Grid>
