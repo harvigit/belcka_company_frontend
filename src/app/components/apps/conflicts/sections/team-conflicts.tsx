@@ -31,8 +31,8 @@ export interface TeamConflict {
     current_member_count: number;
     max_member_limit: number;
     conflict_type: string;
-    user_name: string | null;
-    image: string | null;
+    user_name: string;
+    image: string;
 }
 
 // Helpers
