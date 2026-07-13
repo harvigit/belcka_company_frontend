@@ -12,6 +12,7 @@ import {
   Avatar,
   Chip,
   CircularProgress,
+  Button,
 } from "@mui/material";
 import {
   IconArrowsShuffle,
@@ -39,6 +40,9 @@ const TeamPricing = () => {
   const [cachedAllProducts, setCachedAllProducts] = useState<any[] | null>(
     null,
   );
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pricingMap, setPricingMap] = useState<Map<number, any>>(new Map());
 
   const session = useSession();
   const user = session.data?.user as User & {
@@ -106,6 +110,8 @@ const TeamPricing = () => {
       setSelectedTeam(team);
       setTeamPercentage(team.percentage);
       setOpenDrawer(true);
+      setPage(1);
+      setProducts([]);
       setLoadingProducts(true);
 
       const teamPercentageStr =
@@ -114,28 +120,26 @@ const TeamPricing = () => {
           : "";
 
       const [productRes, pricingRes] = await Promise.all([
-        cachedAllProducts
-          ? Promise.resolve({ data: { info: cachedAllProducts } })
-          : api.get(
-              `products/get?company_id=${user.company_id}&is_products=true`,
-            ),
+        api.get(
+          `products/get?company_id=${user.company_id}&is_products=true&page=1&limit=20&project_ids=${team.project_id}`,
+        ),
         api.get(
           `team/get-team-pricing-details?company_id=${user.company_id}&team_id=${team.team_id}`,
         ),
       ]);
 
       const allProducts = productRes.data?.info || [];
-      if (!cachedAllProducts) {
-        setCachedAllProducts(allProducts);
-      }
+      const total = productRes.data?.data?.totalItems || 0;
+      setTotalItems(total);
 
       const pricingProducts = pricingRes.data?.info?.products || [];
-      const pricingMap = new Map<number, any>(
+      const map = new Map<number, any>(
         pricingProducts.map((x: any) => [Number(x.product_id), x]),
       );
+      setPricingMap(map);
 
       const mergedProducts = allProducts.map((product: any) => {
-        const matched = pricingMap.get(Number(product.id));
+        const matched = map.get(Number(product.id));
 
         const resolvedPercentage =
           matched?.percentage !== undefined &&
@@ -165,6 +169,63 @@ const TeamPricing = () => {
       });
 
       setProducts(mergedProducts);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const handleSeeMore = async () => {
+    if (!selectedTeam) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    setLoadingProducts(true);
+
+    try {
+      const productRes = await api.get(
+        `products/get?company_id=${user.company_id}&is_products=true&is_web=true&page=${nextPage}&limit=20`,
+      );
+
+      const newProducts = productRes.data?.info || [];
+
+      const teamPercentageStr =
+        selectedTeam.percentage !== undefined &&
+        selectedTeam.percentage !== null
+          ? String(selectedTeam.percentage)
+          : "";
+
+      const mergedProducts = newProducts.map((product: any) => {
+        const matched = pricingMap.get(Number(product.id));
+
+        const resolvedPercentage =
+          matched?.percentage !== undefined &&
+          matched?.percentage !== null &&
+          String(matched.percentage) !== ""
+            ? String(matched.percentage)
+            : teamPercentageStr;
+
+        const buyingPrice = Number(product.price || product.buying_price || 0);
+        const marketPrice = Number(product.market_price || 0);
+
+        const calculatedPrice =
+          matched?.calculated_price !== undefined &&
+          matched?.calculated_price !== null
+            ? Number(matched.calculated_price).toFixed(2)
+            : calculateProductPrice(
+                buyingPrice,
+                marketPrice,
+                resolvedPercentage,
+              );
+
+        return {
+          ...product,
+          percentage: resolvedPercentage,
+          calculated_price: calculatedPrice,
+        };
+      });
+
+      setProducts((prev) => [...prev, ...mergedProducts]);
     } catch (err) {
       console.error(err);
     } finally {
@@ -502,11 +563,11 @@ const TeamPricing = () => {
             pb: 12,
           }}
         >
-          {loadingProducts ? (
+          {loadingProducts && products.length === 0 ? (
             <Box display="flex" justifyContent="center" mt={5}>
               <CircularProgress />
             </Box>
-          ) : (
+          ) : filteredProducts?.length > 0 ? (
             <Stack spacing={1.5}>
               {filteredProducts.map((item: any) => (
                 <Box
@@ -578,7 +639,26 @@ const TeamPricing = () => {
                   </Stack>
                 </Box>
               ))}
+
+              {products.length < totalItems && (
+                <Box display="flex" justifyContent="center" my={2}>
+                  <Button
+                    variant="outlined"
+                    disabled={loadingProducts}
+                    onClick={handleSeeMore}
+                    startIcon={
+                      loadingProducts && <CircularProgress size={16} />
+                    }
+                  >
+                    See More
+                  </Button>
+                </Box>
+              )}
             </Stack>
+          ) : (
+            <Typography alignItems={"center"} textAlign={"center"} mt={2}>
+              No products are found !!
+            </Typography>
           )}
         </Box>
       </Drawer>

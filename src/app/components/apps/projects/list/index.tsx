@@ -1322,19 +1322,22 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
               <FormControlLabel
                 control={
                   <Checkbox
-                    checked={selectAll}
+                    checked={
+                      filteredData.length > 0 &&
+                      filteredData.every((p) => selectedProducts.includes(p.id))
+                    }
                     onChange={(e) => {
                       const isChecked = e.target.checked;
                       setSelectAll(isChecked);
                       if (isChecked) {
                         const newSelected = [...selectedProducts];
-                        paginatedProduct.forEach((p) => {
+                        filteredData.forEach((p) => {
                           if (!newSelected.includes(p.id))
                             newSelected.push(p.id);
                         });
                         setSelectedProducts(newSelected);
                       } else {
-                        const visibleIds = paginatedProduct.map((p) => p.id);
+                        const visibleIds = filteredData.map((p) => p.id);
                         setSelectedProducts(
                           selectedProducts.filter(
                             (id) => !visibleIds.includes(id),

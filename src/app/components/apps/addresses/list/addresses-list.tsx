@@ -74,6 +74,7 @@ import { TradesTab } from "./address-sidebar-tab/trades-tab";
 import { ProjectList } from "../../projects/list";
 import { IconX } from "@tabler/icons-react";
 import { IconFilter } from "@tabler/icons-react";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 
 dayjs.extend(customParseFormat);
 
@@ -477,6 +478,7 @@ const AddressesList = ({
       color: task.color,
       project_ids: projectIds,
       parent_address_id: task.parent_address_id,
+      ref: task.ref,
     });
 
     setSelectedLocation({
@@ -662,7 +664,7 @@ const AddressesList = ({
   ) => {
     const geocoder = new google.maps.Geocoder();
 
-    geocoder.geocode({ address: item.postcode }, (results, status) => {
+    geocoder.geocode({ address: `${item.summaryline}, ${item.postcode}` }, (results, status) => {
       if (status === "OK" && results?.[0]?.geometry?.location) {
         const lat = results[0].geometry.location.lat();
         const lng = results[0].geometry.location.lng();
@@ -2005,6 +2007,19 @@ const AddressesList = ({
                             height: "40px",
                             border: "none",
                           }}
+                        />
+                      </Box>
+                      <Box mt={2}>
+                        <CustomTextField
+                          fullWidth
+                          label="Reference"
+                          value={formData.ref || ""}
+                          onChange={(e: any) =>
+                            setFormData((prev: any) => ({
+                              ...prev,
+                              ref: e.target.value,
+                            }))
+                          }
                         />
                       </Box>
                     </Box>
