@@ -14,8 +14,16 @@ import {
     DialogContent,
     DialogActions,
     Button,
+    Tooltip,
 } from '@mui/material';
-import {IconArrowLeft, IconDownload, IconX} from '@tabler/icons-react';
+import {
+    IconArrowLeft,
+    IconArrowRight,
+    IconDownload,
+    IconX,
+    IconZoomIn,
+    IconZoomOut,
+} from '@tabler/icons-react';
 import {Stack} from '@mui/system';
 
 interface ChecklogDetailPageProps {
@@ -55,7 +63,11 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
     const [loading, setLoading] = useState<boolean>(false);
     const [checklogTasks, setChecklogTasks] = useState<ChecklogTask[]>([]);
     const [data, setData] = useState<any>([]);
-    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [previewImages, setPreviewImages] = useState<string[]>([]);
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+    const [zoom, setZoom] = useState(1);
+
+    const selectedImage = previewImages[selectedImageIndex] ?? null;
 
     const fetchChecklogDetail = useCallback(async () => {
         if (!checklogId) return;
@@ -160,6 +172,32 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
     const hasDisplayableAttachments = (attachments: Attachment[]) =>
         attachments.some((attachment) => Boolean(getAttachmentUrl(attachment)));
 
+    const closePreview = () => {
+        setPreviewImages([]);
+        setSelectedImageIndex(0);
+        setZoom(1);
+    };
+
+    const openPreview = (images: string[], index: number) => {
+        setPreviewImages(images);
+        setSelectedImageIndex(index);
+        setZoom(1);
+    };
+
+    const showPreviousImage = () => {
+        setSelectedImageIndex((current) =>
+            (current - 1 + previewImages.length) % previewImages.length,
+        );
+        setZoom(1);
+    };
+
+    const showNextImage = () => {
+        setSelectedImageIndex((current) =>
+            (current + 1) % previewImages.length,
+        );
+        setZoom(1);
+    };
+
     const handleDownloadImage = async () => {
         if (!selectedImage) return;
 
@@ -199,6 +237,9 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
         const visibleAttachments = attachments.filter((attachment) =>
             getAttachmentUrl(attachment),
         );
+        const previewUrls = visibleAttachments.map((attachment) =>
+            getAttachmentUrl(attachment, true),
+        );
 
         if (visibleAttachments.length === 0) return null;
 
@@ -224,7 +265,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                     width: 'calc(50% - 6px)',
                                     cursor: 'pointer',
                                 }}
-                                onClick={() => setSelectedImage(previewUrl)}
+                                onClick={() => openPreview(previewUrls, idx)}
                             >
                                 <Box
                                     component="img"
@@ -368,7 +409,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
 
                 <Dialog
                     open={Boolean(selectedImage)}
-                    onClose={() => setSelectedImage(null)}
+                    onClose={closePreview}
                     maxWidth="md"
                     fullWidth
                 >
@@ -381,26 +422,121 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                         }}
                     >
                         Attachment Preview
-                        <IconButton onClick={() => setSelectedImage(null)} size="small">
+                        <IconButton onClick={closePreview} size="small" aria-label="Close preview">
                             <IconX size={20}/>
                         </IconButton>
                     </DialogTitle>
-                    <DialogContent>
+                    <DialogContent sx={{display: 'flex', flexDirection: 'column', gap: 1.5}}>
                         <Box
-                            component="img"
-                            src={selectedImage || ''}
-                            alt="Attachment preview"
                             sx={{
+                                height: {xs: '55vh', sm: '65vh'},
                                 width: '100%',
-                                maxHeight: '70vh',
-                                objectFit: 'contain',
-                                display: 'block',
                                 backgroundColor: '#f5f5f5',
                                 borderRadius: 1,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                overflow: 'auto',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                position: 'relative',
                             }}
-                        />
+                        >
+                            <Box
+                                component="img"
+                                src={selectedImage || ''}
+                                alt={`Attachment preview ${selectedImageIndex + 1}`}
+                                sx={{
+                                    maxWidth: zoom <= 1 ? `${zoom * 100}%` : 'none',
+                                    maxHeight: zoom <= 1 ? `${zoom * 100}%` : 'none',
+                                    width: zoom <= 1 ? 'auto' : `${zoom * 100}%`,
+                                    height: 'auto',
+                                    objectFit: 'contain',
+                                    display: 'block',
+                                    transition: 'width 150ms ease',
+                                }}
+                            />
+
+                            {previewImages.length > 1 && (
+                                <>
+                                    <Tooltip title="Previous attachment">
+                                        <IconButton
+                                            onClick={showPreviousImage}
+                                            aria-label="Previous attachment"
+                                            sx={{
+                                                position: 'absolute',
+                                                top: '50%',
+                                                left: 12,
+                                                transform: 'translateY(-50%)',
+                                                color: '#fff',
+                                                backgroundColor: 'rgba(0, 0, 0, 0.55)',
+                                                zIndex: 1,
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                                                },
+                                            }}
+                                        >
+                                            <IconArrowLeft size={24}/>
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="Next attachment">
+                                        <IconButton
+                                            onClick={showNextImage}
+                                            aria-label="Next attachment"
+                                            sx={{
+                                                position: 'absolute',
+                                                top: '50%',
+                                                right: 12,
+                                                transform: 'translateY(-50%)',
+                                                color: '#fff',
+                                                backgroundColor: 'rgba(0, 0, 0, 0.55)',
+                                                zIndex: 1,
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                                                },
+                                            }}
+                                        >
+                                            <IconArrowRight size={24}/>
+                                        </IconButton>
+                                    </Tooltip>
+                                </>
+                            )}
+                        </Box>
+
+                        <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
+                            <Tooltip title="Zoom out">
+                                <span>
+                                    <IconButton
+                                        onClick={() => setZoom((current) => Math.max(0.5, current - 0.25))}
+                                        disabled={zoom <= 0.5}
+                                        aria-label="Zoom out"
+                                    >
+                                        <IconZoomOut size={22}/>
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                            <Typography variant="body2" minWidth={48} textAlign="center">
+                                {Math.round(zoom * 100)}%
+                            </Typography>
+                            <Tooltip title="Zoom in">
+                                <span>
+                                    <IconButton
+                                        onClick={() => setZoom((current) => Math.min(3, current + 0.25))}
+                                        disabled={zoom >= 3}
+                                        aria-label="Zoom in"
+                                    >
+                                        <IconZoomIn size={22}/>
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                        </Box>
                     </DialogContent>
-                    <DialogActions>
+                    <DialogActions sx={{justifyContent: 'space-between'}}>
+                        <Box display="flex" alignItems="center">
+                            <Typography variant="body2" color="text.secondary">
+                                {selectedImageIndex + 1} / {previewImages.length}
+                            </Typography>
+                        </Box>
                         <Button
                             variant="contained"
                             startIcon={<IconDownload size={18}/>}
