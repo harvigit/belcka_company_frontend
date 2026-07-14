@@ -292,7 +292,9 @@ const ArchiveUserList = () => {
                             selectedRowIds.size === filteredData.length &&
                             filteredData.length > 0
                         }
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) => {
+                            e.stopPropagation();
                             if (e.target.checked) {
                                 setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
                             } else {
@@ -315,7 +317,9 @@ const ArchiveUserList = () => {
                     <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
                         <CustomCheckbox
                             checked={isChecked}
-                            onChange={() => {
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                                e.stopPropagation();
                                 const newSelected = new Set(selectedRowIds);
                                 if (newSelected.has(rowUser.id)) {
                                     newSelected.delete(rowUser.id);
