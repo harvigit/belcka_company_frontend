@@ -76,7 +76,7 @@ const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
       if (selectedItem.action === "restore") {
         const response = await api.post("address/parent-unarchive", payload);
         if (response.data.IsSuccess) {
-          toast.success(response.data.message || "Unarchived successfully");
+          toast.success(response.data.message || "Unarchive successfully");
           fetchAddresses();
           onWorkUpdated?.();
         }
@@ -119,7 +119,7 @@ const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archived Parent Addresses
+                  Archived Addresses
                 </Typography>
               </Box>
 
@@ -203,10 +203,10 @@ const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
       </Box>
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Restore Parent Address</DialogTitle>
+        <DialogTitle>Restore Address</DialogTitle>
         <DialogContent>
           <Typography color="textSecondary">
-            Are you sure you want to restore this parent address?
+            Are you sure you want to restore this address?
           </Typography>
         </DialogContent>
         <DialogActions>

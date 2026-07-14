@@ -128,7 +128,7 @@ const ArchiveUserList = () => {
         fetchActiveUsers();
     }, []);
 
-    const fetchUsers = async (restorePage?: number) => {
+    const fetchUsers = async () => {
         setFetchUser(true);
         try {
             let url = `user/archive-users-list?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -162,12 +162,6 @@ const ArchiveUserList = () => {
                 } else if (pagMeta.last_page !== undefined) {
                     setPageCount(pagMeta.last_page);
                 }
-
-                if (restorePage !== undefined) {
-                    setTimeout(() => {
-                        setPagination((prev) => ({ ...prev, pageIndex: restorePage }));
-                    }, 0);
-                }
             }
         } catch (err) {
             console.error("Failed to fetch archive users", err);
@@ -175,10 +169,6 @@ const ArchiveUserList = () => {
             setFetchUser(false);
         }
     };
-
-    useEffect(() => {
-        fetchUsers();
-    }, [projectId]);
 
     useEffect(() => {
         const fetchTrades = async () => {
@@ -229,7 +219,7 @@ const ArchiveUserList = () => {
         }
     };
 
-    const filteredData = data; // Filtering is now handled by the backend
+    const filteredData = data;
 
     const handleOpenConfirm = (action: DialogAction) => {
         const selectedIds = Array.from(selectedRowIds).filter(Boolean);
@@ -419,7 +409,19 @@ const ArchiveUserList = () => {
         }),
     ];
 
-    const { table, pagination, setPagination, totalRows, setTotalRows, pageCount, setPageCount } = useServerTable({
+      const {
+        table,
+        pagination,
+        setPagination,
+        pageCount,
+        setPageCount,
+        totalRows,
+        setTotalRows,
+        sorting,
+        setSorting,
+        columnFilters,
+        setColumnFilters,
+      } = useServerTable({
         data: filteredData,
         columns,
         fetchData: fetchUsers,
@@ -488,7 +490,7 @@ const ArchiveUserList = () => {
                                 },
                             }}
                         />
-                        <Button variant="contained" onClick={() => setOpen(true)}>
+                        <Button variant="contained" onClick={() => setOpen(true)}  sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}>
                             <IconFilter width={18} />
                         </Button>
                     </Grid>

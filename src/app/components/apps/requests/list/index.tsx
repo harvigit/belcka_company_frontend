@@ -265,8 +265,8 @@ export default function UserRequests({
         "Billing Info": "#4CBC6D",
         Company: "#f5c21bf8",
         Leave: "#949090ff",
-        "Work log": "#FFFF7F00",
-        Timesheet: "#FFFF7F00",
+        "Worklog": "#FF7F00",
+        Timesheet: "rgba(8, 8, 7, 0)",
         "User Account": "#FF3F51B5",
         Penalty: "#ff3737ff",
         Adjustment: "#0066ffff",
@@ -441,6 +441,11 @@ export default function UserRequests({
                                                     <Typography variant="subtitle1">
                                                         {work.message}
                                                     </Typography>
+                                                    {work.request_note && (
+                                                   <Typography variant="subtitle1" color="textSecondary">
+                                                        Note: {work.request_note}
+                                                    </Typography>
+                                                )}
                                                 </Box>
                                                 <Box justifyContent={"flex-end"}>
                                                     <Typography

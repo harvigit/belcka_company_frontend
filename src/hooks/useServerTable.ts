@@ -55,7 +55,7 @@ export function useServerTable<TData>({
     }, debounceTimeMs);
 
     return () => clearTimeout(handler);
-  }, [...debounceDependencies, sorting]);
+  }, [...debounceDependencies, JSON.stringify(sorting)]);
 
   // Handle fetching when page changes
   useEffect(() => {

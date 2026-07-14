@@ -1,0 +1,579 @@
+"use client";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Drawer,
+  Box,
+  Typography,
+  IconButton,
+  Grid,
+  Autocomplete,
+  TextField,
+  Button,
+  List,
+  ListItem,
+  ListItemButton,
+} from "@mui/material";
+import { IconArrowLeft } from "@tabler/icons-react";
+import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRangeSlider";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import api from "@/utils/axios";
+import toast from "react-hot-toast";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
+import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
+import {
+  Circle,
+  GoogleMap,
+  Marker,
+  useJsApiLoader,
+} from "@react-google-maps/api";
+
+interface Boundary {
+  lat: number;
+  lng: number;
+  radius: number;
+}
+
+type PostcoderAddress = {
+  summaryline: string;
+  addressline1: string;
+  addressline2: string;
+  posttown: string;
+  postcode: string;
+};
+
+type GooglePrediction = google.maps.places.AutocompletePrediction;
+
+type UnifiedPrediction =
+  | ({ source: "google" } & GooglePrediction)
+  | ({ source: "postcoder" } & PostcoderAddress);
+
+interface CaseEditDrawerProps {
+  open: boolean;
+  onClose: () => void;
+  selectedCase: any | null;
+  projects: any[];
+  onSave: () => void;
+}
+
+export default function CaseEditDrawer({
+  open,
+  onClose,
+  selectedCase,
+  projects,
+  onSave,
+}: CaseEditDrawerProps) {
+  const session = useSession();
+  const user = session.data?.user as User & { company_id?: number | null };
+
+  const [formData, setFormData] = useState<any>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [typedAddress, setTypedAddress] = useState(false);
+  const [predictions, setPredictions] = useState<UnifiedPrediction[]>([]);
+  const defaultRadius = 100;
+  const circleRef = useRef<google.maps.Circle | null>(null);
+  const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+  const lastRadiusRef = useRef<number | null>(null);
+
+  const isIEPostcode = (value: string) =>
+    /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
+  const isAUPostcode = (value: string) => /^\d{4}$/.test(value.trim());
+  const isNZPostcode = (value: string) => /^\d{4}$/.test(value.trim());
+
+  useEffect(() => {
+    if (open && selectedCase) {
+      setFormData({
+        ...selectedCase,
+        project_ids: selectedCase.project_ids || [],
+        radius: selectedCase.radius || defaultRadius,
+        color: selectedCase.color || "#FF0000",
+      });
+
+      if (selectedCase.latitude && selectedCase.longitude) {
+        const parsedLat = Number(selectedCase.latitude);
+        const parsedLng = Number(selectedCase.longitude);
+        if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+          setSelectedLocation({
+            lat: parsedLat,
+            lng: parsedLng,
+          });
+        } else {
+          setSelectedLocation(null);
+        }
+      } else {
+        setSelectedLocation(null);
+      }
+      setPredictions([]);
+      setTypedAddress(false);
+    }
+  }, [open, selectedCase]);
+
+  const { isLoaded } = useJsApiLoader({
+    ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, name: e.target.value });
+  };
+
+  const handleSearchClick = async () => {
+    const query = formData.name?.trim();
+    if (!query) {
+      setPredictions([]);
+      return;
+    }
+
+    setTypedAddress(true);
+
+    try {
+      let country = "UK";
+      if (isIEPostcode(query)) country = "IE";
+      else if (isAUPostcode(query)) country = "AU";
+      else if (isNZPostcode(query)) country = "NZ";
+
+      const res = await fetch(
+        `https://ws.postcoder.com/pcw/${process.env.NEXT_PUBLIC_POSTCODER_KEY}/address/${country}/${encodeURIComponent(
+          query,
+        )}?format=json`,
+      );
+      const data = await res.json();
+      setPredictions(data || []);
+      return;
+    } catch (err) {
+      console.error("Postcoder failed, falling back to Google", err);
+    }
+
+    const service = new google.maps.places.AutocompleteService();
+    service.getPlacePredictions({ input: query }, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+        setPredictions(
+          results.map((r) => ({
+            ...r,
+            source: "google",
+          })) as UnifiedPrediction[],
+        );
+      } else {
+        setPredictions([]);
+      }
+    });
+  };
+
+  const selectGooglePrediction = (
+    item: { source: "google" } & google.maps.places.AutocompletePrediction,
+  ) => {
+    const service = new google.maps.places.PlacesService(
+      document.createElement("div"),
+    );
+    service.getDetails({ placeId: item.place_id }, (place, status) => {
+      if (
+        status === google.maps.places.PlacesServiceStatus.OK &&
+        place?.geometry?.location
+      ) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        const boundary: Boundary = {
+          lat,
+          lng,
+          radius: formData.radius ?? defaultRadius,
+        };
+
+        setFormData((prev: any) => ({
+          ...prev,
+          name: place.formatted_address || "",
+          lat,
+          lng,
+          boundary: JSON.stringify(boundary),
+        }));
+
+        setSelectedLocation({ lat, lng });
+        setPredictions([]);
+      }
+    });
+  };
+
+  const selectPostcoderPrediction = (
+    item: { source: "postcoder" } & PostcoderAddress,
+  ) => {
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode(
+      { address: `${item.summaryline}, ${item.postcode}` },
+      (results, status) => {
+        if (status === "OK" && results?.[0]?.geometry?.location) {
+          const lat = results[0].geometry.location.lat();
+          const lng = results[0].geometry.location.lng();
+          const boundary: Boundary = {
+            lat,
+            lng,
+            radius: formData.radius ?? defaultRadius,
+          };
+
+          setFormData((prev: any) => ({
+            ...prev,
+            name: item.summaryline,
+            lat,
+            lng,
+            boundary: JSON.stringify(boundary),
+          }));
+
+          setSelectedLocation({ lat, lng });
+          setPredictions([]);
+        }
+      },
+    );
+  };
+
+  const handleRadiusChange = (event: Event, newValue: number | number[]) => {
+    const value = Array.isArray(newValue) ? newValue[0] : newValue;
+    if (!selectedLocation) return;
+    const newBoundary: Boundary = {
+      lat: selectedLocation.lat,
+      lng: selectedLocation.lng,
+      radius: value,
+    };
+    setFormData((prev: any) => ({
+      ...prev,
+      radius: value,
+      boundary: JSON.stringify(newBoundary),
+    }));
+  };
+
+  const handleAddressEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      let payload = {
+        id: selectedCase.id,
+        lat: formData.lat,
+        lng: formData.lng,
+        ...formData,
+        type: "circle",
+      };
+
+      if (!payload.boundary && selectedLocation) {
+        payload.boundary = JSON.stringify({
+          lat: selectedLocation.lat,
+          lng: selectedLocation.lng,
+          radius: formData.radius,
+        });
+      }
+
+      const result = await api.put("address/update", payload);
+      if (result.data.IsSuccess === true) {
+        toast.success(result.data.message);
+        onSave();
+        onClose();
+      } else {
+      }
+    } catch (error) {
+      console.error("Error updating address:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      sx={{
+        width: 500,
+        flexShrink: 0,
+        "& .MuiDrawer-paper": {
+          width: 500,
+          padding: 2,
+          backgroundColor: "#f9f9f9",
+        },
+      }}
+    >
+      <Box display="flex" flexDirection="column" height="100%">
+        <Box height={"100%"}>
+          <form onSubmit={handleAddressEdit} className="address-form">
+            <Grid container>
+              <Grid size={{ xs: 12 }}>
+                <Box
+                  display={"flex"}
+                  alignContent={"center"}
+                  alignItems={"center"}
+                  flexWrap={"wrap"}
+                >
+                  <IconButton onClick={() => onClose}>
+                    <IconArrowLeft />
+                  </IconButton>
+                  <Typography variant="h6" color="inherit" fontWeight={700}>
+                    Edit Case
+                  </Typography>
+                </Box>
+
+                <Box mb={2} mt={2}>
+                  <Autocomplete
+                    multiple
+                    fullWidth
+                    options={projects || []}
+                    value={(projects || []).filter((p: any) =>
+                      formData.project_ids?.includes(p.id),
+                    )}
+                    onChange={(e, newVal) =>
+                      setFormData((prev: any) => ({
+                        ...prev,
+                        project_ids: newVal.map((p: any) => p.id),
+                      }))
+                    }
+                    getOptionLabel={(option: any) => option.name}
+                    isOptionEqualToValue={(option: any, value: any) =>
+                      option.id === value.id
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Select Projects"
+                        placeholder="Projects"
+                      />
+                    )}
+                  />
+                </Box>
+
+                <Box display={"flex"} justifyContent={"space-between"} gap={3}>
+                  <TextField
+                    label="Enter address"
+                    id="name"
+                    name="name"
+                    placeholder="Search for address.."
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    variant="outlined"
+                    fullWidth
+                  />
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleSearchClick}
+                  >
+                    Search
+                  </Button>
+                </Box>
+
+                {typedAddress && predictions.length > 0 && (
+                  <List
+                    sx={{
+                      border: "1px solid #ccc",
+                      maxHeight: 200,
+                      overflow: "auto",
+                      mt: 1,
+                    }}
+                  >
+                    {predictions.map((item, index) => (
+                      <ListItem key={index} disablePadding>
+                        <ListItemButton
+                          onClick={() =>
+                            item.source === "google"
+                              ? selectGooglePrediction(item)
+                              : selectPostcoderPrediction(item)
+                          }
+                        >
+                          {item.source === "google"
+                            ? item.description
+                            : item.summaryline}
+                        </ListItemButton>
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+
+                {selectedLocation && (
+                  <Box
+                    sx={{ marginTop: 3 }}
+                    width={"98%"}
+                    className="slider_wrapper"
+                  >
+                    <Typography variant="h6">
+                      Area size [{formData?.radius} Meter]
+                    </Typography>
+                    <CustomRangeSlider
+                      value={formData?.radius || 0}
+                      onChange={handleRadiusChange}
+                      min={0}
+                      max={100}
+                      step={1}
+                      sx={{ height: "1px" }}
+                    />
+
+                    <GoogleMap
+                      zoom={17}
+                      center={selectedLocation}
+                      mapContainerStyle={{
+                        width: "100%",
+                        height: "400px",
+                        marginTop: "20px",
+                      }}
+                    >
+                      <Marker
+                        position={selectedLocation}
+                        draggable
+                        onDragEnd={(e) => {
+                          const lat = e.latLng?.lat();
+                          const lng = e.latLng?.lng();
+                          if (!lat || !lng) return;
+
+                          setSelectedLocation({ lat, lng });
+
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            lat,
+                            lng,
+                            boundary: JSON.stringify({
+                              lat,
+                              lng,
+                              radius: prev.radius,
+                            }),
+                          }));
+                        }}
+                      />
+
+                      <Circle
+                        center={selectedLocation}
+                        radius={formData.radius}
+                        options={{
+                          draggable: true,
+                          editable: true,
+                          fillColor: formData.color ?? "#FF0000",
+                          fillOpacity: 0.3,
+                          strokeColor: formData.color ?? "#FF0000",
+                          strokeOpacity: 1,
+                          strokeWeight: 1,
+                        }}
+                        onLoad={(circle) => {
+                          circleRef.current = circle;
+                        }}
+                        onCenterChanged={() => {
+                          if (!circleRef.current) return;
+
+                          const center = circleRef.current.getCenter();
+                          if (!center) return;
+
+                          const lat = center.lat();
+                          const lng = center.lng();
+
+                          if (
+                            lastCenterRef.current &&
+                            lastCenterRef.current.lat === lat &&
+                            lastCenterRef.current.lng === lng
+                          ) {
+                            return;
+                          }
+
+                          lastCenterRef.current = { lat, lng };
+
+                          setSelectedLocation({ lat, lng });
+
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            lat,
+                            lng,
+                            boundary: JSON.stringify({
+                              lat,
+                              lng,
+                              radius: prev.radius,
+                            }),
+                          }));
+                        }}
+                        onRadiusChanged={() => {
+                          if (!circleRef.current) return;
+
+                          const newRadius = Math.round(
+                            circleRef.current.getRadius(),
+                          );
+
+                          if (lastRadiusRef.current === newRadius) return;
+
+                          lastRadiusRef.current = newRadius;
+
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            radius: newRadius,
+                            boundary: JSON.stringify({
+                              lat: selectedLocation.lat,
+                              lng: selectedLocation.lng,
+                              radius: newRadius,
+                            }),
+                          }));
+                        }}
+                      />
+                    </GoogleMap>
+                    <Box mt={2}>
+                      <Typography>Zone Color</Typography>
+                      <input
+                        type="color"
+                        value={formData.color || "#000000"}
+                        onChange={(e) =>
+                          setFormData({ ...formData, color: e.target.value })
+                        }
+                        style={{
+                          width: "100%",
+                          height: "40px",
+                          border: "none",
+                        }}
+                      />
+                    </Box>
+                    <Box mt={2}>
+                      <CustomTextField
+                        fullWidth
+                        label="Reference"
+                        value={formData.ref || ""}
+                        onChange={(e: any) =>
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            ref: e.target.value,
+                          }))
+                        }
+                      />
+                    </Box>
+                  </Box>
+                )}
+              </Grid>
+            </Grid>
+
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "start",
+                gap: 2,
+                marginTop: 3,
+              }}
+            >
+              <Button
+                color="primary"
+                variant="contained"
+                size="large"
+                type="submit"
+                sx={{ borderRadius: 3 }}
+                className="drawer_buttons"
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </Button>
+              <Button
+                color="inherit"
+                onClick={() => onClose}
+                variant="contained"
+                size="large"
+                sx={{
+                  backgroundColor: "transparent",
+                  borderRadius: 3,
+                  color: "GrayText",
+                }}
+              >
+                Close
+              </Button>
+            </Box>
+          </form>
+        </Box>
+      </Box>
+    </Drawer>
+  );
+}

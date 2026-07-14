@@ -12,13 +12,20 @@ import {
   Alert,
   MenuItem,
   Autocomplete,
+  Drawer,
+  IconButton,
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import PhoneInput from "react-phone-input-2";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { IconCheck, IconX } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconX,
+  IconAlertCircle,
+  IconArrowLeft,
+} from "@tabler/icons-react";
 
 interface ProjectListingProps {
   companyId: number | null;
@@ -75,7 +82,7 @@ const emptyBillingInfo: BillingFormData = {
   short_code: "",
   status: 0,
   cis: "",
-  account_id:"",
+  account_id: "",
   is_pending_request: false,
   old_data: {},
   new_data: {},
@@ -95,6 +102,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
   const [postcodeQuery, setPostcodeQuery] = useState("");
   const [addressOptions, setAddressOptions] = useState<any[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const session = useSession();
   const user = session.data?.user as User & { user_role_id?: number | null } & {
     id: number;
@@ -310,80 +318,290 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
   return (
     <Box ml={5} p={2} className="billing_wraper">
       {/* General Info */}
-      {user.user_role_id == 1 && billingInfo.is_pending_request === true && (
-        <>
-          <Box display={"flex"} justifyContent={"space-between"} mb={1}>
-            <Typography
-              color="#487bb3ff"
-              fontSize="16px !important"
-              sx={{ mb: 1 }}
-            >
-              General Information
+      <Box
+        display={"flex"}
+        alignItems={"center"}
+        mb={2}
+        justifyContent={"space-between"}
+      >
+        <Typography color="#487bb3ff" fontSize="16px !important">
+          General Information
+        </Typography>
+        {billingInfo.is_pending_request && (
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => setDrawerOpen(true)}
+            sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
+          >
+            <IconAlertCircle size={24} />
+          </Button>
+          // <IconButton
+          //   size="small"
+          //   color="error"
+          //   onClick={() => setDrawerOpen(true)}
+          //   sx={{ ml: 1 }}
+          // >
+          //   <IconAlertCircle size={20} />
+          // </IconButton>
+        )}
+      </Box>
+
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      >
+        <Box
+          p={2}
+          width={600}
+          sx={{ display: "flex", flexDirection: "column", height: "100%" }}
+        >
+          <Box display={"flex"} alignItems={"center"} gap={1}>
+            <IconButton onClick={() => setDrawerOpen(false)}>
+              <IconArrowLeft />
+            </IconButton>
+            <Typography variant="h6" fontWeight={600}>
+              Pending Request
             </Typography>
           </Box>
 
-          <Box display={"flex"} mb={4}>
-            <Alert
-              severity="info"
-              variant="outlined"
-              className="pending-request"
+          {user.user_role_id == 1 ? (
+            <Box
               sx={{
-                alignItems: "center",
-                borderColor: "red !important",
-                color: "black !important",
+                display: "flex",
+                flexDirection: "column",
+                flexGrow: 1,
+                padding: 2,
+                overflow: "hidden",
+              }}
+            >
+              <Typography
+                variant="body1"
+                sx={{ color: "text.secondary", mb: 2, lineHeight: 1.6 }}
+              >
+                A billing information update request is currently pending for
+                this user. Please review the details and take appropriate
+                action.
+              </Typography>
+
+              {billingInfo?.diff_data &&
+                Object.keys(billingInfo.diff_data).length > 0 && (
+                  <Box sx={{ mb: 2, flexGrow: 1, overflowY: "auto", pr: 1 }}>
+                    <Typography variant="subtitle1" fontWeight={600} mb={1.5}>
+                      Requested Changes:
+                    </Typography>
+                    {Object.entries(billingInfo.diff_data).map(
+                      ([key, value]) => (
+                        <Box
+                          key={key}
+                          sx={{
+                            mb: 2,
+                            p: 1.5,
+                            bgcolor: "background.paper",
+                            borderRadius: 1,
+                            border: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            fontWeight={600}
+                            color="primary"
+                            sx={{ mb: 1, textTransform: "capitalize" }}
+                          >
+                            {key.replace(/_/g, " ")}
+                          </Typography>
+                          <Box display="flex" gap={2}>
+                            <Box flex={1}>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                display="block"
+                              >
+                                Old Value
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: "error.main",
+                                  textDecoration: "line-through",
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {value.old || "-"}
+                              </Typography>
+                            </Box>
+                            <Box flex={1}>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                display="block"
+                              >
+                                New Value
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: "success.main",
+                                  fontWeight: 500,
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {value.new || "-"}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Box>
+                      ),
+                    )}
+                  </Box>
+                )}
+
+              <Box
+                sx={{
+                  mt: "auto",
+                  display: "flex",
+                  justifyContent: "start",
+                  gap: 2,
+                }}
+              >
+                <Button
+                  color="success"
+                  variant="contained"
+                  onClick={() => {
+                    handleApprove(billingInfo?.request_log_id);
+                    setDrawerOpen(false);
+                  }}
+                  sx={{ borderRadius: 3 }}
+                  className="drawer_buttons"
+                >
+                  Approve
+                </Button>
+                <Button
+                  color="error"
+                  onClick={() => {
+                    handleReject(billingInfo?.request_log_id);
+                    setDrawerOpen(false);
+                  }}
+                  variant="contained"
+                  className="drawer_buttons"
+                  sx={{
+                    borderRadius: 3,
+                  }}
+                >
+                  Reject
+                </Button>
+              </Box>
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                flexGrow: 1,
+                padding: 2,
+                overflow: "hidden",
               }}
             >
               <Box
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
+                  p: 2.5,
+                  bgcolor: "error.lighter",
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "error.light",
+                  mb: 3,
                 }}
               >
-                <Typography sx={{ color: "black !important", mr: 2 }}>
-                  Billing info request is pending, please take an action.
+                <Typography
+                  variant="body1"
+                  color="error.main"
+                  sx={{ fontWeight: 500 }}
+                >
+                  Your billing information update request is currently pending
+                  approval by an administrator.
                 </Typography>
-
-                <Box>
-                  <Button
-                    variant="outlined"
-                    color="success"
-                    startIcon={<IconCheck size={16} />}
-                    onClick={() => handleApprove(billingInfo?.request_log_id)}
-                    sx={{ mr: 1 }}
-                  >
-                    Approve
-                  </Button>
-
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    startIcon={<IconX size={16} />}
-                    onClick={() => handleReject(billingInfo?.request_log_id)}
-                  >
-                    Reject
-                  </Button>
-                </Box>
               </Box>
-            </Alert>
-          </Box>
-        </>
-      )}
 
-      {user.user_role_id !== 1 && billingInfo.is_pending_request && (
-        <Box mb={4} display={"flex"}>
-          <Alert severity="error" variant="filled">
-            Your billing info request has been pending.
-          </Alert>
+              {billingInfo?.diff_data &&
+                Object.keys(billingInfo.diff_data).length > 0 && (
+                  <Box sx={{ flexGrow: 1, overflowY: "auto", pr: 1 }}>
+                    <Typography variant="subtitle1" fontWeight={600} mb={1.5}>
+                      Requested Changes:
+                    </Typography>
+                    {Object.entries(billingInfo.diff_data).map(
+                      ([key, value]) => (
+                        <Box
+                          key={key}
+                          sx={{
+                            mb: 2,
+                            p: 1.5,
+                            bgcolor: "background.paper",
+                            borderRadius: 1,
+                            border: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            fontWeight={600}
+                            color="primary"
+                            sx={{ mb: 1, textTransform: "capitalize" }}
+                          >
+                            {key.replace(/_/g, " ")}
+                          </Typography>
+                          <Box display="flex" gap={2}>
+                            <Box flex={1}>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                display="block"
+                              >
+                                Old Value
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: "error.main",
+                                  textDecoration: "line-through",
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {value.old || "-"}
+                              </Typography>
+                            </Box>
+                            <Box flex={1}>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                display="block"
+                              >
+                                New Value
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: "success.main",
+                                  fontWeight: 500,
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {value.new || "-"}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Box>
+                      ),
+                    )}
+                  </Box>
+                )}
+            </Box>
+          )}
         </Box>
-      )}
+      </Drawer>
       <Grid container spacing={2} mb={2}>
-        {[
-          "first_name",
-          "middle_name",
-          "last_name",
-          "email",
-        ].map((key) => (
+        {["first_name", "middle_name", "last_name", "email"].map((key) => (
           <Grid size={{ xs: 12, sm: 6 }} key={key}>
             <TextField
               fullWidth
@@ -439,8 +657,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
             getOptionLabel={(o: any) =>
               typeof o === "string"
                 ? o
-                : o.summaryline ||
-                  `${o.addressline1}, ${o.posttown}`
+                : o.summaryline || `${o.addressline1}, ${o.posttown}`
             }
             isOptionEqualToValue={(o: any, v: any) =>
               typeof o !== "string" &&
@@ -466,7 +683,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                     value.postcode,
                   ]
                     .filter(Boolean)
-                    .join(", ")
+                    .join(", "),
                 );
                 handleFieldChange("post_code", value.postcode || "");
               }
@@ -484,9 +701,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                   ...params.InputProps,
                   endAdornment: (
                     <>
-                      {loadingAddresses && (
-                        <CircularProgress size={20} />
-                      )}
+                      {loadingAddresses && <CircularProgress size={20} />}
                       {params.InputProps.endAdornment}
                     </>
                   ),

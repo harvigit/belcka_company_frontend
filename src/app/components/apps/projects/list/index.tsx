@@ -1532,7 +1532,10 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                 shouldRefresh={false}
                 onTableReady={() => {}}
                 projects={data}
-                onClose={() => setAddressListDrawerOpen(false)}
+                onClose={() => {
+                  setAddressListDrawerOpen(false);
+                  fetchProjects();
+                }}
               />
             )}
           </Box>

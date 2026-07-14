@@ -37,6 +37,8 @@ import {
   IconX,
   IconTrash,
   IconNote,
+  IconEdit,
+  IconPointFilled,
 } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import dayjs from "dayjs";
@@ -52,6 +54,7 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import { IconDotsVertical } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import ArchiveAddress from "../../addresses/list/archive-address-list";
+import CaseEditDrawer from "./case-edit-drawer";
 
 interface CaseSummary {
   id: number;
@@ -60,6 +63,14 @@ interface CaseSummary {
   status: number;
   latest_start: string | null;
   finish_date: string | null;
+}
+
+interface ClickToEditProgressProps {
+  value: string | number | null | undefined;
+  rowId: number;
+  statusInt: number;
+  editedBy?: string | null;
+  editedAt?: string | null;
 }
 
 const CasesList = () => {
@@ -84,6 +95,10 @@ const CasesList = () => {
   const openMenu2 = Boolean(anchorEl2);
   const [openDialog, setOpenDialog] = useState(false);
   const [archiveList, setArchiveList] = useState(false);
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingCase, setEditingCase] = useState<any>(null);
+  const [editData, setEditData] = useState({ name: "", case_id: "", ref: "" });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -236,6 +251,141 @@ const CasesList = () => {
     }
   };
 
+  const parseProgress = (value: string | number | null | undefined) => {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === "number") return value;
+    return Number(value.replace("%", ""));
+  };
+
+  const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
+    value,
+    rowId,
+    statusInt,
+    editedBy,
+    editedAt,
+  }) => {
+    const numericValue = value ? parseProgress(value) : 0;
+
+    const [localValue, setLocalValue] = React.useState(numericValue);
+    const [isEditing, setIsEditing] = React.useState(false);
+    const [isHovering, setIsHovering] = React.useState(false);
+    const [loadingProgress, setLoadingProgress] = React.useState(false);
+
+    let color = "textPrimary";
+    if (statusInt === 13) color = "#999999";
+    else if (statusInt === 4) color = "#32A852";
+    else if (statusInt === 3) color = "#FF7F00";
+
+    const saveProgress = async () => {
+      const clampedValue = Math.min(100, Math.max(0, localValue));
+
+      if (clampedValue === numericValue) {
+        setIsEditing(false);
+        setIsHovering(false);
+        return;
+      }
+
+      try {
+        setLoadingProgress(true);
+        const res = await api.put("address/change-address-progress", {
+          id: rowId,
+          progress: clampedValue,
+        });
+        fetchCases();
+        toast.success(res.data.message);
+      } catch {
+        setLocalValue(numericValue);
+      } finally {
+        setLoadingProgress(false);
+        setIsEditing(false);
+        setIsHovering(false);
+      }
+    };
+
+    return (
+      <Box
+        sx={{ display: "flex", alignItems: "center", position: "relative" }}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => {
+          if (!isEditing) setIsHovering(false);
+        }}
+      >
+        {editedBy && editedAt && (
+          <Tooltip
+            title={`Modified by ${editedBy} on ${editedAt.slice(0, 16)}`}
+            arrow
+            placement="top"
+          >
+            <Box
+              onMouseEnter={() => {
+                if (!isEditing) setIsHovering(false);
+              }}
+              onMouseLeave={() => {
+                if (!isEditing) setIsHovering(false);
+              }}
+              sx={{
+                position: "absolute",
+                left: "-15px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                display: "flex",
+                alignItems: "center",
+                cursor: "pointer",
+              }}
+            >
+              <IconPointFilled size={16} style={{ color: "#ff9800" }} />
+            </Box>
+          </Tooltip>
+        )}
+
+        {isHovering || isEditing ? (
+          <TextField
+            type="text"
+            size="small"
+            inputProps={{
+              maxLength: 3,
+              min: 0,
+              max: 100,
+              inputMode: "numeric",
+              pattern: "[0-9]*",
+            }}
+            value={localValue}
+            autoFocus={isEditing}
+            disabled={loadingProgress}
+            onChange={(e) => setLocalValue(Number(e.target.value) || 0)}
+            onFocus={() => setIsEditing(true)}
+            onBlur={saveProgress}
+            onKeyDown={(e) => e.key === "Enter" && saveProgress()}
+            sx={{
+              width: 56,
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: isEditing ? "#1976d2" : "transparent",
+              },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor: "#1976d2",
+              },
+              "& .MuiInputBase-input": {
+                textAlign: "center",
+                p: "6px",
+              },
+            }}
+          />
+        ) : (
+          <Typography
+            fontWeight={700}
+            color={color}
+            sx={{ px: 1.5, cursor: "pointer" }}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => !isEditing && setIsHovering(false)}
+            onClick={() => setIsEditing(true)}
+          >
+            {value}
+          </Typography>
+        )}
+      </Box>
+    );
+  };
+
   const columns = useMemo(
     () => [
       {
@@ -367,6 +517,23 @@ const CasesList = () => {
       },
 
       {
+        header: "Progress",
+        accessorKey: "progress",
+        cell: ({ row, getValue }: any) => {
+          const item = row.original;
+          return (
+            <ClickToEditProgress
+              value={getValue()}
+              rowId={item.id}
+              statusInt={item.status_int}
+              editedBy={item.editedBy ?? undefined}
+              editedAt={item.edited_at ?? undefined}
+            />
+          );
+        },
+      },
+
+      {
         header: "Status",
         accessorKey: "status",
         cell: ({ row }: any) => {
@@ -490,6 +657,39 @@ const CasesList = () => {
             {formatDate(getValue())}
           </Typography>
         ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }: any) => {
+          const item = row.original;
+          return (
+            <IconButton
+              color="primary"
+              onClick={async (e) => {
+                e.stopPropagation();
+
+                try {
+                  const res = await api.get(
+                    `address/address-detail?address_id=${item.id}`,
+                  );
+                  const fullAddress = res.data?.info;
+                  if (fullAddress) {
+                    setEditingCase(fullAddress);
+                  } else {
+                    setEditingCase(item);
+                  }
+                } catch (err) {
+                  setEditingCase(item);
+                }
+
+                setEditDialogOpen(true);
+              }}
+            >
+              <IconEdit size={18} />
+            </IconButton>
+          );
+        },
       },
     ],
     [data, selectedRowIds, hoveredRow],
@@ -975,6 +1175,16 @@ const CasesList = () => {
 
         <TablePaginationFooter table={table} totalRows={totalRows} />
       </Box>
+      {/* Edit Case Drawer */}
+      <CaseEditDrawer
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        selectedCase={editingCase}
+        projects={projectList}
+        onSave={() => {
+          fetchCases();
+        }}
+      />
     </PermissionGuard>
   );
 };

@@ -205,12 +205,16 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [editingParentAddress, setEditingParentAddress] = useState<any>(null);
   const [parentAddressName, setParentAddressName] = useState("");
   const [parentAddressPostcode, setParentAddressPostcode] = useState("");
+  const [parentAddressType, setParentAddressType] = useState("address");
+  const [showLocationPin, setShowLocationPin] = useState(false);
   const [postcodeQuery, setPostcodeQuery] = useState("");
   const [addressOptions, setAddressOptions] = useState<any[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [conflictPopoverAnchor, setConflictPopoverAnchor] =
     useState<null | HTMLElement>(null);
   const [conflictItem, setConflictItem] = useState<any>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState<number | null>(null);
 
   const isIEPostcode = (value: string) =>
     /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
@@ -319,17 +323,20 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   ) => {
     setParentAddressName(item.summaryline);
     setParentAddressPostcode(item.postcode || "");
-    
+
     if (window.google) {
       const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ address: `${item.summaryline}, ${item.postcode}` }, (results, status) => {
-        if (status === "OK" && results?.[0]?.geometry?.location) {
-          setSelectedLocation({
-            lat: results[0].geometry.location.lat(),
-            lng: results[0].geometry.location.lng(),
-          });
-        }
-      });
+      geocoder.geocode(
+        { address: `${item.summaryline}, ${item.postcode}` },
+        (results, status) => {
+          if (status === "OK" && results?.[0]?.geometry?.location) {
+            setSelectedLocation({
+              lat: results[0].geometry.location.lat(),
+              lng: results[0].geometry.location.lng(),
+            });
+          }
+        },
+      );
     }
 
     setPredictions([]);
@@ -347,23 +354,32 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       setEditingParentAddress(address);
       const addrName = address.name || "";
       const addrPincode = address.pincode || address.pin_code || "";
+      const addrType = address.type || "address";
       setParentAddressName(addrName);
       setParentAddressPostcode(addrPincode);
-      
+      setParentAddressType(addrType);
+      setShowLocationPin(addrType !== "location");
+
       if (address.lat && address.lng) {
-        setSelectedLocation({ lat: Number(address.lat), lng: Number(address.lng) });
+        setSelectedLocation({
+          lat: Number(address.lat),
+          lng: Number(address.lng),
+        });
       } else if (window.google && (addrName || addrPincode)) {
         const geocoder = new google.maps.Geocoder();
-        geocoder.geocode({ address: `${addrName}, ${addrPincode}` }, (results, status) => {
-          if (status === "OK" && results?.[0]?.geometry?.location) {
-            setSelectedLocation({
-              lat: results[0].geometry.location.lat(),
-              lng: results[0].geometry.location.lng(),
-            });
-          } else {
-            setSelectedLocation(null);
-          }
-        });
+        geocoder.geocode(
+          { address: `${addrName}, ${addrPincode}` },
+          (results, status) => {
+            if (status === "OK" && results?.[0]?.geometry?.location) {
+              setSelectedLocation({
+                lat: results[0].geometry.location.lat(),
+                lng: results[0].geometry.location.lng(),
+              });
+            } else {
+              setSelectedLocation(null);
+            }
+          },
+        );
       } else {
         setSelectedLocation(null);
       }
@@ -371,6 +387,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       setEditingParentAddress(null);
       setParentAddressName("");
       setParentAddressPostcode("");
+      setParentAddressType("address");
+      setShowLocationPin(true);
       setSelectedLocation(null);
     }
     setAddressOptions([]);
@@ -389,6 +407,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         company_id: user?.company_id,
         name: parentAddressName,
         pin_code: parentAddressPostcode,
+        type: parentAddressType,
       };
 
       let res;
@@ -729,34 +748,36 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     () => [
       {
         id: "select",
-        header: ({ table }: any) => (
-          <Stack direction="row" alignItems="center">
-            <CustomCheckbox
-              className="header-checkbox"
-              checked={
-                selectedRowIds.size === currentFilteredData.length &&
-                currentFilteredData.length > 0
-              }
-              indeterminate={
-                selectedRowIds.size > 0 &&
-                selectedRowIds.size < currentFilteredData.length
-              }
-              onClick={(e: any) => e.stopPropagation()}
-              onChange={(e: any) => {
-                e.stopPropagation();
-                e.preventDefault();
-                const isChecked = e.target.checked;
-                if (isChecked) {
-                  setSelectedRowIds(
-                    new Set(currentFilteredData.map((row) => row.id)),
-                  );
-                } else {
-                  setSelectedRowIds(new Set());
+        header: ({ table }: any) => {
+          return (
+            <Stack direction="row" alignItems="center">
+              <CustomCheckbox
+                className="header-checkbox"
+                checked={
+                  selectedRowIds.size === currentFilteredData.length &&
+                  currentFilteredData.length > 0
                 }
-              }}
-            />
-          </Stack>
-        ),
+                indeterminate={
+                  selectedRowIds.size > 0 &&
+                  selectedRowIds.size < currentFilteredData.length
+                }
+                onClick={(e: any) => e.stopPropagation()}
+                onChange={(e: any) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const isChecked = e.target.checked;
+                  if (isChecked) {
+                    setSelectedRowIds(
+                      new Set(currentFilteredData.map((row) => row.id)),
+                    );
+                  } else {
+                    setSelectedRowIds(new Set());
+                  }
+                }}
+              />
+            </Stack>
+          );
+        },
         cell: ({ row }: any) => {
           const item = row.original;
           const isChecked = selectedRowIds.has(item.id);
@@ -839,32 +860,52 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           return (
             <Box display="flex" alignItems="center">
               <Tooltip title={item.name}>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    cursor: "pointer",
-                    "&:hover": {
-                      color: "primary.main",
-                    },
-                    display: "-webkit-box",
-                    WebkitBoxOrient: "vertical",
-                    WebkitLineClamp: 1,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    wordBreak: "break-word",
-                    px: 1.5,
-                    borderRadius: 1,
-                    border: "1px solid transparent",
-                    transition: "all 0.2s ease",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedParentAddressId(item.id);
-                    setAddressListDrawerOpen(true);
-                  }}
-                >
-                  {item.name}
-                </Typography>
+                {item.is_conflict ? (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      wordBreak: "break-word",
+                      px: 1.5,
+                      borderRadius: 1,
+                      border: "1px solid transparent",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {item.name}
+                  </Typography>
+                ) : (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      cursor: "pointer",
+                      "&:hover": {
+                        color: "primary.main",
+                      },
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      wordBreak: "break-word",
+                      px: 1.5,
+                      borderRadius: 1,
+                      border: "1px solid transparent",
+                      transition: "all 0.2s ease",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedParentAddressId(item.id);
+                      setAddressListDrawerOpen(true);
+                    }}
+                  >
+                    {item.name}
+                  </Typography>
+                )}
               </Tooltip>
             </Box>
           );
@@ -874,6 +915,57 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       columnHelper.accessor("cases", {
         header: "Cases",
         cell: (info) => <Typography px={1.5}>{info.getValue()}</Typography>,
+      }),
+
+      columnHelper.accessor("type", {
+        header: "Type",
+        cell: (info) => {
+          const item = info.row.original;
+          return (
+            <>
+              <Typography px={1.5} textTransform={"capitalize"}>
+                {item.type ?? "-"}
+              </Typography>
+              {/* <TextField
+                select
+                size="small"
+                value={item.type || "address"}
+                onChange={async (e) => {
+                  const newType = e.target.value;
+                  const payload = {
+                    id: item.id,
+                    name: item.name,
+                    pin_code: item.pin_code,
+                    type: newType,
+                  };
+                  try {
+                    const res = await api.put("address/parent-update", payload);
+                    if (res.data.IsSuccess) {
+                      toast.success(res.data.message);
+                      fetchAddresses();
+                    } else {
+                      toast.error(res.data.message);
+                    }
+                  } catch (err) {
+                    toast.error("Failed to update type");
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                sx={{
+                  minWidth: 100,
+                  "& .MuiSelect-select": {
+                    padding: "4px 8px",
+                    fontSize: "0.875rem",
+                    textTransform: "capitalize",
+                  },
+                }}
+              >
+                <MenuItem value="address">Address</MenuItem>
+                <MenuItem value="location">Location</MenuItem>
+              </TextField> */}
+            </>
+          );
+        },
       }),
 
       {
@@ -931,6 +1023,20 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         id: "actions",
         header: "Actions",
         cell: ({ row }: any) => {
+          if (row.original.is_conflict) {
+            return (
+              <IconButton
+                color="error"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setAddressToDelete(row.original.id);
+                  setDeleteConfirmOpen(true);
+                }}
+              >
+                <IconTrash width={18} />
+              </IconButton>
+            );
+          }
           return (
             <IconButton
               color="primary"
@@ -1193,7 +1299,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     <ListItemIcon>
                       <IconPlus width={18} />
                     </ListItemIcon>
-                    Add Parent Address
+                    Add Address
                   </Box>
                 </MenuItem>
                 <MenuItem onClick={handleClose}>
@@ -1620,7 +1726,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 onTableReady={() => {}}
                 parentAddressId={selectedParentAddressId}
                 projects={project}
-                onClose={() => setAddressListDrawerOpen(false)}
+                onClose={() => {
+                  setAddressListDrawerOpen(false);
+                  fetchAddresses();
+                }}
               />
             )}
           </Box>
@@ -1690,9 +1799,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" fontWeight={700}>
-                  {editingParentAddress
-                    ? "Edit Parent Address"
-                    : "Add Parent Address"}
+                  {editingParentAddress ? "Edit Address" : "Add Address"}
                 </Typography>
               </Box>
               <IconButton onClick={() => setParentAddressDrawerOpen(false)}>
@@ -1777,20 +1884,55 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                         }}
                       />
                     </Grid>
-                    {isLoaded && selectedLocation && (
-                      <Grid size={{ xs: 12 }}>
-                        <Box height="350px" width="100%" borderRadius={2} overflow="hidden">
-                          <GoogleMap
-                            mapContainerStyle={{ width: "100%", height: "100%" }}
-                            center={selectedLocation}
-                            zoom={15}
-                            options={{ disableDefaultUI: true }}
-                          >
-                            <Marker position={selectedLocation} />
-                          </GoogleMap>
-                        </Box>
-                      </Grid>
-                    )}
+                    <Grid size={{ xs: 12 }}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={parentAddressType === "location"}
+                            onChange={(e) => {
+                              const newType = e.target.checked
+                                ? "location"
+                                : "address";
+                              setParentAddressType(newType);
+                              if (newType === "location") {
+                                setShowLocationPin(false);
+                              } else {
+                                setShowLocationPin(true);
+                              }
+                            }}
+                          />
+                        }
+                        label="Location"
+                      />
+                    </Grid>
+                    {isLoaded &&
+                      selectedLocation &&
+                      parentAddressType === "location" && (
+                        <Grid size={{ xs: 12 }}>
+                          {showLocationPin ? (
+                            <></>
+                          ) : (
+                            <Box
+                              height="350px"
+                              width="100%"
+                              borderRadius={2}
+                              overflow="hidden"
+                            >
+                              <GoogleMap
+                                mapContainerStyle={{
+                                  width: "100%",
+                                  height: "100%",
+                                }}
+                                center={selectedLocation}
+                                zoom={15}
+                                options={{ disableDefaultUI: true }}
+                              >
+                                <Marker position={selectedLocation} />
+                              </GoogleMap>
+                            </Box>
+                          )}
+                        </Grid>
+                      )}
                   </Grid>
                 </Box>
                 <Box mt={2} display="flex" justifyContent="start" gap={2}>
@@ -1888,6 +2030,51 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
               }}
             >
               Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={deleteConfirmOpen}
+          onClose={() => setDeleteConfirmOpen(false)}
+        >
+          <DialogTitle>Confirm Deletion</DialogTitle>
+          <DialogContent>
+            <Typography color="textSecondary">
+              Are you sure you want to delete this address?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setDeleteConfirmOpen(false)}
+              variant="outlined"
+              color="primary"
+            >
+              Cancel
+            </Button>
+            <Button
+              color="error"
+              variant="contained"
+              onClick={async () => {
+                if (addressToDelete) {
+                  try {
+                    const payload = { address_ids: addressToDelete.toString() };
+                    const res = await api.post(
+                      "address/parent-delete",
+                      payload,
+                    );
+                    if (res.data.IsSuccess) {
+                      toast.success(res.data.message);
+                      fetchAddresses();
+                    } else {
+                    }
+                  } catch (error) {}
+                }
+                setDeleteConfirmOpen(false);
+                setAddressToDelete(null);
+              }}
+            >
+              Confirm
             </Button>
           </DialogActions>
         </Dialog>

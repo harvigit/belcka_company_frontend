@@ -63,7 +63,6 @@ import { User } from "next-auth";
 import CreateProjectTask from "../../projects/tasks";
 import toast from "react-hot-toast";
 import { IconDownload } from "@tabler/icons-react";
-import { Circle, GoogleMap, Marker } from "@react-google-maps/api";
 import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRangeSlider";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
@@ -71,11 +70,16 @@ import ArchiveAddress from "./archive-address-list";
 import { WorksTab } from "./address-sidebar-tab/works-tab";
 import { DocumentsTab } from "./address-sidebar-tab/documents-tab";
 import { TradesTab } from "./address-sidebar-tab/trades-tab";
-import { ProjectList } from "../../projects/list";
 import { IconX } from "@tabler/icons-react";
 import { IconFilter } from "@tabler/icons-react";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
-
+import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
+import {
+  Circle,
+  GoogleMap,
+  Marker,
+  useJsApiLoader,
+} from "@react-google-maps/api";
 dayjs.extend(customParseFormat);
 
 interface AddressesListProps {
@@ -207,7 +211,10 @@ const AddressesList = ({
     const fetchGeneralSettings = async () => {
       try {
         const res = await api.get("setting/general-settings");
-        if (res.data?.IsSuccess && res.data.data?.location_radius !== undefined) {
+        if (
+          res.data?.IsSuccess &&
+          res.data.data?.location_radius !== undefined
+        ) {
           setDefaultRadius(res.data.data.location_radius);
         }
       } catch (err) {
@@ -367,7 +374,7 @@ const AddressesList = ({
         ? item.status_text === filters.status
         : true;
       const matchesProject = filters.project
-        ? item?.project_name === filters.project
+        ? item?.project_names.includes(filters.project)
         : true;
       const search = searchTerm.toLowerCase();
       const matchesSearch =
@@ -553,6 +560,11 @@ const AddressesList = ({
     }
   };
 
+  const { isLoaded } = useJsApiLoader({
+    ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
+  });
+
   const handleAddressEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -686,29 +698,32 @@ const AddressesList = ({
   ) => {
     const geocoder = new google.maps.Geocoder();
 
-    geocoder.geocode({ address: `${item.summaryline}, ${item.postcode}` }, (results, status) => {
-      if (status === "OK" && results?.[0]?.geometry?.location) {
-        const lat = results[0].geometry.location.lat();
-        const lng = results[0].geometry.location.lng();
+    geocoder.geocode(
+      { address: `${item.summaryline}, ${item.postcode}` },
+      (results, status) => {
+        if (status === "OK" && results?.[0]?.geometry?.location) {
+          const lat = results[0].geometry.location.lat();
+          const lng = results[0].geometry.location.lng();
 
-        const boundary: Boundary = {
-          lat,
-          lng,
-          radius: formData.radius ?? defaultRadius,
-        };
+          const boundary: Boundary = {
+            lat,
+            lng,
+            radius: formData.radius ?? defaultRadius,
+          };
 
-        setFormData((prev: any) => ({
-          ...prev,
-          name: item.summaryline,
-          lat,
-          lng,
-          boundary: JSON.stringify(boundary),
-        }));
+          setFormData((prev: any) => ({
+            ...prev,
+            name: item.summaryline,
+            lat,
+            lng,
+            boundary: JSON.stringify(boundary),
+          }));
 
-        setSelectedLocation({ lat, lng });
-        setPredictions([]);
-      }
-    });
+          setSelectedLocation({ lat, lng });
+          setPredictions([]);
+        }
+      },
+    );
   };
 
   const handleRadiusChange = (event: Event, newValue: number | number[]) => {
@@ -987,9 +1002,9 @@ const AddressesList = ({
         },
       }),
 
-      columnHelper.accessor("project_name", {
-        id: "project",
-        header: () => "Project",
+      columnHelper.accessor("project_names", {
+        id: "projects",
+        header: () => "Projects",
         cell: (info) => (
           <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
             {info.getValue()}
@@ -1208,15 +1223,94 @@ const AddressesList = ({
             onClose={handleClose}
           >
             <MenuItem
-              onClick={() => {
+              onClick={async () => {
                 handleClose();
+                const currentParent = parentAddresses.find(
+                  (p: any) => p.id === Number(parentAddressId),
+                );
+                const currentProject = projects?.find(
+                  (p: any) => p.id === Number(projectId),
+                );
+
+                let initialLat: any = undefined;
+                let initialLng: any = undefined;
+                let initialRadius = currentProject?.radius ?? 100;
+                let initialColor: string | undefined = undefined;
+                let initialName = "";
+
+                if (parentAddressId) {
+                  if (data && data.length > 0) {
+                    // Use first case's data
+                    const firstCase = data[0];
+                    initialName = firstCase.parent_addresses_name || "";
+                    initialLat = firstCase.lat || firstCase.latitude;
+                    initialLng = firstCase.lng || firstCase.longitude;
+                    initialRadius = firstCase.radius || 100;
+                    initialColor = firstCase.color;
+                  } else {
+                    if (currentParent?.lat && currentParent?.lng) {
+                      initialLat = currentParent.lat;
+                      initialLng = currentParent.lng;
+                      initialName = currentParent.name || "";
+                    } else {
+                      const query =
+                        `${currentParent?.name ?? ""} ${currentParent?.pin_code ?? ""}`.trim();
+                      initialName = currentParent?.name || "";
+                      if (query && window.google) {
+                        try {
+                          const geocoder = new window.google.maps.Geocoder();
+                          const results = await new Promise<any>(
+                            (resolve, reject) => {
+                              geocoder.geocode(
+                                { address: query },
+                                (res, status) => {
+                                  if (status === "OK") resolve(res);
+                                  else reject(status);
+                                },
+                              );
+                            },
+                          );
+                          if (results?.[0]?.geometry?.location) {
+                            initialLat = results[0].geometry.location.lat();
+                            initialLng = results[0].geometry.location.lng();
+                          }
+                        } catch (err) {
+                          console.error("Geocoding failed", err);
+                        }
+                      }
+                    }
+                  }
+                }
+
                 setFormData({
-                  project_ids: [Number(projectId)],
+                  project_ids: parentAddressId
+                    ? []
+                    : projectId
+                      ? [Number(projectId)]
+                      : [],
                   parent_address_id: parentAddressId ? parentAddressId : null,
                   company_id: user.company_id,
-                  name: "",
-                  radius: defaultRadius,
+                  name: initialName,
+                  radius: initialRadius,
+                  color: initialColor,
+                  lat: initialLat,
+                  lng: initialLng,
                 });
+
+                if (
+                  initialLat !== undefined &&
+                  initialLng !== undefined &&
+                  initialLat !== null &&
+                  initialLng !== null
+                ) {
+                  setSelectedLocation({
+                    lat: parseFloat(String(initialLat)),
+                    lng: parseFloat(String(initialLng)),
+                  });
+                } else {
+                  setSelectedLocation(null);
+                }
+
                 setAddCaseDrawerOpen(true);
               }}
             >
@@ -1784,7 +1878,7 @@ const AddressesList = ({
                       <IconArrowLeft />
                     </IconButton>
                     <Typography variant="h6" color="inherit" fontWeight={700}>
-                      Edit Task
+                      Edit Case
                     </Typography>
                   </Box>
 
@@ -2091,38 +2185,71 @@ const AddressesList = ({
                     </Typography>
                   </Box>
 
-                  <Box mb={2}>
-                    <Autocomplete
-                      multiple
-                      fullWidth
-                      options={projects || []}
-                      value={(projects || []).filter((p: any) =>
-                        formData.project_ids?.includes(p.id),
-                      )}
-                      onChange={(e, newVal) =>
-                        setFormData((prev: any) => ({
-                          ...prev,
-                          project_ids: newVal.map((p: any) => p.id),
-                        }))
-                      }
-                      getOptionLabel={(option: any) => option.name}
-                      isOptionEqualToValue={(option: any, value: any) =>
-                        option.id === value.id
-                      }
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Select Projects"
-                          placeholder="Projects"
-                        />
-                      )}
-                    />
-                  </Box>
+                  {parentAddressId && (
+                    <Box mb={2} mt={2}>
+                      <Autocomplete
+                        multiple
+                        fullWidth
+                        options={projects || []}
+                        value={(projects || []).filter((p: any) =>
+                          formData.project_ids?.includes(p.id),
+                        )}
+                        onChange={(e, newVal) =>
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            project_ids: newVal.map((p: any) => p.id),
+                          }))
+                        }
+                        getOptionLabel={(option: any) => option.name}
+                        isOptionEqualToValue={(option: any, value: any) =>
+                          option.id === value.id
+                        }
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Select Projects"
+                            placeholder="Projects"
+                          />
+                        )}
+                      />
+                    </Box>
+                  )}
+
+                  {!parentAddressId && (
+                    <Box mb={2} mt={2}>
+                      <Autocomplete
+                        fullWidth
+                        options={parentAddresses || []}
+                        value={
+                          parentAddresses?.find(
+                            (p: any) => p.id === formData.parent_address_id,
+                          ) || null
+                        }
+                        onChange={(e, newVal: any) =>
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            parent_address_id: newVal ? newVal.id : null,
+                          }))
+                        }
+                        getOptionLabel={(option: any) => option.name || ""}
+                        isOptionEqualToValue={(option: any, value: any) =>
+                          option.id === value?.id
+                        }
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Select Parent Address"
+                            placeholder="Parent Address"
+                          />
+                        )}
+                      />
+                    </Box>
+                  )}
 
                   <Box
                     display={"flex"}
                     justifyContent={"space-between"}
-                    gap={3}
+                    gap={1}
                   >
                     <TextField
                       label="Enter address"
