@@ -473,7 +473,7 @@ const AddressesList = ({
     setAddressEdit(false);
     setTypedAddress(false);
   };
-  const handleEdit = useCallback(async (task: any) => {
+  const handleEdit = async (task: any) => {
     setSelectedTask(task);
 
     let projectIds = [task.project_id];
@@ -486,12 +486,49 @@ const AddressesList = ({
       console.error("Failed to fetch address details for project IDs");
     }
 
+    const currentProject = projects?.find(
+      (p: any) => p.id === Number(projectId) || p.id === task.project_id
+    );
+    let initialRadius = task.radius || currentProject?.radius || 100;
+
+    let initialLat = task.latitude;
+    let initialLng = task.longitude;
+
+    if (!initialLat || !initialLng) {
+      const currentParent = parentAddresses?.find(
+        (p: any) => p.id === Number(task.parent_address_id)
+      );
+      if (currentParent?.lat && currentParent?.lng) {
+        initialLat = currentParent.lat;
+        initialLng = currentParent.lng;
+      } else if (currentParent) {
+        const query = `${currentParent?.name ?? ""} ${currentParent?.pin_code ?? ""}`.trim();
+        if (query && window.google) {
+          try {
+            const geocoder = new window.google.maps.Geocoder();
+            const results = await new Promise<any>((resolve, reject) => {
+              geocoder.geocode({ address: query }, (res, status) => {
+                if (status === "OK") resolve(res);
+                else reject(status);
+              });
+            });
+            if (results?.[0]?.geometry?.location) {
+              initialLat = results[0].geometry.location.lat();
+              initialLng = results[0].geometry.location.lng();
+            }
+          } catch (err) {
+            console.error("Geocoding failed", err);
+          }
+        }
+      }
+    }
+
     setFormData({
       id: task.id,
       name: task.name,
-      lat: task.latitude,
-      lng: task.longitude,
-      radius: task.radius ?? defaultRadius,
+      lat: initialLat,
+      lng: initialLng,
+      radius: initialRadius,
       boundary: task.boundary,
       type: task.type,
       color: task.color,
@@ -500,9 +537,9 @@ const AddressesList = ({
       ref: task.ref,
     });
 
-    if (task.latitude && task.longitude) {
-      const parsedLat = Number(task.latitude);
-      const parsedLng = Number(task.longitude);
+    if (initialLat && initialLng) {
+      const parsedLat = Number(initialLat);
+      const parsedLng = Number(initialLng);
       if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
         setSelectedLocation({
           lat: parsedLat,
@@ -516,7 +553,7 @@ const AddressesList = ({
     }
 
     setAddressEdit(true);
-  }, []);
+  };
 
   const handleAddCaseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2225,12 +2262,91 @@ const AddressesList = ({
                             (p: any) => p.id === formData.parent_address_id,
                           ) || null
                         }
-                        onChange={(e, newVal: any) =>
+                        onChange={async (e, newVal: any) => {
+                          if (!newVal) {
+                            setFormData((prev: any) => ({
+                              ...prev,
+                              parent_address_id: null,
+                              name: "",
+                              lat: null,
+                              lng: null,
+                            }));
+                            setSelectedLocation(null);
+                            return;
+                          }
+
+                          let newLat: any = undefined;
+                          let newLng: any = undefined;
+                          const currentProject = projects?.find(
+                            (p: any) => p.id === Number(projectId),
+                          );
+                          let newRadius = currentProject?.radius ?? 100;
+                          let newColor: string | undefined = undefined;
+                          let newName = "";
+
+                          const existingCases = data.filter(
+                            (c: any) => c.parent_address_id === newVal.id,
+                          );
+
+                          if (existingCases && existingCases.length > 0) {
+                            const firstCase = existingCases[0];
+                            newName = firstCase.parent_addresses_name || newVal.name || "";
+                            newLat = firstCase.lat || firstCase.latitude;
+                            newLng = firstCase.lng || firstCase.longitude;
+                            newRadius = firstCase.radius || 100;
+                            newColor = firstCase.color;
+                          } else {
+                            if (newVal.lat && newVal.lng) {
+                              newLat = newVal.lat;
+                              newLng = newVal.lng;
+                              newName = newVal.name || "";
+                            } else {
+                              const query = `${newVal.name ?? ""} ${newVal.pin_code ?? ""}`.trim();
+                              newName = newVal.name || "";
+                              if (query && window.google) {
+                                try {
+                                  const geocoder = new window.google.maps.Geocoder();
+                                  const results = await new Promise<any>((resolve, reject) => {
+                                    geocoder.geocode({ address: query }, (res, status) => {
+                                      if (status === "OK") resolve(res);
+                                      else reject(status);
+                                    });
+                                  });
+                                  if (results?.[0]?.geometry?.location) {
+                                    newLat = results[0].geometry.location.lat();
+                                    newLng = results[0].geometry.location.lng();
+                                  }
+                                } catch (err) {
+                                  console.error("Geocoding failed", err);
+                                }
+                              }
+                            }
+                          }
+
                           setFormData((prev: any) => ({
                             ...prev,
-                            parent_address_id: newVal ? newVal.id : null,
-                          }))
-                        }
+                            parent_address_id: newVal.id,
+                            name: newName,
+                            radius: newRadius,
+                            lat: newLat !== undefined ? newLat : null,
+                            lng: newLng !== undefined ? newLng : null,
+                            ...(newColor ? { color: newColor } : {}),
+                          }));
+
+                          if (
+                            newLat !== undefined &&
+                            newLng !== undefined &&
+                            newLat !== null &&
+                            newLng !== null
+                          ) {
+                            setSelectedLocation({
+                              lat: parseFloat(String(newLat)),
+                              lng: parseFloat(String(newLng)),
+                            });
+                          } else {
+                            setSelectedLocation(null);
+                          }
+                        }}
                         getOptionLabel={(option: any) => option.name || ""}
                         isOptionEqualToValue={(option: any, value: any) =>
                           option.id === value?.id
@@ -2238,8 +2354,8 @@ const AddressesList = ({
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            label="Select Parent Address"
-                            placeholder="Parent Address"
+                            label="Select Address"
+                            placeholder="Address"
                           />
                         )}
                       />

@@ -1025,16 +1025,27 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         cell: ({ row }: any) => {
           if (row.original.is_conflict) {
             return (
-              <IconButton
-                color="error"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  setAddressToDelete(row.original.id);
-                  setDeleteConfirmOpen(true);
-                }}
-              >
-                <IconTrash width={18} />
-              </IconButton>
+              <Box display={"flex"} alignItems={"center"} gap={2}>
+                <IconButton
+                  color="primary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenParentAddressDrawer(row.original);
+                  }}
+                >
+                  <IconEdit width={18} />
+                </IconButton>
+                <IconButton
+                  color="error"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setAddressToDelete(row.original.id);
+                    setDeleteConfirmOpen(true);
+                  }}
+                >
+                  <IconTrash width={18} />
+                </IconButton>
+              </Box>
             );
           }
           return (
