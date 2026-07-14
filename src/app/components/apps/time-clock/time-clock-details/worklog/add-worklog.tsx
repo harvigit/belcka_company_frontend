@@ -51,6 +51,7 @@ export type NewRecord = {
     date: string;
     start: string;
     end: string;
+    comment: string;
 };
 
 export interface Shift {
@@ -104,6 +105,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
         date: "",
         start: "",
         end: "",
+        comment: "",
     });
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
@@ -267,7 +269,8 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
             !newRecord.shift_id ||
             !newRecord.project_id ||
             !newRecord.start ||
-            !newRecord.end
+            !newRecord.end ||
+            !newRecord.comment.trim()
         ) {
             toast.error("Please fill out all fields");
             return;
@@ -287,6 +290,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
             project_id: Number(newRecord.project_id),
             start_time: newRecord.start,
             end_time: newRecord.end,
+            comment: newRecord.comment.trim(),
         };
 
         setLoading(true);
@@ -907,6 +911,36 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                                 />
                             </Box>
                         ))}
+                    </Box>
+
+                    <Box
+                        display="grid"
+                        gridTemplateColumns="140px 1fr"
+                        alignItems="start"
+                        gap={2}
+                    >
+                        <Typography
+                            variant="body2"
+                            fontWeight={600}
+                            color="#1a1a1a"
+                            component="label"
+                            htmlFor="worklog-comment"
+                            sx={{ pt: 1 }}
+                        >
+                            Comment
+                        </Typography>
+                        <TextField
+                            id="worklog-comment"
+                            name="comment"
+                            value={newRecord.comment}
+                            onChange={handleChange("comment")}
+                            placeholder="Enter comment"
+                            required
+                            multiline
+                            minRows={3}
+                            fullWidth
+                            size="small"
+                        />
                     </Box>
                 </Box>
             </Box>
