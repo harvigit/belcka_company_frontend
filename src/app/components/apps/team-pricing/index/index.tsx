@@ -121,7 +121,7 @@ const TeamPricing = () => {
 
       const [productRes, pricingRes] = await Promise.all([
         api.get(
-          `products/get?company_id=${user.company_id}&is_products=true&page=1&limit=20&project_ids=${team.project_id}`,
+          `products/get?company_id=${user.company_id}&is_products=true&page=1&limit=20&team_id=${team.team_id}`,
         ),
         api.get(
           `team/get-team-pricing-details?company_id=${user.company_id}&team_id=${team.team_id}`,

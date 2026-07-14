@@ -59,7 +59,7 @@ import api from "@/utils/axios";
 import Cookies from "js-cookie";
 import "react-day-picker/dist/style.css";
 import "../../../../global.css";
-import { useJsApiLoader } from "@react-google-maps/api";
+import { useJsApiLoader, GoogleMap, Marker } from "@react-google-maps/api";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import Link from "next/link";
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
@@ -151,7 +151,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [project, setProject] = useState<ProjectList[]>([]);
   const [allProjects, SetAllProjects] = useState<any[]>([]);
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & { company_id?: number | null } & {
+    user_role_id: number;
+  };
   const [projectId, setProjectId] = useState<number | null>(null);
   const openMenu = Boolean(anchorEl);
   const status = ["Completed", "To Do", "In Progress"];
@@ -302,6 +304,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
         setParentAddressName(place.formatted_address || "");
         setParentAddressPostcode(postcode);
+        setSelectedLocation({
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+        });
 
         setPredictions([]);
       }
@@ -313,6 +319,19 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   ) => {
     setParentAddressName(item.summaryline);
     setParentAddressPostcode(item.postcode || "");
+    
+    if (window.google) {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: `${item.summaryline}, ${item.postcode}` }, (results, status) => {
+        if (status === "OK" && results?.[0]?.geometry?.location) {
+          setSelectedLocation({
+            lat: results[0].geometry.location.lat(),
+            lng: results[0].geometry.location.lng(),
+          });
+        }
+      });
+    }
+
     setPredictions([]);
   };
 
@@ -326,12 +345,33 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const handleOpenParentAddressDrawer = (address?: any) => {
     if (address && address.id) {
       setEditingParentAddress(address);
-      setParentAddressName(address.name || "");
-      setParentAddressPostcode(address.pincode || address.pin_code || "");
+      const addrName = address.name || "";
+      const addrPincode = address.pincode || address.pin_code || "";
+      setParentAddressName(addrName);
+      setParentAddressPostcode(addrPincode);
+      
+      if (address.lat && address.lng) {
+        setSelectedLocation({ lat: Number(address.lat), lng: Number(address.lng) });
+      } else if (window.google && (addrName || addrPincode)) {
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address: `${addrName}, ${addrPincode}` }, (results, status) => {
+          if (status === "OK" && results?.[0]?.geometry?.location) {
+            setSelectedLocation({
+              lat: results[0].geometry.location.lat(),
+              lng: results[0].geometry.location.lng(),
+            });
+          } else {
+            setSelectedLocation(null);
+          }
+        });
+      } else {
+        setSelectedLocation(null);
+      }
     } else {
       setEditingParentAddress(null);
       setParentAddressName("");
       setParentAddressPostcode("");
+      setSelectedLocation(null);
     }
     setAddressOptions([]);
     setParentAddressDrawerOpen(true);
@@ -498,7 +538,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   }, [projectId, user?.id, user.company_id]);
 
   const fetchAddresses = async () => {
-    if (!projectID) return;
     setLoading(true);
     try {
       let url = `address/get-parent?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -1032,7 +1071,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 </Button>
               )}
 
-              {selectedRowIds.size > 0 && (
+              {selectedRowIds.size > 0 && user.user_role_id == 1 && (
                 <Button
                   variant="outlined"
                   color="error"
@@ -1672,7 +1711,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       <Typography variant="subtitle2" mb={1}>
                         Address
                       </Typography>
-                      <Box display={"flex"} justifyContent={"space-between"} gap={2}>
+                      <Box
+                        display={"flex"}
+                        justifyContent={"space-between"}
+                        gap={2}
+                      >
                         <TextField
                           placeholder="Search for address.."
                           value={parentAddressName}
@@ -1734,6 +1777,20 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                         }}
                       />
                     </Grid>
+                    {isLoaded && selectedLocation && (
+                      <Grid size={{ xs: 12 }}>
+                        <Box height="350px" width="100%" borderRadius={2} overflow="hidden">
+                          <GoogleMap
+                            mapContainerStyle={{ width: "100%", height: "100%" }}
+                            center={selectedLocation}
+                            zoom={15}
+                            options={{ disableDefaultUI: true }}
+                          >
+                            <Marker position={selectedLocation} />
+                          </GoogleMap>
+                        </Box>
+                      </Grid>
+                    )}
                   </Grid>
                 </Box>
                 <Box mt={2} display="flex" justifyContent="start" gap={2}>
