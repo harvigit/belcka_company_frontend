@@ -151,6 +151,7 @@ const AddressesList = ({
   const [archiveList, setArchiveList] = useState(false);
   const [address, setAddress] = useState<any>(null);
   const [radius, setRadius] = useState(0);
+  const [defaultRadius, setDefaultRadius] = useState<number>(100);
   const fetched = useRef(false);
   const [progress, setProgress] = useState(false);
   const status = ["Completed", "To Do", "In Progress"];
@@ -203,8 +204,19 @@ const AddressesList = ({
         console.error("Failed to fetch parent addresses", err);
       }
     };
+    const fetchGeneralSettings = async () => {
+      try {
+        const res = await api.get("setting/general-settings");
+        if (res.data?.IsSuccess && res.data.data?.location_radius !== undefined) {
+          setDefaultRadius(res.data.data.location_radius);
+        }
+      } catch (err) {
+        console.error("Failed to fetch general settings", err);
+      }
+    };
     if (user?.company_id) {
       fetchParentAddresses();
+      fetchGeneralSettings();
     }
   }, [user?.company_id]);
 
@@ -472,7 +484,7 @@ const AddressesList = ({
       name: task.name,
       lat: task.latitude,
       lng: task.longitude,
-      radius: task.radius ?? 100,
+      radius: task.radius ?? defaultRadius,
       boundary: task.boundary,
       type: task.type,
       color: task.color,
@@ -481,10 +493,20 @@ const AddressesList = ({
       ref: task.ref,
     });
 
-    setSelectedLocation({
-      lat: task.latitude,
-      lng: task.longitude,
-    });
+    if (task.latitude && task.longitude) {
+      const parsedLat = Number(task.latitude);
+      const parsedLng = Number(task.longitude);
+      if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+        setSelectedLocation({
+          lat: parsedLat,
+          lng: parsedLng,
+        });
+      } else {
+        setSelectedLocation(null);
+      }
+    } else {
+      setSelectedLocation(null);
+    }
 
     setAddressEdit(true);
   }, []);
@@ -501,7 +523,7 @@ const AddressesList = ({
         payload.boundary = JSON.stringify({
           lat: selectedLocation.lat,
           lng: selectedLocation.lng,
-          radius: formData.radius ?? 50,
+          radius: formData.radius ?? defaultRadius,
         });
       }
 
@@ -642,7 +664,7 @@ const AddressesList = ({
         const boundary: Boundary = {
           lat,
           lng,
-          radius: formData.radius ?? 50,
+          radius: formData.radius ?? defaultRadius,
         };
 
         setFormData((prev: any) => ({
@@ -672,7 +694,7 @@ const AddressesList = ({
         const boundary: Boundary = {
           lat,
           lng,
-          radius: formData.radius ?? 50,
+          radius: formData.radius ?? defaultRadius,
         };
 
         setFormData((prev: any) => ({
@@ -855,7 +877,7 @@ const AddressesList = ({
     return "#32A852";
   };
 
-  const columnHelper = createColumnHelper<ProjectList>();
+  const columnHelper = createColumnHelper<any>();
 
   const columns = useMemo(
     () => [
@@ -958,7 +980,7 @@ const AddressesList = ({
                 className="f-14"
                 sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
               >
-                {item.name}
+                {item.parent_addresses_name}
               </Typography>
             </Stack>
           );
@@ -1193,7 +1215,7 @@ const AddressesList = ({
                   parent_address_id: parentAddressId ? parentAddressId : null,
                   company_id: user.company_id,
                   name: "",
-                  radius: 50,
+                  radius: defaultRadius,
                 });
                 setAddCaseDrawerOpen(true);
               }}
@@ -1766,35 +1788,6 @@ const AddressesList = ({
                     </Typography>
                   </Box>
 
-                  <Box mt={3} mb={2}>
-                    <Autocomplete
-                      fullWidth
-                      options={parentAddresses || []}
-                      value={
-                        (parentAddresses || []).find(
-                          (p: any) => p.id === formData.parent_address_id,
-                        ) || null
-                      }
-                      onChange={(e, newVal) =>
-                        setFormData((prev: any) => ({
-                          ...prev,
-                          parent_address_id: newVal ? newVal.id : null,
-                        }))
-                      }
-                      getOptionLabel={(option: any) => option.name}
-                      isOptionEqualToValue={(option: any, value: any) =>
-                        option.id === value.id
-                      }
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Select Parent Address"
-                          placeholder="Parent Address"
-                        />
-                      )}
-                    />
-                  </Box>
-
                   <Box mb={2}>
                     <Autocomplete
                       multiple
@@ -2096,35 +2089,6 @@ const AddressesList = ({
                     <Typography variant="h6" color="inherit" fontWeight={700}>
                       Add Case
                     </Typography>
-                  </Box>
-
-                  <Box mt={3} mb={2}>
-                    <Autocomplete
-                      fullWidth
-                      options={parentAddresses || []}
-                      value={
-                        (parentAddresses || []).find(
-                          (p: any) => p.id === formData.parent_address_id,
-                        ) || null
-                      }
-                      onChange={(e, newVal) =>
-                        setFormData((prev: any) => ({
-                          ...prev,
-                          parent_address_id: newVal ? newVal.id : null,
-                        }))
-                      }
-                      getOptionLabel={(option: any) => option.name}
-                      isOptionEqualToValue={(option: any, value: any) =>
-                        option.id === value.id
-                      }
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Select Parent Address"
-                          placeholder="Parent Address"
-                        />
-                      )}
-                    />
                   </Box>
 
                   <Box mb={2}>

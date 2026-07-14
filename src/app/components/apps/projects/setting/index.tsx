@@ -14,11 +14,11 @@ import {
 } from '@tabler/icons-react';
 import CreateWork from './menus/tasks/list';
 import LocationList from './menus/locations/list';
+import GeneralSettings from './menus/general';
 
-// const menuItems = [
-//     { icon: <IconNotebook size={18} />, label: "Templates" },
-//     { icon: <IconMap size={18} />, label: "Locations" },
-// ];
+const menuItems = [
+    { icon: <IconSettings size={18} />, label: "General" },
+];
 
 interface SettingsProps {
     settingOpen: boolean;
@@ -26,7 +26,7 @@ interface SettingsProps {
 }
 
 const Index: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
-    const [activeMenuItem, setActiveMenuItem] = useState<string>("Templates");
+    const [activeMenuItem, setActiveMenuItem] = useState<string>("General");
     const [openSnackbar, setOpenSnackbar] = useState(false);
 
     const handleMenuItemClick = (label: string) => {
@@ -101,7 +101,7 @@ const Index: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                             },
                         }}
                     >
-                        {/* {menuItems.map((item, i) => (
+                        {menuItems.map((item, i) => (
                             <Box
                                 key={i}
                                 sx={{
@@ -121,7 +121,7 @@ const Index: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                                 {item.icon}
                                 {item.label}
                             </Box>
-                        ))} */}
+                        ))}
                     </Box>
 
                     <Box
@@ -132,12 +132,9 @@ const Index: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                             overflow: "hidden",
                         }}
                     >
-                        {/* {activeMenuItem === "Templates" && (
-                            <CreateWork />
+                        {activeMenuItem === "General" && (
+                            <GeneralSettings onSaveSuccess={handleSaveSuccess} />
                         )}
-                        {activeMenuItem === "Locations" && (
-                            <LocationList />
-                        )} */}
                     </Box>
                 </Box>
             </Drawer>

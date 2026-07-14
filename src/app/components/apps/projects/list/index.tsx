@@ -92,6 +92,7 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import AddressesList from "../../addresses/list/addresses-list";
+import { IconSettings } from "@tabler/icons-react";
 dayjs.extend(customParseFormat);
 
 const columnHelper = createColumnHelper<any>();
@@ -687,15 +688,15 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
               </Button>
             )}
 
-            {/* <Tooltip title="Settings">
-            <IconButton
-              color="primary"
-              size="small"
-              onClick={() => setSettingOpen(true)}
-            >
-              <IconSettings size={24} />
-            </IconButton>
-          </Tooltip> */}
+            <Tooltip title="Settings">
+              <IconButton
+                color="primary"
+                sx={{ ml: 1 }}
+                onClick={() => setSettingOpen(true)}
+              >
+                <IconSettings />
+              </IconButton>
+            </Tooltip>
             <IconButton
               onClick={handlePopoverOpen}
               sx={{ ml: 1 }}
