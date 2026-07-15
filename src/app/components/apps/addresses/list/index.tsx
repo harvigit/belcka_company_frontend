@@ -1917,31 +1917,25 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       />
                     </Grid>
                     {isLoaded &&
-                      selectedLocation &&
-                      parentAddressType === "location" && (
+                      selectedLocation && (
                         <Grid size={{ xs: 12 }}>
-                          {showLocationPin ? (
-                            <></>
-                          ) : (
-                            <Box
-                              height="350px"
-                              width="100%"
-                              borderRadius={2}
-                              overflow="hidden"
+                          <Box
+                            height="350px"
+                            width="100%"
+                            borderRadius={2}
+                            overflow="hidden"
+                          >
+                            <GoogleMap
+                              mapContainerStyle={{
+                                width: "100%",
+                                height: "100%",
+                              }}
+                              center={selectedLocation}
+                              zoom={15}
                             >
-                              <GoogleMap
-                                mapContainerStyle={{
-                                  width: "100%",
-                                  height: "100%",
-                                }}
-                                center={selectedLocation}
-                                zoom={15}
-                                options={{ disableDefaultUI: true }}
-                              >
-                                <Marker position={selectedLocation} />
-                              </GoogleMap>
-                            </Box>
-                          )}
+                              <Marker position={selectedLocation} />
+                            </GoogleMap>
+                          </Box>
                         </Grid>
                       )}
                   </Grid>

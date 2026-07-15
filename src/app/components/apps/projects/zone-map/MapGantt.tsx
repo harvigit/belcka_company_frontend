@@ -526,25 +526,27 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
         }
     };
 
-    const fetchProjectDetail = async (pid: number | null) => {
-        if (!pid) return;
+    const fetchProjectDetail = async (pid: number | null, activeFilters?: typeof filters) => {
+        const currentFilters = activeFilters || filters;
         try {
+            const params: any = { company_id: user.company_id };
+            let pIds = '';
+            if (currentFilters.projects && currentFilters.projects.length > 0) {
+                pIds = currentFilters.projects.join(',');
+            } else if (pid) {
+                pIds = pid.toString();
+            }
+
+            if (pIds) {
+                params.project_id = pIds;
+            }
+
             if (activeTab === 0) {
-                const res = await api.get('work-zone/get', {
-                    params: {
-                        company_id: user.company_id,
-                        is_project: true,
-                        project_id: projectId
-                    }
-                });
+                params.is_project = true;
+                const res = await api.get('work-zone/get', { params });
                 setGeofences(res.data.info ?? []);
             } else {
-                const res: AxiosResponse<any> = await api.get('address/zones', {
-                    params: {
-                        company_id: user.company_id,
-                        project_id: projectId
-                    }
-                });
+                const res: AxiosResponse<any> = await api.get('address/zones', { params });
                 setGeofences(res.data.info?.zones ?? []);
             }
         } catch (err) {
@@ -603,7 +605,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                 setGeofences(prev => prev.filter(z => z.id !== deleteId));
                 setDeleteConfirmOpen(false);
                 setDeleteId(null);
-                fetchProjectDetail(activeProjectId!);
+                fetchProjectDetail(activeProjectId);
             }
         } catch (e) {
             console.error(e);
@@ -633,18 +635,19 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
             setActiveProjectId(projectId);
             fetchProjectDetail(projectId);
             fetchUserLocationsWithFilters(filters);
+            fetchResources();
         }
     }, [open]);
 
     useEffect(() => {
-        if (open && activeProjectId) {
+        if (open) {
             fetchProjectDetail(activeProjectId);
             fetchUserLocationsWithFilters(filters);
         }
     }, [activeTab]);
 
     useEffect(() => {
-        if (open && activeProjectId) {
+        if (open) {
             fetchProjectDetail(activeProjectId);
             fetchUserLocationsWithFilters(filters);
         }
@@ -939,6 +942,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                             setFilters(empty);
                             setFilterDialogOpen(false);
                             fetchUserLocationsWithFilters(empty);
+                            fetchProjectDetail(activeProjectId, empty);
                         }}
                         color="inherit"
                     >
@@ -951,6 +955,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                             setFilters(tempFilters);                   
                             setFilterDialogOpen(false);
                             fetchUserLocationsWithFilters(tempFilters); 
+                            fetchProjectDetail(activeProjectId, tempFilters);
                         }}
                     >
                         Apply Filters
@@ -976,6 +981,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                         flexShrink: 0,
                         display: 'flex',
                         flexDirection: 'column',
+                        height:'80vh',
                         maxHeight: {xs: 360, md: 'unset'},
                     }}
                 >
@@ -1191,9 +1197,10 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                             projectId={activeProjectId}
                             companyId={companyId}
                             addresses={addresses}
+                            projects={resources.projects}
                             activeTab={activeTab}
                             onAdded={() => {
-                                fetchProjectDetail(activeProjectId!);
+                                fetchProjectDetail(activeProjectId);
                                 setAddZoneOpen(false);
                             }}
                             onCancel={() => setAddZoneOpen(false)}
@@ -1597,9 +1604,9 @@ const AllZonesMap = ({zones, isLoaded, userLocations = [], onMapLoad}: {
     if (!isLoaded) return <Typography p={2}>Loading map...</Typography>;
 
     return (
-        <Paper sx={{height: '100%', width: '100%', minHeight: 400}}>
+        <Paper sx={{height: '80vh', width: '100%', minHeight: 400}}>
             <GoogleMap
-                mapContainerStyle={{width: '100%', height: '100%'}}
+                mapContainerStyle={{width: '100%', height: '80vh'}}
                 zoom={12}
                 center={LONDON_CENTER}
                 onLoad={handleMapLoad}

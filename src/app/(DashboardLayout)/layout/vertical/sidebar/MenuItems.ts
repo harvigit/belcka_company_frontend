@@ -23,12 +23,13 @@ import {
   IconReport,
   IconDoorExit,
   IconHome2,
+  IconMapPin,
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
 import { IconSettings } from "@tabler/icons-react";
 import { IconBox } from "@tabler/icons-react";
-import { IconPoint, IconLocation } from "@tabler/icons-react";
+import { IconPoint } from "@tabler/icons-react";
 
 const MenuItems: NavGroup[] = [
   {
@@ -90,6 +91,13 @@ const MenuItems: NavGroup[] = [
     slug: "projects",
     icon: IconFiles,
     href: "/apps/projects/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Map",
+    slug: "map",
+    icon: IconMapPin,
+    href: "/apps/map",
   },
   {
     id: uniqueId(),

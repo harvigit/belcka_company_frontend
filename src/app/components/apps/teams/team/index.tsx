@@ -93,6 +93,7 @@ export interface TeamList {
   trade_id: number | null;
   last_worked_date: string | null;
   status_color: string;
+  new_member: boolean;
 }
 
 export interface TradeList {
@@ -289,6 +290,7 @@ const TablePagination = () => {
                 trade_name: null,
                 last_worked_date: null,
                 status_color: null,
+                new_member: false
               },
             ];
           }
@@ -313,6 +315,7 @@ const TablePagination = () => {
             is_subcontractor: team.is_subcontractor,
             company_id: team.company_id,
             subcontractor_company_id: team.subcontractor_company_id,
+            new_member: user.new_member
           }));
         });
 
@@ -587,7 +590,7 @@ const TablePagination = () => {
     },
     columnHelper.accessor("name", {
       id: "name",
-      enableSorting: true, // allow sorting
+      enableSorting: true,
       header: ({ column }) => (
         <Stack
           direction="row"
@@ -635,7 +638,7 @@ const TablePagination = () => {
                     sx={{ width: 36, height: 36, cursor: "pointer" }}
                   />
                 </Badge>
-                <Box>
+                <Box display={"block"}>
                   <Typography
                     className="f-14"
                     color="textPrimary"
@@ -647,6 +650,9 @@ const TablePagination = () => {
                   >
                     {item.name ?? "-"}
                   </Typography>
+                  {item?.new_member && (
+                    <Chip label="New" size="small" color="primary" variant="outlined"/>
+                  )}
                 </Box>
               </Stack>
             </Link>
