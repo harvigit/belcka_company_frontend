@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useRef, useState, useCallback} from 'react';
+import React, {useRef, useState, useCallback, useEffect} from 'react';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import {
@@ -18,6 +18,7 @@ interface AddZoneProps {
     projectId: number | null;
     companyId: number | null;
     addresses: any[];
+    projects?: any[];
     activeTab: number;
     onAdded: () => void;
     onCancel: () => void;
@@ -151,8 +152,20 @@ function pixelDistance(a: { x: number; y: number }, b: { x: number; y: number })
     return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
-const AddZone = ({onAdded, onCancel, projectId, companyId, addresses, activeTab}: AddZoneProps) => {
+const AddZone = ({onAdded, onCancel, projectId, companyId, addresses, projects = [], activeTab}: AddZoneProps) => {
     const [addressId, setAddressId] = useState<number | null>(null);
+    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(projectId);
+    const [filteredAddresses, setFilteredAddresses] = useState<any[]>(addresses);
+
+    useEffect(() => {
+        if (selectedProjectId) {
+            api.get('address/get', {params: {project_id: selectedProjectId}})
+               .then(res => setFilteredAddresses(res.data.info || []))
+               .catch(err => console.error(err));
+        } else {
+            setFilteredAddresses(addresses);
+        }
+    }, [selectedProjectId, addresses]);
     const [name, setName] = useState('');
     const [address, setAddress] = useState('');
     const [color, setColor] = useState('#1976d2');
@@ -354,7 +367,7 @@ const AddZone = ({onAdded, onCancel, projectId, companyId, addresses, activeTab}
                 type: zoneType,
                 color,
                 boundary: JSON.stringify(boundary),
-                project_id: projectId,
+                project_id: selectedProjectId,
             };
             if (activeTab === 1) payload.address_id = addressId;
 
@@ -386,6 +399,20 @@ const AddZone = ({onAdded, onCancel, projectId, companyId, addresses, activeTab}
                 <Grid container>
                     <Grid size={{lg: 12, xs: 12}}>
 
+                        <FormControl fullWidth sx={{mb: 2}}>
+                            <InputLabel>Select Project</InputLabel>
+                            <Select
+                                value={selectedProjectId || ''}
+                                label="Select Project"
+                                onChange={(e) => setSelectedProjectId(Number(e.target.value) || null)}
+                            >
+                                <MenuItem value=""><em>None</em></MenuItem>
+                                {projects.map((p: any) => (
+                                    <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
                         {activeTab === 1 && (
                             <FormControl fullWidth sx={{mb: 2}}>
                                 <InputLabel>Select Address</InputLabel>
@@ -394,7 +421,7 @@ const AddZone = ({onAdded, onCancel, projectId, companyId, addresses, activeTab}
                                     label="Select Address"
                                     onChange={(e) => handleAddressChange(Number(e.target.value))}
                                 >
-                                    {addresses.map((a: any) => (
+                                    {filteredAddresses.map((a: any) => (
                                         <MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>
                                     ))}
                                 </Select>

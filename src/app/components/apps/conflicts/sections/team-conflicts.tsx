@@ -106,7 +106,6 @@ import { IconChevronRight } from '@tabler/icons-react';
 export const TeamConflictRow = React.memo(({ item, onClick }: {
     item: TeamConflict; onClick: () => void;
 }) => {
-    const isMemberConflict = item.conflict_type == 'team_member_limit' ? true : false;
     const overBy = item.current_member_count - item.max_member_limit;
     const pct = Math.min(100, (item.current_member_count / Math.max(item.max_member_limit, 1)) * 100);
 
@@ -116,15 +115,14 @@ export const TeamConflictRow = React.memo(({ item, onClick }: {
             borderBottom: '1px solid #F3F4F6', cursor: 'pointer', transition: 'background 0.15s',
             '&:hover': { bgcolor: '#F9FAFB' },
         }}>
-            <UserAvatar name={isMemberConflict ? item.team_name : item.user_name} image={isMemberConflict ? item.supervisor_thumb_image : item.image} color="#7C3AED" bg="#EDE9FE" />
+            <UserAvatar name={item.team_name} image={item.supervisor_thumb_image } color="#7C3AED" bg="#EDE9FE" />
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
                     <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#111827' }}>
-                        {isMemberConflict ? item.team_name : item.user_name}
+                        {item.team_name}
                     </Typography>
-                    <LabelPill label={isMemberConflict ? `Limit exceeded: +${overBy} users` : "New"} color="#7C3AED" bg="#EDE9FE" border="#DDD6FE" />
+                    <LabelPill label={`Limit exceeded: +${overBy} users`} color="#7C3AED" bg="#EDE9FE" border="#DDD6FE" />
                 </Stack>
-                {isMemberConflict && (
                     <Stack direction="row" alignItems="center" spacing={1.5}>
                         <Box sx={{ flex: 1 }}>
                             <LinearProgress variant="determinate" value={pct} sx={{
@@ -136,7 +134,6 @@ export const TeamConflictRow = React.memo(({ item, onClick }: {
                             {item.current_member_count}/{item.max_member_limit}
                         </Typography>
                     </Stack>
-                )}
                 <Typography sx={{ fontSize: '0.7rem', color: '#6B7280', mt: 0.3 }}>
                     Supervisor: {item.supervisor_name}
                 </Typography>
@@ -151,7 +148,6 @@ TeamConflictRow.displayName = 'TeamConflictRow';
 const TeamDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved }: {
     conflict: TeamConflict; isLoading: boolean; onClose: () => void; onResolved: () => void;
 }) => {
-    const isMemberConflict = conflict.conflict_type == 'team_member_limit' ? true : false;
     const router = useRouter();
     const overBy = conflict.current_member_count - conflict.max_member_limit;
     const pct = Math.min(100, (conflict.current_member_count / Math.max(conflict.max_member_limit, 1)) * 100);
@@ -171,22 +167,21 @@ const TeamDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved }
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#fff' }}>
             <DrawerHeader
-                title={isMemberConflict ? conflict.team_name : conflict.user_name}
+                title={conflict.team_name}
                 image={conflict.supervisor_thumb_image}
                 subtitle={`Supervisor: ${conflict.supervisor_name}`}
                 onClose={onClose}
-                badge={<LabelPill label={isMemberConflict ? "Team Limit" : "New" } color="#7C3AED" bg="#EDE9FE" border="#DDD6FE" />}
+                badge={<LabelPill label={"Team Limit"} color="#7C3AED" bg="#EDE9FE" border="#DDD6FE" />}
             />
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
                 <Typography sx={{
                     fontSize: '0.7rem', fontWeight: 700, color: '#6B7280',
                     textTransform: 'uppercase', letterSpacing: '0.06em', mb: 1.5,
                 }}>
-                  {isMemberConflict ? "Member Usage" : "New Member"} 
+                  {"Member Usage"} 
                 </Typography>
 
                 {/* Usage card */}
-                {isMemberConflict && (
                 <Box sx={{ p: 2, borderRadius: '12px', bgcolor: '#FEF2F2', border: '1px solid #FECACA', mb: 2 }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-end" sx={{ mb: 1.25 }}>
                         <Box>
@@ -218,7 +213,6 @@ const TeamDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved }
                         {overBy} member{overBy > 1 ? 's' : ''} over the limit — reduce team size to resolve
                     </Typography>
                 </Box>
-                )}
 
                 {/* Details */}
                 <Box sx={{ p: 2, borderRadius: '12px', bgcolor: '#F9FAFB', border: '1px solid #E5E7EB', mb: 2 }}>
@@ -231,7 +225,7 @@ const TeamDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved }
                     {[
                         { label: 'Team Name', value: conflict.team_name },
                         { label: 'Supervisor', value: conflict.supervisor_name },
-                        { label: 'Conflict Type', value: isMemberConflict ? 'Member Limit Exceeded' : 'New Member Added' },
+                        { label: 'Conflict Type', value: 'Member Limit Exceeded'},
                     ].map(({ label, value }) => (
                         <Stack key={label} direction="row" justifyContent="space-between" sx={{ py: 0.6 }}>
                             <Typography sx={{ fontSize: '0.78rem', color: '#6B7280' }}>{label}</Typography>
@@ -260,7 +254,6 @@ const TeamDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved }
                     >
                         View Team
                     </Button>
-                    {isMemberConflict && (
                     <Button
                         variant="contained" color="error" fullWidth
                         disabled={isLoading}
@@ -272,7 +265,6 @@ const TeamDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved }
                     >
                         Mark as Resolved
                     </Button>
-                    )}
                 </Stack>
             </Box>
         </Box>

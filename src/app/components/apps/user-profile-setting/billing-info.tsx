@@ -89,6 +89,25 @@ const emptyBillingInfo: BillingFormData = {
   diff_data: {},
 };
 
+const ALLOWED_BILLING_FIELDS = [
+  "first_name",
+  "middle_name",
+  "last_name",
+  "email",
+  "post_code",
+  "address",
+  "extension",
+  "phone",
+  "name_on_utr",
+  "utr_number",
+  "nin_number",
+  "name_on_account",
+  "bank_name",
+  "account_no",
+  "short_code",
+  "cis",
+];
+
 const BillingInfo: React.FC<ProjectListingProps> = ({
   companyId,
   active,
@@ -386,13 +405,14 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
               </Typography>
 
               {billingInfo?.diff_data &&
-                Object.keys(billingInfo.diff_data).length > 0 && (
+                Object.keys(billingInfo.diff_data).filter(key => ALLOWED_BILLING_FIELDS.includes(key)).length > 0 && (
                   <Box sx={{ mb: 2, flexGrow: 1, overflowY: "auto", pr: 1 }}>
                     <Typography variant="subtitle1" fontWeight={600} mb={1.5}>
                       Requested Changes:
                     </Typography>
-                    {Object.entries(billingInfo.diff_data).map(
-                      ([key, value]) => (
+                    {Object.entries(billingInfo.diff_data)
+                      .filter(([key]) => ALLOWED_BILLING_FIELDS.includes(key))
+                      .map(([key, value]) => (
                         <Box
                           key={key}
                           sx={{
@@ -525,13 +545,14 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
               </Box>
 
               {billingInfo?.diff_data &&
-                Object.keys(billingInfo.diff_data).length > 0 && (
+                Object.keys(billingInfo.diff_data).filter(key => ALLOWED_BILLING_FIELDS.includes(key)).length > 0 && (
                   <Box sx={{ flexGrow: 1, overflowY: "auto", pr: 1 }}>
                     <Typography variant="subtitle1" fontWeight={600} mb={1.5}>
                       Requested Changes:
                     </Typography>
-                    {Object.entries(billingInfo.diff_data).map(
-                      ([key, value]) => (
+                    {Object.entries(billingInfo.diff_data)
+                      .filter(([key]) => ALLOWED_BILLING_FIELDS.includes(key))
+                      .map(([key, value]) => (
                         <Box
                           key={key}
                           sx={{

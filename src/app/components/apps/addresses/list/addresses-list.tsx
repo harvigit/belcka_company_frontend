@@ -495,7 +495,7 @@ const AddressesList = ({
     let initialLng = task.longitude;
 
     if (!initialLat || !initialLng) {
-      const currentParent = parentAddresses?.find(
+      const currentParent = parentAddresses?.filter((item) => !item.is_conflict).find(
         (p: any) => p.id === Number(task.parent_address_id)
       );
       if (currentParent?.lat && currentParent?.lng) {
@@ -1262,7 +1262,7 @@ const AddressesList = ({
             <MenuItem
               onClick={async () => {
                 handleClose();
-                const currentParent = parentAddresses.find(
+                const currentParent = parentAddresses.filter((item) => !item.is_conflict).find(
                   (p: any) => p.id === Number(parentAddressId),
                 );
                 const currentProject = projects?.find(
@@ -2256,9 +2256,9 @@ const AddressesList = ({
                     <Box mb={2} mt={2}>
                       <Autocomplete
                         fullWidth
-                        options={parentAddresses || []}
+                        options={parentAddresses.filter((item) => !item.is_conflict) || []}
                         value={
-                          parentAddresses?.find(
+                          parentAddresses?.filter((item) => !item.is_conflict).find(
                             (p: any) => p.id === formData.parent_address_id,
                           ) || null
                         }
@@ -2361,7 +2361,7 @@ const AddressesList = ({
                       />
                     </Box>
                   )}
-
+                  {parentAddressId && (
                   <Box
                     display={"flex"}
                     justifyContent={"space-between"}
@@ -2385,6 +2385,7 @@ const AddressesList = ({
                       Search
                     </Button>
                   </Box>
+                  )}
 
                   {typedAddress && predictions.length > 0 && (
                     <List

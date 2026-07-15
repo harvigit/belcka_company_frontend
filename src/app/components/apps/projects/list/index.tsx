@@ -85,7 +85,7 @@ import EditProject from "../edit";
 
 // Drawers
 import DynamicGantt from "@/app/components/DynamicGantt";
-import MapGantt from "../zone-map/MapGantt";
+
 import Setting from "@/app/components/apps/projects/setting";
 import ArchiveProject from "../../addresses/list/archive-project-list";
 import dayjs from "dayjs";
@@ -151,7 +151,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   const [isSaving, setIsSaving] = useState(false);
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [mapOpen, setMapOpen] = useState(false);
+
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [settingOpen, setSettingOpen] = useState(false);
   const [openDrawer, setOpenDrawer] = useState(false);
@@ -586,18 +586,6 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                 </IconButton>
               </Tooltip>
 
-              <Tooltip title="Map">
-                <IconButton
-                  color="error"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveProjectId(item.id);
-                    setMapOpen(true);
-                  }}
-                >
-                  <IconMapPin size={18} />
-                </IconButton>
-              </Tooltip>
             </Stack>
           );
         },
@@ -1026,30 +1014,6 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
           <DynamicGantt
             open={detailsOpen}
             onClose={() => setDetailsOpen(false)}
-            projectId={activeProjectId}
-            companyId={user?.company_id ?? null}
-          />
-        </Drawer>
-
-        <Drawer
-          anchor="bottom"
-          open={mapOpen}
-          onClose={() => setMapOpen(false)}
-          PaperProps={{
-            sx: {
-              borderRadius: 0,
-              height: "95vh",
-              boxShadow: "none",
-              borderTopLeftRadius: 12,
-              borderTopRightRadius: 12,
-              overflow: "hidden",
-            },
-          }}
-        >
-          <MapGantt
-            open={mapOpen}
-            onClose={() => setMapOpen(false)}
-            onUpdate={fetchProjects}
             projectId={activeProjectId}
             companyId={user?.company_id ?? null}
           />
