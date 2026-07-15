@@ -5,6 +5,8 @@ import {
     Stack, Chip, CircularProgress,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { useDropzone } from "react-dropzone";
 import toast from "react-hot-toast";
@@ -42,6 +44,25 @@ interface EditPayslipProps {
     companyId: number | null;
 }
 
+const toDateInputValue = (value?: string | null): string => {
+    if (!value) return "";
+
+    const isoMatch = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+        const [, year, month, day] = isoMatch;
+        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+
+    const displayMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (displayMatch) {
+        const [, day, month, year] = displayMatch;
+        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+
+    const parsed = dayjs(value);
+    return parsed.isValid() ? parsed.format("YYYY-MM-DD") : "";
+};
+
 const EditPayslip: React.FC<EditPayslipProps> = ({
                                                      open, onClose, formData, setFormData,
                                                      handleSubmit, isSaving, payslip, isShow,
@@ -72,17 +93,17 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
                 id: payslip.id,
                 company_id: payslip.company_id,
                 user_id: payslip.user_id,
-                from_date: payslip.from_date ? dayjs(payslip.from_date).format("YYYY-MM-DD") : "",
-                to_date: payslip.to_date ? dayjs(payslip.to_date).format("YYYY-MM-DD") : "",
-                payment_date: payslip.payment_date ? dayjs(payslip.payment_date).format("YYYY-MM-DD") : "",
+                from_date: toDateInputValue(payslip.fromDate ?? payslip.from_date),
+                to_date: toDateInputValue(payslip.toDate ?? payslip.to_date),
+                payment_date: toDateInputValue(payslip.payment_date),
                 amount: payslip.amount || "",
                 payslip_number: payslip.payslip_number || "",
                 file_name: null,
-                existing_pdf: payslip.pdf || undefined,
-                existing_image: payslip.image || undefined,
+                existing_pdf: payslip.pdf_url || undefined,
+                existing_image: payslip.image_url || undefined,
             });
 
-            setPreview(payslip.image || null);
+            setPreview(payslip.image_url || null);
             // Reset OCR state — existing amount is already confirmed
             setOcrMatches([]);
             setOcrDialogOpen(false);
@@ -134,7 +155,7 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
         }
     };
 
-    const { getRootProps, getInputProps } = useDropzone({
+    const { getRootProps, getInputProps, open: openFileDialog } = useDropzone({
         accept: {
             "image/jpeg": [".jpeg", ".jpg"],
             "image/png": [".png"],
@@ -182,6 +203,12 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
 
         handleSubmit(e);
     };
+
+    const isPdfPreview = formData.file_name?.type === "application/pdf" ||
+        (!formData.file_name && Boolean(formData.existing_pdf));
+    const pdfPreviewUrl = isPdfPreview
+        ? (formData.file_name ? preview : formData.existing_pdf)
+        : null;
 
     return (
         <>
@@ -268,6 +295,28 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
                                                 Scanning...
                                             </Typography>
                                         </Stack>
+                                    ) : isPdfPreview ? (
+                                        <Stack
+                                            alignItems="center"
+                                            spacing={1}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                if (pdfPreviewUrl) {
+                                                    window.open(pdfPreviewUrl, "_blank", "noopener,noreferrer");
+                                                }
+                                            }}
+                                            sx={{ px: 2, maxWidth: "100%" }}
+                                        >
+                                            <PictureAsPdfIcon color="error" sx={{ fontSize: 56 }} />
+                                            <Typography
+                                                fontSize="12px"
+                                                color="primary.main"
+                                                textAlign="center"
+                                                sx={{ wordBreak: "break-word" }}
+                                            >
+                                                {formData.file_name?.name || "View uploaded PDF"}
+                                            </Typography>
+                                        </Stack>
                                     ) : preview ? (
                                         <Avatar src={preview} alt="Preview" sx={{ width: "100%", height: "100%" }} />
                                     ) : (
@@ -276,6 +325,19 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
                                         </Typography>
                                     )}
                                 </Box>
+                                {(preview || formData.existing_pdf || formData.existing_image) && (
+                                    <Button
+                                        type="button"
+                                        variant="outlined"
+                                        size="small"
+                                        startIcon={<CloudUploadIcon />}
+                                        onClick={openFileDialog}
+                                        disabled={isScanning || isSaving}
+                                        sx={{ mt: 1.5 }}
+                                    >
+                                        Replace uploaded file
+                                    </Button>
+                                )}
                             </Box>
 
                             {/* Amount display — read only, set by OCR or existing value */}

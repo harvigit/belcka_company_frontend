@@ -30,6 +30,8 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({open, onClose, o
                 return 'error';
             case 'paid':
                 return 'primary';
+            case 'delete':
+                return 'error';
             default:
                 return 'primary';
         }
@@ -43,6 +45,8 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({open, onClose, o
                 return 'Unlock';
             case 'paid':
                 return 'Mark as Paid';
+            case 'delete':
+                return 'Delete';
             default:
                 return 'Confirm';
         }
@@ -107,7 +111,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({open, onClose, o
                     color={getActionColor()}
                     sx={{ textTransform: 'none', fontWeight: 600 }}
                 >
-                    {getActionText()} Anyway
+                    {getActionText()}{conflictCount > 0 ? ' Anyway' : ''}
                 </Button>
             </DialogActions>
         </Dialog>

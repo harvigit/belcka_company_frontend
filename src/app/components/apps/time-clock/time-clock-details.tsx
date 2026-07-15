@@ -31,6 +31,7 @@ import AddLeave from './time-clock-details/leaves/add-leave';
 import LeaveRequest from './time-clock-details/leaves/leave-request';
 import AddExpense from './time-clock-details/expenses/add-expense';
 import AddAdjustment from './time-clock-details/adjustments/add-adjustment';
+import AddPricework from './time-clock-details/pricework/add-pricework';
 import AdjustmentActivitySidebar from './time-clock-details/adjustments/activity-sidebar';
 import {formatHour} from '@/app/components/apps/time-clock/utils/recordHelpers';
 import {Stack} from '@mui/system';
@@ -89,6 +90,7 @@ const DELETE_ENDPOINTS: Record<RecordType, string> = {
     expense: '/expense/bulk-delete',
     leave: '/user-leaves/delete-leave',
     adjustment: '/time-clock/delete-adjustment',
+    pricework: '/pricework/delete',
 };
 
 const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, columnVisibility: VisibilityState) => {
@@ -190,6 +192,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
     const [addAdjustmentSidebar, setAddAdjustmentSidebar] = useState<boolean>(false);
+    const [addPriceworkSidebar, setAddPriceworkSidebar] = useState<boolean>(false);
+    const [selectedPricework, setSelectedPricework] = useState<any>(null);
     const [adjustmentActivitySidebar, setAdjustmentActivitySidebar] = useState<boolean>(false);
     const [selectedAdjustmentActivities, setSelectedAdjustmentActivities] = useState<AdjustmentActivity[]>([]);
     const [expensesSidebar, setExpensesSidebar] = useState<boolean>(false);
@@ -664,6 +668,16 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setAddAdjustmentSidebar(true);
     };
 
+    const handleAddPricework = async () => {
+        setSelectedPricework(null);
+        setAddPriceworkSidebar(true);
+    };
+
+    const handleEditPricework = async (pricework: any) => {
+        setSelectedPricework(pricework);
+        setAddPriceworkSidebar(true);
+    };
+
     const handleOpenAdjustmentActivities = (activities: AdjustmentActivity[]) => {
         setSelectedAdjustmentActivities(activities);
         setAdjustmentActivitySidebar(true);
@@ -690,6 +704,19 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             onDataChange?.();
         } catch (error) {
             console.error('Error fetching time clock data after closing add expense sidebar:', error);
+        }
+    };
+
+    const closeAddPriceworkSidebar = async () => {
+        setAddPriceworkSidebar(false);
+        setSelectedPricework(null);
+        try {
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            onDataChange?.();
+        } catch (error) {
+            console.error('Error refreshing time clock data after closing add pricework sidebar:', error);
         }
     };
 
@@ -1315,6 +1342,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         const leaveIds: string[] = [];
         const expenseIds: string[] = [];
         const adjustmentIds: string[] = [];
+        const priceworkIds: string[] = [];
 
         const selectedRowIndices = Array.from(selectedRows).map((rowId) =>
             parseInt(rowId.replace('row-', ''))
@@ -1346,27 +1374,32 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         if (record.is_expense && record.expense_id) {
                             expenseIds.push(record.expense_id);
                         }
+
+                        if (record.is_pricework_record && record.pricework_id) {
+                            priceworkIds.push(record.pricework_id);
+                        }
                     });
                 }
             }
         });
 
-        if (!worklogIds.length && !leaveIds.length && !expenseIds.length && !adjustmentIds.length) return;
+        if (!worklogIds.length && !leaveIds.length && !expenseIds.length && !adjustmentIds.length && !priceworkIds.length) return;
 
         const conflictCount = getConflictsInSelectedRows();
 
         if (conflictCount > 0) {
             setConfirmDialog({open: true, actionType: 'delete', conflictCount,});
         } else {
-            await proceedWithDelete({worklogIds, leaveIds, expenseIds, adjustmentIds});
+            await proceedWithDelete({worklogIds, leaveIds, expenseIds, adjustmentIds, priceworkIds});
         }
     };
 
-    const proceedWithDelete = async ({worklogIds, leaveIds, expenseIds, adjustmentIds}: {
+    const proceedWithDelete = async ({worklogIds, leaveIds, expenseIds, adjustmentIds, priceworkIds}: {
         worklogIds: string[];
         leaveIds: string[];
         expenseIds: string[];
         adjustmentIds: string[];
+        priceworkIds: string[];
     }) => {
         try {
             // Worklogs
@@ -1395,6 +1428,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 await api.post(DELETE_ENDPOINTS.adjustment, {
                     adjustment_ids: adjustmentIds.join(','),
                 });
+            }
+
+            if (priceworkIds.length) {
+                await api.post(DELETE_ENDPOINTS.pricework, {ids: priceworkIds.join(',')});
             }
 
             const defaultStartDate = startDate || defaultStart;
@@ -1468,6 +1505,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 const leaveIds: string[] = [];
                 const expenseIds: string[] = [];
                 const adjustmentIds: string[] = [];
+                const priceworkIds: string[] = [];
 
                 const selectedRowIndices = Array.from(selectedRows).map((rowId) =>
                     parseInt(rowId.replace('row-', ''))
@@ -1499,14 +1537,18 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                                 if (record.is_expense && record.expense_id) {
                                     expenseIds.push(record.expense_id);
                                 }
+
+                                if (record.is_pricework_record && record.pricework_id) {
+                                    priceworkIds.push(record.pricework_id);
+                                }
                             });
                         }
                     }
                 });
 
-                if (!worklogIds.length && !leaveIds.length && !expenseIds.length) return;
+                if (!worklogIds.length && !leaveIds.length && !expenseIds.length && !adjustmentIds.length && !priceworkIds.length) return;
 
-                await proceedWithDelete({worklogIds, leaveIds, expenseIds, adjustmentIds});
+                await proceedWithDelete({worklogIds, leaveIds, expenseIds, adjustmentIds, priceworkIds});
 
                 break;
             }
@@ -1888,6 +1930,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 onAddLeave={handleAddLeave}
                 onAddExpense={handleAddExpense}
                 onAddAdjustment={handleAddAdjustment}
+                onAddPricework={handleAddPricework}
                 payrollCycle={payrollCycle}
                 isRemovedUser={Boolean(isRemovedUser || isArchivedUser)}
             />
@@ -1952,6 +1995,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 openChecklogsSidebar={handleChecklogs}
                 openExpensesSidebar={handleExpenses}
                 openPenaltiesSidebar={handlePenalties}
+                openPriceworkSidebar={handleEditPricework}
                 leaveRequestCount={leaveRequestCount}
                 penaltyAppealCount={penaltyAppealCount}
                 openLeaveRequestsSideBar={handleLeaveRequests}
@@ -2174,6 +2218,29 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         await fetchTimeClockData(defaultStartDate, defaultEndDate);
                         onDataChange?.();
                     }}
+                />
+            </Drawer>
+
+            <Drawer
+                anchor="right"
+                open={addPriceworkSidebar}
+                onClose={closeAddPriceworkSidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '504px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <AddPricework
+                    onClose={closeAddPriceworkSidebar}
+                    userId={user_id}
+                    companyId={companyId}
+                    pricework={selectedPricework}
                 />
             </Drawer>
 

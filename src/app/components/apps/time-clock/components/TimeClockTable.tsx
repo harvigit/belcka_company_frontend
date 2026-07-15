@@ -99,6 +99,7 @@ interface TimeClockTableProps {
     openChecklogsSidebar?: (worklogId: number) => Promise<void>;
     openExpensesSidebar?: (expenseId: number) => Promise<void>;
     openPenaltiesSidebar?: (worklogId: number) => Promise<void>;
+    openPriceworkSidebar?: (pricework: any) => Promise<void>;
     leaveRequestCount: number;
     penaltyAppealCount: number;
     penaltyAppealByDate?: { [key: string]: number };
@@ -151,6 +152,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            openChecklogsSidebar,
                                                            openExpensesSidebar,
                                                            openPenaltiesSidebar,
+                                                           openPriceworkSidebar,
                                                            leaveRequestCount,
                                                            openLeaveRequestsSideBar,
                                                            onAdjustmentSave,
@@ -664,7 +666,13 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                 const rowSpan = row.original.rowsData.length + expandedWorklogsCount + dateNewRecords.length;
 
                                 const subRows = row.original.rowsData.map((log: any, index: number) => {
-                                    const worklogId = log.is_expense ? `${row.id}-expense-${log.expense_id}-${index}` : log.is_leave ? `${row.id}-leave-${log.user_leave_id}-${index}` : `${row.id}-worklog-${log.worklog_id}`;
+                                    const worklogId = log.is_expense
+                                        ? `${row.id}-expense-${log.expense_id}-${index}`
+                                        : log.is_leave
+                                            ? `${row.id}-leave-${log.user_leave_id}-${index}`
+                                            : log.is_pricework_record
+                                                ? `${row.id}-pricework-${log.pricework_id}-${index}`
+                                                : `${row.id}-worklog-${log.worklog_id}`;
                                     const isFirstRow = index === 0;
                                     const isLogLocked = isRecordLocked(log) || log.is_timesheet_locked === true;
 
@@ -957,23 +965,27 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             </Box>
                                                         ) : log.is_pricework ? (
                                                             <Tooltip
-                                                                title="Pricework type record cannot be edited"
+                                                                title={log.is_pricework_record ? 'Click to edit pricework' : 'Pricework worklog cannot be edited here'}
                                                                 arrow
                                                                 placement="top"
                                                             >
-                                                                <Box sx={{
+                                                                <Box onClick={() => {
+                                                                    if (log.is_pricework_record && !isLogLocked) {
+                                                                        openPriceworkSidebar?.(log);
+                                                                    }
+                                                                }} sx={{
                                                                     display: 'flex',
                                                                     alignItems: 'center',
                                                                     justifyContent: 'center',
                                                                     opacity: isLogLocked ? 0.6 : 1,
-                                                                    cursor: 'not-allowed',
+                                                                    cursor: log.is_pricework_record && !isLogLocked ? 'pointer' : 'not-allowed',
                                                                     minHeight: '32px',
                                                                     py: 0.5,
                                                                     fontSize: '0.875rem',
                                                                     borderRadius: '4px',
                                                                     px: '8px',
                                                                 }}>
-                                                                    {getTruncatedName(log.shift_name)}
+                                                                    {getTruncatedName(log.is_pricework_record ? log.work_type : log.shift_name)}
                                                                 </Box>
                                                             </Tooltip>
                                                         ) : isLogLocked ? (
@@ -1185,11 +1197,17 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 {/* Pricework Column */}
                                                 {visibleColumnConfigs.priceWork?.visible && (
-                                                    <TableCell align="center" sx={{
+                                                    <TableCell align="center" onClick={() => {
+                                                        if (log.is_pricework_record && log.pricework_id && !isLogLocked) {
+                                                            openPriceworkSidebar?.(log);
+                                                        }
+                                                    }} sx={{
                                                         py: 0.5,
                                                         fontSize: '0.875rem',
                                                         height: '45px',
-                                                        verticalAlign: 'middle'
+                                                        verticalAlign: 'middle',
+                                                        cursor: log.is_pricework_record && !isLogLocked ? 'pointer' : 'default',
+                                                        color: log.is_pricework_record && !isLogLocked ? '#1976d2' : 'inherit',
                                                     }}>
                                                         {`${currency}${log.pricework_amount || 0}`}
                                                     </TableCell>
@@ -1470,6 +1488,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                         onDeleteClick(log.expense_id, 'expense');
                                                                     } else if (log.is_leave) {
                                                                         onDeleteClick(log.user_leave_id, 'leave');
+                                                                    } else if (log.is_pricework_record) {
+                                                                        onDeleteClick(log.pricework_id, 'pricework');
                                                                     } else {
                                                                         onDeleteClick(log.worklog_id, 'worklog');
                                                                     }

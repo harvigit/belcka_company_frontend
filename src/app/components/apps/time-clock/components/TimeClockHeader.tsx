@@ -46,6 +46,7 @@ interface TimeClockHeaderProps {
     onAddLeave: () => void;
     onAddExpense: () => void;
     onAddAdjustment: () => void;
+    onAddPricework: () => void;
     payrollCycle?: string;
     isRemovedUser?: boolean;
 }
@@ -70,6 +71,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                                              onAddLeave,
                                                              onAddExpense,
                                                              onAddAdjustment,
+                                                             onAddPricework,
                                                              payrollCycle,
                                                              isRemovedUser
                                                          }) => {
@@ -113,6 +115,11 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
     const handleAdjustmentClick = () => {
         setAddDropDown(null);
         onAddAdjustment();
+    };
+
+    const handlePriceworkClick = () => {
+        setAddDropDown(null);
+        onAddPricework();
     };
 
     const handleExportClose = (option: string) => {
@@ -316,6 +323,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                 <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
                                 <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
                                 <MenuItem onClick={handleAdjustmentClick}>Add Adjustment</MenuItem>
+                                <MenuItem onClick={handlePriceworkClick}>Add Pricework</MenuItem>
                             </Menu>
                         </>
                     )}

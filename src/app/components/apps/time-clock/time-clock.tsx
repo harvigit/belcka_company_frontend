@@ -41,7 +41,7 @@ import {
     IconChevronDown,
     IconDotsVertical,
     IconNotes, IconExclamationCircle, IconX,
-    IconSettings, IconRestore,
+    IconSettings, IconRestore, IconTrash,
 } from '@tabler/icons-react';
 import {
     useReactTable,
@@ -84,6 +84,7 @@ import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import AddExpense from './time-clock-details/expenses/add-expense';
 import AddWorklog from './time-clock-details/worklog/add-worklog';
+import AddPricework from './time-clock-details/pricework/add-pricework';
 import Image from 'next/image';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import Link from 'next/link';
@@ -344,6 +345,7 @@ const TimeClock = ({ queryParams }: Props) => {
     const [addLeaveSidebar, setAddLeaveSidebar] = useState<boolean>(false);
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
     const [addWorklogSidebar, setAddWorklogSidebar] = useState<boolean>(false);
+    const [addPriceworkSidebar, setAddPriceworkSidebar] = useState<boolean>(false);
     const [openLeaves, setOpenLeaves] = useState(false);
     
     // Conflict sidebar
@@ -397,7 +399,7 @@ const TimeClock = ({ queryParams }: Props) => {
 
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
-        actionType: 'lock' | 'unlock' | 'paid';
+        actionType: 'lock' | 'unlock' | 'paid' | 'delete';
         conflictCount: number;
     } | null>(null);
 
@@ -698,6 +700,11 @@ const TimeClock = ({ queryParams }: Props) => {
         setAddWorklogSidebar(true);
     };
 
+    const handlePriceworkClick = () => {
+        setAddDropDown(null);
+        setAddPriceworkSidebar(true);
+    };
+
     const closeAddLeaveSidebar = async () => {
         setAddLeaveSidebar(false);
     };
@@ -708,6 +715,10 @@ const TimeClock = ({ queryParams }: Props) => {
 
     const closeAddExpenseSidebar = async () => {
         setAddExpenseSidebar(false);
+    };
+
+    const closeAddPriceworkSidebar = async () => {
+        setAddPriceworkSidebar(false);
     };
 
 
@@ -1448,6 +1459,9 @@ const TimeClock = ({ queryParams }: Props) => {
             case 'paid':
                 await proceedWithMarkAsPaid(timesheetIds);
                 break;
+            case 'delete':
+                await proceedWithDeleteSelectedUsers();
+                break;
         }
     };
 
@@ -1542,6 +1556,38 @@ const TimeClock = ({ queryParams }: Props) => {
             });
         } else {
             await proceedWithMarkAsPaid(timesheetIds);
+        }
+    };
+
+    const handleDeleteSelectedUsers = async () => {
+        setConfirmDialog({
+            open: true,
+            actionType: 'delete',
+            conflictCount: getConflictsInSelectedRows(),
+        });
+    };
+
+    const proceedWithDeleteSelectedUsers = async () => {
+        const from = startDate || defaultStart;
+        const to = endDate || defaultEnd;
+        const userIds = Array.from(selectedRowIds);
+
+        if (!userIds.length) return;
+
+        try {
+            const response = await api.post('/time-clock/users-range-delete', {
+                user_ids: userIds,
+                start_date: format(from, 'yyyy-MM-dd'),
+                end_date: format(to, 'yyyy-MM-dd'),
+            });
+            if (response.data.IsSuccess) {
+                setSuccessMessage(response.data.message);
+                setSelectedRowIds(new Set());
+                await fetchData(from, to);
+                await fetchConflictsData(from, to);
+            }
+        } catch (error: any) {
+            setErrorMessage(error?.response?.data?.message || 'Failed to delete selected users\' time-clock records.');
         }
     };
 
@@ -1698,6 +1744,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                         <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
                                         <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
                                         <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
+                                        <MenuItem onClick={handlePriceworkClick}>Add Pricework</MenuItem>
                                     </Menu>
                                 </>
                             )}
@@ -1891,6 +1938,17 @@ const TimeClock = ({ queryParams }: Props) => {
                                     sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px', boxShadow: 'none', '&:hover': { boxShadow: 'none' } }}
                                 >
                                     Paid
+                                </Button>
+
+                                <Button
+                                    startIcon={<IconTrash size={15} />}
+                                    variant="outlined"
+                                    color="error"
+                                    size="small"
+                                    onClick={handleDeleteSelectedUsers}
+                                    sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px' }}
+                                >
+                                    Delete
                                 </Button>
 
                                 <Button
@@ -2315,6 +2373,30 @@ const TimeClock = ({ queryParams }: Props) => {
                 />
             </Drawer>
 
+            {/* Add Pricework */}
+            <Drawer
+                anchor="right"
+                open={addPriceworkSidebar}
+                onClose={closeAddPriceworkSidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '504px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <AddPricework
+                    onClose={closeAddPriceworkSidebar}
+                    companyId={user.company_id}
+                    selectUser={true}
+                    onDataRefresh={refreshTimeClockData}
+                />
+            </Drawer>
+
             {/*  Leave list */}
             <LeaveLists open={openLeaves} onClose={() => setOpenLeaves(false)} queryParams={queryParams}/>
 
@@ -2372,8 +2454,8 @@ const TimeClock = ({ queryParams }: Props) => {
                     open={confirmDialog.open}
                     onClose={() => setConfirmDialog(null)}
                     onConfirm={handleConfirmAction}
-                    title={confirmDialog.actionType === 'lock' ? 'Lock Timesheets' : confirmDialog.actionType === 'unlock' ? 'Unlock Timesheets' : 'Mark as Paid'}
-                    message={confirmDialog.actionType === 'lock' ? 'Are you sure you want to lock the selected timesheets?' : confirmDialog.actionType === 'unlock' ? 'Are you sure you want to unlock the selected timesheets?' : 'Are you sure you want to mark the selected timesheets as paid?'}
+                    title={confirmDialog.actionType === 'lock' ? 'Lock Timesheets' : confirmDialog.actionType === 'unlock' ? 'Unlock Timesheets' : confirmDialog.actionType === 'delete' ? 'Delete Time-clock Records' : 'Mark as Paid'}
+                    message={confirmDialog.actionType === 'lock' ? 'Are you sure you want to lock the selected timesheets?' : confirmDialog.actionType === 'unlock' ? 'Are you sure you want to unlock the selected timesheets?' : confirmDialog.actionType === 'delete' ? `Are you sure you want to delete all worklogs, leave, penalties, pricework and expenses for ${selectedRowIds.size} selected user(s) from ${format(startDate || defaultStart, 'dd MMM yyyy')} to ${format(endDate || defaultEnd, 'dd MMM yyyy')}? This action cannot be undone.` : 'Are you sure you want to mark the selected timesheets as paid?'}
                     conflictCount={confirmDialog.conflictCount}
                     actionType={confirmDialog.actionType}
                 />
