@@ -42,12 +42,14 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     const [resourcesLoading, setResourcesLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [users, setUsers] = useState<any[]>([]);
+    const [projects, setProjects] = useState<Resource[]>([]);
     const [addresses, setAddresses] = useState<Address[]>([]);
-    const [trades, setTrades] = useState<Resource[]>([]);
+    const [teams, setTeams] = useState<Resource[]>([]);
     const [units, setUnits] = useState<Resource[]>([]);
     const [selectedUser, setSelectedUser] = useState(userId ? String(userId) : '');
+    const [projectId, setProjectId] = useState(pricework?.project_id ? String(pricework.project_id) : '');
     const [addressId, setAddressId] = useState(pricework?.address_id ? String(pricework.address_id) : '');
-    const [tradeId, setTradeId] = useState(pricework?.trade_id ? String(pricework.trade_id) : '');
+    const [teamId, setTeamId] = useState(pricework?.team_id ? String(pricework.team_id) : '');
     const [unitId, setUnitId] = useState(pricework?.unit_id ? String(pricework.unit_id) : '');
     const [workType, setWorkType] = useState(pricework?.work_type || '');
     const [amountPerUnit, setAmountPerUnit] = useState(pricework?.amount_per_unit != null ? String(pricework.amount_per_unit) : '');
@@ -105,16 +107,17 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             setError(null);
             try {
                 const requests: Promise<any>[] = [
-                    api.get('/expense/get-resources'),
-                    api.get('/trade/get-trades', {params: {company_id: companyId}}),
-                    api.get('/units/get', {params: {company_id: companyId}}),
+                    api.get('/pricework/get-resources', {
+                        params: selectUser && selectedUser ? {user_id: Number(selectedUser)} : undefined,
+                    }),
                 ];
                 if (selectUser) requests.push(api.get('/user/list'));
 
-                const [expenseResponse, tradeResponse, unitResponse, userResponse] = await Promise.all(requests);
-                setAddresses(expenseResponse.data?.addresses || []);
-                setTrades(tradeResponse.data?.info || []);
-                setUnits(unitResponse.data?.info || []);
+                const [resourceResponse, userResponse] = await Promise.all(requests);
+                setProjects(resourceResponse.data?.projects || []);
+                setAddresses(resourceResponse.data?.addresses || []);
+                setTeams(resourceResponse.data?.teams || []);
+                setUnits(resourceResponse.data?.units || []);
                 if (selectUser) setUsers(userResponse?.data?.info || []);
             } catch (resourceError: any) {
                 setError(resourceError?.response?.data?.message || 'Failed to load pricework resources.');
@@ -124,7 +127,7 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
         };
 
         fetchResources();
-    }, [companyId, selectUser]);
+    }, [companyId, selectUser, selectedUser]);
 
     const totalAmount = useMemo(() => {
         const amount = Number(amountPerUnit);
@@ -132,11 +135,17 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
         return Number.isFinite(amount) && Number.isFinite(completed) ? amount * completed : 0;
     }, [amountPerUnit, workComplete]);
 
+    const filteredAddresses = useMemo(
+        () => addresses.filter((address) => address.project_id === Number(projectId)),
+        [addresses, projectId],
+    );
+
     const handleSubmit = async () => {
         const targetUserId = selectUser ? Number(selectedUser) : Number(userId);
         if (!targetUserId) return setError('User is required.');
+        if (!projectId) return setError('Project is required.');
         if (!addressId) return setError('Address is required.');
-        if (!tradeId) return setError('Trade is required.');
+        if (!teamId) return setError('Team is required.');
         if (!workType.trim()) return setError('Work type is required.');
         if (!unitId) return setError('Unit is required.');
         if (amountPerUnit === '' || Number(amountPerUnit) < 0) return setError('Valid amount per unit is required.');
@@ -148,8 +157,9 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             const payload = {
                 user_id: targetUserId,
                 ...(isEditMode ? {pricework_id: Number(pricework.pricework_id)} : {}),
+                project_id: Number(projectId),
                 address_id: Number(addressId),
-                trade_id: Number(tradeId),
+                team_id: Number(teamId),
                 note: note.trim() || undefined,
                 work_type: workType.trim(),
                 unit_id: Number(unitId),
@@ -202,18 +212,29 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
                         )}
 
                         <FormControl fullWidth>
+                            {fieldLabel('Project')}
+                            <Select size="small" value={projectId} onChange={(event) => {
+                                setProjectId(event.target.value);
+                                setAddressId('');
+                            }} displayEmpty sx={selectSx} MenuProps={selectMenuProps}>
+                                <MenuItem value="" disabled>Select project</MenuItem>
+                                {projects.map((project) => <MenuItem key={project.id} value={String(project.id)}>{project.name}</MenuItem>)}
+                            </Select>
+                        </FormControl>
+
+                        <FormControl fullWidth disabled={!projectId}>
                             {fieldLabel('Address')}
                             <Select size="small" value={addressId} onChange={(event) => setAddressId(event.target.value)} displayEmpty sx={selectSx} MenuProps={selectMenuProps}>
                                 <MenuItem value="" disabled>Select address</MenuItem>
-                                {addresses.map((address) => <MenuItem key={address.id} value={String(address.id)}>{address.name}</MenuItem>)}
+                                {filteredAddresses.map((address) => <MenuItem key={address.id} value={String(address.id)}>{address.name}</MenuItem>)}
                             </Select>
                         </FormControl>
 
                         <FormControl fullWidth>
-                            {fieldLabel('Trade')}
-                            <Select size="small" value={tradeId} onChange={(event) => setTradeId(event.target.value)} displayEmpty sx={selectSx} MenuProps={selectMenuProps}>
-                                <MenuItem value="" disabled>Select trade</MenuItem>
-                                {trades.map((trade) => <MenuItem key={trade.id} value={String(trade.id)}>{trade.name}</MenuItem>)}
+                            {fieldLabel('Team')}
+                            <Select size="small" value={teamId} onChange={(event) => setTeamId(event.target.value)} displayEmpty sx={selectSx} MenuProps={selectMenuProps}>
+                                <MenuItem value="" disabled>Select team</MenuItem>
+                                {teams.map((team) => <MenuItem key={team.id} value={String(team.id)}>{team.name}</MenuItem>)}
                             </Select>
                         </FormControl>
 

@@ -1431,7 +1431,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
 
             if (priceworkIds.length) {
-                await api.post(DELETE_ENDPOINTS.pricework, {ids: priceworkIds.join(',')});
+                await api.post(DELETE_ENDPOINTS.pricework, {ids: priceworkIds.join(','), user_id});
             }
 
             const defaultStartDate = startDate || defaultStart;
@@ -1598,6 +1598,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
             if (type === 'leave') {
                 response = await api.post(endpoint, {user_leave_id: id});
+            } else if (type === 'pricework') {
+                response = await api.post(endpoint, {ids: id, user_id});
             } else {
                 response = await api.post(endpoint, {ids: id});
             }
