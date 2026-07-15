@@ -95,6 +95,7 @@ const CasesList = () => {
   const openMenu2 = Boolean(anchorEl2);
   const [openDialog, setOpenDialog] = useState(false);
   const [archiveList, setArchiveList] = useState(false);
+  const [sorting, setSorting] = useState<any[]>([]);
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<any>(null);
@@ -186,6 +187,10 @@ const CasesList = () => {
       if (filters.parent_address_id)
         url += `&parent_address_id=${filters.parent_address_id}`;
       if (search) url += `&search=${search}`;
+      
+      if (sorting && sorting.length > 0) {
+        url += `&sort_by=${sorting[0].id}&sort_order=${sorting[0].desc ? "desc" : "asc"}`;
+      }
 
       const res = await api.get(url);
 
@@ -222,12 +227,7 @@ const CasesList = () => {
     }
   };
 
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchCases();
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-  }, [search, page, user?.company_id, filters]);
+
   const fallbackCopy = (text: string) => {
     try {
       const textArea = document.createElement("textarea");
@@ -487,12 +487,12 @@ const CasesList = () => {
 
       {
         header: "Projects",
-        accessorKey: "project_names",
+        accessorKey: "project_name",
         cell: ({ row }: any) => {
           const item = row.original;
 
           return (
-            <Tooltip title={item.project_names ?? ""}>
+            <Tooltip title={item.project_name ?? ""}>
               <Typography
                 variant="body2"
                 sx={{
@@ -509,7 +509,7 @@ const CasesList = () => {
                   transition: "all 0.2s ease",
                 }}
               >
-                {item.project_names ? item.project_names : "-"}
+                {item.project_name ? item.project_name : "-"}
               </Typography>
             </Tooltip>
           );
@@ -640,6 +640,16 @@ const CasesList = () => {
       },
 
       {
+        header: "Type",
+        accessorKey: "address_type",
+        cell: ({ getValue }: any) => (
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 ,textTransform:'capitalize'}}>
+            {getValue()}
+          </Typography>
+        ),
+      },
+
+      {
         header: "Latest Start",
         accessorKey: "start_date",
         cell: ({ getValue }: any) => (
@@ -710,7 +720,10 @@ const CasesList = () => {
     data: data,
     columns,
     fetchData: fetchCases,
-    debounceDependencies: [user?.company_id, search, filters],
+    debounceDependencies: [user?.company_id, search, JSON.stringify(filters)],
+    state: { sorting },
+    onSortingChange: setSorting,
+    manualSorting: true,
   });
 
   return (

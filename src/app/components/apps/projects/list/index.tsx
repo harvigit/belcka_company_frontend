@@ -93,6 +93,7 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import AddressesList from "../../addresses/list/addresses-list";
 import { IconSettings } from "@tabler/icons-react";
+import MapGantt from "../zone-map/MapGantt";
 dayjs.extend(customParseFormat);
 
 const columnHelper = createColumnHelper<any>();
@@ -104,6 +105,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [addressListDrawerOpen, setAddressListDrawerOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -585,7 +587,18 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                   <IconBookmark size={18} />
                 </IconButton>
               </Tooltip>
-
+                <Tooltip title="Map">
+                <IconButton
+                  color="error"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveProjectId(item.id);
+                    setMapOpen(true);
+                  }}
+                >
+                  <IconMapPin size={18} />
+                </IconButton>
+              </Tooltip>
             </Stack>
           );
         },
@@ -1504,6 +1517,30 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
             )}
           </Box>
         </Drawer>
+
+          <Drawer
+                  anchor="bottom"
+                  open={mapOpen}
+                  onClose={() => setMapOpen(false)}
+                  PaperProps={{
+                    sx: {
+                      borderRadius: 0,
+                      height: "95vh",
+                      boxShadow: "none",
+                      borderTopLeftRadius: 12,
+                      borderTopRightRadius: 12,
+                      overflow: "hidden",
+                    },
+                  }}
+                >
+                  <MapGantt
+                    open={mapOpen}
+                    onClose={() => setMapOpen(false)}
+                    onUpdate={fetchProjects}
+                    projectId={activeProjectId}
+                    companyId={user?.company_id ?? null}
+                  />
+                </Drawer>
       </Box>
     </PermissionGuard>
   );

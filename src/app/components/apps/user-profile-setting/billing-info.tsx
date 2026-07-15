@@ -433,44 +433,44 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                             {key.replace(/_/g, " ")}
                           </Typography>
                           <Box display="flex" gap={2}>
-                            <Box flex={1}>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                display="block"
-                              >
-                                Old Value
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  color: "error.main",
-                                  textDecoration: "line-through",
-                                  wordBreak: "break-word",
-                                }}
-                              >
-                                {value.old || "-"}
-                              </Typography>
-                            </Box>
-                            <Box flex={1}>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                display="block"
-                              >
-                                New Value
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  color: "success.main",
-                                  fontWeight: 500,
-                                  wordBreak: "break-word",
-                                }}
-                              >
-                                {value.new || "-"}
-                              </Typography>
-                            </Box>
+                            {(!value.old || value.old === "") && (value.new && value.new !== "") ? (
+                              <Box flex={1}>
+                                <Typography variant="caption" color="success.main" fontWeight={600} display="block">
+                                  Added
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: "success.main", fontWeight: 500, wordBreak: "break-word" }}>
+                                  {value.new}
+                                </Typography>
+                              </Box>
+                            ) : (value.old && value.old !== "") && (!value.new || value.new === "") ? (
+                              <Box flex={1}>
+                                <Typography variant="caption" color="error.main" fontWeight={600} display="block">
+                                  Removed
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: "error.main", textDecoration: "line-through", wordBreak: "break-word" }}>
+                                  {value.old}
+                                </Typography>
+                              </Box>
+                            ) : (
+                              <>
+                                <Box flex={1}>
+                                  <Typography variant="caption" color="text.secondary" display="block">
+                                    Old Value
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ color: "error.main", textDecoration: "line-through", wordBreak: "break-word" }}>
+                                    {value.old}
+                                  </Typography>
+                                </Box>
+                                <Box flex={1}>
+                                  <Typography variant="caption" color="text.secondary" display="block">
+                                    New Value
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ color: "success.main", fontWeight: 500, wordBreak: "break-word" }}>
+                                    {value.new}
+                                  </Typography>
+                                </Box>
+                              </>
+                            )}
                           </Box>
                         </Box>
                       ),
@@ -573,44 +573,44 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                             {key.replace(/_/g, " ")}
                           </Typography>
                           <Box display="flex" gap={2}>
-                            <Box flex={1}>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                display="block"
-                              >
-                                Old Value
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  color: "error.main",
-                                  textDecoration: "line-through",
-                                  wordBreak: "break-word",
-                                }}
-                              >
-                                {value.old || "-"}
-                              </Typography>
-                            </Box>
-                            <Box flex={1}>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                display="block"
-                              >
-                                New Value
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  color: "success.main",
-                                  fontWeight: 500,
-                                  wordBreak: "break-word",
-                                }}
-                              >
-                                {value.new || "-"}
-                              </Typography>
-                            </Box>
+                            {(!value.old || value.old === "") && (value.new && value.new !== "") ? (
+                              <Box flex={1}>
+                                <Typography variant="caption" color="success.main" fontWeight={600} display="block">
+                                  Added
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: "success.main", fontWeight: 500, wordBreak: "break-word" }}>
+                                  {value.new}
+                                </Typography>
+                              </Box>
+                            ) : (value.old && value.old !== "") && (!value.new || value.new === "") ? (
+                              <Box flex={1}>
+                                <Typography variant="caption" color="error.main" fontWeight={600} display="block">
+                                  Removed
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: "error.main", textDecoration: "line-through", wordBreak: "break-word" }}>
+                                  {value.old}
+                                </Typography>
+                              </Box>
+                            ) : (
+                              <>
+                                <Box flex={1}>
+                                  <Typography variant="caption" color="text.secondary" display="block">
+                                    Old Value
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ color: "error.main", textDecoration: "line-through", wordBreak: "break-word" }}>
+                                    {value.old}
+                                  </Typography>
+                                </Box>
+                                <Box flex={1}>
+                                  <Typography variant="caption" color="text.secondary" display="block">
+                                    New Value
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ color: "success.main", fontWeight: 500, wordBreak: "break-word" }}>
+                                    {value.new}
+                                  </Typography>
+                                </Box>
+                              </>
+                            )}
                           </Box>
                         </Box>
                       ),

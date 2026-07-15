@@ -88,7 +88,7 @@ export default function CaseEditDrawer({
     if (open && selectedCase) {
       setFormData({
         ...selectedCase,
-        project_ids: selectedCase.project_ids || [],
+        project_id: selectedCase.project_id || null,
         radius: selectedCase.radius || defaultRadius,
         color: selectedCase.color || "#FF0000",
       });
@@ -302,7 +302,7 @@ export default function CaseEditDrawer({
                   alignItems={"center"}
                   flexWrap={"wrap"}
                 >
-                  <IconButton onClick={() => onClose}>
+                  <IconButton onClick={() => onClose()}>
                     <IconArrowLeft />
                   </IconButton>
                   <Typography variant="h6" color="inherit" fontWeight={700}>
@@ -312,16 +312,13 @@ export default function CaseEditDrawer({
 
                 <Box mb={2} mt={2}>
                   <Autocomplete
-                    multiple
                     fullWidth
                     options={projects || []}
-                    value={(projects || []).filter((p: any) =>
-                      formData.project_ids?.includes(p.id),
-                    )}
-                    onChange={(e, newVal) =>
+                    value={(projects || []).find((p: any) => p.id === formData.project_id) || null}
+                    onChange={(e, newVal: any) =>
                       setFormData((prev: any) => ({
                         ...prev,
-                        project_ids: newVal.map((p: any) => p.id),
+                        project_id: newVal ? newVal.id : null,
                       }))
                     }
                     getOptionLabel={(option: any) => option.name}
@@ -331,8 +328,8 @@ export default function CaseEditDrawer({
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label="Select Projects"
-                        placeholder="Projects"
+                        label="Select Project"
+                        placeholder="Project"
                       />
                     )}
                   />
@@ -559,7 +556,7 @@ export default function CaseEditDrawer({
               </Button>
               <Button
                 color="inherit"
-                onClick={() => onClose}
+                onClick={() => onClose()}
                 variant="contained"
                 size="large"
                 sx={{
