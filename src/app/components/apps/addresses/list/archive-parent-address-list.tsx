@@ -14,8 +14,9 @@ import {
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
-import { IconArrowBackUp } from "@tabler/icons-react";
+import { IconArrowBackUp, IconTrash } from "@tabler/icons-react";
 import toast from "react-hot-toast";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 
 interface ArchiveParentAddressProps {
   open: boolean;
@@ -37,10 +38,10 @@ const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
 }) => {
   const [data, setData] = useState<ParentAddressList[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<{
-    id: number;
-    action: "restore";
-  } | null>(null);
+  const [actionType, setActionType] = useState<"restore" | "delete" | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const isAllSelected = data.length > 0 && selectedIds.length === data.length;
+  const isIndeterminate = selectedIds.length > 0 && selectedIds.length < data.length;
 
   // Fetch data
   const fetchAddresses = useCallback(async () => {
@@ -65,22 +66,42 @@ const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
     }
   }, [open, fetchAddresses]);
 
+  const handleCheckboxChange = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds([]);
+    } else {
+      const allIds = data.map((item) => item.id);
+      setSelectedIds(allIds);
+    }
+  };
+
   const handleConfirmAction = async () => {
-    if (!selectedItem) return;
+    if (!actionType || selectedIds.length === 0) return;
 
     try {
-      const payload = {
-        id: selectedItem.id,
-      };
-
-      if (selectedItem.action === "restore") {
-        const response = await api.post("address/parent-unarchive", payload);
+      if (actionType === "restore") {
+        for (const id of selectedIds) {
+          await api.post("address/parent-unarchive", { id });
+        }
+        toast.success("Unarchive successfully");
+      } else {
+        const response = await api.post("address/parent-delete", { address_ids: selectedIds.join(",") });
         if (response.data.IsSuccess) {
-          toast.success(response.data.message || "Unarchive successfully");
-          fetchAddresses();
-          onWorkUpdated?.();
+          toast.success(response.data.message);
+        } else {
+          toast.error(response.data.message);
         }
       }
+      
+      fetchAddresses();
+      onWorkUpdated?.();
+      setSelectedIds([]);
     } catch (err) {
       console.error("Action failed", err);
       toast.error("Action failed");
@@ -114,13 +135,27 @@ const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
         <Box className="task-form">
           <Grid container>
             <Grid size={{ xs: 12, lg: 12 }}>
-              <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
-                <IconButton onClick={onClose}>
-                  <IconArrowLeft />
-                </IconButton>
-                <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archived Addresses
-                </Typography>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                <Box display="flex" alignItems="center" flexWrap="wrap">
+                  <IconButton onClick={onClose}>
+                    <IconArrowLeft />
+                  </IconButton>
+                  <Typography variant="h6" color="inherit" fontWeight={700}>
+                    Archived Addresses
+                  </Typography>
+                </Box>
+                {data.length > 0 && (
+                  <Box display="flex" alignItems="center">
+                    <Typography variant="body2" mr={1}>
+                      Select All
+                    </Typography>
+                    <CustomCheckbox
+                      checked={isAllSelected}
+                      indeterminate={isIndeterminate}
+                      onChange={handleSelectAll}
+                    />
+                  </Box>
+                )}
               </Box>
 
               {data.map((item, index) => (
@@ -144,6 +179,10 @@ const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
                     width="100%"
                   >
                     <Box display={"flex"} alignItems={"center"} gap={1}>
+                      <CustomCheckbox
+                        checked={selectedIds.includes(item.id)}
+                        onChange={() => handleCheckboxChange(item.id)}
+                      />
                       <Typography variant="subtitle1" fontWeight={600}>
                         Name:
                       </Typography>
@@ -166,18 +205,6 @@ const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
                         {item.name}
                       </Typography>
                     </Box>
-                    <Box display={"flex"} fontSize="10px">
-                      <IconButton
-                        color="primary"
-                        size="small"
-                        onClick={() => {
-                          setSelectedItem({ id: item.id, action: "restore" });
-                          setOpenDialog(true);
-                        }}
-                      >
-                        <IconArrowBackUp />
-                      </IconButton>
-                    </Box>
                   </Box>
                 </Box>
               ))}
@@ -186,12 +213,41 @@ const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
         </Box>
       </Box>
 
-      <Box mt={2}>
+      <Box mt={2} display="flex" gap={2}>
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ borderRadius: 3 }}
+          className="drawer_buttons"
+          startIcon={<IconArrowBackUp />}
+          disabled={selectedIds.length === 0}
+          onClick={() => {
+            setActionType("restore");
+            setOpenDialog(true);
+          }}
+        >
+          Restore
+        </Button>
+
+        <Button
+          variant="contained"
+          color="error"
+          sx={{ borderRadius: 3 }}
+          className="drawer_buttons"
+          startIcon={<IconTrash />}
+          disabled={selectedIds.length === 0}
+          onClick={() => {
+            setActionType("delete");
+            setOpenDialog(true);
+          }}
+        >
+          Delete
+        </Button>
+
         <Button
           color="inherit"
           onClick={onClose}
           variant="contained"
-          size="large"
           sx={{
             backgroundColor: "transparent",
             borderRadius: 3,
@@ -203,10 +259,12 @@ const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
       </Box>
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Restore Address</DialogTitle>
+        <DialogTitle>
+          {actionType === "restore" ? "Confirm Restore" : "Confirm Deletion"}
+        </DialogTitle>
         <DialogContent>
           <Typography color="textSecondary">
-            Are you sure you want to restore this address?
+            Are you sure you want to {actionType} selected address(es)?
           </Typography>
         </DialogContent>
         <DialogActions>

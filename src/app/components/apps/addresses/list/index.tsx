@@ -59,7 +59,12 @@ import api from "@/utils/axios";
 import Cookies from "js-cookie";
 import "react-day-picker/dist/style.css";
 import "../../../../global.css";
-import { useJsApiLoader, GoogleMap, Marker } from "@react-google-maps/api";
+import {
+  useJsApiLoader,
+  GoogleMap,
+  Marker,
+  Circle,
+} from "@react-google-maps/api";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import Link from "next/link";
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
@@ -77,6 +82,7 @@ import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox
 import { IconExclamationCircle } from "@tabler/icons-react";
 import AddressesList from "./addresses-list";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRangeSlider";
 
 dayjs.extend(customParseFormat);
 const columnHelper = createColumnHelper<any>();
@@ -134,10 +140,12 @@ type UnifiedPrediction =
 const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [openDialog, setOpenDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showConflicts, setShowConflicts] = useState(false);
   const [filters, setFilters] = useState({
     status: "",
   });
   const [tempFilters, setTempFilters] = useState(filters);
+  const [sorting, setSorting] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [value, setValue] = useState(0);
@@ -146,7 +154,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [trade, setTrade] = useState<TradeList[]>([]);
-  const [data, setData] = useState<ProjectList[]>([]);
+  const [data, setData] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [project, setProject] = useState<ProjectList[]>([]);
   const [allProjects, SetAllProjects] = useState<any[]>([]);
@@ -207,6 +215,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [parentAddressPostcode, setParentAddressPostcode] = useState("");
   const [parentAddressType, setParentAddressType] = useState("address");
   const [showLocationPin, setShowLocationPin] = useState(false);
+  const [parentAddressRadius, setParentAddressRadius] = useState(0);
+  const circleRef = useRef<any>(null);
+  const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+  const lastRadiusRef = useRef<number>(0);
+  const [maxRadius, setMaxRadius] = useState<number>(100);
   const [postcodeQuery, setPostcodeQuery] = useState("");
   const [addressOptions, setAddressOptions] = useState<any[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
@@ -365,6 +378,20 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           lat: Number(address.lat),
           lng: Number(address.lng),
         });
+
+        let radius = 0;
+        if (address.boundary) {
+          try {
+            const boundary =
+              typeof address.boundary === "string"
+                ? JSON.parse(address.boundary)
+                : address.boundary;
+            if (boundary.radius) {
+              radius = Number(boundary.radius);
+            }
+          } catch (e) {}
+        }
+        setParentAddressRadius(radius);
       } else if (window.google && (addrName || addrPincode)) {
         const geocoder = new google.maps.Geocoder();
         geocoder.geocode(
@@ -390,6 +417,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       setParentAddressType("address");
       setShowLocationPin(true);
       setSelectedLocation(null);
+      setParentAddressRadius(0);
     }
     setAddressOptions([]);
     setParentAddressDrawerOpen(true);
@@ -403,11 +431,23 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       return;
     }
     try {
+      let boundaryData: any = null;
+      if (selectedLocation) {
+        boundaryData = JSON.stringify({
+          lat: selectedLocation.lat,
+          lng: selectedLocation.lng,
+          radius: parentAddressRadius,
+        });
+      }
+
       const payload = {
         company_id: user?.company_id,
         name: parentAddressName,
         pin_code: parentAddressPostcode,
         type: parentAddressType,
+        latitude: selectedLocation?.lat,
+        longitude: selectedLocation?.lng,
+        boundary: boundaryData,
       };
 
       let res;
@@ -538,11 +578,23 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     }
   };
 
+  const fetchGeneralSettings = async () => {
+    try {
+      const res = await api.get("setting/general-settings");
+      if (res.data?.IsSuccess && res.data.data?.location_radius !== undefined) {
+        setMaxRadius(res.data.data.location_radius);
+      }
+    } catch (err) {
+      console.error("Failed to fetch general settings", err);
+    }
+  };
+
   useEffect(() => {
     if (user.company_id) {
       fetchProjects();
       fetchResources();
       getData();
+      fetchGeneralSettings();
     }
   }, [projectID]);
 
@@ -563,6 +615,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       if (searchTerm) {
         url += `&search=${searchTerm}`;
       }
+
+      if (sorting && sorting.length > 0) {
+        url += `&sort_by=${sorting[0].id}&sort_order=${sorting[0].desc ? "desc" : "asc"}`;
+      }
+
       const res = await api.get(url);
       if (res.data) {
         const responseData =
@@ -871,6 +928,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       textOverflow: "ellipsis",
                       wordBreak: "break-word",
                       px: 1.5,
+                      width: "200px",
                       borderRadius: 1,
                       border: "1px solid transparent",
                       transition: "all 0.2s ease",
@@ -1070,11 +1128,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       const matchesStatus = filters.status
         ? item.status_text === filters.status
         : true;
-      return matchesStatus;
+      const matchesConflict = showConflicts ? item.is_conflict : true;
+      return matchesStatus && matchesConflict;
     });
 
     return filtered;
-  }, [data, filters, searchTerm]);
+  }, [data, filters, searchTerm, showConflicts]);
 
   const {
     table,
@@ -1088,7 +1147,14 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     data: currentFilteredData,
     columns,
     fetchData: fetchAddresses,
-    debounceDependencies: [searchTerm, user?.company_id, filters],
+    debounceDependencies: [
+      searchTerm,
+      user?.company_id,
+      JSON.stringify(filters),
+    ],
+    state: { sorting },
+    onSortingChange: setSorting,
+    manualSorting: true,
   });
 
   useEffect(() => {
@@ -1154,18 +1220,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
             <Button
               variant="contained"
-              onClick={() => handleModelOpen()}
-              sx={{ mt: { xs: 1, sm: 0 } }}
-              startIcon={<IconFileImport width={18} />}
+              color={showConflicts ? "primary" : "error"}
+              onClick={() => setShowConflicts(!showConflicts)}
+              sx={{
+                mt: { xs: 1, sm: 0 },
+                minWidth: "40px",
+                px: 1,
+              }}
             >
-              Import
-            </Button>
-            <Button
-              variant="contained"
-              onClick={exportProducts}
-              sx={{ mt: { xs: 1, sm: 0 } }}
-            >
-              <IconFileExport width={18} /> Export
+              <IconExclamationCircle width={18} />
             </Button>
           </Grid>
           <Stack
@@ -1336,9 +1399,55 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     Archive Address List
                   </Link>
                 </MenuItem>
+                <MenuItem onClick={handleClose}>
+                  <Link
+                    color="body1"
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleModelOpen();
+                    }}
+                    style={{
+                      width: "100%",
+                      color: "#11142D",
+                      textTransform: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyItems: "center",
+                    }}
+                  >
+                    <ListItemIcon>
+                      <IconFileImport width={18} />
+                    </ListItemIcon>
+                    Import
+                  </Link>
+                </MenuItem>
+
+                <MenuItem onClick={handleClose}>
+                  <Link
+                    color="body1"
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      exportProducts();
+                    }}
+                    style={{
+                      width: "100%",
+                      color: "#11142D",
+                      textTransform: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyItems: "center",
+                    }}
+                  >
+                    <ListItemIcon>
+                      <IconFileExport width={18} />
+                    </ListItemIcon>
+                    Export
+                  </Link>
+                </MenuItem>
               </Menu>
             </Box>
-
             {/* Filter Dialog */}
             <Dialog
               open={open}
@@ -1547,15 +1656,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       sx={{ cursor: "pointer" }}
                       onMouseEnter={() => setHoveredRow(row.original.id)}
                       onMouseLeave={() => setHoveredRow(null)}
-                      onClick={() => {
-                        const newSelected = new Set(selectedRowIds);
-                        if (newSelected.has(row.original.id)) {
-                          newSelected.delete(row.original.id);
-                        } else {
-                          newSelected.add(row.original.id);
-                        }
-                        setSelectedRowIds(newSelected);
-                      }}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
@@ -1916,28 +2016,113 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                         label="Location"
                       />
                     </Grid>
-                    {isLoaded &&
-                      selectedLocation && (
-                        <Grid size={{ xs: 12 }}>
-                          <Box
-                            height="350px"
-                            width="100%"
-                            borderRadius={2}
-                            overflow="hidden"
+                    {parentAddressType === "location" && (
+                      <Grid size={{ xs: 12 }}>
+                        <Box width={"100%"}>
+                          <Typography variant="subtitle2" mb={1}>
+                            Area size [{parentAddressRadius} Meter]
+                          </Typography>
+                          <CustomRangeSlider
+                            value={parentAddressRadius}
+                            onChange={(e: any, newValue: number | number[]) =>
+                              setParentAddressRadius(newValue as number)
+                            }
+                            min={0}
+                            max={maxRadius}
+                            step={1}
+                          />
+                        </Box>
+                      </Grid>
+                    )}
+                    {isLoaded && selectedLocation && (
+                      <Grid size={{ xs: 12 }}>
+                        <Box
+                          height="350px"
+                          width="100%"
+                          borderRadius={2}
+                          overflow="hidden"
+                        >
+                          <GoogleMap
+                            mapContainerStyle={{
+                              width: "100%",
+                              height: "100%",
+                            }}
+                            center={selectedLocation}
+                            zoom={15}
                           >
-                            <GoogleMap
-                              mapContainerStyle={{
-                                width: "100%",
-                                height: "100%",
+                            <Marker
+                              position={selectedLocation}
+                              draggable={parentAddressType === "location"}
+                              onDragEnd={(e) => {
+                                if (parentAddressType !== "location") return;
+                                const lat = e.latLng?.lat();
+                                const lng = e.latLng?.lng();
+                                if (lat && lng)
+                                  setSelectedLocation({ lat, lng });
                               }}
-                              center={selectedLocation}
-                              zoom={15}
-                            >
-                              <Marker position={selectedLocation} />
-                            </GoogleMap>
-                          </Box>
-                        </Grid>
-                      )}
+                            />
+                            {parentAddressRadius > 0 && (
+                              <Circle
+                                center={selectedLocation}
+                                radius={parentAddressRadius}
+                                options={{
+                                  draggable: parentAddressType === "location",
+                                  editable: parentAddressType === "location",
+                                  fillColor: "#FF0000",
+                                  fillOpacity: 0.3,
+                                  strokeColor: "#FF0000",
+                                  strokeOpacity: 1,
+                                  strokeWeight: 1,
+                                }}
+                                onLoad={(circle) => {
+                                  circleRef.current = circle;
+                                }}
+                                onCenterChanged={() => {
+                                  if (
+                                    !circleRef.current ||
+                                    parentAddressType !== "location"
+                                  )
+                                    return;
+
+                                  const center = circleRef.current.getCenter();
+                                  if (!center) return;
+
+                                  const lat = center.lat();
+                                  const lng = center.lng();
+
+                                  if (
+                                    lastCenterRef.current &&
+                                    lastCenterRef.current.lat === lat &&
+                                    lastCenterRef.current.lng === lng
+                                  ) {
+                                    return;
+                                  }
+
+                                  lastCenterRef.current = { lat, lng };
+                                  setSelectedLocation({ lat, lng });
+                                }}
+                                onRadiusChanged={() => {
+                                  if (
+                                    !circleRef.current ||
+                                    parentAddressType !== "location"
+                                  )
+                                    return;
+
+                                  const newRadius = Math.round(
+                                    circleRef.current.getRadius(),
+                                  );
+                                  if (lastRadiusRef.current === newRadius)
+                                    return;
+
+                                  lastRadiusRef.current = newRadius;
+                                  setParentAddressRadius(newRadius);
+                                }}
+                              />
+                            )}
+                          </GoogleMap>
+                        </Box>
+                      </Grid>
+                    )}
                   </Grid>
                 </Box>
                 <Box mt={2} display="flex" justifyContent="start" gap={2}>

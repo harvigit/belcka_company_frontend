@@ -476,14 +476,14 @@ const AddressesList = ({
   const handleEdit = async (task: any) => {
     setSelectedTask(task);
 
-    let projectIds = [task.project_id];
+    let taskProjectId = task.project_id;
     try {
       const res = await api.get(`address/address-detail?address_id=${task.id}`);
-      if (res.data?.info && res.data.info.project_ids) {
-        projectIds = res.data.info.project_ids;
+      if (res.data?.info && res.data.info.project_id) {
+        taskProjectId = res.data.info.project_id;
       }
     } catch (err) {
-      console.error("Failed to fetch address details for project IDs");
+      console.error("Failed to fetch address details for project ID");
     }
 
     const currentProject = projects?.find(
@@ -532,7 +532,7 @@ const AddressesList = ({
       boundary: task.boundary,
       type: task.type,
       color: task.color,
-      project_ids: projectIds,
+      project_id: taskProjectId,
       parent_address_id: task.parent_address_id,
       ref: task.ref,
     });
@@ -1039,9 +1039,9 @@ const AddressesList = ({
         },
       }),
 
-      columnHelper.accessor("project_names", {
-        id: "projects",
-        header: () => "Projects",
+      columnHelper.accessor("project_name", {
+        id: "project",
+        header: () => "Project",
         cell: (info) => (
           <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
             {info.getValue()}
@@ -1320,11 +1320,11 @@ const AddressesList = ({
                 }
 
                 setFormData({
-                  project_ids: parentAddressId
-                    ? []
+                  project_id: parentAddressId
+                    ? null
                     : projectId
-                      ? [Number(projectId)]
-                      : [],
+                      ? Number(projectId)
+                      : null,
                   parent_address_id: parentAddressId ? parentAddressId : null,
                   company_id: user.company_id,
                   name: initialName,
@@ -1921,16 +1921,13 @@ const AddressesList = ({
 
                   <Box mb={2}>
                     <Autocomplete
-                      multiple
                       fullWidth
                       options={projects || []}
-                      value={(projects || []).filter((p: any) =>
-                        formData.project_ids?.includes(p.id),
-                      )}
-                      onChange={(e, newVal) =>
+                      value={(projects || []).find((p: any) => p.id === formData.project_id) || null}
+                      onChange={(e, newVal: any) =>
                         setFormData((prev: any) => ({
                           ...prev,
-                          project_ids: newVal.map((p: any) => p.id),
+                          project_id: newVal ? newVal.id : null,
                         }))
                       }
                       getOptionLabel={(option: any) => option.name}
@@ -1940,8 +1937,8 @@ const AddressesList = ({
                       renderInput={(params) => (
                         <TextField
                           {...params}
-                          label="Select Projects"
-                          placeholder="Projects"
+                          label="Select Project"
+                          placeholder="Project"
                         />
                       )}
                     />
@@ -2225,16 +2222,13 @@ const AddressesList = ({
                   {parentAddressId && (
                     <Box mb={2} mt={2}>
                       <Autocomplete
-                        multiple
                         fullWidth
                         options={projects || []}
-                        value={(projects || []).filter((p: any) =>
-                          formData.project_ids?.includes(p.id),
-                        )}
-                        onChange={(e, newVal) =>
+                        value={(projects || []).find((p: any) => p.id === formData.project_id) || null}
+                        onChange={(e, newVal: any) =>
                           setFormData((prev: any) => ({
                             ...prev,
-                            project_ids: newVal.map((p: any) => p.id),
+                            project_id: newVal ? newVal.id : null,
                           }))
                         }
                         getOptionLabel={(option: any) => option.name}
@@ -2244,8 +2238,8 @@ const AddressesList = ({
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            label="Select Projects"
-                            placeholder="Projects"
+                            label="Select Project"
+                            placeholder="Project"
                           />
                         )}
                       />

@@ -13,6 +13,7 @@ interface UseServerTableOptions<TData> {
   debounceDependencies?: any[];
   debounceTimeMs?: number;
   onSortingChange?: (updater: any) => void;
+  manualSorting?: boolean;
   state?: any;
   getRowId?: (originalRow: TData, index: number, parent?: any) => string;
 }
@@ -24,6 +25,7 @@ export function useServerTable<TData>({
   debounceDependencies = [],
   debounceTimeMs = 300,
   onSortingChange: controlledOnSortingChange,
+  manualSorting = false,
   state: controlledState,
   getRowId,
 }: UseServerTableOptions<TData>) {
@@ -70,7 +72,7 @@ export function useServerTable<TData>({
     rowCount: totalRows,
     manualPagination: true,
     manualFiltering: true,
-    manualSorting: false,
+    manualSorting: manualSorting,
     autoResetPageIndex: false,
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
