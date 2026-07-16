@@ -71,7 +71,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
       const priceworks = priceworksResponse?.data?.IsSuccess
         ? (priceworksResponse.data.info || []).map((record: any) => ({
             ...record,
-            id: `pricework-${record.pricework_id}`,
+            id: record.pricework_id,
             name: record.work_type,
             is_pricework_record: true,
           }))
