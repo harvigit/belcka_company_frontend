@@ -56,15 +56,27 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
   const fetchWorkTabData = async () => {
     setFetchWork(true);
     try {
-      const res = await api.get("/project/get-works", {
-        params: { address_id: addressId, company_id: companyId },
-      });
+      const [worksResult, priceworksResult] = await Promise.allSettled([
+        api.get("/project/get-works", {
+          params: { address_id: addressId, company_id: companyId },
+        }),
+        api.get("/pricework/list", { params: { address_id: addressId } }),
+      ]);
 
-      if (res.data?.IsSuccess) {
-        setTabData(res.data.info || []);
-      } else {
-        setTabData([]);
-      }
+      const worksResponse = worksResult.status === "fulfilled" ? worksResult.value : null;
+      const priceworksResponse = priceworksResult.status === "fulfilled" ? priceworksResult.value : null;
+      const works = worksResponse?.data?.IsSuccess
+        ? worksResponse.data.info || []
+        : [];
+      const priceworks = priceworksResponse?.data?.IsSuccess
+        ? (priceworksResponse.data.info || []).map((record: any) => ({
+            ...record,
+            id: `pricework-${record.pricework_id}`,
+            name: record.work_type,
+            is_pricework_record: true,
+          }))
+        : [];
+      setTabData([...priceworks, ...works]);
     } catch {
       setTabData([]);
     }
@@ -126,7 +138,9 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
       data = data.filter(
         (item) =>
           item.name?.toLowerCase().includes(search) ||
-          item.trade_name?.toLowerCase().includes(search),
+          item.trade_name?.toLowerCase().includes(search) ||
+          item.user_name?.toLowerCase().includes(search) ||
+          item.team_name?.toLowerCase().includes(search),
       );
     }
 
@@ -333,7 +347,49 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
       {fetchWork ? (
         <SkeletonLoader columns={[{ name: "Id" }]} rowCount={1} />
       ) : filteredData.length > 0 ? (
-        filteredData.map((work, idx) => (
+        filteredData.map((work, idx) => work.is_pricework_record ? (
+          <Box
+            key={work.id}
+            mb={2}
+            sx={{
+              border: "1px solid #ccc",
+              borderRadius: 2,
+              p: 2,
+              "&:hover": { boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)" },
+            }}
+          >
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+              <Box sx={{ minWidth: 0 }}>
+                <Box
+                  sx={{
+                    display: "inline-block",
+                    bgcolor: "#1e4db7",
+                    color: "#fff",
+                    borderRadius: "999px",
+                    px: 1,
+                    py: 0.2,
+                    mb: 1,
+                    fontSize: "11px",
+                    fontWeight: 600,
+                  }}
+                >
+                  Pricework
+                </Box>
+                <Typography fontWeight="bold">{work.work_type}</Typography>
+                <Typography variant="body2" color="text.secondary" mt={0.5}>
+                  {work.user_name} · {work.team_name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {work.work_complete || "0"} {work.unit_name} × {Number(work.amount_per_unit || 0).toFixed(2)}
+                  {work.date ? ` · ${work.date}` : ""}
+                </Typography>
+              </Box>
+              <Typography fontWeight="bold" fontSize="1.1rem" sx={{ whiteSpace: "nowrap" }}>
+                {Number(work.pricework_amount || 0).toFixed(2)}
+              </Typography>
+            </Stack>
+          </Box>
+        ) : (
           <Box
             key={idx}
             mb={2}

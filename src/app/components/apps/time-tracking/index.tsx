@@ -75,6 +75,7 @@ import { DailyBreakdown } from './types/timeClock';
 import type { User } from 'next-auth';
 import AddExpense from '@/app/components/apps/time-clock/time-clock-details/expenses/add-expense';
 import AddWorklog from '@/app/components/apps/time-clock/time-clock-details/worklog/add-worklog';
+import AddPricework from '@/app/components/apps/time-clock/time-clock-details/pricework/add-pricework';
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from '@/utils/googleMaps';
 
 const TIME_TRACKING_PAGE = 'time-tracking-page';
@@ -1067,6 +1068,7 @@ const TimeTracking: React.FC<Props> = () => {
     const [geofences, setGeofences] = useState<WorklogGeofence[]>([]);
     const [addExpenseSidebar, setAddExpenseSidebar] = useState(false);
     const [addWorklogSidebar, setAddWorklogSidebar] = useState(false);
+    const [addPriceworkSidebar, setAddPriceworkSidebar] = useState(false);
 
     const latestTodayClockRequestRef = useRef(0);
     const mapRef = useRef<google.maps.Map | null>(null);
@@ -1670,6 +1672,10 @@ const TimeTracking: React.FC<Props> = () => {
         try { await fetchTimeClockData(startDate, endDate); } catch { /* ignore */ }
     }, [fetchTimeClockData, startDate, endDate]);
 
+    const closeAddPriceworkSidebar = useCallback(() => {
+        setAddPriceworkSidebar(false);
+    }, []);
+
     const userImg = (user as any)?.user_image || (user as any)?.image || undefined;
     const userInitials = user?.name
         ? user.name.split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -1889,6 +1895,7 @@ const TimeTracking: React.FC<Props> = () => {
                                 amountColumns={AMOUNT_COLUMNS as unknown as string[]}
                                 onAddExpense={() => setAddExpenseSidebar(true)}
                                 onAddWorklog={() => setAddWorklogSidebar(true)}
+                                onAddPricework={() => setAddPriceworkSidebar(true)}
                                 tableExpanded={tableExpanded}
                                 onToggleTableExpanded={() => setTableExpanded((prev) => !prev)}
                             />
@@ -1931,6 +1938,17 @@ const TimeTracking: React.FC<Props> = () => {
                         PaperProps={{ sx: { width: '504px', borderTopLeftRadius: 18, borderBottomLeftRadius: 18, overflow: 'hidden' } }}>
                     <AddWorklog
                         onClose={closeAddWorklogSidebar}
+                        userId={Number(userId)}
+                        selectUser={false}
+                        companyId={Number(user.company_id)}
+                        onDataRefresh={() => fetchTimeClockData(startDate, endDate)}
+                    />
+                </Drawer>
+
+                <Drawer anchor="right" open={addPriceworkSidebar} onClose={closeAddPriceworkSidebar}
+                        PaperProps={{ sx: { width: '504px', borderTopLeftRadius: 18, borderBottomLeftRadius: 18, overflow: 'hidden' } }}>
+                    <AddPricework
+                        onClose={closeAddPriceworkSidebar}
                         userId={Number(userId)}
                         selectUser={false}
                         companyId={Number(user.company_id)}

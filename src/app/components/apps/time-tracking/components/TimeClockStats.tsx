@@ -38,6 +38,7 @@ interface TimeClockStatsProps {
     amountColumns: string[];
     onAddExpense: () => void;
     onAddWorklog: () => void;
+    onAddPricework: () => void;
     tableExpanded: boolean;
     onToggleTableExpanded: () => void;
 }
@@ -60,6 +61,7 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                                            amountColumns,
                                                            onAddExpense,
                                                            onAddWorklog,
+                                                           onAddPricework,
                                                            tableExpanded,
                                                            onToggleTableExpanded,
                                                        }) => {
@@ -89,6 +91,11 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
     const handleWorklogClick = () => {
         setAddDropDown(null);
         onAddWorklog();
+    };
+
+    const handlePriceworkClick = () => {
+        setAddDropDown(null);
+        onAddPricework();
     };
     
     return (
@@ -303,6 +310,7 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                     >
                         <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
                         <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
+                        <MenuItem onClick={handlePriceworkClick}>Add Pricework</MenuItem>
                     </Menu>
                 </Box>
             </Box>
