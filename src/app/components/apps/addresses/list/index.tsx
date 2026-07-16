@@ -951,6 +951,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       textOverflow: "ellipsis",
                       wordBreak: "break-word",
                       px: 1.5,
+                      width: "200px",
                       borderRadius: 1,
                       border: "1px solid transparent",
                       transition: "all 0.2s ease",
