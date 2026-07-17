@@ -33,17 +33,9 @@ import {
 } from "@mui/material";
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
   createColumnHelper,
-  SortingState,
 } from "@tanstack/react-table";
 import {
-  IconChevronLeft,
-  IconChevronRight,
   IconClock,
   IconDotsVertical,
   IconFilter,
@@ -54,7 +46,6 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
@@ -1054,7 +1045,7 @@ const StockList = () => {
             <Button
               variant="contained"
               onClick={() => setOpen(true)}
-              sx={{ mt: { xs: 1, sm: 0 } }}
+              sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
             >
               <IconFilter width={18} />
             </Button>
@@ -1487,7 +1478,7 @@ const StockList = () => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <TablePaginationFooter table={table} totalRows={totalRows} />
+        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
 
         {/* Stock History */}
         <StockHistoryList

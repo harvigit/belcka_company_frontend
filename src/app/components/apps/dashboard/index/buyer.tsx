@@ -45,11 +45,29 @@ const BuyerDashboard = () => {
   const [sales, setSales] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
-  const [suppliersData, setSuppliersData] = useState<any[]>([]);
+  const [suppliersData, setSuppliersData] = useState<any[]>([
+    {
+      btnText: "primary.main",
+      title: "suppliers",
+      digits: 0,
+      subtext: "",
+      text: "",
+      text2: "Number of Suppliers",
+    },
+    {
+      btnText: "warning.main",
+      title: "categories",
+      digits: 0,
+      subtext: "",
+      text: "",
+      text2: "Number of Categories",
+    },
+  ]);
   const [loading, setLoading] = useState(false);
   const theme = useTheme();
   const borderColor = theme.palette.divider;
   const [currency, setCurrency] = useState("");
+  const [buyerOverview, setBuyerOverview] = useState<any>(null);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [openDialog, setOpenDialog] = useState(false);
@@ -306,6 +324,30 @@ const BuyerDashboard = () => {
     setLoading(false);
   };
 
+  const fetchBuyerOverview = async () => {
+    if (!user.company_id) return;
+    try {
+      let url = `buyer-overview?company_id=${user.company_id}`;
+      if (startDate && endDate) {
+        const start = `${String(startDate.getDate()).padStart(2, "0")}/${String(startDate.getMonth() + 1).padStart(2, "0")}/${startDate.getFullYear()}`;
+        const end = `${String(endDate.getDate()).padStart(2, "0")}/${String(endDate.getMonth() + 1).padStart(2, "0")}/${endDate.getFullYear()}`;
+        url += `&start_date=${start}&end_date=${end}`;
+      }
+      const res = await api.get(url);
+      if (res.data.IsSuccess) {
+        setBuyerOverview(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (user.company_id) {
+      fetchBuyerOverview();
+    }
+  }, [user.company_id, startDate, endDate]);
+
   useEffect(() => {
     fetchOverview();
     fetchInventory();
@@ -319,15 +361,25 @@ const BuyerDashboard = () => {
       alignContent={"flex-end"}
       alignItems={"flex-end"}
     >
-      <IconButton
-        id="basic-button"
-        aria-controls={openMenu ? "basic-menu" : undefined}
-        aria-haspopup="true"
-        aria-expanded={openMenu ? "true" : undefined}
-        onClick={handleClick}
-      >
-        <IconReportAnalytics size={30} stroke={1.5} color="#629FF4" />
-      </IconButton>
+      <Box display="flex" flexDirection="row" justifyContent="flex-end" alignItems="center" mb={2}>
+        <Box width="250px" mr={2}>
+          <DateRangePickerBox
+            from={startDate}
+            to={endDate}
+            onChange={handleDateRangeChange}
+            payrollCycle={"2_week"}
+          />
+        </Box>
+        <IconButton
+          id="basic-button"
+          aria-controls={openMenu ? "basic-menu" : undefined}
+          aria-haspopup="true"
+          aria-expanded={openMenu ? "true" : undefined}
+          onClick={handleClick}
+        >
+          <IconReportAnalytics size={30} stroke={1.5} color="#629FF4" />
+        </IconButton>
+      </Box>
       <Menu
         id="basic-menu"
         anchorEl={anchorEl}
@@ -456,14 +508,13 @@ const BuyerDashboard = () => {
                   />
 
                   <Box
-                    display="flex"
-                    justifyContent="space-between"
+                    display="block"
                     alignItems="center"
-                    mt={3}
+                    mt={0.5}
                     color="text.secondary"
                   >
-                    <Typography variant="h3">40</Typography>
-                    <Typography variant="h6">Will be delivery</Typography>
+                    <Typography variant="h3" fontWeight="400">{buyerOverview?.will_be_delivered ?? 0}</Typography>
+                    <Typography variant="h6" fontWeight="400" color="textSecondary">Will be delivered</Typography>
                   </Box>
                 </CardContent>
               </Grid>
@@ -491,14 +542,13 @@ const BuyerDashboard = () => {
                   />
 
                   <Box
-                    display="flex"
-                    justifyContent="space-between"
+                    display="block"
                     alignItems="center"
-                    mt={3}
+                    mt={0.5}
                     color="text.secondary"
                   >
-                    <Typography variant="h3">5</Typography>
-                    <Typography variant="h6">In Transit</Typography>
+                    <Typography variant="h3" fontWeight="400">{buyerOverview?.transit ?? 0}</Typography>
+                    <Typography variant="h6" fontWeight="400" color="textSecondary">In Transit</Typography>
                   </Box>
                 </CardContent>
               </Grid>
@@ -526,14 +576,13 @@ const BuyerDashboard = () => {
                   />
 
                   <Box
-                    display="flex"
-                    justifyContent="space-between"
+                    display="block"
                     alignItems="center"
-                    mt={3}
+                    mt={0.5}
                     color="text.secondary"
                   >
-                    <Typography variant="h3">20</Typography>
-                    <Typography variant="h6">Delivered</Typography>
+                    <Typography variant="h3" fontWeight="400">{buyerOverview?.delivered ?? 0}</Typography>
+                    <Typography variant="h6" fontWeight="400" color="textSecondary">Delivered</Typography>
                   </Box>
                 </CardContent>
               </Grid>
@@ -561,16 +610,15 @@ const BuyerDashboard = () => {
                   />
 
                   <Box
-                    display="flex"
-                    justifyContent="space-between"
+                    display="block"
                     alignItems="center"
-                    mt={3}
+                    mt={0.5}
                     color="text.secondary"
                   >
-                    <Typography variant="h3">
-                      {currency ? currency : "£"}17,432
+                    <Typography variant="h3" fontWeight="400">
+                      {buyerOverview?.currency ?? currency ?? "£"}{buyerOverview?.cost ?? "0.00"}
                     </Typography>
-                    <Typography variant="h6">Cost</Typography>
+                    <Typography variant="h6" fontWeight="400" color="textSecondary">Cost</Typography>
                   </Box>
                 </CardContent>
               </Grid>

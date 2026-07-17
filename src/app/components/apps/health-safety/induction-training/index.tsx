@@ -939,7 +939,7 @@ const InductionTraining = ({ companyId }: Props) => {
             </TableContainer>
 
             {/* ── Pagination ── */}
-            <TablePaginationFooter
+            <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined}
                 table={table}
                 totalRows={table.getPrePaginationRowModel().rows.length}
             />

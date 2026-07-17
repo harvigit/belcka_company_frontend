@@ -263,7 +263,7 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
               disabled={loading}
               sx={{ width: "20%" }}
             >
-              {loading ? "Saving..." : "Update Client"}
+              {loading ? "Saving..." : "Update"}
             </Button>
           </form>
         </Box>

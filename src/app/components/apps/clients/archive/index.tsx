@@ -57,7 +57,7 @@ const ArchiveClient: React.FC<ArchiveClientProps> = ({
     try {
       setLoading(true);
       const res: AxiosResponse<any> = await api.get(
-        `company-clients/archive-list?company_id=${user.company_id}`
+        `company-clients/archive-list?company_id=${user.company_id}`,
       );
       if (res.data?.info) {
         setData(res.data.info);
@@ -85,7 +85,7 @@ const ArchiveClient: React.FC<ArchiveClientProps> = ({
       if (selectedItem.action === "restore") {
         let response: AxiosResponse<any> = await api.post(
           "company-clients/unarchive",
-          payload
+          payload,
         );
         if (response.data.IsSuccess == true) {
           toast.success(response.data.message);
@@ -94,7 +94,7 @@ const ArchiveClient: React.FC<ArchiveClientProps> = ({
       } else if (selectedItem.action === "delete") {
         let response: AxiosResponse<any> = await api.post(
           `/company-locations/delete`,
-          payload
+          payload,
         );
         if (response.data.IsSuccess == true) {
           toast.success(response.data.message);
@@ -143,7 +143,13 @@ const ArchiveClient: React.FC<ArchiveClientProps> = ({
                   Archived Client List
                 </Typography>
               </Box>
-
+              {data.length === 0 && (
+                <Box mt={2} p={2} textAlign="center">
+                  <Typography variant="body1" color="textSecondary">
+                    No records found for clients..
+                  </Typography>
+                </Box>
+              )}
               {data.map((item, index) => (
                 <Box
                   key={index}

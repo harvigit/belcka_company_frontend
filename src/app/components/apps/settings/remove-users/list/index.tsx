@@ -32,23 +32,13 @@ import {
 import {
   createColumnHelper,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
 } from "@tanstack/react-table";
 import {
-  IconChevronLeft,
-  IconChevronRight,
   IconEye,
   IconSearch,
-  IconTrash,
   IconUserPlus,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import Link from "next/link";
@@ -794,7 +784,7 @@ const RemoveUsersList = () => {
             padding: "10px",
           }}
         >
-          <TablePaginationFooter table={table} totalRows={totalRows} />
+          <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
         </Box>
 
         <Divider />

@@ -1259,7 +1259,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                 {data.length ? <Divider/> : <></>}
             </Box>
             <Divider/>
-            <TablePaginationFooter
+            <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined}
                 table={table}
                 totalRows={table.getPrePaginationRowModel().rows.length}
             />

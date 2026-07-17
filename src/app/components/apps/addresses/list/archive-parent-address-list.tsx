@@ -104,7 +104,6 @@ const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
       setSelectedIds([]);
     } catch (err) {
       console.error("Action failed", err);
-      toast.error("Action failed");
     }
   };
 
@@ -158,6 +157,13 @@ const ArchiveParentAddress: React.FC<ArchiveParentAddressProps> = ({
                 )}
               </Box>
 
+              {data.length === 0 && (
+                <Box mt={2} p={2} textAlign="center">
+                  <Typography variant="body1" color="textSecondary">
+                    No records found for addresses..
+                  </Typography>
+                </Box>
+              )}
               {data.map((item, index) => (
                 <Box
                   key={index}

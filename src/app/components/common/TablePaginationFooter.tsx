@@ -1,14 +1,21 @@
 import React from 'react';
 import { Stack, Box, Typography, MenuItem, IconButton } from '@mui/material';
-import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
+import { IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight } from '@tabler/icons-react';
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 
 interface TablePaginationFooterProps {
   table: any;
   totalRows: number;
+  selectedCount?: number;
 }
 
-export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({ table, totalRows }) => {
+export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({ table, totalRows, selectedCount }) => {
+  const tableSelectedCount = table.getState().rowSelection 
+    ? Object.keys(table.getState().rowSelection).filter(key => table.getState().rowSelection[key]).length 
+    : 0;
+    
+  const finalSelectedCount = selectedCount !== undefined ? selectedCount : tableSelectedCount;
+
   return (
     <Stack
       gap={1}
@@ -22,7 +29,7 @@ export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({ ta
     >
       <Box display="flex" alignItems="center" gap={1}>
         <Typography color="textSecondary" className="f-14">
-          {totalRows} Rows
+          {finalSelectedCount > 0 ? `${finalSelectedCount} selected out of ${totalRows}` : `${totalRows} Rows`}
         </Typography>
       </Box>
       <Box
@@ -73,6 +80,14 @@ export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({ ta
           <IconButton
             size="small"
             sx={{ width: "30px" }}
+            onClick={() => table.setPageIndex(0)}
+            disabled={!table.getCanPreviousPage()}
+          >
+            <IconChevronsLeft />
+          </IconButton>
+          <IconButton
+            size="small"
+            sx={{ width: "30px" }}
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
@@ -85,6 +100,14 @@ export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({ ta
             disabled={!table.getCanNextPage()}
           >
             <IconChevronRight />
+          </IconButton>
+          <IconButton
+            size="small"
+            sx={{ width: "30px" }}
+            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+            disabled={!table.getCanNextPage()}
+          >
+            <IconChevronsRight />
           </IconButton>
         </Stack>
       </Box>

@@ -36,9 +36,13 @@ export function useServerTable<TData>({
   const [totalRows, setTotalRows] = useState(0);
   const [internalSorting, setInternalSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
+  const [internalRowSelection, setInternalRowSelection] = useState<any>({});
 
   const sorting = controlledState?.sorting !== undefined ? controlledState.sorting : internalSorting;
   const setSorting = controlledOnSortingChange || setInternalSorting;
+  
+  const rowSelection = controlledState?.rowSelection !== undefined ? controlledState.rowSelection : internalRowSelection;
+  const setRowSelection = controlledState?.onRowSelectionChange || setInternalRowSelection;
 
   // Use a ref to keep track of the latest fetch function to avoid stale closures
   const fetchRef = useRef(fetchData);
@@ -69,17 +73,19 @@ export function useServerTable<TData>({
   const table = useReactTable({
     data,
     columns,
-    state: { ...controlledState, columnFilters, sorting, pagination },
+    state: { columnFilters, sorting, pagination, rowSelection, ...controlledState },
     pageCount: pageCount,
     rowCount: totalRows,
     manualPagination: true,
     manualFiltering: true,
     manualSorting: manualSorting,
     autoResetPageIndex: false,
+    enableRowSelection: true,
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange,
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId,
@@ -97,5 +103,7 @@ export function useServerTable<TData>({
     setSorting,
     columnFilters,
     setColumnFilters,
+    rowSelection,
+    setRowSelection,
   };
 }

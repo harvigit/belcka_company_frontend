@@ -17,7 +17,6 @@ import {
   TextField,
   InputAdornment,
   MenuItem,
-  Tooltip,
   Popover,
   FormGroup,
   FormControlLabel,
@@ -30,22 +29,13 @@ import {
 } from "@mui/material";
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
   createColumnHelper,
-  SortingState,
 } from "@tanstack/react-table";
 import {
-  IconChevronLeft,
-  IconChevronRight,
   IconFilter,
   IconSearch,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
@@ -472,7 +462,7 @@ const HistoryList = () => {
               },
             }}
           />
-          <Button variant="contained" onClick={() => setOpen(true)}>
+          <Button variant="contained" onClick={() => setOpen(true)} sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}>
             <IconFilter width={18} />
           </Button>
         </Grid>
@@ -766,7 +756,7 @@ const HistoryList = () => {
         {data.length ? <Divider /> : <></>}
       </Box>
       <Divider />
-      <TablePaginationFooter table={table} totalRows={totalRows} />
+      <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
     </Box>
   );
 };

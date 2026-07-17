@@ -857,7 +857,7 @@ const ArchiveUserList = () => {
 
                 {/* ── Pagination ── */}
                 <Divider />
-                <TablePaginationFooter
+                <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined}
                     table={table}
                     totalRows={table.getPrePaginationRowModel().rows.length}
                 />

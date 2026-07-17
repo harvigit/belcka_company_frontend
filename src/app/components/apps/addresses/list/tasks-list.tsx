@@ -27,17 +27,10 @@ import {
 } from "@mui/material";
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
   createColumnHelper,
-  SortingState,
 } from "@tanstack/react-table";
 import {
   IconArrowLeft,
-  IconChevronRight,
   IconDownload,
   IconEdit,
   IconTrash,
@@ -50,8 +43,6 @@ import CustomTextField from "@/app/components/forms/theme-elements/CustomTextFie
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import toast from "react-hot-toast";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
-import { IconChevronLeft } from "@tabler/icons-react";
 import { AxiosResponse } from "axios";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
@@ -770,7 +761,7 @@ const TasksList = ({
       </Box>
 
       <Divider />
-      <TablePaginationFooter table={table} totalRows={totalRows} />
+      <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
 
       {/* ✅ Drawer for Add/Edit */}
       <Drawer

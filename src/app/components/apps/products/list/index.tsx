@@ -2212,7 +2212,7 @@ const ProductList = () => {
               onClick={handleSaveImages}
               disabled={isSaving}
             >
-              Save
+             {isSaving? "Saving..." : "Save"}
             </Button>
           </DialogActions>
         </Dialog>
@@ -2299,7 +2299,7 @@ const ProductList = () => {
             <Button
               variant="contained"
               onClick={() => setOpen(true)}
-              sx={{ mt: { xs: 1, sm: 0 } }}
+              sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
             >
               <IconFilter width={18} />
             </Button>
@@ -2440,7 +2440,7 @@ const ProductList = () => {
                       importProducts();
                     }}
                   >
-                    Save
+                   {isImport ? "Importing..." : "Save"}
                   </Button>
                   <Button
                     variant="outlined"
@@ -3460,7 +3460,15 @@ const ProductList = () => {
         ) : (
           <>
             <Divider />
-            <TablePaginationFooter table={table} totalRows={totalRows} />
+            <TablePaginationFooter
+              selectedCount={
+                typeof selectedRowIds !== "undefined"
+                  ? selectedRowIds.size
+                  : undefined
+              }
+              table={table}
+              totalRows={totalRows}
+            />
           </>
         )}
         <Settings

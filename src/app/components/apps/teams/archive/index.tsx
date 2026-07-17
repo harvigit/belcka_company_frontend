@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Drawer,
   Box,
@@ -11,11 +11,15 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
-import { IconArrowBackUp, IconTrash } from "@tabler/icons-react";
+import { IconArrowBackUp, IconSearch, IconTrash } from "@tabler/icons-react";
 import toast from "react-hot-toast";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+
 import { AxiosResponse } from "axios";
 
 interface ArchiveTeamProps {
@@ -41,6 +45,30 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<TeamList[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const isAllSelected = data.length > 0 && selectedIds.length === data.length;
+  const isIndeterminate =
+    selectedIds.length > 0 && selectedIds.length < data.length;
+  const [actionType, setActionType] = useState<"restore" | "delete" | null>(
+    null,
+  );
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const handleCheckboxChange = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds([]);
+    } else {
+      const allIds = data.map((item) => item.id);
+      setSelectedIds(allIds);
+    }
+  };
+
   const [selectedItem, setSelectedItem] = useState<{
     id: number;
     action: "restore" | "delete";
@@ -69,14 +97,14 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
   }, [open]);
 
   const handleConfirmAction = async () => {
-    if (!selectedItem) return;
+    if (!actionType || selectedIds.length === 0) return;
 
     try {
       const payload = {
-        team_id: selectedItem.id,
+        teams_ids: selectedIds.join(","),
       };
 
-      if (selectedItem.action === "restore") {
+      if (actionType === "restore") {
         const response = await api.post("team/unarchive", payload);
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
@@ -84,9 +112,9 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
           onWorkUpdated?.();
           onClose();
         }
-      } else if (selectedItem.action === "delete") {
+      } else if (actionType === "delete") {
         const response = await api.delete(
-          `/team/delete?team_id=${selectedItem.id}`
+          `/team/delete?team_ids=${selectedIds.join(",")}`,
         );
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
@@ -100,6 +128,15 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
       // toast.error("Something went wrong");
     }
   };
+  const filteredData = useMemo(() => {
+    let filtered = data.filter((item) => {
+      const search = searchTerm.toLowerCase();
+      const matchesSearch = item.name.toLowerCase().includes(search);
+      return matchesSearch;
+    });
+
+    return filtered;
+  }, [data, searchTerm]);
 
   return (
     <Drawer
@@ -136,8 +173,47 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
                   Archived Team List
                 </Typography>
               </Box>
+              <Box display={"flex"} gap={1} justifyItems={"center"}>
+                <TextField
+                  id="search"
+                  type="text"
+                  size="small"
+                  variant="outlined"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconSearch size={"16"} />
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent={"flex-end"}
+                >
+                  <Typography variant="body2">Select All</Typography>
+                  <CustomCheckbox
+                    checked={isAllSelected}
+                    indeterminate={isIndeterminate}
+                    onChange={handleSelectAll}
+                  />
+                </Box>
+              </Box>
 
-              {data.map((item, index) => (
+              {filteredData.length === 0 && (
+                <Box mt={2} p={2} textAlign="center">
+                  <Typography variant="body1" color="textSecondary">
+                    No records found...
+                  </Typography>
+                </Box>
+              )}
+              {filteredData.map((item, index) => (
                 <Box
                   key={index}
                   mt={2}
@@ -158,6 +234,10 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
                     width="100%"
                   >
                     <Box display={"flex"} alignItems={"center"} gap={1}>
+                      <CustomCheckbox
+                        checked={selectedIds.includes(item.id)}
+                        onChange={() => handleCheckboxChange(item.id)}
+                      />
                       <Typography variant="subtitle1" fontWeight={600}>
                         Name:
                       </Typography>
@@ -185,7 +265,8 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
                         color="primary"
                         size="small"
                         onClick={() => {
-                          setSelectedItem({ id: item.id, action: "restore" });
+                          setSelectedIds([item.id]);
+                          setActionType("restore");
                           setOpenDialog(true);
                         }}
                       >
@@ -195,7 +276,8 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
                         color="error"
                         size="small"
                         onClick={() => {
-                          setSelectedItem({ id: item.id, action: "delete" });
+                          setSelectedIds([item.id]);
+                          setActionType("delete");
                           setOpenDialog(true);
                         }}
                       >
@@ -211,6 +293,33 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
       </Box>
 
       <Box mt={2}>
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ borderRadius: 3, mr: 2 }}
+          startIcon={<IconArrowBackUp />}
+          disabled={selectedIds.length === 0}
+          onClick={() => {
+            setActionType("restore");
+            setOpenDialog(true);
+          }}
+        >
+          Restore
+        </Button>
+        <Button
+          variant="contained"
+          color="error"
+          sx={{ borderRadius: 3, mr: 2 }}
+          startIcon={<IconTrash />}
+          disabled={selectedIds.length === 0}
+          onClick={() => {
+            setActionType("delete");
+            setOpenDialog(true);
+          }}
+        >
+          Delete
+        </Button>
+
         <Button
           color="inherit"
           onClick={onClose}
@@ -228,14 +337,11 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>
-          {selectedItem?.action === "restore"
-            ? "Restore Task"
-            : "Confirm Deletion"}
+          {actionType === "restore" ? "Restore Team" : "Confirm Deletion"}
         </DialogTitle>
         <DialogContent>
           <Typography color="textSecondary">
-            Are you sure you want to <strong>{selectedItem?.action}</strong>{" "}
-            this task?
+            Are you sure you want to <strong>{actionType}</strong> this team?
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -254,7 +360,7 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
               setOpenDialog(false);
             }}
           >
-            {selectedItem?.action === "restore" ? "Confirm" : "Delete"}
+            {actionType === "restore" ? "Confirm" : "Delete"}
           </Button>
         </DialogActions>
       </Dialog>

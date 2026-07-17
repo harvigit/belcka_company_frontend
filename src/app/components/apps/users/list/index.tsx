@@ -41,18 +41,10 @@ import {
 } from "@mui/material";
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
   createColumnHelper,
-  SortingState,
 } from "@tanstack/react-table";
 import {
   IconArrowLeft,
-  IconChevronLeft,
-  IconChevronRight,
   IconFilter,
   IconSearch,
   IconTrash,
@@ -2250,7 +2242,7 @@ const TablePagination = () => {
             padding: "10px",
           }}
         >
-          <TablePaginationFooter
+          <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined}
             table={table}
             totalRows={totalRows}
           />

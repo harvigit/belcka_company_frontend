@@ -133,6 +133,13 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
                 </Typography>
               </Box>
 
+              {data.length === 0 && (
+                <Box mt={2} p={2} textAlign="center">
+                  <Typography variant="body1" color="textSecondary">
+                    No records found for cases..
+                  </Typography>
+                </Box>
+              )}
               {data.map((item, index) => (
                 <Box
                   key={index}

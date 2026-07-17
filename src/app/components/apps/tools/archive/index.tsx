@@ -143,7 +143,13 @@ const ArchiveTools: React.FC<ArchiveToolsProps> = ({
                   Archived Tool List
                 </Typography>
               </Box>
-
+              {data.length === 0 && (
+                <Box mt={2} p={2} textAlign="center">
+                  <Typography variant="body1" color="textSecondary">
+                    No records found...
+                  </Typography>
+                </Box>
+              )}
               {data.map((item, index) => (
                 <Box
                   key={index}

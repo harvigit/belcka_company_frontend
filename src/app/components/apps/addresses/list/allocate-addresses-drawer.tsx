@@ -236,7 +236,7 @@ const AllocateAddressesDrawer: React.FC<AllocateAddressesDrawerProps> = ({
             sx={{ borderRadius: 3, width: "10% !important" }}
             className="drawer_buttons"
           >
-            Save
+           {loading ? "Saving..." : "Save"}
           </Button>
           <Button
             color="inherit"

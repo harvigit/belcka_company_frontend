@@ -55,6 +55,7 @@ import { IconDotsVertical } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import ArchiveAddress from "../../addresses/list/archive-address-list";
 import CaseEditDrawer from "./case-edit-drawer";
+import { IconNotes } from "@tabler/icons-react";
 
 interface CaseSummary {
   id: number;
@@ -864,9 +865,9 @@ const CasesList = () => {
                   }}
                 >
                   <ListItemIcon>
-                    <IconNote width={18} />
+                    <IconNotes width={18} />
                   </ListItemIcon>
-                  Archive Cases
+                  Archive Case list
                 </MenuItem>
               </Menu>
             </Box>
@@ -1186,7 +1187,7 @@ const CasesList = () => {
         </Box>
         <Divider />
 
-        <TablePaginationFooter table={table} totalRows={totalRows} />
+        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
       </Box>
       {/* Edit Case Drawer */}
       <CaseEditDrawer

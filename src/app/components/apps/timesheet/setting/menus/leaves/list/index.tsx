@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   TableContainer,
   Table,
@@ -31,17 +31,9 @@ import {
 } from "@mui/material";
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
   createColumnHelper,
-  SortingState,
 } from "@tanstack/react-table";
 import {
-  IconChevronLeft,
-  IconChevronRight,
   IconEye,
   IconNotes,
   IconSearch,
@@ -49,7 +41,6 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import Link from "next/link";
@@ -765,7 +756,7 @@ const TablePagination = () => {
         {data.length ? <Divider /> : <></>}
       </Box>
       <Divider />
-      <TablePaginationFooter table={table} totalRows={totalRows} />
+      <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
     </Box>
   );
 };

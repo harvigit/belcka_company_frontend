@@ -895,6 +895,7 @@ export default function MapGantt({
               setFilterDialogOpen(true);
               fetchResources();
             }}
+            sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
           >
             <IconFilter width={18} />
           </Button>

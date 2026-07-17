@@ -708,7 +708,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
         {data.length ? <Divider /> : <></>}
       </Box>
       <Divider />
-      <TablePaginationFooter
+      <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined}
         table={table}
         totalRows={table.getPrePaginationRowModel().rows.length}
       />

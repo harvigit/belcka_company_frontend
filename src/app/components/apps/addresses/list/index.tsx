@@ -152,6 +152,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [data, setData] = useState<any[]>([]);
@@ -424,6 +425,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   };
 
   const handleSaveParentAddress = async (e: any) => {
+    setIsSaving(true);
     e.preventDefault();
 
     if (!parentAddressName) {
@@ -469,6 +471,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     } catch (err) {
       console.error(err);
     }
+    setIsSaving(false);
   };
 
   React.useEffect(() => {
@@ -1688,7 +1691,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           </TableContainer>
         </Box>
         <Divider />
-        <TablePaginationFooter table={table} totalRows={totalRows} />
+        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
         {/* Modal for File Upload */}
         <Modal open={openModel} onClose={handleModelClose} disableEscapeKeyDown>
           <Box
@@ -1801,7 +1804,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     importAddresses();
                   }}
                 >
-                  Save
+                 {isImport ? "Saving" : "Save"}
                 </Button>
                 <Button
                   variant="outlined"
@@ -2133,9 +2136,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     size="large"
                     type="submit"
                     sx={{ borderRadius: 3 }}
+                    disabled={isSaving}
                     className="drawer_buttons"
                   >
-                    Save
+                   {isSaving ? "Saving..." : "Save"}
                   </Button>
                   <Button
                     color="inherit"

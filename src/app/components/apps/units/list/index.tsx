@@ -760,7 +760,7 @@ const UnitList: React.FC = () => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <TablePaginationFooter table={table} totalRows={totalRows} />
+        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
       </Box>
     </Box>
   );

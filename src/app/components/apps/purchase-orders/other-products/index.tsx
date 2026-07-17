@@ -45,12 +45,7 @@ import {
   IconFileImport,
   IconFilter,
 } from "@tabler/icons-react";
-import {
-  useReactTable,
-  getCoreRowModel,
-  flexRender,
-  createColumnHelper,
-} from "@tanstack/react-table";
+import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { useDropzone } from "react-dropzone";
@@ -60,7 +55,8 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
 import { FileDownload } from "@mui/icons-material";
 import Link from "next/link";
-
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 interface OtherProductsDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -118,12 +114,31 @@ const OtherProductsDrawer = ({
     if (!companyId) return;
     setIsLoading(true);
     try {
-      const url = selectedProject
-        ? `other-products/get?company_id=${companyId}&project_id=${selectedProject}`
-        : `other-products/get?company_id=${companyId}`;
+      let url = selectedProject
+        ? `other-products/get?company_id=${companyId}&project_id=${selectedProject}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`
+        : `other-products/get?company_id=${companyId}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (searchTerm) {
+        url += `&search=${searchTerm}`;
+      }
       const res = await api.get(url);
-      if (res.data?.IsSuccess) {
-        setData(res.data.info || []);
+      if (res.data) {
+        const responseData =
+          res.data.info?.data || res.data.info || res.data.data || [];
+        setData(responseData);
+
+        const pagMeta =
+          res.data.data?.totalPages !== undefined ||
+          res.data.data?.totalItems !== undefined
+            ? res.data.data
+            : res.data.info;
+
+        if (pagMeta) {
+          setTotalRows(pagMeta.totalItems || responseData.length);
+          setPageCount(pagMeta.totalPages || 1);
+        } else {
+          setTotalRows(responseData.length);
+          setPageCount(1);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -487,10 +502,23 @@ const OtherProductsDrawer = ({
     }),
   ];
 
-  const table = useReactTable({
-    data: filteredData,
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
+    data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
+    fetchData: fetchData,
+    debounceDependencies: [searchTerm],
   });
 
   return (
@@ -512,12 +540,9 @@ const OtherProductsDrawer = ({
               <IconButton onClick={onClose}>
                 <IconArrowLeft />
               </IconButton>
-              <Typography variant="h6" fontWeight={700}>
+              <Typography variant="h6" fontWeight={700} noWrap>
                 Other Products
               </Typography>
-            </Box>
-
-            <Grid display="flex" gap={1} alignItems="center">
               <TextField
                 id="search"
                 type="text"
@@ -535,7 +560,7 @@ const OtherProductsDrawer = ({
                     ),
                   },
                 }}
-                sx={{ width: '100%' }}
+                // sx={{ width: '100%' }}
               />
               <Button
                 variant="contained"
@@ -543,17 +568,13 @@ const OtherProductsDrawer = ({
                   setTempProject(selectedProject);
                   setFilterOpen(true);
                 }}
-                sx={{
-                  mt: { xs: 1, sm: 0 },
-                  minWidth: "40px",
-                  padding: "6px 12px",
-                }}
+                sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
               >
                 <IconFilter width={18} />
               </Button>
-            </Grid>
+            </Box>
 
-            <Stack direction="row" spacing={2}>
+            <Stack direction="row" spacing={1}>
               {selectedRowIds.size > 0 && (
                 <Button
                   variant="outlined"
@@ -739,6 +760,16 @@ const OtherProductsDrawer = ({
               </Table>
             </TableContainer>
           </Box>
+          <Divider />
+          <TablePaginationFooter
+            selectedCount={
+              typeof selectedRowIds !== "undefined"
+                ? selectedRowIds.size
+                : undefined
+            }
+            table={table}
+            totalRows={totalRows}
+          />
         </Box>
 
         {/* Filter Dialog */}

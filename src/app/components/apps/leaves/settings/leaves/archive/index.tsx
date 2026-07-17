@@ -130,6 +130,14 @@ const ArchiveLeave: React.FC<ArchiveLeaveProps> = ({
                                 </Typography>
                             </Box>
 
+                            {data.length === 0 && (
+                                <Box mt={2} p={2} textAlign="center">
+                                <Typography variant="body1" color="textSecondary">
+                                    No records found for leaves..
+                                </Typography>
+                                </Box>
+                            )}
+
                             {data.map((item, index) => (
                                 <Box
                                     key={index}

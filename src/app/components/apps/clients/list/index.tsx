@@ -1041,7 +1041,7 @@ const ClientList = () => {
         </DialogActions>
       </Dialog>
 
-      <TablePaginationFooter table={table} totalRows={totalRows} />
+      <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
     </Box>
   );
 };

@@ -30,6 +30,8 @@ import toast from "react-hot-toast";
 import WorkDetailPage from "@/app/components/works";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 interface WorksTabProps {
   addressId: number;
@@ -52,6 +54,26 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
   const [openSidebar, setOpenSidebar] = useState(false);
   const [selectedWorkId, setSelectedWorkId] = useState(null);
   const [fetchWork, setFetchWork] = useState(false);
+  const [trade, setTrade] = useState<any[]>([]);
+  const session = useSession();
+
+  const user = session.data?.user as User & {
+    company_id?: string | number | null;
+  };
+
+  useEffect(() => {
+    const fetchTrades = async () => {
+      try {
+        const res = await api.get(
+          `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
+        );
+        if (res.data) setTrade(res.data.info);
+      } catch (err) {
+        console.error("Failed to fetch trades", err);
+      }
+    };
+    fetchTrades();
+  }, [user?.company_id]);
 
   const fetchWorkTabData = async () => {
     setFetchWork(true);
@@ -63,8 +85,10 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
         api.get("/pricework/list", { params: { address_id: addressId } }),
       ]);
 
-      const worksResponse = worksResult.status === "fulfilled" ? worksResult.value : null;
-      const priceworksResponse = priceworksResult.status === "fulfilled" ? priceworksResult.value : null;
+      const worksResponse =
+        worksResult.status === "fulfilled" ? worksResult.value : null;
+      const priceworksResponse =
+        priceworksResult.status === "fulfilled" ? priceworksResult.value : null;
       const works = worksResponse?.data?.IsSuccess
         ? worksResponse.data.info || []
         : [];
@@ -91,17 +115,17 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
 
     const uniqueTradesMap = new Map<number, any>();
 
-    tabData.forEach((item: any) => {
-      if (item.trade_id && !uniqueTradesMap.has(item.trade_id)) {
-        uniqueTradesMap.set(item.trade_id, {
-          id: item.trade_id,
-          name: item.trade_name,
+    trade.forEach((item: any) => {
+      if (item.id && !uniqueTradesMap.has(item.id)) {
+        uniqueTradesMap.set(item.id, {
+          id: item.id,
+          name: item.name,
         });
       }
     });
 
     setFilterOptions(Array.from(uniqueTradesMap.values()));
-  }, [tabData]);
+  }, [tabData, trade]);
 
   const formatHour = (val: string | number | null | undefined): string => {
     if (val === null || val === undefined) return "-";
@@ -249,7 +273,11 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
           }}
           sx={{ width: { xs: "100%", sm: "80%" }, mb: { xs: 2, sm: 0 } }}
         />
-        <Button variant="contained" onClick={() => setOpen(true)} sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}>
+        <Button
+          variant="contained"
+          onClick={() => setOpen(true)}
+          sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
+        >
           <IconFilter width={18} />
         </Button>
       </Stack>
@@ -288,7 +316,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
               getOptionLabel={(opt: any) => opt.name || ""}
               value={
                 filterOptions.find(
-                  (opt) => opt.id.toString() === tempFilters.type,
+                  (opt) => opt.id?.toString() === tempFilters.type,
                 ) || null
               }
               onChange={(_, newValue) => {
@@ -347,109 +375,124 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
       {fetchWork ? (
         <SkeletonLoader columns={[{ name: "Id" }]} rowCount={1} />
       ) : filteredData.length > 0 ? (
-        filteredData.map((work, idx) => work.is_pricework_record ? (
-          <Box
-            key={work.id}
-            mb={2}
-            sx={{
-              border: "1px solid #ccc",
-              borderRadius: 2,
-              p: 2,
-              "&:hover": { boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)" },
-            }}
-          >
-            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
-              <Box sx={{ minWidth: 0 }}>
-                <Box
-                  sx={{
-                    display: "inline-block",
-                    bgcolor: "#1e4db7",
-                    color: "#fff",
-                    borderRadius: "999px",
-                    px: 1,
-                    py: 0.2,
-                    mb: 1,
-                    fontSize: "11px",
-                    fontWeight: 600,
-                  }}
-                >
-                  Pricework
-                </Box>
-                <Typography fontWeight="bold">{work.work_type}</Typography>
-                <Typography variant="body2" color="text.secondary" mt={0.5}>
-                  {work.user_name} · {work.team_name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {work.work_complete || "0"} {work.unit_name} × {Number(work.amount_per_unit || 0).toFixed(2)}
-                  {work.date ? ` · ${work.date}` : ""}
-                </Typography>
-              </Box>
-              <Typography fontWeight="bold" fontSize="1.1rem" sx={{ whiteSpace: "nowrap" }}>
-                {Number(work.pricework_amount || 0).toFixed(2)}
-              </Typography>
-            </Stack>
-          </Box>
-        ) : (
-          <Box
-            key={idx}
-            mb={2}
-            sx={{ display: "flex", flexDirection: "column", cursor: "pointer" }}
-            onClick={() => handleWorkClick(work.id)}
-          >
+        filteredData.map((work, idx) =>
+          work.is_pricework_record ? (
             <Box
+              key={work.id}
+              mb={2}
               sx={{
-                position: "relative",
                 border: "1px solid #ccc",
                 borderRadius: 2,
                 p: 2,
-                mb: 2,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                "&:hover": {
-                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-                },
+                "&:hover": { boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)" },
               }}
             >
-              {/* Labels */}
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="flex-start"
+                spacing={2}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Box
+                    sx={{
+                      display: "inline-block",
+                      bgcolor: "#1e4db7",
+                      color: "#fff",
+                      borderRadius: "999px",
+                      px: 1,
+                      py: 0.2,
+                      mb: 1,
+                      fontSize: "11px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Pricework
+                  </Box>
+                  <Typography fontWeight="bold">{work.work_type}</Typography>
+                  <Typography variant="body2" color="text.secondary" mt={0.5}>
+                    {work.user_name} · {work.team_name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {work.work_complete || "0"} {work.unit_name} ×{" "}
+                    {Number(work.amount_per_unit || 0).toFixed(2)}
+                    {work.date ? ` · ${work.date}` : ""}
+                  </Typography>
+                </Box>
+                <Typography
+                  fontWeight="bold"
+                  fontSize="1.1rem"
+                  sx={{ whiteSpace: "nowrap" }}
+                >
+                  {Number(work.pricework_amount || 0).toFixed(2)}
+                </Typography>
+              </Stack>
+            </Box>
+          ) : (
+            <Box
+              key={idx}
+              mb={2}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                cursor: "pointer",
+              }}
+              onClick={() => handleWorkClick(work.id)}
+            >
               <Box
                 sx={{
-                  position: "absolute",
-                  top: -10,
-                  left: 16,
-                  right: 16,
+                  position: "relative",
+                  border: "1px solid #ccc",
+                  borderRadius: 2,
+                  p: 2,
+                  mb: 2,
                   display: "flex",
+                  alignItems: "center",
                   justifyContent: "space-between",
-                  gap: 1,
                   flexWrap: "wrap",
-                  zIndex: 1,
+                  "&:hover": {
+                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                  },
                 }}
               >
-                <Box display={"flex"} gap={1}>
-                  <Tooltip title={work.trade_name || ""} arrow>
-                    <Box
-                      sx={{
-                        backgroundColor: "#FF7A00",
-                        border: "1px solid #FF7A00",
-                        color: "#fff",
-                        fontSize: "11px",
-                        fontWeight: 500,
-                        px: 1,
-                        py: 0.2,
-                        borderRadius: "999px",
-                        maxWidth: "80px",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {truncateText(work.trade_name)}
-                    </Box>
-                  </Tooltip>
+                {/* Labels */}
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: -10,
+                    left: 16,
+                    right: 16,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 1,
+                    flexWrap: "wrap",
+                    zIndex: 1,
+                  }}
+                >
+                  <Box display={"flex"} gap={1}>
+                    <Tooltip title={work.trade_name || ""} arrow>
+                      <Box
+                        sx={{
+                          backgroundColor: "#FF7A00",
+                          border: "1px solid #FF7A00",
+                          color: "#fff",
+                          fontSize: "11px",
+                          fontWeight: 500,
+                          px: 1,
+                          py: 0.2,
+                          borderRadius: "999px",
+                          maxWidth: "80px",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {truncateText(work.trade_name)}
+                      </Box>
+                    </Tooltip>
 
-                  {/* <Box
+                    {/* <Box
                     sx={{
                       backgroundColor: "#7523D3",
                       border: "1px solid #7523D3",
@@ -464,118 +507,121 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                     {work.duration}
                   </Box> */}
 
-                  <Box
-                    sx={{
-                      backgroundColor:
-                        work.repeatable_job === "Task" ? "#32A852" : "#FF008C",
-                      border:
-                        work.repeatable_job === "Task"
-                          ? "1px solid #32A852"
-                          : "1px solid #FF008C",
-                      color: "#fff",
-                      fontSize: "11px",
-                      fontWeight: 500,
-                      px: 1,
-                      py: 0.2,
-                      borderRadius: "999px",
-                    }}
-                  >
-                    {work.repeatable_job === "Task" ? work.rate : "Job"}
+                    <Box
+                      sx={{
+                        backgroundColor:
+                          work.repeatable_job === "Task"
+                            ? "#32A852"
+                            : "#FF008C",
+                        border:
+                          work.repeatable_job === "Task"
+                            ? "1px solid #32A852"
+                            : "1px solid #FF008C",
+                        color: "#fff",
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        px: 1,
+                        py: 0.2,
+                        borderRadius: "999px",
+                      }}
+                    >
+                      {work.repeatable_job === "Task" ? work.rate : "Job"}
+                    </Box>
+
+                    <Box
+                      sx={{
+                        backgroundColor: work.status_color,
+                        border: `1px solid ${work.status_color}`,
+                        color: "#fff",
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        px: 1,
+                        py: 0.2,
+                        borderRadius: "999px",
+                      }}
+                    >
+                      {work.status_text}
+                    </Box>
                   </Box>
-
-                  <Box
-                    sx={{
-                      backgroundColor: work.status_color,
-                      border: `1px solid ${work.status_color}`,
-                      color: "#fff",
-                      fontSize: "11px",
-                      fontWeight: 500,
-                      px: 1,
-                      py: 0.2,
-                      borderRadius: "999px",
-                    }}
-                  >
-                    {work.status_text}
+                  <Box display={"flex"} gap={1} alignItems={"center"}>
+                    <Badge
+                      badgeContent={work.count}
+                      color="error"
+                      overlap="circular"
+                    >
+                      {work.count > 0 && (
+                        <IconButton
+                          sx={{
+                            minHeight: "20px !important",
+                            height: "10px",
+                            top: "3px",
+                            backgroundColor: "white",
+                            "&:hover": {
+                              backgroundColor: "white !important",
+                            },
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <IconPaperclip color="#1e4db7" />
+                        </IconButton>
+                      )}
+                    </Badge>
                   </Box>
                 </Box>
-                <Box display={"flex"} gap={1} alignItems={"center"}>
-                  <Badge
-                    badgeContent={work.count}
-                    color="error"
-                    overlap="circular"
-                  >
-                    {work.count > 0 && (
-                      <IconButton
-                        sx={{
-                          minHeight: "20px !important",
-                          height: "10px",
-                          top: "3px",
-                          backgroundColor: "white",
-                          "&:hover": {
-                            backgroundColor: "white !important",
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                      >
-                        <IconPaperclip color="#1e4db7" />
-                      </IconButton>
-                    )}
-                  </Badge>
-                </Box>
-              </Box>
 
-              {/* Work row */}
-              <Stack
-                direction="row"
-                spacing={2}
-                alignItems="center"
-                sx={{ width: "100%", mt: 1 }}
-              >
-                <Box sx={{ flexGrow: 1 }}>
-                  <Typography
-                    fontWeight="bold"
-                    mb={1}
-                    sx={{ fontSize: { xs: "1rem", sm: "1.125rem" } }}
-                  >
-                    {work.name}
-                  </Typography>
-
-                  {/* Progress Bar */}
-                  {/* <ProgressBar work={work} /> */}
-                </Box>
-
-                {work.is_checklog === false && work.status_int == 1 && (
-                  <IconButton
-                    color="error"
-                    onClick={(e) => {
-                      setOpenDialog(true);
-                      setSelectedIds(work.id);
-                      e.stopPropagation();
-                    }}
-                  >
-                    <IconTrash width={18} />
-                  </IconButton>
-                )}
-
-                {parseFloat(work.total_work_hours) > 0 && (
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography fontWeight="bold" fontSize="1.25rem">
-                      {formatHour(work.total_work_hours)} H
+                {/* Work row */}
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  alignItems="center"
+                  sx={{ width: "100%", mt: 1 }}
+                >
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography
+                      fontWeight="bold"
+                      mb={1}
+                      sx={{ fontSize: { xs: "1rem", sm: "1.125rem" } }}
+                    >
+                      {work.name}
                     </Typography>
-                    <IconButton>
-                      <IconChevronRight
-                        fontSize="small"
-                        onClick={(e) => e.stopPropagation()}
-                      />
+
+                    {/* Progress Bar */}
+                    {/* <ProgressBar work={work} /> */}
+                  </Box>
+
+                  {work.is_checklog === false && work.status_int == 1 && (
+                    <IconButton
+                      color="error"
+                      onClick={(e) => {
+                        setOpenDialog(true);
+                        setSelectedIds(work.id);
+                        e.stopPropagation();
+                      }}
+                    >
+                      <IconTrash width={18} />
                     </IconButton>
-                  </Stack>
-                )}
-              </Stack>
+                  )}
+
+                  {parseFloat(work.total_work_hours) > 0 && (
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Typography fontWeight="bold" fontSize="1.25rem">
+                        {formatHour(work.total_work_hours)} H
+                      </Typography>
+                      <IconButton>
+                        <IconChevronRight
+                          fontSize="small"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </IconButton>
+                    </Stack>
+                  )}
+                </Stack>
+              </Box>
             </Box>
-          </Box>
-        ))
+          ),
+        )
       ) : (
         <Box
           sx={{

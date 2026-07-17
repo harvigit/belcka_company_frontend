@@ -1295,7 +1295,7 @@ const Leaves = () => {
             </TableContainer>
             {filteredSummaryRows.length ? <Divider/> : <></>}
             
-            <TablePaginationFooter table={table} totalRows={filteredSummaryRows.length}/>
+            <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={filteredSummaryRows.length}/>
 
             <Drawer
                 anchor="bottom"

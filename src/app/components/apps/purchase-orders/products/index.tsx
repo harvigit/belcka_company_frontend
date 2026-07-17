@@ -1104,6 +1104,7 @@ const PurchaseProductList: React.FC<Props> = ({
                 setTempFilters(filters);
                 setFilterOpen(true);
               }}
+              sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
             >
               <IconFilter width={18} />
             </Button>

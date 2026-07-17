@@ -944,7 +944,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
           </TableContainer>
         </Box>
         <Divider />
-        <TablePaginationFooter table={table} totalRows={totalRows} />
+        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
         {/* Dialogs and Drawers */}
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
           <DialogTitle>Confirm Archive</DialogTitle>
@@ -1444,6 +1444,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
               onClick={handleSaveProducts}
               variant="contained"
               size="large"
+              disabled={isSaving}
               sx={{ borderRadius: 3 }}
             >
               {isSaving ? "Saving..." : "Save"}

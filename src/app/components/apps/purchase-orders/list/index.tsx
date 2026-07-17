@@ -30,23 +30,13 @@ import {
   Checkbox,
   CircularProgress,
   Paper,
-  ListItemText,
 } from "@mui/material";
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
   createColumnHelper,
-  SortingState,
 } from "@tanstack/react-table";
 import { useServerTable } from "@/hooks/useServerTable";
 import {
-  IconBasketCancel,
-  IconChevronLeft,
-  IconChevronRight,
   IconDownload,
   IconEye,
   IconFileSignal,
@@ -60,7 +50,6 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import Link from "next/link";
@@ -1767,7 +1756,7 @@ Team Belcka
                 },
               }}
             />
-            <Button variant="contained" onClick={() => setFilterOpen(true)}>
+            <Button variant="contained" onClick={() => setFilterOpen(true)} sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}>
               <IconFilter width={18} />
             </Button>
 
@@ -2354,7 +2343,7 @@ Team Belcka
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <TablePaginationFooter table={table} totalRows={totalRows} />
+        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
 
         <Dialog open={modalOpen} onClose={handleCloseModal}>
           <DialogTitle>Select Delivery Date</DialogTitle>

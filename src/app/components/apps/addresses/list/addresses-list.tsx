@@ -80,6 +80,7 @@ import {
   Marker,
   useJsApiLoader,
 } from "@react-google-maps/api";
+import { IconNotes } from "@tabler/icons-react";
 dayjs.extend(customParseFormat);
 
 interface AddressesListProps {
@@ -146,6 +147,7 @@ const AddressesList = ({
   const [sidebarData, setSidebarData] = useState<any>(null);
   const [value, setValue] = useState<number>(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [anchorEl1, setAnchorEl1] = useState<null | HTMLElement>(null);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
@@ -183,6 +185,7 @@ const AddressesList = ({
   const [typedAddress, setTypedAddress] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const openMenu = Boolean(anchorEl);
+  const openMenu1 = Boolean(anchorEl1);
   const [filters, setFilters] = useState({
     status: "",
     project: "",
@@ -232,16 +235,21 @@ const AddressesList = ({
   const [isSaving, setIsSaving] = useState(false);
   const [trade, setTrade] = useState<TradeList[]>([]);
 
-  const tooltipStyles = {
-    "& .MuiTooltip-arrow": { color: "#1a1f29" },
-  };
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
+    setAnchorEl1(event.currentTarget);
   };
   const handleClose = () => {
     setAnchorEl(null);
+    setAnchorEl1(null);
   };
 
+  const handleClick1 = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl1(event.currentTarget);
+  };
+  const handleClose1 = () => {
+    setAnchorEl1(null);
+  };
   useEffect(() => {
     const fetchTrades = async () => {
       try {
@@ -487,7 +495,7 @@ const AddressesList = ({
     }
 
     const currentProject = projects?.find(
-      (p: any) => p.id === Number(projectId) || p.id === task.project_id
+      (p: any) => p.id === Number(projectId) || p.id === task.project_id,
     );
     let initialRadius = task.radius || currentProject?.radius || 100;
 
@@ -495,14 +503,15 @@ const AddressesList = ({
     let initialLng = task.longitude;
 
     if (!initialLat || !initialLng) {
-      const currentParent = parentAddresses?.filter((item) => !item.is_conflict).find(
-        (p: any) => p.id === Number(task.parent_address_id)
-      );
+      const currentParent = parentAddresses
+        ?.filter((item) => !item.is_conflict)
+        .find((p: any) => p.id === Number(task.parent_address_id));
       if (currentParent?.lat && currentParent?.lng) {
         initialLat = currentParent.lat;
         initialLng = currentParent.lng;
       } else if (currentParent) {
-        const query = `${currentParent?.name ?? ""} ${currentParent?.pin_code ?? ""}`.trim();
+        const query =
+          `${currentParent?.name ?? ""} ${currentParent?.pin_code ?? ""}`.trim();
         if (query && window.google) {
           try {
             const geocoder = new window.google.maps.Geocoder();
@@ -1262,9 +1271,9 @@ const AddressesList = ({
             <MenuItem
               onClick={async () => {
                 handleClose();
-                const currentParent = parentAddresses.filter((item) => !item.is_conflict).find(
-                  (p: any) => p.id === Number(parentAddressId),
-                );
+                const currentParent = parentAddresses
+                  .filter((item) => !item.is_conflict)
+                  .find((p: any) => p.id === Number(parentAddressId));
                 const currentProject = projects?.find(
                   (p: any) => p.id === Number(projectId),
                 );
@@ -1363,9 +1372,9 @@ const AddressesList = ({
               }}
             >
               <ListItemIcon>
-                <IconNote width={18} />
+                <IconNotes width={18} />
               </ListItemIcon>
-              Archive Cases
+              Archive Case List
             </MenuItem>
           </Menu>
         </Box>
@@ -1490,6 +1499,11 @@ const AddressesList = ({
       <Divider />
 
       <TablePaginationFooter
+        selectedCount={
+          typeof selectedRowIds !== "undefined"
+            ? selectedRowIds.size
+            : undefined
+        }
         table={table}
         totalRows={table.getPrePaginationRowModel().rows.length}
       />
@@ -1528,9 +1542,9 @@ const AddressesList = ({
                   </Typography>
                   <Menu
                     id="basic-menu"
-                    anchorEl={anchorEl}
-                    open={openMenu}
-                    onClose={handleClose}
+                    anchorEl={anchorEl1}
+                    open={openMenu1}
+                    onClose={handleClose1}
                     slotProps={{
                       list: {
                         "aria-labelledby": "basic-button",
@@ -1591,10 +1605,10 @@ const AddressesList = ({
                   <IconButton
                     sx={{ margin: "0px" }}
                     id="basic-button"
-                    aria-controls={openMenu ? "basic-menu" : undefined}
+                    aria-controls={openMenu1 ? "basic-menu" : undefined}
                     aria-haspopup="true"
-                    aria-expanded={openMenu ? "true" : undefined}
-                    onClick={handleClick}
+                    aria-expanded={openMenu1 ? "true" : undefined}
+                    onClick={handleClick1}
                   >
                     <IconDotsVertical width={18} />
                   </IconButton>
@@ -1923,7 +1937,11 @@ const AddressesList = ({
                     <Autocomplete
                       fullWidth
                       options={projects || []}
-                      value={(projects || []).find((p: any) => p.id === formData.project_id) || null}
+                      value={
+                        (projects || []).find(
+                          (p: any) => p.id === formData.project_id,
+                        ) || null
+                      }
                       onChange={(e, newVal: any) =>
                         setFormData((prev: any) => ({
                           ...prev,
@@ -2224,7 +2242,11 @@ const AddressesList = ({
                       <Autocomplete
                         fullWidth
                         options={projects || []}
-                        value={(projects || []).find((p: any) => p.id === formData.project_id) || null}
+                        value={
+                          (projects || []).find(
+                            (p: any) => p.id === formData.project_id,
+                          ) || null
+                        }
                         onChange={(e, newVal: any) =>
                           setFormData((prev: any) => ({
                             ...prev,
@@ -2250,11 +2272,16 @@ const AddressesList = ({
                     <Box mb={2} mt={2}>
                       <Autocomplete
                         fullWidth
-                        options={parentAddresses.filter((item) => !item.is_conflict) || []}
+                        options={
+                          parentAddresses.filter((item) => !item.is_conflict) ||
+                          []
+                        }
                         value={
-                          parentAddresses?.filter((item) => !item.is_conflict).find(
-                            (p: any) => p.id === formData.parent_address_id,
-                          ) || null
+                          parentAddresses
+                            ?.filter((item) => !item.is_conflict)
+                            .find(
+                              (p: any) => p.id === formData.parent_address_id,
+                            ) || null
                         }
                         onChange={async (e, newVal: any) => {
                           if (!newVal) {
@@ -2284,7 +2311,10 @@ const AddressesList = ({
 
                           if (existingCases && existingCases.length > 0) {
                             const firstCase = existingCases[0];
-                            newName = firstCase.parent_addresses_name || newVal.name || "";
+                            newName =
+                              firstCase.parent_addresses_name ||
+                              newVal.name ||
+                              "";
                             newLat = firstCase.lat || firstCase.latitude;
                             newLng = firstCase.lng || firstCase.longitude;
                             newRadius = firstCase.radius || 100;
@@ -2295,17 +2325,24 @@ const AddressesList = ({
                               newLng = newVal.lng;
                               newName = newVal.name || "";
                             } else {
-                              const query = `${newVal.name ?? ""} ${newVal.pin_code ?? ""}`.trim();
+                              const query =
+                                `${newVal.name ?? ""} ${newVal.pin_code ?? ""}`.trim();
                               newName = newVal.name || "";
                               if (query && window.google) {
                                 try {
-                                  const geocoder = new window.google.maps.Geocoder();
-                                  const results = await new Promise<any>((resolve, reject) => {
-                                    geocoder.geocode({ address: query }, (res, status) => {
-                                      if (status === "OK") resolve(res);
-                                      else reject(status);
-                                    });
-                                  });
+                                  const geocoder =
+                                    new window.google.maps.Geocoder();
+                                  const results = await new Promise<any>(
+                                    (resolve, reject) => {
+                                      geocoder.geocode(
+                                        { address: query },
+                                        (res, status) => {
+                                          if (status === "OK") resolve(res);
+                                          else reject(status);
+                                        },
+                                      );
+                                    },
+                                  );
                                   if (results?.[0]?.geometry?.location) {
                                     newLat = results[0].geometry.location.lat();
                                     newLng = results[0].geometry.location.lng();
@@ -2356,29 +2393,29 @@ const AddressesList = ({
                     </Box>
                   )}
                   {parentAddressId && (
-                  <Box
-                    display={"flex"}
-                    justifyContent={"space-between"}
-                    gap={1}
-                  >
-                    <TextField
-                      label="Enter address"
-                      id="name"
-                      name="name"
-                      placeholder="Search for address.."
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      variant="outlined"
-                      fullWidth
-                    />
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={handleSearchClick}
+                    <Box
+                      display={"flex"}
+                      justifyContent={"space-between"}
+                      gap={1}
                     >
-                      Search
-                    </Button>
-                  </Box>
+                      <TextField
+                        label="Enter address"
+                        id="name"
+                        name="name"
+                        placeholder="Search for address.."
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        variant="outlined"
+                        fullWidth
+                      />
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleSearchClick}
+                      >
+                        Search
+                      </Button>
+                    </Box>
                   )}
 
                   {typedAddress && predictions.length > 0 && (

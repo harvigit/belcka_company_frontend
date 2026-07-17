@@ -19,7 +19,6 @@ import {
     Drawer,
     InputAdornment,
     Snackbar,
-    Alert,
     Popover,
     FormGroup,
     FormControlLabel,
@@ -29,12 +28,9 @@ import {
     Menu,
     ListItemIcon, Tooltip,
     Badge,
-    CircularProgress,
 } from '@mui/material';
 import {
     IconSearch,
-    IconChevronLeft,
-    IconChevronRight,
     IconLock,
     IconLockOpen,
     IconChevronUp,
@@ -44,11 +40,6 @@ import {
     IconSettings, IconRestore, IconTrash,
 } from '@tabler/icons-react';
 import {
-    useReactTable,
-    getCoreRowModel,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
     createColumnHelper,
     flexRender,
     VisibilityState
@@ -74,7 +65,6 @@ import {AxiosResponse} from 'axios';
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import TimeClockDetails from './time-clock-details';
-import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import AddLeave from './time-clock-details/leaves/add-leave';
 
@@ -2247,7 +2237,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 {data.length ? <Divider/> : <></>}
             </Box>
 
-            <TablePaginationFooter table={table} totalRows={totalRows} />
+            <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
 
             <Drawer
                 anchor="bottom"

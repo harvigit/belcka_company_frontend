@@ -1198,7 +1198,7 @@ const CategoryList = () => {
               }}
               disabled={isSaving}
             >
-              Save
+             {isSaving ? "Saving..." : "Save"}
             </Button>
           </DialogActions>
         </Dialog>
@@ -1382,7 +1382,7 @@ const CategoryList = () => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <TablePaginationFooter table={table} totalRows={totalRows} />
+        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
       </Box>
     </PermissionGuard>
   );

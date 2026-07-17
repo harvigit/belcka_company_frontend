@@ -199,7 +199,7 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
           }}
         />
 
-        {filteredData.map((product) => (
+        {filteredData.length === 0 && ( <Box mt={2} p={2} textAlign="center"> <Typography variant="body1" color="textSecondary"> No records found for products.. </Typography> </Box> )} {filteredData.map((product) => (
           <Box
             key={product.id}
             mt={1}
