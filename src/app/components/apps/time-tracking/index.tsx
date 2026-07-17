@@ -43,8 +43,8 @@ import {
     IconEyeOff,
 } from '@tabler/icons-react';
 
-import { AxiosResponse } from 'axios';
-import { parse } from 'date-fns';
+import {AxiosResponse} from 'axios';
+import {parse} from 'date-fns';
 import {
     useReactTable,
     getCoreRowModel,
@@ -63,25 +63,25 @@ import {
     Polyline,
 } from '@react-google-maps/api';
 
-import { useSession } from 'next-auth/react';
+import {useSession} from 'next-auth/react';
 
 import api from '@/utils/axios';
 import TimeClockTable from './components/TimeClockTable';
 import TimeClockStats from './components/TimeClockStats';
 import PermissionGuard from '@/app/auth/PermissionGuard';
-import { useTimeClockData } from './hooks/useTimeClockData';
-import { useEditingState } from './hooks/useEditingState';
-import { DailyBreakdown } from './types/timeClock';
-import type { User } from 'next-auth';
+import {useTimeClockData} from './hooks/useTimeClockData';
+import {useEditingState} from './hooks/useEditingState';
+import {DailyBreakdown} from './types/timeClock';
+import type {User} from 'next-auth';
 import AddExpense from '@/app/components/apps/time-clock/time-clock-details/expenses/add-expense';
 import AddWorklog from '@/app/components/apps/time-clock/time-clock-details/worklog/add-worklog';
 import AddPricework from '@/app/components/apps/time-clock/time-clock-details/pricework/add-pricework';
-import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from '@/utils/googleMaps';
+import {GOOGLE_MAPS_SHARED_LOADER_OPTIONS} from '@/utils/googleMaps';
 import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
 
 const TIME_TRACKING_PAGE = 'time-tracking-page';
 const TIME_TRACKING_COLUMNS_COOKIE = 'time-tracking-column-visibility';
-const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 };
+const DEFAULT_CENTER = {lat: 51.5074, lng: -0.1278};
 const DEFAULT_ZOOM = 13;
 
 const WEEK_DAY_MAP: Record<number, string> = {
@@ -152,6 +152,8 @@ type ApiResponse<T = unknown> = {
     IsSuccess: boolean;
     message: string;
     data?: T;
+    is_rate_approved?: boolean;
+    user_worklog_id?: number | null;
 };
 
 type ActiveWorklogResponse = {
@@ -262,7 +264,11 @@ const normalizeLocations = (locations?: LocationPoint[]): LocationPoint[] =>
 const parseGeofencePath = (coordinates: unknown): google.maps.LatLngLiteral[] => {
     let raw = coordinates;
     if (typeof raw === 'string') {
-        try { raw = JSON.parse(raw); } catch { return []; }
+        try {
+            raw = JSON.parse(raw);
+        } catch {
+            return [];
+        }
     }
     if (!Array.isArray(raw)) return [];
     return raw
@@ -271,7 +277,7 @@ const parseGeofencePath = (coordinates: unknown): google.maps.LatLngLiteral[] =>
             const v = point as Record<string, unknown>;
             const lat = Number(v.lat ?? v.latitude);
             const lng = Number(v.lng ?? v.longitude);
-            return isValidLatLng(lat, lng) ? { lat, lng } : null;
+            return isValidLatLng(lat, lng) ? {lat, lng} : null;
         })
         .filter((p): p is google.maps.LatLngLiteral => p !== null);
 };
@@ -284,7 +290,7 @@ const normalizeGeofences = (geofences?: WorklogGeofenceApi[]): WorklogGeofence[]
 
             const lat = Number(zone?.latitude);
             const lng = Number(zone?.longitude);
-            const center = isValidLatLng(lat, lng) ? { lat, lng } : null;
+            const center = isValidLatLng(lat, lng) ? {lat, lng} : null;
 
             let path: google.maps.LatLngLiteral[] = [];
             if (zone?.boundary && typeof zone.boundary === 'string') {
@@ -348,7 +354,7 @@ const getCurrentWeekRange = (): { start: Date; end: Date } => {
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
     end.setHours(23, 59, 59, 999);
-    return { start, end };
+    return {start, end};
 };
 
 const getTodayDayName = () => WEEK_DAY_MAP[new Date().getDay()];
@@ -371,7 +377,7 @@ const loadStoredSettings = (): {
     } catch (error) {
         console.error('Error loading settings:', error);
     }
-    return { startDate: null, endDate: null, columnVisibility: {} };
+    return {startDate: null, endDate: null, columnVisibility: {}};
 };
 
 const saveSettingsToStorage = (
@@ -411,7 +417,7 @@ const getAddressFromCoordinates = (latitude: number, longitude: number): Promise
 
         const geocoder = new google.maps.Geocoder();
         geocoder.geocode(
-            { location: { lat: latitude, lng: longitude } },
+            {location: {lat: latitude, lng: longitude}},
             (results, status) => {
                 if (status === 'OK' && results && results.length > 0) {
                     const address = results[0].formatted_address;
@@ -464,12 +470,12 @@ const useGeolocation = (
 
             if (navigator.permissions) {
                 try {
-                    const result = await navigator.permissions.query({ name: 'geolocation' });
+                    const result = await navigator.permissions.query({name: 'geolocation'});
                     if (result.state === 'denied') {
                         onError('denied');
                         return null;
                     }
-                } catch { /* fall through */ }
+                } catch {}
             }
 
             let best: (LocationCoords & { accuracy: number }) | null = null;
@@ -525,7 +531,7 @@ const useGeolocation = (
         [lastKnownLocation, setLastKnownLocation]
     );
 
-    return { getLocation };
+    return {getLocation};
 };
 
 interface LocationPermissionDialogProps {
@@ -540,17 +546,17 @@ const LocationPermissionDialog: React.FC<LocationPermissionDialogProps> = ({open
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth
-                PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}>
-            <Box sx={{ height: 4, background: 'linear-gradient(90deg,#ef4444,#f97316)' }} />
+                PaperProps={{sx: {borderRadius: 3, overflow: 'hidden'}}}>
+            <Box sx={{height: 4, background: 'linear-gradient(90deg,#ef4444,#f97316)'}}/>
 
-            <DialogTitle sx={{ pt: 2.5, pb: 1 }}>
+            <DialogTitle sx={{pt: 2.5, pb: 1}}>
                 <Stack direction="row" alignItems="center" spacing={1.5}>
                     <Box sx={{
                         width: 40, height: 40, borderRadius: 2,
                         background: 'rgba(239,68,68,0.1)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     }}>
-                        <IconMapPinOff size={20} color="#ef4444" />
+                        <IconMapPinOff size={20} color="#ef4444"/>
                     </Box>
                     <Box>
                         <Typography fontWeight={700} fontSize={15} lineHeight={1.2}>
@@ -563,7 +569,7 @@ const LocationPermissionDialog: React.FC<LocationPermissionDialogProps> = ({open
                 </Stack>
             </DialogTitle>
 
-            <DialogContent sx={{ pt: 1, pb: 2 }}>
+            <DialogContent sx={{pt: 1, pb: 2}}>
                 {isDenied ? (
                     <Stack spacing={2}>
                         <Typography fontSize={13} color="text.secondary" lineHeight={1.6}>
@@ -582,9 +588,11 @@ const LocationPermissionDialog: React.FC<LocationPermissionDialogProps> = ({open
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         flexShrink: 0, mt: 0.1,
                                     }}>
-                                        <Typography sx={{ color: '#fff', fontSize: 10, fontWeight: 700 }}>{i + 1}</Typography>
+                                        <Typography
+                                            sx={{color: '#fff', fontSize: 10, fontWeight: 700}}>{i + 1}</Typography>
                                     </Box>
-                                    <Typography fontSize={12} color="text.secondary" lineHeight={1.5}>{step}</Typography>
+                                    <Typography fontSize={12} color="text.secondary"
+                                                lineHeight={1.5}>{step}</Typography>
                                 </Stack>
                             ))}
                         </Box>
@@ -598,20 +606,30 @@ const LocationPermissionDialog: React.FC<LocationPermissionDialogProps> = ({open
                 )}
             </DialogContent>
 
-            <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+            <DialogActions sx={{px: 3, pb: 2.5, gap: 1}}>
                 <Button onClick={onClose} variant="outlined" size="small"
-                        sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}>
+                        sx={{textTransform: 'none', fontWeight: 600, borderRadius: 2}}>
                     Cancel
                 </Button>
                 {isDenied ? (
                     <Button onClick={onClose} variant="contained" size="small"
-                            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, background: 'linear-gradient(135deg,#ef4444,#f97316)' }}>
+                            sx={{
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                borderRadius: 2,
+                                background: 'linear-gradient(135deg,#ef4444,#f97316)'
+                            }}>
                         Got it
                     </Button>
                 ) : (
                     <Button onClick={onRetry} variant="contained" size="small"
-                            startIcon={<IconMapPin size={14} />}
-                            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, background: 'linear-gradient(135deg,#06b6d4,#3b82f6)' }}>
+                            startIcon={<IconMapPin size={14}/>}
+                            sx={{
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                borderRadius: 2,
+                                background: 'linear-gradient(135deg,#06b6d4,#3b82f6)'
+                            }}>
                         Try Again
                     </Button>
                 )}
@@ -629,7 +647,7 @@ interface ClockButtonProps {
     loading: boolean;
 }
 
-const ClockButton: React.FC<ClockButtonProps> = ({ isWorking, onClick, loading }) => {
+const ClockButton: React.FC<ClockButtonProps> = ({isWorking, onClick, loading}) => {
     const gradient = isWorking
         ? 'linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%)'
         : 'linear-gradient(135deg, #4ecdc4 0%, #44a5c2 100%)';
@@ -651,8 +669,8 @@ const ClockButton: React.FC<ClockButtonProps> = ({ isWorking, onClick, loading }
                 }
             }}
             sx={{
-                width: { xs: 108, sm: 124, md: 140 },
-                height: { xs: 108, sm: 124, md: 140 },
+                width: {xs: 108, sm: 124, md: 140},
+                height: {xs: 108, sm: 124, md: 140},
                 borderRadius: '50%',
                 background: gradient,
                 display: 'flex', flexDirection: 'column',
@@ -661,22 +679,22 @@ const ClockButton: React.FC<ClockButtonProps> = ({ isWorking, onClick, loading }
                 boxShadow: shadow,
                 transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
                 userSelect: 'none', gap: 0.5,
-                '&:hover': loading ? {} : { transform: 'scale(1.08)' },
-                '&:active': loading ? {} : { transform: 'scale(0.96)' },
-                '&:focus-visible': { outline: '3px solid #3b82f6', outlineOffset: 4 },
+                '&:hover': loading ? {} : {transform: 'scale(1.08)'},
+                '&:active': loading ? {} : {transform: 'scale(0.96)'},
+                '&:focus-visible': {outline: '3px solid #3b82f6', outlineOffset: 4},
                 opacity: loading ? 0.7 : 1,
             }}
         >
             {loading ? (
-                <CircularProgress size={32} color="inherit" sx={{ color: 'white' }} />
+                <CircularProgress size={32} color="inherit" sx={{color: 'white'}}/>
             ) : isWorking ? (
-                <IconPlayerStop size={32} color="#fff" stroke={2.5} />
+                <IconPlayerStop size={32} color="#fff" stroke={2.5}/>
             ) : (
-                <IconClockPlay size={32} color="#fff" stroke={2.5} />
+                <IconClockPlay size={32} color="#fff" stroke={2.5}/>
             )}
             <Typography sx={{
                 color: '#fff', fontWeight: 800,
-                fontSize: { xs: 11, md: 12 },
+                fontSize: {xs: 11, md: 12},
                 letterSpacing: 0.5, mt: 0.25, textTransform: 'uppercase',
             }}>
                 {isWorking ? 'Stop' : 'Start'}
@@ -693,7 +711,7 @@ interface PinOverlayProps {
     userInitials?: string;
 }
 
-const PinOverlay: React.FC<PinOverlayProps> = ({ position, color, userName, userImage, userInitials }) => {
+const PinOverlay: React.FC<PinOverlayProps> = ({position, color, userName, userImage, userInitials}) => {
     const [hovered, setHovered] = useState(false);
     const pinColor = color || '#1976d2';
     const displayInitials =
@@ -701,7 +719,7 @@ const PinOverlay: React.FC<PinOverlayProps> = ({ position, color, userName, user
 
     return (
         <OverlayView position={position} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                     getPixelPositionOffset={() => ({ x: -24, y: -58 })}>
+                     getPixelPositionOffset={() => ({x: -24, y: -58})}>
             <div
                 onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
@@ -712,10 +730,11 @@ const PinOverlay: React.FC<PinOverlayProps> = ({ position, color, userName, user
                     transition: 'filter 0.15s ease, transform 0.15s ease',
                 }}
             >
-                <svg width="48" height="58" viewBox="0 0 48 58" style={{ position: 'absolute', top: 0, left: 0 }}>
-                    <path d="M24 0C13.507 0 5 8.507 5 19c0 14.25 19 39 19 39S43 33.25 43 19C43 8.507 34.493 0 24 0z" fill={pinColor} />
-                    <circle cx="24" cy="19" r="15" fill="white" />
-                    <circle cx="24" cy="19" r="15" fill={pinColor} fillOpacity="0.12" />
+                <svg width="48" height="58" viewBox="0 0 48 58" style={{position: 'absolute', top: 0, left: 0}}>
+                    <path d="M24 0C13.507 0 5 8.507 5 19c0 14.25 19 39 19 39S43 33.25 43 19C43 8.507 34.493 0 24 0z"
+                          fill={pinColor}/>
+                    <circle cx="24" cy="19" r="15" fill="white"/>
+                    <circle cx="24" cy="19" r="15" fill={pinColor} fillOpacity="0.12"/>
                 </svg>
                 <div style={{
                     position: 'absolute', top: 4, left: 9,
@@ -725,9 +744,15 @@ const PinOverlay: React.FC<PinOverlayProps> = ({ position, color, userName, user
                 }}>
                     {userImage ? (
                         <img src={userImage} alt={userName || 'User'}
-                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                             style={{width: '100%', height: '100%', objectFit: 'cover', display: 'block'}}/>
                     ) : (
-                        <span style={{ color: 'white', fontWeight: 700, fontSize: 11, userSelect: 'none', fontFamily: 'sans-serif' }}>
+                        <span style={{
+                            color: 'white',
+                            fontWeight: 700,
+                            fontSize: 11,
+                            userSelect: 'none',
+                            fontFamily: 'sans-serif'
+                        }}>
                             {displayInitials}
                         </span>
                     )}
@@ -746,8 +771,16 @@ interface StartWorkDialogProps {
     setLastKnownLocation?: (loc: LocationCoords | null) => void;
 }
 
-const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfirm, loading, lastKnownLocation, setLastKnownLocation}) => {
-    const { getLocation } = useGeolocation(lastKnownLocation ?? null, setLastKnownLocation ?? (() => {}));
+const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
+                                                             open,
+                                                             onClose,
+                                                             onConfirm,
+                                                             loading,
+                                                             lastKnownLocation,
+                                                             setLastKnownLocation
+                                                         }) => {
+    const {getLocation} = useGeolocation(lastKnownLocation ?? null, setLastKnownLocation ?? (() => {
+    }));
 
     const [shifts, setShifts] = useState<ShiftOption[]>([]);
     const [projects, setProjects] = useState<ProjectOption[]>([]);
@@ -876,26 +909,26 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfi
 
     return (
         <>
-            <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-                <DialogTitle sx={{ fontWeight: 700, fontSize: 16, pb: 1 }}>Start Work</DialogTitle>
+            <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{sx: {borderRadius: 3}}}>
+                <DialogTitle sx={{fontWeight: 700, fontSize: 16, pb: 1}}>Start Work</DialogTitle>
 
-                <DialogContent sx={{ pt: 1 }}>
+                <DialogContent sx={{pt: 1}}>
                     <Stack spacing={2} mt={1}>
                         {/* Project */}
                         <FormControl fullWidth size="small" required>
                             <InputLabel>Select Project</InputLabel>
                             {loadingProjects ? (
-                                <Skeleton height={40} sx={{ mt: 0.5 }} />
+                                <Skeleton height={40} sx={{mt: 0.5}}/>
                             ) : (
                                 <Select
                                     label="Select Project"
                                     value={selectedProject}
                                     onChange={(e) => setSelectedProject(e.target.value as number)}
-                                    MenuProps={{ PaperProps: { sx: { maxHeight: 300, mt: 1 } } }}
-                                    sx={{ '& .MuiSelect-select': { py: 1.2, display: 'flex', alignItems: 'center' } }}
+                                    MenuProps={{PaperProps: {sx: {maxHeight: 300, mt: 1}}}}
+                                    sx={{'& .MuiSelect-select': {py: 1.2, display: 'flex', alignItems: 'center'}}}
                                 >
                                     {projects.map((p) => (
-                                        <MenuItem key={p.id} value={p.id} sx={{ minHeight: 42 }}>
+                                        <MenuItem key={p.id} value={p.id} sx={{minHeight: 42}}>
                                             <Typography>{p.name}</Typography>
                                         </MenuItem>
                                     ))}
@@ -907,7 +940,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfi
                         <FormControl fullWidth size="small" required error={!!shiftDayError}>
                             <InputLabel>Select Shift</InputLabel>
                             {loadingShifts ? (
-                                <Skeleton height={40} sx={{ mt: 0.5 }} />
+                                <Skeleton height={40} sx={{mt: 0.5}}/>
                             ) : (
                                 <Select
                                     label="Select Shift"
@@ -917,20 +950,23 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfi
                                     {shifts.map((s) => {
                                         const unavailable = isShiftUnavailable(s);
                                         return (
-                                            <MenuItem key={s.id} value={s.id} sx={{ opacity: unavailable ? 0.45 : 1 }}>
+                                            <MenuItem key={s.id} value={s.id} sx={{opacity: unavailable ? 0.45 : 1}}>
                                                 <Stack direction="row" alignItems="center" spacing={1} width="100%">
                                                     <Box sx={{
                                                         width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
                                                         background: unavailable ? '#ef4444' : '#22c55e',
-                                                    }} />
-                                                    <Box sx={{ flex: 1 }}>
-                                                        <Typography fontSize={13} fontWeight={600} lineHeight={1.2}>{s.name}</Typography>
+                                                    }}/>
+                                                    <Box sx={{flex: 1}}>
+                                                        <Typography fontSize={13} fontWeight={600}
+                                                                    lineHeight={1.2}>{s.name}</Typography>
                                                         {s.start_time && s.end_time && (
-                                                            <Typography fontSize={11} color="text.secondary">{s.start_time} – {s.end_time}</Typography>
+                                                            <Typography fontSize={11}
+                                                                        color="text.secondary">{s.start_time} – {s.end_time}</Typography>
                                                         )}
                                                     </Box>
                                                     {unavailable && (
-                                                        <Typography fontSize={10} color="error" sx={{ flexShrink: 0 }}>Not today</Typography>
+                                                        <Typography fontSize={10} color="error" sx={{flexShrink: 0}}>Not
+                                                            today</Typography>
                                                     )}
                                                 </Stack>
                                             </MenuItem>
@@ -945,9 +981,9 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfi
                     </Stack>
                 </DialogContent>
 
-                <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+                <DialogActions sx={{px: 3, pb: 2.5, gap: 1}}>
                     <Button onClick={onClose} variant="outlined" size="small"
-                            sx={{ textTransform: 'none', fontWeight: 600 }}>Cancel</Button>
+                            sx={{textTransform: 'none', fontWeight: 600}}>Cancel</Button>
                     <Button
                         onClick={handleConfirm}
                         variant="contained"
@@ -955,10 +991,10 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfi
                         disabled={isConfirmDisabled}
                         startIcon={
                             loading || locationLoading
-                                ? <CircularProgress size={14} color="inherit" />
-                                : <IconClockPlay size={16} />
+                                ? <CircularProgress size={14} color="inherit"/>
+                                : <IconClockPlay size={16}/>
                         }
-                        sx={{ textTransform: 'none', fontWeight: 600 }}
+                        sx={{textTransform: 'none', fontWeight: 600}}
                     >
                         {locationLoading ? 'Getting location…' : loading ? 'Starting…' : 'Start Work'}
                     </Button>
@@ -984,7 +1020,7 @@ interface GeofenceOverlayProps {
     onZoneClick: (zone: WorklogGeofence) => void;
 }
 
-const ZoneLabel: React.FC<{ zone: WorklogGeofence; onClick: () => void }> = ({ zone, onClick }) => (
+const ZoneLabel: React.FC<{ zone: WorklogGeofence; onClick: () => void }> = ({zone, onClick}) => (
     <OverlayView position={zone.center} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
         <Box
             onClick={onClick}
@@ -998,24 +1034,24 @@ const ZoneLabel: React.FC<{ zone: WorklogGeofence; onClick: () => void }> = ({ z
                 borderRadius: '4px', px: 1.25, py: 0.35,
                 boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
             }}>
-                <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#111', whiteSpace: 'nowrap' }}>
+                <Typography sx={{fontSize: 12, fontWeight: 700, color: '#111', whiteSpace: 'nowrap'}}>
                     {zone.name}
                 </Typography>
             </Box>
-            <Box sx={{ width: '2px', height: '20px', backgroundColor: zone.color }} />
+            <Box sx={{width: '2px', height: '20px', backgroundColor: zone.color}}/>
         </Box>
     </OverlayView>
 );
 
-const GeofenceOverlay: React.FC<GeofenceOverlayProps> = ({ zone, onZoneClick }) => {
+const GeofenceOverlay: React.FC<GeofenceOverlayProps> = ({zone, onZoneClick}) => {
     const handleClick = () => onZoneClick(zone);
 
     if (zone.type === 'circle') {
         return (
             <React.Fragment key={zone.id}>
                 <Circle center={zone.center} radius={zone.radius}
-                        options={{ strokeColor: zone.color, fillColor: zone.color + '33' }} />
-                <ZoneLabel zone={zone} onClick={handleClick} />
+                        options={{strokeColor: zone.color, fillColor: zone.color + '33'}}/>
+                <ZoneLabel zone={zone} onClick={handleClick}/>
             </React.Fragment>
         );
     }
@@ -1024,9 +1060,9 @@ const GeofenceOverlay: React.FC<GeofenceOverlayProps> = ({ zone, onZoneClick }) 
         return (
             <React.Fragment key={zone.id}>
                 <Polygon paths={zone.path}
-                         options={{ strokeColor: zone.color, fillColor: zone.color + '33', strokeWeight: 2 }}
-                         onClick={handleClick} />
-                <ZoneLabel zone={zone} onClick={handleClick} />
+                         options={{strokeColor: zone.color, fillColor: zone.color + '33', strokeWeight: 2}}
+                         onClick={handleClick}/>
+                <ZoneLabel zone={zone} onClick={handleClick}/>
             </React.Fragment>
         );
     }
@@ -1035,9 +1071,9 @@ const GeofenceOverlay: React.FC<GeofenceOverlayProps> = ({ zone, onZoneClick }) 
         return (
             <React.Fragment key={zone.id}>
                 <Polyline path={zone.path}
-                          options={{ strokeColor: zone.color, strokeWeight: 3 }}
-                          onClick={handleClick} />
-                <ZoneLabel zone={zone} onClick={handleClick} />
+                          options={{strokeColor: zone.color, strokeWeight: 3}}
+                          onClick={handleClick}/>
+                <ZoneLabel zone={zone} onClick={handleClick}/>
             </React.Fragment>
         );
     }
@@ -1070,8 +1106,8 @@ const TimeTracking: React.FC<Props> = () => {
     const initialSettings = useMemo(() => {
         const stored = loadStoredSettings();
         if (stored.startDate && stored.endDate) return stored;
-        const { start, end } = getCurrentWeekRange();
-        return { startDate: start, endDate: end, columnVisibility: {} as VisibilityState };
+        const {start, end} = getCurrentWeekRange();
+        return {startDate: start, endDate: end, columnVisibility: {} as VisibilityState};
     }, []);
 
     const [startDate, setStartDate] = useState<Date | null>(initialSettings.startDate);
@@ -1086,7 +1122,7 @@ const TimeTracking: React.FC<Props> = () => {
     const clockActionInProgressRef = useRef(false);
     const startDialogOpenRef = useRef(false);
     const [todayLoading, setTodayLoading] = useState(true);
-    const [toast, setToast] = useState<ToastState>({ open: false, message: '', severity: 'success' });
+    const [toast, setToast] = useState<ToastState>({open: false, message: '', severity: 'success'});
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => ({
@@ -1106,29 +1142,41 @@ const TimeTracking: React.FC<Props> = () => {
     const latestTodayClockRequestRef = useRef(0);
     const mapRef = useRef<google.maps.Map | null>(null);
 
-    const { isLoaded: isGoogleMapsLoaded, loadError: googleMapsLoadError } = useJsApiLoader({
+    const {isLoaded: isGoogleMapsLoaded, loadError: googleMapsLoadError} = useJsApiLoader({
         ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
     });
 
-    const { data, setData, fetchTimeClockData, payrollCycle, fetchPayrollCycle, headerDetail } = useTimeClockData(userId);
-    const { editingWorklogs, savingWorklogs, setSavingWorklogs, startEditingField, cancelEditingField, updateEditingField } = useEditingState();
+    const {data, setData, fetchTimeClockData, payrollCycle, fetchPayrollCycle, headerDetail} = useTimeClockData(userId);
+    const {
+        editingWorklogs,
+        savingWorklogs,
+        setSavingWorklogs,
+        startEditingField,
+        cancelEditingField,
+        updateEditingField
+    } = useEditingState();
 
     // ── Toast ──
     const showToast = useCallback(
         (message: string, severity: 'success' | 'error' = 'success') =>
-            setToast({ open: true, message, severity }),
+            setToast({open: true, message, severity}),
         []
     );
-    const closeToast = useCallback(() => setToast((t) => ({ ...t, open: false })), []);
+    const closeToast = useCallback(() => setToast((t) => ({...t, open: false})), []);
 
     const fitMapToBounds = useCallback((map: google.maps.Map, locs: LocationPoint[], fences: WorklogGeofence[]) => {
         const validPoints = locs.filter(hasLocationCoordinates);
         const bounds = new google.maps.LatLngBounds();
         let hasBounds = false;
 
-        validPoints.forEach((p) => { bounds.extend(toLatLng(p.latitude, p.longitude)); hasBounds = true; });
-        fences.forEach((z) => { hasBounds = extendBoundsWithGeofence(bounds, z) || hasBounds; });
+        validPoints.forEach((p) => {
+            bounds.extend(toLatLng(p.latitude, p.longitude));
+            hasBounds = true;
+        });
+        fences.forEach((z) => {
+            hasBounds = extendBoundsWithGeofence(bounds, z) || hasBounds;
+        });
 
         if (!hasBounds) return;
 
@@ -1136,7 +1184,7 @@ const TimeTracking: React.FC<Props> = () => {
             map.panTo(toLatLng(validPoints[0].latitude, validPoints[0].longitude));
             map.setZoom(DEFAULT_ZOOM);
         } else {
-            map.fitBounds(bounds, { top: 60, bottom: 60, left: 60, right: 60 });
+            map.fitBounds(bounds, {top: 60, bottom: 60, left: 60, right: 60});
         }
     }, []);
 
@@ -1144,7 +1192,9 @@ const TimeTracking: React.FC<Props> = () => {
         if (mapRef.current) fitMapToBounds(mapRef.current, locations, geofences);
     }, [locations, geofences, fitMapToBounds]);
 
-    useEffect(() => { fetchPayrollCycle(); }, [fetchPayrollCycle]);
+    useEffect(() => {
+        fetchPayrollCycle();
+    }, [fetchPayrollCycle]);
 
     useEffect(() => {
         setColumnVisibility((prev) => ({
@@ -1162,17 +1212,25 @@ const TimeTracking: React.FC<Props> = () => {
         if (clockInfo.user_is_working) {
             timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
         } else {
-            if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
             setElapsed(0);
         }
-        return () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+        };
     }, [clockInfo.user_is_working]);
 
     // Fetch worklog locations
     const fetchWorklogLocations = useCallback(async (worklogId: number) => {
         try {
             const res: AxiosResponse<WorklogLocationsResponse> = await api.get(
-                'user-worklog/get-worklog-locations', { params: { worklog_id: worklogId } }
+                'user-worklog/get-worklog-locations', {params: {worklog_id: worklogId}}
             );
             if (!res.data?.IsSuccess) return null;
             return {
@@ -1217,7 +1275,10 @@ const TimeTracking: React.FC<Props> = () => {
                 if (d.worklog_id) {
                     const wl = await fetchWorklogLocations(d.worklog_id);
                     if (requestId !== latestTodayClockRequestRef.current) return;
-                    if (wl) { nextLocations = wl.locations; nextGeofences = wl.geofences; }
+                    if (wl) {
+                        nextLocations = wl.locations;
+                        nextGeofences = wl.geofences;
+                    }
                 }
 
                 setLocations(nextLocations);
@@ -1245,8 +1306,12 @@ const TimeTracking: React.FC<Props> = () => {
         }
     }, [locations, geofences, fitMapToBounds]);
 
-    useEffect(() => { fetchTodayClock(); }, [fetchTodayClock]);
-    useEffect(() => { if (userId) fetchTimeClockData(startDate, endDate); }, [userId, fetchTimeClockData, startDate, endDate]);
+    useEffect(() => {
+        fetchTodayClock();
+    }, [fetchTodayClock]);
+    useEffect(() => {
+        if (userId) fetchTimeClockData(startDate, endDate);
+    }, [userId, fetchTimeClockData, startDate, endDate]);
 
     // Formatters
     const formatHour = useCallback((val: string | number | null | undefined, isPricework = false): string => {
@@ -1267,7 +1332,11 @@ const TimeTracking: React.FC<Props> = () => {
 
     const parseDate = useCallback((dateString: string): Date | null => {
         if (!dateString) return null;
-        try { return parse(dateString, 'EEE d/M', new Date()); } catch { return null; }
+        try {
+            return parse(dateString, 'EEE d/M', new Date());
+        } catch {
+            return null;
+        }
     }, []);
 
     const sanitizeDateTime = useCallback(
@@ -1291,14 +1360,25 @@ const TimeTracking: React.FC<Props> = () => {
         const digits = value.replace(/\D/g, '');
         if (!digits.length) return '';
         let h = 0, m = 0;
-        if (digits.length === 1) { h = parseInt(digits); }
-        else if (digits.length === 2) {
+        if (digits.length === 1) {
+            h = parseInt(digits);
+        } else if (digits.length === 2) {
             const n = parseInt(digits);
-            if (n <= 23) { h = n; } else { h = parseInt(digits[0]); m = parseInt(digits[1]) * 10; }
+            if (n <= 23) {
+                h = n;
+            } else {
+                h = parseInt(digits[0]);
+                m = parseInt(digits[1]) * 10;
+            }
         } else if (digits.length === 3) {
             const firstTwo = parseInt(digits.slice(0, 2));
-            if (firstTwo <= 23) { h = firstTwo; m = parseInt(digits[2]) * 10; }
-            else { h = parseInt(digits[0]); m = parseInt(digits.slice(1, 3)); }
+            if (firstTwo <= 23) {
+                h = firstTwo;
+                m = parseInt(digits[2]) * 10;
+            } else {
+                h = parseInt(digits[0]);
+                m = parseInt(digits.slice(1, 3));
+            }
         } else {
             h = parseInt(digits.slice(0, 2));
             m = parseInt(digits.slice(2, 4));
@@ -1347,7 +1427,13 @@ const TimeTracking: React.FC<Props> = () => {
                         rowsData: worklogs,
                     };
                 }
-                return { ...base, dailyTotal: '--', netPayableAmount: '--', daily_adjustment_amount: '--', payableAmount: '--' };
+                return {
+                    ...base,
+                    dailyTotal: '--',
+                    netPayableAmount: '--',
+                    daily_adjustment_amount: '--',
+                    payableAmount: '--'
+                };
             })
         );
     }, [data, currency, formatHour, parseDate]);
@@ -1363,9 +1449,9 @@ const TimeTracking: React.FC<Props> = () => {
             {
                 id: 'date',
                 header: () => <span style={headerStyle}>Date</span>,
-                cell: ({ row }) => (
-                    <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%' }}>
-                        <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
+                cell: ({row}) => (
+                    <Stack direction="row" alignItems="center" spacing={2} sx={{width: '100%'}}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
                             <Typography className="f-14" noWrap>
                                 {row.original.date}
                             </Typography>
@@ -1378,7 +1464,7 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'project',
                 accessorKey: 'project',
                 header: () => <span style={headerStyle}>Project</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.project : null,
                 size: 120,
             },
@@ -1386,7 +1472,7 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'shift',
                 accessorKey: 'shift',
                 header: () => <span style={headerStyle}>Shift</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.shift : null,
                 size: 120,
             },
@@ -1394,7 +1480,7 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'start',
                 accessorKey: 'start',
                 header: () => <span style={headerStyle}>Start</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.start : null,
                 size: 80,
             },
@@ -1402,7 +1488,7 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'break',
                 accessorKey: 'break',
                 header: () => <span style={headerStyle}>Break</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day'
                         ? row.original.total_break_hours
                         : null,
@@ -1412,7 +1498,7 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'end',
                 accessorKey: 'end',
                 header: () => <span style={headerStyle}>End</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.end : null,
                 size: 80,
             },
@@ -1420,13 +1506,13 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'totalHours',
                 accessorKey: 'totalHours',
                 header: () => <span style={headerStyle}>Total hours</span>,
-                cell: ({ row }) => {
+                cell: ({row}) => {
                     if (row.original.rowType !== 'day') return null;
                     const isPricework = row.original.rowsData?.some(
                         (log: any) => log.is_pricework
                     ) ?? false;
                     return (
-                        <span style={{ color: row.original.is_edited ? '#ff0000' : 'inherit' }}>
+                        <span style={{color: row.original.is_edited ? '#ff0000' : 'inherit'}}>
                             {isPricework ? '--' : row.original.totalHours}
                         </span>
                     );
@@ -1437,13 +1523,13 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'penaltyHours',
                 accessorKey: 'penaltyHours',
                 header: () => <span style={headerStyle}>Penalty hours</span>,
-                cell: ({ row }) => {
+                cell: ({row}) => {
                     if (row.original.rowType !== 'day') return null;
                     const isPricework = row.original.rowsData?.some(
                         (log: any) => log.is_pricework
                     ) ?? false;
                     return (
-                        <span style={{ color: row.original.is_edited ? '#ff0000' : 'inherit' }}>
+                        <span style={{color: row.original.is_edited ? '#ff0000' : 'inherit'}}>
                             {isPricework ? '--' : row.original.penaltyHours}
                         </span>
                     );
@@ -1454,7 +1540,7 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'priceWork',
                 accessorKey: 'priceWork',
                 header: () => <span style={headerStyle}>Pricework</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.priceWork : null,
                 size: 120,
             },
@@ -1462,25 +1548,25 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'expense',
                 accessorKey: 'expense',
                 header: () => <span style={headerStyle}>Expense</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.expense : null,
                 size: 120,
             },
             {
                 id: 'cis_amount',
                 accessorKey: 'cis_amount',
-                meta: { label: 'CIS' },
+                meta: {label: 'CIS'},
                 header: () => <span style={headerStyle}>CIS</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.cis_amount : null,
                 size: 120,
             },
             {
                 id: 'gross_amount',
                 accessorKey: 'gross_amount',
-                meta: { label: 'Gross' },
+                meta: {label: 'Gross'},
                 header: () => <span style={headerStyle}>Gross</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.gross_amount : null,
                 size: 120,
             },
@@ -1488,7 +1574,7 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'checkIns',
                 accessorKey: 'checkIns',
                 header: () => <span style={headerStyle}>Check Ins</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.check_in : null,
                 size: 100,
             },
@@ -1496,14 +1582,14 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'status',
                 accessorKey: 'status',
                 header: () => <span style={headerStyle}>Status</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.status_text : null,
                 size: 100,
             },
             {
                 id: 'dailyTotal',
                 header: () => <span style={headerStyle}>Daily total</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.dailyTotal : null,
                 size: 100,
             },
@@ -1511,7 +1597,7 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'netPayableAmount',
                 accessorKey: 'netPayableAmount',
                 header: () => <span style={headerStyle}>Net Payable</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day'
                         ? row.original.netPayableAmount ?? '--'
                         : null,
@@ -1521,7 +1607,7 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'adjustment',
                 accessorKey: 'adjustment',
                 header: () => <span style={headerStyle}>Adjustment</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day'
                         ? row.original.adjustment ?? '--'
                         : null,
@@ -1531,14 +1617,14 @@ const TimeTracking: React.FC<Props> = () => {
                 id: 'payableAmount',
                 accessorKey: 'payableAmount',
                 header: () => <span style={headerStyle}>Payable Amount</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.payableAmount : null,
                 size: 150,
             },
             {
                 id: 'employeeNotes',
                 header: () => <span style={headerStyle}>Employee notes</span>,
-                cell: ({ row }) =>
+                cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.employeeNotes : null,
                 size: 150,
             },
@@ -1555,7 +1641,7 @@ const TimeTracking: React.FC<Props> = () => {
     const table = useReactTable({
         data: dailyData,
         columns: mainTableColumns,
-        state: { columnVisibility, expanded },
+        state: {columnVisibility, expanded},
         onColumnVisibilityChange: setColumnVisibility,
         onExpandedChange: setExpanded,
         getCoreRowModel: getCoreRowModel(),
@@ -1566,13 +1652,17 @@ const TimeTracking: React.FC<Props> = () => {
     // ── Handlers ──
     const saveFieldChanges = useCallback(async (worklogId: string, originalLog: any) => {
         const editedData = editingWorklogs[worklogId];
-        if (!editedData || isRecordLocked(originalLog)) { cancelEditingField(worklogId); return; }
+        if (!editedData || isRecordLocked(originalLog)) {
+            cancelEditingField(worklogId);
+            return;
+        }
 
         const newStart = validateAndFormatTime(editedData.start ?? '');
         const newEnd = validateAndFormatTime(editedData.end ?? '');
 
         if (sanitizeDateTime(originalLog.start) === newStart && sanitizeDateTime(originalLog.end) === newEnd) {
-            cancelEditingField(worklogId); return;
+            cancelEditingField(worklogId);
+            return;
         }
 
         setSavingWorklogs((p) => new Set(p).add(worklogId));
@@ -1587,7 +1677,11 @@ const TimeTracking: React.FC<Props> = () => {
         } catch {
             showToast('Failed to save changes', 'error');
         } finally {
-            setSavingWorklogs((p) => { const s = new Set(p); s.delete(worklogId); return s; });
+            setSavingWorklogs((p) => {
+                const s = new Set(p);
+                s.delete(worklogId);
+                return s;
+            });
             cancelEditingField(worklogId);
         }
     }, [editingWorklogs, isRecordLocked, cancelEditingField, validateAndFormatTime, sanitizeDateTime, setSavingWorklogs, fetchTimeClockData, startDate, endDate, showToast]);
@@ -1603,7 +1697,7 @@ const TimeTracking: React.FC<Props> = () => {
         try {
             const res: AxiosResponse<{ IsSuccess: boolean }> = await api.post(
                 endpoint,
-                type === 'leave' ? { user_leave_id: id } : { ids: id }
+                type === 'leave' ? {user_leave_id: id} : {ids: id}
             );
             if (res.data.IsSuccess) {
                 await fetchTimeClockData(startDate, endDate);
@@ -1626,18 +1720,23 @@ const TimeTracking: React.FC<Props> = () => {
                 device_model_type: ipAddress
                     ? `${navigator.userAgent.substring(0, 50)} | IP: ${ipAddress}`
                     : navigator.userAgent.substring(0, 50),
-                ...(user?.company_id ? { company_id: user.company_id } : {}),
+                ...(user?.company_id ? {company_id: user.company_id} : {}),
             };
 
             try {
                 const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, enableHighAccuracy: true, maximumAge: 0 })
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        timeout: 10000,
+                        enableHighAccuracy: true,
+                        maximumAge: 0
+                    })
                 );
                 payload.latitude = String(pos.coords.latitude);
                 payload.longitude = String(pos.coords.longitude);
                 const address = await getAddressFromCoordinates(pos.coords.latitude, pos.coords.longitude);
                 if (address) payload.address = address;
-            } catch { /* location not available */ }
+            } catch { /* location not available */
+            }
 
             const res: AxiosResponse<ApiResponse> = await api.post('user-worklog/user-stop-work', payload);
             if (res.data.IsSuccess) {
@@ -1668,19 +1767,27 @@ const TimeTracking: React.FC<Props> = () => {
                     : navigator.userAgent.substring(0, 50),
                 latitude: String(coords.latitude),
                 longitude: String(coords.longitude),
-                ...(coords.address ? { address: coords.address } : {}),
-                ...(user?.company_id ? { company_id: user.company_id } : {}),
+                ...(coords.address ? {address: coords.address} : {}),
+                ...(user?.company_id ? {company_id: user.company_id} : {}),
             };
             if (projectId) payload.project_id = projectId;
 
             const res: AxiosResponse<ApiResponse> = await api.post('user-worklog/user-start-work', payload);
-            if (res.data.IsSuccess) {
+            
+            if (res.data.IsSuccess && res.data.is_rate_approved !== false && res.data.user_worklog_id) {
                 showToast(res.data.message || 'Work started!', 'success');
+                
                 startDialogOpenRef.current = false;
                 setStartDialogOpen(false);
-                await fetchTodayClock();
-                await fetchTimeClockData(startDate, endDate);
+            } else {
+                showToast(res.data.message || 'Work could not be started. Please check the user rate approval.', 'error');
             }
+            
+            startDialogOpenRef.current = false;
+            setStartDialogOpen(false);
+            
+            await fetchTodayClock();
+            await fetchTimeClockData(startDate, endDate);
         } catch (err: any) {
             showToast(err?.response?.data?.message || 'Failed to start work', 'error');
         } finally {
@@ -1721,12 +1828,18 @@ const TimeTracking: React.FC<Props> = () => {
 
     const closeAddExpenseSidebar = useCallback(async () => {
         setAddExpenseSidebar(false);
-        try { await fetchTimeClockData(startDate, endDate); } catch { /* ignore */ }
+        try {
+            await fetchTimeClockData(startDate, endDate);
+        } catch { /* ignore */
+        }
     }, [fetchTimeClockData, startDate, endDate]);
 
     const closeAddWorklogSidebar = useCallback(async () => {
         setAddWorklogSidebar(false);
-        try { await fetchTimeClockData(startDate, endDate); } catch { /* ignore */ }
+        try {
+            await fetchTimeClockData(startDate, endDate);
+        } catch { /* ignore */
+        }
     }, [fetchTimeClockData, startDate, endDate]);
 
     const closeAddPriceworkSidebar = useCallback(() => {
@@ -1762,62 +1875,96 @@ const TimeTracking: React.FC<Props> = () => {
 
     return (
         <PermissionGuard permission="Time Tracking">
-            <Box sx={{ width: '100%', background: '#f8f9fb' }}>
-                <Box sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
+            <Box sx={{width: '100%', background: '#f8f9fb'}}>
+                <Box sx={{px: {xs: 2, sm: 3, md: 4}}}>
 
-                    <Typography sx={{ fontSize: { xs: 26, sm: 30, md: 32 }, fontWeight: 700, color: '#1a1a1a', my: 2 }}>
+                    <Typography sx={{fontSize: {xs: 26, sm: 30, md: 32}, fontWeight: 700, color: '#1a1a1a', my: 2}}>
                         Time Tracking
                     </Typography>
 
                     {/* ── Stats Cards ── */}
                     <Box sx={{
                         display: 'grid', gap: 3, mb: 3,
-                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: '2fr 1fr 1fr 1fr' },
+                        gridTemplateColumns: {xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: '2fr 1fr 1fr 1fr'},
                     }}>
                         {/* TimeClock Card */}
-                        <Card sx={{ borderRadius: 3, border: '1px solid #e8eef7', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', background: '#fff' }}>
-                            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-                                <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, mb: 2 }}>
+                        <Card sx={{
+                            borderRadius: 3,
+                            border: '1px solid #e8eef7',
+                            boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                            background: '#fff'
+                        }}>
+                            <CardContent sx={{p: {xs: 2, sm: 3}}}>
+                                <Typography sx={{
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    color: '#666',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: 0.5,
+                                    mb: 2
+                                }}>
                                     TimeClock
                                 </Typography>
-                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}
-                                       alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between">
-                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                        {todayLoading ? <Skeleton variant="text" height={40} /> : (
+                                <Stack direction={{xs: 'column', sm: 'row'}} spacing={2}
+                                       alignItems={{xs: 'flex-start', sm: 'center'}} justifyContent="space-between">
+                                    <Box sx={{flex: 1, minWidth: 0}}>
+                                        {todayLoading ? <Skeleton variant="text" height={40}/> : (
                                             <>
-                                                <Typography sx={{ fontSize: { xs: 22, sm: 26 }, fontWeight: 700, color: '#1a1a1a', fontVariantNumeric: 'tabular-nums', letterSpacing: 0.5, mb: 0.75 }}>
+                                                <Typography sx={{
+                                                    fontSize: {xs: 22, sm: 26},
+                                                    fontWeight: 700,
+                                                    color: '#1a1a1a',
+                                                    fontVariantNumeric: 'tabular-nums',
+                                                    letterSpacing: 0.5,
+                                                    mb: 0.75
+                                                }}>
                                                     {secondsToHHMMSS(elapsed)}
                                                 </Typography>
                                                 {clockInfo.user_is_working ? (
                                                     <Stack spacing={0.5}>
                                                         <Stack direction="row" alignItems="center" spacing={0.75}>
                                                             <Box sx={{
-                                                                width: 7, height: 7, borderRadius: '50%', background: '#4caf50',
+                                                                width: 7,
+                                                                height: 7,
+                                                                borderRadius: '50%',
+                                                                background: '#4caf50',
                                                                 animation: 'blink 1.2s ease-in-out infinite',
-                                                                '@keyframes blink': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } },
-                                                            }} />
-                                                            <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#4caf50' }}>Active</Typography>
+                                                                '@keyframes blink': {
+                                                                    '0%,100%': {opacity: 1},
+                                                                    '50%': {opacity: 0.3}
+                                                                },
+                                                            }}/>
+                                                            <Typography sx={{
+                                                                fontSize: 12,
+                                                                fontWeight: 600,
+                                                                color: '#4caf50'
+                                                            }}>Active</Typography>
                                                         </Stack>
                                                         {clockInfo.current_shift_name && (
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                                                <IconClock size={12} color="#999" />
-                                                                <Typography sx={{ fontSize: 11, color: '#666' }} noWrap>{clockInfo.current_shift_name}</Typography>
+                                                            <Box
+                                                                sx={{display: 'flex', alignItems: 'center', gap: 0.75}}>
+                                                                <IconClock size={12} color="#999"/>
+                                                                <Typography sx={{fontSize: 11, color: '#666'}}
+                                                                            noWrap>{clockInfo.current_shift_name}</Typography>
                                                             </Box>
                                                         )}
                                                         {clockInfo.current_project_name && (
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                                                <IconMapPin size={12} color="#999" />
-                                                                <Typography sx={{ fontSize: 11, color: '#666' }} noWrap>{clockInfo.current_project_name}</Typography>
+                                                            <Box
+                                                                sx={{display: 'flex', alignItems: 'center', gap: 0.75}}>
+                                                                <IconMapPin size={12} color="#999"/>
+                                                                <Typography sx={{fontSize: 11, color: '#666'}}
+                                                                            noWrap>{clockInfo.current_project_name}</Typography>
                                                             </Box>
                                                         )}
                                                     </Stack>
                                                 ) : (
-                                                    <Typography sx={{ fontSize: 12, color: '#999' }}>No active session</Typography>
+                                                    <Typography sx={{fontSize: 12, color: '#999'}}>No active
+                                                        session</Typography>
                                                 )}
                                             </>
                                         )}
                                     </Box>
-                                    <Box sx={{ flexShrink: 0, alignSelf: { xs: 'center', sm: 'auto' } }}>
+                                    <Box sx={{flexShrink: 0, alignSelf: {xs: 'center', sm: 'auto'}}}>
                                         <ClockButton
                                             isWorking={clockInfo.user_is_working}
                                             elapsed={elapsed}
@@ -1832,18 +1979,41 @@ const TimeTracking: React.FC<Props> = () => {
                         </Card>
 
                         {/* Week Total */}
-                        <Card sx={{ borderRadius: 3, border: '1px solid #e8eef7', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
-                            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                                    <Box sx={{ width: 40, height: 40, borderRadius: 2, background: '#90caf9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <IconClock size={22} color="#1565c0" stroke={2} />
+                        <Card sx={{
+                            borderRadius: 3,
+                            border: '1px solid #e8eef7',
+                            boxShadow: '0 2px 12px rgba(0,0,0,0.05)'
+                        }}>
+                            <CardContent sx={{p: {xs: 2, sm: 3}}}>
+                                <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5, mb: 2}}>
+                                    <Box sx={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: 2,
+                                        background: '#90caf9',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <IconClock size={22} color="#1565c0" stroke={2}/>
                                     </Box>
-                                    <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#1565c0', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    <Typography sx={{
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        color: '#1565c0',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 0.5
+                                    }}>
                                         Week Total
                                     </Typography>
                                 </Box>
-                                {todayLoading ? <Skeleton variant="text" height={44} width={120} /> : (
-                                    <Typography sx={{ fontSize: { xs: 24, sm: 28 }, fontWeight: 700, color: '#0d47a1', fontVariantNumeric: 'tabular-nums' }}>
+                                {todayLoading ? <Skeleton variant="text" height={44} width={120}/> : (
+                                    <Typography sx={{
+                                        fontSize: {xs: 24, sm: 28},
+                                        fontWeight: 700,
+                                        color: '#0d47a1',
+                                        fontVariantNumeric: 'tabular-nums'
+                                    }}>
                                         {clockInfo.weekly_total_hours}h
                                     </Typography>
                                 )}
@@ -1851,25 +2021,53 @@ const TimeTracking: React.FC<Props> = () => {
                         </Card>
 
                         {/* Total Payable */}
-                        <Card sx={{ borderRadius: 3, border: '1px solid #e8eef7', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
-                            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, justifyContent: 'space-between' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                        <Box sx={{ width: 40, height: 40, borderRadius: 2, background: '#a5d6a7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <IconCurrencyDollar size={22} color="#1b5e20" stroke={2} />
+                        <Card sx={{
+                            borderRadius: 3,
+                            border: '1px solid #e8eef7',
+                            boxShadow: '0 2px 12px rgba(0,0,0,0.05)'
+                        }}>
+                            <CardContent sx={{p: {xs: 2, sm: 3}}}>
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    mb: 2,
+                                    justifyContent: 'space-between'
+                                }}>
+                                    <Box sx={{display: 'flex', alignItems: 'center', gap: 0.75}}>
+                                        <Box sx={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 2,
+                                            background: '#a5d6a7',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            <IconCurrencyDollar size={22} color="#1b5e20" stroke={2}/>
                                         </Box>
-                                        <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#1b5e20', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        <Typography sx={{
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            color: '#1b5e20',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: 0.5
+                                        }}>
                                             Total Payable
                                         </Typography>
                                     </Box>
                                     <IconButton size="small" onClick={() => setShowPayableAmounts(!showPayableAmounts)}
-                                                sx={{ padding: '4px', color: '#1b5e20', '&:hover': { backgroundColor: 'rgba(27,94,32,0.08)' } }}>
-                                        {showPayableAmounts ? <IconEye size={18} /> : <IconEyeOff size={18} />}
+                                                sx={{
+                                                    padding: '4px',
+                                                    color: '#1b5e20',
+                                                    '&:hover': {backgroundColor: 'rgba(27,94,32,0.08)'}
+                                                }}>
+                                        {showPayableAmounts ? <IconEye size={18}/> : <IconEyeOff size={18}/>}
                                     </IconButton>
                                 </Box>
-                                {todayLoading || !currency ? <Skeleton variant="text" height={44} width={120} /> : (
+                                {todayLoading || !currency ? <Skeleton variant="text" height={44} width={120}/> : (
                                     <Typography sx={{
-                                        fontSize: { xs: 24, sm: 28 }, fontWeight: 700, color: '#1b5e20',
+                                        fontSize: {xs: 24, sm: 28}, fontWeight: 700, color: '#1b5e20',
                                         fontVariantNumeric: 'tabular-nums',
                                         letterSpacing: showPayableAmounts ? 'normal' : '3px',
                                         fontFamily: showPayableAmounts ? 'inherit' : 'monospace',
@@ -1881,17 +2079,38 @@ const TimeTracking: React.FC<Props> = () => {
                         </Card>
 
                         {/* AI Insight */}
-                        <Card sx={{ borderRadius: 3, border: '1px solid #e8eef7', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
-                            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                                    <Box sx={{ width: 40, height: 40, borderRadius: 2, background: '#ce93d8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                        <IconSparkles size={22} color="#6a1b9a" stroke={2} />
+                        <Card sx={{
+                            borderRadius: 3,
+                            border: '1px solid #e8eef7',
+                            boxShadow: '0 2px 12px rgba(0,0,0,0.05)'
+                        }}>
+                            <CardContent sx={{p: {xs: 2, sm: 3}}}>
+                                <Box sx={{display: 'flex', alignItems: 'flex-start', gap: 1.5}}>
+                                    <Box sx={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: 2,
+                                        background: '#ce93d8',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0
+                                    }}>
+                                        <IconSparkles size={22} color="#6a1b9a" stroke={2}/>
                                     </Box>
                                     <Box>
-                                        <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#6a1b9a', textTransform: 'uppercase', letterSpacing: 0.5, mb: 0.75 }}>
+                                        <Typography sx={{
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            color: '#6a1b9a',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: 0.5,
+                                            mb: 0.75
+                                        }}>
                                             AI Insight
                                         </Typography>
-                                        <Typography sx={{ fontSize: 13, color: '#4a148c', lineHeight: 1.5, fontWeight: 500 }}>
+                                        <Typography
+                                            sx={{fontSize: 13, color: '#4a148c', lineHeight: 1.5, fontWeight: 500}}>
                                             No insights available
                                         </Typography>
                                     </Box>
@@ -1903,42 +2122,70 @@ const TimeTracking: React.FC<Props> = () => {
                     {/* ── Map + Table ── */}
                     <Box sx={{
                         display: 'grid', gap: 3, mb: 3,
-                        gridTemplateColumns: { xs: '1fr', lg: tableExpanded ? '1fr' : '2fr 3fr' },
+                        gridTemplateColumns: {xs: '1fr', lg: tableExpanded ? '1fr' : '2fr 3fr'},
                     }}>
                         {/* Map */}
                         {!tableExpanded && (
                             <Card sx={{
                                 borderRadius: 3, border: '1px solid #e8eef7',
                                 boxShadow: '0 2px 12px rgba(0,0,0,0.05)', background: '#fff',
-                                overflow: 'hidden', height: '100%', minHeight: { xs: 320, sm: 380, md: 460 },
+                                overflow: 'hidden', height: '100%', minHeight: {xs: 320, sm: 380, md: 460},
                             }}>
-                                <Box sx={{ p: 2, borderBottom: '1px solid #e8eef7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                <Box sx={{
+                                    p: 2,
+                                    borderBottom: '1px solid #e8eef7',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between'
+                                }}>
+                                    <Typography sx={{
+                                        fontSize: 13,
+                                        fontWeight: 700,
+                                        color: '#666',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 0.5
+                                    }}>
                                         Work Location
                                     </Typography>
                                 </Box>
 
                                 {!isGoogleMapsLoaded || googleMapsLoadError ? (
-                                    <Box sx={{ height: { xs: 280, sm: 340, md: 450 }, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5', flexDirection: 'column', gap: 2 }}>
+                                    <Box sx={{
+                                        height: {xs: 280, sm: 340, md: 450},
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: '#f5f5f5',
+                                        flexDirection: 'column',
+                                        gap: 2
+                                    }}>
                                         <Typography color="textSecondary" fontSize={14}>
                                             {googleMapsLoadError ? 'Failed to load map' : 'Loading map…'}
                                         </Typography>
                                         {googleMapsLoadError && (
-                                            <Button size="small" onClick={() => window.location.reload()} variant="outlined">Retry</Button>
+                                            <Button size="small" onClick={() => window.location.reload()}
+                                                    variant="outlined">Retry</Button>
                                         )}
                                     </Box>
                                 ) : (
-                                    <Box sx={{ height: { xs: 280, sm: 340, md: 450 } }}>
+                                    <Box sx={{height: {xs: 280, sm: 340, md: 450}}}>
                                         <GoogleMap
-                                            mapContainerStyle={{ width: '100%', height: '100%' }}
+                                            mapContainerStyle={{width: '100%', height: '100%'}}
                                             zoom={DEFAULT_ZOOM}
                                             center={DEFAULT_CENTER}
                                             onLoad={handleMapLoad}
-                                            options={{ disableDefaultUI: false, zoomControl: true, streetViewControl: false, mapTypeControl: false, fullscreenControl: true }}
+                                            options={{
+                                                disableDefaultUI: false,
+                                                zoomControl: true,
+                                                streetViewControl: false,
+                                                mapTypeControl: false,
+                                                fullscreenControl: true
+                                            }}
                                         >
                                             {/* Geofences */}
                                             {geofences.map((zone) => (
-                                                <GeofenceOverlay key={zone.id} zone={zone} onZoneClick={(z) => mapRef.current && flyToZone(mapRef.current, z)} />
+                                                <GeofenceOverlay key={zone.id} zone={zone}
+                                                                 onZoneClick={(z) => mapRef.current && flyToZone(mapRef.current, z)}/>
                                             ))}
 
                                             {/* Location pins */}
@@ -1960,7 +2207,16 @@ const TimeTracking: React.FC<Props> = () => {
                         )}
 
                         {/* Table */}
-                        <Box sx={{ border: '1px solid #e8eef7', borderRadius: 3, background: '#fff', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{
+                            border: '1px solid #e8eef7',
+                            borderRadius: 3,
+                            background: '#fff',
+                            overflow: 'hidden',
+                            boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                            minWidth: 0,
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
                             <TimeClockStats
                                 startDate={startDate} endDate={endDate}
                                 onDateRangeChange={handleDateRangeChange}
@@ -2005,7 +2261,14 @@ const TimeTracking: React.FC<Props> = () => {
                 />
 
                 <Drawer anchor="right" open={addExpenseSidebar} onClose={closeAddExpenseSidebar}
-                        PaperProps={{ sx: { width: '504px', borderTopLeftRadius: 18, borderBottomLeftRadius: 18, overflow: 'hidden' } }}>
+                        PaperProps={{
+                            sx: {
+                                width: '504px',
+                                borderTopLeftRadius: 18,
+                                borderBottomLeftRadius: 18,
+                                overflow: 'hidden'
+                            }
+                        }}>
                     <AddExpense
                         onClose={closeAddExpenseSidebar}
                         userId={Number(userId)}
@@ -2015,7 +2278,14 @@ const TimeTracking: React.FC<Props> = () => {
                 </Drawer>
 
                 <Drawer anchor="right" open={addWorklogSidebar} onClose={closeAddWorklogSidebar}
-                        PaperProps={{ sx: { width: '504px', borderTopLeftRadius: 18, borderBottomLeftRadius: 18, overflow: 'hidden' } }}>
+                        PaperProps={{
+                            sx: {
+                                width: '504px',
+                                borderTopLeftRadius: 18,
+                                borderBottomLeftRadius: 18,
+                                overflow: 'hidden'
+                            }
+                        }}>
                     <AddWorklog
                         onClose={closeAddWorklogSidebar}
                         userId={Number(userId)}
@@ -2029,7 +2299,14 @@ const TimeTracking: React.FC<Props> = () => {
                 </Drawer>
 
                 <Drawer anchor="right" open={addPriceworkSidebar} onClose={closeAddPriceworkSidebar}
-                        PaperProps={{ sx: { width: '504px', borderTopLeftRadius: 18, borderBottomLeftRadius: 18, overflow: 'hidden' } }}>
+                        PaperProps={{
+                            sx: {
+                                width: '504px',
+                                borderTopLeftRadius: 18,
+                                borderBottomLeftRadius: 18,
+                                overflow: 'hidden'
+                            }
+                        }}>
                     <AddPricework
                         onClose={closeAddPriceworkSidebar}
                         userId={Number(userId)}
@@ -2043,8 +2320,10 @@ const TimeTracking: React.FC<Props> = () => {
                     />
                 </Drawer>
 
-                <Snackbar open={toast.open} autoHideDuration={4000} anchorOrigin={{ vertical: 'top', horizontal: 'center' }} onClose={closeToast}>
-                    <Alert onClose={closeToast} severity={toast.severity} variant="filled" sx={{ borderRadius: 2, fontSize: 13 }}>
+                <Snackbar open={toast.open} autoHideDuration={4000}
+                          anchorOrigin={{vertical: 'top', horizontal: 'center'}} onClose={closeToast}>
+                    <Alert onClose={closeToast} severity={toast.severity} variant="filled"
+                           sx={{borderRadius: 2, fontSize: 13}}>
                         {toast.message}
                     </Alert>
                 </Snackbar>
