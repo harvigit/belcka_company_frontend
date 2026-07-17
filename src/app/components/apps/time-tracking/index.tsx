@@ -1941,7 +1941,10 @@ const TimeTracking: React.FC<Props> = () => {
                         userId={Number(userId)}
                         selectUser={false}
                         companyId={Number(user.company_id)}
-                        onDataRefresh={() => fetchTimeClockData(startDate, endDate)}
+                        onDataRefresh={() => Promise.all([
+                            fetchTimeClockData(startDate, endDate),
+                            fetchTodayClock(),
+                        ]).then(() => undefined)}
                     />
                 </Drawer>
 
