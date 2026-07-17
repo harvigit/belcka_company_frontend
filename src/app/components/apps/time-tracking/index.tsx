@@ -637,11 +637,17 @@ const ClockButton: React.FC<ClockButtonProps> = ({ isWorking, onClick, loading }
 
     return (
         <Box
-            onClick={onClick}
+            onClick={loading ? undefined : onClick}
             role="button"
-            tabIndex={0}
+            tabIndex={loading ? -1 : 0}
+            aria-disabled={loading}
             aria-label={isWorking ? 'Stop Work' : 'Start Work'}
-            onKeyDown={(e) => e.key === 'Enter' && onClick()}
+            onKeyDown={(e) => {
+                if (!loading && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    onClick();
+                }
+            }}
             sx={{
                 width: { xs: 108, sm: 124, md: 140 },
                 height: { xs: 108, sm: 124, md: 140 },
@@ -751,6 +757,9 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfi
     const [locationLoading, setLocationLoading] = useState(false);
     const [locationError, setLocationError] = useState<LocationErrorType>(null);
     const [locationDialogOpen, setLocationDialogOpen] = useState(false);
+    const resourcesRequestInProgressRef = useRef(false);
+    const resourcesLoadedForOpenRef = useRef(false);
+    const locationRequestInProgressRef = useRef(false);
 
     const handleShiftChange = useCallback((shiftId: number | '', currentShifts: ShiftOption[]) => {
         setSelectedShift(shiftId);
@@ -767,7 +776,13 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfi
 
     // Fetch projects and their assigned shifts when dialog opens
     useEffect(() => {
-        if (!open) return;
+        if (!open) {
+            resourcesRequestInProgressRef.current = false;
+            resourcesLoadedForOpenRef.current = false;
+            return;
+        }
+        if (resourcesRequestInProgressRef.current || resourcesLoadedForOpenRef.current) return;
+        resourcesRequestInProgressRef.current = true;
         setSelectedShift('');
         setSelectedProject('');
         setProjects([]);
@@ -792,7 +807,11 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfi
                 if (mapped.length === 1) setSelectedProject(mapped[0].id);
             })
             .catch(() => setProjects([]))
-            .finally(() => setLoadingProjects(false));
+            .finally(() => {
+                resourcesRequestInProgressRef.current = false;
+                resourcesLoadedForOpenRef.current = true;
+                setLoadingProjects(false);
+            });
     }, [open]);
 
     // Load shifts from selected project's resources
@@ -819,14 +838,20 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfi
     }, [open, selectedProject, projects, handleShiftChange]);
 
     const requestLocationAndConfirm = useCallback(async () => {
+        if (locationRequestInProgressRef.current) return;
+        locationRequestInProgressRef.current = true;
         setLocationLoading(true);
-        const coords = await getLocation((type) => {
-            setLocationError(type);
-            setLocationDialogOpen(true);
-        });
-        setLocationLoading(false);
-        if (!coords) return;
-        onConfirm(Number(selectedShift), selectedProject ? Number(selectedProject) : null, coords);
+        try {
+            const coords = await getLocation((type) => {
+                setLocationError(type);
+                setLocationDialogOpen(true);
+            });
+            if (!coords) return;
+            onConfirm(Number(selectedShift), selectedProject ? Number(selectedProject) : null, coords);
+        } finally {
+            locationRequestInProgressRef.current = false;
+            setLocationLoading(false);
+        }
     }, [getLocation, onConfirm, selectedShift, selectedProject]);
 
     const handleConfirm = () => {
@@ -1056,6 +1081,8 @@ const TimeTracking: React.FC<Props> = () => {
 
     const [startDialogOpen, setStartDialogOpen] = useState(false);
     const [clockLoading, setClockLoading] = useState(false);
+    const clockActionInProgressRef = useRef(false);
+    const startDialogOpenRef = useRef(false);
     const [todayLoading, setTodayLoading] = useState(true);
     const [toast, setToast] = useState<ToastState>({ open: false, message: '', severity: 'success' });
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -1069,6 +1096,7 @@ const TimeTracking: React.FC<Props> = () => {
     const [addExpenseSidebar, setAddExpenseSidebar] = useState(false);
     const [addWorklogSidebar, setAddWorklogSidebar] = useState(false);
     const [addPriceworkSidebar, setAddPriceworkSidebar] = useState(false);
+    const [selectedPricework, setSelectedPricework] = useState<any>(null);
 
     const latestTodayClockRequestRef = useRef(0);
     const mapRef = useRef<google.maps.Map | null>(null);
@@ -1577,7 +1605,8 @@ const TimeTracking: React.FC<Props> = () => {
     }, [fetchTimeClockData, startDate, endDate, showToast]);
 
     const handleStopWork = useCallback(async () => {
-        if (!clockInfo.user_worklog_id) return;
+        if (!clockInfo.user_worklog_id || clockActionInProgressRef.current) return;
+        clockActionInProgressRef.current = true;
         setClockLoading(true);
         try {
             const ipAddress = await getIPAddress();
@@ -1611,11 +1640,14 @@ const TimeTracking: React.FC<Props> = () => {
         } catch (err: any) {
             showToast(err?.response?.data?.message || 'Failed to stop work', 'error');
         } finally {
+            clockActionInProgressRef.current = false;
             setClockLoading(false);
         }
     }, [clockInfo.user_worklog_id, user?.company_id, showToast, fetchTodayClock, fetchTimeClockData, startDate, endDate]);
 
     const handleStartWork = useCallback(async (shiftId: number, projectId: number | null, coords: LocationCoords) => {
+        if (clockActionInProgressRef.current) return;
+        clockActionInProgressRef.current = true;
         setClockLoading(true);
         try {
             const ipAddress = await getIPAddress();
@@ -1634,6 +1666,7 @@ const TimeTracking: React.FC<Props> = () => {
             const res: AxiosResponse<ApiResponse> = await api.post('user-worklog/user-start-work', payload);
             if (res.data.IsSuccess) {
                 showToast(res.data.message || 'Work started!', 'success');
+                startDialogOpenRef.current = false;
                 setStartDialogOpen(false);
                 await fetchTodayClock();
                 await fetchTimeClockData(startDate, endDate);
@@ -1641,14 +1674,28 @@ const TimeTracking: React.FC<Props> = () => {
         } catch (err: any) {
             showToast(err?.response?.data?.message || 'Failed to start work', 'error');
         } finally {
+            clockActionInProgressRef.current = false;
             setClockLoading(false);
         }
     }, [user?.company_id, showToast, fetchTodayClock, fetchTimeClockData, startDate, endDate]);
 
     const handleClockButtonClick = useCallback(() => {
-        if (clockInfo.user_is_working) handleStopWork();
-        else setStartDialogOpen(true);
-    }, [clockInfo.user_is_working, handleStopWork]);
+        if (clockLoading || startDialogOpenRef.current || clockActionInProgressRef.current) {
+            return;
+        }
+        if (clockInfo.user_is_working) {
+            handleStopWork();
+        } else {
+            startDialogOpenRef.current = true;
+            setStartDialogOpen(true);
+        }
+    }, [clockLoading, clockInfo.user_is_working, handleStopWork]);
+
+    const handleStartDialogClose = useCallback(() => {
+        if (clockActionInProgressRef.current) return;
+        startDialogOpenRef.current = false;
+        setStartDialogOpen(false);
+    }, []);
 
     const handleDateRangeChange = useCallback((range: { from: Date | null; to: Date | null }) => {
         if (!range.from || !range.to || !userId) return;
@@ -1674,7 +1721,29 @@ const TimeTracking: React.FC<Props> = () => {
 
     const closeAddPriceworkSidebar = useCallback(() => {
         setAddPriceworkSidebar(false);
+        setSelectedPricework(null);
     }, []);
+
+    const handleAddPricework = useCallback(() => {
+        setSelectedPricework(null);
+        setAddPriceworkSidebar(true);
+    }, []);
+
+    const handleEditPricework = useCallback(async (pricework: any) => {
+        try {
+            const response = await api.get('/timesheet/pricework-details', {
+                params: {pricework_id: pricework.pricework_id},
+            });
+            if (!response.data?.IsSuccess || !response.data?.info) {
+                showToast(response.data?.message || 'Failed to load pricework details.', 'error');
+                return;
+            }
+            setSelectedPricework(response.data.info);
+            setAddPriceworkSidebar(true);
+        } catch (error: any) {
+            showToast(error?.response?.data?.message || 'Failed to load pricework details.', 'error');
+        }
+    }, [showToast]);
 
     const userImg = (user as any)?.user_image || (user as any)?.image || undefined;
     const userInitials = user?.name
@@ -1745,7 +1814,7 @@ const TimeTracking: React.FC<Props> = () => {
                                             currentShift={clockInfo.current_shift_name}
                                             currentProject={clockInfo.current_project_name}
                                             onClick={handleClockButtonClick}
-                                            loading={clockLoading}
+                                            loading={clockLoading || startDialogOpen}
                                         />
                                     </Box>
                                 </Stack>
@@ -1895,7 +1964,7 @@ const TimeTracking: React.FC<Props> = () => {
                                 amountColumns={AMOUNT_COLUMNS as unknown as string[]}
                                 onAddExpense={() => setAddExpenseSidebar(true)}
                                 onAddWorklog={() => setAddWorklogSidebar(true)}
-                                onAddPricework={() => setAddPriceworkSidebar(true)}
+                                onAddPricework={handleAddPricework}
                                 tableExpanded={tableExpanded}
                                 onToggleTableExpanded={() => setTableExpanded((prev) => !prev)}
                             />
@@ -1909,6 +1978,7 @@ const TimeTracking: React.FC<Props> = () => {
                                 startEditingField={startEditingField} updateEditingField={updateEditingField}
                                 cancelEditingField={cancelEditingField} saveFieldChanges={saveFieldChanges}
                                 onDeleteClick={handleDeleteRecord}
+                                openPriceworkSidebar={handleEditPricework}
                             />
                         </Box>
                     </Box>
@@ -1917,7 +1987,7 @@ const TimeTracking: React.FC<Props> = () => {
                 {/* Dialogs & Drawers */}
                 <StartWorkDialog
                     open={startDialogOpen}
-                    onClose={() => setStartDialogOpen(false)}
+                    onClose={handleStartDialogClose}
                     onConfirm={handleStartWork}
                     loading={clockLoading}
                     lastKnownLocation={lastKnownLocation}
@@ -1955,7 +2025,11 @@ const TimeTracking: React.FC<Props> = () => {
                         userId={Number(userId)}
                         selectUser={false}
                         companyId={Number(user.company_id)}
-                        onDataRefresh={() => fetchTimeClockData(startDate, endDate)}
+                        pricework={selectedPricework}
+                        onDataRefresh={() => Promise.all([
+                            fetchTimeClockData(startDate, endDate),
+                            fetchTodayClock(),
+                        ]).then(() => undefined)}
                     />
                 </Drawer>
 

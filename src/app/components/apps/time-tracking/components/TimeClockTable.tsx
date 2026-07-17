@@ -52,6 +52,7 @@ interface TimeClockTableProps {
     cancelEditingField: (worklogId: string) => void,
     saveFieldChanges: (worklogId: string, originalLog: any) => void,
     onDeleteClick: (id: string, type: RecordType) => void,
+    openPriceworkSidebar?: (pricework: any) => void | Promise<void>,
 }
 
 const TimeClockTable: React.FC<TimeClockTableProps> = ({
@@ -70,6 +71,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            cancelEditingField,
                                                            saveFieldChanges,
                                                            onDeleteClick,
+                                                           openPriceworkSidebar,
                                                        }) => {
     const [locationDrawer, setLocationDrawer] = useState<LocationDrawerState>({
         open: false,
@@ -355,8 +357,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                     const isFirstRow = index === 0;
                                     const isLogLocked = isRecordLocked(log) || log.is_timesheet_locked === true;
 
-                                    const hasValue = rowData.daily_adjustment_amount !== undefined && rowData.daily_adjustment_amount !== null && rowData.daily_adjustment_amount !== 0;
-                                    const isPositive = (rowData.daily_adjustment_amount ?? 0) > 0;
+                                    const adjustmentAmount = Number(rowData.daily_adjustment_amount ?? 0);
+                                    const normalizedAdjustmentAmount = Number.isFinite(adjustmentAmount) ? adjustmentAmount : 0;
+                                    const hasValue = normalizedAdjustmentAmount !== 0;
+                                    const isPositive = normalizedAdjustmentAmount > 0;
 
                                     return (
                                         <React.Fragment key={worklogId}>
@@ -647,11 +651,17 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 {/* Pricework Column */}
                                                 {visibleColumnConfigs.priceWork?.visible && (
-                                                    <TableCell align="center" sx={{
+                                                    <TableCell align="center" onClick={() => {
+                                                        if (log.is_pricework_record && log.pricework_id && !isLogLocked) {
+                                                            openPriceworkSidebar?.(log);
+                                                        }
+                                                    }} sx={{
                                                         py: 0.5,
                                                         fontSize: '0.875rem',
                                                         height: '45px',
-                                                        verticalAlign: 'middle'
+                                                        verticalAlign: 'middle',
+                                                        cursor: log.is_pricework_record && !isLogLocked ? 'pointer' : 'default',
+                                                        color: log.is_pricework_record && !isLogLocked ? '#1976d2' : 'inherit',
                                                     }}>
                                                         {`${currency}${log.pricework_amount || 0}`}
                                                     </TableCell>
@@ -867,7 +877,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             >
                                                                 {hasValue && !isPositive && ('-')}
                                                                 <Typography variant="body2">
-                                                                    {hasValue ? `${currency}${Math.abs(rowData.daily_adjustment_amount!)}` : '--'}
+                                                                    {`${currency}${hasValue ? Math.abs(normalizedAdjustmentAmount) : 0}`}
                                                                 </Typography>
                                                             </Box>
                                                         </Tooltip>

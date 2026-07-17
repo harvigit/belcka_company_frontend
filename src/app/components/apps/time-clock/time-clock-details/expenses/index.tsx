@@ -17,7 +17,10 @@ import {
     Card,
     CardMedia,
 } from '@mui/material';
-import {IconArrowLeft, IconTrash, IconFileText, IconCalendar, IconUser, IconBuilding, IconTag, IconCamper} from '@tabler/icons-react';
+import {
+    IconArrowLeft, IconTrash, IconFileText, IconCalendar, IconUser, IconBuilding, IconTag, IconCamper, IconDownload,
+    IconX
+} from '@tabler/icons-react';
 import {Stack} from '@mui/system';
 import toast from 'react-hot-toast';
 
@@ -121,6 +124,36 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
         } finally {
             setIsDeleting(false);
             setOpenDialog(false);
+        }
+    };
+
+    const handleDownloadImage = async () => {
+        if (!selectedImage) return;
+
+        const imageName = selectedImage.split('?')[0].split('/').pop() || 'expense-attachment.jpg';
+
+        try {
+            const response = await fetch(selectedImage);
+            if (!response.ok) throw new Error('Failed to fetch attachment');
+
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = imageName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
+        } catch {
+            const link = document.createElement('a');
+            link.href = selectedImage;
+            link.download = imageName;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
         }
     };
 
@@ -428,7 +461,7 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                             top: 8,
                         }}
                     >
-                        <IconArrowLeft/>
+                        <IconX />
                     </IconButton>
                 </DialogTitle>
                 <DialogContent>
@@ -446,6 +479,15 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                         />
                     )}
                 </DialogContent>
+                <DialogActions>
+                    <Button
+                        variant="contained"
+                        startIcon={<IconDownload size={18}/>}
+                        onClick={handleDownloadImage}
+                    >
+                        Download
+                    </Button>
+                </DialogActions>
             </Dialog>
         </Box>
     );

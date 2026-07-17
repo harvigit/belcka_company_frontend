@@ -710,14 +710,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const closeAddPriceworkSidebar = async () => {
         setAddPriceworkSidebar(false);
         setSelectedPricework(null);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error refreshing time clock data after closing add pricework sidebar:', error);
-        }
     };
 
     const closeAddAdjustmentSidebar = async () => {
@@ -2243,6 +2235,12 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     userId={user_id}
                     companyId={companyId}
                     pricework={selectedPricework}
+                    onDataRefresh={async () => {
+                        const defaultStartDate = startDate || defaultStart;
+                        const defaultEndDate = endDate || defaultEnd;
+                        await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                        await onDataChange?.();
+                    }}
                 />
             </Drawer>
 

@@ -15,13 +15,18 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
+  Tooltip,
 } from "@mui/material";
 import {
+  IconArrowLeft,
+  IconArrowRight,
   IconDownload,
   IconFilter,
   IconPlus,
   IconTrash,
   IconX,
+  IconZoomIn,
+  IconZoomOut,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
@@ -45,13 +50,12 @@ export const DocumentsTab = ({
 }: DocumentsTabProps) => {
   const [tabData, setTabData] = useState<any[]>([]);
   const [searchUser, setSearchUser] = useState<string>("");
-  const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
+  const [selectedTasks, setSelectedTasks] = useState<Array<number | string>>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<number>();
-  const [hoveredImage, setHoveredImage] = useState<string | null>(null);
-  const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number }>({
-    x: 0,
-    y: 0,
-  });
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const selectedImage = previewImages[selectedImageIndex] ?? null;
   const [attachmentsPayload, setAttachmentsPayload] = useState<{
     add: Record<string, { before: File[]; after: File[] }>;
     delete: Record<string, string[]>;
@@ -73,6 +77,59 @@ export const DocumentsTab = ({
   >("before");
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
 
+  const closePreview = () => {
+    setPreviewImages([]);
+    setSelectedImageIndex(0);
+    setZoom(1);
+  };
+
+  const openPreview = (images: string[], index: number) => {
+    setPreviewImages(images);
+    setSelectedImageIndex(index);
+    setZoom(1);
+  };
+
+  const showPreviousImage = () => {
+    setSelectedImageIndex((current) =>
+      (current - 1 + previewImages.length) % previewImages.length,
+    );
+    setZoom(1);
+  };
+
+  const showNextImage = () => {
+    setSelectedImageIndex((current) =>
+      (current + 1) % previewImages.length,
+    );
+    setZoom(1);
+  };
+
+  const handleDownloadImage = async () => {
+    if (!selectedImage) return;
+    const imageName = selectedImage.split("?")[0].split("/").pop() || "attachment.jpg";
+
+    try {
+      const response = await fetch(selectedImage);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = imageName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      const link = document.createElement("a");
+      link.href = selectedImage;
+      link.download = imageName;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+  };
+
   useEffect(() => {
     if (addressId) fetchDocumentTabData();
   }, [addressId, projectId]);
@@ -92,11 +149,17 @@ export const DocumentsTab = ({
     setFetchWork(false);
   };
 
-  const handleDownloadZip = async (taskIds: number[]) => {
+  const handleDownloadZip = async (taskIds: number[] = [], priceworkIds: number[] = []) => {
     try {
       const response = await api.get(
-        `address/download-tasks-zip/${addressId}?taskIds=${taskIds.join(",")}`,
-        { responseType: "blob" },
+        `address/download-tasks-zip/${addressId}`,
+        {
+          params: {
+            taskIds: taskIds.join(","),
+            priceworkIds: priceworkIds.join(","),
+          },
+          responseType: "blob",
+        },
       );
       const blob = new Blob([response.data], { type: "application/zip" });
       const url = window.URL.createObjectURL(blob);
@@ -241,7 +304,7 @@ export const DocumentsTab = ({
     }
   };
 
-  const handleCheckboxChange = (taskId: number) => {
+  const handleCheckboxChange = (taskId: number | string) => {
     setSelectedTasks((prev) =>
       prev.includes(taskId)
         ? prev.filter((id) => id !== taskId)
@@ -250,13 +313,16 @@ export const DocumentsTab = ({
   };
 
   const handleDownloadSelected = () => {
-    const tasksWithImages = selectedTasks.filter((taskId) => {
-      const task = tabData.find((doc) => doc.id === taskId);
-      return task?.images?.length > 0;
-    });
-    if (tasksWithImages.length > 0) {
-      handleDownloadZip(tasksWithImages);
-    }
+    const selectedDocuments = tabData.filter(
+      (document) => selectedTasks.includes(document.id) && document.images?.length > 0,
+    );
+    const taskIds = selectedDocuments
+      .filter((document) => !document.is_pricework_document)
+      .map((document) => Number(document.id));
+    const priceworkIds = selectedDocuments
+      .filter((document) => document.is_pricework_document)
+      .map((document) => Number(document.record_id));
+    if (taskIds.length || priceworkIds.length) handleDownloadZip(taskIds, priceworkIds);
   };
 
   const hasTasksWithImages = useMemo(() => {
@@ -272,23 +338,25 @@ export const DocumentsTab = ({
     return tabData.filter(
       (item) =>
         item.title?.toLowerCase().includes(search) ||
+        item.user_name?.toLowerCase().includes(search) ||
         item.created_at?.toLowerCase().includes(search),
     );
   }, [searchUser, tabData]);
 
+  const selectableDocuments = filteredData.filter((item) => item.images?.length > 0);
   const isAllSelected =
-    filteredData.length > 0 && selectedTasks.length === filteredData.length;
+    selectableDocuments.length > 0 && selectableDocuments.every((item) => selectedTasks.includes(item.id));
 
-  const isIndeterminate =
-    selectedTasks.length > 0 && selectedTasks.length < filteredData.length;
+  const selectedVisibleCount = selectableDocuments.filter((item) => selectedTasks.includes(item.id)).length;
+  const isIndeterminate = selectedVisibleCount > 0 && !isAllSelected;
 
   const handleSelectAll = () => {
     if (isAllSelected) {
-      setSelectedTasks([]);
+      const visibleIds = new Set(selectableDocuments.map((item) => item.id));
+      setSelectedTasks((current) => current.filter((id) => !visibleIds.has(id)));
     } else {
-      filteredData.forEach((item) => handleCheckboxChange(item.id));
-      const allIds = filteredData.map((item) => item.id);
-      setSelectedTasks(allIds);
+      const allIds = selectableDocuments.map((item) => item.id);
+      setSelectedTasks((current) => [...new Set([...current, ...allIds])]);
     }
   };
 
@@ -343,9 +411,17 @@ export const DocumentsTab = ({
                   checked={selectedTasks.includes(doc.id)}
                   onChange={() => handleCheckboxChange(doc.id)}
                 />
+                {doc.is_pricework_document && (
+                  <Box sx={{ bgcolor: "#1e4db7", color: "#fff", borderRadius: "999px", px: 1, py: 0.25, fontSize: 11, fontWeight: 600 }}>
+                    Pricework
+                  </Box>
+                )}
                 <Typography variant="h6" fontWeight={600}>
                   {doc.title || `Document #${doc.record_id}`}
                 </Typography>
+                {doc.is_pricework_document && doc.user_name && (
+                  <Typography variant="caption" color="text.secondary">{doc.user_name}</Typography>
+                )}
               </Stack>
               <Stack direction="row" spacing={1}>
                 <Badge
@@ -355,7 +431,9 @@ export const DocumentsTab = ({
                 >
                   <IconButton
                     color="error"
-                    onClick={() => handleDownloadZip([doc.id])}
+                    onClick={() => doc.is_pricework_document
+                      ? handleDownloadZip([], [Number(doc.record_id)])
+                      : handleDownloadZip([Number(doc.id)])}
                     sx={{
                       border: "1px solid",
                       borderColor: "error.main",
@@ -369,26 +447,28 @@ export const DocumentsTab = ({
                     <IconDownload size={20} />
                   </IconButton>
                 </Badge>
-                <IconButton
-                  color="primary"
-                  onClick={() => handleOpenDialog(doc)}
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "primary.main",
-                    borderRadius: "8px",
-                    display:
-                      doc.images && doc.images.length === 0
-                        ? "none"
-                        : "inline-flex",
-                  }}
-                >
-                  <IconPlus size={20} />
-                </IconButton>
+                {!doc.is_pricework_document && (
+                  <IconButton
+                    color="primary"
+                    onClick={() => handleOpenDialog(doc)}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "primary.main",
+                      borderRadius: "8px",
+                      display:
+                        doc.images && doc.images.length === 0
+                          ? "none"
+                          : "inline-flex",
+                    }}
+                  >
+                    <IconPlus size={20} />
+                  </IconButton>
+                )}
               </Stack>
             </Stack>
 
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-              {doc.images.map((image: any) => (
+              {doc.images.map((image: any, imageIndex: number) => (
                 <Box
                   key={image.id}
                   sx={{ width: "100px", position: "relative" }}
@@ -412,64 +492,36 @@ export const DocumentsTab = ({
                         objectFit: "cover",
                         cursor: "pointer",
                       }}
-                      onMouseEnter={(e) => {
-                        setHoveredImage(image.image_url);
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setHoverPosition({
-                          x: rect.right + 10,
-                          y: rect.top,
-                        });
-                      }}
-                      onMouseLeave={() => setHoveredImage(null)}
+                      onClick={() => openPreview(
+                        doc.images.map((item: any) => item.image_url).filter(Boolean),
+                        imageIndex,
+                      )}
                     />
                   </Card>
-                  <IconButton
-                    color="error"
-                    size="small"
-                    onClick={() =>
-                      handleDeleteImage(
-                        doc.id,
-                        image.record_id ?? doc.record_id,
-                        image.id,
-                      )
-                    }
-                    sx={{
-                      position: "absolute",
-                      top: 4,
-                      right: 4,
-                      backgroundColor: "white",
-                      "&:hover": { backgroundColor: "#fee" },
-                    }}
-                  >
-                    <IconTrash size={16} />
-                  </IconButton>
+                  {!doc.is_pricework_document && (
+                    <IconButton
+                      color="error"
+                      size="small"
+                      onClick={() =>
+                        handleDeleteImage(
+                          doc.id,
+                          image.record_id ?? doc.record_id,
+                          image.id,
+                        )
+                      }
+                      sx={{
+                        position: "absolute",
+                        top: 4,
+                        right: 4,
+                        backgroundColor: "white",
+                        "&:hover": { backgroundColor: "#fee" },
+                      }}
+                    >
+                      <IconTrash size={16} />
+                    </IconButton>
+                  )}
                 </Box>
               ))}
-              {/* Hover Preview */}
-              {hoveredImage && (
-                <Box
-                  sx={{
-                    position: "fixed",
-                    top: "20%",
-                    left: "35%",
-                    width: "25%",
-                    maxHeight: "80vh",
-                    zIndex: 2000,
-                    border: "1px solid #ccc",
-                    borderRadius: 2,
-                    overflow: "hidden",
-                    backgroundColor: "#fff",
-                    boxShadow: 3,
-                  }}
-                >
-                  <Box
-                    component="img"
-                    src={hoveredImage}
-                    alt="Preview"
-                    sx={{ width: "100%", height: "100%", objectFit: "contain" }}
-                  />
-                </Box>
-              )}
             </Box>
           </Box>
         ))
@@ -509,6 +561,124 @@ export const DocumentsTab = ({
           </Button>
         </Box>
       )}
+
+      <Dialog open={Boolean(selectedImage)} onClose={closePreview} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
+          Attachment Preview
+          <IconButton onClick={closePreview} size="small" aria-label="Close preview">
+            <IconX size={20} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+          <Box
+            sx={{
+              height: { xs: "55vh", sm: "65vh" },
+              width: "100%",
+              backgroundColor: "#f5f5f5",
+              borderRadius: 1,
+              border: "1px solid",
+              borderColor: "divider",
+              overflow: "auto",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative",
+            }}
+          >
+            <Box
+              component="img"
+              src={selectedImage || ""}
+              alt={`Attachment preview ${selectedImageIndex + 1}`}
+              sx={{
+                maxWidth: zoom <= 1 ? `${zoom * 100}%` : "none",
+                maxHeight: zoom <= 1 ? `${zoom * 100}%` : "none",
+                width: zoom <= 1 ? "auto" : `${zoom * 100}%`,
+                height: "auto",
+                objectFit: "contain",
+                display: "block",
+                transition: "width 150ms ease",
+              }}
+            />
+
+            {previewImages.length > 1 && (
+              <>
+                <Tooltip title="Previous attachment">
+                  <IconButton
+                    onClick={showPreviousImage}
+                    aria-label="Previous attachment"
+                    sx={{
+                      position: "absolute",
+                      top: "50%",
+                      left: 12,
+                      transform: "translateY(-50%)",
+                      color: "#fff",
+                      backgroundColor: "rgba(0, 0, 0, 0.55)",
+                      zIndex: 1,
+                      "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.75)" },
+                    }}
+                  >
+                    <IconArrowLeft size={24} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Next attachment">
+                  <IconButton
+                    onClick={showNextImage}
+                    aria-label="Next attachment"
+                    sx={{
+                      position: "absolute",
+                      top: "50%",
+                      right: 12,
+                      transform: "translateY(-50%)",
+                      color: "#fff",
+                      backgroundColor: "rgba(0, 0, 0, 0.55)",
+                      zIndex: 1,
+                      "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.75)" },
+                    }}
+                  >
+                    <IconArrowRight size={24} />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+          </Box>
+
+          <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
+            <Tooltip title="Zoom out">
+              <span>
+                <IconButton
+                  onClick={() => setZoom((current) => Math.max(0.5, current - 0.25))}
+                  disabled={zoom <= 0.5}
+                  aria-label="Zoom out"
+                >
+                  <IconZoomOut size={22} />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Typography variant="body2" minWidth={48} textAlign="center">
+              {Math.round(zoom * 100)}%
+            </Typography>
+            <Tooltip title="Zoom in">
+              <span>
+                <IconButton
+                  onClick={() => setZoom((current) => Math.min(3, current + 0.25))}
+                  disabled={zoom >= 3}
+                  aria-label="Zoom in"
+                >
+                  <IconZoomIn size={22} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "space-between" }}>
+          <Typography variant="body2" color="text.secondary">
+            {selectedImageIndex + 1} / {previewImages.length}
+          </Typography>
+          <Button variant="contained" startIcon={<IconDownload size={18} />} onClick={handleDownloadImage}>
+            Download
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Dialog for selecting image and type */}
       <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth>
