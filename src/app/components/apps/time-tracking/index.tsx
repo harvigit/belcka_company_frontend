@@ -77,8 +77,10 @@ import AddExpense from '@/app/components/apps/time-clock/time-clock-details/expe
 import AddWorklog from '@/app/components/apps/time-clock/time-clock-details/worklog/add-worklog';
 import AddPricework from '@/app/components/apps/time-clock/time-clock-details/pricework/add-pricework';
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from '@/utils/googleMaps';
+import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
 
 const TIME_TRACKING_PAGE = 'time-tracking-page';
+const TIME_TRACKING_COLUMNS_COOKIE = 'time-tracking-column-visibility';
 const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 };
 const DEFAULT_ZOOM = 13;
 
@@ -1087,7 +1089,10 @@ const TimeTracking: React.FC<Props> = () => {
     const [toast, setToast] = useState<ToastState>({ open: false, message: '', severity: 'success' });
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ ...initialSettings.columnVisibility });
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => ({
+        ...initialSettings.columnVisibility,
+        ...loadColumnVisibilityCookie(TIME_TRACKING_COLUMNS_COOKIE),
+    }));
     const [expanded, setExpanded] = useState<ExpandedState>({});
     const [showPayableAmounts, setShowPayableAmounts] = useState(false);
     const [tableExpanded, setTableExpanded] = useState(false);
@@ -1144,9 +1149,14 @@ const TimeTracking: React.FC<Props> = () => {
     useEffect(() => {
         setColumnVisibility((prev) => ({
             ...prev,
-            ...Object.fromEntries(AMOUNT_COLUMNS.map((col) => [col, true])),
+            ...Object.fromEntries(AMOUNT_COLUMNS.map((col) => [col, prev[col] ?? true])),
         }));
     }, []);
+
+    useEffect(() => {
+        saveSettingsToStorage(startDate, endDate, columnVisibility);
+        saveColumnVisibilityCookie(TIME_TRACKING_COLUMNS_COOKIE, columnVisibility);
+    }, [startDate, endDate, columnVisibility]);
 
     useEffect(() => {
         if (clockInfo.user_is_working) {

@@ -39,9 +39,11 @@ import {Stack} from '@mui/system';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import {useRouter} from 'next/navigation';
+import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
+const TIME_CLOCK_DETAILS_COLUMNS_COOKIE = 'time-clock-details-column-visibility';
 const TIME_CLOCK_DETAILS_AMOUNT_COLUMNS = [
     'priceWork',
     'cis_amount',
@@ -211,6 +213,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const initialParamsRef = useRef(queryParams);
     const handledRef = useRef(false);
+    const lastAutomaticFetchKeyRef = useRef<string | null>(null);
 
     // Custom hooks
     const {
@@ -236,8 +239,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         fetchPayrollCycle,
     } = useTimeClockData(user_id, currency, isRemovedUser, isArchivedUser);
 
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-        ...initialData.columnVisibility,
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => ({
         priceWork: false,
         cis_amount: false,
         gross_amount: false,
@@ -245,7 +247,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         adjustment: false,
         payableAmount: false,
         dailyTotal: false,
-    });
+        ...initialData.columnVisibility,
+        ...loadColumnVisibilityCookie(TIME_CLOCK_DETAILS_COLUMNS_COOKIE),
+    }));
 
     useEffect(() => { fetchPayrollCycle(); }, []);
     
@@ -267,6 +271,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     useEffect(() => {
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
     }, [startDate, endDate, columnVisibility]); 
+
+    useEffect(() => {
+        saveColumnVisibilityCookie(TIME_CLOCK_DETAILS_COLUMNS_COOKIE, columnVisibility);
+    }, [columnVisibility]);
     
     // Process conflicts
     useEffect(() => {
@@ -1878,7 +1886,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     });
 
     useEffect(() => {
-        if (!open) return;
+        if (!open) {
+            lastAutomaticFetchKeyRef.current = null;
+            return;
+        }
 
         let start: Date | null = null;
         let end: Date | null = null;
@@ -1894,11 +1905,35 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         }
 
         if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
+            const fetchKey = [
+                user_id ?? '',
+                start.getTime(),
+                end.getTime(),
+                Boolean(isRemovedUser),
+                Boolean(isArchivedUser),
+            ].join(':');
+
+            // The parent can recreate `timeClock` while this drawer is open, and
+            // React also re-runs effects in development. Do not repeat the same
+            // automatic load; action handlers still refresh explicitly as before.
+            if (lastAutomaticFetchKeyRef.current === fetchKey) return;
+            lastAutomaticFetchKeyRef.current = fetchKey;
+
             setStartDate(start);
             setEndDate(end);
             fetchTimeClockData(start, end);
         }
-    }, [timeClock, initialData, fetchTimeClockData]);
+    }, [
+        open,
+        user_id,
+        isRemovedUser,
+        isArchivedUser,
+        initialData.startDate,
+        initialData.endDate,
+        timeClock?.start_date,
+        timeClock?.end_date,
+        fetchTimeClockData,
+    ]);
 
     if (!timeClock) return null;
 

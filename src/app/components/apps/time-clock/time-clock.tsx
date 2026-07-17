@@ -87,6 +87,7 @@ import AddWorklog from './time-clock-details/worklog/add-worklog';
 import AddPricework from './time-clock-details/pricework/add-pricework';
 import Image from 'next/image';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
+import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
 import Link from 'next/link';
 import LeaveLists from './time-clock-details/leaves';
 import Conflicts from '@/app/components/apps/time-clock/time-clock-details/conflicts/conflicts';
@@ -103,6 +104,7 @@ const columnHelper = createColumnHelper<TimeClock>();
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
+const TIME_CLOCK_COLUMNS_COOKIE = 'time-clock-column-visibility';
 const TIME_CLOCK_AMOUNT_COLUMNS = [
     'daylog_payable_amount',
     'pricework_total_amount',
@@ -363,11 +365,15 @@ const TimeClock = ({ queryParams }: Props) => {
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
     const [ratePermissionLoaded, setRatePermissionLoaded] = useState<boolean>(false);
 
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-        initialStoredState?.columnVisibility || {}
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() =>
+        loadColumnVisibilityCookie(TIME_CLOCK_COLUMNS_COOKIE)
+        ?? initialStoredState?.columnVisibility
+        ?? {}
     );
 
     const queryParamsRef = useRef(queryParams);
+    const dataRequestsRef = useRef<Map<string, Promise<TimeClock[]>>>(new Map());
+    const conflictRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
     useEffect(() => {
         queryParamsRef.current = queryParams;
     }, [queryParams]);
@@ -397,6 +403,10 @@ const TimeClock = ({ queryParams }: Props) => {
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
     }, [startDate, endDate, columnVisibility]);
 
+    useEffect(() => {
+        saveColumnVisibilityCookie(TIME_CLOCK_COLUMNS_COOKIE, columnVisibility);
+    }, [columnVisibility]);
+
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
         actionType: 'lock' | 'unlock' | 'paid' | 'delete';
@@ -404,33 +414,38 @@ const TimeClock = ({ queryParams }: Props) => {
     } | null>(null);
 
     const fetchData = async (start: Date, end: Date): Promise<TimeClock[]> => {
-        try {
-            setFetchTimesheet(true);
-            const params: Record<string, string> = {
-                start_date: format(start, 'dd/MM/yyyy'),
-                end_date: format(end, 'dd/MM/yyyy'),
-                page: String(pagination.pageIndex + 1),
-                limit: String(pagination.pageSize),
-            };
+        const params: Record<string, string> = {
+            start_date: format(start, 'dd/MM/yyyy'),
+            end_date: format(end, 'dd/MM/yyyy'),
+            page: String(pagination.pageIndex + 1),
+            limit: String(pagination.pageSize),
+        };
 
-            if (searchTerm) {
-                params.search = searchTerm;
-            }
+        if (searchTerm) {
+            params.search = searchTerm;
+        }
 
-            const currentParams = queryParamsRef.current;
+        const currentParams = queryParamsRef.current;
 
-            if (currentParams?.user_id) {
-                const userId = String(currentParams.user_id).trim();
-                if (userId && !isNaN(Number(userId))) {
-                    params.user_id = userId;
-                    if (currentParams.is_removed_user === true) {
-                        params.is_removed_user = '1';
-                    } else if (currentParams.is_archived_user === true) {
-                        params.is_archived_user = '1';
-                    }
+        if (currentParams?.user_id) {
+            const userId = String(currentParams.user_id).trim();
+            if (userId && !isNaN(Number(userId))) {
+                params.user_id = userId;
+                if (currentParams.is_removed_user === true) {
+                    params.is_removed_user = '1';
+                } else if (currentParams.is_archived_user === true) {
+                    params.is_archived_user = '1';
                 }
             }
+        }
 
+        const requestKey = JSON.stringify(params);
+        const pendingRequest = dataRequestsRef.current.get(requestKey);
+        if (pendingRequest) return pendingRequest;
+
+        const request = (async (): Promise<TimeClock[]> => {
+          try {
+            setFetchTimesheet(true);
             const response: AxiosResponse<TimeClockResponse> = await api.get('/time-clock/get', {params});
             if (response.data.IsSuccess) {
                 setData(response.data.info);
@@ -454,21 +469,45 @@ const TimeClock = ({ queryParams }: Props) => {
             setFetchTimesheet(false);
         }
         return [];
+        })();
+
+        dataRequestsRef.current.set(requestKey, request);
+        try {
+            return await request;
+        } finally {
+            if (dataRequestsRef.current.get(requestKey) === request) {
+                dataRequestsRef.current.delete(requestKey);
+            }
+        }
     };
 
     const fetchConflictsData = async (start: Date, end: Date) => {
-        try {
-            const params: Record<string, string> = {
-                start_date: format(start, 'dd/MM/yyyy'),
-                end_date: format(end, 'dd/MM/yyyy'),
-            };
+        const params: Record<string, string> = {
+            start_date: format(start, 'dd/MM/yyyy'),
+            end_date: format(end, 'dd/MM/yyyy'),
+        };
+        const requestKey = JSON.stringify(params);
+        const pendingRequest = conflictRequestsRef.current.get(requestKey);
+        if (pendingRequest) return pendingRequest;
 
+        const request = (async () => {
+          try {
             const response = await api.get('/time-clock/conflicts', {params});
             if (response.data.IsSuccess) {
                 setConflictDetails(response.data.conflicts || []);
             }
         } catch (error) {
             setConflictDetails([]);
+        }
+        })();
+
+        conflictRequestsRef.current.set(requestKey, request);
+        try {
+            await request;
+        } finally {
+            if (conflictRequestsRef.current.get(requestKey) === request) {
+                conflictRequestsRef.current.delete(requestKey);
+            }
         }
     };
 
@@ -478,7 +517,6 @@ const TimeClock = ({ queryParams }: Props) => {
             const e = endDate || defaultEnd;
             if (fullRefresh) {
                 await fetchData(s, e);
-                await fetchConflictsData(s, e);
             } else {
                 await fetchConflictsData(s, e);
             }
@@ -570,12 +608,6 @@ const TimeClock = ({ queryParams }: Props) => {
     }, []);
 
     useEffect(() => {
-        if (!cycleReady || !startDate || !endDate) return;
-
-        fetchData(startDate, endDate);
-    }, [cycleReady, startDate, endDate, queryParams?.user_id]);
-
-    useEffect(() => {
         if (!queryParams?.user_id || !queryParams?.start_date || !queryParams?.end_date) return;
 
         const startDateObj = new Date(queryParams.start_date);
@@ -662,7 +694,6 @@ const TimeClock = ({ queryParams }: Props) => {
             saveDateRangeToStorage(from, to, columnVisibility);
 
             await fetchData(from, to);
-            await fetchConflictsData(from, to);
         } catch (error) {
             console.error('Error refreshing data after settings close:', error);
             setErrorMessage('Failed to refresh data after saving settings.');
@@ -755,8 +786,6 @@ const TimeClock = ({ queryParams }: Props) => {
         const e = endDate   || defaultEnd;
         try {
             handleDateRangeChange({ from: s, to: e });
-            
-            await fetchConflictsData(s, e);
             setHasDataChanged(false);
         } catch (error) {
             setErrorMessage('Failed to refresh data. Please try again.');
@@ -908,75 +937,70 @@ const TimeClock = ({ queryParams }: Props) => {
                 
                 return (
                     <Stack direction="row" alignItems="center" spacing={4}>
-                        <Stack
-                            direction="row"
-                            alignItems="center"
-                            spacing={4}
-                            sx={{cursor: 'pointer'}}
-                        >
                         <Link
-                        href={{
-                            pathname: `/apps/users/${row?.user_id}`,
-                            query: isReadOnlyUser
-                                ? (isRemovedUser
-                                    ? { is_removed_user: 'true' }
-                                    : { is_archived_user: 'true' })
-                                : {}
-                        }}
-                        passHref
-                        onClick={(e) => e.stopPropagation()}
+                            href={{
+                                pathname: `/apps/users/${row?.user_id}`,
+                                query: {
+                                    tab: 'billing',
+                                    ...(isReadOnlyUser
+                                        ? (isRemovedUser
+                                            ? {is_removed_user: 'true'}
+                                            : {is_archived_user: 'true'})
+                                        : {}),
+                                },
+                            }}
+                            passHref
+                            onClick={(e) => e.stopPropagation()}
+                            style={{textDecoration: 'none', color: 'inherit'}}
                         >
-                            <Badge
-                                overlap="circular"
-                                anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-                                variant="dot"
-                                sx={{
-                                    '& .MuiBadge-badge': {
-                                        backgroundColor: row?.user_status_color,
-                                        color: row?.user_status_color,
-                                        width: 8,
-                                        height: 8,
-                                        borderRadius: '50%',
-                                        boxShadow: '0 0 0 2px white',
-                                        cursor: 'pointer',
-                                    },
-                                }}
+                            <Stack
+                                direction="row"
+                                alignItems="center"
+                                spacing={4}
+                                sx={{cursor: 'pointer'}}
                             >
-                                <Avatar
-                                    src={
-                                        row?.user_thumb_image
-                                            ? row.user_thumb_image
-                                            : '/images/users/user.png'
-                                    }
-                                    alt={row?.user_name}
-                                    sx={{width: 36, height: 36, cursor: 'pointer'}}
-                                />
-                            </Badge>
-                        </Link>
-                            <Box>
-                                <Typography
-                                    className="f-14"
-                                    color="textPrimary"
+                                <Badge
+                                    overlap="circular"
+                                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                    variant="dot"
                                     sx={{
-                                        cursor: 'pointer',
-                                        '&:hover': {color: '#173f98'},
-                                        width: 150,
+                                        '& .MuiBadge-badge': {
+                                            backgroundColor: row?.user_status_color,
+                                            color: row?.user_status_color,
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: '50%',
+                                            boxShadow: '0 0 0 2px white',
+                                            cursor: 'pointer',
+                                        },
                                     }}
                                 >
-                                    {row.user_name}
-                                </Typography>
-                                <Tooltip title={row.trade_name ?? '-'} placement="top" arrow>
+                                    <Avatar
+                                        src={row?.user_thumb_image || '/images/users/user.png'}
+                                        alt={row?.user_name}
+                                        sx={{width: 36, height: 36, cursor: 'pointer'}}
+                                    />
+                                </Badge>
+                                <Box>
                                     <Typography
-                                        color="textSecondary"
-                                        variant="subtitle1"
-                                        width={150}
-                                        noWrap
+                                        className="f-14"
+                                        color="textPrimary"
+                                        sx={{
+                                            cursor: 'pointer',
+                                            '&:hover': {color: '#173f98'},
+                                            width: 150,
+                                        }}
                                     >
-                                        {row.trade_name}
+                                        {row.user_name}
                                     </Typography>
-                                </Tooltip>
-                            </Box>
-                        </Stack>
+                                    <Tooltip title={row.trade_name ?? '-'} placement="top" arrow>
+                                        <Typography color="textSecondary" variant="subtitle1" width={150} noWrap>
+                                            {row.trade_name}
+                                        </Typography>
+                                    </Tooltip>
+                                </Box>
+                            </Stack>
+                        </Link>
                     </Stack>
                 );
             },
@@ -1312,6 +1336,8 @@ const TimeClock = ({ queryParams }: Props) => {
     ];
 
     const handleFetchData = () => {
+        if (!cycleReady || !startDate || !endDate) return;
+
         const start = startDate || defaultStart;
         const end = endDate || defaultEnd;
         fetchData(start, end);
@@ -1335,12 +1361,8 @@ const TimeClock = ({ queryParams }: Props) => {
         fetchData: handleFetchData,
         debounceDependencies: [searchTerm, queryParamsRef.current?.user_id, startDate, endDate, cycleReady],
         state: { columnVisibility },
+        onColumnVisibilityChange: setColumnVisibility,
     });
-
-    // Handle internal visibility changes from useReactTable not supported natively via useServerTable
-    useEffect(() => {
-        table.setColumnVisibility(columnVisibility);
-    }, [columnVisibility, table]);
 
     useEffect(() => {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
@@ -1584,7 +1606,6 @@ const TimeClock = ({ queryParams }: Props) => {
                 setSuccessMessage(response.data.message);
                 setSelectedRowIds(new Set());
                 await fetchData(from, to);
-                await fetchConflictsData(from, to);
             }
         } catch (error: any) {
             setErrorMessage(error?.response?.data?.message || 'Failed to delete selected users\' time-clock records.');
@@ -1603,7 +1624,6 @@ const TimeClock = ({ queryParams }: Props) => {
                 const s = startDate || defaultStart;
                 const e = endDate || defaultEnd;
                 await fetchData(s, e);
-                await fetchConflictsData(s, e);
             }
         } catch (error) {
             setErrorMessage('Failed to mark timesheets as paid.');
@@ -1626,7 +1646,6 @@ const TimeClock = ({ queryParams }: Props) => {
                 const s = startDate || defaultStart;
                 const e = endDate || defaultEnd;
                 await fetchData(s, e);
-                await fetchConflictsData(s, e);
             } else {
                 setErrorMessage(`Failed to ${action} timesheet(s).`);
             }

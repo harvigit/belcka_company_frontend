@@ -13,6 +13,7 @@ interface UseServerTableOptions<TData> {
   debounceDependencies?: any[];
   debounceTimeMs?: number;
   onSortingChange?: (updater: any) => void;
+  onColumnVisibilityChange?: (updater: any) => void;
   manualSorting?: boolean;
   state?: any;
   getRowId?: (originalRow: TData, index: number, parent?: any) => string;
@@ -25,6 +26,7 @@ export function useServerTable<TData>({
   debounceDependencies = [],
   debounceTimeMs = 300,
   onSortingChange: controlledOnSortingChange,
+  onColumnVisibilityChange,
   manualSorting = false,
   state: controlledState,
   getRowId,
@@ -67,7 +69,7 @@ export function useServerTable<TData>({
   const table = useReactTable({
     data,
     columns,
-    state: { columnFilters, sorting, pagination },
+    state: { ...controlledState, columnFilters, sorting, pagination },
     pageCount: pageCount,
     rowCount: totalRows,
     manualPagination: true,
@@ -77,6 +79,7 @@ export function useServerTable<TData>({
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId,

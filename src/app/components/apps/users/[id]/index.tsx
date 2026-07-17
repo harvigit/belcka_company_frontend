@@ -561,7 +561,7 @@ const TablePagination = () => {
         if (tabParam) {
             switch (tabParam) {
                 case 'billing':
-                    setValue(2);
+                    setValue(isReadOnlyUserView ? 1 : 2);
                     break;
                 case 'rate':
                     setValue(3);
