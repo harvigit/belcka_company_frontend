@@ -117,7 +117,12 @@ const TablePagination = () => {
   const [users, setUsers] = useState<UserList[]>([]);
   const [user, setUser] = useState<UserList[]>([]);
   const [teamInfo, setTeamInfo] = useState<any>(null);
-
+  const [totalUsersListCount, setTotalUsersListCount] = useState<
+    number | undefined
+  >(undefined);
+  const [workingUsersListCount, setWorkingUsersListCount] = useState<
+    number | undefined
+  >(undefined);
   const session = useSession();
   const id = session.data?.user as User & { company_id?: number | null };
 
@@ -245,7 +250,8 @@ const TablePagination = () => {
       }
 
       const res = await api.get(url);
-      const teamData = res.data?.info?.data || res.data?.info || res.data?.data || [];
+      const teamData =
+        res.data?.info?.data || res.data?.info || res.data?.data || [];
 
       if (teamData && Array.isArray(teamData)) {
         if (teamData.length > 0) {
@@ -290,7 +296,7 @@ const TablePagination = () => {
                 trade_name: null,
                 last_worked_date: null,
                 status_color: null,
-                new_member: false
+                new_member: false,
               },
             ];
           }
@@ -315,7 +321,7 @@ const TablePagination = () => {
             is_subcontractor: team.is_subcontractor,
             company_id: team.company_id,
             subcontractor_company_id: team.subcontractor_company_id,
-            new_member: user.new_member
+            new_member: user.new_member,
           }));
         });
 
@@ -337,6 +343,12 @@ const TablePagination = () => {
           setTotalRows(flattened.length);
         }
 
+        if (res.data.total_users !== undefined) {
+          setTotalUsersListCount(res.data.total_users);
+        }
+        if (res.data.working_member_count !== undefined) {
+          setWorkingUsersListCount(res.data.working_member_count);
+        }
         if (pagMeta.totalPages !== undefined) {
           setPageCount(pagMeta.totalPages);
         } else if (pagMeta.last_page !== undefined) {
@@ -651,7 +663,12 @@ const TablePagination = () => {
                     {item.name ?? "-"}
                   </Typography>
                   {item?.new_member && (
-                    <Chip label="New" size="small" color="primary" variant="outlined"/>
+                    <Chip
+                      label="New"
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                    />
                   )}
                 </Box>
               </Stack>
@@ -937,7 +954,11 @@ const TablePagination = () => {
                     },
                   }}
                 />
-                <Button variant="contained" onClick={() => setOpen(true)} sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}>
+                <Button
+                  variant="contained"
+                  onClick={() => setOpen(true)}
+                  sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
+                >
                   <IconFilter width={18} />
                 </Button>
 
@@ -1417,9 +1438,16 @@ const TablePagination = () => {
                 {data.length ? <Divider /> : <></>}
               </Box>
               <Divider />
-              <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined}
+              <TablePaginationFooter
+                selectedCount={
+                  typeof selectedRowIds !== "undefined"
+                    ? selectedRowIds.size
+                    : undefined
+                }
                 table={table}
                 totalRows={table.getPrePaginationRowModel().rows.length}
+                totalUsers={totalUsersListCount}
+                workingMemberCount={workingUsersListCount}
               />
             </Box>
           </BlankCard>

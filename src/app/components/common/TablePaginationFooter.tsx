@@ -1,20 +1,36 @@
-import React from 'react';
-import { Stack, Box, Typography, MenuItem, IconButton } from '@mui/material';
-import { IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight } from '@tabler/icons-react';
-import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
+import React from "react";
+import { Stack, Box, Typography, MenuItem, IconButton } from "@mui/material";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconChevronsLeft,
+  IconChevronsRight,
+} from "@tabler/icons-react";
+import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 
 interface TablePaginationFooterProps {
   table: any;
   totalRows: number;
   selectedCount?: number;
+  totalUsers?: number;
+  workingMemberCount?: number;
 }
 
-export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({ table, totalRows, selectedCount }) => {
-  const tableSelectedCount = table.getState().rowSelection 
-    ? Object.keys(table.getState().rowSelection).filter(key => table.getState().rowSelection[key]).length 
+export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({
+  table,
+  totalRows,
+  selectedCount,
+  totalUsers,
+  workingMemberCount,
+}) => {
+  const tableSelectedCount = table.getState().rowSelection
+    ? Object.keys(table.getState().rowSelection).filter(
+        (key) => table.getState().rowSelection[key],
+      ).length
     : 0;
-    
-  const finalSelectedCount = selectedCount !== undefined ? selectedCount : tableSelectedCount;
+
+  const finalSelectedCount =
+    selectedCount !== undefined ? selectedCount : tableSelectedCount;
 
   return (
     <Stack
@@ -29,8 +45,29 @@ export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({ ta
     >
       <Box display="flex" alignItems="center" gap={1}>
         <Typography color="textSecondary" className="f-14">
-          {finalSelectedCount > 0 ? `${finalSelectedCount} selected out of ${totalRows}` : `${totalRows} Rows`}
+          {finalSelectedCount > 0
+            ? `${finalSelectedCount} selected out of ${totalRows}`
+            : `${totalRows} Rows`}
         </Typography>
+        {(totalUsers !== undefined || workingMemberCount !== undefined) && (
+          <Box sx={{ ml: 2, display: "flex", alignItems: "center", gap: 0.5 }}>
+            {workingMemberCount !== undefined && (
+              <Typography variant="h6" fontWeight={600} color="primary">
+                {workingMemberCount}
+              </Typography>
+            )}
+
+            {totalUsers !== undefined && (
+              <Typography
+                variant="body2"
+                fontWeight={600}
+                color="text.secondary"
+              >
+                / {totalUsers} Working
+              </Typography>
+            )}
+          </Box>
+        )}
       </Box>
       <Box
         sx={{

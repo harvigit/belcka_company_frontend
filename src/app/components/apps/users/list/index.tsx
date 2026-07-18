@@ -138,6 +138,8 @@ export interface TradeList {
 const TablePagination = () => {
   const [data, setData] = useState<UserList[]>([]);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [totalUsersListCount, setTotalUsersListCount] = useState<number | undefined>(undefined);
+  const [workingUsersListCount, setWorkingUsersListCount] = useState<number | undefined>(undefined);
   const [hasPermissionUser, setHasPermissionUser] = useState<boolean>(false);
   const [permissionUserType, setPermissionUserType] = useState<
     "view" | "view_edit" | ""
@@ -275,6 +277,13 @@ const TablePagination = () => {
         setHasPermissionUser(res.data.has_permission_user || false);
         setPermissionUserType(res.data.permission_user_type || "");
         setColumnAccessLoaded(true);
+
+        if (res.data.total_users !== undefined) {
+          setTotalUsersListCount(res.data.total_users);
+        }
+        if (res.data.working_member_count !== undefined) {
+          setWorkingUsersListCount(res.data.working_member_count);
+        }
 
         const pagMeta =
           res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
@@ -2245,6 +2254,8 @@ const TablePagination = () => {
           <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined}
             table={table}
             totalRows={totalRows}
+            totalUsers={totalUsersListCount}
+            workingMemberCount={workingUsersListCount}
           />
         </Box>
         <Divider />
