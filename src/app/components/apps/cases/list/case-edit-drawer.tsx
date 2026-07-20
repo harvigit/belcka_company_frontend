@@ -306,13 +306,14 @@ export default function CaseEditDrawer({
                     <IconArrowLeft />
                   </IconButton>
                   <Typography variant="h6" color="inherit" fontWeight={700}>
-                    Edit Case
+                    Case Detail
                   </Typography>
                 </Box>
 
                 <Box mb={2} mt={2}>
                   <Autocomplete
                     fullWidth
+                    disabled
                     options={projects || []}
                     value={
                       (projects || []).find(
@@ -393,7 +394,7 @@ export default function CaseEditDrawer({
                     width={"98%"}
                     className="slider_wrapper"
                   >
-                    <Typography variant="h6">
+                    {/* <Typography variant="h6">
                       Area size [{formData?.radius} Meter]
                     </Typography>
                     <CustomRangeSlider
@@ -403,7 +404,7 @@ export default function CaseEditDrawer({
                       max={100}
                       step={1}
                       sx={{ height: "1px" }}
-                    />
+                    /> */}
 
                     <GoogleMap
                       zoom={17}
@@ -445,6 +446,7 @@ export default function CaseEditDrawer({
                       <Typography>Zone Color</Typography>
                       <input
                         type="color"
+                        disabled
                         value={formData.color || "#000000"}
                         onChange={(e) =>
                           setFormData({ ...formData, color: e.target.value })
@@ -459,6 +461,7 @@ export default function CaseEditDrawer({
                     <Box mt={2}>
                       <CustomTextField
                         fullWidth
+                        disabled
                         label="Reference"
                         value={formData.ref || ""}
                         onChange={(e: any) =>
@@ -474,7 +477,7 @@ export default function CaseEditDrawer({
               </Grid>
             </Grid>
 
-            <Box
+            {/* <Box
               sx={{
                 display: "flex",
                 justifyContent: "start",
@@ -506,7 +509,7 @@ export default function CaseEditDrawer({
               >
                 Close
               </Button>
-            </Box>
+            </Box> */}
           </form>
         </Box>
       </Box>

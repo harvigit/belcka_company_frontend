@@ -709,7 +709,7 @@ const CasesList = () => {
                 setEditDialogOpen(true);
               }}
             >
-              <IconEdit size={18} />
+              <IconEye size={18} />
             </IconButton>
           );
         },

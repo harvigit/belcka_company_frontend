@@ -45,6 +45,7 @@ import {
   IconArrowLeft,
   IconDotsVertical,
   IconEdit,
+  IconEye,
   IconNote,
   IconPointFilled,
   IconProgress,
@@ -1155,7 +1156,7 @@ const AddressesList = ({
                   onClick={() => handleEdit(info.row.original)}
                   color="primary"
                 >
-                  <IconEdit size={18} />
+                  <IconEye size={18} />
                 </IconButton>
                 <Badge
                   badgeContent={info.row.original.image_count}
@@ -1942,13 +1943,14 @@ const AddressesList = ({
                       <IconArrowLeft />
                     </IconButton>
                     <Typography variant="h6" color="inherit" fontWeight={700}>
-                      Edit Case
+                      Case Detail
                     </Typography>
                   </Box>
 
                   <Box mb={2}>
                     <Autocomplete
                       fullWidth
+                      disabled
                       options={projects || []}
                       value={
                         (projects || []).find(
@@ -2085,6 +2087,7 @@ const AddressesList = ({
                         <Typography>Zone Color</Typography>
                         <input
                           type="color"
+                          disabled
                           value={formData.color || "#000000"}
                           onChange={(e) =>
                             setFormData({ ...formData, color: e.target.value })
@@ -2100,6 +2103,7 @@ const AddressesList = ({
                         <CustomTextField
                           fullWidth
                           label="Reference"
+                          disabled
                           value={formData.ref || ""}
                           onChange={(e: any) =>
                             setFormData((prev: any) => ({
@@ -2114,7 +2118,7 @@ const AddressesList = ({
                 </Grid>
               </Grid>
 
-              <Box
+              {/* <Box
                 sx={{
                   display: "flex",
                   justifyContent: "start",
@@ -2146,7 +2150,7 @@ const AddressesList = ({
                 >
                   Close
                 </Button>
-              </Box>
+              </Box> */}
             </form>
           </Box>
         </Box>

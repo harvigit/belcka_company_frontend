@@ -338,14 +338,14 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     if (!circleRef.current) return;
     const r = circleRef.current.getRadius();
     let newRadius = Math.round(r);
-    
+
     if (newRadius > 10000) {
       newRadius = 10000;
       circleRef.current.setRadius(10000);
     }
-    
+
     if (lastRadiusRef.current === newRadius) return;
-    
+
     lastRadiusRef.current = newRadius;
     setRadius(newRadius);
     setParentAddressRadius(newRadius);
@@ -2281,6 +2281,29 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
           <DialogActions sx={{ px: 3, pb: 2 }}>
             <Button
+              variant="outlined"
+              color="error"
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (conflictItem) {
+                  try {
+                    const res = await api.post("address/resolve-conflict", {
+                      id: conflictItem.id,
+                    });
+                    if (res.data.IsSuccess) {
+                      toast.success(res.data.message || "Conflict discarded");
+                      fetchAddresses();
+                    } else {
+                    }
+                  } catch (error: any) {}
+                }
+                setConflictItem(null);
+              }}
+            >
+              Discard
+            </Button>
+
+            <Button
               variant="contained"
               onClick={(e) => {
                 e.stopPropagation();
@@ -2294,6 +2317,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
             >
               Verify or Edit
             </Button>
+
             <Button
               variant="outlined"
               color="error"
