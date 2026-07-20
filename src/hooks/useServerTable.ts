@@ -37,12 +37,16 @@ export function useServerTable<TData>({
   const [internalSorting, setInternalSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [internalRowSelection, setInternalRowSelection] = useState<any>({});
+  const [internalColumnVisibility, setInternalColumnVisibility] = useState<any>({});
 
   const sorting = controlledState?.sorting !== undefined ? controlledState.sorting : internalSorting;
   const setSorting = controlledOnSortingChange || setInternalSorting;
   
   const rowSelection = controlledState?.rowSelection !== undefined ? controlledState.rowSelection : internalRowSelection;
   const setRowSelection = controlledState?.onRowSelectionChange || setInternalRowSelection;
+
+  const columnVisibility = controlledState?.columnVisibility !== undefined ? controlledState.columnVisibility : internalColumnVisibility;
+  const setColumnVisibility = onColumnVisibilityChange || setInternalColumnVisibility;
 
   // Use a ref to keep track of the latest fetch function to avoid stale closures
   const fetchRef = useRef(fetchData);
@@ -73,7 +77,7 @@ export function useServerTable<TData>({
   const table = useReactTable({
     data,
     columns,
-    state: { columnFilters, sorting, pagination, rowSelection, ...controlledState },
+    state: { columnFilters, sorting, pagination, rowSelection, columnVisibility, ...controlledState },
     pageCount: pageCount,
     rowCount: totalRows,
     manualPagination: true,
@@ -84,7 +88,7 @@ export function useServerTable<TData>({
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange,
+    onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -105,5 +109,7 @@ export function useServerTable<TData>({
     setColumnFilters,
     rowSelection,
     setRowSelection,
+    columnVisibility,
+    setColumnVisibility,
   };
 }

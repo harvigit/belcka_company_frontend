@@ -157,13 +157,13 @@ const AddressesList = ({
         setSelectedRowIds(new Set((window as any).__lastFetchedIds));
       }
     } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+      if (err.message !== "SELECT_ALL_INTERCEPT") {
         console.error(err);
       }
     } finally {
       (window as any).__isSelectingAll = false;
-      }
-  }
+    }
+  };
 
   const [sidebarData, setSidebarData] = useState<any>(null);
   const [value, setValue] = useState<number>(0);
@@ -978,7 +978,11 @@ const AddressesList = ({
                 selectedRowIds.size < currentFilteredData.length
               }
               onClick={(e) => e.stopPropagation()}
-              onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleSelectAllAcrossPages(e.target.checked);
+              }}
             />
           </Stack>
         ),
@@ -2028,7 +2032,7 @@ const AddressesList = ({
                       width={"98%"}
                       className="slider_wrapper"
                     >
-                      <Typography variant="h6">
+                      {/* <Typography variant="h6">
                         Area size [{formData?.radius} Meter]
                       </Typography>
                       <CustomRangeSlider
@@ -2038,7 +2042,7 @@ const AddressesList = ({
                         max={100}
                         step={1}
                         sx={{ height: "1px" }}
-                      />
+                      /> */}
 
                       <GoogleMap
                         zoom={17}
@@ -2048,97 +2052,31 @@ const AddressesList = ({
                           height: "400px",
                           marginTop: "20px",
                         }}
+                        options={{
+                          draggable: false,
+                          scrollwheel: false,
+                          disableDoubleClickZoom: true,
+                          zoomControl: false,
+                          streetViewControl: false,
+                          mapTypeControl: false,
+                          fullscreenControl: false,
+                          keyboardShortcuts: false,
+                        }}
                       >
-                        <Marker
-                          position={selectedLocation}
-                          draggable
-                          onDragEnd={(e) => {
-                            const lat = e.latLng?.lat();
-                            const lng = e.latLng?.lng();
-                            if (!lat || !lng) return;
-
-                            setSelectedLocation({ lat, lng });
-
-                            setFormData((prev: any) => ({
-                              ...prev,
-                              lat,
-                              lng,
-                              boundary: JSON.stringify({
-                                lat,
-                                lng,
-                                radius: prev.radius,
-                              }),
-                            }));
-                          }}
-                        />
+                        <Marker position={selectedLocation} />
 
                         <Circle
                           center={selectedLocation}
                           radius={formData.radius}
                           options={{
-                            draggable: true,
-                            editable: true,
+                            draggable: false,
+                            editable: false,
+                            clickable: false,
                             fillColor: formData.color ?? "#FF0000",
                             fillOpacity: 0.3,
                             strokeColor: formData.color ?? "#FF0000",
                             strokeOpacity: 1,
                             strokeWeight: 1,
-                          }}
-                          onLoad={(circle) => {
-                            circleRef.current = circle;
-                          }}
-                          onCenterChanged={() => {
-                            if (!circleRef.current) return;
-
-                            const center = circleRef.current.getCenter();
-                            if (!center) return;
-
-                            const lat = center.lat();
-                            const lng = center.lng();
-
-                            if (
-                              lastCenterRef.current &&
-                              lastCenterRef.current.lat === lat &&
-                              lastCenterRef.current.lng === lng
-                            ) {
-                              return;
-                            }
-
-                            lastCenterRef.current = { lat, lng };
-
-                            setSelectedLocation({ lat, lng });
-
-                            setFormData((prev: any) => ({
-                              ...prev,
-                              lat,
-                              lng,
-                              boundary: JSON.stringify({
-                                lat,
-                                lng,
-                                radius: prev.radius,
-                              }),
-                            }));
-                          }}
-                          onRadiusChanged={() => {
-                            if (!circleRef.current) return;
-
-                            const newRadius = Math.round(
-                              circleRef.current.getRadius(),
-                            );
-
-                            if (lastRadiusRef.current === newRadius) return;
-
-                            lastRadiusRef.current = newRadius;
-
-                            setFormData((prev: any) => ({
-                              ...prev,
-                              radius: newRadius,
-                              boundary: JSON.stringify({
-                                lat: selectedLocation.lat,
-                                lng: selectedLocation.lng,
-                                radius: newRadius,
-                              }),
-                            }));
                           }}
                         />
                       </GoogleMap>
@@ -2460,7 +2398,7 @@ const AddressesList = ({
                       width={"98%"}
                       className="slider_wrapper"
                     >
-                      <Typography variant="h6">
+                      {/* <Typography variant="h6">
                         Area size [{formData?.radius} Meter]
                       </Typography>
                       <CustomRangeSlider
@@ -2470,7 +2408,7 @@ const AddressesList = ({
                         max={100}
                         step={1}
                         sx={{ height: "1px" }}
-                      />
+                      /> */}
 
                       <GoogleMap
                         zoom={17}
@@ -2481,96 +2419,20 @@ const AddressesList = ({
                           marginTop: "20px",
                         }}
                       >
-                        <Marker
-                          position={selectedLocation}
-                          draggable
-                          onDragEnd={(e) => {
-                            const lat = e.latLng?.lat();
-                            const lng = e.latLng?.lng();
-                            if (!lat || !lng) return;
-
-                            setSelectedLocation({ lat, lng });
-
-                            setFormData((prev: any) => ({
-                              ...prev,
-                              lat,
-                              lng,
-                              boundary: JSON.stringify({
-                                lat,
-                                lng,
-                                radius: prev.radius,
-                              }),
-                            }));
-                          }}
-                        />
+                        <Marker position={selectedLocation} />
 
                         <Circle
                           center={selectedLocation}
                           radius={formData.radius}
                           options={{
-                            draggable: true,
-                            editable: true,
+                            draggable: false,
+                            editable: false,
+                            clickable: false,
                             fillColor: formData.color ?? "#FF0000",
                             fillOpacity: 0.3,
                             strokeColor: formData.color ?? "#FF0000",
                             strokeOpacity: 1,
                             strokeWeight: 1,
-                          }}
-                          onLoad={(circle) => {
-                            circleRef.current = circle;
-                          }}
-                          onCenterChanged={() => {
-                            if (!circleRef.current) return;
-
-                            const center = circleRef.current.getCenter();
-                            if (!center) return;
-
-                            const lat = center.lat();
-                            const lng = center.lng();
-
-                            if (
-                              lastCenterRef.current &&
-                              lastCenterRef.current.lat === lat &&
-                              lastCenterRef.current.lng === lng
-                            ) {
-                              return;
-                            }
-
-                            lastCenterRef.current = { lat, lng };
-
-                            setSelectedLocation({ lat, lng });
-
-                            setFormData((prev: any) => ({
-                              ...prev,
-                              lat,
-                              lng,
-                              boundary: JSON.stringify({
-                                lat,
-                                lng,
-                                radius: prev.radius,
-                              }),
-                            }));
-                          }}
-                          onRadiusChanged={() => {
-                            if (!circleRef.current) return;
-
-                            const newRadius = Math.round(
-                              circleRef.current.getRadius(),
-                            );
-
-                            if (lastRadiusRef.current === newRadius) return;
-
-                            lastRadiusRef.current = newRadius;
-
-                            setFormData((prev: any) => ({
-                              ...prev,
-                              radius: newRadius,
-                              boundary: JSON.stringify({
-                                lat: selectedLocation.lat,
-                                lng: selectedLocation.lng,
-                                radius: newRadius,
-                              }),
-                            }));
                           }}
                         />
                       </GoogleMap>

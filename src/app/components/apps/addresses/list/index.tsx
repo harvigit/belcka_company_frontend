@@ -202,26 +202,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [file, setFile] = useState<any | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const handleSelectAllAcrossPages = async (checked: boolean) => {
-    if (!checked) {
-      setSelectedRowIds(new Set());
-      return;
-    }
-    try {
-      (window as any).__isSelectingAll = true;
-      await fetchAddresses();
-      (window as any).__isSelectingAll = false;
-      if ((window as any).__lastFetchedIds) {
-        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-      }
-    } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
-        console.error(err);
-      }
-    } finally {
-      (window as any).__isSelectingAll = false;
-      }
-  }
 
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
@@ -234,6 +214,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [parentAddressDrawerOpen, setParentAddressDrawerOpen] = useState(false);
   const [editingParentAddress, setEditingParentAddress] = useState<any>(null);
   const [parentAddressName, setParentAddressName] = useState("");
+  const [parentAddressShortName, setParentAddressShortName] = useState("");
   const [parentAddressPostcode, setParentAddressPostcode] = useState("");
   const [parentAddressType, setParentAddressType] = useState("address");
   const [showLocationPin, setShowLocationPin] = useState(false);
@@ -353,6 +334,16 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     });
   };
 
+  const onRadiusChanged = () => {
+    if (!circleRef.current) return;
+    const r = circleRef.current.getRadius();
+    if (r > 10000) {
+      circleRef.current.setRadius(10000);
+      setRadius(10000);
+    } else setRadius(Math.round(r));
+    setParentAddressRadius(radius);
+  };
+
   const selectPostcoderPrediction = (
     item: { source: "postcoder" } & PostcoderAddress,
   ) => {
@@ -388,9 +379,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     if (address && address.id) {
       setEditingParentAddress(address);
       const addrName = address.name || "";
+      const addrShortName = address.short_name || "";
       const addrPincode = address.pincode || address.pin_code || "";
       const addrType = address.type || "address";
       setParentAddressName(addrName);
+      setParentAddressShortName(addrShortName);
       setParentAddressPostcode(addrPincode);
       setParentAddressType(addrType);
       setShowLocationPin(addrType !== "location");
@@ -435,6 +428,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     } else {
       setEditingParentAddress(null);
       setParentAddressName("");
+      setParentAddressShortName("");
       setParentAddressPostcode("");
       setParentAddressType("address");
       setShowLocationPin(true);
@@ -466,6 +460,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       const payload = {
         company_id: user?.company_id,
         name: parentAddressName,
+        short_name: parentAddressShortName,
         pin_code: parentAddressPostcode,
         type: parentAddressType,
         latitude: selectedLocation?.lat,
@@ -830,9 +825,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       {
         id: "select",
         header: ({ table }: any) => {
-          const selectableData = currentFilteredData.filter((item: any) => !item.is_conflict);
-          const isAllSelected = selectableData.length > 0 && selectableData.every((item: any) => selectedRowIds.has(item.id));
-          const isSomeSelected = selectableData.some((item: any) => selectedRowIds.has(item.id)) && !isAllSelected;
+          const selectableData = currentFilteredData.filter(
+            (item: any) => !item.is_conflict,
+          );
+          const isAllSelected =
+            selectableData.length > 0 &&
+            selectableData.every((item: any) => selectedRowIds.has(item.id));
+          const isSomeSelected =
+            selectableData.some((item: any) => selectedRowIds.has(item.id)) &&
+            !isAllSelected;
 
           return (
             <Stack direction="row" alignItems="center">
@@ -846,9 +847,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   const checked = e.target.checked;
                   const newSelected = new Set(selectedRowIds);
                   if (checked) {
-                    selectableData.forEach((item: any) => newSelected.add(item.id));
+                    selectableData.forEach((item: any) =>
+                      newSelected.add(item.id),
+                    );
                   } else {
-                    selectableData.forEach((item: any) => newSelected.delete(item.id));
+                    selectableData.forEach((item: any) =>
+                      newSelected.delete(item.id),
+                    );
                   }
                   setSelectedRowIds(newSelected);
                 }}
@@ -928,6 +933,41 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         enableSorting: false,
         enableHiding: false,
         meta: { align: "center" },
+      }),
+
+      columnHelper.accessor("short_name", {
+        header: "Short Name",
+        cell: ({ row }: any) => {
+          const item = row.original;
+
+          return (
+            <Box display="flex" alignItems="center">
+              <Tooltip title={item.short_name}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": {
+                      color: "primary.main",
+                    },
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    wordBreak: "break-word",
+                    px: 1.5,
+                    borderRadius: 1,
+                    border: "1px solid transparent",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {item.short_name ?? "-"}
+                </Typography>
+              </Tooltip>
+            </Box>
+          );
+        },
       }),
 
       columnHelper.accessor("name", {
@@ -1709,7 +1749,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           </TableContainer>
         </Box>
         <Divider />
-        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
+        <TablePaginationFooter
+          selectedCount={
+            typeof selectedRowIds !== "undefined"
+              ? selectedRowIds.size
+              : undefined
+          }
+          table={table}
+          totalRows={totalRows}
+        />
         {/* Modal for File Upload */}
         <Modal open={openModel} onClose={handleModelClose} disableEscapeKeyDown>
           <Box
@@ -1822,7 +1870,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     importAddresses();
                   }}
                 >
-                 {isImport ? "Saving" : "Save"}
+                  {isImport ? "Saving" : "Save"}
                 </Button>
                 <Button
                   variant="outlined"
@@ -1949,6 +1997,20 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   <Grid container spacing={3}>
                     <Grid size={{ xs: 12 }}>
                       <Typography variant="subtitle2" mb={1}>
+                        Short Name
+                      </Typography>
+                      <TextField
+                        placeholder="Short name.."
+                        value={parentAddressShortName}
+                        onChange={(e) =>
+                          setParentAddressShortName(e.target.value)
+                        }
+                        variant="outlined"
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Typography variant="subtitle2" mb={1}>
                         Address
                       </Typography>
                       <Box
@@ -2038,24 +2100,22 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                         label="Location"
                       />
                     </Grid>
-                    {parentAddressType === "location" && (
-                      <Grid size={{ xs: 12 }}>
-                        <Box width={"100%"}>
-                          <Typography variant="subtitle2" mb={1}>
-                            Area size [{parentAddressRadius} Meter]
-                          </Typography>
-                          <CustomRangeSlider
-                            value={parentAddressRadius}
-                            onChange={(e: any, newValue: number | number[]) =>
-                              setParentAddressRadius(newValue as number)
-                            }
-                            min={0}
-                            max={maxRadius}
-                            step={1}
-                          />
-                        </Box>
-                      </Grid>
-                    )}
+                    <Grid size={{ xs: 12 }}>
+                      <Box width={"100%"}>
+                        <Typography variant="subtitle2" mb={1}>
+                          Area size [{parentAddressRadius} Meter]
+                        </Typography>
+                        <CustomRangeSlider
+                          value={parentAddressRadius}
+                          onChange={(e: any, newValue: number | number[]) =>
+                            setParentAddressRadius(newValue as number)
+                          }
+                          min={0}
+                          max={maxRadius}
+                          step={1}
+                        />
+                      </Box>
+                    </Grid>
                     {isLoaded && selectedLocation && (
                       <Grid size={{ xs: 12 }}>
                         <Box
@@ -2074,9 +2134,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                           >
                             <Marker
                               position={selectedLocation}
-                              draggable={parentAddressType === "location"}
+                              draggable={true}
                               onDragEnd={(e) => {
-                                if (parentAddressType !== "location") return;
                                 const lat = e.latLng?.lat();
                                 const lng = e.latLng?.lng();
                                 if (lat && lng)
@@ -2088,8 +2147,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                                 center={selectedLocation}
                                 radius={parentAddressRadius}
                                 options={{
-                                  draggable: parentAddressType === "location",
-                                  editable: parentAddressType === "location",
+                                  draggable: true,
+                                  editable: true,
                                   fillColor: "#FF0000",
                                   fillOpacity: 0.3,
                                   strokeColor: "#FF0000",
@@ -2100,11 +2159,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                                   circleRef.current = circle;
                                 }}
                                 onCenterChanged={() => {
-                                  if (
-                                    !circleRef.current ||
-                                    parentAddressType !== "location"
-                                  )
-                                    return;
+                                  if (!circleRef.current) return;
 
                                   const center = circleRef.current.getCenter();
                                   if (!center) return;
@@ -2123,22 +2178,20 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                                   lastCenterRef.current = { lat, lng };
                                   setSelectedLocation({ lat, lng });
                                 }}
-                                onRadiusChanged={() => {
-                                  if (
-                                    !circleRef.current ||
-                                    parentAddressType !== "location"
-                                  )
-                                    return;
+                                onRadiusChanged={onRadiusChanged}
 
-                                  const newRadius = Math.round(
-                                    circleRef.current.getRadius(),
-                                  );
-                                  if (lastRadiusRef.current === newRadius)
-                                    return;
+                                // onRadiusChanged={() => {
+                                //   if (!circleRef.current) return;
 
-                                  lastRadiusRef.current = newRadius;
-                                  setParentAddressRadius(newRadius);
-                                }}
+                                //   const newRadius = Math.round(
+                                //     circleRef.current.getRadius(),
+                                //   );
+                                //   if (lastRadiusRef.current === newRadius)
+                                //     return;
+
+                                //   lastRadiusRef.current = newRadius;
+                                //   setParentAddressRadius(newRadius);
+                                // }}
                               />
                             )}
                           </GoogleMap>
@@ -2157,7 +2210,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     disabled={isSaving}
                     className="drawer_buttons"
                   >
-                   {isSaving ? "Saving..." : "Save"}
+                    {isSaving ? "Saving..." : "Save"}
                   </Button>
                   <Button
                     color="inherit"

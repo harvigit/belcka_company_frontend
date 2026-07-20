@@ -20,6 +20,7 @@ import {
 } from '@tabler/icons-react';
 import GeneralSetting from './menus/general';
 import ShiftLists from './menus/shift/index';
+import ShiftManagement from './menus/shift/shift-management';
 import Payroll from './menus/payroll';
 import RateSetting from "./menus/rate-setting";
 import PenaltySettings from "./menus/penalty-setting";
@@ -31,6 +32,7 @@ import CategoryList from './menus/expense-categories/list';
 const menuItems = [
     { icon: <IconSettings size={18} />, label: "General" },
     { icon: <IconTiltShift size={18} />, label: "Shift" },
+    { icon: <IconTiltShift size={18} />, label: "Shift Management" },
     { icon: <IconCalendarWeek size={18} />, label: "Payroll" },
     { icon: <IconCoinPound size={18} />, label: "Rate Settings" },
     { icon: <IconMapPinCog size={18} />, label: "Penalty Setting" },
@@ -163,6 +165,9 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                         {/*)}*/}
                         {activeMenuItem === "Shift" && (
                             <ShiftLists />
+                        )}
+                        {activeMenuItem === "Shift Management" && (
+                            <ShiftManagement />
                         )}
                         {activeMenuItem === "Payroll" && (
                             <Payroll />

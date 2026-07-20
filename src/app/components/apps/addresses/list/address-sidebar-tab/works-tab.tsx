@@ -32,6 +32,7 @@ import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import ChecklogDetailPage from "../../../time-clock/time-clock-details/checklogs/checklog-details";
 
 interface WorksTabProps {
   addressId: number;
@@ -52,6 +53,8 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
   const [filters, setFilters] = useState<FilterState>({ type: "" });
   const [tempFilters, setTempFilters] = useState<FilterState>(filters);
   const [openSidebar, setOpenSidebar] = useState(false);
+  const [openChecklogSidebar, setOpenChecklogSidebar] = useState(false);
+  const [selectedChecklogId, setSelectedChecklogId] = useState<number | null>(null);
   const [selectedWorkId, setSelectedWorkId] = useState(null);
   const [fetchWork, setFetchWork] = useState(false);
   const [trade, setTrade] = useState<any[]>([]);
@@ -380,10 +383,17 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
             <Box
               key={work.id}
               mb={2}
+              onClick={() => {
+                if (work.check_log_id) {
+                  setSelectedChecklogId(work.check_log_id);
+                  setOpenChecklogSidebar(true);
+                }
+              }}
               sx={{
                 border: "1px solid #ccc",
                 borderRadius: 2,
                 p: 2,
+                cursor: work.check_log_id ? "pointer" : "default",
                 "&:hover": { boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)" },
               }}
             >
@@ -437,7 +447,14 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                 flexDirection: "column",
                 cursor: "pointer",
               }}
-              onClick={() => handleWorkClick(work.id)}
+              onClick={() => {
+                if (work.check_log_id) {
+                  setSelectedChecklogId(work.check_log_id);
+                  setOpenChecklogSidebar(true);
+                } else if (work.id) {
+                  handleWorkClick(work.id);
+                }
+              }}
             >
               <Box
                 sx={{
@@ -506,29 +523,30 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                   >
                     {work.duration}
                   </Box> */}
+                    {work.rate && (
+                      <Box
+                        sx={{
+                          backgroundColor:
+                            work.repeatable_job === "Task"
+                              ? "#32A852"
+                              : "#FF008C",
+                          border:
+                            work.repeatable_job === "Task"
+                              ? "1px solid #32A852"
+                              : "1px solid #FF008C",
+                          color: "#fff",
+                          fontSize: "11px",
+                          fontWeight: 500,
+                          px: 1,
+                          py: 0.2,
+                          borderRadius: "999px",
+                        }}
+                      >
+                        {work.repeatable_job === "Task" ? work.rate : "Job"}
+                      </Box>
+                    )}
 
-                    <Box
-                      sx={{
-                        backgroundColor:
-                          work.repeatable_job === "Task"
-                            ? "#32A852"
-                            : "#FF008C",
-                        border:
-                          work.repeatable_job === "Task"
-                            ? "1px solid #32A852"
-                            : "1px solid #FF008C",
-                        color: "#fff",
-                        fontSize: "11px",
-                        fontWeight: 500,
-                        px: 1,
-                        py: 0.2,
-                        borderRadius: "999px",
-                      }}
-                    >
-                      {work.repeatable_job === "Task" ? work.rate : "Job"}
-                    </Box>
-
-                    <Box
+                    {/* <Box
                       sx={{
                         backgroundColor: work.status_color,
                         border: `1px solid ${work.status_color}`,
@@ -541,7 +559,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                       }}
                     >
                       {work.status_text}
-                    </Box>
+                    </Box> */}
                   </Box>
                   <Box display={"flex"} gap={1} alignItems={"center"}>
                     <Badge
@@ -586,7 +604,16 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                     >
                       {work.name}
                     </Typography>
-
+                    <Typography fontWeight="bold" color="textSecondary">
+                      {work.user_name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {work.work_complete} {work.unit_name}
+                      {work.amount_per_unit
+                        ? ` × ${Number(work.amount_per_unit).toFixed(2)}`
+                        : ""}
+                      {work.date ? ` · ${work.date}` : ""}
+                    </Typography>
                     {/* Progress Bar */}
                     {/* <ProgressBar work={work} /> */}
                   </Box>
@@ -604,19 +631,26 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                     </IconButton>
                   )}
 
-                  {parseFloat(work.total_work_hours) > 0 && (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Typography fontWeight="bold" fontSize="1.25rem">
-                        {formatHour(work.total_work_hours)} H
-                      </Typography>
-                      <IconButton>
-                        <IconChevronRight
-                          fontSize="small"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </IconButton>
-                    </Stack>
-                  )}
+                  <Stack>
+                    <Typography fontWeight="bold" mb={1} fontSize="1.25rem">
+                      {work.pricework_amount
+                        ? Number(work.pricework_amount).toFixed(2)
+                        : null}
+                    </Typography>
+                    {parseFloat(work.total_work_hours) > 0 && (
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography fontWeight="bold" fontSize="1.25rem">
+                          {formatHour(work.total_work_hours)} H
+                        </Typography>
+                        <IconButton>
+                          <IconChevronRight
+                            fontSize="small"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </IconButton>
+                      </Stack>
+                    )}
+                  </Stack>
                 </Stack>
               </Box>
             </Box>
@@ -664,6 +698,14 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
           </Button>
         </DialogActions>
       </Dialog>
+      <ChecklogDetailPage
+        checklogId={selectedChecklogId}
+        open={openChecklogSidebar}
+        onClose={() => {
+          setOpenChecklogSidebar(false);
+          setSelectedChecklogId(null);
+        }}
+      />
     </Box>
   );
 };
