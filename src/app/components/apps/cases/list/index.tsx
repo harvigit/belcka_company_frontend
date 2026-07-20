@@ -89,6 +89,27 @@ const CasesList = () => {
   const [parentAddressList, setParentAddressList] = useState<any[]>([]);
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const handleSelectAllAcrossPages = async (checked: boolean) => {
+    if (!checked) {
+      setSelectedRowIds(new Set());
+      return;
+    }
+    try {
+      (window as any).__isSelectingAll = true;
+      await fetchCases();
+      (window as any).__isSelectingAll = false;
+      if ((window as any).__lastFetchedIds) {
+        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+      }
+    } catch (err: any) {
+      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+        console.error(err);
+      }
+    } finally {
+      (window as any).__isSelectingAll = false;
+      }
+  }
+
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
@@ -400,16 +421,7 @@ const CasesList = () => {
                 selectedRowIds.size > 0 && selectedRowIds.size < data.length
               }
               onClick={(e: any) => e.stopPropagation()}
-              onChange={(e: any) => {
-                e.stopPropagation();
-                e.preventDefault();
-
-                if (e.target.checked) {
-                  setSelectedRowIds(new Set(data.map((item: any) => item.id)));
-                } else {
-                  setSelectedRowIds(new Set());
-                }
-              }}
+              onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
             />
           </Stack>
         ),

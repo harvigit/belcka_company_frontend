@@ -71,6 +71,27 @@ const OtherProductsDrawer = ({
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const handleSelectAllAcrossPages = async (checked: boolean) => {
+    if (!checked) {
+      setSelectedRowIds(new Set());
+      return;
+    }
+    try {
+      (window as any).__isSelectingAll = true;
+      await fetchData();
+      (window as any).__isSelectingAll = false;
+      if ((window as any).__lastFetchedIds) {
+        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+      }
+    } catch (err: any) {
+      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+        console.error(err);
+      }
+    } finally {
+      (window as any).__isSelectingAll = false;
+      }
+  }
+
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -363,17 +384,11 @@ const OtherProductsDrawer = ({
       id: "select",
       header: ({ table }: any) => (
         <CustomCheckbox
-          checked={selectedRowIds.size === data.length && data.length > 0}
+          checked={selectedRowIds.size > 0 && selectedRowIds.size >= data.length}
           indeterminate={
             selectedRowIds.size > 0 && selectedRowIds.size < data.length
           }
-          onChange={(e) => {
-            if (e.target.checked) {
-              setSelectedRowIds(new Set(data.map((row) => row.id)));
-            } else {
-              setSelectedRowIds(new Set());
-            }
-          }}
+          onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
         />
       ),
       cell: ({ row }: any) => {

@@ -456,6 +456,26 @@ const InductionTraining = ({ companyId }: Props) => {
     const [attachmentDrawerOpen, setAttachmentDrawerOpen] = useState(false);
     const [selectedAttachments, setSelectedAttachments]   = useState<AttachmentFile[]>([]);
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const handleSelectAllAcrossPages = async (checked: boolean) => {
+    if (!checked) {
+      setSelectedRowIds(new Set());
+      return;
+    }
+    try {
+      (window as any).__isSelectingAll = true;
+      await fetchData();
+      if ((window as any).__lastFetchedIds) {
+        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+      }
+    } catch (err: any) {
+      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+        console.error(err);
+      }
+    } finally {
+      (window as any).__isSelectingAll = false;
+      }
+  }
+
     const [hoveredRow, setHoveredRow]   = useState<number | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deletingId, setDeletingId]   = useState<number | null>(null);
@@ -649,14 +669,9 @@ const InductionTraining = ({ companyId }: Props) => {
             header: () => (
                 <Box sx={{ px: 1.5, py: 1 }}>
                     <CustomCheckbox
-                        checked={selectedRowIds.size === filteredData.length && filteredData.length > 0}
+                        checked={selectedRowIds.size > 0 && selectedRowIds.size >= filteredData.length}
                         indeterminate={selectedRowIds.size > 0 && selectedRowIds.size < filteredData.length}
-                        onChange={(e: any) => {
-                            e.stopPropagation();
-                            setSelectedRowIds(
-                                e.target.checked ? new Set(filteredData.map(r => r.id)) : new Set()
-                            );
-                        }}
+                        onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
                     />
                 </Box>
             ),

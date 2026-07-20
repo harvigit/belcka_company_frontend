@@ -86,6 +86,27 @@ const StoreList = () => {
   const [fetchStore, setFetchStore] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const handleSelectAllAcrossPages = async (checked: boolean) => {
+    if (!checked) {
+      setSelectedRowIds(new Set());
+      return;
+    }
+    try {
+      (window as any).__isSelectingAll = true;
+      await fetchStores();
+      (window as any).__isSelectingAll = false;
+      if ((window as any).__lastFetchedIds) {
+        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+      }
+    } catch (err: any) {
+      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+        console.error(err);
+      }
+    } finally {
+      (window as any).__isSelectingAll = false;
+      }
+  }
+
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -297,22 +318,12 @@ const StoreList = () => {
         <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
-            checked={selectedRowIds.size === data.length && data.length > 0}
+            checked={selectedRowIds.size > 0 && selectedRowIds.size >= data.length}
             indeterminate={
               selectedRowIds.size > 0 && selectedRowIds.size < data.length
             }
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              const isChecked = e.target.checked;
-
-              if (isChecked) {
-                setSelectedRowIds(new Set(data.map((row) => row.id)));
-              } else {
-                setSelectedRowIds(new Set());
-              }
-            }}
+            onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
           />
         </Stack>
       ),

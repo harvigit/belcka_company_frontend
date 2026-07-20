@@ -92,6 +92,27 @@ const PurchaseProductList: React.FC<Props> = ({
   const [fetchStore, setFetchStore] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const handleSelectAllAcrossPages = async (checked: boolean) => {
+    if (!checked) {
+      setSelectedRowIds(new Set());
+      return;
+    }
+    try {
+      (window as any).__isSelectingAll = true;
+      await fetchOrders();
+      (window as any).__isSelectingAll = false;
+      if ((window as any).__lastFetchedIds) {
+        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+      }
+    } catch (err: any) {
+      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+        console.error(err);
+      }
+    } finally {
+      (window as any).__isSelectingAll = false;
+      }
+  };
+
   const selectedRowIdsRef = useRef<Set<number>>(selectedRowIds);
   useEffect(() => {
     selectedRowIdsRef.current = selectedRowIds;
@@ -135,6 +156,7 @@ const PurchaseProductList: React.FC<Props> = ({
   const [manualOrderId, setManualOrderId] = useState("");
 
   const handleModelOpen = () => {
+
     setPreview(null);
     setOpenModel(true);
   };
@@ -546,25 +568,7 @@ const PurchaseProductList: React.FC<Props> = ({
               !finalFilteredData.every((row) => selectedRowIds.has(row.id))
             }
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              const isChecked = e.target.checked;
-
-              if (isChecked) {
-                const newSelected = new Set(selectedRowIds);
-                finalFilteredData.forEach((row) => newSelected.add(row.id));
-                setSelectedRowIds(newSelected);
-              } else {
-                const newSelected = new Set(selectedRowIds);
-                finalFilteredData.forEach((row) => newSelected.delete(row.id));
-                setSelectedRowIds(newSelected);
-
-                const newDeselected = new Set(manuallyDeselected);
-                finalFilteredData.forEach((row) => newDeselected.add(row.id));
-                setManuallyDeselected(newDeselected);
-              }
-            }}
+            onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
           />
         </Stack>
       ),

@@ -47,6 +47,19 @@ api.interceptors.request.use(
       config.headers.is_web = "true";
     }
 
+    if (typeof window !== 'undefined' && (window as any).__isSelectingAll && config.method?.toLowerCase() === 'get') {
+      if (config.url && (config.url.includes('limit=') || config.url.includes('page='))) {
+        // Strip out limit and page parameters when fetching all IDs
+        config.url = config.url.replace(/([?&])limit=\d+/g, '');
+        config.url = config.url.replace(/([?&])page=\d+/g, '');
+        
+        config.url += (config.url.includes('?') ? '&' : '?') + 'return_ids_only=true';
+        
+        // Clean up any malformed query strings
+        config.url = config.url.replace(/\?&/g, '?').replace(/&&/g, '&').replace(/[?&]$/, '');
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error),
@@ -54,6 +67,15 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   async (response) => {
+    if (response.config.url?.includes('return_ids_only=true')) {
+      let idsData = response.data.info?.data || response.data.info || response.data.data || response.data;
+      if (Array.isArray(idsData) && idsData.length > 0 && typeof idsData[0] === 'object' && idsData[0].id) {
+         idsData = idsData.map((x: any) => x.id); // fallback if interceptor failed
+      }
+      (window as any).__lastFetchedIds = idsData;
+      return Promise.reject(new Error('SELECT_ALL_INTERCEPT'));
+    }
+
     try {
       const activeCompanyId =
         response?.data?.context?.active_company_id ??
@@ -157,7 +179,7 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (!error.config?.__handled) {
+    if (!error.config?.__handled && error.message !== 'SELECT_ALL_INTERCEPT') {
       error.config.__handled = true;
 
       toast.error(error.response?.data?.message || "Something went wrong");

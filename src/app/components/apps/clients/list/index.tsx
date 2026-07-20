@@ -89,6 +89,27 @@ const ClientList = () => {
   const [fetchClient, setFetchClient] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const handleSelectAllAcrossPages = async (checked: boolean) => {
+    if (!checked) {
+      setSelectedRowIds(new Set());
+      return;
+    }
+    try {
+      (window as any).__isSelectingAll = true;
+      await fetchClients();
+      (window as any).__isSelectingAll = false;
+      if ((window as any).__lastFetchedIds) {
+        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+      }
+    } catch (err: any) {
+      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+        console.error(err);
+      }
+    } finally {
+      (window as any).__isSelectingAll = false;
+      }
+  }
+
   const [openDialog, setOpenDialog] = useState(false);
   const [openActiveDialog, setOpenActiveDialog] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<number | null>();
@@ -232,17 +253,7 @@ const ClientList = () => {
               selectedRowIds.size < filteredData.length
             }
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              const isChecked = e.target.checked;
-
-              if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
-              } else {
-                setSelectedRowIds(new Set());
-              }
-            }}
+            onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
           />
         </Stack>
       ),

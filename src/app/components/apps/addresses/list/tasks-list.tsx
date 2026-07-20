@@ -91,6 +91,26 @@ const TasksList = ({
   const [fetchTask, setFetchTask] = useState(false);
   const [isSaving, seIsSaving] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const handleSelectAllAcrossPages = async (checked: boolean) => {
+    if (!checked) {
+      setSelectedRowIds(new Set());
+      return;
+    }
+    try {
+      (window as any).__isSelectingAll = true;
+      await fetchTasks();
+      if ((window as any).__lastFetchedIds) {
+        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+      }
+    } catch (err: any) {
+      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+        console.error(err);
+      }
+    } finally {
+      (window as any).__isSelectingAll = false;
+      }
+  }
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskList | null>(null);
   const [trade, setTrade] = useState<any[]>([]);
@@ -348,19 +368,7 @@ const TasksList = ({
                 selectedRowIds.size < currentFilteredData.length
               }
               onClick={(e) => e.stopPropagation()}
-              onChange={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                const isChecked = e.target.checked;
-
-                if (isChecked) {
-                  setSelectedRowIds(
-                    new Set(currentFilteredData.map((row) => row.id)),
-                  );
-                } else {
-                  setSelectedRowIds(new Set());
-                }
-              }}
+              onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
             />
           </Stack>
         ),

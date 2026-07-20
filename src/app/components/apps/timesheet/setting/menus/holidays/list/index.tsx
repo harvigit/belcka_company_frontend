@@ -82,6 +82,26 @@ const HolidayList = () => {
   const [fetchingHolidays, setFetchingHolidays] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const handleSelectAllAcrossPages = async (checked: boolean) => {
+    if (!checked) {
+      setSelectedRowIds(new Set());
+      return;
+    }
+    try {
+      (window as any).__isSelectingAll = true;
+      await fetchHolidays();
+      if ((window as any).__lastFetchedIds) {
+        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+      }
+    } catch (err: any) {
+      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+        console.error(err);
+      }
+    } finally {
+      (window as any).__isSelectingAll = false;
+      }
+  }
+
   const [openArchiveDialog, setOpenArchiveDialog] = useState(false);
   const [holidaysToArchive, setHolidaysToArchive] = useState<number[]>([]);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
@@ -160,14 +180,7 @@ const HolidayList = () => {
               selectedRowIds.size < filteredData.length
             }
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-              e.stopPropagation();
-              if (e.target.checked) {
-                setSelectedRowIds(new Set(filteredData.map((r) => r.id)));
-              } else {
-                setSelectedRowIds(new Set());
-              }
-            }}
+            onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
           />
         </Stack>
       ),

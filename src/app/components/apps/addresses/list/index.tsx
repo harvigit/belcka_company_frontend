@@ -202,6 +202,27 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [file, setFile] = useState<any | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const handleSelectAllAcrossPages = async (checked: boolean) => {
+    if (!checked) {
+      setSelectedRowIds(new Set());
+      return;
+    }
+    try {
+      (window as any).__isSelectingAll = true;
+      await fetchAddresses();
+      (window as any).__isSelectingAll = false;
+      if ((window as any).__lastFetchedIds) {
+        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+      }
+    } catch (err: any) {
+      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+        console.error(err);
+      }
+    } finally {
+      (window as any).__isSelectingAll = false;
+      }
+  }
+
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
   const [addressListDrawerOpen, setAddressListDrawerOpen] = useState(false);
@@ -809,30 +830,27 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       {
         id: "select",
         header: ({ table }: any) => {
+          const selectableData = currentFilteredData.filter((item: any) => !item.is_conflict);
+          const isAllSelected = selectableData.length > 0 && selectableData.every((item: any) => selectedRowIds.has(item.id));
+          const isSomeSelected = selectableData.some((item: any) => selectedRowIds.has(item.id)) && !isAllSelected;
+
           return (
             <Stack direction="row" alignItems="center">
               <CustomCheckbox
                 className="header-checkbox"
-                checked={
-                  selectedRowIds.size === currentFilteredData.length &&
-                  currentFilteredData.length > 0
-                }
-                indeterminate={
-                  selectedRowIds.size > 0 &&
-                  selectedRowIds.size < currentFilteredData.length
-                }
+                checked={isAllSelected}
+                indeterminate={isSomeSelected}
                 onClick={(e: any) => e.stopPropagation()}
-                onChange={(e: any) => {
+                onChange={(e) => {
                   e.stopPropagation();
-                  e.preventDefault();
-                  const isChecked = e.target.checked;
-                  if (isChecked) {
-                    setSelectedRowIds(
-                      new Set(currentFilteredData.map((row) => row.id)),
-                    );
+                  const checked = e.target.checked;
+                  const newSelected = new Set(selectedRowIds);
+                  if (checked) {
+                    selectableData.forEach((item: any) => newSelected.add(item.id));
                   } else {
-                    setSelectedRowIds(new Set());
+                    selectableData.forEach((item: any) => newSelected.delete(item.id));
                   }
+                  setSelectedRowIds(newSelected);
                 }}
               />
             </Stack>

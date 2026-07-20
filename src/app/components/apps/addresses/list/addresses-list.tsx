@@ -144,6 +144,27 @@ const AddressesList = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchAddress, setFetchAddress] = useState<boolean>(false);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const handleSelectAllAcrossPages = async (checked: boolean) => {
+    if (!checked) {
+      setSelectedRowIds(new Set());
+      return;
+    }
+    try {
+      (window as any).__isSelectingAll = true;
+      await fetchAddresses();
+      (window as any).__isSelectingAll = false;
+      if ((window as any).__lastFetchedIds) {
+        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+      }
+    } catch (err: any) {
+      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+        console.error(err);
+      }
+    } finally {
+      (window as any).__isSelectingAll = false;
+      }
+  }
+
   const [sidebarData, setSidebarData] = useState<any>(null);
   const [value, setValue] = useState<number>(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -957,19 +978,7 @@ const AddressesList = ({
                 selectedRowIds.size < currentFilteredData.length
               }
               onClick={(e) => e.stopPropagation()}
-              onChange={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                const isChecked = e.target.checked;
-
-                if (isChecked) {
-                  setSelectedRowIds(
-                    new Set(currentFilteredData.map((row) => row.id)),
-                  );
-                } else {
-                  setSelectedRowIds(new Set());
-                }
-              }}
+              onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
             />
           </Stack>
         ),

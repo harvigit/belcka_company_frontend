@@ -95,6 +95,27 @@ const ArchiveUserList = () => {
     const [data, setData] = useState<UserList[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const handleSelectAllAcrossPages = async (checked: boolean) => {
+    if (!checked) {
+      setSelectedRowIds(new Set());
+      return;
+    }
+    try {
+      (window as any).__isSelectingAll = true;
+      await fetchUsers();
+      (window as any).__isSelectingAll = false;
+      if ((window as any).__lastFetchedIds) {
+        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+      }
+    } catch (err: any) {
+      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+        console.error(err);
+      }
+    } finally {
+      (window as any).__isSelectingAll = false;
+      }
+  }
+
     const [filters, setFilters] = useState({ team: "", supervisor: "" });
     const [tempFilters, setTempFilters] = useState(filters);
     const [open, setOpen] = useState(false);
@@ -293,14 +314,7 @@ const ArchiveUserList = () => {
                             filteredData.length > 0
                         }
                         onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => {
-                            e.stopPropagation();
-                            if (e.target.checked) {
-                                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
-                            } else {
-                                setSelectedRowIds(new Set());
-                            }
-                        }}
+                        onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
                     />
                     <Typography variant="subtitle2" fontWeight="inherit">
                         Name
