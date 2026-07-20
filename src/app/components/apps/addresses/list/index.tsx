@@ -337,11 +337,18 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const onRadiusChanged = () => {
     if (!circleRef.current) return;
     const r = circleRef.current.getRadius();
-    if (r > 10000) {
+    let newRadius = Math.round(r);
+    
+    if (newRadius > 10000) {
+      newRadius = 10000;
       circleRef.current.setRadius(10000);
-      setRadius(10000);
-    } else setRadius(Math.round(r));
-    setParentAddressRadius(radius);
+    }
+    
+    if (lastRadiusRef.current === newRadius) return;
+    
+    lastRadiusRef.current = newRadius;
+    setRadius(newRadius);
+    setParentAddressRadius(newRadius);
   };
 
   const selectPostcoderPrediction = (

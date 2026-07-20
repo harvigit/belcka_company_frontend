@@ -54,7 +54,9 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
   const [tempFilters, setTempFilters] = useState<FilterState>(filters);
   const [openSidebar, setOpenSidebar] = useState(false);
   const [openChecklogSidebar, setOpenChecklogSidebar] = useState(false);
-  const [selectedChecklogId, setSelectedChecklogId] = useState<number | null>(null);
+  const [selectedChecklogId, setSelectedChecklogId] = useState<number | null>(
+    null,
+  );
   const [selectedWorkId, setSelectedWorkId] = useState(null);
   const [fetchWork, setFetchWork] = useState(false);
   const [trade, setTrade] = useState<any[]>([]);
@@ -92,17 +94,25 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
         worksResult.status === "fulfilled" ? worksResult.value : null;
       const priceworksResponse =
         priceworksResult.status === "fulfilled" ? priceworksResult.value : null;
-      const works = worksResponse?.data?.IsSuccess
-        ? worksResponse.data.info || []
-        : [];
-      const priceworks = priceworksResponse?.data?.IsSuccess
-        ? (priceworksResponse.data.info || []).map((record: any) => ({
-            ...record,
-            id: record.pricework_id,
-            name: record.work_type,
-            is_pricework_record: true,
-          }))
-        : [];
+
+      let rawWorks = worksResponse?.data?.IsSuccess ? worksResponse.data.info : [];
+      if (!Array.isArray(rawWorks)) {
+        rawWorks = rawWorks?.data && Array.isArray(rawWorks.data) ? rawWorks.data : [];
+      }
+
+      let rawPriceworks = priceworksResponse?.data?.IsSuccess ? priceworksResponse.data.info : [];
+      if (!Array.isArray(rawPriceworks)) {
+        rawPriceworks = rawPriceworks?.data && Array.isArray(rawPriceworks.data) ? rawPriceworks.data : [];
+      }
+
+      const works = rawWorks;
+      const priceworks = rawPriceworks.map((record: any) => ({
+        ...record,
+        id: record.pricework_id,
+        name: record.work_type,
+        is_pricework_record: true,
+      }));
+
       setTabData([...priceworks, ...works]);
     } catch {
       setTabData([]);
@@ -157,18 +167,23 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
     let data = [...tabData];
 
     if (filters.type) {
-      data = data.filter((item) => item.trade_id?.toString() === filters.type);
+      data = data.filter((item) => {
+        const tId = item.trade_id || item.trade?.id;
+        return tId?.toString() === filters.type;
+      });
     }
 
     if (searchWork.trim()) {
       const search = searchWork.trim().toLowerCase();
-      data = data.filter(
-        (item) =>
+      data = data.filter((item) => {
+        const tName = item.trade_name || item.trade?.name || "";
+        return (
           item.name?.toLowerCase().includes(search) ||
-          item.trade_name?.toLowerCase().includes(search) ||
+          tName.toLowerCase().includes(search) ||
           item.user_name?.toLowerCase().includes(search) ||
-          item.team_name?.toLowerCase().includes(search),
-      );
+          item.team_name?.toLowerCase().includes(search)
+        );
+      });
     }
 
     return data;

@@ -1986,17 +1986,18 @@ const AddressesList = ({
                       name="name"
                       placeholder="Search for address.."
                       value={formData.name}
+                      disabled
                       onChange={handleInputChange}
                       variant="outlined"
                       fullWidth
                     />
-                    <Button
+                    {/* <Button
                       variant="contained"
                       color="primary"
                       onClick={handleSearchClick}
                     >
                       Search
-                    </Button>
+                    </Button> */}
                   </Box>
 
                   {typedAddress && predictions.length > 0 && (
