@@ -32,7 +32,7 @@ import CategoryList from './menus/expense-categories/list';
 const menuItems = [
     { icon: <IconSettings size={18} />, label: "General" },
     { icon: <IconTiltShift size={18} />, label: "Shift" },
-    { icon: <IconTiltShift size={18} />, label: "Shift Management" },
+    // { icon: <IconTiltShift size={18} />, label: "Shift Management" },
     { icon: <IconCalendarWeek size={18} />, label: "Payroll" },
     { icon: <IconCoinPound size={18} />, label: "Rate Settings" },
     { icon: <IconMapPinCog size={18} />, label: "Penalty Setting" },
@@ -166,9 +166,9 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                         {activeMenuItem === "Shift" && (
                             <ShiftLists />
                         )}
-                        {activeMenuItem === "Shift Management" && (
+                        {/* {activeMenuItem === "Shift Management" && (
                             <ShiftManagement />
-                        )}
+                        )} */}
                         {activeMenuItem === "Payroll" && (
                             <Payroll />
                         )}
