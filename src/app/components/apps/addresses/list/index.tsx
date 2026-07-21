@@ -943,12 +943,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       }),
 
       columnHelper.accessor("short_name", {
-        header: "Short Name",
+        header: "Name",
         cell: ({ row }: any) => {
           const item = row.original;
 
           return (
-            <Box display="flex" alignItems="center">
+            <Box display="flex" alignItems="center" sx={{ px: 1.5}}>
               <Tooltip title={item.short_name}>
                 <Typography
                   variant="body2"
@@ -963,7 +963,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     wordBreak: "break-word",
-                    px: 1.5,
+                    width:"350px",
                     borderRadius: 1,
                     border: "1px solid transparent",
                     transition: "all 0.2s ease",
@@ -978,12 +978,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       }),
 
       columnHelper.accessor("name", {
-        header: "Name",
+        header: "Postcode Name",
         cell: ({ row }: any) => {
           const item = row.original;
 
           return (
-            <Box display="flex" alignItems="center">
+            <Box display="flex" alignItems="center" sx={{ px: 1.5}}>
               <Tooltip title={item.name}>
                 {item.is_conflict ? (
                   <Typography
@@ -995,7 +995,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       wordBreak: "break-word",
-                      px: 1.5,
                       width: "200px",
                       borderRadius: 1,
                       border: "1px solid transparent",
@@ -1143,8 +1142,14 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       }),
 
       columnHelper.accessor("pin_code", {
-        header: "Pin Code",
-        cell: (info) => info.getValue(),
+        header: "Post Code",
+        cell: (info) => {
+          return (
+            <Typography className="f-14" sx={{ px: 1.5 }}>
+              {info.getValue() ?? "-"}
+            </Typography>
+          );
+        },
       }),
       columnHelper.accessor("id", {
         id: "actions",
@@ -2004,10 +2009,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   <Grid container spacing={3}>
                     <Grid size={{ xs: 12 }}>
                       <Typography variant="subtitle2" mb={1}>
-                        Short Name
+                        Name
                       </Typography>
                       <TextField
-                        placeholder="Short name.."
+                        placeholder="Name.."
                         value={parentAddressShortName}
                         onChange={(e) =>
                           setParentAddressShortName(e.target.value)
@@ -2069,7 +2074,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     </Grid>
                     <Grid size={{ xs: 12 }}>
                       <Typography variant="subtitle2" mb={1}>
-                        Pin Code
+                        Post Code
                       </Typography>
                       <CustomTextField
                         name="pin_code"
