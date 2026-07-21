@@ -31,10 +31,7 @@ import {
   Menu,
   ListItemIcon,
 } from "@mui/material";
-import {
-  flexRender,
-  createColumnHelper,
-} from "@tanstack/react-table";
+import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import {
   IconClock,
   IconDotsVertical,
@@ -118,18 +115,18 @@ const StockList = () => {
     }
     try {
       (window as any).__isSelectingAll = true;
-      await fetchResources();
+      await fetchProducts();
       if ((window as any).__lastFetchedIds) {
         setSelectedRowIds(new Set((window as any).__lastFetchedIds));
       }
     } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+      if (err.message !== "SELECT_ALL_INTERCEPT") {
         console.error(err);
       }
     } finally {
       (window as any).__isSelectingAll = false;
-      }
-  }
+    }
+  };
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -329,8 +326,27 @@ const StockList = () => {
       } else {
         setData([]);
       }
-      setPageCount(res.data.data.totalPages || 0);
-      setTotalRows(res.data.data.totalItems || 0);
+      if (res.data) {
+        const pagMeta =
+          res.data.data?.totalPages !== undefined ||
+            res.data.data?.totalItems !== undefined
+            ? res.data.data
+            : res.data.info && res.data.info.totalPages !== undefined
+              ? res.data.info
+              : res.data.data || {};
+
+        if (pagMeta.totalItems !== undefined) {
+          setTotalRows(pagMeta.totalItems);
+        } else if (pagMeta.total !== undefined) {
+          setTotalRows(pagMeta.total);
+        }
+
+        if (pagMeta.totalPages !== undefined) {
+          setPageCount(pagMeta.totalPages);
+        } else if (pagMeta.last_page !== undefined) {
+          setPageCount(pagMeta.last_page);
+        }
+      }
 
       if (productIdParam) {
         router.replace("/apps/stocks/list", { scroll: false });
@@ -556,15 +572,19 @@ const StockList = () => {
           <CustomCheckbox
             className="header-checkbox"
             checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
+              selectedRowIds.size === totalRows &&
+              totalRows > 0
             }
             indeterminate={
               selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
+              selectedRowIds.size < totalRows
             }
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
+            onChange={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleSelectAllAcrossPages(e.target.checked);
+            }}
           />
         </Stack>
       ),
@@ -671,7 +691,7 @@ const StockList = () => {
                 width: 200,
                 display: "-webkit-box",
                 WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 2,
+                WebkitLineClamp: 1,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 lineHeight: 1.25,
@@ -923,7 +943,27 @@ const StockList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography textTransform="capitalize" className="f-14">
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  border: "1px solid #1976d2",
+                },
+              }}
+            >
               {item.product_categories ? item.product_categories : "-"}
             </Typography>
           </Stack>
@@ -1003,12 +1043,17 @@ const StockList = () => {
         fetchProducts(
           storeId,
           undefined,
-          productId ? Number(productId) : undefined
+          productId ? Number(productId) : undefined,
         );
       }
     },
     debounceDependencies: [searchTerm, filters, storeId],
   });
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [searchTerm]);
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -1488,7 +1533,15 @@ const StockList = () => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
+        <TablePaginationFooter
+          selectedCount={
+            typeof selectedRowIds !== "undefined"
+              ? selectedRowIds.size
+              : undefined
+          }
+          table={table}
+          totalRows={totalRows}
+        />
 
         {/* Stock History */}
         <StockHistoryList

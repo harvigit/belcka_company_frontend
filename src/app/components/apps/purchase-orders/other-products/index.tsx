@@ -447,7 +447,7 @@ const OtherProductsDrawer = ({
                 sx={{
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 2,
+                  WebkitLineClamp: 1,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,

@@ -29,10 +29,7 @@ import {
   FormControlLabel,
   Checkbox,
 } from "@mui/material";
-import {
-  flexRender,
-  createColumnHelper,
-} from "@tanstack/react-table";
+import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import {
   IconEye,
   IconFilter,
@@ -108,26 +105,14 @@ const TablePagination = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const rerender = React.useReducer(() => ({}), {})[1];
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const handleSelectAllAcrossPages = async (checked: boolean) => {
-    if (!checked) {
+  const handleSelectAllRows = (checked: boolean) => {
+    if (checked) {
+      const allIds = data.map((item: any) => item.team_id);
+      setSelectedRowIds(new Set(allIds));
+    } else {
       setSelectedRowIds(new Set());
-      return;
     }
-    try {
-      (window as any).__isSelectingAll = true;
-      await fetchTeams();
-      (window as any).__isSelectingAll = false;
-      if ((window as any).__lastFetchedIds) {
-        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-      }
-    } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
-        console.error(err);
-      }
-    } finally {
-      (window as any).__isSelectingAll = false;
-      }
-  }
+  };
 
   const [archiveDrawerOpen, setarchiveDrawerOpen] = useState(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
@@ -358,7 +343,11 @@ const TablePagination = () => {
               selectedRowIds.size > 0 && selectedRowIds.size < data.length
             }
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
+            onChange={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleSelectAllRows(e.target.checked);
+            }}
           />
         </Stack>
       ),
@@ -608,7 +597,11 @@ const TablePagination = () => {
                 },
               }}
             />
-            <Button variant="contained" onClick={() => setOpen(true)} sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}>
+            <Button
+              variant="contained"
+              onClick={() => setOpen(true)}
+              sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}
+            >
               <IconFilter width={18} />
             </Button>
             <Dialog
@@ -1174,7 +1167,15 @@ const TablePagination = () => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
+        <TablePaginationFooter
+          selectedCount={
+            typeof selectedRowIds !== "undefined"
+              ? selectedRowIds.size
+              : undefined
+          }
+          table={table}
+          totalRows={totalRows}
+        />
       </Box>
     </PermissionGuard>
   );

@@ -113,25 +113,14 @@ const TablePagination = () => {
   const [fetchTeam, setFetchTeam] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const handleSelectAllAcrossPages = async (checked: boolean) => {
-    if (!checked) {
+  const handleSelectAllRows = (checked: boolean) => {
+    if (checked) {
+      const allIds = data.map((item: any) => item.id);
+      setSelectedRowIds(new Set(allIds));
+    } else {
       setSelectedRowIds(new Set());
-      return;
     }
-    try {
-      (window as any).__isSelectingAll = true;
-      await fetchTrades();
-      if ((window as any).__lastFetchedIds) {
-        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-      }
-    } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
-        console.error(err);
-      }
-    } finally {
-      (window as any).__isSelectingAll = false;
-      }
-  }
+  };
 
   const rerender = React.useReducer(() => ({}), {})[1];
   const [users, setUsers] = useState<UserList[]>([]);
@@ -563,12 +552,18 @@ const TablePagination = () => {
         <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
-            checked={selectedRowIds.size > 0 && selectedRowIds.size >= data.length}
+            checked={
+              selectedRowIds.size > 0 && selectedRowIds.size >= data.length
+            }
             indeterminate={
               selectedRowIds.size > 0 && selectedRowIds.size < data.length
             }
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
+            onChange={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleSelectAllRows(e.target.checked);
+            }}
           />
         </Stack>
       ),

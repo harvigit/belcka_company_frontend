@@ -856,7 +856,7 @@ const PurchaseProductList: React.FC<Props> = ({
                   width: 300,
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 3,
+                  WebkitLineClamp: 1,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,
@@ -892,7 +892,7 @@ const PurchaseProductList: React.FC<Props> = ({
                 sx={{
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 2,
+                  WebkitLineClamp: 1,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,

@@ -102,13 +102,13 @@ const CasesList = () => {
         setSelectedRowIds(new Set((window as any).__lastFetchedIds));
       }
     } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+      if (err.message !== "SELECT_ALL_INTERCEPT") {
         console.error(err);
       }
     } finally {
       (window as any).__isSelectingAll = false;
-      }
-  }
+    }
+  };
 
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -209,7 +209,7 @@ const CasesList = () => {
       if (filters.parent_address_id)
         url += `&parent_address_id=${filters.parent_address_id}`;
       if (search) url += `&search=${search}`;
-      
+
       if (sorting && sorting.length > 0) {
         url += `&sort_by=${sorting[0].id}&sort_order=${sorting[0].desc ? "desc" : "asc"}`;
       }
@@ -248,7 +248,6 @@ const CasesList = () => {
       setLoading(false);
     }
   };
-
 
   const fallbackCopy = (text: string) => {
     try {
@@ -421,7 +420,11 @@ const CasesList = () => {
                 selectedRowIds.size > 0 && selectedRowIds.size < data.length
               }
               onClick={(e: any) => e.stopPropagation()}
-              onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleSelectAllAcrossPages(e.target.checked);
+              }}
             />
           </Stack>
         ),
@@ -484,9 +487,8 @@ const CasesList = () => {
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   wordBreak: "break-word",
-                  px: 1.5,
+                  width: "200px",
                   borderRadius: 1,
-                  cursor: "pointer",
                   border: "1px solid transparent",
                   transition: "all 0.2s ease",
                 }}
@@ -656,7 +658,11 @@ const CasesList = () => {
         header: "Type",
         accessorKey: "address_type",
         cell: ({ getValue }: any) => (
-          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 ,textTransform:'capitalize'}}>
+          <Typography
+            className="f-14"
+            color="textPrimary"
+            sx={{ px: 1.5, textTransform: "capitalize" }}
+          >
             {getValue()}
           </Typography>
         ),
@@ -1199,7 +1205,15 @@ const CasesList = () => {
         </Box>
         <Divider />
 
-        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
+        <TablePaginationFooter
+          selectedCount={
+            typeof selectedRowIds !== "undefined"
+              ? selectedRowIds.size
+              : undefined
+          }
+          table={table}
+          totalRows={totalRows}
+        />
       </Box>
       {/* Edit Case Drawer */}
       <CaseEditDrawer

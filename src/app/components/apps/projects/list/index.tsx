@@ -166,14 +166,13 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
         setSelectedRowIds(new Set((window as any).__lastFetchedIds));
       }
     } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+      if (err.message !== "SELECT_ALL_INTERCEPT") {
         console.error(err);
       }
     } finally {
       (window as any).__isSelectingAll = false;
-      }
-  }
-
+    }
+  };
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [settingOpen, setSettingOpen] = useState(false);
@@ -479,12 +478,18 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
           <Stack direction="row" alignItems="center">
             <CustomCheckbox
               className="header-checkbox"
-              checked={selectedRowIds.size > 0 && selectedRowIds.size >= data.length}
+              checked={
+                selectedRowIds.size > 0 && selectedRowIds.size >= data.length
+              }
               indeterminate={
                 selectedRowIds.size > 0 && selectedRowIds.size < data.length
               }
               onClick={(e: any) => e.stopPropagation()}
-              onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleSelectAllAcrossPages(e.target.checked);
+              }}
             />
           </Stack>
         ),
@@ -540,7 +545,26 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <Typography textTransform="capitalize" className="f-14">
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              sx={{
+                cursor: "pointer",
+                "&:hover": {
+                  color: "primary.main",
+                },
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                width: "200px",
+                borderRadius: 1,
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+              }}
+            >
               {item.teams?.length
                 ? item.teams.map((shift: any) => shift.name).join(", ")
                 : "-"}
@@ -555,7 +579,26 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <Typography textTransform="capitalize" className="f-14">
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              sx={{
+                cursor: "pointer",
+                "&:hover": {
+                  color: "primary.main",
+                },
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                width: "200px",
+                borderRadius: 1,
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+              }}
+            >
               {item.shifts?.length
                 ? item.shifts.map((shift: any) => shift.name).join(", ")
                 : "-"}
@@ -599,7 +642,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                   <IconBookmark size={18} />
                 </IconButton>
               </Tooltip>
-                <Tooltip title="Map">
+              <Tooltip title="Map">
                 <IconButton
                   color="error"
                   onClick={(e) => {
@@ -956,7 +999,15 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
           </TableContainer>
         </Box>
         <Divider />
-        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
+        <TablePaginationFooter
+          selectedCount={
+            typeof selectedRowIds !== "undefined"
+              ? selectedRowIds.size
+              : undefined
+          }
+          table={table}
+          totalRows={totalRows}
+        />
         {/* Dialogs and Drawers */}
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
           <DialogTitle>Confirm Archive</DialogTitle>
@@ -1531,29 +1582,29 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
           </Box>
         </Drawer>
 
-          <Drawer
-                  anchor="bottom"
-                  open={mapOpen}
-                  onClose={() => setMapOpen(false)}
-                  PaperProps={{
-                    sx: {
-                      borderRadius: 0,
-                      height: "95vh",
-                      boxShadow: "none",
-                      borderTopLeftRadius: 12,
-                      borderTopRightRadius: 12,
-                      overflow: "hidden",
-                    },
-                  }}
-                >
-                  <MapGantt
-                    open={mapOpen}
-                    onClose={() => setMapOpen(false)}
-                    onUpdate={fetchProjects}
-                    projectId={activeProjectId}
-                    companyId={user?.company_id ?? null}
-                  />
-                </Drawer>
+        <Drawer
+          anchor="bottom"
+          open={mapOpen}
+          onClose={() => setMapOpen(false)}
+          PaperProps={{
+            sx: {
+              borderRadius: 0,
+              height: "95vh",
+              boxShadow: "none",
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              overflow: "hidden",
+            },
+          }}
+        >
+          <MapGantt
+            open={mapOpen}
+            onClose={() => setMapOpen(false)}
+            onUpdate={fetchProjects}
+            projectId={activeProjectId}
+            companyId={user?.company_id ?? null}
+          />
+        </Drawer>
       </Box>
     </PermissionGuard>
   );
