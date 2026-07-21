@@ -430,7 +430,7 @@ const TablePagination = () => {
           <Stack direction="row" alignItems="center" spacing={1}>
             <Typography
               className="f-14"
-              sx={{
+              sx={{minWidth: "150px", width: "100%", maxWidth: "500px", 
                 display: "-webkit-box",
                 WebkitBoxOrient: "vertical",
                 WebkitLineClamp: 1,
@@ -438,7 +438,7 @@ const TablePagination = () => {
                 textOverflow: "ellipsis",
                 lineHeight: 1.15,
                 wordBreak: "break-word",
-                maxWidth: 250,
+                
               }}
             >
               {item.name ?? "-"}

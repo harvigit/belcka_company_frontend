@@ -1079,14 +1079,14 @@ const PurchaseOrderList = () => {
               <Typography
                 className="f-14"
                 fontWeight={500}
-                sx={{
+                sx={{minWidth: "150px", width: "100%", maxWidth: "500px", 
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
                   WebkitLineClamp: 1,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,
-                  maxWidth: 300,
+                  
                   wordBreak: "break-word",
                 }}
               >

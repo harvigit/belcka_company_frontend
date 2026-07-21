@@ -1460,14 +1460,14 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                         <Stack mt={2} spacing={1}>
                           <Typography
                             variant="body2"
-                            sx={{
+                            sx={{minWidth: "150px", width: "100%", maxWidth: "500px", 
                               display: "-webkit-box",
                               WebkitBoxOrient: "vertical",
                               WebkitLineClamp: 3,
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               lineHeight: 1.25,
-                              maxWidth: 350,
+                              
                               wordBreak: "break-word",
                             }}
                           >

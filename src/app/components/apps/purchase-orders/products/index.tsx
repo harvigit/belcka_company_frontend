@@ -858,8 +858,8 @@ const PurchaseProductList: React.FC<Props> = ({
               <Typography
                 className="f-14"
                 variant="body1"
-                sx={{
-                  width: 300,
+                sx={{minWidth: "150px", width: "100%", maxWidth: "500px", 
+                  
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
                   WebkitLineClamp: 1,

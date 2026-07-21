@@ -970,12 +970,7 @@ const Leaves = () => {
                                     {row.user_name}
                                 </Typography>
                                 <Tooltip title={row.trade_name ?? '-'} placement="top" arrow>
-                                    <Typography
-                                        color="textSecondary"
-                                        variant="subtitle1"
-                                        width={150}
-                                        noWrap
-                                    >
+                                    <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} color="textSecondary" variant="subtitle1" width={150} >
                                         {row.trade_name}
                                     </Typography>
                                 </Tooltip>
@@ -1150,7 +1145,7 @@ const Leaves = () => {
                         <FormControlLabel
                             key={column.id}
                             control={
-                                <Checkbox
+                                <CustomCheckbox
                                     size="small"
                                     checked={column.getIsVisible()}
                                     onChange={column.getToggleVisibilityHandler()}

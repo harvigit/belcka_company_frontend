@@ -1013,7 +1013,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.user_code}
                             </Typography>
                         </Box>
@@ -1030,7 +1030,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.account_id}
                             </Typography>
                         </Box>
@@ -1189,7 +1189,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.name_on_account}
                             </Typography>
                         </Box>
@@ -1206,7 +1206,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.sort_code}
                             </Typography>
                         </Box>
@@ -1223,7 +1223,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.account_number}
                             </Typography>
                         </Box>
@@ -1240,7 +1240,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.utr_name}
                             </Typography>
                         </Box>
@@ -1257,7 +1257,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.utr_number}
                             </Typography>
                         </Box>
@@ -1274,7 +1274,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.nin_number}
                             </Typography>
                         </Box>
@@ -2055,7 +2055,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                     <FormControlLabel
                                         key={col.id}
                                         control={
-                                            <Checkbox
+                                            <CustomCheckbox
                                                 size="small"
                                                 checked={col.getIsVisible()}
                                                 onChange={(e) => {

@@ -1659,10 +1659,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     return (
                         <Stack direction="row" alignItems="center" spacing={2} sx={{width: '100%'}}>
                             <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                                <Typography
-                                    className="f-14"
-                                    noWrap
-                                >
+                                <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                     {row.original.date}
                                 </Typography>
                             </Box>
