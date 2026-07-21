@@ -56,6 +56,7 @@ import toast from "react-hot-toast";
 import ArchiveAddress from "../../addresses/list/archive-address-list";
 import CaseEditDrawer from "./case-edit-drawer";
 import { IconNotes } from "@tabler/icons-react";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 interface CaseSummary {
   id: number;
@@ -140,6 +141,11 @@ const CasesList = () => {
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${user?.company_id}_${user?.id}_cases`,
+    enabled: !!user?.id,
+  });
+
 
   React.useEffect(() => {
     const checkScroll = () => {
@@ -487,7 +493,9 @@ const CasesList = () => {
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   wordBreak: "break-word",
-                  width: "200px",
+                  minWidth: "150px",
+                  width: "100%",
+                  maxWidth: "500px",
                   borderRadius: 1,
                   border: "1px solid transparent",
                   transition: "all 0.2s ease",
@@ -740,7 +748,8 @@ const CasesList = () => {
     columns,
     fetchData: fetchCases,
     debounceDependencies: [user?.company_id, search, JSON.stringify(filters)],
-    state: { sorting },
+    state: { columnVisibility, sorting },
+    onColumnVisibilityChange,
     onSortingChange: setSorting,
     manualSorting: true,
   });
@@ -839,7 +848,7 @@ const CasesList = () => {
                       <FormControlLabel
                         key={column.id}
                         control={
-                          <Checkbox
+                          <CustomCheckbox
                             checked={column.getIsVisible()}
                             onChange={column.getToggleVisibilityHandler()}
                           />

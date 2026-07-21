@@ -68,6 +68,7 @@ export type ExpenseCategoryList = {
 
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 const TablePagination = () => {
   const [data, setData] = useState<ExpenseCategoryList[]>([]);
@@ -99,6 +100,11 @@ const TablePagination = () => {
 
   const session = useSession();
   const company = session.data?.user as User & { company_id?: number | null };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${company?.company_id}_${company?.id}_expense_categories`,
+    enabled: !!company?.id,
+  });
+
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
@@ -450,6 +456,8 @@ const TablePagination = () => {
     columns,
     fetchData: fetchExpenseCategories,
     debounceDependencies: [searchTerm, company?.company_id],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   const simpleColumns = columns.map((column) => ({
@@ -551,8 +559,8 @@ const TablePagination = () => {
                   <FormControlLabel
                     key={col.id}
                     control={
-                      <Checkbox
-                        checked={col.getIsVisible()}
+                      <CustomCheckbox
+                          checked={col.getIsVisible()}
                         onChange={col.getToggleVisibilityHandler()}
                         disabled={col.id === "conflicts"}
                       />

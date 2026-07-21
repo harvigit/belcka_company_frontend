@@ -101,6 +101,7 @@ export interface ProductFormData {
 
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 const StockList = () => {
   const [data, setData] = useState<any[]>([]);
@@ -108,28 +109,22 @@ const StockList = () => {
   const [fetchProduct, setFetchProduct] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const handleSelectAllAcrossPages = async (checked: boolean) => {
-    if (!checked) {
+  const handleSelectAllRows = (checked: boolean) => {
+    if (checked) {
+      const allIds = data.map((item: any) => item.id);
+      setSelectedRowIds(new Set(allIds));
+    } else {
       setSelectedRowIds(new Set());
-      return;
-    }
-    try {
-      (window as any).__isSelectingAll = true;
-      await fetchProducts();
-      if ((window as any).__lastFetchedIds) {
-        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-      }
-    } catch (err: any) {
-      if (err.message !== "SELECT_ALL_INTERCEPT") {
-        console.error(err);
-      }
-    } finally {
-      (window as any).__isSelectingAll = false;
     }
   };
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${user?.company_id}_${user?.id}_stocks`,
+    enabled: !!user?.id,
+  });
+
   const [storeModalOpen, setStoreModalOpen] = useState(false);
   const [storeId, setStoreId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -329,7 +324,7 @@ const StockList = () => {
       if (res.data) {
         const pagMeta =
           res.data.data?.totalPages !== undefined ||
-            res.data.data?.totalItems !== undefined
+          res.data.data?.totalItems !== undefined
             ? res.data.data
             : res.data.info && res.data.info.totalPages !== undefined
               ? res.data.info
@@ -541,7 +536,7 @@ const StockList = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
           tableContainerRef.current.scrollWidth >
-          tableContainerRef.current.clientWidth,
+            tableContainerRef.current.clientWidth,
         );
       }
     };
@@ -571,19 +566,15 @@ const StockList = () => {
         <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
-            checked={
-              selectedRowIds.size === totalRows &&
-              totalRows > 0
-            }
+            checked={selectedRowIds.size === totalRows && totalRows > 0}
             indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < totalRows
+              selectedRowIds.size > 0 && selectedRowIds.size < totalRows
             }
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
               e.stopPropagation();
               e.preventDefault();
-              handleSelectAllAcrossPages(e.target.checked);
+              handleSelectAllRows(e.target.checked);
             }}
           />
         </Stack>
@@ -688,14 +679,15 @@ const StockList = () => {
               className="f-14"
               variant="body1"
               sx={{
-                width: 200,
+                width: "100%",
+                minWidth: "150px",
                 display: "-webkit-box",
                 WebkitBoxOrient: "vertical",
                 WebkitLineClamp: 1,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 lineHeight: 1.25,
-                maxWidth: 250,
+                maxWidth: "500px",
                 wordBreak: "break-word",
               }}
             >
@@ -1048,6 +1040,8 @@ const StockList = () => {
       }
     },
     debounceDependencies: [searchTerm, filters, storeId],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   // Reset to first page when search term changes
@@ -1171,7 +1165,7 @@ const StockList = () => {
                     <FormControlLabel
                       key={col.id}
                       control={
-                        <Checkbox
+                        <CustomCheckbox
                           checked={col.getIsVisible()}
                           onChange={col.getToggleVisibilityHandler()}
                           disabled={col.id === "conflicts"}
@@ -1184,14 +1178,14 @@ const StockList = () => {
                           : col.columnDef.meta?.label
                             ? col.columnDef.meta.label
                             : typeof col.columnDef.header === "string" &&
-                              col.columnDef.header.trim() !== ""
+                                col.columnDef.header.trim() !== ""
                               ? col.columnDef.header
                               : col.id
-                                .replace(/([A-Z])/g, " $1")
-                                .replace(/^./, (str: string) =>
-                                  str.toUpperCase(),
-                                )
-                                .trim()
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str: string) =>
+                                    str.toUpperCase(),
+                                  )
+                                  .trim()
                       }
                     />
                   ))}
@@ -1400,7 +1394,7 @@ const StockList = () => {
                             paddingBottom: "10px",
                             width:
                               header.column.id === "actions" ||
-                                header.column.id === "barcode"
+                              header.column.id === "barcode"
                                 ? 80
                                 : header.column.id === "Qty"
                                   ? 120
@@ -1409,7 +1403,7 @@ const StockList = () => {
                                     : header.column.id === "QrCode"
                                       ? 120
                                       : header.column.id === "supplierCode" ||
-                                        header.column.id === "stockStatus"
+                                          header.column.id === "stockStatus"
                                         ? 140
                                         : header.column.id === "QrCode"
                                           ? 120

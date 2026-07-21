@@ -62,6 +62,7 @@ import { FileDownload } from "@mui/icons-material";
 import { useDropzone } from "react-dropzone";
 import { format } from "date-fns";
 import { useServerTable } from "@/hooks/useServerTable";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 dayjs.extend(customParseFormat);
 interface Props {
@@ -119,6 +120,11 @@ const PurchaseProductList: React.FC<Props> = ({
   }, [selectedRowIds]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${user?.company_id}_${user?.id}_orders_products`,
+    enabled: !!user?.id,
+  });
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
@@ -1020,6 +1026,8 @@ const PurchaseProductList: React.FC<Props> = ({
     columns,
     fetchData: fetchOrders,
     debounceDependencies: [searchTerm, filters, user.company_id],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
     getRowId: (row: any) => row.id.toString(),
   });
   // Reset to first page when search term changes
@@ -1352,7 +1360,7 @@ const PurchaseProductList: React.FC<Props> = ({
                     <FormControlLabel
                       key={col.id}
                       control={
-                        <Checkbox
+                        <CustomCheckbox
                           checked={col.getIsVisible()}
                           onChange={col.getToggleVisibilityHandler()}
                           disabled={col.id === "conflicts"}

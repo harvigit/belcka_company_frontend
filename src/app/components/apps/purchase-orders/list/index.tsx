@@ -74,6 +74,7 @@ import { IconHelp } from "@tabler/icons-react";
 import CancelOrder from "../cancel-orders";
 import OtherProductsDrawer from "../other-products";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 dayjs.extend(customParseFormat);
 
@@ -134,6 +135,11 @@ const PurchaseOrderList = () => {
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${user?.company_id}_${user?.id}_purchase_orders`,
+    enabled: !!user?.id,
+  });
+
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -300,6 +306,8 @@ const PurchaseOrderList = () => {
     columns: [],
     fetchData: fetchOrders,
     debounceDependencies: [searchTerm, filters],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   useEffect(() => {
@@ -1921,7 +1929,7 @@ Team Belcka
                     <FormControlLabel
                       key={col.id}
                       control={
-                        <Checkbox
+                        <CustomCheckbox
                           checked={col.getIsVisible()}
                           onChange={col.getToggleVisibilityHandler()}
                           disabled={col.id === "conflicts"}

@@ -70,6 +70,7 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import Link from "next/link";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 dayjs.extend(customParseFormat);
 
@@ -133,7 +134,12 @@ const TablePagination = () => {
     number | undefined
   >(undefined);
   const session = useSession();
-  const id = session.data?.user as User & { company_id?: number | null };
+  const id = session.data?.user as User & { company_id?: number | null; id?: string };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${id?.company_id}_${id?.id}_teams_team`,
+    enabled: !!id?.id,
+  });
+
 
   const searchParams = useSearchParams();
   const teamId = searchParams ? searchParams.get("team_id") : "";
@@ -772,6 +778,8 @@ const TablePagination = () => {
     columns,
     fetchData,
     debounceDependencies: [searchTerm, filters],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   const handleCopy = () => {
@@ -1163,8 +1171,8 @@ const TablePagination = () => {
                         <FormControlLabel
                           key={col.id}
                           control={
-                            <Checkbox
-                              checked={col.getIsVisible()}
+                            <CustomCheckbox
+                          checked={col.getIsVisible()}
                               onChange={col.getToggleVisibilityHandler()}
                               disabled={col.id === "conflicts"}
                             />

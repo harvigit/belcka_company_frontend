@@ -75,7 +75,7 @@ import "react-phone-input-2/lib/material.css";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { AxiosResponse } from "axios";
-import Cookies from "js-cookie";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import UserSettingDrawer from "./user-setting-drawer";
@@ -632,7 +632,7 @@ const TablePagination = () => {
       if (tableContainerRef.current) {
         setHasHorizontalScrollbar(
           tableContainerRef.current.scrollWidth >
-            tableContainerRef.current.clientWidth,
+          tableContainerRef.current.clientWidth,
         );
       }
     };
@@ -660,14 +660,6 @@ const TablePagination = () => {
   }, [selectedUserPermissions, permissionSearch]);
 
   const userId = user.id;
-  const getColumnVisibilityKey = (userId?: number | string) =>
-    userId ? `columnVisibility_${userId}` : "columnVisibility";
-
-  const columnVisibilityKey = getColumnVisibilityKey(userId);
-  const canShowAllColumns =
-    isAdmin ||
-    (hasPermissionUser &&
-      (permissionUserType === "view" || permissionUserType === "view_edit"));
 
   const columnHelper = createColumnHelper<UserList>();
 
@@ -1188,6 +1180,26 @@ const TablePagination = () => {
       },
     }),
   ];
+  const getColumnVisibilityKey = (userId?: number | string) =>
+    userId ? `cv_${userId}_users` : "cv_users";
+  const columnVisibilityKey = getColumnVisibilityKey(userId);
+
+  const limitedColumns = new Set(["name", "user_code", "email", "phone"]);
+  const limitedVisibility = columns.reduce((acc, col) => {
+    acc[col.id as string] = limitedColumns.has(col.id as string);
+    return acc;
+  }, {} as Record<string, boolean>);
+
+  const canShowAllColumns =
+    isAdmin ||
+    (hasPermissionUser &&
+      (permissionUserType === "view" || permissionUserType === "view_edit"));
+
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: columnVisibilityKey,
+    defaultVisibility: limitedVisibility,
+    enabled: !!(userId && columnAccessLoaded && canShowAllColumns),
+  });
 
   const {
     table,
@@ -1206,43 +1218,16 @@ const TablePagination = () => {
     columns,
     fetchData: fetchUsers,
     debounceDependencies: [searchTerm, filters, user.company_id],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
-
-  useEffect(() => {
-    if (!userId || !columnAccessLoaded) return;
-
-    if (canShowAllColumns) {
-      const savedVisibility = Cookies.get(columnVisibilityKey)
-        ? JSON.parse(Cookies.get(columnVisibilityKey)!)
-        : {};
-      table.setColumnVisibility(savedVisibility);
-      return;
-    }
-
-    const limitedColumns = new Set(["name", "user_code", "email", "phone"]);
-    const limitedVisibility: Record<string, boolean> = {};
-    table.getAllLeafColumns().forEach((column) => {
-      limitedVisibility[column.id] = limitedColumns.has(column.id);
-    });
-    table.setColumnVisibility(limitedVisibility);
-  }, [
-    table,
-    userId,
-    columnVisibilityKey,
-    columnAccessLoaded,
-    canShowAllColumns,
-  ]);
-
   useEffect(() => {
     const eligibleColumns = table
       .getAllLeafColumns()
       .filter((col) => col.id !== "conflicts");
 
     const allSelected = eligibleColumns.every((col) => col.getIsVisible());
-
-    const visibleCount = eligibleColumns.filter((col) =>
-      col.getIsVisible(),
-    ).length;
+    const visibleCount = eligibleColumns.filter((col) => col.getIsVisible()).length;
 
     setSelectAll(allSelected);
     setVisibleColumnsCount(visibleCount);
@@ -1250,48 +1235,13 @@ const TablePagination = () => {
 
   const handleSelectAllChange = (e: any) => {
     const checked = e.target.checked;
-    setSelectAll(checked);
-
     const newVisibility: Record<string, boolean> = {};
-
     table.getAllLeafColumns().forEach((col) => {
       if (col.id !== "conflicts") {
         newVisibility[col.id] = checked;
       }
     });
-
-    Cookies.set(
-      columnVisibilityKey,
-      JSON.stringify({
-        ...newVisibility,
-        selectAll: checked,
-      }),
-      {
-        expires: 365,
-      },
-    );
-
     table.setColumnVisibility(newVisibility);
-  };
-
-  const handleColumnVisibilityChange = (colId: string, value: boolean) => {
-    const currentVisibility = Cookies.get(columnVisibilityKey)
-      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
-      : {};
-
-    const updatedVisibility = {
-      ...currentVisibility,
-      [colId]: value,
-    };
-
-    Cookies.set(columnVisibilityKey, JSON.stringify(updatedVisibility), {
-      expires: 365,
-    });
-
-    table.setColumnVisibility((prev: any) => ({
-      ...prev,
-      [colId]: value,
-    }));
   };
 
   useEffect(() => {
@@ -1343,7 +1293,7 @@ const TablePagination = () => {
                 },
               }}
             />
-            <Button variant="contained" onClick={() => setOpen(true)}  sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}>
+            <Button variant="contained" onClick={() => setOpen(true)} sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}>
               <IconFilter width={18} />
             </Button>
           </Grid>
@@ -1478,13 +1428,13 @@ const TablePagination = () => {
               </IconButton>
             )}
             {isAuthenticatedUserAdmin && (
-                <IconButton
-                  onClick={() => setUserSettingDrawerOpen(true)}
-                  color="primary"
-                  aria-label="Open user permission settings"
-                >
-                  <IconSettings />
-                </IconButton>
+              <IconButton
+                onClick={() => setUserSettingDrawerOpen(true)}
+                color="primary"
+                aria-label="Open user permission settings"
+              >
+                <IconSettings />
+              </IconButton>
             )}
             <Popover
               open={Boolean(anchorEl2)}
@@ -1505,7 +1455,7 @@ const TablePagination = () => {
               <FormGroup>
                 <FormControlLabel
                   control={
-                    <Checkbox
+                    <CustomCheckbox
                       id="select all"
                       checked={selectAll}
                       onChange={handleSelectAllChange}
@@ -1525,25 +1475,21 @@ const TablePagination = () => {
                     <FormControlLabel
                       key={col.id}
                       control={
-                        <Checkbox
+                        <CustomCheckbox
                           checked={col.getIsVisible()}
-                          onChange={(e) =>
-                            handleColumnVisibilityChange(
-                              col.id,
-                              e.target.checked,
-                            )
-                          }
+                          onChange={col.getToggleVisibilityHandler()}
+                          disabled={col.id === "conflicts"}
                         />
                       }
                       sx={{ textTransform: "none" }}
                       label={
                         typeof col.columnDef.header === "string" &&
-                        col.columnDef.header.trim() !== ""
+                          col.columnDef.header.trim() !== ""
                           ? col.columnDef.header
                           : col.id
-                              .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str) => str.toUpperCase())
-                              .trim()
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (str) => str.toUpperCase())
+                            .trim()
                       }
                     />
                   ))}
@@ -1825,8 +1771,8 @@ const TablePagination = () => {
                   <tr
                     style={{ borderRadius: 4 }}
                     onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor =
-                        "rgba(0,0,0,0.04)")
+                    (e.currentTarget.style.backgroundColor =
+                      "rgba(0,0,0,0.04)")
                     }
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.backgroundColor = "#f9f9f9")
@@ -1858,8 +1804,8 @@ const TablePagination = () => {
                     <tr
                       key={permission.id}
                       onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor =
-                          "rgba(0,0,0,0.04)")
+                      (e.currentTarget.style.backgroundColor =
+                        "rgba(0,0,0,0.04)")
                       }
                       onMouseLeave={(e) =>
                         (e.currentTarget.style.backgroundColor = "transparent")

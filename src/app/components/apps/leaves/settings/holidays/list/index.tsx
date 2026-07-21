@@ -76,6 +76,7 @@ export type HolidayItem = {
 
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 const HolidayList = () => {
   const [data, setData] = useState<HolidayItem[]>([]);
@@ -119,6 +120,11 @@ const HolidayList = () => {
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${user?.company_id}_${user?.id}_settings_holidays`,
+    enabled: !!user?.id,
+  });
+
 
   const fetchHolidays = async () => {
     setFetchingHolidays(true);
@@ -321,6 +327,8 @@ const HolidayList = () => {
       if (user?.company_id) fetchHolidays();
     },
     debounceDependencies: [searchTerm, user?.company_id],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   const simpleColumns = columns.map((col) => ({
@@ -422,8 +430,8 @@ const HolidayList = () => {
                   <FormControlLabel
                     key={col.id}
                     control={
-                      <Checkbox
-                        checked={col.getIsVisible()}
+                      <CustomCheckbox
+                          checked={col.getIsVisible()}
                         onChange={col.getToggleVisibilityHandler()}
                       />
                     }

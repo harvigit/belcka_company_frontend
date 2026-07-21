@@ -966,7 +966,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     wordBreak: "break-word",
-                    width: "200px",
+                  minWidth: "150px",
+                  width: "100%",
+                  maxWidth: "500px",
                     borderRadius: 1,
                     border: "1px solid transparent",
                     transition: "all 0.2s ease",
@@ -998,7 +1000,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       wordBreak: "break-word",
-                      width: "200px",
+                  minWidth: "150px",
+                  width: "100%",
+                  maxWidth: "500px",
                       borderRadius: 1,
                       border: "1px solid transparent",
                       transition: "all 0.2s ease",
@@ -1020,7 +1024,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       wordBreak: "break-word",
-                      width: "200px",
+                  minWidth: "150px",
+                  width: "100%",
+                  maxWidth: "500px",
                       borderRadius: 1,
                       border: "1px solid transparent",
                       transition: "all 0.2s ease",
@@ -1375,7 +1381,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       <FormControlLabel
                         key={col.id}
                         control={
-                          <Checkbox
+                          <CustomCheckbox
                             checked={
                               columnVisibility[col.id] ?? col.getIsVisible()
                             }

@@ -119,6 +119,7 @@ export interface ProductFormData {
 
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 const ProductList = () => {
   const [data, setData] = useState<any[]>([]);
@@ -152,6 +153,11 @@ const ProductList = () => {
     id: number;
     user_role_id: number;
   };
+
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${user?.company_id}_${user?.id}_products`,
+    enabled: !!user?.id,
+  });
 
   const [productPermission, setProductPermission] = useState<string | null>(
     null,
@@ -1945,6 +1951,8 @@ const ProductList = () => {
     columns,
     fetchData: fetchProducts,
     debounceDependencies: [searchTerm, filters, user.company_id, categories],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   // Reset to first page when search term changes
@@ -2555,7 +2563,7 @@ const ProductList = () => {
                     <FormControlLabel
                       key={col.id}
                       control={
-                        <Checkbox
+                        <CustomCheckbox
                           checked={col.getIsVisible()}
                           onChange={col.getToggleVisibilityHandler()}
                           disabled={col.id === "conflicts"}

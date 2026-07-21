@@ -94,6 +94,7 @@ import PermissionGuard from "@/app/auth/PermissionGuard";
 import AddressesList from "../../addresses/list/addresses-list";
 import { IconSettings } from "@tabler/icons-react";
 import MapGantt from "../zone-map/MapGantt";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 dayjs.extend(customParseFormat);
 
 const columnHelper = createColumnHelper<any>();
@@ -146,6 +147,11 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${user?.company_id}_${user?.id}_projects`,
+    enabled: !!user?.id,
+  });
+
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
@@ -559,7 +565,9 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 wordBreak: "break-word",
-                width: "200px",
+                  minWidth: "150px",
+                  width: "100%",
+                  maxWidth: "500px",
                 borderRadius: 1,
                 border: "1px solid transparent",
                 transition: "all 0.2s ease",
@@ -593,7 +601,9 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 wordBreak: "break-word",
-                width: "200px",
+                  minWidth: "150px",
+                  width: "100%",
+                  maxWidth: "500px",
                 borderRadius: 1,
                 border: "1px solid transparent",
                 transition: "all 0.2s ease",
@@ -675,6 +685,8 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
     columns,
     fetchData: fetchProjects,
     debounceDependencies: [searchTerm, user?.company_id],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   useEffect(() => {

@@ -89,6 +89,7 @@ import BookkeeperHistory from './history';
 import RecoverWorklogs from './recover-worklogs';
 import { useServerTable } from '@/hooks/useServerTable';
 import TablePaginationFooter from '../../common/TablePaginationFooter';
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -351,7 +352,12 @@ const TimeClock = ({ queryParams }: Props) => {
     const [anchorEl3, setAnchorEl3] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
     const session = useSession();
-    const user = session.data?.user as User & { company_id: number } & { user_role_id: number; };
+    const user = session.data?.user as User & { company_id: number; id?: string } & { user_role_id: number; };
+    
+    const { columnVisibility, onColumnVisibilityChange, onColumnVisibilityChange: setColumnVisibility } = usePersistentColumnVisibility({
+      storageKey: `cv_${user?.company_id}_${user?.id}_time_clock`,
+      enabled: !!user?.id,
+    });
     const openMenu = Boolean(anchorEl3);
     const [addDropDown, setAddDropDown] = useState<null | HTMLElement>(null);
     const openAddleave = Boolean(addDropDown);
@@ -376,11 +382,7 @@ const TimeClock = ({ queryParams }: Props) => {
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
     const [ratePermissionLoaded, setRatePermissionLoaded] = useState<boolean>(false);
 
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() =>
-        loadColumnVisibilityCookie(TIME_CLOCK_COLUMNS_COOKIE)
-        ?? initialStoredState?.columnVisibility
-        ?? {}
-    );
+
 
     const queryParamsRef = useRef(queryParams);
     const dataRequestsRef = useRef<Map<string, Promise<TimeClock[]>>>(new Map());
@@ -398,7 +400,7 @@ const TimeClock = ({ queryParams }: Props) => {
     useEffect(() => {
         if (!ratePermissionLoaded) return;
 
-        setColumnVisibility((prev) => ({
+        setColumnVisibility((prev: any) => ({
             ...prev,
             ...Object.fromEntries(
                 TIME_CLOCK_AMOUNT_COLUMNS.map((col) => [
@@ -414,9 +416,7 @@ const TimeClock = ({ queryParams }: Props) => {
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
     }, [startDate, endDate, columnVisibility]);
 
-    useEffect(() => {
-        saveColumnVisibilityCookie(TIME_CLOCK_COLUMNS_COOKIE, columnVisibility);
-    }, [columnVisibility]);
+
 
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
