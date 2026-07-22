@@ -399,7 +399,7 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                                             boxShadow: 3,
                                         },
                                     }}
-                                    onClick={() => setSelectedImage(attachment.image_url)}
+                                    onClick={() => setSelectedImage(attachment.type == 'application/pdf' ? attachment.thumb_url : attachment.image_url)}
                                 >
                                     <CardMedia
                                         component="img"
