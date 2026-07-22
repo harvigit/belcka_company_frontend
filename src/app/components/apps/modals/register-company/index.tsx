@@ -105,7 +105,7 @@ export default function CompanyRegistration({ open, onClose }: Props) {
       formData.append("email", email);
       formData.append("phone", nationalPhone);
       formData.append("extension", extension);
-      formData.append("created_by", user.id);
+      formData.append("created_by", String(user.id));
       formData.append("team_size_id", team_size_id);
       formData.append("business_id", business_field_id);
       formData.append("is_web", "true");
