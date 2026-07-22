@@ -399,12 +399,18 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                                             boxShadow: 3,
                                         },
                                     }}
-                                    onClick={() => setSelectedImage(attachment.type == 'application/pdf' ? attachment.thumb_url : attachment.image_url)}
+                                    onClick={() => {
+                                        if (attachment.type === 'application/pdf') {
+                                            window.open(attachment.image_url, '_blank');
+                                        } else {
+                                            setSelectedImage(attachment.image_url);
+                                        }
+                                    }}
                                 >
                                     <CardMedia
                                         component="img"
                                         height="140"
-                                        image={attachment.thumb_url}
+                                        image={attachment.type === 'application/pdf' ? attachment.thumb_url : attachment.image_url}
                                         alt={`Attachment ${attachment.id}`}
                                         sx={{objectFit: 'cover'}}
                                     />
