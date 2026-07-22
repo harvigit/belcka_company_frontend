@@ -57,6 +57,7 @@ import { FileDownload } from "@mui/icons-material";
 import Link from "next/link";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 interface OtherProductsDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -102,6 +103,11 @@ const OtherProductsDrawer = ({
   const [search, setSearch] = useState("");
 
   const [searchTerm, setSearchTerm] = useState("");
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${companyId}_none_other_products`,
+    enabled: !!companyId,
+  });
+
   const [selectedProject, setSelectedProject] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [tempProject, setTempProject] = useState("");
@@ -447,7 +453,7 @@ const OtherProductsDrawer = ({
                 sx={{
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 2,
+                  WebkitLineClamp: 1,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,
@@ -534,6 +540,8 @@ const OtherProductsDrawer = ({
     columns,
     fetchData: fetchData,
     debounceDependencies: [searchTerm],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   return (
@@ -673,8 +681,8 @@ const OtherProductsDrawer = ({
                       <FormControlLabel
                         key={col.id}
                         control={
-                          <Checkbox
-                            checked={col.getIsVisible()}
+                          <CustomCheckbox
+                          checked={col.getIsVisible()}
                             onChange={col.getToggleVisibilityHandler()}
                           />
                         }

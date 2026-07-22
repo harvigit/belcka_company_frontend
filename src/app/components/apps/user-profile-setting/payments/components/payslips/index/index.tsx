@@ -65,6 +65,7 @@ import EditPayslip from '../edit';
 import {DateTime} from 'luxon';
 import {PictureAsPdf} from '@mui/icons-material';
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 dayjs.extend(customParseFormat);
 
@@ -239,6 +240,11 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
 
     const session = useSession();
     const user = session.data?.user as User & { company_id?: number | null };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${user?.company_id}_${user?.id}_payments_payslips`,
+    enabled: !!user?.id,
+  });
+
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
     const openMenu = Boolean(anchorEl);
     const [isSaving, setIsSaving] = useState(false);
@@ -822,6 +828,8 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
         columns,
         fetchData: () => fetchPayslips(startDate, endDate),
         debounceDependencies: [searchTerm],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
     });
 
     // Reset to first page when search term changes
@@ -947,8 +955,8 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                                     <FormControlLabel
                                         key={col.id}
                                         control={
-                                            <Checkbox
-                                                checked={col.getIsVisible()}
+                                            <CustomCheckbox
+                          checked={col.getIsVisible()}
                                                 onChange={col.getToggleVisibilityHandler()}
                                                 disabled={col.id === 'conflicts'}
                                             />

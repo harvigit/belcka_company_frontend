@@ -70,6 +70,7 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import Link from "next/link";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 dayjs.extend(customParseFormat);
 
@@ -113,25 +114,14 @@ const TablePagination = () => {
   const [fetchTeam, setFetchTeam] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const handleSelectAllAcrossPages = async (checked: boolean) => {
-    if (!checked) {
+  const handleSelectAllRows = (checked: boolean) => {
+    if (checked) {
+      const allIds = data.map((item: any) => item.id);
+      setSelectedRowIds(new Set(allIds));
+    } else {
       setSelectedRowIds(new Set());
-      return;
     }
-    try {
-      (window as any).__isSelectingAll = true;
-      await fetchTrades();
-      if ((window as any).__lastFetchedIds) {
-        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-      }
-    } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
-        console.error(err);
-      }
-    } finally {
-      (window as any).__isSelectingAll = false;
-      }
-  }
+  };
 
   const rerender = React.useReducer(() => ({}), {})[1];
   const [users, setUsers] = useState<UserList[]>([]);
@@ -144,7 +134,12 @@ const TablePagination = () => {
     number | undefined
   >(undefined);
   const session = useSession();
-  const id = session.data?.user as User & { company_id?: number | null };
+  const id = session.data?.user as User & { company_id?: number | null; id?: string };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${id?.company_id}_${id?.id}_teams_team`,
+    enabled: !!id?.id,
+  });
+
 
   const searchParams = useSearchParams();
   const teamId = searchParams ? searchParams.get("team_id") : "";
@@ -563,12 +558,18 @@ const TablePagination = () => {
         <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
-            checked={selectedRowIds.size > 0 && selectedRowIds.size >= data.length}
+            checked={
+              selectedRowIds.size > 0 && selectedRowIds.size >= data.length
+            }
             indeterminate={
               selectedRowIds.size > 0 && selectedRowIds.size < data.length
             }
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
+            onChange={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleSelectAllRows(e.target.checked);
+            }}
           />
         </Stack>
       ),
@@ -777,6 +778,8 @@ const TablePagination = () => {
     columns,
     fetchData,
     debounceDependencies: [searchTerm, filters],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   const handleCopy = () => {
@@ -1168,8 +1171,8 @@ const TablePagination = () => {
                         <FormControlLabel
                           key={col.id}
                           control={
-                            <Checkbox
-                              checked={col.getIsVisible()}
+                            <CustomCheckbox
+                          checked={col.getIsVisible()}
                               onChange={col.getToggleVisibilityHandler()}
                               disabled={col.id === "conflicts"}
                             />

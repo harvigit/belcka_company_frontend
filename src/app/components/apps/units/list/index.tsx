@@ -51,6 +51,7 @@ dayjs.extend(customParseFormat);
 
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 const UnitList: React.FC = () => {
   const [data, setData] = useState<any[]>([]);
@@ -80,6 +81,11 @@ const UnitList: React.FC = () => {
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${user?.company_id}_${user?.id}_units`,
+    enabled: !!user?.id,
+  });
+
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -377,6 +383,8 @@ const UnitList: React.FC = () => {
     columns,
     fetchData: fetchUnits,
     debounceDependencies: [searchTerm, user?.company_id],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   const simpleColumns = columns.map((column) => ({
@@ -490,7 +498,7 @@ const UnitList: React.FC = () => {
                     <FormControlLabel
                       key={col.id}
                       control={
-                        <Checkbox
+                        <CustomCheckbox
                           checked={col.getIsVisible()}
                           onChange={col.getToggleVisibilityHandler()}
                           disabled={col.id === "conflicts"}

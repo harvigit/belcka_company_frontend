@@ -394,7 +394,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       setParentAddressPostcode(addrPincode);
       setParentAddressType(addrType);
       setShowLocationPin(addrType !== "location");
-
       if (address.lat && address.lng) {
         setSelectedLocation({
           lat: Number(address.lat),
@@ -644,6 +643,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
       if (sorting && sorting.length > 0) {
         url += `&sort_by=${sorting[0].id}&sort_order=${sorting[0].desc ? "desc" : "asc"}`;
+      }
+
+      if (showConflicts) {
+        url += `&is_conflict=true`;
       }
 
       const res = await api.get(url);
@@ -948,7 +951,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           const item = row.original;
 
           return (
-            <Box display="flex" alignItems="center" sx={{ px: 1.5}}>
+            <Box display="flex" alignItems="center">
               <Tooltip title={item.short_name}>
                 <Typography
                   variant="body2"
@@ -963,7 +966,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     wordBreak: "break-word",
-                    width:"350px",
+                  minWidth: "150px",
+                  width: "100%",
+                  maxWidth: "500px",
                     borderRadius: 1,
                     border: "1px solid transparent",
                     transition: "all 0.2s ease",
@@ -983,7 +988,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           const item = row.original;
 
           return (
-            <Box display="flex" alignItems="center" sx={{ px: 1.5}}>
+            <Box display="flex" alignItems="center">
               <Tooltip title={item.name}>
                 {item.is_conflict ? (
                   <Typography
@@ -995,7 +1000,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       wordBreak: "break-word",
-                      width: "200px",
+                  minWidth: "150px",
+                  width: "100%",
+                  maxWidth: "500px",
                       borderRadius: 1,
                       border: "1px solid transparent",
                       transition: "all 0.2s ease",
@@ -1017,8 +1024,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       wordBreak: "break-word",
-                      px: 1.5,
-                      width: "200px",
+                  minWidth: "150px",
+                  width: "100%",
+                  maxWidth: "500px",
                       borderRadius: 1,
                       border: "1px solid transparent",
                       transition: "all 0.2s ease",
@@ -1202,12 +1210,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       const matchesStatus = filters.status
         ? item.status_text === filters.status
         : true;
-      const matchesConflict = showConflicts ? item.is_conflict : true;
-      return matchesStatus && matchesConflict;
+      return matchesStatus;
     });
 
     return filtered;
-  }, [data, filters, searchTerm, showConflicts]);
+  }, [data, filters, searchTerm]);
 
   const {
     table,
@@ -1225,6 +1232,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       searchTerm,
       user?.company_id,
       JSON.stringify(filters),
+      showConflicts,
     ],
     state: { sorting },
     onSortingChange: setSorting,
@@ -1373,7 +1381,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       <FormControlLabel
                         key={col.id}
                         control={
-                          <Checkbox
+                          <CustomCheckbox
                             checked={
                               columnVisibility[col.id] ?? col.getIsVisible()
                             }
@@ -1611,7 +1619,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           }}
         >
           <TableContainer ref={tableContainerRef}>
-            <Table stickyHeader aria-label="sticky table">
+            <Table
+              stickyHeader
+              aria-label="sticky table"
+              sx={{ whiteSpace: "nowrap" }}
+            >
               <TableHead>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
@@ -1623,7 +1635,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       return (
                         <TableCell
                           key={header.id}
-                          align="center"
+                          align="left"
                           sx={{
                             paddingTop: "10px",
                             paddingBottom: "10px",
@@ -1734,6 +1746,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
+                          align="left"
                           sx={{
                             padding: "10px",
                             ...(cell.column.id === "actions" && {

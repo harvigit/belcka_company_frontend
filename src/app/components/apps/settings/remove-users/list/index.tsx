@@ -325,12 +325,7 @@ const RemoveUsersList = () => {
                     {user.name ?? "-"}
                   </Typography>
                   <Tooltip title={user.trade_name ?? "-"} placement="top" arrow>
-                    <Typography
-                      color="textSecondary"
-                      variant="subtitle1"
-                      width={190}
-                      noWrap
-                    >
+                    <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} color="textSecondary" variant="subtitle1" width={190} >
                       {user.trade_name}
                     </Typography>
                   </Tooltip>
@@ -367,12 +362,7 @@ const RemoveUsersList = () => {
       ),
       cell: (info) => (
         <Tooltip title={info.getValue() ?? ""} placement="top" arrow>
-          <Typography
-            className="f-14"
-            color="textPrimary"
-            sx={{ width: 100, ml: 2 }}
-            noWrap
-          >
+          <Typography className="f-14" color="textPrimary" sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  width: 100, ml: 2 }} >
             {info.getValue() ?? "-"}
           </Typography>
         </Tooltip>
@@ -387,12 +377,7 @@ const RemoveUsersList = () => {
       ),
       cell: (info) => (
         <Tooltip title={info.getValue() ?? ""} placement="top" arrow>
-          <Typography
-            className="f-14"
-            color="textPrimary"
-            sx={{ width: 100, ml: 2 }}
-            noWrap
-          >
+          <Typography className="f-14" color="textPrimary" sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  width: 100, ml: 2 }} >
             {info.getValue() ?? "-"}
           </Typography>
         </Tooltip>

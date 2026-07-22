@@ -29,10 +29,7 @@ import {
   FormControlLabel,
   Checkbox,
 } from "@mui/material";
-import {
-  flexRender,
-  createColumnHelper,
-} from "@tanstack/react-table";
+import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import {
   IconEye,
   IconFilter,
@@ -100,34 +97,31 @@ export type UserList = {
 
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 const TablePagination = () => {
+  const session = useSession();
+  const id = session.data?.user as User & { company_id?: number | null; id?: string };
+
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${id?.company_id}_${id?.id}_teamList`,
+    enabled: !!id?.id,
+  });
+
   const [data, setData] = useState<TeamList[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [fetchTeam, setFetchTeam] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const rerender = React.useReducer(() => ({}), {})[1];
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const handleSelectAllAcrossPages = async (checked: boolean) => {
-    if (!checked) {
+  const handleSelectAllRows = (checked: boolean) => {
+    if (checked) {
+      const allIds = data.map((item: any) => item.team_id);
+      setSelectedRowIds(new Set(allIds));
+    } else {
       setSelectedRowIds(new Set());
-      return;
     }
-    try {
-      (window as any).__isSelectingAll = true;
-      await fetchTeams();
-      (window as any).__isSelectingAll = false;
-      if ((window as any).__lastFetchedIds) {
-        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-      }
-    } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
-        console.error(err);
-      }
-    } finally {
-      (window as any).__isSelectingAll = false;
-      }
-  }
+  };
 
   const [archiveDrawerOpen, setarchiveDrawerOpen] = useState(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
@@ -140,9 +134,6 @@ const TablePagination = () => {
 
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
-
-  const session = useSession();
-  const id = session.data?.user as User & { company_id?: number | null };
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
@@ -358,7 +349,11 @@ const TablePagination = () => {
               selectedRowIds.size > 0 && selectedRowIds.size < data.length
             }
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
+            onChange={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleSelectAllRows(e.target.checked);
+            }}
           />
         </Stack>
       ),
@@ -563,6 +558,8 @@ const TablePagination = () => {
     columns,
     fetchData: fetchTeams,
     debounceDependencies: [searchTerm, filters, projectId],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
   const rows = table.getRowModel().rows;
 
@@ -608,7 +605,11 @@ const TablePagination = () => {
                 },
               }}
             />
-            <Button variant="contained" onClick={() => setOpen(true)} sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}>
+            <Button
+              variant="contained"
+              onClick={() => setOpen(true)}
+              sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}
+            >
               <IconFilter width={18} />
             </Button>
             <Dialog
@@ -766,7 +767,7 @@ const TablePagination = () => {
                     <FormControlLabel
                       key={col.id}
                       control={
-                        <Checkbox
+                        <CustomCheckbox
                           checked={col.getIsVisible()}
                           onChange={col.getToggleVisibilityHandler()}
                           disabled={col.id === "conflicts"}
@@ -1174,7 +1175,15 @@ const TablePagination = () => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
+        <TablePaginationFooter
+          selectedCount={
+            typeof selectedRowIds !== "undefined"
+              ? selectedRowIds.size
+              : undefined
+          }
+          table={table}
+          totalRows={totalRows}
+        />
       </Box>
     </PermissionGuard>
   );

@@ -59,6 +59,7 @@ import PermissionGuard from "@/app/auth/PermissionGuard";
 import Cookies from "js-cookie";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 dayjs.extend(customParseFormat);
 
@@ -109,6 +110,11 @@ const StoreList = () => {
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${user?.company_id}_${user?.id}_stores`,
+    enabled: !!user?.id,
+  });
+
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -601,6 +607,8 @@ const StoreList = () => {
     columns,
     fetchData: fetchStores,
     debounceDependencies: [searchTerm, user?.company_id],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   // Reset to first page when search term changes
@@ -707,7 +715,7 @@ const StoreList = () => {
                     <FormControlLabel
                       key={col.id}
                       control={
-                        <Checkbox
+                        <CustomCheckbox
                           checked={col.getIsVisible()}
                           onChange={col.getToggleVisibilityHandler()}
                           disabled={col.id === "conflicts"}

@@ -94,6 +94,7 @@ import PermissionGuard from "@/app/auth/PermissionGuard";
 import AddressesList from "../../addresses/list/addresses-list";
 import { IconSettings } from "@tabler/icons-react";
 import MapGantt from "../zone-map/MapGantt";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 dayjs.extend(customParseFormat);
 
 const columnHelper = createColumnHelper<any>();
@@ -146,6 +147,11 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${user?.company_id}_${user?.id}_projects`,
+    enabled: !!user?.id,
+  });
+
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
@@ -166,14 +172,13 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
         setSelectedRowIds(new Set((window as any).__lastFetchedIds));
       }
     } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
+      if (err.message !== "SELECT_ALL_INTERCEPT") {
         console.error(err);
       }
     } finally {
       (window as any).__isSelectingAll = false;
-      }
-  }
-
+    }
+  };
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [settingOpen, setSettingOpen] = useState(false);
@@ -479,12 +484,18 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
           <Stack direction="row" alignItems="center">
             <CustomCheckbox
               className="header-checkbox"
-              checked={selectedRowIds.size > 0 && selectedRowIds.size >= data.length}
+              checked={
+                selectedRowIds.size > 0 && selectedRowIds.size >= data.length
+              }
               indeterminate={
                 selectedRowIds.size > 0 && selectedRowIds.size < data.length
               }
               onClick={(e: any) => e.stopPropagation()}
-              onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleSelectAllAcrossPages(e.target.checked);
+              }}
             />
           </Stack>
         ),
@@ -540,7 +551,28 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <Typography textTransform="capitalize" className="f-14">
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              sx={{
+                cursor: "pointer",
+                "&:hover": {
+                  color: "primary.main",
+                },
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                  minWidth: "150px",
+                  width: "100%",
+                  maxWidth: "500px",
+                borderRadius: 1,
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+              }}
+            >
               {item.teams?.length
                 ? item.teams.map((shift: any) => shift.name).join(", ")
                 : "-"}
@@ -555,7 +587,28 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <Typography textTransform="capitalize" className="f-14">
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              sx={{
+                cursor: "pointer",
+                "&:hover": {
+                  color: "primary.main",
+                },
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                  minWidth: "150px",
+                  width: "100%",
+                  maxWidth: "500px",
+                borderRadius: 1,
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+              }}
+            >
               {item.shifts?.length
                 ? item.shifts.map((shift: any) => shift.name).join(", ")
                 : "-"}
@@ -599,7 +652,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                   <IconBookmark size={18} />
                 </IconButton>
               </Tooltip>
-                <Tooltip title="Map">
+              <Tooltip title="Map">
                 <IconButton
                   color="error"
                   onClick={(e) => {
@@ -632,6 +685,8 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
     columns,
     fetchData: fetchProjects,
     debounceDependencies: [searchTerm, user?.company_id],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   useEffect(() => {
@@ -956,7 +1011,15 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
           </TableContainer>
         </Box>
         <Divider />
-        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
+        <TablePaginationFooter
+          selectedCount={
+            typeof selectedRowIds !== "undefined"
+              ? selectedRowIds.size
+              : undefined
+          }
+          table={table}
+          totalRows={totalRows}
+        />
         {/* Dialogs and Drawers */}
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
           <DialogTitle>Confirm Archive</DialogTitle>
@@ -1397,14 +1460,14 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                         <Stack mt={2} spacing={1}>
                           <Typography
                             variant="body2"
-                            sx={{
+                            sx={{minWidth: "150px", width: "100%", maxWidth: "500px", 
                               display: "-webkit-box",
                               WebkitBoxOrient: "vertical",
                               WebkitLineClamp: 3,
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               lineHeight: 1.25,
-                              maxWidth: 350,
+                              
                               wordBreak: "break-word",
                             }}
                           >
@@ -1531,29 +1594,29 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
           </Box>
         </Drawer>
 
-          <Drawer
-                  anchor="bottom"
-                  open={mapOpen}
-                  onClose={() => setMapOpen(false)}
-                  PaperProps={{
-                    sx: {
-                      borderRadius: 0,
-                      height: "95vh",
-                      boxShadow: "none",
-                      borderTopLeftRadius: 12,
-                      borderTopRightRadius: 12,
-                      overflow: "hidden",
-                    },
-                  }}
-                >
-                  <MapGantt
-                    open={mapOpen}
-                    onClose={() => setMapOpen(false)}
-                    onUpdate={fetchProjects}
-                    projectId={activeProjectId}
-                    companyId={user?.company_id ?? null}
-                  />
-                </Drawer>
+        <Drawer
+          anchor="bottom"
+          open={mapOpen}
+          onClose={() => setMapOpen(false)}
+          PaperProps={{
+            sx: {
+              borderRadius: 0,
+              height: "95vh",
+              boxShadow: "none",
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              overflow: "hidden",
+            },
+          }}
+        >
+          <MapGantt
+            open={mapOpen}
+            onClose={() => setMapOpen(false)}
+            onUpdate={fetchProjects}
+            projectId={activeProjectId}
+            companyId={user?.company_id ?? null}
+          />
+        </Drawer>
       </Box>
     </PermissionGuard>
   );

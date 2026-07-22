@@ -82,6 +82,7 @@ import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import { AxiosResponse } from "axios";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 const ClientList = () => {
   const [data, setData] = useState<ClientList[]>([]);
@@ -127,7 +128,12 @@ const ClientList = () => {
   const [expireDate, setExpireDate] = useState("");
 
   const session = useSession();
-  const id = session.data?.user as User & { company_id?: number | null };
+  const id = session.data?.user as User & { company_id?: number | null; id?: string };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${id?.company_id}_${id?.id}_clients`,
+    enabled: !!id?.id,
+  });
+
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -534,6 +540,8 @@ const ClientList = () => {
     columns,
     fetchData: fetchClients,
     debounceDependencies: [searchTerm],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   const simpleColumns = columns.map((column) => ({
@@ -633,8 +641,8 @@ const ClientList = () => {
                   <FormControlLabel
                     key={col.id}
                     control={
-                      <Checkbox
-                        checked={col.getIsVisible()}
+                      <CustomCheckbox
+                          checked={col.getIsVisible()}
                         onChange={col.getToggleVisibilityHandler()}
                         disabled={col.id === "conflicts"}
                       />

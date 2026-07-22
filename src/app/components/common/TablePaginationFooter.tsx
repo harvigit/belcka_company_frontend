@@ -46,7 +46,9 @@ export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({
       <Box display="flex" alignItems="center" gap={1}>
         <Typography color="textSecondary" className="f-14">
           {finalSelectedCount > 0
-            ? `${finalSelectedCount} selected out of ${totalRows}`
+            ? `${finalSelectedCount} selected from ${table.getRowModel().rows.length} out of ${totalRows}`
+            : table.options.manualPagination
+            ? `${table.getRowModel().rows.length} out of ${totalRows} Rows`
             : `${totalRows} Rows`}
         </Typography>
         {(totalUsers !== undefined || workingMemberCount !== undefined) && (

@@ -31,10 +31,7 @@ import {
   Menu,
   ListItemIcon,
 } from "@mui/material";
-import {
-  flexRender,
-  createColumnHelper,
-} from "@tanstack/react-table";
+import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import {
   IconClock,
   IconDotsVertical,
@@ -104,6 +101,7 @@ export interface ProductFormData {
 
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 const StockList = () => {
   const [data, setData] = useState<any[]>([]);
@@ -111,28 +109,22 @@ const StockList = () => {
   const [fetchProduct, setFetchProduct] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const handleSelectAllAcrossPages = async (checked: boolean) => {
-    if (!checked) {
+  const handleSelectAllRows = (checked: boolean) => {
+    if (checked) {
+      const allIds = data.map((item: any) => item.id);
+      setSelectedRowIds(new Set(allIds));
+    } else {
       setSelectedRowIds(new Set());
-      return;
     }
-    try {
-      (window as any).__isSelectingAll = true;
-      await fetchResources();
-      if ((window as any).__lastFetchedIds) {
-        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-      }
-    } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
-        console.error(err);
-      }
-    } finally {
-      (window as any).__isSelectingAll = false;
-      }
-  }
+  };
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${user?.company_id}_${user?.id}_stocks`,
+    enabled: !!user?.id,
+  });
+
   const [storeModalOpen, setStoreModalOpen] = useState(false);
   const [storeId, setStoreId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -329,8 +321,27 @@ const StockList = () => {
       } else {
         setData([]);
       }
-      setPageCount(res.data.data.totalPages || 0);
-      setTotalRows(res.data.data.totalItems || 0);
+      if (res.data) {
+        const pagMeta =
+          res.data.data?.totalPages !== undefined ||
+          res.data.data?.totalItems !== undefined
+            ? res.data.data
+            : res.data.info && res.data.info.totalPages !== undefined
+              ? res.data.info
+              : res.data.data || {};
+
+        if (pagMeta.totalItems !== undefined) {
+          setTotalRows(pagMeta.totalItems);
+        } else if (pagMeta.total !== undefined) {
+          setTotalRows(pagMeta.total);
+        }
+
+        if (pagMeta.totalPages !== undefined) {
+          setPageCount(pagMeta.totalPages);
+        } else if (pagMeta.last_page !== undefined) {
+          setPageCount(pagMeta.last_page);
+        }
+      }
 
       if (productIdParam) {
         router.replace("/apps/stocks/list", { scroll: false });
@@ -525,7 +536,7 @@ const StockList = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
           tableContainerRef.current.scrollWidth >
-          tableContainerRef.current.clientWidth,
+            tableContainerRef.current.clientWidth,
         );
       }
     };
@@ -555,16 +566,16 @@ const StockList = () => {
         <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
-            checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
-            }
+            checked={selectedRowIds.size === totalRows && totalRows > 0}
             indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
+              selectedRowIds.size > 0 && selectedRowIds.size < totalRows
             }
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
+            onChange={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleSelectAllRows(e.target.checked);
+            }}
           />
         </Stack>
       ),
@@ -668,14 +679,15 @@ const StockList = () => {
               className="f-14"
               variant="body1"
               sx={{
-                width: 200,
+                width: "100%",
+                minWidth: "150px",
                 display: "-webkit-box",
                 WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 2,
+                WebkitLineClamp: 1,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 lineHeight: 1.25,
-                maxWidth: 250,
+                maxWidth: "500px",
                 wordBreak: "break-word",
               }}
             >
@@ -923,7 +935,27 @@ const StockList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography textTransform="capitalize" className="f-14">
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  border: "1px solid #1976d2",
+                },
+              }}
+            >
               {item.product_categories ? item.product_categories : "-"}
             </Typography>
           </Stack>
@@ -1003,12 +1035,19 @@ const StockList = () => {
         fetchProducts(
           storeId,
           undefined,
-          productId ? Number(productId) : undefined
+          productId ? Number(productId) : undefined,
         );
       }
     },
     debounceDependencies: [searchTerm, filters, storeId],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [searchTerm]);
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -1126,7 +1165,7 @@ const StockList = () => {
                     <FormControlLabel
                       key={col.id}
                       control={
-                        <Checkbox
+                        <CustomCheckbox
                           checked={col.getIsVisible()}
                           onChange={col.getToggleVisibilityHandler()}
                           disabled={col.id === "conflicts"}
@@ -1139,14 +1178,14 @@ const StockList = () => {
                           : col.columnDef.meta?.label
                             ? col.columnDef.meta.label
                             : typeof col.columnDef.header === "string" &&
-                              col.columnDef.header.trim() !== ""
+                                col.columnDef.header.trim() !== ""
                               ? col.columnDef.header
                               : col.id
-                                .replace(/([A-Z])/g, " $1")
-                                .replace(/^./, (str: string) =>
-                                  str.toUpperCase(),
-                                )
-                                .trim()
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str: string) =>
+                                    str.toUpperCase(),
+                                  )
+                                  .trim()
                       }
                     />
                   ))}
@@ -1355,7 +1394,7 @@ const StockList = () => {
                             paddingBottom: "10px",
                             width:
                               header.column.id === "actions" ||
-                                header.column.id === "barcode"
+                              header.column.id === "barcode"
                                 ? 80
                                 : header.column.id === "Qty"
                                   ? 120
@@ -1364,7 +1403,7 @@ const StockList = () => {
                                     : header.column.id === "QrCode"
                                       ? 120
                                       : header.column.id === "supplierCode" ||
-                                        header.column.id === "stockStatus"
+                                          header.column.id === "stockStatus"
                                         ? 140
                                         : header.column.id === "QrCode"
                                           ? 120
@@ -1488,7 +1527,15 @@ const StockList = () => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
+        <TablePaginationFooter
+          selectedCount={
+            typeof selectedRowIds !== "undefined"
+              ? selectedRowIds.size
+              : undefined
+          }
+          table={table}
+          totalRows={totalRows}
+        />
 
         {/* Stock History */}
         <StockHistoryList
@@ -1645,14 +1692,14 @@ const StockList = () => {
                           >
                             <Typography
                               className="f-14"
-                              sx={{
+                              sx={{minWidth: "150px", width: "100%", maxWidth: "500px", 
                                 display: "-webkit-box",
                                 WebkitBoxOrient: "vertical",
                                 WebkitLineClamp: 1,
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
                                 lineHeight: 1.25,
-                                maxWidth: 100,
+                                
                                 wordBreak: "break-word",
                               }}
                             >

@@ -60,6 +60,7 @@ import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 dayjs.extend(customParseFormat);
 
@@ -121,7 +122,12 @@ const TablePagination = () => {
   const [open, setOpen] = useState(false);
 
   const session = useSession();
-  const id = session.data?.user as User & { company_id?: number | null };
+  const id = session.data?.user as User & { company_id?: number | null; id?: string };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${id?.company_id}_${id?.id}_projects_tasks`,
+    enabled: !!id?.id,
+  });
+
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
@@ -424,7 +430,7 @@ const TablePagination = () => {
           <Stack direction="row" alignItems="center" spacing={1}>
             <Typography
               className="f-14"
-              sx={{
+              sx={{minWidth: "150px", width: "100%", maxWidth: "500px", 
                 display: "-webkit-box",
                 WebkitBoxOrient: "vertical",
                 WebkitLineClamp: 1,
@@ -432,7 +438,7 @@ const TablePagination = () => {
                 textOverflow: "ellipsis",
                 lineHeight: 1.15,
                 wordBreak: "break-word",
-                maxWidth: 250,
+                
               }}
             >
               {item.name ?? "-"}
@@ -551,6 +557,8 @@ const TablePagination = () => {
     columns,
     fetchData: fetchTasks,
     debounceDependencies: [searchTerm, filters],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   const simpleColumns = columns.map((column) => ({
@@ -731,8 +739,8 @@ const TablePagination = () => {
                   <FormControlLabel
                     key={col.id}
                     control={
-                      <Checkbox
-                        checked={col.getIsVisible()}
+                      <CustomCheckbox
+                          checked={col.getIsVisible()}
                         onChange={col.getToggleVisibilityHandler()}
                         disabled={col.id === "conflicts"}
                       />

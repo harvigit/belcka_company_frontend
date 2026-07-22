@@ -69,8 +69,12 @@ api.interceptors.response.use(
   async (response) => {
     if (response.config.url?.includes('return_ids_only=true')) {
       let idsData = response.data.info?.data || response.data.info || response.data.data || response.data;
-      if (Array.isArray(idsData) && idsData.length > 0 && typeof idsData[0] === 'object' && idsData[0].id) {
-         idsData = idsData.map((x: any) => x.id); // fallback if interceptor failed
+      if (Array.isArray(idsData) && idsData.length > 0 && typeof idsData[0] === 'object') {
+         if (idsData[0].team_id !== undefined) {
+           idsData = idsData.map((x: any) => x.team_id);
+         } else if (idsData[0].id !== undefined) {
+           idsData = idsData.map((x: any) => x.id); // fallback if interceptor failed
+         }
       }
       (window as any).__lastFetchedIds = idsData;
       return Promise.reject(new Error('SELECT_ALL_INTERCEPT'));

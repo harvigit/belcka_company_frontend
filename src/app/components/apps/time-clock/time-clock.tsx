@@ -89,6 +89,7 @@ import BookkeeperHistory from './history';
 import RecoverWorklogs from './recover-worklogs';
 import {useServerTable} from '@/hooks/useServerTable';
 import TablePaginationFooter from '../../common/TablePaginationFooter';
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -351,7 +352,12 @@ const TimeClock = ({queryParams}: Props) => {
     const [anchorEl3, setAnchorEl3] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
     const session = useSession();
-    const user = session.data?.user as User & { company_id: number } & { user_role_id: number; };
+    const user = session.data?.user as User & { company_id: number; id?: string } & { user_role_id: number; };
+    
+    const { columnVisibility, onColumnVisibilityChange, onColumnVisibilityChange: setColumnVisibility } = usePersistentColumnVisibility({
+      storageKey: `cv_${user?.company_id}_${user?.id}_time_clock`,
+      enabled: !!user?.id,
+    });
     const openMenu = Boolean(anchorEl3);
     const [addDropDown, setAddDropDown] = useState<null | HTMLElement>(null);
     const openAddleave = Boolean(addDropDown);
@@ -376,11 +382,7 @@ const TimeClock = ({queryParams}: Props) => {
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
     const [ratePermissionLoaded, setRatePermissionLoaded] = useState<boolean>(false);
 
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() =>
-        loadColumnVisibilityCookie(TIME_CLOCK_COLUMNS_COOKIE)
-        ?? initialStoredState?.columnVisibility
-        ?? {}
-    );
+
 
     const queryParamsRef = useRef(queryParams);
     const dataRequestsRef = useRef<Map<string, Promise<TimeClock[]>>>(new Map());
@@ -398,7 +400,7 @@ const TimeClock = ({queryParams}: Props) => {
     useEffect(() => {
         if (!ratePermissionLoaded) return;
 
-        setColumnVisibility((prev) => ({
+        setColumnVisibility((prev: any) => ({
             ...prev,
             ...Object.fromEntries(
                 TIME_CLOCK_AMOUNT_COLUMNS.map((col) => [
@@ -414,9 +416,7 @@ const TimeClock = ({queryParams}: Props) => {
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
     }, [startDate, endDate, columnVisibility]);
 
-    useEffect(() => {
-        saveColumnVisibilityCookie(TIME_CLOCK_COLUMNS_COOKIE, columnVisibility);
-    }, [columnVisibility]);
+
 
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
@@ -1017,7 +1017,7 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.user_code}
                             </Typography>
                         </Box>
@@ -1034,7 +1034,7 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.account_id}
                             </Typography>
                         </Box>
@@ -1193,7 +1193,7 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.name_on_account}
                             </Typography>
                         </Box>
@@ -1210,7 +1210,7 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.sort_code}
                             </Typography>
                         </Box>
@@ -1227,7 +1227,7 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.account_number}
                             </Typography>
                         </Box>
@@ -1244,7 +1244,7 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.utr_name}
                             </Typography>
                         </Box>
@@ -1261,7 +1261,7 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.utr_number}
                             </Typography>
                         </Box>
@@ -1278,7 +1278,7 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
+                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
                                 {row.nin_number}
                             </Typography>
                         </Box>
@@ -2078,7 +2078,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     <FormControlLabel
                                         key={col.id}
                                         control={
-                                            <Checkbox
+                                            <CustomCheckbox
                                                 size="small"
                                                 checked={col.getIsVisible()}
                                                 onChange={(e) => {

@@ -67,6 +67,7 @@ export type UserList = {
 
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 const TradeList = () => {
   const [data, setData] = useState<any[]>([]);
@@ -105,7 +106,12 @@ const TradeList = () => {
   const [open, setOpen] = useState(false);
 
   const session = useSession();
-  const id = session.data?.user as User & { company_id?: number | null };
+  const id = session.data?.user as User & { company_id?: number | null; id?: string };
+  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+    storageKey: `cv_${id?.company_id}_${id?.id}_company_trades`,
+    enabled: !!id?.id,
+  });
+
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
@@ -493,6 +499,8 @@ const TradeList = () => {
     columns,
     fetchData: fetchTrades,
     debounceDependencies: [searchTerm, filters],
+    state: { columnVisibility },
+    onColumnVisibilityChange,
   });
 
   const simpleColumns = columns.map((column) => ({
@@ -672,8 +680,8 @@ const TradeList = () => {
                   <FormControlLabel
                     key={col.id}
                     control={
-                      <Checkbox
-                        checked={col.getIsVisible()}
+                      <CustomCheckbox
+                          checked={col.getIsVisible()}
                         onChange={col.getToggleVisibilityHandler()}
                         disabled={col.id === "conflicts"}
                       />
