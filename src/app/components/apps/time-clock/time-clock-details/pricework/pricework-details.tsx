@@ -212,7 +212,13 @@ const PriceworkDetails: React.FC<PriceworkDetailsProps> = ({
     );
 
     return (
-        <Box p={2}>
+        <Box
+            sx={{
+                height: '100%',
+                overflowY: 'auto',
+                p: 2,
+            }}
+        >
             <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
                 <Box display="flex" alignItems="center">
                     <IconButton onClick={onClose}>
