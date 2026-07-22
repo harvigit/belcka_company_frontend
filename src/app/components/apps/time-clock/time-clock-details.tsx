@@ -32,6 +32,7 @@ import LeaveRequest from './time-clock-details/leaves/leave-request';
 import AddExpense from './time-clock-details/expenses/add-expense';
 import AddAdjustment from './time-clock-details/adjustments/add-adjustment';
 import AddPricework from './time-clock-details/pricework/add-pricework';
+import PriceworkDetails from './time-clock-details/pricework/pricework-details';
 import AdjustmentActivitySidebar from './time-clock-details/adjustments/activity-sidebar';
 import {formatHour} from '@/app/components/apps/time-clock/utils/recordHelpers';
 import {Stack} from '@mui/system';
@@ -195,6 +196,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
     const [addAdjustmentSidebar, setAddAdjustmentSidebar] = useState<boolean>(false);
     const [addPriceworkSidebar, setAddPriceworkSidebar] = useState<boolean>(false);
+    const [priceworkDetailsSidebar, setPriceworkDetailsSidebar] = useState<boolean>(false);
     const [selectedPricework, setSelectedPricework] = useState<any>(null);
     const [adjustmentActivitySidebar, setAdjustmentActivitySidebar] = useState<boolean>(false);
     const [selectedAdjustmentActivities, setSelectedAdjustmentActivities] = useState<AdjustmentActivity[]>([]);
@@ -678,12 +680,24 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const handleAddPricework = async () => {
         setSelectedPricework(null);
+        setPriceworkDetailsSidebar(false);
         setAddPriceworkSidebar(true);
     };
 
-    const handleEditPricework = async (pricework: any) => {
+    const handleOpenPriceworkDetails = async (pricework: any) => {
         setSelectedPricework(pricework);
+        setPriceworkDetailsSidebar(true);
+    };
+
+    const handleEditPricework = (pricework: any) => {
+        setSelectedPricework(pricework);
+        setPriceworkDetailsSidebar(false);
         setAddPriceworkSidebar(true);
+    };
+
+    const closePriceworkDetailsSidebar = () => {
+        setPriceworkDetailsSidebar(false);
+        setSelectedPricework(null);
     };
 
     const handleOpenAdjustmentActivities = (activities: AdjustmentActivity[]) => {
@@ -2021,7 +2035,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 openChecklogsSidebar={handleChecklogs}
                 openExpensesSidebar={handleExpenses}
                 openPenaltiesSidebar={handlePenalties}
-                openPriceworkSidebar={handleEditPricework}
+                openPriceworkSidebar={handleOpenPriceworkDetails}
                 leaveRequestCount={leaveRequestCount}
                 penaltyAppealCount={penaltyAppealCount}
                 openLeaveRequestsSideBar={handleLeaveRequests}
@@ -2273,6 +2287,29 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         await fetchTimeClockData(defaultStartDate, defaultEndDate);
                         await onDataChange?.();
                     }}
+                />
+            </Drawer>
+
+            <Drawer
+                anchor="right"
+                open={priceworkDetailsSidebar}
+                onClose={closePriceworkDetailsSidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '504px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <PriceworkDetails
+                    pricework={selectedPricework}
+                    currency={currency}
+                    onClose={closePriceworkDetailsSidebar}
+                    onEdit={handleEditPricework}
                 />
             </Drawer>
 

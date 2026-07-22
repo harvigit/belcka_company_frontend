@@ -965,12 +965,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             </Box>
                                                         ) : log.is_pricework ? (
                                                             <Tooltip
-                                                                title={log.is_pricework_record ? 'Click to edit pricework' : 'Pricework worklog cannot be edited here'}
+                                                                title={log.is_pricework_record ? 'Click to view pricework details' : 'Pricework worklog cannot be viewed here'}
                                                                 arrow
                                                                 placement="top"
                                                             >
                                                                 <Box onClick={() => {
-                                                                    if (log.is_pricework_record && !isLogLocked) {
+                                                                    if (log.is_pricework_record) {
                                                                         openPriceworkSidebar?.(log);
                                                                     }
                                                                 }} sx={{
@@ -978,7 +978,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     alignItems: 'center',
                                                                     justifyContent: 'center',
                                                                     opacity: isLogLocked ? 0.6 : 1,
-                                                                    cursor: log.is_pricework_record && !isLogLocked ? 'pointer' : 'not-allowed',
+                                                                    cursor: log.is_pricework_record ? 'pointer' : 'not-allowed',
                                                                     minHeight: '32px',
                                                                     py: 0.5,
                                                                     fontSize: '0.875rem',
@@ -1198,7 +1198,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 {/* Pricework Column */}
                                                 {visibleColumnConfigs.priceWork?.visible && (
                                                     <TableCell align="center" onClick={() => {
-                                                        if (log.is_pricework_record && log.pricework_id && !isLogLocked) {
+                                                        if (log.is_pricework_record && log.pricework_id) {
                                                             openPriceworkSidebar?.(log);
                                                         }
                                                     }} sx={{
@@ -1206,8 +1206,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         fontSize: '0.875rem',
                                                         height: '45px',
                                                         verticalAlign: 'middle',
-                                                        cursor: log.is_pricework_record && !isLogLocked ? 'pointer' : 'default',
-                                                        color: log.is_pricework_record && !isLogLocked ? '#1976d2' : 'inherit',
+                                                        cursor: log.is_pricework_record ? 'pointer' : 'default',
+                                                        color: log.is_pricework_record ? '#1976d2' : 'inherit',
                                                     }}>
                                                         {`${currency}${log.pricework_amount || 0}`}
                                                     </TableCell>
