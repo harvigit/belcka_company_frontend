@@ -40,8 +40,8 @@
     ".next/types/**/*.ts",
     "next-env.d.ts",
     "types",
-    "dist/types/**/*.ts"
-  ],
+    "dist/types/**/*.ts",
+    "src/types/next-auth.d.ts"  ],
   "exclude": [
     "node_modules"
   ],
