@@ -296,7 +296,7 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             }
             newAttachments.forEach(({file}) => payload.append('attachments', file));
             const response = isEditMode
-                ? await api.put('/pricework/update', payload)
+                ? await api.post('/pricework/update', payload)
                 : await api.post('/pricework/store', payload);
 
             toast.success(response.data?.message || `Pricework ${isEditMode ? 'updated' : 'added'} successfully.`);
