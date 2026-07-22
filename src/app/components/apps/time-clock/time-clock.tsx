@@ -319,26 +319,14 @@ const TimeClock = ({queryParams}: Props) => {
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-    const handleSelectAllAcrossPages = async (checked: boolean) => {
-        if (!checked) {
-            setSelectedRowIds(new Set());
-            return;
+    const handleSelectAllRows = (checked: boolean) => {
+        if (checked) {
+        const allIds = data.map((item: any) => item.user_id);
+        setSelectedRowIds(new Set(allIds));
+        } else {
+        setSelectedRowIds(new Set());
         }
-        try {
-            (window as any).__isSelectingAll = true;
-            await handleFetchData();
-            (window as any).__isSelectingAll = false;
-            if ((window as any).__lastFetchedIds) {
-                setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-            }
-        } catch (err: any) {
-            if (err.message !== 'SELECT_ALL_INTERCEPT') {
-                console.error(err);
-            }
-        } finally {
-            (window as any).__isSelectingAll = false;
-        }
-    }
+    };
 
     const [selectedTimeClock, setSelectedTimeClock] = useState<TimeClock | null>(null);
     const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
@@ -838,7 +826,7 @@ const TimeClock = ({queryParams}: Props) => {
                         onChange={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
-                            handleSelectAllAcrossPages(e.target.checked);
+                            handleSelectAllRows(e.target.checked);
                         }}
                     />
                 </Stack>

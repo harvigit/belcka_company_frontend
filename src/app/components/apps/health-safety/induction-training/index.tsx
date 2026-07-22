@@ -456,25 +456,14 @@ const InductionTraining = ({ companyId }: Props) => {
     const [attachmentDrawerOpen, setAttachmentDrawerOpen] = useState(false);
     const [selectedAttachments, setSelectedAttachments]   = useState<AttachmentFile[]>([]);
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const handleSelectAllAcrossPages = async (checked: boolean) => {
-    if (!checked) {
-      setSelectedRowIds(new Set());
-      return;
-    }
-    try {
-      (window as any).__isSelectingAll = true;
-      await fetchData();
-      if ((window as any).__lastFetchedIds) {
-        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-      }
-    } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
-        console.error(err);
-      }
-    } finally {
-      (window as any).__isSelectingAll = false;
-      }
-  }
+    const handleSelectAllRows = (checked: boolean) => {
+        if (checked) {
+        const allIds = data.map((item: any) => item.id);
+        setSelectedRowIds(new Set(allIds));
+        } else {
+        setSelectedRowIds(new Set());
+        }
+    };
 
     const [hoveredRow, setHoveredRow]   = useState<number | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -671,7 +660,7 @@ const InductionTraining = ({ companyId }: Props) => {
                     <CustomCheckbox
                         checked={selectedRowIds.size > 0 && selectedRowIds.size >= filteredData.length}
                         indeterminate={selectedRowIds.size > 0 && selectedRowIds.size < filteredData.length}
-                        onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
+                        onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllRows(e.target.checked); }}
                     />
                 </Box>
             ),

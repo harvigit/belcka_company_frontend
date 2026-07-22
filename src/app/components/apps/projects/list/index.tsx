@@ -159,24 +159,12 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   const [isSaving, setIsSaving] = useState(false);
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const handleSelectAllAcrossPages = async (checked: boolean) => {
-    if (!checked) {
+ const handleSelectAllRows = (checked: boolean) => {
+    if (checked) {
+      const allIds = data.map((item: any) => item.id);
+      setSelectedRowIds(new Set(allIds));
+    } else {
       setSelectedRowIds(new Set());
-      return;
-    }
-    try {
-      (window as any).__isSelectingAll = true;
-      await fetchProjects();
-      (window as any).__isSelectingAll = false;
-      if ((window as any).__lastFetchedIds) {
-        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-      }
-    } catch (err: any) {
-      if (err.message !== "SELECT_ALL_INTERCEPT") {
-        console.error(err);
-      }
-    } finally {
-      (window as any).__isSelectingAll = false;
     }
   };
 
@@ -494,7 +482,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
               onChange={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                handleSelectAllAcrossPages(e.target.checked);
+                handleSelectAllRows(e.target.checked);
               }}
             />
           </Stack>

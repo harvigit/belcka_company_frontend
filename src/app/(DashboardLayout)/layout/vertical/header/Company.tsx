@@ -631,7 +631,16 @@ const Company = () => {
                       <MenuItem value="Order">Order</MenuItem>
                     </TextField>
 
-                    <Button variant="contained" onClick={() => setOpen(true)}  sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}>
+                    <Button
+                      variant="contained"
+                      onClick={() => setOpen(true)}
+                      sx={{
+                        mt: { xs: 1, sm: 0 },
+                        ml: 1,
+                        minWidth: "40px",
+                        px: 1,
+                      }}
+                    >
                       <IconFilter width={18} />
                     </Button>
                   </Box>
@@ -891,23 +900,42 @@ const Company = () => {
                             <Box>
                               <Typography
                                 variant="subtitle2"
-                                color="textSecondary"
-                                fontWeight={400}
+                                // color="textSecondary"
+                                // fontWeight={400}
                                 className="multi-ellipsis"
                               >
                                 <b>{item.user_name}</b>: {item.message}
                               </Typography>
-                              <Typography
-                                fontSize={"12px !important"}
-                                variant="caption"
-                                color="textSecondary"
-                                fontWeight={500}
-                                className="multi-ellipsis"
+                              <Box
+                                display={"flex"}
+                                alignItems={"center"}
+                                gap={item?.note ? 2 : 0}
                               >
-                                {item.request_type === 110
-                                  ? item.date_added
-                                  : item.date}
-                              </Typography>
+                                <Typography
+                                  variant="body2"
+                                  className="multi-ellipsis"
+                                  display={"flex !important"}
+                                  alignItems={"center"}
+                                  fontWeight={600}
+                                  gap={0.5}
+                                >
+                                  {item?.note ? "Note:" : ""}
+                                  <Typography className="f-14" color="textSecondary" fontWeight={500}>
+                                    {item?.note}
+                                  </Typography>
+                                </Typography>
+                                <Typography
+                                  fontSize={"12px !important"}
+                                  variant="caption"
+                                  color="textSecondary"
+                                  fontWeight={500}
+                                  className="multi-ellipsis"
+                                >
+                                  {item.request_type === 110
+                                    ? item.date_added
+                                    : item.date}
+                                </Typography>
+                              </Box>
                             </Box>
                           </Box>
                         </Box>
