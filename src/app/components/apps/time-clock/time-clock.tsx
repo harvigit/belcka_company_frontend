@@ -83,11 +83,11 @@ import LeaveLists from './time-clock-details/leaves';
 import Conflicts from '@/app/components/apps/time-clock/time-clock-details/conflicts/conflicts';
 import {ConflictDetail} from '@/app/components/apps/time-clock/types/timeClock';
 import ConfirmationDialog from './components/ConfirmationDialog';
-import { IconCalendar, IconEye } from '@tabler/icons-react';
+import {IconCalendar, IconEye} from '@tabler/icons-react';
 import Settings from '../timesheet/setting/settings';
 import BookkeeperHistory from './history';
 import RecoverWorklogs from './recover-worklogs';
-import { useServerTable } from '@/hooks/useServerTable';
+import {useServerTable} from '@/hooks/useServerTable';
 import TablePaginationFooter from '../../common/TablePaginationFooter';
 
 const columnHelper = createColumnHelper<TimeClock>();
@@ -182,27 +182,27 @@ const loadDetailsStateFromStorage = () => {
 };
 
 const getRangeForCycle = (cycle: string): { from: Date; to: Date } => {
-    const today      = new Date();
+    const today = new Date();
     const normalized = cycle.replace(/s$/, '');
 
     if (normalized === '1_month') {
-        return { from: startOfMonth(today), to: endOfMonth(today) };
+        return {from: startOfMonth(today), to: endOfMonth(today)};
     }
     if (normalized === '2_week') {
-        const weekStart            = startOfWeek(today, { weekStartsOn: 1 });
+        const weekStart = startOfWeek(today, {weekStartsOn: 1});
         const daysSinceEpochMonday = Math.floor(weekStart.getTime() / (7 * 24 * 60 * 60 * 1000));
-        const blockOffset          = daysSinceEpochMonday % 2 === 0 ? 0 : 7;
-        const from                 = addDays(weekStart, -blockOffset);
-        return { from, to: addDays(from, 13) };
+        const blockOffset = daysSinceEpochMonday % 2 === 0 ? 0 : 7;
+        const from = addDays(weekStart, -blockOffset);
+        return {from, to: addDays(from, 13)};
     }
     if (normalized === '3_month') {
         const from = startOfMonth(today);
-        return { from, to: endOfMonth(addDays(from, 89)) };
+        return {from, to: endOfMonth(addDays(from, 89))};
     }
 
     return {
-        from: startOfWeek(today, { weekStartsOn: 1 }),
-        to:   endOfWeek(today,   { weekStartsOn: 1 }),
+        from: startOfWeek(today, {weekStartsOn: 1}),
+        to: endOfWeek(today, {weekStartsOn: 1}),
     };
 };
 
@@ -295,11 +295,11 @@ const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
         };
         localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(dateRange));
     } catch (error) {
-        console.log("Error saving date range to localStorage:", error);
+        console.log('Error saving date range to localStorage:', error);
     }
 };
 
-const TimeClock = ({ queryParams }: Props) => {
+const TimeClock = ({queryParams}: Props) => {
     // Initialize default date range (current week)
     const today = new Date();
     const defaultStart = new Date(today);
@@ -318,26 +318,26 @@ const TimeClock = ({ queryParams }: Props) => {
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const handleSelectAllAcrossPages = async (checked: boolean) => {
-    if (!checked) {
-      setSelectedRowIds(new Set());
-      return;
+    const handleSelectAllAcrossPages = async (checked: boolean) => {
+        if (!checked) {
+            setSelectedRowIds(new Set());
+            return;
+        }
+        try {
+            (window as any).__isSelectingAll = true;
+            await handleFetchData();
+            (window as any).__isSelectingAll = false;
+            if ((window as any).__lastFetchedIds) {
+                setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+            }
+        } catch (err: any) {
+            if (err.message !== 'SELECT_ALL_INTERCEPT') {
+                console.error(err);
+            }
+        } finally {
+            (window as any).__isSelectingAll = false;
+        }
     }
-    try {
-      (window as any).__isSelectingAll = true;
-      await handleFetchData();
-      (window as any).__isSelectingAll = false;
-      if ((window as any).__lastFetchedIds) {
-        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-      }
-    } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
-        console.error(err);
-      }
-    } finally {
-      (window as any).__isSelectingAll = false;
-      }
-  }
 
     const [selectedTimeClock, setSelectedTimeClock] = useState<TimeClock | null>(null);
     const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
@@ -360,7 +360,7 @@ const TimeClock = ({ queryParams }: Props) => {
     const [addWorklogSidebar, setAddWorklogSidebar] = useState<boolean>(false);
     const [addPriceworkSidebar, setAddPriceworkSidebar] = useState<boolean>(false);
     const [openLeaves, setOpenLeaves] = useState(false);
-    
+
     // Conflict sidebar
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
     const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);
@@ -455,31 +455,31 @@ const TimeClock = ({ queryParams }: Props) => {
         if (pendingRequest) return pendingRequest;
 
         const request = (async (): Promise<TimeClock[]> => {
-          try {
-            setFetchTimesheet(true);
-            const response: AxiosResponse<TimeClockResponse> = await api.get('/time-clock/get', {params});
-            if (response.data.IsSuccess) {
-                setData(response.data.info);
-                setCompanyId(response.data.company_id);
-                setUserHasRatePermission(response.data.user_rate_permission);
-                setRatePermissionLoaded(true);
-                if (response.data.currency !== null) {
-                    setCurrency(response.data.currency);
-                    setFetchTimesheet(false);
-                }
+            try {
+                setFetchTimesheet(true);
+                const response: AxiosResponse<TimeClockResponse> = await api.get('/time-clock/get', {params});
+                if (response.data.IsSuccess) {
+                    setData(response.data.info);
+                    setCompanyId(response.data.company_id);
+                    setUserHasRatePermission(response.data.user_rate_permission);
+                    setRatePermissionLoaded(true);
+                    if (response.data.currency !== null) {
+                        setCurrency(response.data.currency);
+                        setFetchTimesheet(false);
+                    }
 
-                // Fetch conflicts separately
-                await fetchConflictsData(start, end);
-                const pagMeta = response.data.data;
-                setTotalRows(pagMeta?.totalItems ?? response.data.info.length);
-                setPageCount(pagMeta?.totalPages ?? 1);
-                return response.data.info;
+                    // Fetch conflicts separately
+                    await fetchConflictsData(start, end);
+                    const pagMeta = response.data.data;
+                    setTotalRows(pagMeta?.totalItems ?? response.data.info.length);
+                    setPageCount(pagMeta?.totalPages ?? 1);
+                    return response.data.info;
+                }
+            } catch (error) {
+                setErrorMessage('Failed to fetch timesheet data. Please try again.');
+                setFetchTimesheet(false);
             }
-        } catch (error) {
-            setErrorMessage('Failed to fetch timesheet data. Please try again.');
-            setFetchTimesheet(false);
-        }
-        return [];
+            return [];
         })();
 
         dataRequestsRef.current.set(requestKey, request);
@@ -502,14 +502,14 @@ const TimeClock = ({ queryParams }: Props) => {
         if (pendingRequest) return pendingRequest;
 
         const request = (async () => {
-          try {
-            const response = await api.get('/time-clock/conflicts', {params});
-            if (response.data.IsSuccess) {
-                setConflictDetails(response.data.conflicts || []);
+            try {
+                const response = await api.get('/time-clock/conflicts', {params});
+                if (response.data.IsSuccess) {
+                    setConflictDetails(response.data.conflicts || []);
+                }
+            } catch (error) {
+                setConflictDetails([]);
             }
-        } catch (error) {
-            setConflictDetails([]);
-        }
         })();
 
         conflictRequestsRef.current.set(requestKey, request);
@@ -599,10 +599,10 @@ const TimeClock = ({ queryParams }: Props) => {
                 } else if (cycle) {
                     const range = getRangeForCycle(cycle);
                     from = range.from;
-                    to   = range.to;
+                    to = range.to;
                 } else {
                     from = defaultStart;
-                    to   = defaultEnd;
+                    to = defaultEnd;
                 }
 
                 setStartDate(from);
@@ -794,9 +794,9 @@ const TimeClock = ({ queryParams }: Props) => {
         setSelectedTimeClock(null);
 
         const s = startDate || defaultStart;
-        const e = endDate   || defaultEnd;
+        const e = endDate || defaultEnd;
         try {
-            handleDateRangeChange({ from: s, to: e });
+            handleDateRangeChange({from: s, to: e});
             setHasDataChanged(false);
         } catch (error) {
             setErrorMessage('Failed to refresh data. Please try again.');
@@ -835,7 +835,11 @@ const TimeClock = ({ queryParams }: Props) => {
                             selectedRowIds.size > 0 &&
                             selectedRowIds.size < filteredData.length
                         }
-                        onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllAcrossPages(e.target.checked); }}
+                        onChange={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleSelectAllAcrossPages(e.target.checked);
+                        }}
                     />
                 </Stack>
             ),
@@ -933,7 +937,7 @@ const TimeClock = ({ queryParams }: Props) => {
             header: 'Name',
             cell: (info: any) => {
                 const row = info.row.original;
-                
+
                 return (
                     <Stack direction="row" alignItems="center" spacing={4}>
                         <Link
@@ -1021,7 +1025,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 );
             },
         }),
-        
+
         columnHelper.accessor('account_id', {
             id: 'account_id',
             header: 'Account ID',
@@ -1359,12 +1363,12 @@ const TimeClock = ({ queryParams }: Props) => {
         columns,
         fetchData: handleFetchData,
         debounceDependencies: [searchTerm, queryParamsRef.current?.user_id, startDate, endDate, cycleReady],
-        state: { columnVisibility },
+        state: {columnVisibility},
         onColumnVisibilityChange: setColumnVisibility,
     });
 
     useEffect(() => {
-        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setPagination((prev) => ({...prev, pageIndex: 0}));
     }, [
         searchTerm,
         startDate,
@@ -1410,13 +1414,13 @@ const TimeClock = ({ queryParams }: Props) => {
 
             // Map option to format + file extension
             const formatMap: Record<string, { format: string; ext: string }> = {
-                summary:      { format: 'summary',      ext: 'xlsx' },
-                details:      { format: 'details',      ext: 'xlsx' },
-                summary_pdf:  { format: 'summary_pdf',  ext: 'pdf'  },
-                details_pdf:  { format: 'details_pdf',  ext: 'pdf'  },
+                summary: {format: 'summary', ext: 'xlsx'},
+                details: {format: 'details', ext: 'xlsx'},
+                summary_pdf: {format: 'summary_pdf', ext: 'pdf'},
+                details_pdf: {format: 'details_pdf', ext: 'pdf'},
             };
 
-            const selected = formatMap[option] ?? { format: option, ext: 'xlsx' };
+            const selected = formatMap[option] ?? {format: option, ext: 'xlsx'};
 
             const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export', {
                 ids,
@@ -1424,7 +1428,7 @@ const TimeClock = ({ queryParams }: Props) => {
             });
 
             if (response.data.IsSuccess) {
-                const { file, filename, contentType } = response.data.data;
+                const {file, filename, contentType} = response.data.data;
 
                 const binaryString = atob(file);
                 const binaryLen = binaryString.length;
@@ -1433,7 +1437,7 @@ const TimeClock = ({ queryParams }: Props) => {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
 
-                const blob = new Blob([bytes], { type: contentType });
+                const blob = new Blob([bytes], {type: contentType});
                 const url = window.URL.createObjectURL(blob);
 
                 const link = document.createElement('a');
@@ -1694,7 +1698,14 @@ const TimeClock = ({ queryParams }: Props) => {
                             flexWrap: 'wrap',
                         }}
                     >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            flexWrap: 'wrap',
+                            flex: 1,
+                            minWidth: 0
+                        }}>
                             {cycleReady && (
                                 <DateRangePickerBox
                                     from={startDate}
@@ -1708,11 +1719,11 @@ const TimeClock = ({ queryParams }: Props) => {
                                 size="small"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                sx={{ width: 180 }}
+                                sx={{width: 180}}
                                 InputProps={{
                                     endAdornment: (
                                         <InputAdornment position="end">
-                                            <IconSearch size={16} />
+                                            <IconSearch size={16}/>
                                         </InputAdornment>
                                     ),
                                 }}
@@ -1724,7 +1735,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                     variant="outlined"
                                     onClick={handleClearSessionFilter}
                                 >
-                                    <IconX size={24} />
+                                    <IconX size={24}/>
                                 </Button>
                             )}
 
@@ -1733,22 +1744,23 @@ const TimeClock = ({ queryParams }: Props) => {
                                 variant="outlined"
                                 size="small"
                                 onClick={() => setOpenDrawer(true)}
-                                sx={{ whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600 }}
+                                sx={{whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600}}
                             >
                                 Activity
                             </Button>
                         </Box>
 
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                        <Box sx={{display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0}}>
                             {!isReadOnlyUser && (
                                 <>
                                     <Button
                                         size="small"
                                         variant="outlined"
                                         color="primary"
-                                        sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
+                                        sx={{textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap'}}
                                         onClick={handleAddClick}
-                                        endIcon={openAddleave ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
+                                        endIcon={openAddleave ? <IconChevronUp size={18}/> :
+                                            <IconChevronDown size={18}/>}
                                     >
                                         Add
                                     </Button>
@@ -1756,8 +1768,8 @@ const TimeClock = ({ queryParams }: Props) => {
                                         anchorEl={addDropDown}
                                         open={openAddleave}
                                         onClose={handleAddClose}
-                                        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                                        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                                        anchorOrigin={{vertical: 'bottom', horizontal: 'left'}}
+                                        transformOrigin={{vertical: 'top', horizontal: 'left'}}
                                     >
                                         <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
                                         <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
@@ -1782,7 +1794,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                         textTransform: 'none',
                                         whiteSpace: 'nowrap',
                                         minWidth: 'unset',
-                                        '&:hover': { backgroundColor: 'transparent', borderColor: '#f28b82' },
+                                        '&:hover': {backgroundColor: 'transparent', borderColor: '#f28b82'},
                                     }}
                                 >
                                     <Box
@@ -1802,7 +1814,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                     >
                                         {totalConflictsCount}
                                     </Box>
-                                    <Typography sx={{ fontWeight: 600, color: '#e53935', fontSize: '13px' }}>
+                                    <Typography sx={{fontWeight: 600, color: '#e53935', fontSize: '13px'}}>
                                         Conflicts
                                     </Typography>
                                 </Button>
@@ -1810,17 +1822,17 @@ const TimeClock = ({ queryParams }: Props) => {
 
                             <Tooltip title="Column visibility">
                                 <IconButton onClick={(e) => setAnchorEl2(e.currentTarget)} color="primary" size="small">
-                                    <IconEye size={20} />
+                                    <IconEye size={20}/>
                                 </IconButton>
                             </Tooltip>
 
                             <Tooltip title="Settings">
                                 <IconButton onClick={handleSettingOpen} color="primary" size="small">
-                                    <IconSettings size={20} />
+                                    <IconSettings size={20}/>
                                 </IconButton>
                             </Tooltip>
 
-                            <Settings settingOpen={settingOpen} onClose={handleSettingClose} />
+                            <Settings settingOpen={settingOpen} onClose={handleSettingClose}/>
 
                             <IconButton
                                 size="small"
@@ -1830,7 +1842,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                 aria-expanded={openMenu ? 'true' : undefined}
                                 onClick={handleClick}
                             >
-                                <IconDotsVertical width={18} />
+                                <IconDotsVertical width={18}/>
                             </IconButton>
 
                             <Menu
@@ -1838,7 +1850,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                 anchorEl={anchorEl3}
                                 open={openMenu}
                                 onClose={handleClose}
-                                slotProps={{ list: { 'aria-labelledby': 'basic-button' } }}
+                                slotProps={{list: {'aria-labelledby': 'basic-button'}}}
                             >
                                 <MenuItem onClick={handleClose}>
                                     <Link
@@ -1857,7 +1869,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                         }}
                                     >
                                         <ListItemIcon>
-                                            <IconNotes width={18} />
+                                            <IconNotes width={18}/>
                                         </ListItemIcon>
                                         Leaves List
                                     </Link>
@@ -1880,7 +1892,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                         }}
                                     >
                                         <ListItemIcon>
-                                            <IconRestore width={18} />
+                                            <IconRestore width={18}/>
                                         </ListItemIcon>
                                         Recover worklogs
                                     </Link>
@@ -1891,7 +1903,7 @@ const TimeClock = ({ queryParams }: Props) => {
 
                 </Box>
 
-                <BookkeeperHistory open={openDrawer} onClose={() => setOpenDrawer(false)} />
+                <BookkeeperHistory open={openDrawer} onClose={() => setOpenDrawer(false)}/>
 
                 {isAnyRowSelected && (
                     <Box
@@ -1914,36 +1926,36 @@ const TimeClock = ({ queryParams }: Props) => {
                             <IconButton
                                 size="small"
                                 onClick={() => setSelectedRowIds(new Set())}
-                                sx={{ color: '#666', '&:hover': { bgcolor: 'grey.100' } }}
+                                sx={{color: '#666', '&:hover': {bgcolor: 'grey.100'}}}
                             >
-                                <IconX size={16} />
+                                <IconX size={16}/>
                             </IconButton>
 
                             <Typography variant="body2" fontWeight={600} color="text.primary">
                                 {selectedRowIds.size} Selected
                             </Typography>
 
-                            <Box sx={{ flexGrow: 1 }} />
+                            <Box sx={{flexGrow: 1}}/>
 
                             <Stack direction="row" spacing={1.5}>
                                 <Button
-                                    startIcon={<IconLock size={15} />}
+                                    startIcon={<IconLock size={15}/>}
                                     variant="outlined"
                                     color="success"
                                     size="small"
                                     onClick={handleLock}
-                                    sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px' }}
+                                    sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     Lock
                                 </Button>
 
                                 <Button
-                                    startIcon={<IconLockOpen size={15} />}
+                                    startIcon={<IconLockOpen size={15}/>}
                                     variant="outlined"
                                     color="error"
                                     size="small"
                                     onClick={handleUnlock}
-                                    sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px' }}
+                                    sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     Unlock
                                 </Button>
@@ -1953,18 +1965,25 @@ const TimeClock = ({ queryParams }: Props) => {
                                     color="primary"
                                     size="small"
                                     onClick={handleMarkAsPaid}
-                                    sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px', boxShadow: 'none', '&:hover': { boxShadow: 'none' } }}
+                                    sx={{
+                                        px: 2.5,
+                                        textTransform: 'none',
+                                        fontWeight: 600,
+                                        borderRadius: '8px',
+                                        boxShadow: 'none',
+                                        '&:hover': {boxShadow: 'none'}
+                                    }}
                                 >
                                     Paid
                                 </Button>
 
                                 <Button
-                                    startIcon={<IconTrash size={15} />}
+                                    startIcon={<IconTrash size={15}/>}
                                     variant="outlined"
                                     color="error"
                                     size="small"
                                     onClick={handleDeleteSelectedUsers}
-                                    sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px' }}
+                                    sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     Delete
                                 </Button>
@@ -1973,9 +1992,9 @@ const TimeClock = ({ queryParams }: Props) => {
                                     size="small"
                                     variant="outlined"
                                     color="primary"
-                                    sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px' }}
+                                    sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                     onClick={handleExportClick}
-                                    endIcon={open ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
+                                    endIcon={open ? <IconChevronUp size={18}/> : <IconChevronDown size={18}/>}
                                 >
                                     Export
                                 </Button>
@@ -1983,14 +2002,18 @@ const TimeClock = ({ queryParams }: Props) => {
                                     anchorEl={anchorEl}
                                     open={open}
                                     onClose={() => handleExportClose('')}
-                                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                                    transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                                    anchorOrigin={{vertical: 'top', horizontal: 'center'}}
+                                    transformOrigin={{vertical: 'bottom', horizontal: 'center'}}
                                 >
-                                    <MenuItem onClick={() => handleExportClose('summary')}>Export Summary (Excel)</MenuItem>
-                                    <MenuItem onClick={() => handleExportClose('details')}>Export Timeclock Details (Excel)</MenuItem>
-                                    <Divider />
-                                    <MenuItem onClick={() => handleExportClose('summary_pdf')}>Export Summary (PDF)</MenuItem>
-                                    <MenuItem onClick={() => handleExportClose('details_pdf')}>Export Timeclock Details (PDF)</MenuItem>
+                                    <MenuItem onClick={() => handleExportClose('summary')}>Export Summary
+                                        (Excel)</MenuItem>
+                                    <MenuItem onClick={() => handleExportClose('details')}>Export Timeclock Details
+                                        (Excel)</MenuItem>
+                                    <Divider/>
+                                    <MenuItem onClick={() => handleExportClose('summary_pdf')}>Export Summary
+                                        (PDF)</MenuItem>
+                                    <MenuItem onClick={() => handleExportClose('details_pdf')}>Export Timeclock Details
+                                        (PDF)</MenuItem>
                                 </Menu>
                             </Stack>
                         </Stack>
@@ -2040,7 +2063,7 @@ const TimeClock = ({ queryParams }: Props) => {
                             pr: 0.5,
                         }}
                     >
-                        <FormGroup sx={{ gap: 0.25 }}>
+                        <FormGroup sx={{gap: 0.25}}>
                             {table
                                 .getAllLeafColumns()
                                 .filter((col: any) => {
@@ -2246,7 +2269,9 @@ const TimeClock = ({ queryParams }: Props) => {
                 {data.length ? <Divider/> : <></>}
             </Box>
 
-            <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
+            <TablePaginationFooter
+                selectedCount={typeof selectedRowIds !== 'undefined' ? selectedRowIds.size : undefined} table={table}
+                totalRows={totalRows}/>
 
             <Drawer
                 anchor="bottom"

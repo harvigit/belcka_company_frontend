@@ -908,6 +908,7 @@ const Leaves = () => {
         columnHelper.accessor('user_name', {
             id: 'user_name',
             header: 'Name',
+            meta: {label: 'Name'},
             cell: (info: any) => {
                 const row = info.row.original;
 

@@ -8,12 +8,13 @@ import {
     CircularProgress,
     FormControl,
     IconButton,
+    InputAdornment,
     MenuItem,
     Select,
     TextField,
     Typography,
 } from '@mui/material';
-import {IconPhotoPlus, IconTrash, IconX} from '@tabler/icons-react';
+import {IconCalendar, IconPhotoPlus, IconTrash, IconX} from '@tabler/icons-react';
 import api from '@/utils/axios';
 import toast from 'react-hot-toast';
 
@@ -22,6 +23,58 @@ type ProjectResource = Resource & { team_ids?: number[] };
 type Address = Resource & { project_id: number };
 type ExistingAttachment = { id: number; image?: string; image_url?: string; url?: string };
 type NewAttachment = { file: File; previewUrl: string };
+
+const formatDisplayDate = (date: Date) => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+};
+
+const isValidDisplayDate = (value: string) => {
+    const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return false;
+
+    const [, day, month, year] = match;
+    const parsedDate = new Date(Number(year), Number(month) - 1, Number(day));
+
+    return parsedDate.getFullYear() === Number(year)
+        && parsedDate.getMonth() === Number(month) - 1
+        && parsedDate.getDate() === Number(day);
+};
+
+const displayDateToInputValue = (value: string) => {
+    if (!isValidDisplayDate(value)) return '';
+
+    const [day, month, year] = value.split('/');
+    return `${year}-${month}-${day}`;
+};
+
+const normalizeDateDisplayValue = (value?: string | null) => {
+    if (!value) return '';
+
+    const trimmedValue = String(value).trim();
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmedValue) && isValidDisplayDate(trimmedValue)) return trimmedValue;
+
+    const isoMatch = trimmedValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+        const [, year, month, day] = isoMatch;
+        return `${day}/${month}/${year}`;
+    }
+
+    const datePart = trimmedValue.split(' ')[0];
+    const slashMatch = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (slashMatch) {
+        const [, day, month, year] = slashMatch;
+        return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+    }
+
+    const parsedDate = new Date(trimmedValue);
+    if (!Number.isNaN(parsedDate.getTime())) return formatDisplayDate(parsedDate);
+
+    return '';
+};
 
 interface AddPriceworkProps {
     onClose: () => void;
@@ -58,6 +111,9 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     const [teamId, setTeamId] = useState(pricework?.team_id ? String(pricework.team_id) : '');
     const [unitId, setUnitId] = useState(pricework?.unit_id ? String(pricework.unit_id) : '');
     const [workType, setWorkType] = useState(pricework?.work_type || '');
+    const [priceworkDate, setPriceworkDate] = useState(
+        normalizeDateDisplayValue(pricework?.pricework_date || pricework?.date_added) || formatDisplayDate(new Date()),
+    );
     const [amountPerUnit, setAmountPerUnit] = useState(pricework?.amount_per_unit != null ? String(pricework.amount_per_unit) : '');
     const [workComplete, setWorkComplete] = useState(pricework?.work_complete != null ? String(pricework.work_complete) : '');
     const [note, setNote] = useState(pricework?.note || '');
@@ -67,6 +123,7 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     const [newAttachments, setNewAttachments] = useState<NewAttachment[]>([]);
     const [removedAttachmentIds, setRemovedAttachmentIds] = useState<number[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const dateInputRef = useRef<HTMLInputElement>(null);
     const hasFetchedResources = useRef(false);
 
     const addAttachments = (files: FileList | null) => {
@@ -90,6 +147,18 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     const removeExistingAttachment = (attachment: ExistingAttachment) => {
         setExistingAttachments((current) => current.filter((item) => item.id !== attachment.id));
         setRemovedAttachmentIds((current) => [...current, attachment.id]);
+    };
+
+    const openPriceworkDatePicker = () => {
+        const dateInput = dateInputRef.current;
+        if (!dateInput) return;
+
+        if (typeof dateInput.showPicker === 'function') {
+            dateInput.showPicker();
+            return;
+        }
+
+        dateInput.click();
     };
 
     const inputSx = {
@@ -166,6 +235,12 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
         fetchResources();
     }, [companyId, selectUser]);
 
+    useEffect(() => {
+        setPriceworkDate(
+            normalizeDateDisplayValue(pricework?.pricework_date || pricework?.date_added) || formatDisplayDate(new Date()),
+        );
+    }, [pricework?.pricework_id, pricework?.pricework_date, pricework?.date_added]);
+
     const totalAmount = useMemo(() => {
         const amount = Number(amountPerUnit);
         const completed = Number(workComplete);
@@ -190,6 +265,8 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
         if (!addressId) return setError('Address is required.');
         if (!teamId) return setError('Team is required.');
         if (!workType.trim()) return setError('Work type is required.');
+        if (!priceworkDate) return setError('Pricework date is required.');
+        if (!isValidDisplayDate(priceworkDate)) return setError('Pricework date must be in dd/MM/yyyy format.');
         if (!unitId) return setError('Unit is required.');
         if (amountPerUnit === '' || Number(amountPerUnit) < 0) return setError('Valid amount per unit is required.');
         if (workComplete === '' || Number(workComplete) < 0) return setError('Valid work complete is required.');
@@ -209,6 +286,7 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             payload.append('team_id', teamId);
             payload.append('note', note.trim());
             payload.append('work_type', workType.trim());
+            payload.append('pricework_date', priceworkDate);
             payload.append('unit_id', unitId);
             payload.append('amount_per_unit', amountPerUnit);
             payload.append('work_complete', workComplete);
@@ -332,6 +410,54 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
                                 )}
                             </Select>
                         </FormControl>
+
+                        <Box>
+                            {fieldLabel('Pricework Date')}
+                            <input
+                                ref={dateInputRef}
+                                type="date"
+                                style={{position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none'}}
+                                tabIndex={-1}
+                                value={displayDateToInputValue(priceworkDate)}
+                                onChange={(event) => setPriceworkDate(
+                                    normalizeDateDisplayValue(event.target.value) || priceworkDate,
+                                )}
+                            />
+                            <TextField
+                                fullWidth
+                                size="small"
+                                value={priceworkDate}
+                                onClick={openPriceworkDatePicker}
+                                onFocus={openPriceworkDatePicker}
+                                onChange={(event) => setPriceworkDate(event.target.value)}
+                                placeholder="dd/MM/yyyy"
+                                inputProps={{
+                                    style: {textAlign: 'left'},
+                                    maxLength: 10,
+                                }}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                aria-label="Select pricework date"
+                                                edge="end"
+                                                onClick={openPriceworkDatePicker}
+                                            >
+                                                <IconCalendar size={20}/>
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        '& fieldset': {borderColor: '#e0e0e0'},
+                                        '&:hover fieldset': {borderColor: '#bbb'},
+                                        '&.Mui-focused fieldset': {borderColor: '#50ABFF'},
+                                    },
+                                    '& .MuiInputBase-input': {textAlign: 'left'},
+                                }}
+                            />
+                        </Box>
 
                         <Box>
                             {fieldLabel('Work Type')}
