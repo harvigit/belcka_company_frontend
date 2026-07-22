@@ -141,13 +141,13 @@ const ShiftManagement = () => {
         }
     }, []);
 
-    const fetchTeams = useCallback(async (projectId: number) => {
+    const fetchTeams = useCallback(async (projectId: number): Promise<Team[]> => {
         try {
             const res = await api.get(
                 `team/get-team-member-list?project_id=${projectId}`,
             );
             if (res.data?.info) {
-                return res.data.info?.data || res.data.info || res.data.data || [];
+                return (res.data.info?.data || res.data.info || res.data.data || []) as Team[];
             }
         } catch (error) {
             console.error('Error fetching teams:', error);
