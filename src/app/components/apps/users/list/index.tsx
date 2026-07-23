@@ -38,6 +38,7 @@ import {
   Checkbox,
   Tooltip,
   Badge,
+  CircularProgress,
 } from "@mui/material";
 import {
   flexRender,
@@ -99,7 +100,8 @@ export interface UserList {
   is_on_break: boolean;
   last_worked_date: string;
   cis: string;
-  permissions: Permission[];
+  /** Lazy-loaded when opening the permissions drawer (not in list payload). */
+  permissions?: Permission[];
   id: number;
   name: string;
   supervisor_name: string;
@@ -109,13 +111,13 @@ export interface UserList {
   phone: number;
   extension: string;
   team_name: string;
-  shifts: string;
-  status: number;
+  shifts?: string;
+  status?: number;
   is_invited: boolean;
   logged_in_at: any;
-  created_at: any;
-  company_id: number | null;
-  user_role_id: number;
+  created_at?: any;
+  company_id?: number | null;
+  user_role_id?: number;
   permission_count: number;
   joining_date: string;
   bank_name: string;
@@ -129,6 +131,7 @@ export interface UserList {
   account_id: string;
   supervisor_team_id: number | null;
   supervisor_team_name: string | null;
+  is_archive?: boolean;
 }
 
 export interface TradeList {
@@ -205,6 +208,8 @@ const TablePagination = () => {
   const openMenu = Boolean(anchorEl);
   // Permissions drawer state
   const [permissionsDrawerOpen, setPermissionsDrawerOpen] = useState(false);
+  const [permissionsDrawerLoading, setPermissionsDrawerLoading] =
+    useState(false);
   const [userSettingDrawerOpen, setUserSettingDrawerOpen] = useState(false);
   const [selectedUserPermissions, setSelectedUserPermissions] =
     useState<UserList | null>(null);
@@ -252,7 +257,7 @@ const TablePagination = () => {
   const fetchUsers = async (restorePage?: number) => {
     setFetchUser(true);
     try {
-      let url = `user/get-user-lists?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      let url = `user/get-user-lists-web?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
 
       if (searchTerm) {
         url += `&search=${searchTerm}`;
@@ -489,20 +494,49 @@ const TablePagination = () => {
     return isAdmin;
   };
 
-  const handleOpenPermissionsDrawer = (userPermission: UserList) => {
-    setSelectedUserPermissions(userPermission);
-    const web = new Set<number>();
-    const app = new Set<number>();
-
-    userPermission.permissions.forEach((p) => {
-      // status: 1 = web+app, 2 = web, 3 = app
-      if (p.status === 1 || p.status === 2) web.add(p.id);
-      if (p.status === 1 || p.status === 3) app.add(p.id);
-    });
-
-    setTempPermissions({ web, app });
+  const handleOpenPermissionsDrawer = async (userPermission: UserList) => {
+    setSelectedUserPermissions({ ...userPermission, permissions: [] });
+    setTempPermissions({ web: new Set(), app: new Set() });
     setPermissionSearch("");
     setPermissionsDrawerOpen(true);
+    setPermissionsDrawerLoading(true);
+
+    try {
+      const res = await api.get(
+        `user/get-user-list-permissions?user_id=${userPermission.id}`,
+      );
+      if (!res.data?.IsSuccess) {
+        toast.error(res.data?.message || "Failed to load permissions");
+        setPermissionsDrawerOpen(false);
+        return;
+      }
+
+      const info = res.data.info;
+      const permissions: Permission[] = info?.permissions || [];
+
+      setSelectedUserPermissions({
+        ...userPermission,
+        name: info?.name || userPermission.name,
+        permissions,
+        permission_count:
+          info?.permission_count ?? userPermission.permission_count,
+      });
+
+      const web = new Set<number>();
+      const app = new Set<number>();
+      permissions.forEach((p) => {
+        // status: 1 = web+app, 2 = web, 3 = app
+        if (p.status === 1 || p.status === 2) web.add(p.id);
+        if (p.status === 1 || p.status === 3) app.add(p.id);
+      });
+      setTempPermissions({ web, app });
+    } catch (error) {
+      console.error("Failed to load permissions", error);
+      toast.error("Failed to load permissions");
+      setPermissionsDrawerOpen(false);
+    } finally {
+      setPermissionsDrawerLoading(false);
+    }
   };
 
   const handlePermissionToggle = (
@@ -553,20 +587,22 @@ const TablePagination = () => {
       const payload = {
         user_id: selectedUserPermissions.id,
         company_id: user.company_id,
-        permissions: selectedUserPermissions.permissions.map((permission) => {
-          const hasWeb = tempPermissions.web.has(permission.id);
-          const hasApp = tempPermissions.app.has(permission.id);
+        permissions: (selectedUserPermissions.permissions || []).map(
+          (permission) => {
+            const hasWeb = tempPermissions.web.has(permission.id);
+            const hasApp = tempPermissions.app.has(permission.id);
 
-          let status = 0;
-          if (hasWeb && hasApp) status = 1;
-          else if (hasWeb) status = 2;
-          else if (hasApp) status = 3;
+            let status = 0;
+            if (hasWeb && hasApp) status = 1;
+            else if (hasWeb) status = 2;
+            else if (hasApp) status = 3;
 
-          return {
-            permission_id: permission.id,
-            status: status,
-          };
-        }),
+            return {
+              permission_id: permission.id,
+              status: status,
+            };
+          },
+        ),
       };
 
       const response = await api.post(
@@ -579,31 +615,19 @@ const TablePagination = () => {
           response.data.message || "Permissions updated successfully",
         );
 
-        const newPermissionCount = selectedUserPermissions.permissions.filter(
-          (p) => {
-            return (
-              tempPermissions.web.has(p.id) || tempPermissions.app.has(p.id)
-            );
-          },
-        ).length;
+        const newPermissionCount = (
+          selectedUserPermissions.permissions || []
+        ).filter((p) => {
+          return (
+            tempPermissions.web.has(p.id) || tempPermissions.app.has(p.id)
+          );
+        }).length;
 
         setData((prevData) =>
           prevData.map((u) => {
             if (u.id !== selectedUserPermissions.id) return u;
-
-            const updatedPermissions = u.permissions.map((p) => {
-              const hasWeb = tempPermissions.web.has(p.id);
-              const hasApp = tempPermissions.app.has(p.id);
-              let status = 0;
-              if (hasWeb && hasApp) status = 1;
-              else if (hasWeb) status = 2;
-              else if (hasApp) status = 3;
-              return { ...p, status };
-            });
-
             return {
               ...u,
-              permissions: updatedPermissions,
               permission_count: newPermissionCount,
             };
           }),
@@ -642,7 +666,7 @@ const TablePagination = () => {
   }, [data]);
 
   const filteredPermissions = useMemo(() => {
-    if (!selectedUserPermissions) return [];
+    if (!selectedUserPermissions?.permissions) return [];
     const uniquePermissions = Array.from(
       new Map(
         selectedUserPermissions.permissions
@@ -881,7 +905,7 @@ const TablePagination = () => {
       },
     }),
 
-    columnHelper.accessor((row) => row.permissions, {
+    columnHelper.accessor((row) => row.permission_count, {
       id: "permissions",
       header: () => (
         <Typography variant="subtitle2" noWrap>
@@ -1632,7 +1656,7 @@ const TablePagination = () => {
             </Box>
 
             {/* Permission mode indicator */}
-            {!canEditPermissions() && (
+            {!canEditPermissions() && !permissionsDrawerLoading && (
               <Box
                 sx={{
                   mb: 2,
@@ -1652,6 +1676,18 @@ const TablePagination = () => {
               </Box>
             )}
 
+            {permissionsDrawerLoading ? (
+              <Box
+                flex={1}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                minHeight={200}
+              >
+                <CircularProgress size={32} />
+              </Box>
+            ) : (
+              <>
             {/* Search */}
             <Box sx={{ mb: 2, flexShrink: 0 }}>
               <TextField
@@ -1843,6 +1879,8 @@ const TablePagination = () => {
                   Cancel
                 </Button>
               </Box>
+            )}
+              </>
             )}
           </Box>
         </Drawer>
