@@ -209,7 +209,23 @@ const Company = () => {
     [trade],
   );
 
-  const fetchFeeds = async () => {
+  const fetchNotificationCounts = useCallback(async () => {
+    if (!user?.company_id || !user?.id) return;
+    try {
+      const res = await api.get(
+        `get-notification-count?company_id=${user.company_id}`,
+      );
+      if (res.data?.IsSuccess) {
+        setCount(Number(res.data.feed_count) || 0);
+        setRequestCount(Number(res.data.request_count) || 0);
+        setAnnouncemntCount(Number(res.data.announcement_count) || 0);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [user?.company_id, user?.id]);
+
+  const fetchFeeds = useCallback(async () => {
     if (!user?.company_id || !user?.id) return;
     setLoadingFeeds(true);
     try {
@@ -236,8 +252,11 @@ const Company = () => {
 
       const feeds = res.data?.info ?? [];
       setFeed(feeds);
-      setCount(feeds?.[0]?.unread_feeds);
-      setRequestCount(feeds?.[0]?.request_count);
+      setCount(feeds?.[0]?.unread_feeds ?? res.data?.unread_count ?? 0);
+      setRequestCount(feeds?.[0]?.request_count ?? 0);
+      if (res.data?.announcement_count !== undefined) {
+        setAnnouncemntCount(res.data.announcement_count);
+      }
 
       const unreadIds = feeds
         .filter((f: any) => !f.status)
@@ -247,14 +266,23 @@ const Company = () => {
       setUnreedFeed(unreadIds);
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoadingFeeds(false);
     }
-    setLoadingFeeds(true);
-  };
+  }, [user?.company_id, user?.id, filters, teams, trade]);
 
+  // Lightweight badge counts on app/header bootstrap — not full feed/request lists
   useEffect(() => {
     if (!user?.company_id || !user?.id) return;
+    fetchNotificationCounts();
+  }, [user?.company_id, user?.id, fetchNotificationCounts]);
+
+  // Load full feed list only when the notification drawer is open
+  useEffect(() => {
+    if (!openDrawer) return;
+    if (!user?.company_id || !user?.id) return;
     fetchFeeds();
-  }, [user?.company_id, user?.id, filters]);
+  }, [openDrawer, filters, fetchFeeds, user?.company_id, user?.id]);
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -317,7 +345,7 @@ const Company = () => {
           payload,
         );
         if (res.data) {
-          await fetchFeeds();
+          await fetchNotificationCounts();
         }
       } catch (err) {
         console.error(err);
@@ -330,7 +358,7 @@ const Company = () => {
     setOpenDrawer(false);
     setLoading(false);
     setPage(1);
-  }, [count, unreedFeed, loading]);
+  }, [count, unreedFeed, loading, fetchNotificationCounts]);
 
   const fetchList = useCallback(async () => {
     try {
@@ -459,15 +487,27 @@ const Company = () => {
         });
       }
       if (payload) {
-        fetchFeeds();
-        fetchList();
+        fetchNotificationCounts();
+        if (openDrawer) {
+          fetchFeeds();
+        }
+        if (openannouncementDrawer) {
+          fetchList();
+        }
       }
     });
 
     return () => {
       unsubscribe();
     };
-  }, [user?.id]);
+  }, [
+    user?.id,
+    openDrawer,
+    openannouncementDrawer,
+    fetchNotificationCounts,
+    fetchFeeds,
+    fetchList,
+  ]);
 
   return (
     <Box display={"flex"} alignItems={"center"} gap={1}>
@@ -511,7 +551,7 @@ const Company = () => {
           </MenuItem>
         ))}
       </Menu>
-      {loadingFeeds && (
+      {user?.id && (
         <Badge
           badgeContent={count > 0 ? count : null}
           color="error"
@@ -549,7 +589,7 @@ const Company = () => {
       </Badge>
       <UserRequests
         open={requestDrawer}
-        onRequestCountChange={fetchFeeds}
+        onRequestCountChange={fetchNotificationCounts}
         onClose={() => setRequestDrawer(false)}
       />
       <Drawer

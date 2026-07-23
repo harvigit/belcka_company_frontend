@@ -41,7 +41,6 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [businessFields, setBusinessFields] = useState([]);
   const [teamSizes, setTeamSizes] = useState([]);
-  const [loadingDropdowns, setLoadingDropdowns] = useState(true);
   const [id, setId] = useState(0);
   const [token, setToken] = useState("");
   const { data: session, update } = useSession();
@@ -195,10 +194,12 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
         }
     };
 
-    useEffect(() => {
+  // Only needed for Create Company modal (team size / industry steps) — not for login OTP.
+  useEffect(() => {
+    if (!showCompanyPopup) return;
+
     const fetchDropdownData = async () => {
       try {
-        setLoadingDropdowns(true);
         const res = await api.get(
           "get-company-resources?flag=industryList,numberOfEmployeeList",
         );
@@ -206,12 +207,10 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
         setTeamSizes(res.data.info?.numberOfEmployeeList || []);
       } catch (error) {
         console.error("Dropdown fetch error:", error);
-      } finally {
-        setLoadingDropdowns(false);
       }
     };
     fetchDropdownData();
-  }, []);
+  }, [showCompanyPopup]);
 
   const handleCreateCompany = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -43,7 +43,6 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const [isCodeVerified, setIsCodeVerified] = useState(false);
   const [businessFields, setBusinessFields] = useState([]);
   const [teamSizes, setTeamSizes] = useState([]);
-  const [loadingDropdowns, setLoadingDropdowns] = useState(true);
   const [step, setStep] = useState(1);
   const [canCloseModal, setCanCloseModal] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -129,10 +128,12 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     }
   };
 
+  // Only needed for Create Company modal (team size / industry steps) — not for register OTP.
   useEffect(() => {
+    if (!openCompanyModal) return;
+
     const fetchDropdownData = async () => {
       try {
-        setLoadingDropdowns(true);
         const res = await api.get(
           "get-company-resources?flag=industryList,numberOfEmployeeList",
         );
@@ -140,12 +141,10 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
         setTeamSizes(res.data.info?.numberOfEmployeeList || []);
       } catch (error) {
         console.error("Dropdown fetch error:", error);
-      } finally {
-        setLoadingDropdowns(false);
       }
     };
     fetchDropdownData();
-  }, []);
+  }, [openCompanyModal]);
 
   // resend otp
   const resendOtp = async () => {

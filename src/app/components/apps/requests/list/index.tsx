@@ -126,8 +126,12 @@ export default function UserRequests({
                 res = await api.post(`requests/get-all-request`, payload);
             }
             if (res.data?.requests) setData(res.data.requests);
-            setRequestCount(res.data.requests?.[0]?.count);
-            onRequestCountChange(requestCount);
+            const nextCount = res.data.requests?.[0]?.count ?? 0;
+            setRequestCount(nextCount);
+            // Refresh header badge from the lightweight count API (not full feeds)
+            if (typeof onRequestCountChange === "function") {
+              onRequestCountChange();
+            }
         } catch (err) {
             console.error("Failed to fetch requests", err);
         } finally {
