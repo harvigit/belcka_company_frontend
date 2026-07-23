@@ -89,7 +89,7 @@ import BookkeeperHistory from './history';
 import RecoverWorklogs from './recover-worklogs';
 import {useServerTable} from '@/hooks/useServerTable';
 import TablePaginationFooter from '../../common/TablePaginationFooter';
-import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
+import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -321,10 +321,10 @@ const TimeClock = ({queryParams}: Props) => {
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     const handleSelectAllRows = (checked: boolean) => {
         if (checked) {
-        const allIds = data.map((item: any) => item.user_id);
-        setSelectedRowIds(new Set(allIds));
+            const allIds = data.map((item: any) => item.user_id);
+            setSelectedRowIds(new Set(allIds));
         } else {
-        setSelectedRowIds(new Set());
+            setSelectedRowIds(new Set());
         }
     };
 
@@ -341,10 +341,14 @@ const TimeClock = ({queryParams}: Props) => {
     const open = Boolean(anchorEl);
     const session = useSession();
     const user = session.data?.user as User & { company_id: number; id?: string } & { user_role_id: number; };
-    
-    const { columnVisibility, onColumnVisibilityChange, onColumnVisibilityChange: setColumnVisibility } = usePersistentColumnVisibility({
-      storageKey: `cv_${user?.company_id}_${user?.id}_time_clock`,
-      enabled: !!user?.id,
+
+    const {
+        columnVisibility,
+        onColumnVisibilityChange,
+        onColumnVisibilityChange: setColumnVisibility
+    } = usePersistentColumnVisibility({
+        storageKey: `cv_${user?.company_id}_${user?.id}_time_clock`,
+        enabled: !!user?.id,
     });
     const openMenu = Boolean(anchorEl3);
     const [addDropDown, setAddDropDown] = useState<null | HTMLElement>(null);
@@ -369,7 +373,6 @@ const TimeClock = ({queryParams}: Props) => {
     // Pay Rate Permission
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
     const [ratePermissionLoaded, setRatePermissionLoaded] = useState<boolean>(false);
-
 
 
     const queryParamsRef = useRef(queryParams);
@@ -403,7 +406,6 @@ const TimeClock = ({queryParams}: Props) => {
         if (!startDate || !endDate) return;
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
     }, [startDate, endDate, columnVisibility]);
-
 
 
     const [confirmDialog, setConfirmDialog] = useState<{
@@ -928,27 +930,27 @@ const TimeClock = ({queryParams}: Props) => {
 
                 return (
                     <Stack direction="row" alignItems="center" spacing={4}>
-                        <Link
-                            href={{
-                                pathname: `/apps/users/${row?.user_id}`,
-                                query: {
-                                    tab: 'billing',
-                                    ...(isReadOnlyUser
-                                        ? (isRemovedUser
-                                            ? {is_removed_user: 'true'}
-                                            : {is_archived_user: 'true'})
-                                        : {}),
-                                },
-                            }}
-                            passHref
-                            onClick={(e) => e.stopPropagation()}
-                            style={{textDecoration: 'none', color: 'inherit'}}
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={4}
+                            sx={{cursor: 'pointer'}}
                         >
-                            <Stack
-                                direction="row"
-                                alignItems="center"
-                                spacing={4}
-                                sx={{cursor: 'pointer'}}
+                            <Link
+                                href={{
+                                    pathname: `/apps/users/${row?.user_id}`,
+                                    query: {
+                                        tab: 'billing',
+                                        ...(isReadOnlyUser
+                                            ? (isRemovedUser
+                                                ? {is_removed_user: 'true'}
+                                                : {is_archived_user: 'true'})
+                                            : {}),
+                                    },
+                                }}
+                                passHref
+                                onClick={(e) => e.stopPropagation()}
+                                style={{textDecoration: 'none', color: 'inherit'}}
                             >
                                 <Badge
                                     overlap="circular"
@@ -972,26 +974,25 @@ const TimeClock = ({queryParams}: Props) => {
                                         sx={{width: 36, height: 36, cursor: 'pointer'}}
                                     />
                                 </Badge>
-                                <Box>
-                                    <Typography
-                                        className="f-14"
-                                        color="textPrimary"
-                                        sx={{
-                                            cursor: 'pointer',
-                                            '&:hover': {color: '#173f98'},
-                                            width: 150,
-                                        }}
-                                    >
-                                        {row.user_name}
+                            </Link>
+                            <Box>
+                                <Typography
+                                    className="f-14"
+                                    color="textPrimary"
+                                    sx={{
+                                        cursor: 'pointer',
+                                        width: 150,
+                                    }}
+                                >
+                                    {row.user_name}
+                                </Typography>
+                                <Tooltip title={row.trade_name ?? '-'} placement="top" arrow>
+                                    <Typography color="textSecondary" variant="subtitle1" width={150} noWrap>
+                                        {row.trade_name}
                                     </Typography>
-                                    <Tooltip title={row.trade_name ?? '-'} placement="top" arrow>
-                                        <Typography color="textSecondary" variant="subtitle1" width={150} noWrap>
-                                            {row.trade_name}
-                                        </Typography>
-                                    </Tooltip>
-                                </Box>
-                            </Stack>
-                        </Link>
+                                </Tooltip>
+                            </Box>
+                        </Stack>
                     </Stack>
                 );
             },
@@ -1005,7 +1006,14 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
                                 {row.user_code}
                             </Typography>
                         </Box>
@@ -1022,7 +1030,14 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
                                 {row.account_id}
                             </Typography>
                         </Box>
@@ -1181,7 +1196,14 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
                                 {row.name_on_account}
                             </Typography>
                         </Box>
@@ -1198,7 +1220,14 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
                                 {row.sort_code}
                             </Typography>
                         </Box>
@@ -1215,7 +1244,14 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
                                 {row.account_number}
                             </Typography>
                         </Box>
@@ -1232,7 +1268,14 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
                                 {row.utr_name}
                             </Typography>
                         </Box>
@@ -1249,7 +1292,14 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
                                 {row.utr_number}
                             </Typography>
                         </Box>
@@ -1266,7 +1316,14 @@ const TimeClock = ({queryParams}: Props) => {
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} className="f-14" >
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
                                 {row.nin_number}
                             </Typography>
                         </Box>
