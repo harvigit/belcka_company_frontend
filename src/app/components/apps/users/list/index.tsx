@@ -59,6 +59,7 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
+import { fetchCompanyResources } from "@/utils/companyResources";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -384,29 +385,24 @@ const TablePagination = () => {
   // we only keep this if there's any direct component mount fetching logic needed.
 
   useEffect(() => {
-    const fetchTrades = async () => {
+    if (!user?.company_id) return;
+
+    const fetchTradeAndTeams = async () => {
       try {
-        const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
+        const res = await fetchCompanyResources(
+          ["tradeList", "teamList"],
+          user.company_id,
         );
-        if (res.data) setTrade(res.data.info);
+        if (res.data?.info) {
+          setTrade(res.data.info.tradeList || []);
+          setTeams(res.data.info.teamList || []);
+        }
       } catch (err) {
-        console.error("Failed to fetch trades", err);
+        console.error("Failed to fetch trades/teams", err);
       }
     };
 
-    const fetchTeams = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=teamList&company_id=${user.company_id}`,
-        );
-        if (res.data) setTeams(res.data.info);
-      } catch (err) {
-        console.error("Failed to fetch teams", err);
-      }
-    };
-    fetchTeams();
-    fetchTrades();
+    fetchTradeAndTeams();
   }, [user?.company_id]);
 
   const closeInviteDrawer = () => {
@@ -1213,10 +1209,6 @@ const TablePagination = () => {
     });
     table.setColumnVisibility(newVisibility);
   };
-
-  useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
 
   const visibleColumns = table
     .getAllLeafColumns()
@@ -2148,13 +2140,6 @@ const TablePagination = () => {
                     ))}
                   </TableRow>
                 ))
-              )}
-              {data.length ? (
-                <>
-                  <Divider />
-                </>
-              ) : (
-                <></>
               )}
             </TableBody>
           </Table>

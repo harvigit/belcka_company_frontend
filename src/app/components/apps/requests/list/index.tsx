@@ -136,6 +136,7 @@ export default function UserRequests({
     };
 
     useEffect(() => {
+        if (!open) return;
         if (startDate && endDate) fetchRequests(startDate, endDate);
     }, [startDate && endDate, open]);
 

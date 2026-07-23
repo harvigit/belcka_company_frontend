@@ -54,8 +54,17 @@ export function useServerTable<TData>({
     fetchRef.current = fetchData;
   }, [fetchData]);
 
+  // Skip the debounce effect on initial mount — the pagination effect below
+  // already performs the first fetch. Without this, mount fires twice.
+  const skipInitialDebounceFetch = useRef(true);
+
   // Handle debounced fetch when dependencies like search or filters change
   useEffect(() => {
+    if (skipInitialDebounceFetch.current) {
+      skipInitialDebounceFetch.current = false;
+      return;
+    }
+
     const handler = setTimeout(() => {
       // If we're not on page 1, reset to page 1, which will trigger the pageIndex effect below
       if (pagination.pageIndex !== 0) {
@@ -69,7 +78,7 @@ export function useServerTable<TData>({
     return () => clearTimeout(handler);
   }, [...debounceDependencies, JSON.stringify(sorting)]);
 
-  // Handle fetching when page changes
+  // Handle fetching when page / pageSize changes (including initial mount)
   useEffect(() => {
     fetchRef.current();
   }, [pagination.pageIndex, pagination.pageSize]);

@@ -48,12 +48,11 @@ export default function CompanyRegistration({ open, onClose }: Props) {
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        const [businessRes, teamRes] = await Promise.all([
-          api.get("get-company-resources?flag=industryList"),
-          api.get("get-company-resources?flag=numberOfEmployeeList"),
-        ]);
-        setBusinessFields(businessRes.data.info || []);
-        setTeamSizes(teamRes.data.info || []);
+        const res = await api.get(
+          "get-company-resources?flag=industryList,numberOfEmployeeList",
+        );
+        setBusinessFields(res.data.info?.industryList || []);
+        setTeamSizes(res.data.info?.numberOfEmployeeList || []);
       } catch (error) {
         console.error(error);
       }

@@ -24,6 +24,7 @@ import {
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
+import { fetchCompanyResources } from "@/utils/companyResources";
 import toast from "react-hot-toast";
 import {
   IconArrowLeft,
@@ -178,29 +179,24 @@ const Company = () => {
   }, [user?.company_id, user?.id]);
 
   useEffect(() => {
-    const fetchTrades = async () => {
+    if (!user?.company_id) return;
+
+    const fetchTradeAndTeams = async () => {
       try {
-        const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
+        const res = await fetchCompanyResources(
+          ["tradeList", "teamList"],
+          user.company_id,
         );
-        if (res.data) setTrade(res.data.info);
+        if (res.data?.info) {
+          setTrade(res.data.info.tradeList || []);
+          setTeams(res.data.info.teamList || []);
+        }
       } catch (err) {
-        console.error("Failed to fetch trades", err);
+        console.error("Failed to fetch trades/teams", err);
       }
     };
 
-    const fetchTeams = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=teamList&company_id=${user.company_id}`,
-        );
-        if (res.data) setTeams(res.data.info);
-      } catch (err) {
-        console.error("Failed to fetch teams", err);
-      }
-    };
-    fetchTeams();
-    fetchTrades();
+    fetchTradeAndTeams();
   }, [user?.company_id]);
 
   const uniqueTeams = useMemo(
