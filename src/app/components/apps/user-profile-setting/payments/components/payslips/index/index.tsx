@@ -1,5 +1,5 @@
 'use client';
-import React, {useEffect, useState, useMemo, useCallback} from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
     TableContainer,
     Table,
@@ -48,22 +48,22 @@ import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import Link from 'next/link';
-import {IconDotsVertical} from '@tabler/icons-react';
+import { IconDotsVertical } from '@tabler/icons-react';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
-import {IconPlus} from '@tabler/icons-react';
+import { IconPlus } from '@tabler/icons-react';
 import toast from 'react-hot-toast';
-import {useSession} from 'next-auth/react';
-import {User} from 'next-auth';
-import {IconEdit} from '@tabler/icons-react';
+import { useSession } from 'next-auth/react';
+import { User } from 'next-auth';
+import { IconEdit } from '@tabler/icons-react';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import Image from 'next/image';
-import {IconEye} from '@tabler/icons-react';
+import { IconEye } from '@tabler/icons-react';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
-import {format} from 'date-fns';
+import { format } from 'date-fns';
 import CreatePayslip from '../create';
 import EditPayslip from '../edit';
-import {DateTime} from 'luxon';
-import {PictureAsPdf} from '@mui/icons-material';
+import { DateTime } from 'luxon';
+import { PictureAsPdf } from '@mui/icons-material';
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
@@ -110,11 +110,11 @@ const saveDateRangeToStorage = (
 
 // Add this OUTSIDE PayslipsList component (above it)
 const AmountCell = ({
-                        item,
-                        startDate,
-                        endDate,
-                        fetchPayslips,
-                    }: {
+    item,
+    startDate,
+    endDate,
+    fetchPayslips,
+}: {
     item: any;
     startDate: Date | null;
     endDate: Date | null;
@@ -142,7 +142,7 @@ const AmountCell = ({
             payload.append('payslip_number', item.payslip_number ?? '');
 
             const result = await api.post('payslips/update', payload, {
-                headers: {'Content-Type': 'multipart/form-data'},
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
 
             if (result.data.IsSuccess) {
@@ -183,7 +183,7 @@ const AmountCell = ({
                         ),
                     },
                 }}
-                sx={{width: 140}}
+                sx={{ width: 140 }}
             />
         );
     }
@@ -213,25 +213,25 @@ const AmountCell = ({
     );
 };
 
-const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readOnly = false}) => {
+const PayslipsList: React.FC<Props> = ({ userId, isShow, disableDateFilter, readOnly = false }) => {
     const [data, setData] = useState<any[]>([]);
     const [fetchPayslip, setFetchPayslip] = useState<boolean>(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     const handleSelectAllRows = (checked: boolean) => {
         if (checked) {
-        const allIds = data.map((item: any) => item.id);
-        setSelectedRowIds(new Set(allIds));
+            const allIds = filteredData.map((item: any) => item.id);
+            setSelectedRowIds(new Set(allIds));
         } else {
-        setSelectedRowIds(new Set());
+            setSelectedRowIds(new Set());
         }
     };
     const session = useSession();
     const user = session.data?.user as User & { company_id?: number | null };
-  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
-    storageKey: `cv_${user?.company_id}_${user?.id}_payments_payslips`,
-    enabled: !!user?.id,
-  });
+    const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
+        storageKey: `cv_${user?.company_id}_${user?.id}_payments_payslips`,
+        enabled: !!user?.id,
+    });
 
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
     const openMenu = Boolean(anchorEl);
@@ -322,9 +322,9 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
             const startParam = activeStart ? format(activeStart, 'dd/MM/yyyy') : '';
             const endParam = activeEnd ? format(activeEnd, 'dd/MM/yyyy') : '';
             let url = `payslips/get?company_id=${user.company_id}&user_id=${userId}&start_date=${startParam}&end_date=${endParam}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
-            
+
             if (searchTerm) url += `&search=${searchTerm}`;
-            
+
             const res = await api.get(url);
             if (res.data) {
                 const responseData = res.data.info?.data || res.data.info || res.data.data || [];
@@ -334,8 +334,8 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                     res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
                         ? res.data.data
                         : res.data.info && res.data.info.totalPages !== undefined
-                        ? res.data.info
-                        : res.data.data || {};
+                            ? res.data.info
+                            : res.data.data || {};
 
                 if (pagMeta.totalItems !== undefined) {
                     setTotalRows(pagMeta.totalItems);
@@ -542,7 +542,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
     const columns = [
         {
             id: 'select',
-            header: ({table}: any) => (
+            header: ({ table }: any) => (
                 <Stack direction="row" alignItems="center">
                     <CustomCheckbox
                         className="header-checkbox"
@@ -559,7 +559,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                     />
                 </Stack>
             ),
-            cell: ({row}: any) => {
+            cell: ({ row }: any) => {
                 const item = row.original;
                 const isChecked = selectedRowIds.has(item.id);
                 const isHovered = hoveredRow === item.id;
@@ -571,7 +571,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                         alignItems="center"
                         onMouseEnter={() => setHoveredRow(item.id)}
                         onMouseLeave={() => setHoveredRow(null)}
-                        sx={{pl: 0.3}}
+                        sx={{ pl: 0.3 }}
                     >
                         <CustomCheckbox
                             checked={isChecked}
@@ -608,7 +608,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                 </Stack>
             ),
             enableSorting: false,
-            cell: ({row}) => {
+            cell: ({ row }) => {
                 const item = row.original;
 
                 const isPdf = item.pdf_extension === '.pdf';
@@ -712,19 +712,19 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                 </Stack>
             ),
             enableSorting: true,
-            cell: ({row}) => {
+            cell: ({ row }) => {
                 const user = row.original;
                 return (
                     <Stack
                         direction="row"
                         alignItems="center"
                         spacing={1}
-                        sx={{cursor: 'pointer'}}
+                        sx={{ cursor: 'pointer' }}
                     >
                         <Avatar
                             src={user.user_image ? user.user_image : ''}
                             alt={user.name}
-                            sx={{width: 36, height: 36}}
+                            sx={{ width: 36, height: 36 }}
                         />
                         <Box>
                             <Typography
@@ -745,7 +745,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
         columnHelper.accessor((row) => row?.amount, {
             id: 'amount',
             header: () => 'Amount',
-            cell: ({row}) => (
+            cell: ({ row }) => (
                 <AmountCell
                     item={row.original}
                     startDate={startDate}
@@ -758,7 +758,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
         columnHelper.accessor((row) => row?.date, {
             id: 'uploadedDate',
             header: () => 'Uploaded Date',
-            cell: ({row}) => {
+            cell: ({ row }) => {
                 const item = row.original;
                 return (
                     <Stack
@@ -778,7 +778,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
         columnHelper.accessor((row) => row?.from_date, {
             id: 'period',
             header: () => 'Period',
-            cell: ({row}) => {
+            cell: ({ row }) => {
                 const item = row.original;
                 return (
                     <Typography textTransform="capitalize" className="f-14">
@@ -792,13 +792,13 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
         columnHelper.display({
             id: 'actions',
             header: 'Actions',
-            cell: ({row}) => {
+            cell: ({ row }) => {
                 const item = row.original;
                 return (
                     <Stack direction="row" spacing={1}>
                         {!readOnly && <Tooltip title="Edit">
                             <IconButton onClick={() => handleEdit(item)} color="primary">
-                                <IconEdit size={18}/>
+                                <IconEdit size={18} />
                             </IconButton>
                         </Tooltip>}
                     </Stack>
@@ -816,8 +816,8 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
         columns,
         fetchData: () => fetchPayslips(startDate, endDate),
         debounceDependencies: [searchTerm],
-    state: { columnVisibility },
-    onColumnVisibilityChange,
+        state: { columnVisibility },
+        onColumnVisibilityChange,
     });
 
     // Reset to first page when search term changes
@@ -842,14 +842,14 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
             <Stack
                 mx={2}
                 mb={2}
-                direction={{xs: 'column', md: 'row'}}
-                alignItems={{xs: 'stretch', md: 'center'}}
+                direction={{ xs: 'column', md: 'row' }}
+                alignItems={{ xs: 'stretch', md: 'center' }}
             >
                 <Stack
-                    direction={{xs: 'column', sm: 'row'}}
+                    direction={{ xs: 'column', sm: 'row' }}
                     spacing={1.5}
-                    alignItems={{xs: 'stretch', sm: 'center'}}
-                    sx={{flex: 1, minWidth: 0}}
+                    alignItems={{ xs: 'stretch', sm: 'center' }}
+                    sx={{ flex: 1, minWidth: 0 }}
                 >
                     <Box className={isShow ? '' : 'date_range_picker'}>
                         <DateRangePickerBox
@@ -871,7 +871,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                             input: {
                                 endAdornment: (
                                     <InputAdornment position="end">
-                                        <IconSearch size={'16'}/>
+                                        <IconSearch size={'16'} />
                                     </InputAdornment>
                                 ),
                             },
@@ -880,7 +880,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                     <Button
                         variant="contained"
                         onClick={handleZip}
-                        sx={{mt: {xs: 1, sm: 0}}}
+                        sx={{ mt: { xs: 1, sm: 0 } }}
                     >
                         {' '}
                         Zip
@@ -888,16 +888,16 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                 </Stack>
                 <Stack
                     direction="row"
-                    justifyContent={{xs: 'flex-start', md: 'flex-end'}}
+                    justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
                     alignItems="center"
-                    sx={{flexShrink: 0}}
+                    sx={{ flexShrink: 0 }}
                 >
                     {!readOnly && selectedRowIds.size > 0 && (
                         <Button
                             variant="outlined"
                             color="error"
-                            startIcon={<IconTrash width={18}/>}
-                            sx={{marginRight: '5px'}}
+                            startIcon={<IconTrash width={18} />}
+                            sx={{ marginRight: '5px' }}
                             onClick={() => {
                                 const selectedIds = Array.from(selectedRowIds);
                                 setUsersToDelete(selectedIds);
@@ -909,18 +909,18 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                     )}
                     <IconButton
                         onClick={handlePopoverOpen}
-                        sx={{ml: 1}}
+                        sx={{ ml: 1 }}
                         color="primary"
                     >
-                        <IconEye/>
+                        <IconEye />
                     </IconButton>
                     <Popover
                         open={Boolean(anchorEl2)}
                         anchorEl={anchorEl2}
                         onClose={handlePopoverClose}
-                        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-                        transformOrigin={{vertical: 'top', horizontal: 'right'}}
-                        PaperProps={{sx: {width: 220, p: 1, borderRadius: 2}}}
+                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                        PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
                     >
                         <TextField
                             size="small"
@@ -928,7 +928,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                             fullWidth
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            sx={{mb: 1}}
+                            sx={{ mb: 1 }}
                         />
                         <FormGroup>
                             {table
@@ -944,16 +944,16 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                                         key={col.id}
                                         control={
                                             <CustomCheckbox
-                          checked={col.getIsVisible()}
+                                                checked={col.getIsVisible()}
                                                 onChange={col.getToggleVisibilityHandler()}
                                                 disabled={col.id === 'conflicts'}
                                             />
                                         }
-                                        sx={{textTransform: 'none'}}
+                                        sx={{ textTransform: 'none' }}
                                         label={
                                             col.columnDef.meta?.label ||
                                             (typeof col.columnDef.header === 'string' &&
-                                            col.columnDef.header.trim() !== ''
+                                                col.columnDef.header.trim() !== ''
                                                 ? col.columnDef.header
                                                 : col.id
                                                     .replace(/([A-Z])/g, ' $1')
@@ -964,16 +964,16 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                                 ))}
                         </FormGroup>
                     </Popover>
-                    
-                    {!readOnly &&<IconButton
-                        sx={{margin: '0px'}}
+
+                    {!readOnly && <IconButton
+                        sx={{ margin: '0px' }}
                         id="basic-button"
                         aria-controls={openMenu ? 'basic-menu' : undefined}
                         aria-haspopup="true"
                         aria-expanded={openMenu ? 'true' : undefined}
                         onClick={handleClick}
                     >
-                        <IconDotsVertical width={18}/>
+                        <IconDotsVertical width={18} />
                     </IconButton>}
                     <Menu
                         id="basic-menu"
@@ -1004,7 +1004,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                                 }}
                             >
                                 <ListItemIcon>
-                                    <IconPlus width={18}/>
+                                    <IconPlus width={18} />
                                 </ListItemIcon>
                                 Add Payslip
                             </Link>
@@ -1055,7 +1055,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                     </Dialog>
                 </Stack>
             </Stack>
-            <Divider/>
+            <Divider />
 
             <Dialog
                 open={openPreview}
@@ -1083,7 +1083,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                         },
                     }}
                 >
-                    <IconX/>
+                    <IconX />
                 </IconButton>
 
                 <Box
@@ -1159,8 +1159,8 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                                                     paddingBottom: '10px',
                                                     width:
                                                         header.column.id === 'actions' ||
-                                                        header.column.id === 'price' ||
-                                                        header.column.id === 'barcode'
+                                                            header.column.id === 'price' ||
+                                                            header.column.id === 'barcode'
                                                             ? 80
                                                             : header.column.id === 'QrCode'
                                                                 ? 120
@@ -1180,8 +1180,8 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                                                         borderRadius: '6px',
                                                         display: 'flex',
                                                         justifyContent: 'flex-start',
-                                                        '&:hover': {color: '#888'},
-                                                        '&:hover .hoverIcon': {opacity: 1},
+                                                        '&:hover': { color: '#888' },
+                                                        '&:hover .hoverIcon': { opacity: 1 },
                                                     }}
                                                 >
                                                     <Typography variant="subtitle2">
@@ -1247,7 +1247,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                                 </TableRow>
                             ) : (
                                 table.getRowModel().rows.map((row) => (
-                                    <TableRow key={row.id} hover sx={{cursor: 'pointer'}}>
+                                    <TableRow key={row.id} hover sx={{ cursor: 'pointer' }}>
                                         {row.getVisibleCells().map((cell) => (
                                             <TableCell key={cell.id}>
                                                 {flexRender(
@@ -1262,12 +1262,12 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                         </TableBody>
                     </Table>
                 </TableContainer>
-                {data.length ? <Divider/> : <></>}
+                {data.length ? <Divider /> : <></>}
             </Box>
-            <Divider/>
+            <Divider />
             <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined}
                 table={table}
-                totalRows={table.getPrePaginationRowModel().rows.length}
+                totalRows={totalRows}
             />
         </Box>
     );

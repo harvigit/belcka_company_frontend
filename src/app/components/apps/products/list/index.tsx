@@ -1316,6 +1316,20 @@ const ProductList = () => {
             <Typography
               textTransform="capitalize"
               className="f-14"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+              }}
               onClick={() => {
                 if (!code) {
                   toast.error("No code to copy!");

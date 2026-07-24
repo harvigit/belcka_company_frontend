@@ -24,6 +24,7 @@ import {
   IconDoorExit,
   IconHome2,
   IconMapPin,
+  IconUserPin,
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
@@ -119,6 +120,13 @@ const MenuItems: NavGroup[] = [
     slug: "tasks",
     icon: IconFiles,
     href: "/apps/tasks/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Check ins",
+    slug: "check-ins",
+    icon: IconUserPin,
+    href: "/apps/checkins/list",
   },
   {
     id: uniqueId(),

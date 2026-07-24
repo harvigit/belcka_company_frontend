@@ -289,12 +289,7 @@ export default function UserRequests({
       }}
     >
       {/* Header */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        py={1}
-      >
+      <Box display="flex" justifyContent="space-between" alignItems="center">
         <Stack direction="row" alignItems="center" spacing={1}>
           <IconButton onClick={onClose}>
             <IconArrowLeft />
@@ -438,32 +433,36 @@ export default function UserRequests({
                         <Typography variant="h1" fontSize={"16px !important"}>
                           {work.user_name}:
                         </Typography>
-                        <Typography variant="subtitle1">
-                          {work.message}
-                        </Typography>
+                        <Typography variant="h5">{work.message}</Typography>
                         {work.request_note && (
-                          <Tooltip title={work.request_note ?? ""}>
+                          <Box display={"flex"} alignItems={"center"} gap={0.3}>
                             <Typography
                               variant="subtitle1"
                               color="textSecondary"
-                              sx={{
-                                display: "-webkit-box",
-                                WebkitBoxOrient: "vertical",
-                                WebkitLineClamp: 1,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                wordBreak: "break-word",
-                                minWidth: "200px",
-                                width: "95%",
-                                maxWidth: "200px",
-                                borderRadius: 1,
-                                border: "1px solid transparent",
-                                transition: "all 0.2s ease",
-                              }}
                             >
-                              Note: {work.request_note}
+                              Note:
                             </Typography>
-                          </Tooltip>
+                            <Tooltip title={work.request_note ?? ""}>
+                              <Typography
+                                variant="subtitle1"
+                                color="textSecondary"
+                                sx={{
+                                  display: "-webkit-box",
+                                  WebkitBoxOrient: "vertical",
+                                  WebkitLineClamp: 1,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  wordBreak: "break-word",
+                                  maxWidth: "500px",
+                                  borderRadius: 1,
+                                  border: "1px solid transparent",
+                                  transition: "all 0.2s ease",
+                                }}
+                              >
+                                {work.request_note}
+                              </Typography>
+                            </Tooltip>
+                          </Box>
                         )}
                       </Box>
                       <Box justifyContent={"flex-end"}>

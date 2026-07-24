@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Avatar, Badge,
     Box,
@@ -54,9 +54,9 @@ import {
     startOfWeek,
     subMonths,
 } from 'date-fns';
-import {useRouter} from 'next/navigation';
-import {useSession} from 'next-auth/react';
-import {User} from 'next-auth';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { User } from 'next-auth';
 import {
     createColumnHelper,
     flexRender,
@@ -90,7 +90,7 @@ type LeaveOverviewRow = {
     user_thumb_image?: string | null;
     is_working: boolean;
     is_on_break: boolean;
-    current_break?: {break_start_time: string; break_end_time: string} | null;
+    current_break?: { break_start_time: string; break_end_time: string } | null;
     user_status_color: string;
     paid?: number;
     unpaid?: number;
@@ -111,9 +111,9 @@ const LEAVE_STATUS_COLOR: Record<string, string> = {
 };
 
 const SUMMARY_COLUMNS = [
-    {key: 'paid', label: 'Paid', leaveType: 'paid'},
-    {key: 'unpaid', label: 'Unpaid', leaveType: 'unpaid'},
-    {key: 'holiday', label: 'Holiday', aliases: ['holiday', 'public holiday']},
+    { key: 'paid', label: 'Paid', leaveType: 'paid' },
+    { key: 'unpaid', label: 'Unpaid', leaveType: 'unpaid' },
+    { key: 'holiday', label: 'Holiday', aliases: ['holiday', 'public holiday'] },
 ] as const;
 
 const parseLeaveDate = (value?: string | null) => {
@@ -277,13 +277,13 @@ const getLeaveUnitCount = (leave: any) => {
     return 1;
 };
 
-function LeaveSettingsDrawer({open, onClose}: { open: boolean; onClose: () => void }) {
+function LeaveSettingsDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
     const [activeMenuItem, setActiveMenuItem] = useState<'General' | 'Leaves' | 'Holidays'>('General');
 
     const menuItems = [
-        {icon: <IconSettings size={18}/>, label: 'General'},
-        {icon: <IconDoorExit size={18}/>, label: 'Leaves'},
-        {icon: <IconCalendarOff size={18}/>, label: 'Holidays'},
+        { icon: <IconSettings size={18} />, label: 'General' },
+        { icon: <IconDoorExit size={18} />, label: 'Leaves' },
+        { icon: <IconCalendarOff size={18} />, label: 'Holidays' },
     ] as const;
 
     return (
@@ -316,15 +316,15 @@ function LeaveSettingsDrawer({open, onClose}: { open: boolean; onClose: () => vo
                     bgcolor: '#fff',
                 }}
             >
-                <IconSettings size={24}/>
+                <IconSettings size={24} />
                 <Typography>Leave Settings</Typography>
-                <IconButton onClick={onClose} size="small" sx={{position: 'absolute', right: 16}}>
-                    <IconX size={18}/>
+                <IconButton onClick={onClose} size="small" sx={{ position: 'absolute', right: 16 }}>
+                    <IconX size={18} />
                 </IconButton>
             </Box>
 
-            <Box display="flex" flex="1" sx={{overflow: 'hidden'}}>
-                <Box sx={{width: 240, borderRight: '1px solid #e0e0e0', p: 1, overflowY: 'auto', bgcolor: '#fff'}}>
+            <Box display="flex" flex="1" sx={{ overflow: 'hidden' }}>
+                <Box sx={{ width: 240, borderRight: '1px solid #e0e0e0', p: 1, overflowY: 'auto', bgcolor: '#fff' }}>
                     {menuItems.map((item) => (
                         <Box
                             key={item.label}
@@ -336,7 +336,7 @@ function LeaveSettingsDrawer({open, onClose}: { open: boolean; onClose: () => vo
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,
-                                '&:hover': {bgcolor: '#f6f7f7'},
+                                '&:hover': { bgcolor: '#f6f7f7' },
                                 fontSize: 14,
                                 color: activeMenuItem === item.label ? '#203040' : '#7D92A9',
                             }}
@@ -348,10 +348,10 @@ function LeaveSettingsDrawer({open, onClose}: { open: boolean; onClose: () => vo
                     ))}
                 </Box>
 
-                <Box sx={{flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
-                    {activeMenuItem === 'Leaves' && <LeaveList/>}
-                    {activeMenuItem === 'Holidays' && <HolidayList/>}
-                    {activeMenuItem === 'General' && <GeneralSetting/>}
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    {activeMenuItem === 'Leaves' && <LeaveList />}
+                    {activeMenuItem === 'Holidays' && <HolidayList />}
+                    {activeMenuItem === 'General' && <GeneralSetting />}
                 </Box>
             </Box>
         </Drawer>
@@ -359,10 +359,10 @@ function LeaveSettingsDrawer({open, onClose}: { open: boolean; onClose: () => vo
 }
 
 function LeaveActivityDrawer({
-                                 open, 
-                                 onClose, 
-                                 startDate, 
-                                 endDate
+    open,
+    onClose,
+    startDate,
+    endDate
 }: {
     open: boolean;
     onClose: () => void;
@@ -400,28 +400,28 @@ function LeaveActivityDrawer({
             anchor="right"
             open={open}
             onClose={onClose}
-            PaperProps={{sx: {width: {xs: '100%', sm: 460}, p: 2}}}
+            PaperProps={{ sx: { width: { xs: '100%', sm: 460 }, p: 2 } }}
         >
             <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
                 <Box>
                     <Typography variant="h6" fontWeight={800}>Activity</Typography>
                 </Box>
-                <IconButton onClick={onClose}><IconX/></IconButton>
+                <IconButton onClick={onClose}><IconX /></IconButton>
             </Stack>
 
             {loading ? (
-                <Box display="flex" justifyContent="center" py={5}><CircularProgress size={28}/></Box>
+                <Box display="flex" justifyContent="center" py={5}><CircularProgress size={28} /></Box>
             ) : history.length ? (
-                <Stack spacing={1.25} sx={{pb: 2}}>
+                <Stack spacing={1.25} sx={{ pb: 2 }}>
                     {history.map((item, index) => (
-                        <Box key={`${item.id || index}`} sx={{border: '1px solid #e5e7eb', borderRadius: 2, p: 1.5}}>
+                        <Box key={`${item.id || index}`} sx={{ border: '1px solid #e5e7eb', borderRadius: 2, p: 1.5 }}>
                             <Stack direction="row" alignItems="center" spacing={1.25} mb={1}>
                                 <Avatar
                                     src={item.requested_user_thumb_image || item.requested_user_image || '/images/users/user.png'}
                                     alt={item.requested_user_name || 'User'}
-                                    sx={{width: 34, height: 34}}
+                                    sx={{ width: 34, height: 34 }}
                                 />
-                                <Box sx={{minWidth: 0, flex: 1}}>
+                                <Box sx={{ minWidth: 0, flex: 1 }}>
                                     <Typography
                                         fontWeight={800}
                                         noWrap
@@ -443,7 +443,7 @@ function LeaveActivityDrawer({
                                                 ? 'primary'
                                                 : 'default'}
                                     variant="outlined"
-                                    sx={{textTransform: 'capitalize', fontWeight: 700}}
+                                    sx={{ textTransform: 'capitalize', fontWeight: 700 }}
                                 />
                             </Stack>
                             <Typography fontSize={13}>{item.message || 'Leave activity'}</Typography>
@@ -470,7 +470,7 @@ function LeaveActivityDrawer({
                     ))}
                 </Stack>
             ) : (
-                <Box sx={{border: '1px dashed #cbd5e1', borderRadius: 2, p: 3, textAlign: 'center'}}>
+                <Box sx={{ border: '1px dashed #cbd5e1', borderRadius: 2, p: 3, textAlign: 'center' }}>
                     <Typography color="text.secondary">No leave or holiday activity found.</Typography>
                 </Box>
             )}
@@ -479,17 +479,17 @@ function LeaveActivityDrawer({
 }
 
 function LeaveDetailsDrawer({
-                                open,
-                                onClose,
-                                title,
-                                leaves,
-                                onOpenUser,
-                            }: {
+    open,
+    onClose,
+    title,
+    leaves,
+    onOpenUser,
+}: {
     open: boolean;
     onClose: () => void;
     title: string;
     leaves: any[];
-                            onOpenUser: (leave: any) => void;
+    onOpenUser: (leave: any) => void;
 }) {
     const sortedLeaves = [...leaves].sort((first, second) => {
         const firstDate = parseLeaveDate(first.start_date ?? first.date ?? first.date_formatted);
@@ -503,10 +503,10 @@ function LeaveDetailsDrawer({
             anchor="right"
             open={open}
             onClose={onClose}
-            PaperProps={{sx: {width: {xs: '100%', sm: 520}, p: 2}}}
+            PaperProps={{ sx: { width: { xs: '100%', sm: 520 }, p: 2 } }}
         >
             <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
-                <Box sx={{minWidth: 0}}>
+                <Box sx={{ minWidth: 0 }}>
                     <Typography variant="h6" fontWeight={800} noWrap>{title}</Typography>
                     <Typography
                         variant="caption"
@@ -515,7 +515,7 @@ function LeaveDetailsDrawer({
                         {leaves.length} record{leaves.length === 1 ? '' : 's'}
                     </Typography>
                 </Box>
-                <IconButton onClick={onClose}><IconX/></IconButton>
+                <IconButton onClick={onClose}><IconX /></IconButton>
             </Stack>
 
             {sortedLeaves.length ? (
@@ -529,12 +529,12 @@ function LeaveDetailsDrawer({
                                 borderRadius: 2,
                                 p: 1.5,
                                 cursor: leave.is_holiday || leave.is_absence ? 'default' : 'pointer',
-                                '&:hover': leave.is_holiday || leave.is_absence ? {} : {bgcolor: '#f8fafc'},
+                                '&:hover': leave.is_holiday || leave.is_absence ? {} : { bgcolor: '#f8fafc' },
                             }}
                         >
                             <Stack direction="row" alignItems="center" spacing={1}>
                                 {leave.is_holiday ? (
-                                    <Box sx={{minWidth: 0, flex: 1}}>
+                                    <Box sx={{ minWidth: 0, flex: 1 }}>
                                         <Typography fontWeight={800} noWrap>{leave.title || 'Holiday'}</Typography>
                                         <Typography variant="caption" color="text.secondary" noWrap display="block">
                                             Added by: {leave.added_by_name || '-'}
@@ -544,8 +544,8 @@ function LeaveDetailsDrawer({
                                     <>
                                         <Avatar
                                             src={leave.user_thumb_image || leave.user_image || '/images/users/user.png'}
-                                            alt={leave.user_name || 'User'} sx={{width: 36, height: 36}}/>
-                                        <Box sx={{minWidth: 0, flex: 1}}>
+                                            alt={leave.user_name || 'User'} sx={{ width: 36, height: 36 }} />
+                                        <Box sx={{ minWidth: 0, flex: 1 }}>
                                             <Typography fontWeight={800} noWrap>{leave.user_name || 'User'}</Typography>
                                             <Typography variant="caption" color="text.secondary" noWrap display="block">
                                                 {leave.is_absence ? leave.shift_name || 'Scheduled shift' : leave.leave_name || 'Leave'}
@@ -554,9 +554,9 @@ function LeaveDetailsDrawer({
                                     </>
                                 )}
                                 {leave.is_holiday ? (
-                                    <Chip size="small" label="Holiday" color="primary" variant="outlined"/>
+                                    <Chip size="small" label="Holiday" color="primary" variant="outlined" />
                                 ) : leave.is_absence ? (
-                                    <Chip size="small" label="Absent" color="error" variant="outlined"/>
+                                    <Chip size="small" label="Absent" color="error" variant="outlined" />
                                 ) : leave.status_text && (
                                     <Chip
                                         size="small"
@@ -592,7 +592,7 @@ function LeaveDetailsDrawer({
                                 </Typography>
                             )}
                             {!leave.is_absence && !leave.is_holiday && (
-                                <Box sx={{mt: 1, pt: 1, borderTop: '1px solid #eef2f7'}}>
+                                <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid #eef2f7' }}>
                                     <Typography color="text.secondary" fontSize={12}>
                                         Requested: {leave.requested_at || '-'}
                                         {leave.requested_by_name ? ` by ${leave.requested_by_name}` : ''}
@@ -619,7 +619,7 @@ function LeaveDetailsDrawer({
                     ))}
                 </Stack>
             ) : (
-                <Box sx={{border: '1px dashed #cbd5e1', borderRadius: 2, p: 3, textAlign: 'center'}}>
+                <Box sx={{ border: '1px dashed #cbd5e1', borderRadius: 2, p: 3, textAlign: 'center' }}>
                     <Typography color="text.secondary">No leave records found.</Typography>
                 </Box>
             )}
@@ -844,7 +844,7 @@ const Leaves = () => {
                     end_time: absence.shift_end_time,
                 }));
         const title = column ? `${row.user_name || 'User'} - ${column.label}` : `${row.user_name || 'User'} - Absence`;
-        setDetailDrawer({title, leaves});
+        setDetailDrawer({ title, leaves });
     };
 
     const columns = [
@@ -856,19 +856,19 @@ const Leaves = () => {
                     <CustomCheckbox
                         className="header-checkbox"
                         checked={
-                            selectedRowIds.size === filteredSummaryRows.length &&
-                            filteredSummaryRows.length > 0
+                            selectedRowIds.size > 0 &&
+                            selectedRowIds.size >= table.getRowModel().rows.length
                         }
                         indeterminate={
                             selectedRowIds.size > 0 &&
-                            selectedRowIds.size < filteredSummaryRows.length
+                            selectedRowIds.size < table.getRowModel().rows.length
                         }
                         onClick={(event) => event.stopPropagation()}
                         onChange={(event) => {
                             event.stopPropagation();
                             setSelectedRowIds(
                                 event.target.checked
-                                    ? new Set(filteredSummaryRows.map((row) => row.user_id))
+                                    ? new Set(table.getRowModel().rows.map((row) => row.original.user_id))
                                     : new Set(),
                             );
                         }}
@@ -903,12 +903,12 @@ const Leaves = () => {
             },
             enableSorting: false,
             enableHiding: false,
-            meta: {label: 'Select'},
+            meta: { label: 'Select' },
         }),
         columnHelper.accessor('user_name', {
             id: 'user_name',
             header: 'Name',
-            meta: {label: 'Name'},
+            meta: { label: 'Name' },
             cell: (info: any) => {
                 const row = info.row.original;
 
@@ -918,7 +918,7 @@ const Leaves = () => {
                             direction="row"
                             alignItems="center"
                             spacing={4}
-                            sx={{cursor: 'pointer'}}
+                            sx={{ cursor: 'pointer' }}
                         >
                             <Link
                                 href={{
@@ -929,7 +929,7 @@ const Leaves = () => {
                             >
                                 <Badge
                                     overlap="circular"
-                                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                                     variant="dot"
                                     sx={{
                                         '& .MuiBadge-badge': {
@@ -954,7 +954,7 @@ const Leaves = () => {
                                                 : '/images/users/user.png'
                                         }
                                         alt={row?.user_name}
-                                        sx={{width: 36, height: 36, cursor: 'pointer'}}
+                                        sx={{ width: 36, height: 36, cursor: 'pointer' }}
                                     />
                                 </Badge>
                             </Link>
@@ -964,14 +964,14 @@ const Leaves = () => {
                                     color="textPrimary"
                                     sx={{
                                         cursor: 'pointer',
-                                        '&:hover': {color: '#173f98'},
+                                        '&:hover': { color: '#173f98' },
                                         width: 150,
                                     }}
                                 >
                                     {row.user_name}
                                 </Typography>
                                 <Tooltip title={row.trade_name ?? '-'} placement="top" arrow>
-                                    <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} color="textSecondary" variant="subtitle1" width={150} >
+                                    <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word", }} color="textSecondary" variant="subtitle1" width={150} >
                                         {row.trade_name}
                                     </Typography>
                                 </Tooltip>
@@ -988,7 +988,7 @@ const Leaves = () => {
                     id: summaryColumn.key,
                     size: 160,
                     header: summaryColumn.label,
-                    meta: {label: summaryColumn.label},
+                    meta: { label: summaryColumn.label },
                     cell: (info) => {
                         const count = Number(info.getValue() ?? 0);
                         return (
@@ -1014,7 +1014,7 @@ const Leaves = () => {
             id: 'total_absence_days',
             size: 160,
             header: 'Absence',
-            meta: {label: 'Absence'},
+            meta: { label: 'Absence' },
             cell: (info) => {
                 const count = Number(info.getValue() ?? 0);
                 return (
@@ -1039,9 +1039,9 @@ const Leaves = () => {
     const table = useReactTable({
         data: filteredSummaryRows,
         columns,
-        state: {columnVisibility},
+        state: { columnVisibility },
         onColumnVisibilityChange: setColumnVisibility,
-        initialState: {pagination: {pageIndex: 0, pageSize: 50}},
+        initialState: { pagination: { pageIndex: 0, pageSize: 50 } },
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -1060,7 +1060,7 @@ const Leaves = () => {
         name: column.id ?? 'Unnamed Column',
         width: 'auto',
     }));
-    
+
     return (
         <Box sx={{
             // Keep scrolling inside the table, matching the Time Clock screen.
@@ -1071,20 +1071,20 @@ const Leaves = () => {
             bgcolor: '#fff',
             overflow: 'hidden',
         }}>
-            <Box sx={{px: 2, py: 1.5}}>
-                <Stack direction={{xs: 'column', lg: 'row'}} spacing={1.5} justifyContent="space-between">
-                    <Stack direction={{xs: 'column', md: 'row'}} spacing={1} sx={{flex: 1}}>
-                        <DateRangePickerBox from={startDate} to={endDate} onChange={handleDateRangeChange}/>
+            <Box sx={{ px: 2, py: 1.5 }}>
+                <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5} justifyContent="space-between">
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ flex: 1 }}>
+                        <DateRangePickerBox from={startDate} to={endDate} onChange={handleDateRangeChange} />
                         <TextField
                             size="small"
                             placeholder="Search..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            sx={{width: {xs: '100%', md: 260}}}
+                            sx={{ width: { xs: '100%', md: 260 } }}
                             InputProps={{
                                 endAdornment: (
                                     <InputAdornment position="end">
-                                        <IconSearch size={16}/>
+                                        <IconSearch size={16} />
                                     </InputAdornment>
                                 ),
                             }}
@@ -1094,7 +1094,7 @@ const Leaves = () => {
                             variant="outlined"
                             size="small"
                             onClick={() => setActivityOpen(true)}
-                            sx={{whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 700}}
+                            sx={{ whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 700 }}
                         >
                             Activity
                         </Button>
@@ -1105,40 +1105,40 @@ const Leaves = () => {
                             size="small"
                             variant="outlined"
                             color="primary"
-                            startIcon={<IconPlus size={17}/>}
+                            startIcon={<IconPlus size={17} />}
                             onClick={() => setAddLeaveOpen(true)}
-                            sx={{textTransform: 'none', fontWeight: 700, whiteSpace: 'nowrap'}}
+                            sx={{ textTransform: 'none', fontWeight: 700, whiteSpace: 'nowrap' }}
                         >
                             Add
                         </Button>
                         <Tooltip title="General calendar">
                             <IconButton color="primary" onClick={() => setCalendarOpen(true)}>
-                                <IconCalendar size={22}/>
+                                <IconCalendar size={22} />
                             </IconButton>
                         </Tooltip>
                         <Tooltip title="Column visibility">
                             <IconButton color="primary" onClick={(event) => setColumnPopover(event.currentTarget)}>
-                                <IconEye size={20}/>
+                                <IconEye size={20} />
                             </IconButton>
                         </Tooltip>
                         <Tooltip title="Settings">
                             <IconButton color="primary" onClick={() => setSettingsOpen(true)}>
-                                <IconSettings size={20}/>
+                                <IconSettings size={20} />
                             </IconButton>
                         </Tooltip>
                     </Stack>
                 </Stack>
             </Box>
 
-            <Divider/>
+            <Divider />
 
             <Popover
                 open={Boolean(columnPopover)}
                 anchorEl={columnPopover}
                 onClose={() => setColumnPopover(null)}
-                anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-                transformOrigin={{vertical: 'top', horizontal: 'right'}}
-                PaperProps={{sx: {width: 240, p: 1.25, borderRadius: 2}}}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                PaperProps={{ sx: { width: 240, p: 1.25, borderRadius: 2 } }}
             >
                 <Typography fontWeight={800} fontSize={13} mb={1}>Show columns</Typography>
                 <FormGroup>
@@ -1157,7 +1157,7 @@ const Leaves = () => {
                     ))}
                 </FormGroup>
             </Popover>
-            
+
             <TableContainer
                 sx={{
                     flex: 1,
@@ -1205,8 +1205,8 @@ const Leaves = () => {
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    '&:hover': {color: '#888'},
-                                                    '&:hover .hoverIcon': {opacity: 1},
+                                                    '&:hover': { color: '#888' },
+                                                    '&:hover .hoverIcon': { opacity: 1 },
                                                 }}
                                             >
                                                 <Typography variant="body2">
@@ -1272,12 +1272,12 @@ const Leaves = () => {
                                     onMouseEnter={() => setHoveredRow(row.original.user_id)}
                                     onMouseLeave={() => setHoveredRow(null)}
                                     onClick={() => openUserLeaveDetails(row.original.user_id)}
-                                    sx={{cursor: 'pointer', transition: 'background-color 0.2s ease'}}
+                                    sx={{ cursor: 'pointer', transition: 'background-color 0.2s ease' }}
                                 >
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell
                                             key={cell.id}
-                                            sx={{padding: '10px'}}
+                                            sx={{ padding: '10px' }}
                                             align="left"
                                         >
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -1289,9 +1289,9 @@ const Leaves = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
-            {filteredSummaryRows.length ? <Divider/> : <></>}
-            
-            <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={filteredSummaryRows.length}/>
+            {filteredSummaryRows.length ? <Divider /> : <></>}
+
+            <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={filteredSummaryRows.length} />
 
             <Drawer
                 anchor="bottom"
@@ -1311,13 +1311,13 @@ const Leaves = () => {
                         height: '100%',
                         p: 2,
                         display: 'grid',
-                        gridTemplateColumns: {xs: '1fr', md: 'minmax(0, 1fr) 360px'},
-                        gridTemplateRows: {xs: 'auto minmax(0, 1fr) 220px', md: 'auto minmax(0, 1fr)'},
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 360px' },
+                        gridTemplateRows: { xs: 'auto minmax(0, 1fr) 220px', md: 'auto minmax(0, 1fr)' },
                         gap: 1.5,
                     }}
                 >
-                    <Stack direction={{xs: 'column', sm: 'row'}} alignItems={{xs: 'flex-start', sm: 'center'}}
-                           justifyContent="space-between" sx={{gridColumn: '1 / -1'}} spacing={1}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }}
+                        justifyContent="space-between" sx={{ gridColumn: '1 / -1' }} spacing={1}>
                         <Stack direction="row" spacing={2} alignItems="center">
                             <Stack direction="row" spacing={0.75} alignItems="center">
                                 <Box sx={{
@@ -1325,7 +1325,7 @@ const Leaves = () => {
                                     height: 9,
                                     borderRadius: '50%',
                                     backgroundColor: LEAVE_TYPE_COLOR.paid
-                                }}/>
+                                }} />
                                 <Typography variant="caption" color="text.secondary">Paid</Typography>
                             </Stack>
                             <Stack direction="row" spacing={0.75} alignItems="center">
@@ -1334,7 +1334,7 @@ const Leaves = () => {
                                     height: 9,
                                     borderRadius: '50%',
                                     backgroundColor: LEAVE_TYPE_COLOR.unpaid
-                                }}/>
+                                }} />
                                 <Typography variant="caption" color="text.secondary">Unpaid</Typography>
                             </Stack>
                             <Stack direction="row" spacing={0.75} alignItems="center">
@@ -1343,7 +1343,7 @@ const Leaves = () => {
                                     height: 9,
                                     borderRadius: '50%',
                                     backgroundColor: LEAVE_STATUS_COLOR.pending
-                                }}/>
+                                }} />
                                 <Typography variant="caption" color="text.secondary">Pending</Typography>
                             </Stack>
                         </Stack>
@@ -1353,22 +1353,22 @@ const Leaves = () => {
                                 size="small"
                                 onClick={() => setCalendarMonth(startOfMonth(subMonths(calendarMonth, 1)))}
                             >
-                                <IconChevronLeft size={18}/>
+                                <IconChevronLeft size={18} />
                             </IconButton>
-                            
-                            <Typography fontWeight={800} sx={{minWidth: 170, textAlign: 'center'}}>
+
+                            <Typography fontWeight={800} sx={{ minWidth: 170, textAlign: 'center' }}>
                                 {format(calendarMonth, 'MMMM yyyy')}
                             </Typography>
-                            
+
                             <IconButton
                                 size="small"
                                 onClick={() => setCalendarMonth(startOfMonth(addMonths(calendarMonth, 1)))}
                             >
-                                <IconChevronRight size={18}/>
+                                <IconChevronRight size={18} />
                             </IconButton>
                             <Tooltip title="Close calendar">
-                                <IconButton size="small" onClick={() => setCalendarOpen(false)} sx={{ml: 1}}>
-                                    <IconX size={19}/>
+                                <IconButton size="small" onClick={() => setCalendarOpen(false)} sx={{ ml: 1 }}>
+                                    <IconX size={19} />
                                 </IconButton>
                             </Tooltip>
                         </Stack>
@@ -1416,7 +1416,7 @@ const Leaves = () => {
                                     sx={{
                                         minWidth: 0,
                                         minHeight: 0,
-                                        p: {xs: 0.6, md: 0.8},
+                                        p: { xs: 0.6, md: 0.8 },
                                         borderRight: '1px solid #edf2f7',
                                         borderBottom: '1px solid #edf2f7',
                                         cursor: 'pointer',
@@ -1424,18 +1424,18 @@ const Leaves = () => {
                                         opacity: isSameMonth(day, calendarMonth) ? 1 : 0.42,
                                         boxShadow: selected ? 'inset 0 0 0 2px #0b63ce' : 'none',
                                         overflow: 'hidden',
-                                        '&:hover': {backgroundColor: selected ? '#e8f1ff' : '#f8fafc'},
+                                        '&:hover': { backgroundColor: selected ? '#e8f1ff' : '#f8fafc' },
                                     }}
                                 >
-                                    <Stack 
-                                        direction="row" 
-                                        alignItems="center" 
+                                    <Stack
+                                        direction="row"
+                                        alignItems="center"
                                         justifyContent="space-between"
                                         spacing={0.5} mb={0.5}
                                     >
-                                        <Typography 
+                                        <Typography
                                             sx={{
-                                                fontSize: {xs: 13, md: 15},
+                                                fontSize: { xs: 13, md: 15 },
                                                 fontWeight: selected ? 900 : 700,
                                                 color: day.getDay() === 0 || day.getDay() === 6 ? '#ff4d4f' : '#0f172a'
                                             }}
@@ -1450,7 +1450,7 @@ const Leaves = () => {
                                         )}
                                     </Stack>
 
-                                    <Stack spacing={0.45} sx={{minWidth: 0}}>
+                                    <Stack spacing={0.45} sx={{ minWidth: 0 }}>
                                         {dayLeaves.slice(0, 2).map((leave) => (
                                             <Box
                                                 key={`${leave.id}-${day.toISOString()}`}
@@ -1458,7 +1458,7 @@ const Leaves = () => {
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     minWidth: 0,
-                                                    height: {xs: 16, md: 20},
+                                                    height: { xs: 16, md: 20 },
                                                     px: 0.7,
                                                     borderRadius: 1.2,
                                                     backgroundColor: `${getLeaveColor(leave)}22`,
@@ -1466,19 +1466,19 @@ const Leaves = () => {
                                                 }}
                                             >
                                                 <Typography
-                                                    variant="caption" 
+                                                    variant="caption"
                                                     noWrap
-                                                    sx={{color: '#0f172a', fontWeight: 700, lineHeight: 1}}
+                                                    sx={{ color: '#0f172a', fontWeight: 700, lineHeight: 1 }}
                                                 >
                                                     {getCalendarLeaveLabel(leave)}
                                                 </Typography>
                                             </Box>
                                         ))}
                                         {dayLeaves.length > 2 && (
-                                            <Typography 
-                                                variant="caption" 
+                                            <Typography
+                                                variant="caption"
                                                 noWrap
-                                                sx={{color: '#64748b', fontWeight: 700, pl: 0.5}}
+                                                sx={{ color: '#64748b', fontWeight: 700, pl: 0.5 }}
                                             >
                                                 +{dayLeaves.length - 2} more
                                             </Typography>
@@ -1515,24 +1515,24 @@ const Leaves = () => {
                         </Typography>
 
                         {selectedDateLeaves.length ? (
-                            <Stack spacing={1.25} sx={{flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.5}}>
+                            <Stack spacing={1.25} sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.5 }}>
                                 {selectedDateLeaves.map((leave) => (
-                                    <Box 
-                                        key={leave.id} 
+                                    <Box
+                                        key={leave.id}
                                         onClick={() => openUserLeaveDetails(leave.user_id, leave)}
-                                         sx={{
-                                             p: 1.5,
-                                             borderRadius: 2,
-                                             border: '1px solid #e5e7eb',
-                                             cursor: 'pointer'
-                                         }}
+                                        sx={{
+                                            p: 1.5,
+                                            borderRadius: 2,
+                                            border: '1px solid #e5e7eb',
+                                            cursor: 'pointer'
+                                        }}
                                     >
-                                        
+
                                         <Stack direction="row" alignItems="center" spacing={1}>
                                             <Avatar
                                                 src={leave.user_thumb_image || leave.user_image || '/images/users/user.png'}
-                                                alt={leave.user_name || 'User'} sx={{width: 36, height: 36}}/>
-                                            <Box sx={{minWidth: 0, flex: 1}}>
+                                                alt={leave.user_name || 'User'} sx={{ width: 36, height: 36 }} />
+                                            <Box sx={{ minWidth: 0, flex: 1 }}>
                                                 <Typography
                                                     fontWeight={900}
                                                     noWrap
@@ -1551,16 +1551,16 @@ const Leaves = () => {
                                                 color: '#fff',
                                                 textTransform: 'capitalize',
                                                 fontWeight: 700
-                                            }}/>
+                                            }} />
                                         </Stack>
-                                        
+
                                         <Typography variant="caption" color="text.secondary" display="block" mt={1}>
                                             {leave.start_date || leave.leave_date}
                                             {leave.end_date && leave.end_date !== leave.start_date ? ` - ${leave.end_date}` : ''}
                                         </Typography>
-                                        
+
                                         {!isAllDayLeave(leave) && getLeaveDurationText(leave) && (
-                                            <Typography 
+                                            <Typography
                                                 variant="caption"
                                                 color="text.secondary"
                                                 display="block"
@@ -1615,13 +1615,13 @@ const Leaves = () => {
                 leaves={detailDrawer?.leaves || []}
                 onOpenUser={(leave) => openUserLeaveDetails(leave.user_id, leave)}
             />
-            
+
             <LeaveActivityDrawer
                 open={activityOpen}
                 onClose={() => setActivityOpen(false)}
                 startDate={startDate} endDate={endDate}
             />
-            
+
             <LeaveSettingsDrawer
                 open={settingsOpen}
                 onClose={() => setSettingsOpen(false)}

@@ -8,8 +8,8 @@ import NextTopLoader from 'nextjs-toploader';
 import { RouteLoadingProvider } from "./context/RouteLoadingContext/RouteLoadingContext";
 
 export const metadata = {
-  title: "OTMS System",
-  description: "OTMS System",
+  title: "Belcka",
+  description: "Belcka",
 };
 
 const roboto = Roboto({
