@@ -879,7 +879,6 @@ const ProductList = () => {
       };
       const res = await api.post("products/update", payload);
       if (res.data.IsSuccess) {
-        toast.success(res.data.message);
         setData((prev: any[]) =>
           prev.map((p) => {
             if (p.id === Number(id)) {
@@ -893,6 +892,7 @@ const ProductList = () => {
           }),
         );
         setOpenCategoryModal(false);
+        toast.success(res.data.message);
       }
     } catch (err) {
       console.error(err);

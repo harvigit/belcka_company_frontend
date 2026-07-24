@@ -614,7 +614,6 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                   <Box sx={{ flexGrow: 1 }}>
                     <Typography
                       fontWeight="bold"
-                      mb={1}
                       sx={{ fontSize: { xs: "1rem", sm: "1.125rem" } }}
                     >
                       {work.name}
@@ -647,7 +646,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                   )}
 
                   <Stack>
-                    <Typography fontWeight="bold" mb={1} fontSize="1.25rem">
+                    <Typography fontWeight="bold" fontSize="1.25rem">
                       {work.pricework_amount
                         ? Number(work.pricework_amount).toFixed(2)
                         : null}

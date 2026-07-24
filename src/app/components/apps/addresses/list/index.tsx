@@ -966,12 +966,17 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     wordBreak: "break-word",
-                  minWidth: "150px",
-                  width: "100%",
-                  maxWidth: "500px",
+                    minWidth: "100px",
+                    width: "100%",
+                    maxWidth: "200px",
                     borderRadius: 1,
                     border: "1px solid transparent",
                     transition: "all 0.2s ease",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedParentAddressId(item.id);
+                    setAddressListDrawerOpen(true);
                   }}
                 >
                   {item.short_name ?? "-"}
@@ -1000,9 +1005,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       wordBreak: "break-word",
-                  minWidth: "150px",
-                  width: "100%",
-                  maxWidth: "500px",
+                      minWidth: "100px",
+                      width: "100%",
+                      maxWidth: "200px",
                       borderRadius: 1,
                       border: "1px solid transparent",
                       transition: "all 0.2s ease",
@@ -1024,9 +1029,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       wordBreak: "break-word",
-                  minWidth: "150px",
-                  width: "100%",
-                  maxWidth: "500px",
+                      minWidth: "100px",
+                      width: "100%",
+                      maxWidth: "200px",
                       borderRadius: 1,
                       border: "1px solid transparent",
                       transition: "all 0.2s ease",

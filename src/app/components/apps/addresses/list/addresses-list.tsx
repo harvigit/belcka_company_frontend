@@ -208,6 +208,36 @@ const AddressesList = ({
     user_role_id: number;
   };
 
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkScroll = () => {
+      if (tableContainerRef.current) {
+        setIsScrollable(
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
+        );
+      }
+    };
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+
+    const observer = new MutationObserver(checkScroll);
+    if (tableContainerRef.current) {
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    }
+
+    return () => {
+      window.removeEventListener("resize", checkScroll);
+      observer.disconnect();
+    };
+  }, []);
+
   useEffect(() => {
     const fetchParentAddresses = async () => {
       try {
@@ -1030,21 +1060,40 @@ const AddressesList = ({
 
           return (
             <Stack direction="row" alignItems="center" spacing={4}>
-              <Typography
-                onClick={() =>
-                  setSidebarData({
-                    addressName: item.name,
-                    companyId: item.company_id,
-                    projectId: item.project_id,
-                    addressId: item.id,
-                    info: [true],
-                  })
-                }
-                className="f-14"
-                sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
-              >
-                {item.parent_addresses_name}
-              </Typography>
+              <Tooltip title={item.parent_addresses_name ?? ""}>
+                <Typography
+                  onClick={() =>
+                    setSidebarData({
+                      addressName: item.name,
+                      companyId: item.company_id,
+                      projectId: item.project_id,
+                      addressId: item.id,
+                      info: [true],
+                    })
+                  }
+                  className="f-14"
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": {
+                      color: "primary.main",
+                    },
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    wordBreak: "break-word",
+                    minWidth: "150px",
+                    width: "100%",
+                    maxWidth: "300px",
+                    borderRadius: 1,
+                    border: "1px solid transparent",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {item.parent_addresses_name}
+                </Typography>
+              </Tooltip>
             </Stack>
           );
         },
@@ -1097,7 +1146,25 @@ const AddressesList = ({
         id: "caseID",
         header: () => "Case Id",
         cell: (info) => (
-          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+          <Typography
+            className="f-14"
+            color="textPrimary"
+            sx={{
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: 1,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              wordBreak: "break-word",
+              minWidth: "100px",
+              width: "100%",
+              maxWidth: "100px",
+              px: 1.5,
+              borderRadius: 1,
+              border: "1px solid transparent",
+              transition: "all 0.2s ease",
+            }}
+          >
             {info.getValue() ?? "-"}
           </Typography>
         ),
@@ -1139,6 +1206,22 @@ const AddressesList = ({
               <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
                 {formatDate(info.getValue())}
               </Typography>
+            </Box>
+          );
+        },
+      }),
+
+      columnHelper.accessor("actions", {
+        id: "actions",
+        header: () => "Actions",
+        cell: (info) => {
+          return (
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={6}
+              justifyContent={"space-between"}
+            >
               <Box display={"flex"} gap={2}>
                 <IconButton
                   onClick={() => handleEdit(info.row.original)}
@@ -1380,7 +1463,7 @@ const AddressesList = ({
             </MenuItem>
           </Menu>
         </Box>
-        <TableContainer>
+        <TableContainer ref={tableContainerRef}>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -1403,6 +1486,15 @@ const AddressesList = ({
                               : header.column.id === "select"
                                 ? 30
                                 : "auto",
+                          ...(header.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 3,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
                         }}
                       >
                         <Box
@@ -1481,15 +1573,36 @@ const AddressesList = ({
                 </TableRow>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
+                  <TableRow
+                    key={row.id}
+                    hover
+                    sx={{
+                      cursor: "pointer",
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          sx={{
+                            ...(cell.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 1,
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 ))
               )}

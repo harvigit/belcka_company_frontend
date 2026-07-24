@@ -492,7 +492,7 @@ const Company = () => {
       )}
 
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
-        {/* <Button
+        <Button
           color="primary"
           fullWidth
           variant="outlined"
@@ -504,7 +504,7 @@ const Company = () => {
           startIcon={<IconPlus size={18} />}
         >
           Register New
-        </Button> */}
+        </Button>
         {companies.map((company) => (
           <MenuItem
             key={company.id}

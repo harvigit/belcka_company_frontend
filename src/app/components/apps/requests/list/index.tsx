@@ -6,14 +6,15 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import {
-    Box,
-    Grid,
-    Stack,
-    Drawer,
-    IconButton,
-    Typography,
-    TextField,
-    Avatar,
+  Box,
+  Grid,
+  Stack,
+  Drawer,
+  IconButton,
+  Typography,
+  TextField,
+  Avatar,
+  Tooltip,
 } from "@mui/material";
 import { IconArrowLeft, IconX } from "@tabler/icons-react";
 import { format, parse } from "date-fns";
@@ -23,479 +24,497 @@ import { useRouter } from "next/navigation";
 dayjs.extend(customParseFormat);
 
 interface Props {
-    open: boolean;
-    onClose: () => void;
-    onRequestCountChange: any;
+  open: boolean;
+  onClose: () => void;
+  onRequestCountChange: any;
 }
 const STORAGE_KEY = "request-date-range";
 
 const loadDateRangeFromStorage = () => {
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            return {
-                startDate: parsed.startDate ? new Date(parsed.startDate) : null,
-                endDate: parsed.endDate ? new Date(parsed.endDate) : null,
-            };
-        }
-    } catch (error) {
-        console.error("Error loading date range from localStorage:", error);
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        startDate: parsed.startDate ? new Date(parsed.startDate) : null,
+        endDate: parsed.endDate ? new Date(parsed.endDate) : null,
+      };
     }
-    return null;
+  } catch (error) {
+    console.error("Error loading date range from localStorage:", error);
+  }
+  return null;
 };
 
 const saveDateRangeToStorage = (
-    startDate: Date | null,
-    endDate: Date | null,
+  startDate: Date | null,
+  endDate: Date | null,
 ) => {
-    try {
-        const dateRange = {
-            startDate: startDate ? startDate.toDateString() : null,
-            endDate: endDate ? endDate.toDateString() : null,
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(dateRange));
-    } catch (error) {
-        console.error("Error saving date range to localStorage:", error);
-    }
+  try {
+    const dateRange = {
+      startDate: startDate ? startDate.toDateString() : null,
+      endDate: endDate ? endDate.toDateString() : null,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dateRange));
+  } catch (error) {
+    console.error("Error saving date range to localStorage:", error);
+  }
 };
 
 export default function UserRequests({
-                                         open,
-                                         onClose,
-                                         onRequestCountChange,
-                                     }: Props) {
-    const router = useRouter();
-    const today = new Date();
-    const defaultStart = new Date(today);
-    defaultStart.setDate(today.getDate() - today.getDay() + 1);
-    const defaultEnd = new Date(today);
-    defaultEnd.setDate(today.getDate() - today.getDay() + 7);
+  open,
+  onClose,
+  onRequestCountChange,
+}: Props) {
+  const router = useRouter();
+  const today = new Date();
+  const defaultStart = new Date(today);
+  defaultStart.setDate(today.getDate() - today.getDay() + 1);
+  const defaultEnd = new Date(today);
+  defaultEnd.setDate(today.getDate() - today.getDay() + 7);
 
-    const getInitialDates = () => {
-        const stored = loadDateRangeFromStorage();
-        if (stored && stored.startDate && stored.endDate) {
-            return {
-                startDate: stored.startDate,
-                endDate: stored.endDate,
-            };
-        }
-        return {
-            startDate: defaultStart,
-            endDate: defaultEnd,
-        };
+  const getInitialDates = () => {
+    const stored = loadDateRangeFromStorage();
+    if (stored && stored.startDate && stored.endDate) {
+      return {
+        startDate: stored.startDate,
+        endDate: stored.endDate,
+      };
+    }
+    return {
+      startDate: defaultStart,
+      endDate: defaultEnd,
     };
+  };
 
-    const initialDates = getInitialDates();
+  const initialDates = getInitialDates();
 
-    const [data, setData] = useState<any[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [startDate, setStartDate] = useState<Date | null>(
-        initialDates.startDate,
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState<Date | null>(
+    initialDates.startDate,
+  );
+  const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
+  const [requestCount, setRequestCount] = useState<number>(0);
+  const session = useSession();
+  const user = session.data?.user as User & {
+    company_id?: string | null;
+    company_name?: string | null;
+    company_image?: number | null;
+    id: number;
+    user_role_id: number;
+  };
+
+  const fetchRequests = async (start: Date, end: Date): Promise<void> => {
+    try {
+      setLoading(true);
+      const payload = {
+        user_id: Number(user?.id),
+        company_id: Number(user?.company_id),
+        start_date: format(start, "dd/MM/yyyy"),
+        end_date: format(end, "dd/MM/yyyy"),
+      };
+      const param = {
+        company_id: Number(user?.company_id),
+        start_date: format(start, "dd/MM/yyyy"),
+        end_date: format(end, "dd/MM/yyyy"),
+      };
+      let res;
+      if (user?.user_role_id === 1) {
+        res = await api.post(`requests/get-all-request`, param);
+      } else {
+        res = await api.post(`requests/get-all-request`, payload);
+      }
+      if (res.data?.requests) setData(res.data.requests);
+      setRequestCount(res.data.requests?.[0]?.count);
+      onRequestCountChange(requestCount);
+    } catch (err) {
+      console.error("Failed to fetch requests", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (startDate && endDate) fetchRequests(startDate, endDate);
+  }, [startDate && endDate, open]);
+
+  useEffect(() => {
+    setSearchTerm("");
+  }, [onClose]);
+
+  const handleDateRangeChange = (range: {
+    from: Date | null;
+    to: Date | null;
+  }) => {
+    if (range.from && range.to) {
+      setStartDate(range.from);
+      setEndDate(range.to);
+      saveDateRangeToStorage(range.from, range.to);
+    }
+  };
+
+  // Helper to parse leave date from work record
+  const getLeaveDate = (work: any): string | undefined => {
+    // Try dedicated leave date fields first
+    if (work.start_date) {
+      try {
+        // If already in yyyy-MM-dd format
+        if (/^\d{4}-\d{2}-\d{2}$/.test(work.start_date)) {
+          return work.start_date;
+        }
+        // If in dd/MM/yyyy format
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(work.start_date)) {
+          const parsed = parse(work.start_date, "dd/MM/yyyy", new Date());
+          return format(parsed, "yyyy-MM-dd");
+        }
+      } catch {}
+    }
+
+    if (work.leave_date) {
+      try {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(work.leave_date)) {
+          return work.leave_date;
+        }
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(work.leave_date)) {
+          const parsed = parse(work.leave_date, "dd/MM/yyyy", new Date());
+          return format(parsed, "yyyy-MM-dd");
+        }
+      } catch {}
+    }
+
+    // Fallback: parse from date_added (creation date - less accurate)
+    if (work.date_added) {
+      try {
+        const parsed = parse(work.date_added, "d MMMM yyyy HH:mm", new Date());
+        return format(parsed, "yyyy-MM-dd");
+      } catch {}
+    }
+
+    return undefined;
+  };
+
+  const REQUEST_ROUTE_MAP: Record<
+    string,
+    (recordId?: number, startDate?: string, endDate?: string) => string
+  > = {
+    Shift: (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+      params.push("type=shift");
+      params.push(`open=true`);
+      if (params.length > 0) url += `?${params.join("&")}`;
+      return url;
+    },
+    "Billing Info": (id) => `/apps/users/${id}?tab=billing`,
+    Company: (id) => `/apps/users/${id}?tab=rate`,
+    Comapny: (id) => `/apps/users/${id}?tab=billing`,
+    Project: (id) => `/apps/projects/index?id=${id}`,
+    Team: (id) => `/apps/teams/team?team_id=${id}`,
+    Penalty: (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+      params.push("type=penalty");
+      params.push(`open=true`);
+      if (params.length > 0) url += `?${params.join("&")}`;
+      return url;
+    },
+    // Pass leave dates directly in URL params - no localStorage needed
+    Leave: (recordId, startDate, endDate) => {
+      let url = `/apps/users/${recordId}?tab=leave`;
+      if (startDate) url += `&leave_start=${startDate}`;
+      if (endDate) url += `&leave_end=${endDate}`;
+
+      return url;
+    },
+  };
+
+  const filteredData = useMemo(() => {
+    return data.filter((item) =>
+      [
+        item.table_name,
+        item.date,
+        item.status_text,
+        item.message,
+        item.company,
+        item.action,
+        item.user_name,
+        item.type_name,
+      ]
+        .filter(Boolean)
+        .some((field) =>
+          field.toLowerCase().includes(searchTerm.toLowerCase()),
+        ),
     );
-    const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
-    const [requestCount, setRequestCount] = useState<number>(0);
-    const session = useSession();
-    const user = session.data?.user as User & {
-        company_id?: string | null;
-        company_name?: string | null;
-        company_image?: number | null;
-        id: number;
-        user_role_id: number;
-    };
+  }, [data, searchTerm]);
 
-    const fetchRequests = async (start: Date, end: Date): Promise<void> => {
-        try {
-            setLoading(true);
-            const payload = {
-                user_id: Number(user?.id),
-                company_id: Number(user?.company_id),
-                start_date: format(start, "dd/MM/yyyy"),
-                end_date: format(end, "dd/MM/yyyy"),
-            };
-            const param = {
-                company_id: Number(user?.company_id),
-                start_date: format(start, "dd/MM/yyyy"),
-                end_date: format(end, "dd/MM/yyyy"),
-            };
-            let res;
-            if (user?.user_role_id === 1) {
-                res = await api.post(`requests/get-all-request`, param);
-            } else {
-                res = await api.post(`requests/get-all-request`, payload);
-            }
-            if (res.data?.requests) setData(res.data.requests);
-            setRequestCount(res.data.requests?.[0]?.count);
-            onRequestCountChange(requestCount);
-        } catch (err) {
-            console.error("Failed to fetch requests", err);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const STATUS_COLOR: Record<string, string> = {
+    pending: "#FF7F00",
+    approved: "#4CBC6D",
+    rejected: "#FF484B",
+  };
 
-    useEffect(() => {
-        if (startDate && endDate) fetchRequests(startDate, endDate);
-    }, [startDate && endDate, open]);
+  const TYPE_COLOR: Record<string, string> = {
+    Shift: "#FF7F00",
+    "Billing Info": "#4CBC6D",
+    Company: "#f5c21bf8",
+    Leave: "#949090ff",
+    "Work log": "#FF7F00",
+    Timesheet: "#FFFF7F00",
+    "User Account": "#FF3F51B5",
+    Penalty: "#ff3737ff",
+    Adjustment: "#0066ffff",
+  };
 
-    useEffect(() => {
-        setSearchTerm("");
-    }, [onClose]);
-
-    const handleDateRangeChange = (range: {
-        from: Date | null;
-        to: Date | null;
-    }) => {
-        if (range.from && range.to) {
-            setStartDate(range.from);
-            setEndDate(range.to);
-            saveDateRangeToStorage(range.from, range.to);
-        }
-    };
-
-    // Helper to parse leave date from work record
-    const getLeaveDate = (work: any): string | undefined => {
-        // Try dedicated leave date fields first
-        if (work.start_date) {
-            try {
-                // If already in yyyy-MM-dd format
-                if (/^\d{4}-\d{2}-\d{2}$/.test(work.start_date)) {
-                    return work.start_date;
-                }
-                // If in dd/MM/yyyy format
-                if (/^\d{2}\/\d{2}\/\d{4}$/.test(work.start_date)) {
-                    const parsed = parse(work.start_date, "dd/MM/yyyy", new Date());
-                    return format(parsed, "yyyy-MM-dd");
-                }
-            } catch {}
-        }
-
-        if (work.leave_date) {
-            try {
-                if (/^\d{4}-\d{2}-\d{2}$/.test(work.leave_date)) {
-                    return work.leave_date;
-                }
-                if (/^\d{2}\/\d{2}\/\d{4}$/.test(work.leave_date)) {
-                    const parsed = parse(work.leave_date, "dd/MM/yyyy", new Date());
-                    return format(parsed, "yyyy-MM-dd");
-                }
-            } catch {}
-        }
-
-        // Fallback: parse from date_added (creation date - less accurate)
-        if (work.date_added) {
-            try {
-                const parsed = parse(work.date_added, "d MMMM yyyy HH:mm", new Date());
-                return format(parsed, "yyyy-MM-dd");
-            } catch {}
-        }
-
-        return undefined;
-    };
-
-    const REQUEST_ROUTE_MAP: Record<
-        string,
-        (recordId?: number, startDate?: string, endDate?: string) => string
-    > = {
-        Shift: (recordId, startDate, endDate) => {
-            let url = `/apps/timesheet/list`;
-            const params: any[] = [];
-            if (recordId) params.push(`user_id=${recordId}`);
-            if (startDate) params.push(`start_date=${startDate}`);
-            if (endDate) params.push(`end_date=${endDate}`);
-            params.push("type=shift");
-            params.push(`open=true`);
-            if (params.length > 0) url += `?${params.join("&")}`;
-            return url;
+  return (
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      sx={{
+        width: 500,
+        flexShrink: 0,
+        "& .MuiDrawer-paper": {
+          width: 500,
+          padding: 2,
+          backgroundColor: "#f9f9f9",
         },
-        "Billing Info": (id) => `/apps/users/${id}?tab=billing`,
-        Company: (id) => `/apps/users/${id}?tab=rate`,
-        Comapny: (id) => `/apps/users/${id}?tab=billing`,
-        Project: (id) => `/apps/projects/index?id=${id}`,
-        Team: (id) => `/apps/teams/team?team_id=${id}`,
-        Penalty: (recordId, startDate, endDate) => {
-            let url = `/apps/timesheet/list`;
-            const params: any[] = [];
-            if (recordId) params.push(`user_id=${recordId}`);
-            if (startDate) params.push(`start_date=${startDate}`);
-            if (endDate) params.push(`end_date=${endDate}`);
-            params.push("type=penalty");
-            params.push(`open=true`);
-            if (params.length > 0) url += `?${params.join("&")}`;
-            return url;
-        },
-        // Pass leave dates directly in URL params - no localStorage needed
-        Leave: (recordId, startDate, endDate) => {
-            let url = `/apps/users/${recordId}?tab=leave`;
-            if (startDate) url += `&leave_start=${startDate}`;
-            if (endDate) url += `&leave_end=${endDate}`;
+      }}
+    >
+      {/* Header */}
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        py={1}
+      >
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <IconButton onClick={onClose}>
+            <IconArrowLeft />
+          </IconButton>
+          <Typography variant="h6" fontWeight={700}>
+            {user?.user_role_id == 1 ? "Requests" : "My Requests"}
+          </Typography>
+        </Stack>
+        <IconButton onClick={onClose}>
+          <IconX />
+        </IconButton>
+      </Box>
 
-            return url;
-        },
-    };
+      {/* Search */}
+      <Box mb={2} display={"flex"} gap={1} alignContent={"center"}>
+        <TextField
+          placeholder="Search requests..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <DateRangePickerBox
+          from={startDate}
+          to={endDate}
+          onChange={handleDateRangeChange}
+        />
+      </Box>
 
-    const filteredData = useMemo(() => {
-        return data.filter((item) =>
-            [
-                item.table_name,
-                item.date,
-                item.status_text,
-                item.message,
-                item.company,
-                item.action,
-                item.user_name,
-                item.type_name,
-            ]
-                .filter(Boolean)
-                .some((field) =>
-                    field.toLowerCase().includes(searchTerm.toLowerCase()),
-                ),
-        );
-    }, [data, searchTerm]);
-
-    const STATUS_COLOR: Record<string, string> = {
-        pending: "#FF7F00",
-        approved: "#4CBC6D",
-        rejected: "#FF484B",
-    };
-
-    const TYPE_COLOR: Record<string, string> = {
-        Shift: "#FF7F00",
-        "Billing Info": "#4CBC6D",
-        Company: "#f5c21bf8",
-        Leave: "#949090ff",
-        "Work log": "#FF7F00",
-        Timesheet: "#FFFF7F00",
-        "User Account": "#FF3F51B5",
-        Penalty: "#ff3737ff",
-        Adjustment: "#0066ffff",
-    };
-
-    return (
-        <Drawer
-            anchor="right"
-            open={open}
-            onClose={onClose}
-            sx={{
-                width: 500,
-                flexShrink: 0,
-                "& .MuiDrawer-paper": {
-                    width: 500,
-                    padding: 2,
-                    backgroundColor: "#f9f9f9",
-                },
-            }}
-        >
-            {/* Header */}
-            <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                py={1}
-            >
-                <Stack direction="row" alignItems="center" spacing={1}>
-                    <IconButton onClick={onClose}>
-                        <IconArrowLeft />
-                    </IconButton>
-                    <Typography variant="h6" fontWeight={700}>
-                        {user?.user_role_id == 1 ? "Requests" : "My Requests"}
-                    </Typography>
-                </Stack>
-                <IconButton onClick={onClose}>
-                    <IconX />
-                </IconButton>
-            </Box>
-
-            {/* Search */}
-            <Box mb={2} display={"flex"} gap={1} alignContent={"center"}>
-                <TextField
-                    placeholder="Search requests..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <DateRangePickerBox
-                    from={startDate}
-                    to={endDate}
-                    onChange={handleDateRangeChange}
-                />
-            </Box>
-
-            {/* Content */}
-            <Box
-                flex={1}
-                overflow="auto"
-                px={2}
-                pb={2}
-                sx={{ maxHeight: "calc(95vh - 120px)" }}
-            >
-                {loading ? (
-                    <></>
-                ) : filteredData.length > 0 ? (
-                    <Grid container spacing={2}>
-                       {filteredData
-                            .map((work, idx) => (
-                                <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
-                                    <Box
-                                        onClick={() => {
-                                            const routeFn = REQUEST_ROUTE_MAP[work.type_name];
-                                            if (routeFn) {
-                                                if (work.type_name === "Shift") {
-                                                    const dateAdded = work.date_added
-                                                        ? parse(
-                                                            work.date_added,
-                                                            "d MMMM yyyy HH:mm",
-                                                            new Date(),
-                                                        )
-                                                        : undefined;
-                                                    const formattedDate = dateAdded
-                                                        ? format(dateAdded, "yyyy-MM-dd")
-                                                        : undefined;
-                                                    router.push(
-                                                        routeFn(work.user_id, formattedDate, formattedDate),
-                                                    );
-                                                } else if (work.type_name === "Leave") {
-                                                    // Use the actual leave date, not the request creation date
-                                                    const leaveDate = getLeaveDate(work);
-                                                    router.push(
-                                                        routeFn(work.user_id, leaveDate, leaveDate),
-                                                    );
-                                                } else if (work.type_name === "Penalty") {
-                                                    const dateAdded = work.date_added
-                                                        ? parse(
-                                                            work.date_added,
-                                                            "d MMMM yyyy HH:mm",
-                                                            new Date(),
-                                                        )
-                                                        : undefined;
-                                                    const formattedDate = dateAdded
-                                                        ? format(dateAdded, "yyyy-MM-dd")
-                                                        : undefined;
-                                                    router.push(
-                                                        routeFn(work.user_id, formattedDate, formattedDate),
-                                                    );
-                                                } else if (work.type_name === "Team") {
-                                                    router.push(routeFn(work.team_id));
-                                                } else if (work.type_name === "Project") {
-                                                    router.push(
-                                                        routeFn(work?.project_id ?? work?.record_id),
-                                                    );
-                                                } else {
-                                                    router.push(routeFn(work.user_id));
-                                                }
-                                                onClose();
-                                            }
-                                        }}
-                                        sx={{
-                                            border: "1px solid #ddd",
-                                            borderRadius: 2,
-                                            position: "relative",
-                                            p: 2,
-                                            bgcolor: "white",
-                                            transition: "0.2s",
-                                            cursor: "pointer",
-                                            "&:hover": {
-                                                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                                                transform: "translateY(-1px)",
-                                            },
-                                        }}
-                                    >
-                                        <Box
-                                            justifyContent="space-between"
-                                            alignItems="center"
-                                            mb={1}
-                                            sx={{ top: -8, position: "absolute" }}
-                                            flexWrap="wrap"
-                                        >
-                                            <Typography
-                                                variant="body2"
-                                                sx={{
-                                                    px: 1.2,
-                                                    py: 0.2,
-                                                    borderRadius: "12px",
-                                                    bgcolor: TYPE_COLOR[work.type_name] || "#757575",
-                                                    color: "#fff",
-                                                    fontSize: "0.75rem",
-                                                    fontWeight: 500,
-                                                    textTransform: "capitalize",
-                                                }}
-                                            >
-                                                {work.type_name}
-                                            </Typography>
-                                        </Box>
-                                        <Box display={"flex"} gap={1} mt={1}>
-                                            <Avatar
-                                                src={work.user_image}
-                                                alt={work.user_name}
-                                                sx={{ width: 36, height: 36 }}
-                                            />
-                                            <Box
-                                                display={"flex"}
-                                                justifyContent={"space-between"}
-                                                width={"100%"}
-                                            >
-                                                <Box>
-                                                    <Typography variant="h1" fontSize={"16px !important"}>
-                                                        {work.user_name}:
-                                                    </Typography>
-                                                    <Typography variant="subtitle1">
-                                                        {work.message}
-                                                    </Typography>
-                                                    {work.request_note && (
-                                                   <Typography variant="subtitle1" color="textSecondary">
-                                                        Note: {work.request_note}
-                                                    </Typography>
-                                                )}
-                                                </Box>
-                                                <Box justifyContent={"flex-end"}>
-                                                    <Typography
-                                                        variant="body2"
-                                                        sx={{
-                                                            px: 1.6,
-                                                            py: 0.7,
-                                                            borderRadius: "18px",
-                                                            border: 2,
-                                                            borderColor:
-                                                                STATUS_COLOR[work.status_text.toLowerCase()] ||
-                                                                "#757575",
-                                                            color:
-                                                                STATUS_COLOR[work.status_text.toLowerCase()] ||
-                                                                "#757575",
-                                                            fontSize: "0.75rem",
-                                                            fontWeight: 500,
-                                                            textTransform: "capitalize",
-                                                        }}
-                                                    >
-                                                        {work.status_text}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
-                                        </Box>
-
-                                        <Box display={"flex"} justifyContent={"flex-end"} mt={0}>
-                                            <Typography
-                                                variant="caption"
-                                                color="text.secondary"
-                                                fontSize={"12px !important"}
-                                            >
-                                                {work.date}
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                </Grid>
-                            ))}
-                    </Grid>
-                ) : (
+      {/* Content */}
+      <Box
+        flex={1}
+        overflow="auto"
+        px={2}
+        pb={2}
+        sx={{ maxHeight: "calc(95vh - 120px)" }}
+      >
+        {loading ? (
+          <></>
+        ) : filteredData.length > 0 ? (
+          <Grid container spacing={2}>
+            {filteredData.map((work, idx) => (
+              <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
+                <Box
+                  onClick={() => {
+                    const routeFn = REQUEST_ROUTE_MAP[work.type_name];
+                    if (routeFn) {
+                      if (work.type_name === "Shift") {
+                        const dateAdded = work.date_added
+                          ? parse(
+                              work.date_added,
+                              "d MMMM yyyy HH:mm",
+                              new Date(),
+                            )
+                          : undefined;
+                        const formattedDate = dateAdded
+                          ? format(dateAdded, "yyyy-MM-dd")
+                          : undefined;
+                        router.push(
+                          routeFn(work.user_id, formattedDate, formattedDate),
+                        );
+                      } else if (work.type_name === "Leave") {
+                        // Use the actual leave date, not the request creation date
+                        const leaveDate = getLeaveDate(work);
+                        router.push(
+                          routeFn(work.user_id, leaveDate, leaveDate),
+                        );
+                      } else if (work.type_name === "Penalty") {
+                        const dateAdded = work.date_added
+                          ? parse(
+                              work.date_added,
+                              "d MMMM yyyy HH:mm",
+                              new Date(),
+                            )
+                          : undefined;
+                        const formattedDate = dateAdded
+                          ? format(dateAdded, "yyyy-MM-dd")
+                          : undefined;
+                        router.push(
+                          routeFn(work.user_id, formattedDate, formattedDate),
+                        );
+                      } else if (work.type_name === "Team") {
+                        router.push(routeFn(work.team_id));
+                      } else if (work.type_name === "Project") {
+                        router.push(
+                          routeFn(work?.project_id ?? work?.record_id),
+                        );
+                      } else {
+                        router.push(routeFn(work.user_id));
+                      }
+                      onClose();
+                    }
+                  }}
+                  sx={{
+                    border: "1px solid #ddd",
+                    borderRadius: 2,
+                    position: "relative",
+                    p: 2,
+                    bgcolor: "white",
+                    transition: "0.2s",
+                    cursor: "pointer",
+                    "&:hover": {
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                      transform: "translateY(-1px)",
+                    },
+                  }}
+                >
+                  <Box
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={1}
+                    sx={{ top: -8, position: "absolute" }}
+                    flexWrap="wrap"
+                  >
                     <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        textAlign="center"
-                        mt={4}
+                      variant="body2"
+                      sx={{
+                        px: 1.2,
+                        py: 0.2,
+                        borderRadius: "12px",
+                        bgcolor: TYPE_COLOR[work.type_name] || "#757575",
+                        color: "#fff",
+                        fontSize: "0.75rem",
+                        fontWeight: 500,
+                        textTransform: "capitalize",
+                      }}
                     >
-                        No requests found.
+                      {work.type_name}
                     </Typography>
-                )}
-            </Box>
-        </Drawer>
-    );
+                  </Box>
+                  <Box display={"flex"} gap={1} mt={1}>
+                    <Avatar
+                      src={work.user_image}
+                      alt={work.user_name}
+                      sx={{ width: 36, height: 36 }}
+                    />
+                    <Box
+                      display={"flex"}
+                      justifyContent={"space-between"}
+                      width={"100%"}
+                    >
+                      <Box>
+                        <Typography variant="h1" fontSize={"16px !important"}>
+                          {work.user_name}:
+                        </Typography>
+                        <Typography variant="subtitle1">
+                          {work.message}
+                        </Typography>
+                        {work.request_note && (
+                          <Tooltip title={work.request_note ?? ""}>
+                            <Typography
+                              variant="subtitle1"
+                              color="textSecondary"
+                              sx={{
+                                display: "-webkit-box",
+                                WebkitBoxOrient: "vertical",
+                                WebkitLineClamp: 1,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                wordBreak: "break-word",
+                                minWidth: "200px",
+                                width: "95%",
+                                maxWidth: "200px",
+                                borderRadius: 1,
+                                border: "1px solid transparent",
+                                transition: "all 0.2s ease",
+                              }}
+                            >
+                              Note: {work.request_note}
+                            </Typography>
+                          </Tooltip>
+                        )}
+                      </Box>
+                      <Box justifyContent={"flex-end"}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            px: 1.6,
+                            py: 0.7,
+                            borderRadius: "18px",
+                            border: 2,
+                            borderColor:
+                              STATUS_COLOR[work.status_text.toLowerCase()] ||
+                              "#757575",
+                            color:
+                              STATUS_COLOR[work.status_text.toLowerCase()] ||
+                              "#757575",
+                            fontSize: "0.75rem",
+                            fontWeight: 500,
+                            textTransform: "capitalize",
+                          }}
+                        >
+                          {work.status_text}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Box display={"flex"} justifyContent={"flex-end"} mt={0}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      fontSize={"12px !important"}
+                    >
+                      {work.date}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            textAlign="center"
+            mt={4}
+          >
+            No requests found.
+          </Typography>
+        )}
+      </Box>
+    </Drawer>
+  );
 }

@@ -115,6 +115,13 @@ const MenuItems: NavGroup[] = [
   },
   {
     id: uniqueId(),
+    title: "Knowledge Base",
+    slug: "tasks",
+    icon: IconFiles,
+    href: "/apps/tasks/list",
+  },
+  {
+    id: uniqueId(),
     title: "Health & Safety",
     slug: "health_safety",
     icon: IconReportMedical,

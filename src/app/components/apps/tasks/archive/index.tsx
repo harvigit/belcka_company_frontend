@@ -12,7 +12,6 @@ import {
   DialogActions,
   FormControlLabel,
   Stack,
-  Chip,
   TextField,
   InputAdornment,
 } from "@mui/material";
@@ -21,16 +20,15 @@ import api from "@/utils/axios";
 import { IconArrowBackUp, IconSearch, IconTrash } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import Image from "next/image";
 
-interface ArchiveProductProps {
+interface ArchiveTasksProps {
   open: boolean;
   onClose: () => void;
   onWorkUpdated?: () => void;
   companyId?: number | null;
 }
 
-const ArchiveProduct: React.FC<ArchiveProductProps> = ({
+const ArchiveTasks: React.FC<ArchiveTasksProps> = ({
   open,
   onClose,
   onWorkUpdated,
@@ -52,12 +50,10 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
     if (!companyId) return;
 
     try {
-      const res = await api.get(
-        `products/archive-list?company_id=${companyId}`,
-      );
+      const res = await api.get(`tasks/archive-list?company_id=${companyId}`);
       if (res.data) setData(res.data.info);
     } catch (err) {
-      console.error("Failed to fetch archive products", err);
+      console.error("Failed to fetch archive task", err);
     }
   }, [companyId]);
 
@@ -89,11 +85,11 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
     try {
       setIsSaving(true);
       const payload = {
-        product_ids: selectedIds.join(","),
+        ids: selectedIds.join(","),
       };
 
       if (actionType === "restore") {
-        const response = await api.post("products/unarchive", payload);
+        const response = await api.post("tasks/unarchive", payload);
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
           fetchProjects();
@@ -101,7 +97,7 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
           onClose?.();
         }
       } else {
-        const response = await api.post("products/delete", payload);
+        const response = await api.post("tasks/delete", payload);
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
           fetchProjects();
@@ -122,15 +118,11 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
-
-      const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.sort_name?.toLowerCase().includes(search) ||
-        item.uuid?.toLowerCase().includes(search);
-
+      const matchesSearch = item.uuid?.toLowerCase().includes(search);
       return matchesSearch;
     });
   }, [data, searchTerm]);
+
   return (
     <Drawer
       anchor="right"
@@ -147,7 +139,7 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
         },
       }}
     >
-      {/* Product List */}
+      {/* Task List */}
       <Box sx={{ flex: 1, overflowY: "auto" }}>
         <Box
           display="flex"
@@ -160,7 +152,7 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
               <IconArrowLeft />
             </IconButton>
             <Typography variant="h6" fontWeight={700}>
-              Archived Product List
+              Archived Task List
             </Typography>
           </Box>
           {data.length > 0 && (
@@ -202,13 +194,13 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
             {" "}
             <Typography variant="body1" color="textSecondary">
               {" "}
-              No records found for products..{" "}
+              No records found for tasks..{" "}
             </Typography>{" "}
           </Box>
         )}{" "}
-        {filteredData.map((product) => (
+        {filteredData.map((task) => (
           <Box
-            key={product.id}
+            key={task.id}
             mt={1}
             p={1}
             display="flex"
@@ -221,25 +213,10 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
           >
             <Box display="flex" alignItems="center" gap={1}>
               <CustomCheckbox
-                checked={selectedIds.includes(product.id)}
-                onChange={() => handleCheckboxChange(product.id)}
+                checked={selectedIds.includes(task.id)}
+                onChange={() => handleCheckboxChange(task.id)}
               />
-              <Box
-                sx={{
-                  border: "1px dashed #d1d5db",
-                  borderRadius: 2,
-                  p: 1,
-                  textAlign: "center",
-                }}
-              >
-                <Image
-                  src={product.image_url || "/images/products/product.svg"}
-                  alt={"product"}
-                  width={50}
-                  height={50}
-                  style={{ objectFit: "contain" }}
-                />
-              </Box>
+
               <Stack mt={2} spacing={1}>
                 <Typography
                   variant="body2"
@@ -254,8 +231,7 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
                     wordBreak: "break-word",
                   }}
                 >
-                  {product.sort_name ?? product.name}{" "}
-                  <Chip label={product.uuid} size="small" sx={{ ml: 1 }} />
+                  {task.uuid ?? "-"}
                 </Typography>
               </Stack>
             </Box>
@@ -317,7 +293,7 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
         <DialogContent>
           <Typography>
             Are you sure you want to <strong>{actionType}</strong> selected
-            products?
+            tasks?
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -339,4 +315,4 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
   );
 };
 
-export default ArchiveProduct;
+export default ArchiveTasks;

@@ -147,11 +147,11 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
-  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
-    storageKey: `cv_${user?.company_id}_${user?.id}_projects`,
-    enabled: !!user?.id,
-  });
-
+  const { columnVisibility, onColumnVisibilityChange } =
+    usePersistentColumnVisibility({
+      storageKey: `cv_${user?.company_id}_${user?.id}_projects`,
+      enabled: !!user?.id,
+    });
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
@@ -159,7 +159,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   const [isSaving, setIsSaving] = useState(false);
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
- const handleSelectAllRows = (checked: boolean) => {
+  const handleSelectAllRows = (checked: boolean) => {
     if (checked) {
       const allIds = data.map((item: any) => item.id);
       setSelectedRowIds(new Set(allIds));
@@ -553,9 +553,9 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 wordBreak: "break-word",
-                  minWidth: "150px",
-                  width: "100%",
-                  maxWidth: "500px",
+                minWidth: "100px",
+                width: "100%",
+                maxWidth: "200px",
                 borderRadius: 1,
                 border: "1px solid transparent",
                 transition: "all 0.2s ease",
@@ -589,9 +589,9 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 wordBreak: "break-word",
-                  minWidth: "150px",
-                  width: "100%",
-                  maxWidth: "500px",
+                minWidth: "100px",
+                width: "100%",
+                maxWidth: "200px",
                 borderRadius: 1,
                 border: "1px solid transparent",
                 transition: "all 0.2s ease",
@@ -1448,14 +1448,17 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                         <Stack mt={2} spacing={1}>
                           <Typography
                             variant="body2"
-                            sx={{minWidth: "150px", width: "100%", maxWidth: "500px", 
+                            sx={{
+                              minWidth: "150px",
+                              width: "100%",
+                              maxWidth: "500px",
                               display: "-webkit-box",
                               WebkitBoxOrient: "vertical",
                               WebkitLineClamp: 3,
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               lineHeight: 1.25,
-                              
+
                               wordBreak: "break-word",
                             }}
                           >
