@@ -38,6 +38,7 @@ import {
     IconTrash,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
+import { fetchCompanyResources } from "@/utils/companyResources";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -64,29 +65,24 @@ export interface Permission {
 }
 
 export interface UserList {
-    status_color: string;
-    permissions: Permission[];
+    status_color?: string;
+    permissions?: Permission[];
     id: number;
     name: string;
     supervisor_name: string;
     user_image: string;
     trade_name: string;
     team_name: string;
-    shifts: string;
-    status: number;
-    is_invited: boolean;
+    shifts?: string;
+    status?: number;
+    is_invited?: boolean;
     archived_at: any;
-    created_at: any;
-    company_id: number | null;
-    permission_count: number;
+    created_at?: any;
+    company_id?: number | null;
+    permission_count?: number;
     action_by: string | null;
     supervisor_team_id: number | null;
     supervisor_team_name: string | null;
-}
-
-export interface TradeList {
-    id: number;
-    name: string;
 }
 
 type DialogAction = "unarchive" | "remove" | null;
@@ -126,7 +122,6 @@ const ArchiveUserList = () => {
     const [dialogAction, setDialogAction] = useState<DialogAction>(null);
     const session = useSession();
     const user = session.data?.user as User & { company_id?: string | null };
-    const [trade, setTrade] = useState<TradeList[]>([]);
     const [teams, setTeams] = useState<any[]>([]);
     const [fetchUser, setFetchUser] = useState<boolean>(false);
     const [supervisorReplacementOpen, setSupervisorReplacementOpen] = useState(false);
@@ -134,29 +129,32 @@ const ArchiveUserList = () => {
     const [supervisorDetails, setSupervisorDetails] = useState<{ team_id: number | null, team_name: string | null } | null>(null);
     const [activeUsers, setActiveUsers] = useState<any[]>([]);
 
-    const fetchActiveUsers = async () => {
+    const fetchActiveUsers = async (): Promise<any[]> => {
         try {
             const res = await api.get("user/get-user-lists");
-            if (res.data) {
-                setActiveUsers(res.data.info);
-            }
+            const list = res.data?.info ?? [];
+            const users = Array.isArray(list) ? list : [];
+            setActiveUsers(users);
+            return users;
         } catch (err) {
             console.error("Failed to fetch active users", err);
+            return [];
         }
     };
-
-    useEffect(() => {
-        fetchActiveUsers();
-    }, []);
 
     const fetchUsers = async () => {
         setFetchUser(true);
         try {
-            let url = `user/archive-users-list?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+            let url = `user/archive-users-list-web?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
             
             if (searchTerm) url += `&search=${searchTerm}`;
-            if (filters.team && filters.team !== "All") url += `&team_ids=${filters.team}`;
-            if (filters.supervisor && filters.supervisor !== "All") url += `&supervisor_ids=${filters.supervisor}`;
+            if (filters.team && filters.team !== "All") {
+                const teamsId = teams.find((c: any) => c.name === filters.team)?.id;
+                url += `&team_ids=${teamsId ?? encodeURIComponent(filters.team)}`;
+            }
+            if (filters.supervisor && filters.supervisor !== "All") {
+                url += `&supervisor_ids=${encodeURIComponent(filters.supervisor)}`;
+            }
 
             const res = await api.get(url);
             if (res.data) {
@@ -192,26 +190,17 @@ const ArchiveUserList = () => {
     };
 
     useEffect(() => {
-        const fetchTrades = async () => {
-            try {
-                const res = await api.get(
-                    `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
-                );
-                if (res.data) setTrade(res.data.info);
-            } catch (err) {
-                console.error("Failed to fetch trades", err);
-            }
-        };
-        fetchTrades();
-    }, [user?.company_id]);
+        if (!user?.company_id) return;
 
-    useEffect(() => {
         const fetchTeams = async () => {
             try {
-                const res = await api.get(
-                    `get-company-resources?flag=teamList&company_id=${user.company_id}`,
+                const res = await fetchCompanyResources(
+                    ["tradeList", "teamList"],
+                    user.company_id,
                 );
-                if (res.data) setTeams(res.data.info);
+                if (res.data?.info) {
+                    setTeams(res.data.info.teamList || []);
+                }
             } catch (err) {
                 console.error("Failed to fetch teams", err);
             }
@@ -274,6 +263,15 @@ const ArchiveUserList = () => {
     const handleRemove = async () => {
         const supervisorsToReplace = data.filter((u: any) => usersToAction.includes(u.id) && u.supervisor_team_id);
         if (supervisorsToReplace.length > 0) {
+            let usersForSelect = activeUsers;
+            if (usersForSelect.length === 0) {
+                usersForSelect = await fetchActiveUsers();
+            }
+            if (usersForSelect.length === 0) {
+                toast.error("Failed to load active users. Please try again.");
+                return;
+            }
+
             setSupervisorDetails({
                 team_id: supervisorsToReplace[0].supervisor_team_id,
                 team_name: supervisorsToReplace[0].supervisor_team_name || 'the team'
