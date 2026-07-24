@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Box, Button, Dialog, DialogContent, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogContent,
+  Typography,
+} from "@mui/material";
 import { IconPlus } from "@tabler/icons-react";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
@@ -15,6 +22,16 @@ import { hasPermission, hasAnyPermission } from "@/lib/permissions";
 import CreateTrade from "../components/apps/settings/company-trades/create";
 import { User } from "next-auth";
 import Cookies from "js-cookie";
+
+/** Authorization decision must always terminate — never stay pending forever. */
+type AuthDecision =
+  | "pending"
+  | "authorized"
+  | "unauthorized"
+  | "redirect"
+  | "error";
+
+type ProfileStatus = "loading" | "ready" | "error";
 
 export default function PermissionGuard({
   children,
@@ -36,7 +53,8 @@ export default function PermissionGuard({
   };
 
   const [profile, setProfile] = useState<any>(null);
-  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [profileStatus, setProfileStatus] = useState<ProfileStatus>("loading");
+  const [decision, setDecision] = useState<AuthDecision>("pending");
   const [showTradePopup, setShowTradePopup] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -50,57 +68,127 @@ export default function PermissionGuard({
   });
 
   const getProfile = async () => {
+    if (!user?.id || !user?.company_id) {
+      setProfileStatus("error");
+      return;
+    }
+
+    setProfileStatus("loading");
     try {
       const res = await api.get(
         `user/profile?user_id=${user.id}&company_id=${user.company_id}`,
       );
       setProfile(res.data.info);
+      setProfileStatus("ready");
     } catch (err) {
       console.error(err);
+      setProfileStatus("error");
     }
   };
 
   useEffect(() => {
-    if (user?.id && user?.company_id) {
-      getProfile();
+    if (session.status === "loading") {
+      setProfileStatus("loading");
+      return;
     }
-  }, [user?.id, user?.company_id]);
 
-    useEffect(() => {
-        if (loading || !profile) return;
+    if (session.status !== "authenticated") {
+      setProfileStatus("error");
+      return;
+    }
 
-        if (user?.user_role_id === 1) {
-            if (profile?.is_trade_available === false) {
-                setShowTradePopup(true);
-                setIsAuthorized(false);
-                return;
-            }
-            setIsAuthorized(true);
-            return;
+    if (!user?.id || !user?.company_id) {
+      setProfileStatus("error");
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadProfile = async () => {
+      setProfileStatus("loading");
+      try {
+        const res = await api.get(
+          `user/profile?user_id=${user.id}&company_id=${user.company_id}`,
+        );
+        if (!cancelled) {
+          setProfile(res.data.info);
+          setProfileStatus("ready");
         }
-
-        const webPermissions = permissions.filter((p) => p.is_web);
-
-        if (!webPermissions.length) {
-            router.push("/");
-            return;
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setProfileStatus("error");
         }
+      }
+    };
 
-        let authorized = true;
+    loadProfile();
 
-        if (permission) {
-            authorized = hasPermission(permissions, permission);
-        } else if (requiredPermissions?.length) {
-            authorized = requireAll
-                ? requiredPermissions.every((p: string) =>
-                    hasPermission(permissions, p),
-                )
-                : hasAnyPermission(permissions, requiredPermissions);
-        }
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.company_id, session.status]);
 
-        setIsAuthorized(authorized);
+  useEffect(() => {
+    if (loading || profileStatus === "loading") {
+      setDecision("pending");
+      return;
+    }
 
-    }, [loading, permissions, profile, pathname]);
+    if (profileStatus === "error") {
+      setShowTradePopup(false);
+      setDecision("error");
+      return;
+    }
+
+    // profileStatus === "ready"
+    if (user?.user_role_id === 1) {
+      if (profile?.is_trade_available === false) {
+        setShowTradePopup(true);
+        setDecision("unauthorized");
+        return;
+      }
+      setShowTradePopup(false);
+      setDecision("authorized");
+      return;
+    }
+
+    setShowTradePopup(false);
+
+    const webPermissions = permissions.filter((p) => p.is_web);
+
+    if (!webPermissions.length) {
+      setDecision("redirect");
+      router.push("/");
+      return;
+    }
+
+    let authorized = true;
+
+    if (permission) {
+      authorized = hasPermission(permissions, permission);
+    } else if (requiredPermissions?.length) {
+      authorized =
+        requireAll
+          ? requiredPermissions.every((p: string) =>
+              hasPermission(permissions, p),
+            )
+          : hasAnyPermission(permissions, requiredPermissions);
+    }
+
+    setDecision(authorized ? "authorized" : "unauthorized");
+  }, [
+    loading,
+    permissions,
+    profile,
+    profileStatus,
+    pathname,
+    permission,
+    requiredPermissions,
+    requireAll,
+    user?.user_role_id,
+    router,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,7 +232,8 @@ export default function PermissionGuard({
     }
   };
 
-  if (loading) {
+  // Never show Access Denied (or children) until a terminal decision is reached.
+  if (decision === "pending" || decision === "redirect") {
     return <PermissionSkeleton />;
   }
 
@@ -192,7 +281,7 @@ export default function PermissionGuard({
     );
   }
 
-  if (!isAuthorized) {
+  if (decision === "unauthorized" || decision === "error") {
     if (fallback) return <>{fallback}</>;
 
     return (
@@ -227,24 +316,14 @@ function PermissionSkeleton() {
   return (
     <Box
       sx={{
-        p: { xs: 2, sm: 3 },
-        width: "100%",
-        height: "100vh",
         display: "flex",
-        flexDirection: "column",
-        gap: 2.5,
-        backgroundColor: "transparent",
+        justifyContent: "center",
+        alignItems: "center",
+        width: "100%",
+        minHeight: "60vh",
       }}
     >
-      {/* <Skeleton variant="text" width="40%" height={"90%"} sx={{ maxWidth: 300 }} /> */}
-
-      {/* <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1 }} />
-
-            <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
-            <Skeleton variant="rectangular" height={90} sx={{ borderRadius: 2 }} />
-            <Skeleton variant="rectangular" height={90} sx={{ borderRadius: 2 }} />
-
-            <Skeleton variant="rectangular" height={60} sx={{ borderRadius: 1, mt: 1 }} /> */}
+      <CircularProgress />
     </Box>
   );
 }
