@@ -99,6 +99,17 @@ const getStatusText = (priceworkDetails: any) => {
     return timesheetStatusText[status] || '-';
 };
 
+const shouldShowStatus = (priceworkDetails: any) => {
+    const status = String(
+        priceworkDetails?.timesheet_status ??
+        priceworkDetails?.status ??
+        priceworkDetails?.status_id ??
+        '',
+    );
+
+    return ['6', '7', '9'].includes(status);
+};
+
 const isLockedOrPaid = (priceworkDetails: any) => {
     const status = String(
         priceworkDetails?.timesheet_status ??
@@ -293,10 +304,12 @@ const PriceworkDetails: React.FC<PriceworkDetailsProps> = ({
                                     'Work Complete',
                                     details?.work_complete != null ? `${details.work_complete}` : '-',
                                 )}
-                                {renderInfoBlock(
-                                    <IconFileText size={18} color="#666"/>,
-                                    'Status',
-                                    getStatusText(details),
+                                {shouldShowStatus(details) && (
+                                    renderInfoBlock(
+                                        <IconFileText size={18} color="#666"/>,
+                                        'Status',
+                                        getStatusText(details),
+                                    )
                                 )}
                             </Stack>
                         </Box>

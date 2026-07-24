@@ -6,6 +6,8 @@ import {
     Box,
     Typography,
     CircularProgress,
+    Card,
+    CardMedia,
     IconButton,
     Drawer,
     Divider,
@@ -19,7 +21,12 @@ import {
 import {
     IconArrowLeft,
     IconArrowRight,
+    IconBuilding,
+    IconCalendar,
     IconDownload,
+    IconFileText,
+    IconTag,
+    IconUser,
     IconX,
     IconZoomIn,
     IconZoomOut,
@@ -48,8 +55,17 @@ interface ChecklogTask {
     address?: string | null;
     comment?: string | null;
     note?: string | null;
+    checkin_note?: string | null;
+    checkout_note?: string | null;
     work_done?: string | number | null;
     work_complete?: string | number | null;
+    work_type?: string | null;
+    company_task_name?: string | null;
+    trade_name?: string | null;
+    date_added?: string | null;
+    status?: string | number | null;
+    status_text?: string | null;
+    amount_per_unit?: string | number | null;
     unit_name?: string | null;
     currency?: string | null;
     total_pricework_amount?: string | number | null;
@@ -58,6 +74,48 @@ interface ChecklogTask {
     before_attachments?: Attachment[];
     after_attachments?: Attachment[];
 }
+
+const formatDate = (value?: string | null) => {
+    if (!value) return '-';
+    const rawValue = String(value);
+
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(rawValue)) return rawValue.slice(0, 10);
+
+    const isoMatch = rawValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+        const [, year, month, day] = isoMatch;
+        return `${day}/${month}/${year}`;
+    }
+
+    return rawValue;
+};
+
+const formatCurrencyValue = (currency: string, value?: string | number | null) => {
+    const amount = Number(value ?? 0);
+    return `${currency}${Number.isFinite(amount) ? amount.toFixed(2) : '0.00'}`;
+};
+
+const checklogStatusText: Record<string, string> = {
+    '0': 'Default',
+    '1': 'Pending',
+    '2': 'In Progress',
+    '3': 'Completed',
+    '4': 'Approved',
+    '5': 'Rejected',
+};
+
+const getStatusText = (checklog: ChecklogTask, data: any) => {
+    if (checklog.status_text || data?.status_text) return checklog.status_text || data?.status_text;
+
+    const status = String(checklog.status ?? data?.status ?? '');
+    return checklogStatusText[status] || (status ? status : '-');
+};
+
+const shouldShowStatus = (checklog: ChecklogTask, data: any) => {
+    const status = String(checklog.status ?? data?.status ?? '');
+
+    return ['6', '7', '9'].includes(status);
+};
 
 export default function ChecklogDetailPage({checklogId, open, onClose}: ChecklogDetailPageProps) {
     const [loading, setLoading] = useState<boolean>(false);
@@ -104,7 +162,15 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
         checklog.id ?? index;
 
     const getComment = (checklog: ChecklogTask) =>
-        checklog.comment || checklog.note || data?.comment || data?.note || '-';
+        checklog.comment ||
+        checklog.note ||
+        checklog.checkout_note ||
+        checklog.checkin_note ||
+        data?.comment ||
+        data?.note ||
+        data?.checkout_note ||
+        data?.checkin_note ||
+        '-';
 
     const getAddress = (checklog: ChecklogTask) =>
         checklog.address_name || checklog.address || data?.address_name || data?.address || '-';
@@ -124,7 +190,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
         return unitName ? `${workDone} ${unitName}` : String(workDone);
     };
 
-    const getPriceworkAmount = (checklog: ChecklogTask) => {
+    const getPriceworkAmountValue = (checklog: ChecklogTask) => {
         const amount =
             checklog.total_pricework_amount ??
             checklog.pricework_total_amount ??
@@ -134,13 +200,8 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
             data?.pricework_amount ??
             0;
         const currency = checklog.currency ?? data?.currency ?? '';
-        const numericAmount = Number(amount);
 
-        if (Number.isNaN(numericAmount)) {
-            return `${currency}${amount}`;
-        }
-
-        return `${currency}${numericAmount.toFixed(2)}`;
+        return formatCurrencyValue(currency, amount);
     };
 
     const getAttachmentUrl = (attachment: Attachment, isPreview = false) => {
@@ -158,19 +219,16 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
         }
 
         return (
+            attachment.thumb_url ||
+            attachment.image_thumb_url ||
             attachment.image_url ||
             attachment.url ||
             attachment.file_url ||
             attachment.file ||
             attachment.preview ||
-            attachment.thumb_url ||
-            attachment.image_thumb_url ||
             ''
         );
     };
-
-    const hasDisplayableAttachments = (attachments: Attachment[]) =>
-        attachments.some((attachment) => Boolean(getAttachmentUrl(attachment)));
 
     const closePreview = () => {
         setPreviewImages([]);
@@ -245,15 +303,10 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
 
         return (
             <Box>
-                <Typography variant="body2" fontWeight={600} mb={1}>
-                    {label}
+                <Typography variant="caption" color="text.secondary" mb={1} display="block">
+                    {label} ({visibleAttachments.length})
                 </Typography>
-                <Stack
-                    direction="row"
-                    spacing={1.5}
-                    flexWrap="wrap"
-                    useFlexGap
-                >
+                <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
                     {visibleAttachments.map((img: Attachment, idx: number) => {
                         const previewUrl = getAttachmentUrl(img, true);
                         const imageUrl = getAttachmentUrl(img);
@@ -262,44 +315,46 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                             <Box
                                 key={`${label}-${imageUrl}-${idx}`}
                                 sx={{
-                                    width: 'calc(50% - 6px)',
-                                    cursor: 'pointer',
+                                    width: {xs: 'calc(50% - 8px)', sm: 'calc(33.33% - 11px)', md: 'calc(25% - 12px)'},
                                 }}
-                                onClick={() => openPreview(previewUrls, idx)}
                             >
-                                <Box
-                                    component="img"
-                                    src={imageUrl}
-                                    alt={`${label} ${idx + 1}`}
+                                <Card
                                     sx={{
-                                        borderRadius: 1,
-                                        objectFit: 'cover',
-                                        width: '100%',
-                                        height: 130,
-                                        display: 'block',
-                                        border: '1px solid #e0e0e0',
-                                        transition: 'transform .2s, box-shadow .2s',
-                                        '&:hover': {
-                                            transform: 'scale(1.02)',
-                                            boxShadow: 2,
-                                        },
+                                        cursor: previewUrl ? 'pointer' : 'default',
+                                        '&:hover': previewUrl ? {boxShadow: 3} : {},
                                     }}
-                                />
+                                    onClick={() => previewUrl && openPreview(previewUrls, idx)}
+                                >
+                                    <CardMedia
+                                        component="img"
+                                        height="140"
+                                        image={imageUrl}
+                                        alt={`${label} ${idx + 1}`}
+                                        sx={{objectFit: 'cover'}}
+                                    />
+                                </Card>
                             </Box>
                         );
                     })}
-                </Stack>
+                </Box>
             </Box>
         );
     };
 
-    const DetailRow = ({label, value}: { label: string; value: React.ReactNode }) => (
+    const renderInfoBlock = (
+        icon: React.ReactNode,
+        label: string,
+        value?: string | number | null,
+    ) => (
         <Box>
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                {label}
-            </Typography>
-            <Typography variant="body1" mt={0.5} sx={{wordBreak: 'break-word'}}>
-                {value}
+            <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+                {icon}
+                <Typography variant="caption" color="text.secondary">
+                    {label}
+                </Typography>
+            </Stack>
+            <Typography variant="body1" fontWeight={500} sx={{wordBreak: 'break-word'}}>
+                {value || '-'}
             </Typography>
         </Box>
     );
@@ -354,54 +409,108 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                         const taskId = getTaskId(checklog, index);
                         const beforeAttachments = checklog.before_attachments ?? [];
                         const afterAttachments = checklog.after_attachments ?? [];
-                        const hasAnyAttachment =
-                            hasDisplayableAttachments(beforeAttachments) ||
-                            hasDisplayableAttachments(afterAttachments);
 
                         return (
                             <Box key={taskId} mb={3}>
+                                <Box mb={3}>
+                                    <Typography variant="h4" fontWeight={700} color="primary">
+                                        {getPriceworkAmountValue(checklog)}
+                                    </Typography>
+                                </Box>
+
+                                <Divider sx={{my: 2}}/>
+
                                 <Box
                                     sx={{
-                                        border: '1px solid #ccc',
-                                        borderRadius: 2,
-                                        p: 2,
-                                        backgroundColor: '#fff',
-                                        '&:hover': {
-                                            boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
-                                        },
+                                        display: 'flex',
+                                        flexDirection: {xs: 'column', sm: 'row'},
+                                        gap: 2,
+                                        mb: 3,
                                     }}
                                 >
-                                    <Stack spacing={2}>
-                                        <DetailRow label="Address" value={getAddress(checklog)}/>
-                                        <Divider/>
-                                        <DetailRow label="Comment" value={getComment(checklog)}/>
-                                        <Divider/>
-                                        <DetailRow label="Work Done" value={getWorkDone(checklog)}/>
-                                        <Divider/>
-                                        <DetailRow
-                                            label="Total Pricework Amount"
-                                            value={getPriceworkAmount(checklog)}
-                                        />
-                                        <Divider/>
-
-                                        <Box>
-                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                                Attachment
-                                            </Typography>
-
-                                            {hasAnyAttachment ? (
-                                                <Stack spacing={2} mt={1}>
-                                                    {renderAttachmentGrid(beforeAttachments, 'Before Attachments',)}
-                                                    {renderAttachmentGrid(afterAttachments, 'After Attachments',)}
-                                                </Stack>
-                                            ) : (
-                                                <Typography variant="body1" mt={0.5}>
-                                                    -
-                                                </Typography>
+                                    <Box sx={{flex: 1}}>
+                                        <Stack spacing={2}>
+                                            {renderInfoBlock(
+                                                <IconCalendar size={18} color="#666"/>,
+                                                'Checklog Date',
+                                                formatDate(checklog.date_added ?? data?.date_added),
                                             )}
-                                        </Box>
-                                    </Stack>
+                                            {renderInfoBlock(
+                                                <IconTag size={18} color="#666"/>,
+                                                'Work Type',
+                                                checklog.work_type || data?.work_type || checklog.company_task_name || data?.company_task_name,
+                                            )}
+                                            {renderInfoBlock(
+                                                <IconBuilding size={18} color="#666"/>,
+                                                'Unit',
+                                                checklog.unit_name || data?.unit_name,
+                                            )}
+                                            {renderInfoBlock(
+                                                <IconFileText size={18} color="#666"/>,
+                                                'Work Done',
+                                                getWorkDone(checklog),
+                                            )}
+                                            {shouldShowStatus(checklog, data) && (
+                                                renderInfoBlock(
+                                                    <IconFileText size={18} color="#666"/>,
+                                                    'Status',
+                                                    getStatusText(checklog, data),
+                                                )
+                                            )}
+                                        </Stack>
+                                    </Box>
+
+                                    <Box sx={{flex: 1}}>
+                                        <Stack spacing={2}>
+                                            {renderInfoBlock(
+                                                <IconFileText size={18} color="#666"/>,
+                                                'Task',
+                                                checklog.company_task_name || data?.company_task_name,
+                                            )}
+                                            {renderInfoBlock(
+                                                <IconUser size={18} color="#666"/>,
+                                                'Trade',
+                                                checklog.trade_name || data?.trade_name,
+                                            )}
+                                            {renderInfoBlock(
+                                                <IconTag size={18} color="#666"/>,
+                                                'Amount Per Unit',
+                                                formatCurrencyValue(checklog.currency ?? data?.currency ?? '', checklog.amount_per_unit ?? data?.amount_per_unit),
+                                            )}
+                                        </Stack>
+                                    </Box>
                                 </Box>
+
+                                <Divider sx={{my: 2}}/>
+
+                                <Box mb={3}>
+                                    <Typography variant="caption" color="text.secondary" mb={0.5} display="block">
+                                        Address
+                                    </Typography>
+                                    <Typography variant="body1" fontWeight={500} sx={{wordBreak: 'break-word'}}>
+                                        {getAddress(checklog)}
+                                    </Typography>
+                                </Box>
+
+                                {getComment(checklog) !== '-' && (
+                                    <Box mb={3}>
+                                        <Typography variant="caption" color="text.secondary" mb={0.5} display="block">
+                                            Note
+                                        </Typography>
+                                        <Typography variant="body2" sx={{wordBreak: 'break-word'}}>
+                                            {getComment(checklog)}
+                                        </Typography>
+                                    </Box>
+                                )}
+
+                                {(beforeAttachments.length > 0 || afterAttachments.length > 0) && (
+                                    <Box>
+                                        <Stack spacing={3}>
+                                            {renderAttachmentGrid(beforeAttachments, 'Before Attachments')}
+                                            {renderAttachmentGrid(afterAttachments, 'After Attachments')}
+                                        </Stack>
+                                    </Box>
+                                )}
                             </Box>
                         );
                     })
