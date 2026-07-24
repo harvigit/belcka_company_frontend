@@ -106,6 +106,15 @@ const TIME_CLOCK_AMOUNT_COLUMNS = [
     'total_payable_amount',
 ] as const;
 
+const TIME_CLOCK_DEFAULT_COLUMN_VISIBILITY: VisibilityState = {
+    name_on_account: false,
+    sort_code: false,
+    account_number: false,
+    utr_name: false,
+    utr_number: false,
+    nin_number: false,
+};
+
 interface ExportResponse {
     IsSuccess: boolean;
     message: string;
@@ -120,12 +129,17 @@ interface StoredTimeClockState {
     startDate: string | null;
     endDate: string | null;
     columnVisibility?: VisibilityState;
+    pagination?: {
+        pageIndex: number;
+        pageSize: number;
+    };
 }
 
 const saveDateRangeToStorage = (
     startDate: Date | null,
     endDate: Date | null,
-    columnVisibility?: VisibilityState
+    columnVisibility?: VisibilityState,
+    pagination?: { pageIndex: number; pageSize: number }
 ) => {
     try {
         const existingPageState = loadDateRangeFromStorage();
@@ -134,6 +148,7 @@ const saveDateRangeToStorage = (
             startDate: startDate ? startDate.toISOString() : null,
             endDate: endDate ? endDate.toISOString() : null,
             columnVisibility: columnVisibility ?? existingPageState?.columnVisibility ?? {},
+            pagination: pagination ?? existingPageState?.pagination ?? {pageIndex: 0, pageSize: 50},
         };
         const detailsRange: StoredTimeClockState = {
             startDate: dateRange.startDate,
@@ -157,6 +172,12 @@ const loadDateRangeFromStorage = () => {
                 startDate: parsed.startDate ? new Date(parsed.startDate) : null,
                 endDate: parsed.endDate ? new Date(parsed.endDate) : null,
                 columnVisibility: parsed.columnVisibility || {},
+                pagination: parsed.pagination &&
+                    Number.isInteger(parsed.pagination.pageIndex) &&
+                    parsed.pagination.pageIndex >= 0 &&
+                    [50, 100, 250, 500].includes(parsed.pagination.pageSize)
+                    ? parsed.pagination
+                    : undefined,
             };
         }
     } catch (error) {
@@ -236,6 +257,9 @@ export type TimeClock = {
     total_expense_amount: number;
     cis_amount: number;
     gross_amount: number;
+    check_ins?: number | string;
+    checkIns?: number | string;
+    check_in?: number | string;
     net_payable_amount: number;
     total_adjustment_amount: number;
     total_payable_amount: number;
@@ -348,6 +372,7 @@ const TimeClock = ({queryParams}: Props) => {
         onColumnVisibilityChange: setColumnVisibility
     } = usePersistentColumnVisibility({
         storageKey: `cv_${user?.company_id}_${user?.id}_time_clock`,
+        defaultVisibility: TIME_CLOCK_DEFAULT_COLUMN_VISIBILITY,
         enabled: !!user?.id,
     });
     const openMenu = Boolean(anchorEl3);
@@ -363,6 +388,8 @@ const TimeClock = ({queryParams}: Props) => {
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
     const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);
     const [settingOpen, setSettingOpen] = useState(false);
+    const [settingsInitialMenu, setSettingsInitialMenu] = useState<string | null>(null);
+    const [settingsInitialProjectId, setSettingsInitialProjectId] = useState<number | null>(null);
     const [openDrawer, setOpenDrawer] = useState(false);
 
     const [fetchTimesheet, setFetchTimesheet] = useState<boolean>(false);
@@ -378,6 +405,7 @@ const TimeClock = ({queryParams}: Props) => {
     const queryParamsRef = useRef(queryParams);
     const dataRequestsRef = useRef<Map<string, Promise<TimeClock[]>>>(new Map());
     const conflictRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
+    const hasInitializedFilterResetRef = useRef(false);
     useEffect(() => {
         queryParamsRef.current = queryParams;
     }, [queryParams]);
@@ -673,6 +701,8 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleSettingOpen = () => {
+        setSettingsInitialMenu(null);
+        setSettingsInitialProjectId(null);
         setSettingOpen(true);
     };
 
@@ -700,6 +730,26 @@ const TimeClock = ({queryParams}: Props) => {
             setErrorMessage('Failed to refresh data after saving settings.');
         }
     };
+
+    useEffect(() => {
+        const pendingShiftManagementProject = sessionStorage.getItem('shift_management_project');
+        if (!pendingShiftManagementProject) return;
+
+        try {
+            const parsed = JSON.parse(pendingShiftManagementProject);
+            const projectId = Number(parsed?.project_id);
+
+            if (projectId) {
+                setSettingsInitialMenu('Shift Management');
+                setSettingsInitialProjectId(projectId);
+                setSettingOpen(true);
+            }
+        } catch (error) {
+            console.error('Failed to open shift management from project edit', error);
+        } finally {
+            sessionStorage.removeItem('shift_management_project');
+        }
+    }, []);
 
     const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
         setAnchorEl3(event.currentTarget);
@@ -1048,7 +1098,7 @@ const TimeClock = ({queryParams}: Props) => {
 
         columnHelper.accessor('total_hours', {
             id: 'total_hours',
-            header: 'Total Hours',
+            header: 'Total',
             cell: (info: any) => {
                 const row = info.row.original;
                 const value = info.getValue();
@@ -1074,13 +1124,13 @@ const TimeClock = ({queryParams}: Props) => {
 
         columnHelper.accessor('payable_total_hours', {
             id: 'payable_total_hours',
-            header: 'Payable Hours',
+            header: 'Payable',
             cell: (info: any) => formatHour(info.getValue()) || '-',
         }),
 
         columnHelper.accessor('daylog_payable_amount', {
             id: 'daylog_payable_amount',
-            header: 'Daywork Total',
+            header: 'Daywork',
             cell: (info: any) => {
                 const value = info.getValue();
                 return value === 0 ? '0' : value ? `${currency}${value}` : '-';
@@ -1143,7 +1193,7 @@ const TimeClock = ({queryParams}: Props) => {
 
         columnHelper.accessor('cis_amount', {
             id: 'cis_amount',
-            header: 'CIS Amount',
+            header: 'CIS',
             cell: (info: any) => {
                 const value = info.getValue();
                 return value === 0 ? '0' : value ? `${currency}${value}` : '-';
@@ -1152,36 +1202,50 @@ const TimeClock = ({queryParams}: Props) => {
 
         columnHelper.accessor('gross_amount', {
             id: 'gross_amount',
-            header: 'Gross Amount',
+            header: 'Gross',
             cell: (info: any) => {
                 const value = info.getValue();
                 return value === 0 ? '0' : value ? `${currency}${value}` : '-';
             },
         }),
 
-        columnHelper.accessor('net_payable_amount', {
-            id: 'net_payable_amount',
-            header: 'Net Payable',
+        columnHelper.accessor((row) => row.check_ins ?? row.checkIns ?? row.check_in ?? 0, {
+            id: 'checkIns',
+            header: 'Check Ins',
             cell: (info: any) => {
                 const value = info.getValue();
-                return value === 0 ? '0' : value ? `${currency}${value}` : '-';
+                return value === 0 || value ? String(value) : '-';
+            },
+            meta: {align: 'center'},
+        }),
+
+        columnHelper.accessor('net_payable_amount', {
+            id: 'net_payable_amount',
+            header: 'Net',
+            cell: (info: any) => {
+                const value = info.getValue();
+                return value === 0 ? `${currency}0` : value ? `${currency}${value}` : '-';
             },
         }),
 
         columnHelper.accessor('total_adjustment_amount', {
             id: 'total_adjustment_amount',
-            header: 'Adjustment Amount',
+            header: 'Adjustment',
             cell: (info: any) => {
                 const value = info.getValue();
-                if (value === 0 || value === null || value === undefined) return value === 0 ? '0' : '-';
+                if (value === null || value === undefined) return '-';
 
-                return value > 0 ? `${currency}${Math.abs(value)}` : `-${currency}${Math.abs(value)}`;
+                const numericValue = Number(value);
+                if (!Number.isFinite(numericValue)) return '-';
+                if (Object.is(numericValue, -0) || numericValue === 0) return `${currency}0`;
+
+                return numericValue > 0 ? `${currency}${Math.abs(numericValue)}` : `-${currency}${Math.abs(numericValue)}`;
             },
         }),
 
         columnHelper.accessor('total_payable_amount', {
             id: 'total_payable_amount',
-            header: 'Total Payable Amount',
+            header: 'Total',
             cell: (info: any) => {
                 const value = info.getValue();
                 return value === 0 ? '0' : value ? `${currency}${value}` : '-';
@@ -1190,7 +1254,7 @@ const TimeClock = ({queryParams}: Props) => {
 
         columnHelper.accessor('name_on_account', {
             id: 'name_on_account',
-            header: 'Name On Account',
+            header: 'NOA',
             cell: (info: any) => {
                 const row = info.row.original;
                 return (
@@ -1262,7 +1326,7 @@ const TimeClock = ({queryParams}: Props) => {
 
         columnHelper.accessor('utr_name', {
             id: 'utr_name',
-            header: 'Name On UTR',
+            header: 'NOU',
             cell: (info: any) => {
                 const row = info.row.original;
                 return (
@@ -1286,7 +1350,7 @@ const TimeClock = ({queryParams}: Props) => {
 
         columnHelper.accessor('utr_number', {
             id: 'utr_number',
-            header: 'UTR Number',
+            header: 'UTR',
             cell: (info: any) => {
                 const row = info.row.original;
                 return (
@@ -1310,7 +1374,7 @@ const TimeClock = ({queryParams}: Props) => {
 
         columnHelper.accessor('nin_number', {
             id: 'nin_number',
-            header: 'NIN Number',
+            header: 'NIN',
             cell: (info: any) => {
                 const row = info.row.original;
                 return (
@@ -1407,12 +1471,24 @@ const TimeClock = ({queryParams}: Props) => {
         data: filteredData,
         columns,
         fetchData: handleFetchData,
+        initialPagination: initialStoredState?.pagination,
         debounceDependencies: [searchTerm, queryParamsRef.current?.user_id, startDate, endDate, cycleReady],
         state: {columnVisibility},
         onColumnVisibilityChange: setColumnVisibility,
     });
 
     useEffect(() => {
+        if (!startDate || !endDate) return;
+        saveDateRangeToStorage(startDate, endDate, columnVisibility, pagination);
+    }, [startDate, endDate, columnVisibility, pagination.pageIndex, pagination.pageSize]);
+
+    useEffect(() => {
+        if (!cycleReady) return;
+        if (!hasInitializedFilterResetRef.current) {
+            hasInitializedFilterResetRef.current = true;
+            return;
+        }
+
         setPagination((prev) => ({...prev, pageIndex: 0}));
     }, [
         searchTerm,
@@ -1421,6 +1497,7 @@ const TimeClock = ({queryParams}: Props) => {
         queryParams?.user_id,
         queryParams?.is_removed_user,
         queryParams?.is_archived_user,
+        cycleReady,
     ]);
 
     useEffect(() => {
@@ -1877,7 +1954,12 @@ const TimeClock = ({queryParams}: Props) => {
                                 </IconButton>
                             </Tooltip>
 
-                            <Settings settingOpen={settingOpen} onClose={handleSettingClose}/>
+                            <Settings
+                                settingOpen={settingOpen}
+                                onClose={handleSettingClose}
+                                initialActiveMenuItem={settingsInitialMenu}
+                                initialProjectId={settingsInitialProjectId}
+                            />
 
                             <IconButton
                                 size="small"
@@ -2109,64 +2191,114 @@ const TimeClock = ({queryParams}: Props) => {
                         }}
                     >
                         <FormGroup sx={{gap: 0.25}}>
-                            {table
-                                .getAllLeafColumns()
-                                .filter((col: any) => {
+                            {(() => {
+                                const columnOptions = table
+                                    .getAllLeafColumns()
+                                    .filter((col: any) => {
                                     const excludedColumns = ['select'];
                                     if (excludedColumns.includes(col.id)) return false;
 
                                     if (!userHasRatePermission && TIME_CLOCK_AMOUNT_COLUMNS.includes(col.id as typeof TIME_CLOCK_AMOUNT_COLUMNS[number])) return false;
 
                                     return col.id.toLowerCase().includes(search.toLowerCase());
-                                })
-                                .map((col: any) => (
-                                    <FormControlLabel
-                                        key={col.id}
-                                        control={
-                                            <CustomCheckbox
-                                                size="small"
-                                                checked={col.getIsVisible()}
-                                                onChange={(e) => {
-                                                    e.stopPropagation();
-                                                    col.getToggleVisibilityHandler()(e);
+                                    });
+                                const allSelected = columnOptions.length > 0 && columnOptions.every((col: any) => col.getIsVisible());
+                                const someSelected = columnOptions.some((col: any) => col.getIsVisible());
+
+                                return (
+                                    <>
+                                        <FormControlLabel
+                                            control={
+                                                <CustomCheckbox
+                                                    size="small"
+                                                    checked={allSelected}
+                                                    indeterminate={!allSelected && someSelected}
+                                                    disabled={columnOptions.length === 0}
+                                                    onChange={(e) => {
+                                                        e.stopPropagation();
+                                                        columnOptions.forEach((col: any) => col.toggleVisibility(e.target.checked));
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    sx={{
+                                                        p: 0.5,
+                                                        mr: 1,
+                                                    }}
+                                                />
+                                            }
+                                            sx={{
+                                                m: 0,
+                                                px: 0.75,
+                                                py: 0.375,
+                                                width: '100%',
+                                                borderRadius: 1.5,
+                                                alignItems: 'center',
+                                                textTransform: 'none',
+                                                borderBottom: '1px solid #eef2f7',
+                                                mb: 0.25,
+                                                '&:hover': {
+                                                    backgroundColor: '#f8fafc',
+                                                },
+                                                '& .MuiFormControlLabel-label': {
+                                                    fontSize: '14px',
+                                                    lineHeight: 1.35,
+                                                    whiteSpace: 'nowrap',
+                                                    fontWeight: 600,
+                                                },
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            label="Select All"
+                                        />
+                                        {columnOptions.map((col: any) => (
+                                            <FormControlLabel
+                                                key={col.id}
+                                                control={
+                                                    <CustomCheckbox
+                                                        size="small"
+                                                        checked={col.getIsVisible()}
+                                                        onChange={(e) => {
+                                                            e.stopPropagation();
+                                                            col.getToggleVisibilityHandler()(e);
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        sx={{
+                                                            p: 0.5,
+                                                            mr: 1,
+                                                        }}
+                                                    />
+                                                }
+                                                sx={{
+                                                    m: 0,
+                                                    px: 0.75,
+                                                    py: 0.375,
+                                                    width: '100%',
+                                                    borderRadius: 1.5,
+                                                    alignItems: 'center',
+                                                    textTransform: 'none',
+                                                    '&:hover': {
+                                                        backgroundColor: '#f8fafc',
+                                                    },
+                                                    '& .MuiFormControlLabel-label': {
+                                                        fontSize: '14px',
+                                                        lineHeight: 1.35,
+                                                        whiteSpace: 'nowrap',
+                                                    },
                                                 }}
                                                 onClick={(e) => e.stopPropagation()}
-                                                sx={{
-                                                    p: 0.5,
-                                                    mr: 1,
-                                                }}
+                                                label={
+                                                    col.columnDef.meta?.label ||
+                                                    (typeof col.columnDef.header === 'string' &&
+                                                    col.columnDef.header.trim() !== ''
+                                                        ? col.columnDef.header
+                                                        : col.id
+                                                            .replace(/([A-Z])/g, ' $1')
+                                                            .replace(/^./, (str: string) => str.toUpperCase())
+                                                            .trim())
+                                                }
                                             />
-                                        }
-                                        sx={{
-                                            m: 0,
-                                            px: 0.75,
-                                            py: 0.375,
-                                            width: '100%',
-                                            borderRadius: 1.5,
-                                            alignItems: 'center',
-                                            textTransform: 'none',
-                                            '&:hover': {
-                                                backgroundColor: '#f8fafc',
-                                            },
-                                            '& .MuiFormControlLabel-label': {
-                                                fontSize: '14px',
-                                                lineHeight: 1.35,
-                                                whiteSpace: 'nowrap',
-                                            },
-                                        }}
-                                        onClick={(e) => e.stopPropagation()}
-                                        label={
-                                            col.columnDef.meta?.label ||
-                                            (typeof col.columnDef.header === 'string' &&
-                                            col.columnDef.header.trim() !== ''
-                                                ? col.columnDef.header
-                                                : col.id
-                                                    .replace(/([A-Z])/g, ' $1')
-                                                    .replace(/^./, (str: string) => str.toUpperCase())
-                                                    .trim())
-                                        }
-                                    />
-                                ))}
+                                        ))}
+                                    </>
+                                );
+                            })()}
                         </FormGroup>
                     </Box>
                 </Popover>

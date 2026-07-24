@@ -34,6 +34,18 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
         { value: formatHour(headerDetail?.payable_hours), label: 'Payable Hours' },
         { value: `${currency}${headerDetail?.total_payable_amount || 0}`, label: 'Total Payable Amount' },
     ];
+    const columnOptions = table
+        .getAllLeafColumns()
+        .filter((col: any) => {
+            const excludedColumns = ['conflicts'];
+            if (excludedColumns.includes(col.id)) return false;
+
+            if (!userHasRatePermission && amountColumns.includes(col.id)) return false;
+
+            return col.id.toLowerCase().includes(search.toLowerCase());
+        });
+    const allColumnsSelected = columnOptions.length > 0 && columnOptions.every((col: any) => col.getIsVisible());
+    const someColumnsSelected = columnOptions.some((col: any) => col.getIsVisible());
 
     return (
         <Box
@@ -106,17 +118,48 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                             }}
                         >
                             <FormGroup sx={{ gap: 0.25 }}>
-                                {table
-                                    .getAllLeafColumns()
-                                    .filter((col: any) => {
-                                        const excludedColumns = ['conflicts'];
-                                        if (excludedColumns.includes(col.id)) return false;
-
-                                        if (!userHasRatePermission && amountColumns.includes(col.id)) return false;
-
-                                        return col.id.toLowerCase().includes(search.toLowerCase());
-                                    })
-                                    .map((col: any) => (
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            size="small"
+                                            checked={allColumnsSelected}
+                                            indeterminate={!allColumnsSelected && someColumnsSelected}
+                                            disabled={columnOptions.length === 0}
+                                            onChange={(e) => {
+                                                e.stopPropagation();
+                                                columnOptions.forEach((col: any) => col.toggleVisibility(e.target.checked));
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            sx={{
+                                                p: 0.5,
+                                                mr: 1,
+                                            }}
+                                        />
+                                    }
+                                    label="Select All"
+                                    sx={{
+                                        m: 0,
+                                        px: 0.75,
+                                        py: 0.375,
+                                        width: '100%',
+                                        borderRadius: 1.5,
+                                        alignItems: 'center',
+                                        textTransform: 'none',
+                                        borderBottom: '1px solid #eef2f7',
+                                        mb: 0.25,
+                                        '&:hover': {
+                                            backgroundColor: '#f8fafc',
+                                        },
+                                        '& .MuiFormControlLabel-label': {
+                                            fontSize: '14px',
+                                            lineHeight: 1.35,
+                                            whiteSpace: 'nowrap',
+                                            fontWeight: 600,
+                                        },
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                                {columnOptions.map((col: any) => (
                                         <FormControlLabel
                                             key={col.id}
                                             control={

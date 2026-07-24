@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Box,
     Drawer,
@@ -17,6 +17,7 @@ import {
     IconDoorExit,
     IconCalendarOff,
     IconCategoryPlus,
+    IconDeviceDesktopCog
 } from '@tabler/icons-react';
 import GeneralSetting from './menus/general';
 import ShiftLists from './menus/shift/index';
@@ -32,7 +33,7 @@ import CategoryList from './menus/expense-categories/list';
 const menuItems = [
     { icon: <IconSettings size={18} />, label: "General" },
     { icon: <IconTiltShift size={18} />, label: "Shift" },
-    { icon: <IconTiltShift size={18} />, label: "Shift Management" },
+    { icon: <IconDeviceDesktopCog size={18} />, label: "Shift Management" },
     { icon: <IconCalendarWeek size={18} />, label: "Payroll" },
     { icon: <IconCoinPound size={18} />, label: "Rate Settings" },
     { icon: <IconMapPinCog size={18} />, label: "Penalty Setting" },
@@ -45,11 +46,24 @@ const menuItems = [
 interface SettingsProps {
     settingOpen: boolean;
     onClose: () => void;
+    initialActiveMenuItem?: string | null;
+    initialProjectId?: number | null;
 }
 
-const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
+const Settings: React.FC<SettingsProps> = ({
+    settingOpen,
+    onClose,
+    initialActiveMenuItem = null,
+    initialProjectId = null,
+}) => {
     const [activeMenuItem, setActiveMenuItem] = useState<string>("General");
     const [openSnackbar, setOpenSnackbar] = useState(false);
+
+    useEffect(() => {
+        if (settingOpen && initialActiveMenuItem) {
+            setActiveMenuItem(initialActiveMenuItem);
+        }
+    }, [settingOpen, initialActiveMenuItem]);
 
     const handleMenuItemClick = (label: string) => {
         setActiveMenuItem(label);
@@ -167,7 +181,7 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                             <ShiftLists />
                         )}
                         {activeMenuItem === "Shift Management" && (
-                            <ShiftManagement />
+                            <ShiftManagement initialProjectId={initialProjectId} />
                         )}
                         {activeMenuItem === "Payroll" && (
                             <Payroll />

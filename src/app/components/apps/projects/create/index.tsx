@@ -21,16 +21,16 @@ interface FormData {
   budget: string;
   description?: string;
   code: number;
-  shift_ids: string;
+  // shift_ids: string;
   team_ids: string;
   company_id: number;
   workzone_ids?: string;
 }
 
-interface Shift {
-  id: number | null;
-  name: string;
-}
+// interface Shift {
+//   id: number | null;
+//   name: string;
+// }
 
 interface Team {
   id: number | null;
@@ -74,29 +74,29 @@ const CreateProject: React.FC<CreateProjectProps> = ({
     });
   };
 
-  const [shift, setShift] = useState<Shift[]>([]);
+  // const [shift, setShift] = useState<Shift[]>([]);
   const [team, setTeam] = useState<Team[]>([]);
   const [geofence, setGeofence] = useState<Geofence[]>([]);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number };
 
-  useEffect(() => {
-    if (!open || !user?.company_id) return;
-
-    const getShifts = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=shiftList&company_id=${user.company_id}`
-        );
-        if (res.data?.info) setShift(res.data.info);
-      } catch (err) {
-        console.error("Failed loading shifts:", err);
-      }
-    };
-
-    getShifts();
-  }, [open, user?.company_id]);
+  // useEffect(() => {
+  //   if (!open || !user?.company_id) return;
+  //
+  //   const getShifts = async () => {
+  //     try {
+  //       const res = await api.get(
+  //         `get-company-resources?flag=shiftList&company_id=${user.company_id}`
+  //       );
+  //       if (res.data?.info) setShift(res.data.info);
+  //     } catch (err) {
+  //       console.error("Failed loading shifts:", err);
+  //     }
+  //   };
+  //
+  //   getShifts();
+  // }, [open, user?.company_id]);
 
   useEffect(() => {
     if (!open || !user?.company_id) return;
@@ -138,14 +138,14 @@ const CreateProject: React.FC<CreateProjectProps> = ({
     getGeofence();
   }, [open, user?.company_id]);
 
-  const memoShiftOptions = useMemo(() => shift, [shift]);
+  // const memoShiftOptions = useMemo(() => shift, [shift]);
   const memoTeamOptions = useMemo(() => team, [team]);
   const memoGeofenceOptions = useMemo(() => geofence, [geofence]);
 
-  const memoSelectedShifts = useMemo(() => {
-    const ids = formData.shift_ids?.split(",") ?? [];
-    return memoShiftOptions.filter((item) => ids.includes(String(item.id)));
-  }, [formData.shift_ids, memoShiftOptions]);
+  // const memoSelectedShifts = useMemo(() => {
+  //   const ids = formData.shift_ids?.split(",") ?? [];
+  //   return memoShiftOptions.filter((item) => ids.includes(String(item.id)));
+  // }, [formData.shift_ids, memoShiftOptions]);
 
   const memoSelectedTeams = useMemo(() => {
     const ids = formData.team_ids?.split(",") ?? [];
@@ -202,33 +202,33 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                 />
 
                 {/* SHIFTS */}
-                <Typography variant="h5" mt={2}>
-                  Select Shifts
-                </Typography>
-                <Autocomplete
-                  multiple
-                  options={memoShiftOptions}
-                  value={memoSelectedShifts}
-                  onChange={(e, newValue) => {
-                    const ids = newValue.map((i) => i.id).filter(Boolean);
-                    setFormData({
-                      ...formData,
-                      shift_ids: ids.join(","),
-                    });
-                  }}
-                  getOptionLabel={(option) => option.name}
-                  renderOption={(props, option) => (
-                    <li {...props} key={option.id}>
-                      {option.name}
-                    </li>
-                  )}
-                  isOptionEqualToValue={(option, value) =>
-                    option.id === value.id
-                  }
-                  renderInput={(params) => (
-                    <CustomTextField {...params} placeholder="Select Shifts" />
-                  )}
-                />
+                {/*<Typography variant="h5" mt={2}>*/}
+                {/*  Select Shifts*/}
+                {/*</Typography>*/}
+                {/*<Autocomplete*/}
+                {/*  multiple*/}
+                {/*  options={memoShiftOptions}*/}
+                {/*  value={memoSelectedShifts}*/}
+                {/*  onChange={(e, newValue) => {*/}
+                {/*    const ids = newValue.map((i) => i.id).filter(Boolean);*/}
+                {/*    setFormData({*/}
+                {/*      ...formData,*/}
+                {/*      shift_ids: ids.join(","),*/}
+                {/*    });*/}
+                {/*  }}*/}
+                {/*  getOptionLabel={(option) => option.name}*/}
+                {/*  renderOption={(props, option) => (*/}
+                {/*    <li {...props} key={option.id}>*/}
+                {/*      {option.name}*/}
+                {/*    </li>*/}
+                {/*  )}*/}
+                {/*  isOptionEqualToValue={(option, value) =>*/}
+                {/*    option.id === value.id*/}
+                {/*  }*/}
+                {/*  renderInput={(params) => (*/}
+                {/*    <CustomTextField {...params} placeholder="Select Shifts" />*/}
+                {/*  )}*/}
+                {/*/>*/}
 
                 {/* TEAMS */}
                 <Typography variant="h5" mt={2}>

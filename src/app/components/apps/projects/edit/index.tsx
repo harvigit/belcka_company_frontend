@@ -17,6 +17,7 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import { IconPlus, IconSettings, IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 interface FormData {
   id?: number;
@@ -25,16 +26,16 @@ interface FormData {
   budget: string;
   description?: string;
   code: number;
-  shift_ids: string;
+  // shift_ids: string;
   team_ids: string;
   company_id: number;
   workzone_ids?: string;
 }
 
-interface Shift {
-  id: number | null;
-  name: string;
-}
+// interface Shift {
+//   id: number | null;
+//   name: string;
+// }
 
 interface Team {
   id: number | null;
@@ -74,6 +75,8 @@ const EditProject: React.FC<EditProjectProps> = ({
   project,
   isSaving,
 }) => {
+  const router = useRouter();
+
   const normalizeBudgetValue = (value: unknown) =>
     String(value ?? "").replace(/[^0-9.]/g, "");
   
@@ -150,7 +153,7 @@ const EditProject: React.FC<EditProjectProps> = ({
         description: project.description || "",
         code: project.code || "",
         company_id: project.company_id || 0,
-        shift_ids: (project.shifts || []).map((s: any) => s.id).join(","),
+        // shift_ids: (project.shifts || []).map((s: any) => s.id).join(","),
         team_ids: (project.teams || []).map((t: any) => t.id).join(","),
         workzone_ids: (project.project_address || [])
           .map((g: any) => g.workzone_id)
@@ -162,7 +165,7 @@ const EditProject: React.FC<EditProjectProps> = ({
     }
   }, [project]);
 
-  const [shift, setShift] = useState<Shift[]>([]);
+  // const [shift, setShift] = useState<Shift[]>([]);
   const [team, setTeam] = useState<Team[]>([]);
   const [geofence, setGeofence] = useState<Geofence[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -284,23 +287,23 @@ const EditProject: React.FC<EditProjectProps> = ({
     setSettingsOpen(false);
   };
 
-  useEffect(() => {
-    const getShifts = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=shiftList&company_id=${user.company_id}`
-        );
-        if (res.data?.info) {
-          setShift(res.data.info);
-        }
-      } catch (err) {
-        console.error("Failed to refresh project data", err);
-      }
-    };
-    if (open == true) {
-      getShifts();
-    }
-  }, [open, user?.company_id]);
+  // useEffect(() => {
+  //   const getShifts = async () => {
+  //     try {
+  //       const res = await api.get(
+  //         `get-company-resources?flag=shiftList&company_id=${user.company_id}`
+  //       );
+  //       if (res.data?.info) {
+  //         setShift(res.data.info);
+  //       }
+  //     } catch (err) {
+  //       console.error("Failed to refresh project data", err);
+  //     }
+  //   };
+  //   if (open == true) {
+  //     getShifts();
+  //   }
+  // }, [open, user?.company_id]);
 
   useEffect(() => {
     if (!open) {
@@ -353,6 +356,26 @@ const EditProject: React.FC<EditProjectProps> = ({
     setSettingsOpen(true);
   }
 
+  const handleShiftManagementClick = () => {
+    const projectId = project?.id || formData.id;
+
+    if (!projectId) {
+      toast.error("Project is required to open shift management");
+      return;
+    }
+
+    sessionStorage.setItem(
+      "shift_management_project",
+      JSON.stringify({
+        project_id: Number(projectId),
+        project_name: formData.name || project?.name || "",
+      })
+    );
+
+    onClose();
+    router.push("/apps/timesheet/list");
+  };
+
   return (
     <>
     <Drawer
@@ -377,6 +400,7 @@ const EditProject: React.FC<EditProjectProps> = ({
               <Grid size={{ xs: 12 }}>
                 <Box
                   display={"flex"}
+                  alignItems={"center"}
                   justifyContent={"space-between"}
                 >
                     <Box 
@@ -392,10 +416,28 @@ const EditProject: React.FC<EditProjectProps> = ({
                             Edit Project
                           </Typography>
                     </Box>
-                    
-                    <IconButton onClick={onHandleSetting}>
-                        <IconSettings />
-                    </IconButton>
+
+                    <Box
+                        display={"flex"}
+                        alignItems={"center"}
+                    >
+                        <Typography
+                            variant="h6"
+                            fontWeight={600}
+                            onClick={handleShiftManagementClick}
+                            sx={{
+                                cursor: "pointer",
+                                color: "primary.main",
+                            }}
+                        
+                        >
+                            Shift Management
+                        </Typography>
+
+                        <IconButton onClick={onHandleSetting}>
+                            <IconSettings />
+                        </IconButton>
+                    </Box>
                 </Box>
                 <Typography variant="h5" mt={2}>
                   Name
@@ -410,34 +452,34 @@ const EditProject: React.FC<EditProjectProps> = ({
                   inputProps={{ maxLength: 50 }}
                   fullWidth
                 />
-                <Typography variant="h5" mt={2}>
-                  Select Shifts
-                </Typography>
-                <Autocomplete
-                  fullWidth
-                  multiple
-                  id="shift_ids"
-                  options={shift}
-                  value={shift.filter((item) =>
-                    formData.shift_ids?.split(",").includes(String(item.id))
-                  )}
-                  onChange={(event, newValue) => {
-                    const selectedIds = newValue
-                      .map((item) => item.id)
-                      .filter(Boolean);
-                    setFormData({
-                      ...formData,
-                      shift_ids: selectedIds.join(","),
-                    });
-                  }}
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) =>
-                    option.id === value.id
-                  }
-                  renderInput={(params) => (
-                    <CustomTextField {...params} placeholder="Select Shifts" />
-                  )}
-                />
+                {/*<Typography variant="h5" mt={2}>*/}
+                {/*  Select Shifts*/}
+                {/*</Typography>*/}
+                {/*<Autocomplete*/}
+                {/*  fullWidth*/}
+                {/*  multiple*/}
+                {/*  id="shift_ids"*/}
+                {/*  options={shift}*/}
+                {/*  value={shift.filter((item) =>*/}
+                {/*    formData.shift_ids?.split(",").includes(String(item.id))*/}
+                {/*  )}*/}
+                {/*  onChange={(event, newValue) => {*/}
+                {/*    const selectedIds = newValue*/}
+                {/*      .map((item) => item.id)*/}
+                {/*      .filter(Boolean);*/}
+                {/*    setFormData({*/}
+                {/*      ...formData,*/}
+                {/*      shift_ids: selectedIds.join(","),*/}
+                {/*    });*/}
+                {/*  }}*/}
+                {/*  getOptionLabel={(option) => option.name}*/}
+                {/*  isOptionEqualToValue={(option, value) =>*/}
+                {/*    option.id === value.id*/}
+                {/*  }*/}
+                {/*  renderInput={(params) => (*/}
+                {/*    <CustomTextField {...params} placeholder="Select Shifts" />*/}
+                {/*  )}*/}
+                {/*/>*/}
                 <Typography variant="h5" mt={2}>
                   Select Teams
                 </Typography>

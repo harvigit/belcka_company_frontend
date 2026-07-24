@@ -210,7 +210,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
     budget: "",
     description: "",
     code: 0,
-    shift_ids: "",
+    // shift_ids: "",
     team_ids: "",
     company_id: user?.company_id || 0,
     workzone_ids: "",
@@ -569,41 +569,41 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
         },
       }),
 
-      columnHelper.accessor((row) => row?.shifts, {
-        id: "shifts",
-        header: () => "Shifts",
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <Typography
-              textTransform="capitalize"
-              className="f-14"
-              sx={{
-                cursor: "pointer",
-                "&:hover": {
-                  color: "primary.main",
-                },
-                display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 1,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                wordBreak: "break-word",
-                minWidth: "100px",
-                width: "100%",
-                maxWidth: "200px",
-                borderRadius: 1,
-                border: "1px solid transparent",
-                transition: "all 0.2s ease",
-              }}
-            >
-              {item.shifts?.length
-                ? item.shifts.map((shift: any) => shift.name).join(", ")
-                : "-"}
-            </Typography>
-          );
-        },
-      }),
+      // columnHelper.accessor((row) => row?.shifts, {
+      //   id: "shifts",
+      //   header: () => "Shifts",
+      //   cell: ({ row }) => {
+      //     const item = row.original;
+      //     return (
+      //       <Typography
+      //         textTransform="capitalize"
+      //         className="f-14"
+      //         sx={{
+      //           cursor: "pointer",
+      //           "&:hover": {
+      //             color: "primary.main",
+      //           },
+      //           display: "-webkit-box",
+      //           WebkitBoxOrient: "vertical",
+      //           WebkitLineClamp: 1,
+      //           overflow: "hidden",
+      //           textOverflow: "ellipsis",
+      //           wordBreak: "break-word",
+      //             minWidth: "150px",
+      //             width: "100%",
+      //             maxWidth: "500px",
+      //           borderRadius: 1,
+      //           border: "1px solid transparent",
+      //           transition: "all 0.2s ease",
+      //         }}
+      //       >
+      //         {item.shifts?.length
+      //           ? item.shifts.map((shift: any) => shift.name).join(", ")
+      //           : "-"}
+      //       </Typography>
+      //     );
+      //   },
+      // }),
 
       columnHelper.accessor("budget", {
         header: "Budget",

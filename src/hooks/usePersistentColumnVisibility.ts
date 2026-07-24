@@ -17,7 +17,7 @@ export function usePersistentColumnVisibility({
     const saved = Cookies.get(storageKey);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        return { ...defaultVisibility, ...JSON.parse(saved) };
       } catch (e) {}
     }
     return defaultVisibility;
@@ -38,8 +38,10 @@ export function usePersistentColumnVisibility({
       const saved = Cookies.get(storageKey);
       if (saved) {
         try {
-          setColumnVisibility(JSON.parse(saved));
+          setColumnVisibility({ ...defaultVisibility, ...JSON.parse(saved) });
         } catch (e) {}
+      } else {
+        setColumnVisibility(defaultVisibility);
       }
     } else {
       setColumnVisibility(defaultVisibility);

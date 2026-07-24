@@ -1,16 +1,25 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  Typography,
-  Box,
-  Grid,
-  Button,
-  IconButton,
-  Drawer,
-  CircularProgress,
-  Tooltip,
-} from "@mui/material";
-import { IconX, IconArrowLeft } from "@tabler/icons-react";
+    Typography,
+    Box,
+    Grid,
+    Button,
+    IconButton,
+    Drawer,
+    CircularProgress,
+    Tooltip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    TextField,
+    FormGroup,
+    FormControlLabel,
+    Checkbox,
+    Stack,
+    Chip, InputAdornment,
+} from '@mui/material';
+import {IconX, IconArrowLeft, IconFilter, IconSearch} from '@tabler/icons-react';
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
@@ -20,10 +29,23 @@ interface BookkeeperProps {
   onClose: () => void;
 }
 
+const ACTIVITY_FILTER_OPTIONS = [
+  { value: "worklog", label: "Worklog", requestTypes: [102] },
+  { value: "penalty", label: "Penalty", requestTypes: [118, 123] },
+  { value: "expense", label: "Expense", requestTypes: [111] },
+  { value: "leave", label: "Leave", requestTypes: [110] },
+  { value: "pricework", label: "Pricework", requestTypes: [121] },
+] as const;
+
 const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
   const [history, setHistory] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterSearch, setFilterSearch] = useState("");
+  const [activitySearch, setActivitySearch] = useState("");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [draftSelectedTypes, setDraftSelectedTypes] = useState<string[]>([]);
 
   const limit = 20;
   const session = useSession();
@@ -34,26 +56,40 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (open && user?.company_id) {
+    if (!open || !user?.company_id) {
       setHistory([]);
       setPage(1);
       setTotalItems(0);
-
-      fetchHistories(1);
-    } else {
-      setHistory([]);
-      setPage(1);
-      setTotalItems(0);
+      return;
     }
-  }, [open, user?.company_id]);
 
-  const fetchHistories = async (currentPage: number) => {
+    const timer = setTimeout(() => {
+      setHistory([]);
+      setPage(1);
+      setTotalItems(0);
+      fetchHistories(1, selectedTypes, activitySearch);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [open, user?.company_id, selectedTypes, activitySearch]);
+
+  const fetchHistories = async (
+    currentPage: number,
+    typeFilters = selectedTypes,
+    searchValue = activitySearch,
+  ) => {
     setLoading(true);
 
     try {
-      const res = await api.get(
-        `time-clock/bookkeeper-history?company_id=${user.company_id}&page=${currentPage}&limit=${limit}`,
-      );
+      const res = await api.get("time-clock/bookkeeper-history", {
+        params: {
+          company_id: user.company_id,
+          page: currentPage,
+          limit,
+          ...(typeFilters.length > 0 ? { types: typeFilters.join(",") } : {}),
+          ...(searchValue.trim() ? { search: searchValue.trim() } : {}),
+        },
+      });
 
       if (res.data?.IsSuccess) {
         const newData = res.data.info || [];
@@ -75,6 +111,41 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
     const nextPage = page + 1;
     setPage(nextPage);
     fetchHistories(nextPage);
+  };
+
+  const visibleFilterOptions = useMemo(
+    () =>
+      ACTIVITY_FILTER_OPTIONS.filter((option) =>
+        option.label.toLowerCase().includes(filterSearch.trim().toLowerCase()),
+      ),
+    [filterSearch],
+  );
+
+  const handleDraftTypeToggle = (value: string) => {
+    setDraftSelectedTypes((prev) =>
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value],
+    );
+  };
+
+  const handleFilterOpen = () => {
+    setDraftSelectedTypes(selectedTypes);
+    setFilterOpen(true);
+  };
+
+  const handleFilterClose = () => {
+    setDraftSelectedTypes(selectedTypes);
+    setFilterOpen(false);
+  };
+
+  const handleFilterApply = () => {
+    setSelectedTypes(draftSelectedTypes);
+    setFilterOpen(false);
+  };
+
+  const handleAppliedTypeDelete = (value: string) => {
+    setSelectedTypes((prev) => prev.filter((item) => item !== value));
   };
 
   const hasMore = history.length < totalItems;
@@ -115,15 +186,61 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
           </IconButton>
 
           <Grid container spacing={2} display="block">
-            <Box display="flex" alignItems="center">
-              <IconButton onClick={onClose}>
-                <IconArrowLeft />
-              </IconButton>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box display="flex" alignItems="center">
+                <IconButton onClick={onClose}>
+                  <IconArrowLeft />
+                </IconButton>
 
-              <Typography variant="h6" fontWeight={700}>
-                Bookkeeper Activities
-              </Typography>
+                <Typography variant="h6" fontWeight={700}>
+                  Bookkeeper Activities
+                </Typography>
+              </Box>
             </Box>
+
+            <Stack direction="row" alignItems="center" spacing={1} mt={2}>
+                <TextField
+                    placeholder="Search..."
+                    size="small"
+                    fullWidth
+                    value={activitySearch}
+                    onChange={(e) => setActivitySearch(e.target.value)}
+                    InputProps={{
+                        endAdornment: (
+                            <InputAdornment position="end">
+                                <IconSearch size={16}/>
+                            </InputAdornment>
+                        ),
+                    }}
+                />
+
+              <Tooltip title="Filter activities" arrow>
+                <IconButton
+                  color={selectedTypes.length > 0 ? "primary" : "default"}
+                  onClick={handleFilterOpen}
+                >
+                  <IconFilter size={20} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+
+            {selectedTypes.length > 0 && (
+              <Stack direction="row" flexWrap="wrap" gap={1} mt={1}>
+                {selectedTypes.map((type) => {
+                  const option = ACTIVITY_FILTER_OPTIONS.find((item) => item.value === type);
+                  if (!option) return null;
+
+                  return (
+                    <Chip
+                      key={type}
+                      label={option.label}
+                      size="small"
+                      onDelete={() => handleAppliedTypeDelete(type)}
+                    />
+                  );
+                })}
+              </Stack>
+            )}
 
             {loading && history.length === 0 ? (
               <Box display="flex" justifyContent="center" mt={4}>
@@ -223,13 +340,98 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                 )}
               </Box>
             ) : (
-              <Typography mt={3} ml={2} variant="h5">
-                No activities are found for bookkeeper!!
-              </Typography>
+              <Box mt={3} ml={2}>
+                <Typography variant="h5">
+                  {selectedTypes.length > 0
+                    ? "No activities found for selected filter."
+                    : "No activities are found for bookkeeper!!"}
+                </Typography>
+
+                {hasMore && (
+                  <Box display="flex" justifyContent="center" my={2}>
+                    <Button
+                      variant="outlined"
+                      disabled={loading}
+                      onClick={handleSeeMore}
+                      startIcon={loading && <CircularProgress size={16} />}
+                    >
+                      See More
+                    </Button>
+                  </Box>
+                )}
+              </Box>
             )}
           </Grid>
         </Box>
       </Drawer>
+
+      <Dialog
+        open={filterOpen}
+        onClose={handleFilterClose}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            p: 1,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            pb: 1,
+          }}
+        >
+          <Typography variant="h6" fontWeight={700}>
+            Filter Activities
+          </Typography>
+          <IconButton onClick={handleFilterClose} size="small">
+            <IconX size={18} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <FormGroup>
+            {visibleFilterOptions.map((option) => (
+              <FormControlLabel
+                key={option.value}
+                control={
+                  <Checkbox
+                    checked={draftSelectedTypes.includes(option.value)}
+                    onChange={() => handleDraftTypeToggle(option.value)}
+                  />
+                }
+                label={option.label}
+                sx={{
+                  m: 0,
+                  px: 1,
+                  borderRadius: 1.5,
+                  "&:hover": { backgroundColor: "#f8fafc" },
+                }}
+              />
+            ))}
+          </FormGroup>
+
+          <Stack direction="row" justifyContent="space-between" mt={2}>
+            <Button
+              size="small"
+              disabled={draftSelectedTypes.length === 0}
+              onClick={() => setDraftSelectedTypes([])}
+            >
+              Clear
+            </Button>
+            <Button
+              size="small"
+              variant="contained"
+              onClick={handleFilterApply}
+            >
+              Apply
+            </Button>
+          </Stack>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

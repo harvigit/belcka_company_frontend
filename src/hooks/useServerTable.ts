@@ -10,6 +10,7 @@ interface UseServerTableOptions<TData> {
   data: TData[];
   columns: any[];
   fetchData: (...args: any[]) => Promise<void> | void;
+  initialPagination?: { pageIndex: number; pageSize: number };
   debounceDependencies?: any[];
   debounceTimeMs?: number;
   onSortingChange?: (updater: any) => void;
@@ -23,6 +24,7 @@ export function useServerTable<TData>({
   data,
   columns,
   fetchData,
+  initialPagination,
   debounceDependencies = [],
   debounceTimeMs = 300,
   onSortingChange: controlledOnSortingChange,
@@ -31,7 +33,7 @@ export function useServerTable<TData>({
   state: controlledState,
   getRowId,
 }: UseServerTableOptions<TData>) {
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
+  const [pagination, setPagination] = useState(initialPagination ?? { pageIndex: 0, pageSize: 50 });
   const [pageCount, setPageCount] = useState(0);
   const [totalRows, setTotalRows] = useState(0);
   const [internalSorting, setInternalSorting] = useState<SortingState>([]);

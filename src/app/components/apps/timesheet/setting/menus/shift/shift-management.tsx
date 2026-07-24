@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {
     Box,
     Typography,
@@ -62,12 +62,17 @@ interface Project {
     name: string;
 }
 
-const ShiftManagement = () => {
+interface ShiftManagementProps {
+    initialProjectId?: number | null;
+}
+
+const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = null}) => {
     const {data: session} = useSession();
     const user = session?.user as User & { company_id?: number | null };
 
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+    const [teamUserSearch, setTeamUserSearch] = useState('');
 
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
@@ -161,18 +166,17 @@ const ShiftManagement = () => {
                     }
                 });
                 const apiPrimaryShiftId = res.data.info?.primary_shift_id ? Number(res.data.info.primary_shift_id) : null;
-                const defaultPrimaryShiftId = shiftList[0]?.id ?? null;
                 const primaryShiftExists = apiPrimaryShiftId
                     ? shiftList.some((shift) => shift.id === apiPrimaryShiftId)
                     : false;
 
-                setPrimaryShiftId(primaryShiftExists ? apiPrimaryShiftId : defaultPrimaryShiftId);
+                setPrimaryShiftId(primaryShiftExists ? apiPrimaryShiftId : null);
             } else {
-                setPrimaryShiftId(shiftList[0]?.id ?? null);
+                setPrimaryShiftId(null);
             }
         } catch (error) {
             console.error('Error fetching shift management:', error);
-            setPrimaryShiftId(shiftList[0]?.id ?? null);
+            setPrimaryShiftId(null);
         }
 
         setShiftAssignments(initialAssignments);
@@ -184,6 +188,15 @@ const ShiftManagement = () => {
             fetchShifts();
         }
     }, [user?.company_id, fetchProjects, fetchShifts]);
+
+    useEffect(() => {
+        if (!initialProjectId || projects.length === 0) return;
+
+        const initialProject = projects.find((project) => project.id === Number(initialProjectId));
+        if (initialProject && selectedProject?.id !== initialProject.id) {
+            setSelectedProject(initialProject);
+        }
+    }, [initialProjectId, projects, selectedProject?.id]);
 
     useEffect(() => {
         const loadTeamsForSelectedProject = async () => {
@@ -294,6 +307,71 @@ const ShiftManagement = () => {
 
     const hasSelectedProject = Boolean(selectedProject);
 
+    const filteredTeams = useMemo(() => {
+        const searchValue = teamUserSearch.trim().toLowerCase();
+
+        if (!searchValue) {
+            return teams;
+        }
+
+        return teams.reduce<Team[]>((acc, team) => {
+            const teamNameMatches = team.name?.toLowerCase().includes(searchValue);
+
+            if (teamNameMatches) {
+                acc.push(team);
+                return acc;
+            }
+
+            const matchedUsers = (team.users || []).filter((member) =>
+                getUserName(member).toLowerCase().includes(searchValue),
+            );
+
+            if (matchedUsers.length > 0) {
+                acc.push({...team, users: matchedUsers});
+            }
+
+            return acc;
+        }, []);
+    }, [teamUserSearch, teams]);
+
+    const getVisibleEligibleShiftUserIds = (shiftId: number) => {
+        const userIds = filteredTeams.flatMap((team) => getEligibleTeamUserIds(shiftId, team));
+        return Array.from(new Set(userIds));
+    };
+
+    const isShiftFullyAssigned = (shiftId: number) => {
+        const userIds = getVisibleEligibleShiftUserIds(shiftId);
+        if (userIds.length === 0) return false;
+        const currentSet = shiftAssignments[shiftId] || new Set();
+        return userIds.every((id) => currentSet.has(id));
+    };
+
+    const isShiftPartiallyAssigned = (shiftId: number) => {
+        const userIds = getVisibleEligibleShiftUserIds(shiftId);
+        if (userIds.length === 0) return false;
+        const currentSet = shiftAssignments[shiftId] || new Set();
+        const assignedCount = userIds.filter((id) => currentSet.has(id)).length;
+        return assignedCount > 0 && assignedCount < userIds.length;
+    };
+
+    const handleToggleShiftUsers = (shiftId: number) => {
+        const userIds = getVisibleEligibleShiftUserIds(shiftId);
+        if (userIds.length === 0) return;
+
+        setShiftAssignments((prev) => {
+            const currentSet = new Set(prev[shiftId] || []);
+            const allAssigned = userIds.every((id) => currentSet.has(id));
+
+            if (allAssigned) {
+                userIds.forEach((id) => currentSet.delete(id));
+            } else {
+                userIds.forEach((id) => currentSet.add(id));
+            }
+
+            return {...prev, [shiftId]: currentSet};
+        });
+    };
+
     function getShiftUserIdSet(shiftId: number) {
         return new Set((teamsByShift[shiftId] || []).flatMap((team) => (team.users || []).map(getUserId)));
     }
@@ -379,9 +457,10 @@ const ShiftManagement = () => {
         minHeight: 24,
     };
 
-    const teamColumnWidth = 350;
-    const shiftColumnMinWidth = 160;
-    const tableMinWidth = Math.max(960, teamColumnWidth + visibleShifts.length * shiftColumnMinWidth);
+    const teamColumnWidth = 240;
+    const shiftColumnMinWidth = 120;
+    const tableMinWidth = teamColumnWidth + visibleShifts.length * shiftColumnMinWidth;
+    const shiftHeaderHeight = 66;
 
     return (
         <Box
@@ -398,7 +477,9 @@ const ShiftManagement = () => {
             <Box
                 sx={{
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'flex-end',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between',
                     gap: 2,
                     p: 2,
                     borderRadius: 3,
@@ -407,9 +488,6 @@ const ShiftManagement = () => {
                 }}
             >
                 <Box sx={{width: {xs: '100%', sm: 360}}}>
-                    <Typography sx={{fontSize: 12, color: '#7D92A9', fontWeight: 600, mb: 1}}>
-                        Select Project
-                    </Typography>
                     <Autocomplete
                         size="small"
                         options={projects}
@@ -449,6 +527,22 @@ const ShiftManagement = () => {
                         )}
                     />
                 </Box>
+                
+                <Button
+                    variant="contained"
+                    onClick={handleUpdateAssignments}
+                    disabled={!hasSelectedProject || saving || loadingTeams || loadingShifts || visibleShifts.length === 0}
+                    startIcon={saving ? <CircularProgress size={14} color="inherit"/> : null}
+                    sx={{
+                        borderRadius: '10px',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        boxShadow: 'none',
+                        minWidth: 100,
+                    }}
+                >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                </Button>
             </Box>
 
             <Box
@@ -495,8 +589,9 @@ const ShiftManagement = () => {
                             size="small"
                             sx={{
                                 tableLayout: 'fixed',
-                                width: '100%',
+                                width: tableMinWidth,
                                 minWidth: tableMinWidth,
+                                maxWidth: tableMinWidth,
                                 '& .MuiTableCell-root': {
                                     fontSize: 14,
                                     borderBottom: '1px solid rgba(224, 224, 224, 1)',
@@ -504,6 +599,12 @@ const ShiftManagement = () => {
                                 },
                             }}
                         >
+                            <colgroup>
+                                <col style={{width: teamColumnWidth}}/>
+                                {visibleShifts.map((shift) => (
+                                    <col key={`shift-col-${shift.id}`} style={{width: shiftColumnMinWidth}}/>
+                                ))}
+                            </colgroup>
                             <TableHead>
                                 <TableRow>
                                     <TableCell
@@ -516,12 +617,55 @@ const ShiftManagement = () => {
                                             top: 0,
                                             left: 0,
                                             zIndex: 5,
-                                            p: 1.5,
+                                            height: shiftHeaderHeight,
+                                            p: 1,
                                         }}
                                     >
-                                        <Typography sx={{fontSize: 14, fontWeight: 700, color: '#203040'}}>
-                                            Teams & Users
-                                        </Typography>
+                                        <Box
+                                            sx={{
+                                                width: '100%',
+                                            }}
+                                        >
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                value={teamUserSearch}
+                                                onChange={(event) => setTeamUserSearch(event.target.value)}
+                                                placeholder="Search"
+                                                disabled={!hasSelectedProject || loadingTeams}
+                                                InputProps={{
+                                                    startAdornment: (
+                                                        <InputAdornment position="start">
+                                                            <IconSearch size={18}/>
+                                                        </InputAdornment>
+                                                    ),
+                                                    endAdornment: teamUserSearch ? (
+                                                        <InputAdornment position="end">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => setTeamUserSearch('')}
+                                                                edge="end"
+                                                                sx={{p: 0.25}}
+                                                            >
+                                                                <IconX size={16}/>
+                                                            </IconButton>
+                                                        </InputAdornment>
+                                                    ) : null,
+                                                }}
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        borderRadius: 1,
+                                                        bgcolor: '#fff',
+                                                        height: 36,
+                                                        pr: teamUserSearch ? 0.5 : 1,
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        px: 0.5,
+                                                        fontSize: 13,
+                                                    },
+                                                }}
+                                            />
+                                        </Box>
                                     </TableCell>
                                     {visibleShifts.length > 0 ? (
                                         visibleShifts.map((shift) => (
@@ -535,7 +679,8 @@ const ShiftManagement = () => {
                                                     position: 'sticky',
                                                     top: 0,
                                                     zIndex: 4,
-                                                    p: 1,
+                                                    height: shiftHeaderHeight,
+                                                    p: 0.75,
                                                 }}
                                             >
                                                 <Box 
@@ -543,13 +688,27 @@ const ShiftManagement = () => {
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
+                                                        gap: 0.25,
                                                     }}
                                                 >
-                                                    <Box>
-                                                        <Typography p={0.5} sx={{fontSize: 13, lineHeight: 1.2, fontWeight: 700, color: '#001532'}}>
+                                                    <Box sx={{minWidth: 0}}>
+                                                        <Typography
+                                                            title={shift.name}
+                                                            sx={{
+                                                                px: 0.25,
+                                                                py: 0.5,
+                                                                fontSize: 12,
+                                                                lineHeight: 1.2,
+                                                                fontWeight: 700,
+                                                                color: '#001532',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                            }}
+                                                        >
                                                             {shift.name}
                                                         </Typography>
-                                                        <Typography p={0.5} sx={{fontSize: 11, lineHeight: 1.6, color: '#7D92A9'}}>
+                                                        <Typography sx={{px: 0.25, py: 0.5, fontSize: 10, lineHeight: 1.4, color: '#7D92A9'}}>
                                                             {shift.time || 'any time'}
                                                         </Typography>
                                                     </Box>
@@ -559,18 +718,16 @@ const ShiftManagement = () => {
                                                         disableFocusRipple
                                                         title={
                                                             primaryShiftId === shift.id
-                                                                ? 'Remove primary shift'
+                                                                ? 'Primary shift'
                                                                 : 'Set as primary shift'
                                                         }
                                                         aria-label={
                                                             primaryShiftId === shift.id
-                                                                ? `Remove ${shift.name} as primary shift`
+                                                                ? `${shift.name} is primary shift`
                                                                 : `Set ${shift.name} as primary shift`
                                                         }
                                                         onClick={() =>
-                                                            setPrimaryShiftId((current) =>
-                                                                current === shift.id ? null : shift.id,
-                                                            )
+                                                            setPrimaryShiftId(shift.id)
                                                         }
                                                         disabled={!selectedProject}
                                                         sx={{
@@ -616,6 +773,63 @@ const ShiftManagement = () => {
                                         </TableCell>
                                     )}
                                 </TableRow>
+                                <TableRow>
+                                    <TableCell
+                                        sx={{
+                                            minWidth: teamColumnWidth,
+                                            width: teamColumnWidth,
+                                            bgcolor: '#f6f7f7',
+                                            borderRight: '1px solid rgba(224, 224, 224, 1)',
+                                            position: 'sticky',
+                                            top: shiftHeaderHeight,
+                                            left: 0,
+                                            zIndex: 5,
+                                            py: 0.75,
+                                            px: 1,
+                                        }}
+                                    >
+                                        <Typography sx={{fontSize: 12, fontWeight: 700, color: '#203040'}}>
+                                            Select All
+                                        </Typography>
+                                    </TableCell>
+                                    {visibleShifts.length > 0 ? (
+                                        visibleShifts.map((shift) => (
+                                            <TableCell
+                                                key={`select-all-${shift.id}`}
+                                                align="center"
+                                                sx={{
+                                                    minWidth: shiftColumnMinWidth,
+                                                    width: shiftColumnMinWidth,
+                                                    bgcolor: '#f6f7f7',
+                                                    position: 'sticky',
+                                                    top: shiftHeaderHeight,
+                                                    zIndex: 4,
+                                                    py: 0.75,
+                                                    px: 1,
+                                                }}
+                                            >
+                                                <Box sx={checkboxCenterSx}>
+                                                    {renderAssignmentCheckbox(
+                                                        isShiftFullyAssigned(shift.id),
+                                                        () => handleToggleShiftUsers(shift.id),
+                                                        !selectedProject || getVisibleEligibleShiftUserIds(shift.id).length === 0,
+                                                        isShiftPartiallyAssigned(shift.id),
+                                                    )}
+                                                </Box>
+                                            </TableCell>
+                                        ))
+                                    ) : (
+                                        <TableCell
+                                            align="center"
+                                            sx={{
+                                                bgcolor: '#f6f7f7',
+                                                position: 'sticky',
+                                                top: shiftHeaderHeight,
+                                                zIndex: 4,
+                                            }}
+                                        />
+                                    )}
+                                </TableRow>
                             </TableHead>
 
                             <TableBody>
@@ -653,8 +867,20 @@ const ShiftManagement = () => {
                                             </Typography>
                                         </TableCell>
                                     </TableRow>
+                                ) : filteredTeams.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell
+                                            colSpan={visibleShifts.length + 1}
+                                            align="center"
+                                            sx={{py: 5}}
+                                        >
+                                            <Typography color="text.secondary">
+                                                No teams or users match your search.
+                                            </Typography>
+                                        </TableCell>
+                                    </TableRow>
                                 ) : (
-                                    teams.map((team) => (
+                                    filteredTeams.map((team) => (
                                         <React.Fragment key={team.team_id}>
                                             <TableRow
                                                 sx={{
@@ -678,13 +904,14 @@ const ShiftManagement = () => {
                                                         sx={{
                                                             display: 'flex',
                                                             alignItems: 'center',
-                                                            gap: 1,
+                                                            gap: 0.5,
+                                                            minWidth: 0,
                                                         }}
                                                     >
                                                         <IconButton
                                                             size="small"
                                                             onClick={() => toggleTeamOpen(team.team_id)}
-                                                            sx={{p: 0.25}}
+                                                            sx={{p: 0.25, flexShrink: 0}}
                                                         >
                                                             {openTeams[team.team_id] ? (
                                                                 <IconChevronDown size={16}/>
@@ -693,14 +920,28 @@ const ShiftManagement = () => {
                                                             )}
                                                         </IconButton>
                                                         <Typography
-                                                            sx={{fontSize: 14, color: '#203040', fontWeight: 700}}
+                                                            title={team.name}
+                                                            sx={{
+                                                                minWidth: 0,
+                                                                fontSize: 13,
+                                                                color: '#203040',
+                                                                fontWeight: 700,
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                            }}
                                                         >
                                                             {team.name}
                                                         </Typography>
                                                         <Typography
-                                                            sx={{fontSize: 12, color: '#7D92A9', ml: 'auto', pr: 1}}
+                                                            sx={{
+                                                                fontSize: 11,
+                                                                color: '#7D92A9',
+                                                                ml: 'auto',
+                                                                flexShrink: 0,
+                                                            }}
                                                         >
-                                                            {team.users?.length || 0} members
+                                                            {team.users?.length || 0}
                                                         </Typography>
                                                     </Box>
                                                 </TableCell>
@@ -745,18 +986,28 @@ const ShiftManagement = () => {
                                                                     zIndex: 2,
                                                                     borderRight: '1px solid rgba(224, 224, 224, 1)',
                                                                     py: 0.75,
-                                                                    pl: 6,
+                                                                    pl: 3.5,
                                                                     pr: 1,
                                                                 }}
                                                             >
-                                                                <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5}}>
+                                                                <Box sx={{display: 'flex', alignItems: 'center', gap: 1, minWidth: 0}}>
                                                                     <Avatar
                                                                         src={getUserAvatar(userMember) || ''}
-                                                                        sx={{width: 24, height: 24, fontSize: 11}}
+                                                                        sx={{width: 22, height: 22, fontSize: 10, flexShrink: 0}}
                                                                     >
                                                                         {getInitials(userName)}
                                                                     </Avatar>
-                                                                    <Typography sx={{fontSize: 14, color: '#203040'}}>
+                                                                    <Typography
+                                                                        title={userName}
+                                                                        sx={{
+                                                                            minWidth: 0,
+                                                                            fontSize: 13,
+                                                                            color: '#203040',
+                                                                            overflow: 'hidden',
+                                                                            textOverflow: 'ellipsis',
+                                                                            whiteSpace: 'nowrap',
+                                                                        }}
+                                                                    >
                                                                         {userName}
                                                                     </Typography>
                                                                 </Box>
@@ -786,35 +1037,6 @@ const ShiftManagement = () => {
                         </Table>
                     </TableContainer>
                 )}
-            </Box>
-
-            <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    gap: 2,
-                    p: 2,
-                    borderRadius: 3,
-                    bgcolor: '#fff',
-                    boxShadow: '0 4px 18px rgba(0,0,0,0.04)',
-                }}
-            >
-                <Button
-                    variant="contained"
-                    onClick={handleUpdateAssignments}
-                    disabled={!hasSelectedProject || saving || loadingTeams || loadingShifts || visibleShifts.length === 0}
-                    startIcon={saving ? <CircularProgress size={14} color="inherit"/> : null}
-                    sx={{
-                        borderRadius: '10px',
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        boxShadow: 'none',
-                        minWidth: 100,
-                    }}
-                >
-                    {saving ? 'Saving...' : 'Save Changes'}
-                </Button>
             </Box>
         </Box>
     );
