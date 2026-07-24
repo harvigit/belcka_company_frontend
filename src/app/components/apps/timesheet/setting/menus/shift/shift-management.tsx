@@ -20,6 +20,8 @@ import {
     IconChevronDown,
     IconChevronRight,
     IconSearch,
+    IconStar,
+    IconStarFilled,
     IconX,
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
@@ -81,7 +83,6 @@ const ShiftManagement = () => {
     >({});
 
     const [primaryShiftId, setPrimaryShiftId] = useState<number | null>(null);
-    const [primaryShifts, setPrimaryShifts] = useState<Record<number, number>>({});
 
     const [openTeams, setOpenTeams] = useState<Record<number, boolean>>({});
 
@@ -117,22 +118,6 @@ const ShiftManagement = () => {
                         enabled: shift.status,
                     }));
                 setShifts(fetchedShifts);
-
-                const initialAssignments: Record<number, Set<number>> = {};
-                for (const shift of fetchedShifts) {
-                    try {
-                        const assignedRes = await api.get(
-                            `/setting/shift-users/${shift.id}`,
-                        );
-                        const assignedIds = (assignedRes.data?.info || []).map((u: any) =>
-                            Number(u.id ?? u.user_id),
-                        );
-                        initialAssignments[shift.id] = new Set(assignedIds);
-                    } catch (e) {
-                        initialAssignments[shift.id] = new Set();
-                    }
-                }
-                setShiftAssignments(initialAssignments);
             }
         } catch (error) {
             console.error('Error fetching shifts:', error);
@@ -153,6 +138,44 @@ const ShiftManagement = () => {
             console.error('Error fetching teams:', error);
         }
         return [];
+    }, []);
+
+    const fetchShiftManagement = useCallback(async (projectId: number, shiftList: Shift[]) => {
+        const initialAssignments = shiftList.reduce<Record<number, Set<number>>>((acc, shift) => {
+            acc[shift.id] = new Set();
+            return acc;
+        }, {});
+
+        try {
+            const res = await api.get('/setting/shift-management', {
+                params: {project_id: projectId},
+            });
+
+            if (res.data?.IsSuccess) {
+                const assignments = res.data.info?.assignments || [];
+                assignments.forEach((assignment: any) => {
+                    const shiftId = Number(assignment.shift_id);
+                    const userId = Number(assignment.user_id);
+                    if (assignment.status && initialAssignments[shiftId]) {
+                        initialAssignments[shiftId].add(userId);
+                    }
+                });
+                const apiPrimaryShiftId = res.data.info?.primary_shift_id ? Number(res.data.info.primary_shift_id) : null;
+                const defaultPrimaryShiftId = shiftList[0]?.id ?? null;
+                const primaryShiftExists = apiPrimaryShiftId
+                    ? shiftList.some((shift) => shift.id === apiPrimaryShiftId)
+                    : false;
+
+                setPrimaryShiftId(primaryShiftExists ? apiPrimaryShiftId : defaultPrimaryShiftId);
+            } else {
+                setPrimaryShiftId(shiftList[0]?.id ?? null);
+            }
+        } catch (error) {
+            console.error('Error fetching shift management:', error);
+            setPrimaryShiftId(shiftList[0]?.id ?? null);
+        }
+
+        setShiftAssignments(initialAssignments);
     }, []);
 
     useEffect(() => {
@@ -181,6 +204,7 @@ const ShiftManagement = () => {
 
                 setTeamsByShift(nextTeamsByShift);
                 setTeams(mergedTeamList);
+                await fetchShiftManagement(selectedProject.id, shifts);
 
                 setOpenTeams((prev) => {
                     const next = {...prev};
@@ -197,7 +221,7 @@ const ShiftManagement = () => {
         };
 
         loadTeamsForSelectedProject();
-    }, [selectedProject, fetchTeams, shifts]);
+    }, [selectedProject, fetchTeams, fetchShiftManagement, shifts]);
 
     const toggleTeamOpen = (teamId: number) => {
         setOpenTeams((prev) => ({...prev, [teamId]: !prev[teamId]}));
@@ -291,16 +315,28 @@ const ShiftManagement = () => {
         try {
             setSaving(true);
 
-            await Promise.all(
-                visibleShifts
-                    .map((shift) =>
-                        api.post('/setting/assign-shift-users', {
-                            shift_id: shift.id,
-                            user_ids: Array.from(shiftAssignments[shift.id] || []),
-                            project_id: selectedProject?.id,
-                        }),
-                    ),
+            const assignments = teams.flatMap((team) =>
+                (team.users || []).flatMap((userMember) => {
+                    const userId = getUserId(userMember);
+
+                    return visibleShifts.map((shift) => ({
+                        team_id: team.team_id,
+                        user_id: userId,
+                        shift_id: shift.id,
+                        status: Boolean(shiftAssignments[shift.id]?.has(userId)),
+                    }));
+                }),
             );
+
+            await api.post('/setting/save-shift-management', {
+                project_id: selectedProject?.id,
+                primary_shift_id: primaryShiftId,
+                assignments,
+            });
+
+            if (selectedProject) {
+                await fetchShiftManagement(selectedProject.id, visibleShifts);
+            }
 
             toast.success('Shift assignments updated successfully');
         } catch (error) {
@@ -342,6 +378,10 @@ const ShiftManagement = () => {
         width: '100%',
         minHeight: 24,
     };
+
+    const teamColumnWidth = 350;
+    const shiftColumnMinWidth = 160;
+    const tableMinWidth = Math.max(960, teamColumnWidth + visibleShifts.length * shiftColumnMinWidth);
 
     return (
         <Box
@@ -455,8 +495,8 @@ const ShiftManagement = () => {
                             size="small"
                             sx={{
                                 tableLayout: 'fixed',
-                                width: Math.max(960, 350 + visibleShifts.length * 160),
-                                minWidth: Math.max(960, 350 + visibleShifts.length * 160),
+                                width: '100%',
+                                minWidth: tableMinWidth,
                                 '& .MuiTableCell-root': {
                                     fontSize: 14,
                                     borderBottom: '1px solid rgba(224, 224, 224, 1)',
@@ -468,8 +508,8 @@ const ShiftManagement = () => {
                                 <TableRow>
                                     <TableCell
                                         sx={{
-                                            minWidth: 350,
-                                            width: 350,
+                                            minWidth: teamColumnWidth,
+                                            width: teamColumnWidth,
                                             bgcolor: '#f6f7f7',
                                             borderRight: '1px solid rgba(224, 224, 224, 1)',
                                             position: 'sticky',
@@ -489,9 +529,8 @@ const ShiftManagement = () => {
                                                 key={`shift-header-${shift.id}`}
                                                 align="center"
                                                 sx={{
-                                                    minWidth: 160,
-                                                    width: 160,
-                                                    maxWidth: 160,
+                                                    minWidth: shiftColumnMinWidth,
+                                                    width: shiftColumnMinWidth,
                                                     bgcolor: '#f6f7f7',
                                                     position: 'sticky',
                                                     top: 0,
@@ -499,12 +538,68 @@ const ShiftManagement = () => {
                                                     p: 1,
                                                 }}
                                             >
-                                                <Typography sx={{fontSize: 13, lineHeight: 1.2, fontWeight: 700, color: '#001532'}}>
-                                                    {shift.name}
-                                                </Typography>
-                                                <Typography sx={{fontSize: 11, lineHeight: 1.6, color: '#7D92A9'}}>
-                                                    {shift.time || 'any time'}
-                                                </Typography>
+                                                <Box 
+                                                    sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                    }}
+                                                >
+                                                    <Box>
+                                                        <Typography p={0.5} sx={{fontSize: 13, lineHeight: 1.2, fontWeight: 700, color: '#001532'}}>
+                                                            {shift.name}
+                                                        </Typography>
+                                                        <Typography p={0.5} sx={{fontSize: 11, lineHeight: 1.6, color: '#7D92A9'}}>
+                                                            {shift.time || 'any time'}
+                                                        </Typography>
+                                                    </Box>
+                                                    <IconButton
+                                                        size="small"
+                                                        disableRipple
+                                                        disableFocusRipple
+                                                        title={
+                                                            primaryShiftId === shift.id
+                                                                ? 'Remove primary shift'
+                                                                : 'Set as primary shift'
+                                                        }
+                                                        aria-label={
+                                                            primaryShiftId === shift.id
+                                                                ? `Remove ${shift.name} as primary shift`
+                                                                : `Set ${shift.name} as primary shift`
+                                                        }
+                                                        onClick={() =>
+                                                            setPrimaryShiftId((current) =>
+                                                                current === shift.id ? null : shift.id,
+                                                            )
+                                                        }
+                                                        disabled={!selectedProject}
+                                                        sx={{
+                                                            gridColumn: 2,
+                                                            justifySelf: 'center',
+                                                            p: 0,
+                                                            width: 18,
+                                                            height: 18,
+                                                            minWidth: 18,
+                                                            flexShrink: 0,
+                                                            bgcolor: 'transparent',
+                                                            color: primaryShiftId === shift.id ? '#F5A623' : '#7D92A9',
+                                                            '&:hover, &:active, &:focus, &:focus-visible': {
+                                                                bgcolor: 'transparent',
+                                                            },
+                                                            '&.Mui-disabled': {
+                                                                bgcolor: 'transparent',
+                                                                color: '#B9C5D0',
+                                                            },
+                                                        }}
+                                                    >
+                                                        {primaryShiftId === shift.id ? (
+                                                            <IconStarFilled size={16}/>
+                                                        ) : (
+                                                            <IconStar size={16}/>
+                                                        )}
+                                                    </IconButton>
+
+                                                </Box>
                                             </TableCell>
                                         ))
                                     ) : (
@@ -524,50 +619,6 @@ const ShiftManagement = () => {
                             </TableHead>
 
                             <TableBody>
-                                {visibleShifts.length > 0 && (
-                                    <TableRow
-                                        sx={{
-                                            bgcolor: '#fff',
-                                            '&:hover td': {bgcolor: '#f9fbfd'},
-                                        }}
-                                    >
-                                        <TableCell
-                                            sx={{
-                                                position: 'sticky',
-                                                left: 0,
-                                                width: 350,
-                                                minWidth: 350,
-                                                bgcolor: '#fff',
-                                                zIndex: 3,
-                                                borderRight: '1px solid rgba(224, 224, 224, 1)',
-                                                p: 1.5,
-                                            }}
-                                        >
-                                            <Typography sx={{fontSize: 14, color: '#203040', fontWeight: 600}}>
-                                                Primary
-                                            </Typography>
-                                        </TableCell>
-                                        {visibleShifts.map((shift) => (
-                                            <TableCell
-                                                key={`primary-row-${shift.id}`}
-                                                align="center"
-                                                sx={checkboxCellSx}
-                                            >
-                                                <Box sx={checkboxCenterSx}>
-                                                    {renderAssignmentCheckbox(
-                                                        primaryShiftId === shift.id,
-                                                        () =>
-                                                            setPrimaryShiftId((current) =>
-                                                                current === shift.id ? null : shift.id,
-                                                            ),
-                                                        !selectedProject,
-                                                    )}
-                                                </Box>
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                )}
-
                                 {loadingTeams ? (
                                     <TableRow>
                                         <TableCell
@@ -615,8 +666,8 @@ const ShiftManagement = () => {
                                                     sx={{
                                                         position: 'sticky',
                                                         left: 0,
-                                                        width: 350,
-                                                        minWidth: 350,
+                                                        width: teamColumnWidth,
+                                                        minWidth: teamColumnWidth,
                                                         bgcolor: '#fff',
                                                         zIndex: 3,
                                                         borderRight: '1px solid rgba(224, 224, 224, 1)',
@@ -688,8 +739,8 @@ const ShiftManagement = () => {
                                                                 sx={{
                                                                     position: 'sticky',
                                                                     left: 0,
-                                                                    width: 350,
-                                                                    minWidth: 350,
+                                                                    width: teamColumnWidth,
+                                                                    minWidth: teamColumnWidth,
                                                                     bgcolor: 'inherit',
                                                                     zIndex: 2,
                                                                     borderRight: '1px solid rgba(224, 224, 224, 1)',
