@@ -221,6 +221,7 @@ export default function AnnouncementsList({
                   />
                   <ListItemText
                     sx={{ cursor: "pointer" }}
+                    disableTypography
                     primary={
                       <Box
                         onClick={(e) => {

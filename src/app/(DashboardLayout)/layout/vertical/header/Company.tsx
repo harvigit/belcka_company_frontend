@@ -364,7 +364,7 @@ const Company = () => {
     try {
       setLoading(true);
       const res: AxiosResponse<any> = await api.get(
-        `announcements/get-announcements?company_id=${user.company_id}&user_id=${user.id}`,
+        `announcements/get-announcements-web?company_id=${user.company_id}&user_id=${user.id}`,
       );
       const data = res.data.info || [];
       setItems(data);
