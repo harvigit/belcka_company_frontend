@@ -463,7 +463,7 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
 
     const fetchShifts = async () => {
         try {
-            const response = await api.get("/setting/get-shift-settings");
+            const response = await api.get("/setting/get-shift-settings-web");
             if (response.data?.IsSuccess) {
                 const transformedShifts: Shift[] = response.data.info.map(
                     (shift: any) => ({

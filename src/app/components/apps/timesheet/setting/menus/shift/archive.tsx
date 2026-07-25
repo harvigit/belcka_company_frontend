@@ -13,8 +13,6 @@ import {
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
-import { useSession } from "next-auth/react";
-import { User } from "next-auth";
 import { IconArrowBackUp, IconTrash } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { AxiosResponse } from "axios";
@@ -32,8 +30,6 @@ const ArchiveShifts: React.FC<ArchiveShiftsProps> = ({
 }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<any[]>([]);
-  const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{
     id: number;
@@ -45,7 +41,7 @@ const ArchiveShifts: React.FC<ArchiveShiftsProps> = ({
     try {
       setLoading(true);
       const res: AxiosResponse<any> = await api.get(
-        `shift/archive-shifts-list?company_id=${user.company_id}`
+        `shift/archive-shifts-list-web`
       );
       if (res.data?.info) {
         setData(res.data.info);
