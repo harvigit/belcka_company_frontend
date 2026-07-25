@@ -27,7 +27,7 @@ interface CutDeleteConflictsProps {
     index: number;
     startDate: string;
     endDate: string;
-    onClose: () => void;
+    onClose: (didMutate: boolean) => Promise<void> | void;
 }
 
 interface CutPreviewRow {
@@ -298,12 +298,12 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                 return;
             }
 
-            await api.post("/time-clock/cut-worklog", { cut_data: cutData });
+            const response = await api.post("/time-clock/cut-worklog", { cut_data: cutData });
 
             setCutPreviewOpen(false);
             setSelectedItem(null);
             handleMenuClose();
-            onClose(); // Close the sidebar on success
+            await onClose(Boolean(response.data.IsSuccess));
         } catch (error) {
             console.error("Error saving cut action:", error);
             setCutPreviewOpen(false);
@@ -334,14 +334,14 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
         }
         setIsLoading(true);
         try {
-            await api.post("/time-clock/delete-worklog", {
+            const response = await api.post("/time-clock/delete-worklog", {
                 worklog_id: selectedItem.worklog_id,
             });
 
             setDeletePreviewOpen(false);
             setSelectedItem(null);
             handleMenuClose();
-            onClose(); // Close the sidebar on success
+            await onClose(Boolean(response.data.IsSuccess));
         } catch (error) {
             console.error("Error saving delete action:", error);
             setDeletePreviewOpen(false);

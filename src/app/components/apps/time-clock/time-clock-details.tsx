@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useMemo, useCallback, useRef} from 'react';
-import {Box, Drawer, IconButton, TableCell, Typography} from '@mui/material';
+import {Box, Drawer, IconButton, TableCell, Typography, CircularProgress} from '@mui/material';
 import {
     useReactTable,
     getCoreRowModel,
@@ -33,13 +33,20 @@ import AddExpense from './time-clock-details/expenses/add-expense';
 import AddAdjustment from './time-clock-details/adjustments/add-adjustment';
 import AddPricework from './time-clock-details/pricework/add-pricework';
 import AdjustmentActivitySidebar from './time-clock-details/adjustments/activity-sidebar';
-import {formatHour} from '@/app/components/apps/time-clock/utils/recordHelpers';
+import {formatHour, sanitizeDateTime} from '@/app/components/apps/time-clock/utils/recordHelpers';
 import {Stack} from '@mui/system';
 
 import ConfirmationDialog from './components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import {useRouter} from 'next/navigation';
 import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
+
+/** Stable callback identity; always invokes the latest fn (avoids stale closures without re-renders). */
+function useLatestCallback<T extends (...args: any[]) => any>(fn: T): T {
+    const ref = useRef(fn);
+    ref.current = fn;
+    return useCallback(((...args: any[]) => ref.current(...args)) as T, []);
+}
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
@@ -206,6 +213,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         open: boolean;
         actionType: 'lock' | 'unlock' | 'delete';
         conflictCount: number;
+        record?: { id: string; type: RecordType };
     } | null>(null);
 
     const [penaltyAppealByDate, setPenaltyAppealByDate] = useState<{ [key: string]: number }>({});
@@ -234,6 +242,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         ratePermissionLoaded,
         shifts,
         projects,
+        isLoading,
         fetchTimeClockData,
         payrollCycle,
         fetchPayrollCycle,
@@ -267,15 +276,19 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         }));
     }, [userHasRatePermission, ratePermissionLoaded]);
 
-    // Save columnVisibility to localStorage whenever it changes
-    useEffect(() => {
-        saveDateRangeToStorage(startDate, endDate, columnVisibility);
-    }, [startDate, endDate, columnVisibility]); 
+    // Debounce column-visibility persistence (localStorage + cookie)
+    const columnVisibilityPersistRef = useRef({ startDate, endDate, columnVisibility });
+    columnVisibilityPersistRef.current = { startDate, endDate, columnVisibility };
 
     useEffect(() => {
-        saveColumnVisibilityCookie(TIME_CLOCK_DETAILS_COLUMNS_COOKIE, columnVisibility);
-    }, [columnVisibility]);
-    
+        const timer = setTimeout(() => {
+            const { startDate: s, endDate: e, columnVisibility: vis } = columnVisibilityPersistRef.current;
+            saveDateRangeToStorage(s, e, vis);
+            saveColumnVisibilityCookie(TIME_CLOCK_DETAILS_COLUMNS_COOKIE, vis);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [startDate, endDate, columnVisibility]);
+
     // Process conflicts
     useEffect(() => {
         if (conflictDetails && conflictDetails.length > 0) {
@@ -352,27 +365,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         clearNewRecords,
     } = useNewRecords();
 
-    // Utility functions
-    const formatHour = (val: string | number | null | undefined, isPricework: boolean = false): string => {
-        if (val === null || val === undefined) return isPricework ? '--' : '00:00';
-        if (isPricework) return '--';
-
-        const str = val.toString().trim();
-        if (/^\d{1,2}:\d{1,2}(\.\d+)?$/.test(str)) {
-            const [h, m] = str.split(':');
-            const minutes = parseFloat(m) || 0;
-            return `${h.padStart(2, '0')}:${Math.floor(minutes).toString().padStart(2, '0')}`;
-        }
-
-        const num = parseFloat(str);
-        if (!isNaN(num)) {
-            const h = Math.floor(num);
-            const m = Math.round((num - h) * 60);
-            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-        }
-        return isPricework ? '--' : '00:00';
-    };
-
+    // Utility functions (module-level formatHour / sanitizeDateTime are identity-stable for memo)
     const parseDate = (dateString: string): Date | null => {
         if (!dateString) return null;
         try {
@@ -386,19 +379,16 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         }
     };
 
-    const sanitizeDateTime = (dateTime: string): string => {
-        return dateTime && dateTime !== 'Invalid DateTime' ? dateTime : '--';
-    };
-
-    const isRecordLocked = (log: any): boolean => {
+    // Includes status 9 (paid) — broader than recordHelpers.isRecordLocked
+    const isRecordLocked = useCallback((log: any): boolean => {
         return log?.status === 6 || log?.status === '6' || log?.status === 9 || log?.status === '9';
-    };
+    }, []);
 
     const isRecordUnlocked = (log: any): boolean => {
         return log?.status === 7 || log?.status === '7';
     };
 
-    const hasValidWorklogData = (row: DailyBreakdown): boolean => {
+    const hasValidWorklogData = useCallback((row: DailyBreakdown): boolean => {
         return !!(row.worklog_id) &&
             row.start !== '--' &&
             row.end !== '--' &&
@@ -406,11 +396,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             row.end !== null &&
             row.start !== undefined &&
             row.end !== undefined;
-    };
+    }, []);
 
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-    const validateAndFormatTime = (value: string): string => {
+    const validateAndFormatTime = useCallback((value: string): string => {
         if (!value || value.trim() === '') return '';
 
         const digits = value.replace(/\D/g, '');
@@ -449,7 +439,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         minutes = Math.min(minutes, 59);
 
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    };
+    }, []);
 
     const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
@@ -541,7 +531,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         }
     };
 
-    const handleWorklogToggle = (worklogId: string) => {
+    const handleWorklogToggle = useCallback((worklogId: string) => {
         setExpandedWorklogsIds((prevIds) => {
             if (prevIds.includes(worklogId)) {
                 return prevIds.filter((existingId) => existingId !== worklogId);
@@ -549,29 +539,19 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 return [...prevIds, worklogId];
             }
         });
-    };
+    }, []);
 
-    const handleConflicts = async () => {
+    const handleConflicts = useCallback(async () => {
         setConflictSidebar(true);
-    };
+    }, []);
 
-    const closeConflictSidebar = async () => {
+    const closeConflictSidebar = () => {
         setConflictSidebar(false);
-        try {
-            if (conflictDetails?.length > 0) {
-                const defaultStartDate = startDate || defaultStart;
-                const defaultEndDate = endDate || defaultEnd;
-                await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                onDataChange?.();
-            }
-        } catch (error) {
-            console.error('Error fetching time clock data after closing conflict sidebar:', error);
-        }
     };
 
-    const handleLeaveRequests = async () => {
+    const handleLeaveRequests = useCallback(async () => {
         setLeaveRequestSidebar(true);
-    };
+    }, []);
 
     useEffect(() => {
         if (handledRef.current) return;
@@ -600,68 +580,35 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     }, []);
 
 
-    const closeLeaveRequestSidebar = async () => {
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-
-            setLeaveRequestSidebar(false);
-        } catch (error) {
-            console.error('Error fetching time clock data after closing leaves sidebar:', error);
-        }
+    const closeLeaveRequestSidebar = () => {
+        setLeaveRequestSidebar(false);
     };
 
-    const handleChecklogs = async (worklogId: number) => {
+    const handleChecklogs = useCallback(async (worklogId: number) => {
         setChecklogsSidebar(true);
         setSelectedWorkId(worklogId)
-    };
+    }, []);
 
-    const closeChecklogsSidebar = async () => {
+    const closeChecklogsSidebar = () => {
         setChecklogsSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error fetching time clock data after closing checklogs sidebar:', error);
-        }
     };
 
-    const handleExpenses = async (expenseId: number) => {
+    const handleExpenses = useCallback(async (expenseId: number) => {
         setExpensesSidebar(true);
         setSelectedExpenseId(expenseId)
-    };
+    }, []);
 
-    const closeExpensesSidebar = async () => {
+    const closeExpensesSidebar = () => {
         setExpensesSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error fetching time clock data after closing expenses sidebar:', error);
-        }
     };
 
-    const handlePenalties = async (worklogId: number) => {
+    const handlePenalties = useCallback(async (worklogId: number) => {
         setPenaltiesSidebar(true);
         setSelectedWorkId(worklogId)
-    };
+    }, []);
 
-    const closePenaltiesSidebar = async () => {
+    const closePenaltiesSidebar = () => {
         setPenaltiesSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error fetching time clock data after closing penalties sidebar:', error);
-        }
     };
 
     const handleAddLeave = async () => {
@@ -681,38 +628,33 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setAddPriceworkSidebar(true);
     };
 
-    const handleEditPricework = async (pricework: any) => {
+    const handleEditPricework = useCallback(async (pricework: any) => {
         setSelectedPricework(pricework);
         setAddPriceworkSidebar(true);
-    };
+    }, []);
 
-    const handleOpenAdjustmentActivities = (activities: AdjustmentActivity[]) => {
+    const handleOpenAdjustmentActivities = useCallback((activities: AdjustmentActivity[]) => {
         setSelectedAdjustmentActivities(activities);
         setAdjustmentActivitySidebar(true);
-    };
+    }, []);
 
-    const closeAddLeaveSidebar = async () => {
+    const refreshDetailsData = useLatestCallback(async () => {
+        try {
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            onDataChange?.();
+        } catch (error) {
+            console.error('Error refreshing time clock details after data change:', error);
+        }
+    });
+
+    const closeAddLeaveSidebar = () => {
         setAddLeaveSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error fetching time clock data after closing add leave sidebar:', error);
-        }
     };
 
-    const closeAddExpenseSidebar = async () => {
+    const closeAddExpenseSidebar = () => {
         setAddExpenseSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error fetching time clock data after closing add expense sidebar:', error);
-        }
     };
 
     const closeAddPriceworkSidebar = async () => {
@@ -720,16 +662,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setSelectedPricework(null);
     };
 
-    const closeAddAdjustmentSidebar = async () => {
+    const closeAddAdjustmentSidebar = () => {
         setAddAdjustmentSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error fetching time clock data after closing add adjustment sidebar:', error);
-        }
     };
 
     const closeAdjustmentActivitySidebar = () => {
@@ -737,25 +671,15 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setSelectedAdjustmentActivities([]);
     };
 
-    const handlePendingRequest = async () => {
+    const handlePendingRequest = useCallback(async () => {
         setRequestListOpen(true);
-    };
+    }, []);
 
-    const closeRequestList = async () => {
+    const closeRequestList = () => {
         setRequestListOpen(false);
-        try {
-            if (pendingRequestCount > 0) {
-                const defaultStartDate = startDate || defaultStart;
-                const defaultEndDate = endDate || defaultEnd;
-                await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                onDataChange?.();
-            }
-        } catch (error) {
-            console.error('Error fetching time clock data after closing request list:', error);
-        }
     };
 
-    const handleAdjustmentSave = async (date: string, amount: number) => {
+    const handleAdjustmentSave = useLatestCallback(async (date: string, amount: number) => {
         try {
             const parsedDate = parse(date, 'dd/MM/yyyy', new Date());
             const weekStart = startOfWeek(parsedDate, { weekStartsOn: 1 });
@@ -776,10 +700,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         } catch (error) {
             console.error('Error saving adjustment:', error);
         }
-    };
+    });
 
     // API calls
-    const saveFieldChanges = async (worklogId: string, originalLog: any) => {
+    const saveFieldChanges = useLatestCallback(async (worklogId: string, originalLog: any) => {
         const editedData = editingWorklogs[worklogId];
         if (!editedData) return;
 
@@ -833,9 +757,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         }
 
         cancelEditingField(worklogId);
-    };
+    });
 
-    const saveShiftChanges = async (worklogId: string, originalLog: any) => {
+    const saveShiftChanges = useLatestCallback(async (worklogId: string, originalLog: any) => {
         const editedData = editingShifts[worklogId];
         if (!editedData) return;
 
@@ -873,9 +797,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 return newSet;
             });
         }
-    };
+    });
 
-    const saveProjectChanges = async (worklogId: string, originalLog: any) => {
+    const saveProjectChanges = useLatestCallback(async (worklogId: string, originalLog: any) => {
         const editedData = editingProjects[worklogId];
         if (!editedData) return;
 
@@ -913,9 +837,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 return newSet;
             });
         }
-    };
+    });
 
-    const saveNewRecord = async (recordKey: string) => {
+    const saveNewRecord = useLatestCallback(async (recordKey: string) => {
         const newRecord = newRecords[recordKey];
         if (!newRecord) return;
 
@@ -979,7 +903,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 return newSet;
             });
         }
-    };
+    });
 
     const dailyData = useMemo<DailyBreakdown[]>(() => {
         if (!data || data.length === 0) {
@@ -1169,6 +1093,20 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const isAllSelected = selectableRowIds.length > 0 && selectedRows.size === selectableRowIds.length;
     const isIndeterminate = selectedRows.size > 0 && selectedRows.size < selectableRowIds.length;
+
+    // Keep selection/header state out of mainTableColumns deps — cells read latest via refs
+    const selectedRowsRef = useRef(selectedRows);
+    const isAllSelectedRef = useRef(isAllSelected);
+    const isIndeterminateRef = useRef(isIndeterminate);
+    const handleSelectAllRef = useRef(handleSelectAll);
+    const handleRowSelectRef = useRef(handleRowSelect);
+    const handlePendingRequestRef = useRef(handlePendingRequest);
+    selectedRowsRef.current = selectedRows;
+    isAllSelectedRef.current = isAllSelected;
+    isIndeterminateRef.current = isIndeterminate;
+    handleSelectAllRef.current = handleSelectAll;
+    handleRowSelectRef.current = handleRowSelect;
+    handlePendingRequestRef.current = handlePendingRequest;
 
     const getSelectedRowsLockStatus = () => {
         let hasLockedRows = false;
@@ -1475,9 +1413,16 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             return parseInt(rowId.replace('row-', ''));
         });
 
+        const pendingRecord = confirmDialog.record;
+        const actionType = confirmDialog.actionType;
         setConfirmDialog(null);
 
-        switch (confirmDialog.actionType) {
+        if (pendingRecord) {
+            await executeDeleteRecord(pendingRecord.id, pendingRecord.type);
+            return;
+        }
+
+        switch (actionType) {
             case 'lock': {
                 const timesheetIds: (string | number)[] = [];
                 selectedRowIndices.forEach((rowIndex) => {
@@ -1580,12 +1525,21 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         return {hasWorklogs};
     };
 
-    const handleDeleteRecord = async (id: string, type: RecordType) => {
+    const handleDeleteRecord = useLatestCallback((id: string, type: RecordType) => {
         if (!id || !type) {
             console.error('Invalid delete parameters');
             return;
         }
 
+        setConfirmDialog({
+            open: true,
+            actionType: 'delete',
+            conflictCount: 0,
+            record: { id, type },
+        });
+    });
+
+    const executeDeleteRecord = async (id: string, type: RecordType) => {
         try {
             const endpoint = DELETE_ENDPOINTS[type];
 
@@ -1630,9 +1584,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         justifyContent: 'center'
                     }}>
                         <CustomCheckbox
-                            checked={isAllSelected}
-                            indeterminate={isIndeterminate}
-                            onChange={(e) => handleSelectAll(e.target.checked)}
+                            checked={isAllSelectedRef.current}
+                            indeterminate={isIndeterminateRef.current}
+                            onChange={(e) => handleSelectAllRef.current(e.target.checked)}
                         />
                     </Box>
                 ),
@@ -1641,8 +1595,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     const rowId = `row-${row.index}`;
                     return (
                         <CustomCheckbox
-                            checked={selectedRows.has(rowId)}
-                            onChange={(e) => handleRowSelect(rowId, e.target.checked)}
+                            checked={selectedRowsRef.current.has(rowId)}
+                            onChange={(e) => handleRowSelectRef.current(rowId, e.target.checked)}
                         />
                     );
                 },
@@ -1699,7 +1653,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                             color="error"
                             aria-label="error"
                             sx={{'&:hover': {backgroundColor: 'transparent', color: '#fc4b6c'}}}
-                            onClick={handlePendingRequest}
+                            onClick={() => handlePendingRequestRef.current()}
                         >
                             <IconExclamationMark size={18}/>
                         </IconButton>
@@ -1868,7 +1822,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 size: 100,
             },
         ],
-        [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect, penaltyAppealByDate]
+        [],
     );
 
     const table = useReactTable({
@@ -1977,59 +1931,70 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 amountColumns={Array.from(TIME_CLOCK_DETAILS_AMOUNT_COLUMNS)}
             />
 
-            <TimeClockTable
-                key={user_id}
-                table={table}
-                dailyData={dailyData}
-                currency={currency}
-                selectedRows={selectedRows}
-                expandedWorklogsIds={expandedWorklogsIds}
-                newRecords={newRecords}
-                savingNewRecords={savingNewRecords}
-                shifts={shifts}
-                editingWorklogs={editingWorklogs}
-                savingWorklogs={savingWorklogs}
-                editingShifts={editingShifts}
-                formatHour={formatHour}
-                sanitizeDateTime={sanitizeDateTime}
-                validateAndFormatTime={validateAndFormatTime}
-                hasValidWorklogData={hasValidWorklogData}
-                isRecordLocked={isRecordLocked}
-                handleRowSelect={handleRowSelect}
-                handlePendingRequest={handlePendingRequest}
-                handleWorklogToggle={handleWorklogToggle}
-                startAddingNewRecord={startAddingNewRecord}
-                startEditingField={startEditingField}
-                startEditingShift={startEditingShift}
-                updateEditingField={updateEditingField}
-                updateEditingShift={updateEditingShift}
-                updateNewRecord={updateNewRecord}
-                cancelEditingField={cancelEditingField}
-                cancelEditingShift={cancelEditingShift}
-                saveFieldChanges={saveFieldChanges}
-                saveShiftChanges={saveShiftChanges}
-                saveNewRecord={saveNewRecord}
-                cancelNewRecord={cancelNewRecord}
-                projects={projects}
-                editingProjects={editingProjects}
-                startEditingProject={startEditingProject}
-                updateEditingProject={updateEditingProject}
-                cancelEditingProject={cancelEditingProject}
-                saveProjectChanges={saveProjectChanges}
-                onDeleteClick={handleDeleteRecord}
-                conflictsByDate={conflictsByDate}
-                penaltyAppealByDate={penaltyAppealByDate}
-                openConflictsSideBar={handleConflicts}
-                openChecklogsSidebar={handleChecklogs}
-                openExpensesSidebar={handleExpenses}
-                openPenaltiesSidebar={handlePenalties}
-                openPriceworkSidebar={handleEditPricework}
-                leaveRequestCount={leaveRequestCount}
-                penaltyAppealCount={penaltyAppealCount}
-                openLeaveRequestsSideBar={handleLeaveRequests}
-                onAdjustmentSave={handleAdjustmentSave}
-                onOpenAdjustmentActivities={handleOpenAdjustmentActivities}
-            />
+            {isLoading && data.length === 0 ? (
+                <Box
+                    display="flex"
+                    justifyContent="center"
+                    alignItems="center"
+                    sx={{ flex: 1, minHeight: 280 }}
+                >
+                    <CircularProgress />
+                </Box>
+            ) : (
+                <TimeClockTable
+                    key={user_id}
+                    table={table}
+                    dailyData={dailyData}
+                    currency={currency}
+                    selectedRows={selectedRows}
+                    expandedWorklogsIds={expandedWorklogsIds}
+                    newRecords={newRecords}
+                    savingNewRecords={savingNewRecords}
+                    shifts={shifts}
+                    editingWorklogs={editingWorklogs}
+                    savingWorklogs={savingWorklogs}
+                    editingShifts={editingShifts}
+                    formatHour={formatHour}
+                    sanitizeDateTime={sanitizeDateTime}
+                    validateAndFormatTime={validateAndFormatTime}
+                    hasValidWorklogData={hasValidWorklogData}
+                    isRecordLocked={isRecordLocked}
+                    handleRowSelect={handleRowSelect}
+                    handlePendingRequest={handlePendingRequest}
+                    handleWorklogToggle={handleWorklogToggle}
+                    startAddingNewRecord={startAddingNewRecord}
+                    startEditingField={startEditingField}
+                    startEditingShift={startEditingShift}
+                    updateEditingField={updateEditingField}
+                    updateEditingShift={updateEditingShift}
+                    updateNewRecord={updateNewRecord}
+                    cancelEditingField={cancelEditingField}
+                    cancelEditingShift={cancelEditingShift}
+                    saveFieldChanges={saveFieldChanges}
+                    saveShiftChanges={saveShiftChanges}
+                    saveNewRecord={saveNewRecord}
+                    cancelNewRecord={cancelNewRecord}
+                    projects={projects}
+                    editingProjects={editingProjects}
+                    startEditingProject={startEditingProject}
+                    updateEditingProject={updateEditingProject}
+                    cancelEditingProject={cancelEditingProject}
+                    saveProjectChanges={saveProjectChanges}
+                    onDeleteClick={handleDeleteRecord}
+                    conflictsByDate={conflictsByDate}
+                    penaltyAppealByDate={penaltyAppealByDate}
+                    openConflictsSideBar={handleConflicts}
+                    openChecklogsSidebar={handleChecklogs}
+                    openExpensesSidebar={handleExpenses}
+                    openPenaltiesSidebar={handlePenalties}
+                    openPriceworkSidebar={handleEditPricework}
+                    leaveRequestCount={leaveRequestCount}
+                    penaltyAppealCount={penaltyAppealCount}
+                    openLeaveRequestsSideBar={handleLeaveRequests}
+                    onAdjustmentSave={handleAdjustmentSave}
+                    onOpenAdjustmentActivities={handleOpenAdjustmentActivities}
+                />
+            )}
 
             <ActionBar
                 selectedRows={selectedRows}
@@ -2060,6 +2025,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     conflictDetails={conflictDetails}
                     totalConflicts={totalConflicts}
                     onClose={closeConflictSidebar}
+                    onDataRefresh={refreshDetailsData}
                     startDate={startDate ? format(startDate, 'yyyy-MM-dd') : format(defaultStart, 'yyyy-MM-dd')}
                     endDate={endDate ? format(endDate, 'yyyy-MM-dd') : format(defaultEnd, 'yyyy-MM-dd')}
                 />
@@ -2085,6 +2051,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     startDate={startDate}
                     endDate={endDate}
                     onClose={closeLeaveRequestSidebar}
+                    onRefresh={refreshDetailsData}
                     companyId={companyId}
                     userId={user_id}
                 />
@@ -2108,6 +2075,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 <Checklogs
                     worklogId={selectedWorkId}
                     onClose={closeChecklogsSidebar}
+                    onDataRefresh={refreshDetailsData}
                 />
             </Drawer>
 
@@ -2129,6 +2097,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 <Expenses
                     expenseId={selectedExpenseId}
                     onClose={closeExpensesSidebar}
+                    onDataRefresh={refreshDetailsData}
                 />
             </Drawer>
 
@@ -2150,6 +2119,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 <Penalties
                     worklogId={selectedWorkId}
                     onClose={closePenaltiesSidebar}
+                    onDataRefresh={refreshDetailsData}
                 />
             </Drawer>
 
@@ -2194,6 +2164,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     onClose={closeAddLeaveSidebar}
                     userId={user_id}
                     companyId={companyId}
+                    onDataRefresh={refreshDetailsData}
                 />
             </Drawer>
 
@@ -2217,6 +2188,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     userId={user_id}
                     selectUser={false}
                     companyId={companyId}
+                    onDataRefresh={refreshDetailsData}
                 />
             </Drawer>
 
@@ -2240,12 +2212,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     userId={user_id}
                     initialFrom={startDate}
                     initialTo={endDate}
-                    onDataRefresh={async () => {
-                        const defaultStartDate = startDate || defaultStart;
-                        const defaultEndDate = endDate || defaultEnd;
-                        await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                        onDataChange?.();
-                    }}
+                    onDataRefresh={refreshDetailsData}
                 />
             </Drawer>
 
@@ -2269,12 +2236,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     userId={user_id}
                     companyId={companyId}
                     pricework={selectedPricework}
-                    onDataRefresh={async () => {
-                        const defaultStartDate = startDate || defaultStart;
-                        const defaultEndDate = endDate || defaultEnd;
-                        await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                        await onDataChange?.();
-                    }}
+                    onDataRefresh={refreshDetailsData}
                 />
             </Drawer>
 
@@ -2302,6 +2264,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     startDate={startDate}
                     endDate={endDate}
                     onClose={closeRequestList}
+                    onDataRefresh={refreshDetailsData}
                     onUserChange={onUserChange}
                 />
             </Drawer>
@@ -2311,8 +2274,24 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     open={confirmDialog.open}
                     onClose={() => setConfirmDialog(null)}
                     onConfirm={handleConfirmAction}
-                    title={confirmDialog.actionType === 'lock' ? 'Lock Records' : confirmDialog.actionType === 'unlock' ? 'Unlock Records' : 'Delete Records'}
-                    message={confirmDialog.actionType === 'lock' ? 'Are you sure you want to lock the selected records?' : confirmDialog.actionType === 'unlock' ? 'Are you sure you want to unlock the selected records?' : 'Are you sure you want to delete the selected records? This action cannot be undone.'}
+                    title={
+                        confirmDialog.record
+                            ? `Delete ${confirmDialog.record.type === 'worklog' ? 'Worklog' : confirmDialog.record.type === 'expense' ? 'Expense' : confirmDialog.record.type === 'leave' ? 'Leave' : confirmDialog.record.type === 'pricework' ? 'Pricework' : 'Record'}`
+                            : confirmDialog.actionType === 'lock'
+                              ? 'Lock Records'
+                              : confirmDialog.actionType === 'unlock'
+                                ? 'Unlock Records'
+                                : 'Delete Records'
+                    }
+                    message={
+                        confirmDialog.record
+                            ? `Are you sure you want to delete this ${confirmDialog.record.type}? This action cannot be undone.`
+                            : confirmDialog.actionType === 'lock'
+                              ? 'Are you sure you want to lock the selected records?'
+                              : confirmDialog.actionType === 'unlock'
+                                ? 'Are you sure you want to unlock the selected records?'
+                                : 'Are you sure you want to delete the selected records? This action cannot be undone.'
+                    }
                     conflictCount={confirmDialog.conflictCount}
                     actionType={confirmDialog.actionType}
                 />

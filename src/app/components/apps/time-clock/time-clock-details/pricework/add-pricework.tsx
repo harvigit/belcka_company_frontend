@@ -17,6 +17,10 @@ import {IconPhotoPlus, IconTrash, IconX} from '@tabler/icons-react';
 import api from '@/utils/axios';
 import toast from 'react-hot-toast';
 import { fetchUserListWeb } from '@/utils/userListWeb';
+import {
+    fetchPriceworkAttachmentsWeb,
+    invalidatePriceworkAttachmentsWebCache,
+} from '@/utils/priceworkAttachmentsWeb';
 
 type Resource = { id: number; name: string };
 type ProjectResource = Resource & { team_ids?: number[] };
@@ -62,13 +66,13 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     const [amountPerUnit, setAmountPerUnit] = useState(pricework?.amount_per_unit != null ? String(pricework.amount_per_unit) : '');
     const [workComplete, setWorkComplete] = useState(pricework?.work_complete != null ? String(pricework.work_complete) : '');
     const [note, setNote] = useState(pricework?.note || '');
-    const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>(
-        Array.isArray(pricework?.attachments) ? pricework.attachments : [],
-    );
+    const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
+    const [attachmentsLoading, setAttachmentsLoading] = useState(false);
     const [newAttachments, setNewAttachments] = useState<NewAttachment[]>([]);
     const [removedAttachmentIds, setRemovedAttachmentIds] = useState<number[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const hasFetchedResources = useRef(false);
+    const attachmentsFetchIdRef = useRef<string | null>(null);
 
     const addAttachments = (files: FileList | null) => {
         if (!files) return;
@@ -167,6 +171,43 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
         fetchResources();
     }, [companyId, selectUser]);
 
+    // Lazy-load attachments only for Edit Pricework (not included in details-web).
+    useEffect(() => {
+        if (!isEditMode || !pricework?.pricework_id) {
+            setExistingAttachments([]);
+            setAttachmentsLoading(false);
+            attachmentsFetchIdRef.current = null;
+            return;
+        }
+
+        const priceworkId = String(pricework.pricework_id);
+        let cancelled = false;
+        attachmentsFetchIdRef.current = priceworkId;
+        setAttachmentsLoading(true);
+
+        fetchPriceworkAttachmentsWeb(priceworkId)
+            .then((attachments) => {
+                if (cancelled || attachmentsFetchIdRef.current !== priceworkId) return;
+                setExistingAttachments(attachments);
+            })
+            .catch((attachmentsError: any) => {
+                if (cancelled || attachmentsFetchIdRef.current !== priceworkId) return;
+                setExistingAttachments([]);
+                setError(
+                    attachmentsError?.response?.data?.message ||
+                        'Failed to load pricework attachments.',
+                );
+            })
+            .finally(() => {
+                if (cancelled || attachmentsFetchIdRef.current !== priceworkId) return;
+                setAttachmentsLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isEditMode, pricework?.pricework_id]);
+
     const totalAmount = useMemo(() => {
         const amount = Number(amountPerUnit);
         const completed = Number(workComplete);
@@ -223,6 +264,9 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
                 : await api.post('/pricework/store', payload);
 
             toast.success(response.data?.message || `Pricework ${isEditMode ? 'updated' : 'added'} successfully.`);
+            if (isEditMode && pricework?.pricework_id) {
+                invalidatePriceworkAttachmentsWebCache(pricework.pricework_id);
+            }
             await onDataRefresh?.();
             onClose();
         } catch (submitError: any) {
@@ -465,7 +509,15 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
                             >
                                 Add images
                             </Button>
-                            {(existingAttachments.length > 0 || newAttachments.length > 0) && (
+                            {attachmentsLoading && (
+                                <Box sx={{display: 'flex', alignItems: 'center', gap: 1, mt: 1.5}}>
+                                    <CircularProgress size={18}/>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Loading attachments...
+                                    </Typography>
+                                </Box>
+                            )}
+                            {!attachmentsLoading && (existingAttachments.length > 0 || newAttachments.length > 0) && (
                                 <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.25, mt: 1.5}}>
                                     {existingAttachments.map((attachment) => (
                                         <Box key={`existing-${attachment.id}`} sx={{position: 'relative', aspectRatio: '1', borderRadius: 1, overflow: 'hidden', border: '1px solid #e5e7eb'}}>

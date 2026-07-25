@@ -136,6 +136,7 @@ interface ConflictsProps {
     conflictDetails: Conflict[];
     totalConflicts: number;
     onClose: () => void;
+    onDataRefresh?: () => Promise<void> | void;
     startDate: string;
     endDate: string;
     selectedUserId?: number | string | null;
@@ -146,7 +147,7 @@ const ConflictCaseRenderer = React.memo(({conflict, index, startDate, endDate, o
         index: number;
         startDate: string;
         endDate: string;
-        onClose: () => void;
+        onClose: (didMutate: boolean) => Promise<void> | void;
         onApprove: (userId: number, requestLogId?: number | null) => void;
         onReject: (userId: number, requestLogId?: number | null) => void;
         isLoading: boolean;
@@ -399,6 +400,7 @@ export default function Conflicts({
                                       conflictDetails,
                                       totalConflicts,
                                       onClose,
+                                      onDataRefresh,
                                       startDate,
                                       endDate,
                                       selectedUserId
@@ -416,6 +418,18 @@ export default function Conflicts({
 
     const displayConflictCount = selectedUserId ? filteredConflicts.length : totalConflicts;
 
+    const handleMutationSuccess = async () => {
+        onClose();
+        await onDataRefresh?.();
+    };
+
+    const handleCaseClose = async (didMutate: boolean) => {
+        onClose();
+        if (didMutate) {
+            await onDataRefresh?.();
+        }
+    };
+
     const handleApprove = async (
         userId: number,
         requestLogId?: number | null,
@@ -431,7 +445,7 @@ export default function Conflicts({
 
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
-                onClose();
+                await handleMutationSuccess();
             }
         } catch (err) {
             console.error(err);
@@ -454,7 +468,7 @@ export default function Conflicts({
 
                 if (res.data.IsSuccess) {
                     toast.success(res.data.message);
-                    onClose();
+                    await handleMutationSuccess();
                 }
 
                 return;
@@ -467,7 +481,7 @@ export default function Conflicts({
 
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
-                onClose();
+                await handleMutationSuccess();
             }
         } catch (err) {
             console.error(err);
@@ -566,7 +580,7 @@ export default function Conflicts({
                                         index={idx}
                                         startDate={startDate}
                                         endDate={endDate}
-                                        onClose={onClose}
+                                        onClose={handleCaseClose}
                                         onApprove={handleApprove}
                                         onReject={handleReject}
                                         isLoading={isLoading}

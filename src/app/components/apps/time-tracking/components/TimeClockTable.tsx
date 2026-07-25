@@ -316,7 +316,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                             whiteSpace: 'nowrap',
                                         }}
                                     >
-                                        <Typography sx={{color: '#203040', fontSize: { xs: '0.75rem', md: '0.875rem' }}}>
+                                        <Typography component="div" sx={{color: '#203040', fontSize: { xs: '0.75rem', md: '0.875rem' }}}>
                                             {flexRender(header.column.columnDef.header, header.getContext())}
                                         </Typography>
                                     </TableCell>

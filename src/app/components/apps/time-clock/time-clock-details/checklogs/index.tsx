@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 interface ChecklogsPageProps {
     worklogId: number;
     onClose: () => void;
+    onDataRefresh?: () => Promise<void> | void;
 }
 
 type FilterState = {
@@ -40,7 +41,7 @@ interface FilterOption {
     name: string;
 }
 
-export default function Checklogs({worklogId, onClose}: ChecklogsPageProps) {
+export default function Checklogs({worklogId, onClose, onDataRefresh}: ChecklogsPageProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const [checklogs, setChecklogs] = useState<ChecklogItem[]>([]);
     const [day, setDay] = useState<string>("");
@@ -150,6 +151,7 @@ export default function Checklogs({worklogId, onClose}: ChecklogsPageProps) {
             const response = await api.post('user-checklog/delete', { checklog_id: selectedId });
             if (response.data && typeof response.data === 'object' && response.data.IsSuccess) {
                 toast.success(response.data.message || 'Checklog deleted successfully');
+                await onDataRefresh?.();
             } else {
                 setChecklogs(previousChecklogs); // Revert on failure
                 toast.error(response.data?.message || 'Failed to delete checklog');

@@ -579,7 +579,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 </Typography>
                                             ) : null
                                         ) : (
-                                            <Typography sx={{ color: '#203040' }}>
+                                            <Typography component="div" sx={{ color: '#203040' }}>
                                                 {flexRender(header.column.columnDef.header, header.getContext())}
                                             </Typography>
                                         )}
@@ -2128,4 +2128,73 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
     );
 };
 
-export default TimeClockTable;
+function timeClockTablePropsAreEqual(
+    prev: TimeClockTableProps,
+    next: TimeClockTableProps,
+): boolean {
+    const keys: (keyof TimeClockTableProps)[] = [
+        'dailyData',
+        'currency',
+        'selectedRows',
+        'expandedWorklogsIds',
+        'newRecords',
+        'savingNewRecords',
+        'shifts',
+        'editingWorklogs',
+        'savingWorklogs',
+        'editingShifts',
+        'projects',
+        'editingProjects',
+        'conflictsByDate',
+        'penaltyAppealByDate',
+        'leaveRequestCount',
+        'penaltyAppealCount',
+        'formatHour',
+        'sanitizeDateTime',
+        'validateAndFormatTime',
+        'hasValidWorklogData',
+        'isRecordLocked',
+        'handleRowSelect',
+        'handlePendingRequest',
+        'handleWorklogToggle',
+        'startAddingNewRecord',
+        'startEditingField',
+        'startEditingShift',
+        'updateEditingField',
+        'updateEditingShift',
+        'updateNewRecord',
+        'cancelEditingField',
+        'cancelEditingShift',
+        'saveFieldChanges',
+        'saveShiftChanges',
+        'saveNewRecord',
+        'cancelNewRecord',
+        'startEditingProject',
+        'updateEditingProject',
+        'saveProjectChanges',
+        'cancelEditingProject',
+        'onDeleteClick',
+        'openConflictsSideBar',
+        'openChecklogsSidebar',
+        'openExpensesSidebar',
+        'openPenaltiesSidebar',
+        'openPriceworkSidebar',
+        'openLeaveRequestsSideBar',
+        'onAdjustmentSave',
+        'onOpenAdjustmentActivities',
+    ];
+
+    for (const key of keys) {
+        if (prev[key] !== next[key]) return false;
+    }
+
+    // `useReactTable` returns a new object every parent render — compare state, not identity
+    const prevState = prev.table.getState();
+    const nextState = next.table.getState();
+    return (
+        prevState.columnVisibility === nextState.columnVisibility &&
+        prevState.expanded === nextState.expanded
+    );
+}
+
+export default React.memo(TimeClockTable, timeClockTablePropsAreEqual);

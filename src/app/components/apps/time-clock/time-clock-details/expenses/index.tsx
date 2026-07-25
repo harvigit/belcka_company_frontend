@@ -27,6 +27,7 @@ import toast from 'react-hot-toast';
 interface ExpensesPageProps {
     expenseId: number;
     onClose: () => void;
+    onDataRefresh?: () => Promise<void> | void;
 }
 
 interface Attachment {
@@ -73,7 +74,7 @@ interface ExpenseDetail {
     attachments: Attachment[];
 }
 
-export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
+export default function Expenses({expenseId, onClose, onDataRefresh}: ExpensesPageProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const [expenseDetail, setExpenseDetail] = useState<ExpenseDetail | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
@@ -115,6 +116,7 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
             if (response.data && typeof response.data === 'object' && response.data.IsSuccess) {
                 toast.success(response.data.message || 'Expense deleted successfully');
                 onClose(); // Close the detail view after successful deletion
+                await onDataRefresh?.();
             } else {
                 toast.error(response.data?.message || 'Failed to delete expense');
             }

@@ -22,6 +22,7 @@ import toast from "react-hot-toast";
 interface ChecklogsPageProps {
     worklogId: number;
     onClose: () => void;
+    onDataRefresh?: () => Promise<void> | void;
 }
 
 interface PenaltyItem {
@@ -36,7 +37,7 @@ interface PenaltyItem {
     appeal_id?: number;
 }
 
-export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
+export default function Penalties({ worklogId, onClose, onDataRefresh }: ChecklogsPageProps) {
     const [loading, setLoading] = useState(false);
     const [penalties, setPenalties] = useState<PenaltyItem[]>([]);
     const [day, setDay] = useState("");
@@ -98,8 +99,8 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
 
             if (res.data?.IsSuccess) {
                 toast.success(appealAction ? "Appeal approved" : "Appeal rejected");
-                fetchPenalties();
                 onClose();
+                await onDataRefresh?.();
                 handleCloseDialog();
             } else {
                 toast.error(res.data?.message || "Failed to process appeal");
@@ -125,8 +126,8 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
             });
 
             if (res.data?.IsSuccess) {
-                fetchPenalties();
                 onClose();
+                await onDataRefresh?.();
             }
         } catch {
         } finally {

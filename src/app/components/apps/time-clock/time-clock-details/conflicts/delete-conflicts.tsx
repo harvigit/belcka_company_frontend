@@ -25,7 +25,7 @@ interface DeleteOnlyCaseProps {
     index: number;
     startDate: string;
     endDate: string;
-    onClose: () => void;
+    onClose: (didMutate: boolean) => Promise<void> | void;
 }
 
 interface DeletePreviewRow {
@@ -101,18 +101,19 @@ const DeleteOnlyCase: React.FC<DeleteOnlyCaseProps> = ({conflict, index, onClose
 
         setIsLoading(true);
         try {
+            let response;
             if (selectedItem.is_leave && selectedItem.user_leave_id) {
-                await api.post('/user-leaves/delete-leave', {
+                response = await api.post('/user-leaves/delete-leave', {
                     user_leave_id: selectedItem.user_leave_id,
                 });
             } else if (selectedItem.worklog_id) {
-                await api.post('/time-clock/delete-worklog', {
+                response = await api.post('/time-clock/delete-worklog', {
                     worklog_id: selectedItem.worklog_id,
                 });
             }
 
             handleMenuClose();
-            onClose(); // Close the sidebar on success
+            await onClose(Boolean(response?.data?.IsSuccess));
         } catch (error) {
             console.error('Error deleting item:', error);
             handleMenuClose();

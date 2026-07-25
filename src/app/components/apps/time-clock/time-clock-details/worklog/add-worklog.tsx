@@ -27,6 +27,7 @@ import { DayPicker } from "react-day-picker";
 import { styled } from "@mui/material/styles";
 import { AxiosResponse } from "axios";
 import { fetchUserListWeb } from "@/utils/userListWeb";
+import { fetchTimeClockResourcesWeb } from "@/utils/timeClockResourcesWeb";
 
 interface User {
     id: number;
@@ -116,9 +117,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
 
     const fetchTimeClockResources = async (): Promise<void> => {
         try {
-            const response = await api.get("/time-clock/resources-web", {
-                params: { company_id: companyId },
-            });
+            const response = await fetchTimeClockResourcesWeb(companyId);
             if (response.data.IsSuccess) {
                 setShifts(response.data.shifts || []);
                 setProjects(response.data.projects || []);

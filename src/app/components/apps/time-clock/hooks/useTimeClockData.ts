@@ -6,6 +6,7 @@ import {
     getCachedCompanyConflicts,
     invalidateTimeClockConflictsCache,
 } from '@/utils/timeClockConflicts';
+import { fetchTimeClockResourcesWeb } from '@/utils/timeClockResourcesWeb';
 import {ConflictDetail, Shift, Project, TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
 import { TimeClock } from '@/app/components/apps/time-clock/time-clock';
 
@@ -24,6 +25,7 @@ export const useTimeClockData = (
     const [projects, setProjects] = useState<Project[]>([]);
     const [leaveRequestCount, setLeaveRequestCount] = useState<number>(0);
     const [penaltyAppealCount, setPenaltyAppealCount] = useState<number>(0);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
 
     // Pay Rate Permission
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
@@ -98,6 +100,7 @@ export const useTimeClockData = (
         end: Date,
         options?: { reuseCompanyConflicts?: boolean },
     ): Promise<void> => {
+        setIsLoading(true);
         try {
             if (options?.reuseCompanyConflicts !== true) {
                 invalidateTimeClockConflictsCache(
@@ -118,7 +121,12 @@ export const useTimeClockData = (
                 params.is_archived_user = '1';
             }
 
-            const response = await api.get('/time-clock/details', {params});
+            const reuseCompanyConflicts = options?.reuseCompanyConflicts === true;
+
+            const [response] = await Promise.all([
+                api.get('/time-clock/details-web', {params}),
+                fetchConflicts(start, end, user_id, reuseCompanyConflicts),
+            ]);
 
             if (response.data.IsSuccess) {
                 setData(response.data.info || []);
@@ -129,24 +137,19 @@ export const useTimeClockData = (
                 setUserHasRatePermission(response.data.user_rate_permission);
                 setRatePermissionLoaded(true);
 
-                await fetchConflicts(
-                    start,
-                    end,
-                    user_id,
-                    options?.reuseCompanyConflicts === true,
-                );
-
                 fetchTimeClockResources(response.data.company_id);
             }
         } catch (error) {
             console.error('Error fetching timeClock data:', error);
             setRatePermissionLoaded(true);
+        } finally {
+            setIsLoading(false);
         }
     }, [user_id, isRemovedUser, isArchivedUser, fetchConflicts]);
 
     const fetchTimeClockResources = async (companyId: number): Promise<void> => {
         try {
-            const response = await api.get('/time-clock/resources', {params: {companyId}});
+            const response = await fetchTimeClockResourcesWeb(companyId);
             if (response.data.IsSuccess) {
                 setShifts(response.data.shifts || []);
                 setProjects(response.data.projects || []);
@@ -174,6 +177,7 @@ export const useTimeClockData = (
         ratePermissionLoaded,
         shifts,
         projects,
+        isLoading,
         fetchTimeClockData,
         fetchConflicts,
         payrollCycle,

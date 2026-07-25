@@ -26,7 +26,7 @@ interface SplitDeleteCaseProps {
     index: number;
     startDate: string;
     endDate: string;
-    onClose: () => void;
+    onClose: (didMutate: boolean) => Promise<void> | void;
 }
 
 const useMenuState = () => {
@@ -257,7 +257,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
             }
 
             handleMenuClose();
-            onClose(); // Close the sidebar on success
+            await onClose(Boolean(response.data.IsSuccess));
         } catch (error) {
             console.error('Error saving split action:', error);
             handleMenuClose();
@@ -279,12 +279,12 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
         }
         setIsLoading(true);
         try {
-            await api.post('/time-clock/delete-worklog', {
+            const response = await api.post('/time-clock/delete-worklog', {
                 worklog_id: selectedItem.worklog_id,
             });
 
             handleMenuClose();
-            onClose(); // Close the sidebar on success
+            await onClose(Boolean(response.data.IsSuccess));
         } catch (error) {
             console.error('Error saving delete action:', error);
             handleMenuClose();

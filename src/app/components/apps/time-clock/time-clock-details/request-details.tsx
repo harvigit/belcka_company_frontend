@@ -83,6 +83,7 @@ interface RequestDetailsProps {
     startDate?: Date | null;
     endDate?: Date | null;
     onClose: () => void;
+    onDataRefresh?: () => Promise<void> | void;
     onUserChange?: (user: TimeClock) => void;
 }
 
@@ -368,7 +369,15 @@ const RequestCard = React.memo<{
 
 RequestCard.displayName = 'RequestCard';
 
-const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_id, startDate, endDate, onClose }) => {
+const RequestDetails: React.FC<RequestDetailsProps> = ({
+    open,
+    timeClock,
+    user_id,
+    startDate,
+    endDate,
+    onClose,
+    onDataRefresh,
+}) => {
     // State management
     const [requestList, setRequestList] = useState<RequestItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -534,6 +543,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                     await delay(1500);
 
                     await fetchRequests(selectedDateRange.start, selectedDateRange.end);
+                    await onDataRefresh?.();
                 } else {
                     showAlert(response.data.message || `Error ${action}ing request`, 'error');
                 }
@@ -547,7 +557,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                 });
             }
         },
-        [fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, user_id]
+        [fetchRequests, onDataRefresh, selectedDateRange.end, selectedDateRange.start, showAlert, user_id]
     );
 
     const handleBulkAction = useCallback(async (action: 'approve' | 'reject', reason?: string) => {
@@ -581,6 +591,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                 await delay(2000);
 
                 await fetchRequests(selectedDateRange.start, selectedDateRange.end);
+                await onDataRefresh?.();
             } else {
                 showAlert(response.data.message || `Error ${action}ing all requests`, 'error');
             }
@@ -589,7 +600,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
         } finally {
             setLoading(false);
         }
-    }, [pendingRequests, fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, user_id]);
+    }, [pendingRequests, fetchRequests, onDataRefresh, selectedDateRange.end, selectedDateRange.start, showAlert, user_id]);
 
     const handleApproveRequest = useCallback((requestId: number) => {
         return handleSingleRequest(requestId, 'approve');
