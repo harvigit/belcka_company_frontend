@@ -49,7 +49,6 @@ import { IconX } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconPlus } from "@tabler/icons-react";
 import toast from "react-hot-toast";
-import { TradeList } from "../team";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import GenerateCodeDialog from "../../modals/generate-code";
@@ -138,7 +137,6 @@ const TablePagination = () => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [trade, setTrade] = useState<TradeList[]>([]);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [openConfirm, setOpenConfirm] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
@@ -167,7 +165,7 @@ const TablePagination = () => {
   const fetchTeams = async (restorePage?: number) => {
     setFetchTeam(true);
     try {
-      let url = `team/get-team-member-list?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      let url = `team/get-team-member-list-web?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
 
       if (projectId) {
         url += `&project_id=${projectId}`;
@@ -220,20 +218,6 @@ const TablePagination = () => {
       setFetchTeam(false);
     }
   };
-
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${id.company_id}`,
-        );
-        if (res.data) setTrade(res.data.info);
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
-      }
-    };
-    fetchTrades();
-  }, [id?.company_id]);
 
   const handleGenerateCode = async (): Promise<string> => {
     try {
