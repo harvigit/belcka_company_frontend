@@ -75,7 +75,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
     const fetchTrades = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`team/user-list?company_id=${user.company_id}`);
+            const res = await api.get(`team/user-list-web?company_id=${user.company_id}`);
             if (res.data && Array.isArray(res.data.info)) {
                 const idMap = new Map();
                 const nameMap = new Map();
@@ -106,7 +106,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`user/get-user-lists`);
+            const res = await api.get(`user/user-options-web`);
             if (res.data) setData(res.data.info);
         } catch (err) {
             console.error("Failed to fetch users", err);
@@ -117,7 +117,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
     const fetchTradeList = async () => {
         try {
             if (!user?.company_id) return;
-            const res = await api.get(`trade/get-trades?company_id=${user.company_id}`);
+            const res = await api.get(`trade/get-trades-web?company_id=${user.company_id}`);
             if (res.data?.info) setTradeData(res.data.info);
         } catch (err) {
             console.error("Failed to fetch trade list", err);

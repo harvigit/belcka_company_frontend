@@ -102,7 +102,7 @@ const EditTeam: React.FC<Props> = ({
         try {
             if (!teamId || !id?.company_id) return;
             const res = await api.get(
-                `team/user-list?team_id=${teamId}&company_id=${id.company_id}`
+                `team/user-list-web?team_id=${teamId}&company_id=${id.company_id}`
             );
             if (!res.data?.info) return;
             setFormData((prev: any) => {
@@ -122,7 +122,7 @@ const EditTeam: React.FC<Props> = ({
 
     const fetchUsers = async () => {
         try {
-            const res = await api.get(`user/get-user-lists`);
+            const res = await api.get(`user/user-options-web`);
             if (res.data?.info) setUserList(res.data.info);
         } catch (err) {
             console.error("Failed to fetch users", err);
@@ -132,7 +132,7 @@ const EditTeam: React.FC<Props> = ({
     const fetchTrades = async () => {
         try {
             if (!id?.company_id) return;
-            const res = await api.get(`trade/get-trades?company_id=${id.company_id}`);
+            const res = await api.get(`trade/get-trades-web?company_id=${id.company_id}`);
             if (res.data?.info) setTradeData(res.data.info);
         } catch (err) {
             console.error("Failed to fetch trades", err);
@@ -140,7 +140,7 @@ const EditTeam: React.FC<Props> = ({
     };
 
     useEffect(() => {
-        fetchUsers();
+        if (open) fetchUsers();
     }, [open]);
 
     useEffect(() => {
@@ -150,7 +150,7 @@ const EditTeam: React.FC<Props> = ({
     const fetchTeamData = async () => {
         if (!teamId) return;
         try {
-            const res = await api.get(`team/get-team-member-list?team_id=${teamId}`);
+            const res = await api.get(`team/get-team-detail-web?team_id=${teamId}`);
             if (!res.data?.info) return;
 
             const flattened = res.data.info.flatMap(
