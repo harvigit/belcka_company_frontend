@@ -24,7 +24,7 @@ import {
 import { IconPlus, IconX, IconTrash } from "@tabler/icons-react";
 import { User } from "next-auth";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 
@@ -39,53 +39,39 @@ const RateSetting = () => {
   const [enabled, setEnabled] = useState<boolean>(true);
 
   const [timeZone, setTimeZone] = useState<any>(0);
-  const { data: session, update } = useSession();
+  const { data: session } = useSession();
   const user = session?.user as User & { company_id?: string | null } & {
     currency_id?: number | null;
   };
 
-  // Get all users
-  const fetchCompanyUsers = async () => {
-    try {
-      const res = await api.get(
-        `get-company-resources?company_id=${user.company_id}&flag=usersList`
-      );
-      if (res.data) {
-        setUsers(res.data.info);
-      }
-    } catch (err) {
-      console.error("Failed to fetch users", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchCompanyUsers();
-  }, [user.company_id]);
-
-  // Fetch users with pay rates
-  const fetchUsers = async () => {
+  const fetchRateSettings = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(
-        `setting/payrate-users?company_id=${user.company_id}`
-      );
-      if (res.data.IsSuccess) {
-        setData(res.data.info);
-        setTimeZone(res.data.info[0]?.timezone_id);
+      const res = await api.get("setting/rate-settings-web");
+      if (res.data.IsSuccess && res.data.info) {
+        const info = res.data.info;
+        setUsers(info.users || []);
+        setData(info.payrate_users || []);
+        setEnabled(!!info.pay_rate_permission);
+        setTimeZone(info.timezone_id);
+        if (info.currency_id != null) {
+          setCurrency(Number(info.currency_id));
+        }
       } else {
-        toast.error(res.data.message);
+        toast.error(res.data.message || "Failed to load rate settings");
       }
     } catch (err) {
-      console.error("Failed to fetch users", err);
+      console.error("Failed to fetch rate settings", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     if (user?.company_id) {
-      fetchUsers();
+      fetchRateSettings();
     }
-  }, [user?.company_id]);
+  }, [user?.company_id, fetchRateSettings]);
 
   useEffect(() => {
     if (openModal) {
@@ -106,7 +92,7 @@ const RateSetting = () => {
       if (response.data.IsSuccess) {
         toast.success(response.data.message);
         setOpenModal(false);
-        fetchUsers();
+        fetchRateSettings();
       } else {
         toast.error(response.data.message);
       }
@@ -134,13 +120,13 @@ const RateSetting = () => {
 
       if (response.data.IsSuccess) {
         toast.success(response.data.message);
-        fetchUsers();
+        fetchRateSettings();
       } else {
-        fetchUsers();
+        fetchRateSettings();
       }
     } catch (err) {
       console.error("Error updating permission", err);
-      fetchUsers();
+      fetchRateSettings();
     }
   };
 
@@ -153,7 +139,7 @@ const RateSetting = () => {
       const response = await api.post(`setting/delete-payrate-user`, payload);
       if (response.data.IsSuccess) {
         toast.success(response.data.message);
-        fetchUsers();
+        fetchRateSettings();
       }
     } catch (err) {
       console.error("Error deleting user", err);
@@ -207,41 +193,6 @@ const RateSetting = () => {
       setLoading(false);
     }
   };
-
-  const fetchGeneralSetting = async () => {
-    try {
-      const res = await api.get(`setting/general-settings`);
-      if (res.data.IsSuccess && res.data.data) {
-        setEnabled(!!res.data.data.pay_rate_permission);
-        setTimeZone(res.data.data.timezone_id);
-      }
-    } catch (error) {
-      console.error("Error fetching general setting:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (user?.company_id) {
-      fetchGeneralSetting();
-    }
-  }, [user?.company_id]);
-
-  useEffect(() => {
-    if (user?.company_id) {
-      (async () => {
-        try {
-          const res = await api.get(
-            `company/get-company?company_id=${user.company_id}`
-          );
-          if (res.data.IsSuccess && res.data.info.currency_id) {
-            setCurrency(Number(res.data.info.currency_id));
-          }
-        } catch (err) {
-          console.error("Failed to fetch company currency", err);
-        }
-      })();
-    }
-  }, [user?.company_id]);
 
   return (
     <Box display={"flex"} overflow="auto">
@@ -370,7 +321,7 @@ const RateSetting = () => {
                 <ListItemText primary={user.name} />
                 <ListItemSecondaryAction sx={{ mb: 2 }}>
                   <Select
-                    value={user.permission}
+                    value={user.permission ?? ""}
                     onChange={(e) =>
                       handlePermissionChange(user.user_id, e.target.value)
                     }

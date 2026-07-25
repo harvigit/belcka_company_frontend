@@ -59,10 +59,10 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await api.get("/setting/get-company-settings");
+        const response = await api.get("/setting/bookkeeper-settings-web");
 
         if (response.data?.IsSuccess) {
-          const data = response.data.data || {};
+          const data = response.data.info || {};
 
           updateSettings({
             phone: data.hr_contact_number || "",

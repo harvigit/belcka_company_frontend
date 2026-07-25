@@ -13,8 +13,6 @@ import {
 } from '@mui/material';
 import IconArrowLeft from '@mui/icons-material/ArrowBack';
 import api from '@/utils/axios';
-import {useSession} from 'next-auth/react';
-import {User} from 'next-auth';
 import {IconArrowBackUp, IconTrash} from '@tabler/icons-react';
 import toast from 'react-hot-toast';
 
@@ -48,8 +46,6 @@ const ArchiveExpenseCategory: React.FC<ArchiveExpenseCategoryProps> = ({
                                                                        }) => {
     const [loading, setLoading] = useState<boolean>(true);
     const [data, setData] = useState<TaskList[]>([]);
-    const session = useSession();
-    const user = session.data?.user as User & { company_id?: number | null };
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedItem, setSelectedItem] = useState<{
         id: number;
@@ -61,7 +57,7 @@ const ArchiveExpenseCategory: React.FC<ArchiveExpenseCategoryProps> = ({
         try {
             setLoading(true);
             const res = await api.get(
-                `expense-categories/archive-list?company_id=${user.company_id}`
+                `expense-categories/archive-list-web`
             );
             if (res.data?.info) {
                 setData(res.data.info);

@@ -50,7 +50,7 @@ const EditExpenseCategory: React.FC<EditExpenseCategoryProps> = ({
         setError(null);
 
         try {
-            const res = await api.get(`expense-categories/get?category_id=${id}`);
+            const res = await api.get(`expense-categories/get-web?category_id=${id}`);
 
             if (res.data?.info?.[0]) {
                 const task = res.data.info[0];

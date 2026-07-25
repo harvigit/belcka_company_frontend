@@ -141,7 +141,7 @@ const TablePagination = () => {
   const fetchExpenseCategories = async () => {
     setFetchCategory(true);
     try {
-      let url = `expense-categories/get?company_id=${company?.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      let url = `expense-categories/get-web?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
         url += `&search=${encodeURIComponent(searchTerm)}`;
       }

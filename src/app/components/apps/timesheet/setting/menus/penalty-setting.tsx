@@ -59,65 +59,42 @@ export default function PenaltySettings() {
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
 
-  const fetchCompanySetting = async () => {
+  const fetchPenaltySettings = async () => {
     try {
-      const res = await api.get("/setting/get-company-settings");
-      if (res.data?.data) {
-        setEnabled(
-          res.data?.data ? res.data?.data?.is_outside_boundary_penalty : false,
-        );
-        setTimeZone(res.data.data.timezone_id);
-        const dbTime = res.data.data.outside_boundary_penalty_minute
-          ? dayjs(res.data.data.outside_boundary_penalty_minute, "HH:mm")
-          : null;
+      const res = await api.get("/setting/penalty-settings-web");
+      if (res.data?.IsSuccess && res.data?.info) {
+        const info = res.data.info;
 
+        setEnabled(!!info.is_outside_boundary_penalty);
+        setTimeZone(info.timezone_id);
+        const dbTime = info.outside_boundary_penalty_minute
+          ? dayjs(info.outside_boundary_penalty_minute, "HH:mm")
+          : null;
         setValue(dbTime);
         setTemp(dbTime ? dbTime.format("HH:mm") : "");
 
-        setSwEnabled(res.data.data.is_autostop_work_penalty);
-        const swDbTime = res.data.data.autostop_work_penalty_minute
-          ? dayjs(res.data.data.autostop_work_penalty_minute, "HH:mm")
+        setSwEnabled(!!info.is_autostop_work_penalty);
+        const swDbTime = info.autostop_work_penalty_minute
+          ? dayjs(info.autostop_work_penalty_minute, "HH:mm")
           : null;
-
         setSwValue(swDbTime);
         setSwTemp(swDbTime ? swDbTime.format("HH:mm") : "");
-      }
-    } catch (err) {
-      console.error("Failed to fetch general setting", err);
-    }
-  };
 
-  const fetchTeams = async () => {
-    try {
-      const res = await api.get(
-        `get-company-resources?flag=teamList&company_id=${user.company_id}`,
-      );
-      if (res.data?.info) {
-        setTeams(res.data.info);
-        setSwTeams(JSON.parse(JSON.stringify(res.data.info)));
+        const teamsData = info.teams || [];
+        const usersData = info.users || [];
+        setTeams(teamsData);
+        setSwTeams(JSON.parse(JSON.stringify(teamsData)));
+        setUsers(usersData);
+        setSwUsers(JSON.parse(JSON.stringify(usersData)));
       }
     } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const res = await api.get("user/get-user-lists");
-      if (res.data?.info) {
-        setUsers(res.data.info);
-        setSwUsers(JSON.parse(JSON.stringify(res.data.info)));
-      }
-    } catch (err) {
-      console.error(err);
+      console.error("Failed to fetch penalty settings", err);
     }
   };
 
   useEffect(() => {
     if (user?.company_id) {
-      fetchCompanySetting();
-      fetchTeams();
-      fetchUsers();
+      fetchPenaltySettings();
     }
   }, [user?.company_id]);
 
@@ -164,9 +141,7 @@ export default function PenaltySettings() {
       const res = await api.post("setting/save-general-setting", payload);
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        fetchCompanySetting();
-        fetchTeams();
-        fetchUsers();
+        fetchPenaltySettings();
         setSwTeamsDirty(false);
         setSwUsersDirty(false);
         setIsUsersDirty(false);
@@ -201,8 +176,7 @@ export default function PenaltySettings() {
       );
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        fetchUsers();
-        fetchTeams();
+        fetchPenaltySettings();
       }
     } catch (err) {}
   };
@@ -224,8 +198,7 @@ export default function PenaltySettings() {
       );
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        fetchUsers();
-        fetchTeams();
+        fetchPenaltySettings();
       }
     } catch (err) {}
   };
@@ -265,9 +238,7 @@ export default function PenaltySettings() {
       const res = await api.post("setting/save-general-setting", payload);
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        fetchCompanySetting();
-        fetchTeams();
-        fetchUsers();
+        fetchPenaltySettings();
         setSwTeamsDirty(false);
         setSwUsersDirty(false);
         setIsUsersDirty(false);
@@ -294,8 +265,7 @@ export default function PenaltySettings() {
       );
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        fetchUsers();
-        fetchTeams();
+        fetchPenaltySettings();
       }
     } catch (err) {}
   };
@@ -317,8 +287,7 @@ export default function PenaltySettings() {
       );
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        fetchUsers();
-        fetchTeams();
+        fetchPenaltySettings();
       }
     } catch (err) {}
   };
