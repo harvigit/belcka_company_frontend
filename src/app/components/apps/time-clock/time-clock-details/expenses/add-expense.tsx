@@ -71,7 +71,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         const fetchResources = async () => {
             setLoading(true);
             try {
-                const res = await api.get('/expense/get-resources');
+                const res = await api.get('/expense/get-resources-web');
                 setProjects(res.data.projects || []);
                 setAddresses(res.data.addresses || []);
                 setCategories(res.data.categories || []);
@@ -89,11 +89,11 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
             const id = selectUser ? selectedUser : userId;
 
             const res: AxiosResponse<any> = await api.get(
-                `project/get?company_id=${companyId}${id ? `&user_id=${id}` : ''}`
+                `project/get-default-web?company_id=${companyId}${id ? `&user_id=${id}` : ''}`
             );
 
-            if (res.data?.id) {
-                setSelectedProject(res.data.info[0].id ? res.data.info[0].id : res.data.id);
+            if (res.data?.default_project_id) {
+                setSelectedProject(res.data.default_project_id);
             }
         } catch (err) {
             console.error("Failed to fetch projects", err);

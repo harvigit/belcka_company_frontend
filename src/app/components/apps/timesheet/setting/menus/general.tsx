@@ -23,20 +23,11 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
 import toast from 'react-hot-toast';
-import { User } from 'next-auth';
-import { useSession } from 'next-auth/react';
 
 interface Timezone {
     id: string | number;
     value: string;
     name?: string;
-}
-
-interface CompanyUser {
-    id: string;
-    name: string;
-    user_image?: string | null;
-    user_thumb_image?: string | null;
 }
 
 interface CompanySettings {
@@ -117,53 +108,35 @@ const useSettingsState = (defaultSettings: Partial<CompanySettings> = {}): [Sett
     return [state, updateState];
 };
 
-const useApiData = (payRateUsers: CompanyUser[] = []) => {
+const useApiData = () => {
     const [allTimezones, setAllTimezones] = useState<Timezone[]>([]);
-    const [companyUsers, setCompanyUsers] = useState<CompanyUser[]>([]);
     const [loading, setLoading] = useState(false);
 
     const fetchResources = useCallback(async (): Promise<void> => {
         try {
             setLoading(true);
-            const response = await api.get('/setting/resources');
+            const response = await api.get('/setting/resources-web');
             if (response.data?.IsSuccess) {
-                const transformedTimezones: Timezone[] = response.data.timezones.map((tz: any) => ({
-                    ...tz,
+                const transformedTimezones: Timezone[] = (response.data.timezones || []).map((tz: any) => ({
                     id: String(tz.id),
+                    value: tz.value,
                 }));
-                const apiUsers: CompanyUser[] = (response.data.company_users || []).map((user: any) => ({
-                    id: String(user.id),
-                    name: user.name,
-                    user_image: user.user_image || null
-                }));
-                const payRateUsersMapped: CompanyUser[] = payRateUsers.map((user: any) => ({
-                    id: String(user.user_id),
-                    name: user.user_name,
-                    user_image: user.user_image || null
-                }));
-                const combinedUsers = [
-                    ...apiUsers,
-                    ...payRateUsersMapped.filter(
-                        (payUser) => !apiUsers.some((apiUser) => apiUser.id === payUser.id)
-                    ),
-                ];
                 setAllTimezones(transformedTimezones);
-                setCompanyUsers(combinedUsers);
             }
         } catch (error) {
             console.error('Error fetching timesheet data:', error);
         } finally {
             setLoading(false);
         }
-    }, [payRateUsers]);
+    }, []);
 
     useEffect(() => {
-        if (!loading && allTimezones.length === 0 && companyUsers.length === 0) {
+        if (!loading && allTimezones.length === 0) {
             fetchResources();
         }
-    }, [fetchResources, loading, allTimezones.length, companyUsers.length]);
+    }, [fetchResources, loading, allTimezones.length]);
 
-    return { allTimezones, companyUsers, loading };
+    return { allTimezones, loading };
 };
 
 const useCompanySettings = (): { settings: CompanySettings | null; loading: boolean; error: string | null } => {
@@ -177,27 +150,28 @@ const useCompanySettings = (): { settings: CompanySettings | null; loading: bool
             setError(null);
             const response = await api.get('/setting/get-company-settings');
             if (response.data?.IsSuccess) {
-                const apiSettings: CompanySettings = {
-                    dailyLimit: response.data.dailyLimit || getDefaultSettings().dailyLimit,
-                    autoClockOut: Number(response.data.autoClockOut) || getDefaultSettings().autoClockOut,
-                    showDiff: response.data.showDiff ?? getDefaultSettings().showDiff,
-                    timeZone: response.data.timeZone || getDefaultSettings().timeZone,
-                    users: response.data.pay_rate_users
-                        ? response.data.pay_rate_users.map((user: any) => String(user.user_id))
-                        : getDefaultSettings().users,
-                    highlightMore: response.data.highlightMore ?? getDefaultSettings().highlightMore,
-                    highlightLess: response.data.highlightLess ?? getDefaultSettings().highlightLess,
-                    moreThanMinutes: response.data.moreThanMinutes ?? getDefaultSettings().moreThanMinutes,
-                    lessThanMinutes: response.data.lessThanMinutes ?? getDefaultSettings().lessThanMinutes,
-                    roundingIncrement: response.data.roundingIncrement ?? getDefaultSettings().roundingIncrement,
-                    showTimesheetRound: response.data.showTimesheetRound ?? getDefaultSettings().showTimesheetRound,
-                    isDayLimit: response.data.isDayLimit ?? getDefaultSettings().isDayLimit,
-                    isAutoClock: response.data.isAutoClock ?? getDefaultSettings().isAutoClock,
-                    payRatePermission: response.data.pay_rate_permission || 'view',
-                    exportFormat: response.data.export_format || 'time',
-                    leave_limit: response.data?.data?.leave_limit ?? 0
-                };
-                setSettings(apiSettings);
+                const fetchedSettings = response.data.data || {};
+                const payRateUsers = response.data.pay_rate_users || [];
+                const defaults = getDefaultSettings();
+
+                setSettings({
+                    dailyLimit: fetchedSettings.daily_limit || defaults.dailyLimit,
+                    autoClockOut: Number(fetchedSettings.auto_clock_out) || defaults.autoClockOut,
+                    showDiff: fetchedSettings.show_diff ?? defaults.showDiff,
+                    timeZone: fetchedSettings.timezone_id ? String(fetchedSettings.timezone_id) : defaults.timeZone,
+                    users: payRateUsers.map((user: any) => String(user.user_id)),
+                    highlightMore: fetchedSettings.highlight_more ?? defaults.highlightMore,
+                    highlightLess: fetchedSettings.highlight_less ?? defaults.highlightLess,
+                    moreThanMinutes: fetchedSettings.more_than_minutes ?? defaults.moreThanMinutes,
+                    lessThanMinutes: fetchedSettings.less_than_minutes ?? defaults.lessThanMinutes,
+                    roundingIncrement: fetchedSettings.rounding_increment ?? defaults.roundingIncrement,
+                    showTimesheetRound: fetchedSettings.show_timesheet_round ?? defaults.showTimesheetRound,
+                    isDayLimit: fetchedSettings.is_day_limit ?? defaults.isDayLimit,
+                    isAutoClock: fetchedSettings.is_auto_clock ?? defaults.isAutoClock,
+                    payRatePermission: true,
+                    exportFormat: fetchedSettings.export_format || 'time',
+                    leave_limit: fetchedSettings.leave_limit ?? 0,
+                });
             } else {
                 setSettings(getDefaultSettings() as CompanySettings);
             }
@@ -246,56 +220,18 @@ const useSearchableDropdown = () => {
 
 const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
     const { settings: companySettings, loading: settingsLoading, error: settingsError } = useCompanySettings();
-    const { allTimezones, companyUsers, loading: resourcesLoading } = useApiData(companySettings?.users.map(id => ({
-        id,
-        name: companySettings?.users.includes(id) ? (companySettings as any).pay_rate_users?.find((u: any) => String(u.user_id) === id)?.user_name || '' : '',
-    })) || []);
-    const [settings, updateSettings] = useSettingsState(companySettings || undefined);
-    const session = useSession();
-    const user = session.data?.user as User & { user_role_id?: number | null } & {id: number } & { company_id: number};
+    const { allTimezones, loading: resourcesLoading } = useApiData();
+    const [settings, updateSettings] = useSettingsState();
 
     const timezoneDropdown = useSearchableDropdown();
-    const userDropdown = useSearchableDropdown();
 
     useEffect(() => {
-        const fetchCompanySettings = async () => {
-            try {
-                const response = await api.get('/setting/get-company-settings');
-                if (response.data?.IsSuccess) {
-                    const fetchedSettings = response.data.data || {};
-                    const payRateUsers = response.data.pay_rate_users || [];
-                    const defaults = getDefaultSettings();
-
-                    updateSettings({
-                        dailyLimit: fetchedSettings.daily_limit || defaults.dailyLimit,
-                        autoClockOut: Number(fetchedSettings.auto_clock_out) || defaults.autoClockOut,
-                        showDiff: fetchedSettings.show_diff ?? defaults.showDiff,
-                        timeZone: fetchedSettings.timezone_id ? String(fetchedSettings.timezone_id) : defaults.timeZone,
-                        users: payRateUsers.map((user: any) => String(user.user_id)),
-                        highlightMore: fetchedSettings.highlight_more ?? defaults.highlightMore,
-                        highlightLess: fetchedSettings.highlight_less ?? defaults.highlightLess,
-                        moreThanMinutes: fetchedSettings.more_than_minutes ?? defaults.moreThanMinutes,
-                        lessThanMinutes: fetchedSettings.less_than_minutes ?? defaults.lessThanMinutes,
-                        roundingIncrement: fetchedSettings.rounding_increment ?? defaults.roundingIncrement,
-                        showTimesheetRound: fetchedSettings.show_timesheet_round ?? defaults.showTimesheetRound,
-                        isDayLimit: fetchedSettings.is_day_limit ?? defaults.isDayLimit,
-                        isAutoClock: fetchedSettings.is_auto_clock ?? defaults.isAutoClock,
-                        payRatePermission: true,
-                        exportFormat: fetchedSettings.export_format || 'time',
-                        isSaving: false,
-                        leave_limit: fetchedSettings.leave_limit ?? 0
-                    });
-                } else {
-                    updateSettings(getDefaultSettings());
-                }
-            } catch (error) {
-                console.error('Error fetching company general settings:', error);
-                updateSettings(getDefaultSettings());
-            }
-        };
-
-        fetchCompanySettings();
-    }, [updateSettings]);
+        if (!companySettings) return;
+        updateSettings({
+            ...companySettings,
+            isSaving: false,
+        });
+    }, [companySettings, updateSettings]);
 
     const isLoading = settingsLoading || resourcesLoading;
 

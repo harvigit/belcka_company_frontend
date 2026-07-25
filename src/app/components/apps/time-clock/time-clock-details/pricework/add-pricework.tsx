@@ -147,7 +147,7 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             setError(null);
             try {
                 const requests: Promise<any>[] = [
-                    api.get('/pricework/get-resources'),
+                    api.get('/pricework/get-resources-web'),
                 ];
                 if (selectUser) requests.push(fetchUserListWeb(companyId));
 

@@ -116,8 +116,8 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
 
     const fetchTimeClockResources = async (): Promise<void> => {
         try {
-            const response = await api.get("/time-clock/resources", {
-                params: { companyId },
+            const response = await api.get("/time-clock/resources-web", {
+                params: { company_id: companyId },
             });
             if (response.data.IsSuccess) {
                 setShifts(response.data.shifts || []);
@@ -133,12 +133,11 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
             const id = newRecord.userId;
 
             const res: AxiosResponse<any> = await api.get(
-                `project/get?company_id=${companyId}${id ? `&user_id=${id}` : ""}`,
+                `project/get-default-web?company_id=${companyId}${id ? `&user_id=${id}` : ""}`,
             );
 
-            if (res.data?.id) {
-                const projectId = res.data.info[0].id ? res.data.info[0].id : res.data.id;
-                setNewRecord({ ...newRecord, project_id: projectId });
+            if (res.data?.default_project_id) {
+                setNewRecord({ ...newRecord, project_id: res.data.default_project_id });
             }
         } catch (err) {
             console.error("Failed to fetch projects", err);
