@@ -52,7 +52,7 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
 
     try {
       const res = await api.get(
-        `time-clock/bookkeeper-history?company_id=${user.company_id}&page=${currentPage}&limit=${limit}`,
+        `time-clock/bookkeeper-history-web?company_id=${user.company_id}&page=${currentPage}&limit=${limit}`,
       );
 
       if (res.data?.IsSuccess) {

@@ -131,7 +131,7 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
                 user_id: Number(id),
             };
 
-            const res = await api.post(`user-leaves/get-list`, payload);
+            const res = await api.post(`user-leaves/get-list-web`, payload);
             if (res.data?.data) {
                 setData(res.data.data);
                 setLeaveTypes(res.data.leave_types || []);

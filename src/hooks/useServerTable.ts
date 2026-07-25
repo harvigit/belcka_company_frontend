@@ -58,7 +58,9 @@ export function useServerTable<TData>({
   // already performs the first fetch. Without this, mount fires twice.
   const skipInitialDebounceFetch = useRef(true);
 
-  // Handle debounced fetch when dependencies like search or filters change
+  // Handle debounced fetch when dependencies like search or filters change.
+  // Client-side sort (manualSorting=false) must not trigger a refetch.
+  const sortingDep = manualSorting ? JSON.stringify(sorting) : null;
   useEffect(() => {
     if (skipInitialDebounceFetch.current) {
       skipInitialDebounceFetch.current = false;
@@ -76,7 +78,7 @@ export function useServerTable<TData>({
     }, debounceTimeMs);
 
     return () => clearTimeout(handler);
-  }, [...debounceDependencies, JSON.stringify(sorting)]);
+  }, [...debounceDependencies, sortingDep]);
 
   // Handle fetching when page / pageSize changes (including initial mount)
   useEffect(() => {

@@ -38,20 +38,15 @@ dayjs.extend(customParseFormat);
 
 interface DeletedWorklog {
     id: number;
-    user_id: number;
     user_name: string;
     user_image: string | null;
-    shift_id: number | null;
     shift_name: string | null;
-    project_id: number | null;
     project_name: string | null;
-    team_id: number | null;
     team_name: string | null;
     date: string | null;
     start_time: string | null;
     end_time: string | null;
     total_work_seconds: number;
-    payable_work_seconds: number;
     deleted_at: string | null;
 }
 
@@ -103,7 +98,7 @@ const RecoverWorklogs = ({ open, onClose, startDate, endDate }: RecoverWorklogsP
             const end   = dayjs(endDate).format('DD/MM/YYYY');
 
             const res = await api.get(
-                `user-worklog/get-deleted-worklogs?company_id=${authUser.company_id}&start_date=${start}&end_date=${end}`,
+                `user-worklog/get-deleted-worklogs-web?company_id=${authUser.company_id}&start_date=${start}&end_date=${end}`,
             );
             if (res.data?.IsSuccess) {
                 setData(res.data.info ?? []);

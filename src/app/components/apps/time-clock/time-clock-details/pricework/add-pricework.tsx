@@ -16,6 +16,7 @@ import {
 import {IconPhotoPlus, IconTrash, IconX} from '@tabler/icons-react';
 import api from '@/utils/axios';
 import toast from 'react-hot-toast';
+import { fetchUserListWeb } from '@/utils/userListWeb';
 
 type Resource = { id: number; name: string };
 type ProjectResource = Resource & { team_ids?: number[] };
@@ -148,7 +149,7 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
                 const requests: Promise<any>[] = [
                     api.get('/pricework/get-resources'),
                 ];
-                if (selectUser) requests.push(api.get('/user/list'));
+                if (selectUser) requests.push(fetchUserListWeb(companyId));
 
                 const [resourceResponse, userResponse] = await Promise.all(requests);
                 setProjects(resourceResponse.data?.projects || []);

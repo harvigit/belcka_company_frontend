@@ -63,6 +63,14 @@ import {
 import {AxiosResponse} from 'axios';
 
 import api from '@/utils/axios';
+import {
+  fetchPayrollSettings,
+  invalidatePayrollSettingsCache,
+} from '@/utils/payrollSettings';
+import {
+    fetchCompanyConflicts,
+    invalidateTimeClockConflictsCache,
+} from '@/utils/timeClockConflicts';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import TimeClockDetails from './time-clock-details';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
@@ -454,6 +462,14 @@ const TimeClock = ({ queryParams }: Props) => {
         const pendingRequest = dataRequestsRef.current.get(requestKey);
         if (pendingRequest) return pendingRequest;
 
+        // This fetch path has always refreshed conflicts after list data.
+        // Invalidate immediately so Details cannot reuse pre-refresh data while
+        // /time-clock/get is still running.
+        invalidateTimeClockConflictsCache(
+            params.start_date,
+            params.end_date,
+        );
+
         const request = (async (): Promise<TimeClock[]> => {
           try {
             setFetchTimesheet(true);
@@ -493,17 +509,21 @@ const TimeClock = ({ queryParams }: Props) => {
     };
 
     const fetchConflictsData = async (start: Date, end: Date) => {
-        const params: Record<string, string> = {
-            start_date: format(start, 'dd/MM/yyyy'),
-            end_date: format(end, 'dd/MM/yyyy'),
-        };
-        const requestKey = JSON.stringify(params);
+        const startDateParam = format(start, 'dd/MM/yyyy');
+        const endDateParam = format(end, 'dd/MM/yyyy');
+        const requestKey = `${startDateParam}|${endDateParam}`;
         const pendingRequest = conflictRequestsRef.current.get(requestKey);
         if (pendingRequest) return pendingRequest;
 
         const request = (async () => {
           try {
-            const response = await api.get('/time-clock/conflicts', {params});
+            // Every existing list refresh must fetch fresh conflicts. Clearing
+            // only the resolved cache preserves in-flight deduplication.
+            invalidateTimeClockConflictsCache(startDateParam, endDateParam);
+            const response = await fetchCompanyConflicts(
+                startDateParam,
+                endDateParam,
+            );
             if (response.data.IsSuccess) {
                 setConflictDetails(response.data.conflicts || []);
             }
@@ -578,11 +598,15 @@ const TimeClock = ({ queryParams }: Props) => {
     const isReadOnlyUser = isRemovedUser || isArchivedUser;
 
     const [payrollCycle, setPayrollCycle] = useState<string>('');
+    const pendingDeepLinkRef = useRef<{
+        userId: number;
+        openDetails: boolean;
+    } | null>(null);
 
     useEffect(() => {
         (async () => {
             try {
-                const response = await api.get('/setting/get-payroll-settings');
+                const response = await fetchPayrollSettings();
                 const cycle = response.data?.IsSuccess
                     ? (response.data.data?.payroll_cycle || '')
                     : '';
@@ -593,7 +617,11 @@ const TimeClock = ({ queryParams }: Props) => {
                 let to: Date;
                 const stored = loadDateRangeFromStorage();
 
-                if (stored?.startDate && stored?.endDate) {
+                // Deep-link dates win over stored/cycle defaults when present.
+                if (queryParamsRef.current?.start_date && queryParamsRef.current?.end_date) {
+                    from = new Date(queryParamsRef.current.start_date);
+                    to = new Date(queryParamsRef.current.end_date);
+                } else if (stored?.startDate && stored?.endDate) {
                     from = stored.startDate;
                     to = stored.endDate;
                 } else if (cycle) {
@@ -624,36 +652,40 @@ const TimeClock = ({ queryParams }: Props) => {
         const startDateObj = new Date(queryParams.start_date);
         const endDateObj = new Date(queryParams.end_date);
 
+        pendingDeepLinkRef.current = {
+            userId: Number(queryParams.user_id),
+            openDetails: Boolean(queryParams?.type),
+        };
+
         setStartDate(startDateObj);
         setEndDate(endDateObj);
-
-        (async () => {
-            try {
-                const fetchedData = await fetchData(startDateObj, endDateObj);
-
-                const foundUser = fetchedData.find(
-                    (item) =>
-                        Number(item.user_id) === Number(queryParams.user_id)
-                );
-
-                if (!foundUser) return;
-
-                saveDateToStorage(startDateObj, endDateObj);
-                setSelectedTimeClock(foundUser);
-
-                if (queryParams?.type) {
-                    setDetailsOpen(true);
-                }
-            } catch (err) {
-                console.error('Failed to load data from query params:', err);
-            }
-        })();
+        // Fetch is handled by useServerTable when dates / cycleReady change —
+        // do not call fetchData here (avoids duplicate get + conflicts).
     }, [
         queryParams?.user_id,
         queryParams?.start_date,
         queryParams?.end_date,
         queryParams?.type,
     ]);
+
+    useEffect(() => {
+        const pending = pendingDeepLinkRef.current;
+        if (!pending || data.length === 0) return;
+
+        const foundUser = data.find(
+            (item) => Number(item.user_id) === pending.userId,
+        );
+        if (!foundUser) return;
+
+        pendingDeepLinkRef.current = null;
+        if (startDate && endDate) {
+            saveDateToStorage(startDate, endDate);
+        }
+        setSelectedTimeClock(foundUser);
+        if (pending.openDetails) {
+            setDetailsOpen(true);
+        }
+    }, [data, startDate, endDate]);
 
     // Conflicts count
     const totalConflictsCount = useMemo(() => {
@@ -690,7 +722,9 @@ const TimeClock = ({ queryParams }: Props) => {
         setSettingOpen(false);
 
         try {
-            const response = await api.get('/setting/get-payroll-settings');
+            // Settings may have changed payroll (or other list-affecting values).
+            invalidatePayrollSettingsCache();
+            const response = await fetchPayrollSettings({ force: true });
             const cycle = response.data?.IsSuccess
                 ? (response.data.data?.payroll_cycle || '')
                 : '';
@@ -2155,7 +2189,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                                         '&:hover .hoverIcon': {opacity: 1},
                                                     }}
                                                 >
-                                                    <Typography variant="body2">
+                                                    <Typography variant="body2" component="div">
                                                         {flexRender(header.column.columnDef.header, header.getContext())}
                                                     </Typography>
                                                     {isSortable && (

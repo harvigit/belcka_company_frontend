@@ -1918,7 +1918,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
             setStartDate(start);
             setEndDate(end);
-            fetchTimeClockData(start, end);
+            fetchTimeClockData(start, end, {
+                reuseCompanyConflicts: true,
+            });
         }
     }, [
         open,

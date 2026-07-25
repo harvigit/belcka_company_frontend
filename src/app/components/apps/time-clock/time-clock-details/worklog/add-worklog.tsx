@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import { DayPicker } from "react-day-picker";
 import { styled } from "@mui/material/styles";
 import { AxiosResponse } from "axios";
+import { fetchUserListWeb } from "@/utils/userListWeb";
 
 interface User {
     id: number;
@@ -197,14 +198,14 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
 
         setLoading(true);
         try {
-            const res = await api.get(`user/list`);
+            const res = await fetchUserListWeb(companyId);
             setUsers(res.data.info || []);
         } catch (error) {
             console.error("Failed to load users. Please try again.");
         } finally {
             setLoading(false);
         }
-    }, [selectUser]);
+    }, [selectUser, companyId]);
 
     useEffect(() => {
         getUsers();

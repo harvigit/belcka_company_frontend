@@ -13,6 +13,10 @@ import {
 import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
+import {
+  fetchPayrollSettings,
+  invalidatePayrollSettingsCache,
+} from "@/utils/payrollSettings";
 
 interface PayrollSettings {
     payrollCycle: string;
@@ -88,7 +92,7 @@ export default function Payroll({ onSaveSuccess }: PayrollProps) {
 
         const fetchSettings = async () => {
             try {
-                const response = await api.get("/setting/get-payroll-settings");
+                const response = await fetchPayrollSettings();
 
                 if (response.data?.IsSuccess && mounted) {
                     const { payroll_cycle, payroll_cycle_options } = response.data.data;
@@ -135,6 +139,7 @@ export default function Payroll({ onSaveSuccess }: PayrollProps) {
             const response = await api.post("/setting/save-payroll-settings", payload);
 
             if (response.data?.IsSuccess) {
+                invalidatePayrollSettingsCache();
                 toast.success(response.data.message || "Payroll settings saved successfully");
                 onSaveSuccess?.();
             } else {

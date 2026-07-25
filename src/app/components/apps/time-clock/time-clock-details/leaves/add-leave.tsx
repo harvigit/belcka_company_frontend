@@ -29,6 +29,7 @@ import 'react-day-picker/dist/style.css';
 import api from '@/utils/axios';
 import { AxiosResponse } from 'axios';
 import toast from 'react-hot-toast';
+import { fetchUserListWeb } from '@/utils/userListWeb';
 
 interface User {
     id: number;
@@ -253,7 +254,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
         setLoading(true);
         setError(null);
         try {
-            const res = await api.get(`user/list`);
+            const res = await fetchUserListWeb(companyId);
             setUsers(res.data.info || []);
             if (userId && !leaveData) {
                 setFormData((prev) => ({ ...prev, userId: userId.toString() }));
@@ -263,7 +264,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
         } finally {
             setLoading(false);
         }
-    }, [userId, leaveData]);
+    }, [userId, leaveData, companyId]);
 
     const getLeaves = useCallback(async () => {
         setLoading(true);

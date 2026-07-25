@@ -26,6 +26,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import { AxiosResponse } from 'axios';
 import toast from 'react-hot-toast';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
+import { fetchUserListWeb } from '@/utils/userListWeb';
 
 interface Project { id: number; name: string; }
 interface Address { id: number; name: string; project_id: number; }
@@ -115,14 +116,14 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         setLoading(true);
         setError(null);
         try {
-            const res = await api.get(`user/list`);
+            const res = await fetchUserListWeb(companyId);
             setUsers(res.data.info || []);
         } catch (error) {
             setError('Failed to load users. Please try again.');
         } finally {
             setLoading(false);
         }
-    }, [userId]);
+    }, [userId, companyId]);
 
     useEffect(() => {
         getUsers();
