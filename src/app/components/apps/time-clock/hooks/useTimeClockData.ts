@@ -83,7 +83,7 @@ export const useTimeClockData = (
                 params.user_id = userId;
             }
 
-            const response = await api.get('/time-clock/conflicts', {params});
+            const response = await api.get('/time-clock/conflicts-web', {params});
             if (response.data.IsSuccess) {
                 setConflictDetails(response.data.conflicts || []);
                 setTotalConflicts(response.data.total_conflicts || 0);

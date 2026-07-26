@@ -19,6 +19,7 @@ import { AxiosResponse } from "axios";
 import api from "@/utils/axios";
 import { usePermissions } from "@/hooks/usePermissions";
 import { hasPermission, hasAnyPermission } from "@/lib/permissions";
+import { fetchUserProfile } from "@/utils/userProfile";
 import CreateTrade from "../components/apps/settings/company-trades/create";
 import { User } from "next-auth";
 import Cookies from "js-cookie";
@@ -75,8 +76,9 @@ export default function PermissionGuard({
 
     setProfileStatus("loading");
     try {
-      const res = await api.get(
-        `user/profile?user_id=${user.id}&company_id=${user.company_id}`,
+      const res = await fetchUserProfile(
+        Number(user.id),
+        Number(user.company_id),
       );
       setProfile(res.data.info);
       setProfileStatus("ready");
@@ -107,8 +109,9 @@ export default function PermissionGuard({
     const loadProfile = async () => {
       setProfileStatus("loading");
       try {
-        const res = await api.get(
-          `user/profile?user_id=${user.id}&company_id=${user.company_id}`,
+        const res = await fetchUserProfile(
+          Number(user.id),
+          Number(user.company_id),
         );
         if (!cancelled) {
           setProfile(res.data.info);

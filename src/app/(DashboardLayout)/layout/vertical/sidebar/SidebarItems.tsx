@@ -9,7 +9,7 @@ import { CustomizerContext } from "@/app/context/customizerContext";
 import React from "react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import api from "@/utils/axios";
+import { fetchUserPermissions } from "@/utils/userPermissions";
 
 interface Permission {
   id: number;
@@ -37,21 +37,23 @@ const SidebarItems = () => {
   useEffect(() => {
     if (user?.user_role_id === 1) return;
 
-    const fetchPermissions = async () => {
+    const userId = Number(user?.id);
+    const companyId = Number(user?.company_id);
+    if (!Number.isFinite(userId) || userId <= 0 || !Number.isFinite(companyId) || companyId <= 0) {
+      return;
+    }
+
+    const loadPermissions = async () => {
       try {
-        const payload = {
-          user_id: Number(user.id),
-          company_id: Number(user.company_id),
-        };
-        const response = await api.post("/dashboard/user-permissions", payload);
-        setPermissions(response.data.permissions);
+        const response = await fetchUserPermissions(userId, companyId);
+        setPermissions(response.data.permissions || []);
       } catch (error) {
         console.error("Error fetching permissions:", error);
       }
     };
 
-    fetchPermissions();
-  }, [user?.company_id, user?.id]);
+    loadPermissions();
+  }, [user?.company_id, user?.id, user?.user_role_id]);
 
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";

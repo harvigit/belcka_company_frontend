@@ -462,9 +462,8 @@ const TimeClock = ({ queryParams }: Props) => {
         const pendingRequest = dataRequestsRef.current.get(requestKey);
         if (pendingRequest) return pendingRequest;
 
-        // This fetch path has always refreshed conflicts after list data.
         // Invalidate immediately so Details cannot reuse pre-refresh data while
-        // /time-clock/get is still running.
+        // /time-clock/get-web + conflicts-web are still running.
         invalidateTimeClockConflictsCache(
             params.start_date,
             params.end_date,
@@ -473,7 +472,11 @@ const TimeClock = ({ queryParams }: Props) => {
         const request = (async (): Promise<TimeClock[]> => {
           try {
             setFetchTimesheet(true);
-            const response: AxiosResponse<TimeClockResponse> = await api.get('/time-clock/get', {params});
+            // List totals and conflicts are independent — fetch in parallel.
+            const [response] = await Promise.all([
+                api.get<TimeClockResponse>('/time-clock/get-web', {params}),
+                fetchConflictsData(start, end),
+            ]);
             if (response.data.IsSuccess) {
                 setData(response.data.info);
                 setCompanyId(response.data.company_id);
@@ -484,8 +487,6 @@ const TimeClock = ({ queryParams }: Props) => {
                     setFetchTimesheet(false);
                 }
 
-                // Fetch conflicts separately
-                await fetchConflictsData(start, end);
                 const pagMeta = response.data.data;
                 setTotalRows(pagMeta?.totalItems ?? response.data.info.length);
                 setPageCount(pagMeta?.totalPages ?? 1);

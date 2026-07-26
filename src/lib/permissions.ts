@@ -1,4 +1,4 @@
-import api from "@/utils/axios";
+import { fetchUserPermissions } from "@/utils/userPermissions";
 
 export interface Permission {
     id: number;
@@ -16,12 +16,7 @@ export async function getUserPermissions(
     companyId: number
 ): Promise<Permission[]> {
     try {
-        const payload = {
-            user_id: userId,
-            company_id: companyId,
-        };
-
-        const response = await api.post("/dashboard/user-permissions", payload);
+        const response = await fetchUserPermissions(userId, companyId);
         return response.data.permissions || [];
     } catch (error) {
         console.error("Error fetching permissions:", error);

@@ -47,7 +47,7 @@ export function fetchCompanyConflicts(
   if (pending) return pending;
 
   const request = api
-    .get<ConflictsResponse>("/time-clock/conflicts", {
+    .get<ConflictsResponse>("/time-clock/conflicts-web", {
       params: {
         start_date: startDate,
         end_date: endDate,
