@@ -144,7 +144,7 @@ const TablePagination = () => {
   const fetchLeaves = async () => {
     setFetchLeave(true);
     try {
-      let url = `company-leaves/get?company_id=${id.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      let url = `company-leaves/get-web?company_id=${id.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
         url += `&search=${encodeURIComponent(searchTerm)}`;
       }

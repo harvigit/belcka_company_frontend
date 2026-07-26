@@ -369,31 +369,62 @@ function LeaveActivityDrawer({
     startDate: Date | null;
     endDate: Date | null;
 }) {
+    const limit = 20;
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState<any[]>([]);
+    const [page, setPage] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+
+    const fetchActivity = async (currentPage: number) => {
+        if (!startDate || !endDate) return;
+
+        setLoading(true);
+        try {
+            const res = await api.post('user-leaves/activity-web', {
+                start_date: toApiDate(startDate),
+                end_date: toApiDate(endDate),
+                page: currentPage,
+                limit,
+            });
+
+            const newData = res.data?.info || [];
+            setHistory((prev) => (currentPage === 1 ? newData : [...prev, ...newData]));
+            setTotalItems(res.data?.data?.totalItems || 0);
+        } catch (err) {
+            console.error('Failed to fetch leave activity', err);
+            if (currentPage === 1) {
+                setHistory([]);
+                setTotalItems(0);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        if (!open || !startDate || !endDate) return;
-
-        const fetchActivity = async () => {
-            setLoading(true);
-            try {
-                const res = await api.post('user-leaves/activity', {
-                    start_date: toApiDate(startDate),
-                    end_date: toApiDate(endDate),
-                });
-
-                setHistory(res.data?.data || []);
-            } catch (err) {
-                console.error('Failed to fetch leave activity', err);
+        if (!open || !startDate || !endDate) {
+            if (!open) {
                 setHistory([]);
-            } finally {
-                setLoading(false);
+                setPage(1);
+                setTotalItems(0);
             }
-        };
+            return;
+        }
 
-        fetchActivity();
-    }, [endDate, open, startDate]);
+        setHistory([]);
+        setPage(1);
+        setTotalItems(0);
+        fetchActivity(1);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, startDate, endDate]);
+
+    const handleSeeMore = () => {
+        const nextPage = page + 1;
+        setPage(nextPage);
+        fetchActivity(nextPage);
+    };
+
+    const hasMore = history.length < totalItems;
 
     return (
         <Drawer
@@ -409,66 +440,81 @@ function LeaveActivityDrawer({
                 <IconButton onClick={onClose}><IconX/></IconButton>
             </Stack>
 
-            {loading ? (
+            {loading && history.length === 0 ? (
                 <Box display="flex" justifyContent="center" py={5}><CircularProgress size={28}/></Box>
             ) : history.length ? (
-                <Stack spacing={1.25} sx={{pb: 2}}>
-                    {history.map((item, index) => (
-                        <Box key={`${item.id || index}`} sx={{border: '1px solid #e5e7eb', borderRadius: 2, p: 1.5}}>
-                            <Stack direction="row" alignItems="center" spacing={1.25} mb={1}>
-                                <Avatar
-                                    src={item.requested_user_thumb_image || item.requested_user_image || '/images/users/user.png'}
-                                    alt={item.requested_user_name || 'User'}
-                                    sx={{width: 34, height: 34}}
-                                />
-                                <Box sx={{minWidth: 0, flex: 1}}>
-                                    <Typography
-                                        fontWeight={800}
-                                        noWrap
-                                    >
-                                        {item.requested_user_name || 'User'}
+                <Box>
+                    <Stack spacing={1.25} sx={{pb: 2}}>
+                        {history.map((item, index) => (
+                            <Box key={`${item.id || index}`} sx={{border: '1px solid #e5e7eb', borderRadius: 2, p: 1.5}}>
+                                <Stack direction="row" alignItems="center" spacing={1.25} mb={1}>
+                                    <Avatar
+                                        src={item.requested_user_thumb_image || item.requested_user_image || '/images/users/user.png'}
+                                        alt={item.requested_user_name || 'User'}
+                                        sx={{width: 34, height: 34}}
+                                    />
+                                    <Box sx={{minWidth: 0, flex: 1}}>
+                                        <Typography
+                                            fontWeight={800}
+                                            noWrap
+                                        >
+                                            {item.requested_user_name || 'User'}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" noWrap display="block">
+                                            {[item.requested_user_trade_name, item.action_at].filter(Boolean).join(' · ')}
+                                        </Typography>
+                                    </Box>
+                                    <Chip
+                                        size="small"
+                                        label={`${item.action || 'updated'}`}
+                                        color={item.action === 'approved'
+                                            ? 'success'
+                                            : ['rejected', 'cancelled', 'deleted'].includes(item.action)
+                                                ? 'error'
+                                                : item.action === 'requested'
+                                                    ? 'primary'
+                                                    : 'default'}
+                                        variant="outlined"
+                                        sx={{textTransform: 'capitalize', fontWeight: 700}}
+                                    />
+                                </Stack>
+                                <Typography fontSize={13}>{item.message || 'Leave activity'}</Typography>
+                                {item.action_by && item.action_by !== item.requested_user_name && (
+                                    <Typography color="text.secondary" fontSize={12} mt={0.5}>
+                                        Action by: {item.action_by}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary" noWrap display="block">
-                                        {[item.requested_user_trade_name, item.action_at].filter(Boolean).join(' · ')}
+                                )}
+                                {item.request_note && (
+                                    <Typography color="text.secondary" fontSize={12} mt={0.5}>
+                                        Request note: {item.request_note}
                                     </Typography>
-                                </Box>
-                                <Chip
-                                    size="small"
-                                    label={`${item.action || 'updated'}`}
-                                    color={item.action === 'approved'
-                                        ? 'success'
-                                        : ['rejected', 'cancelled', 'deleted'].includes(item.action)
-                                            ? 'error'
-                                            : item.action === 'requested'
-                                                ? 'primary'
-                                                : 'default'}
-                                    variant="outlined"
-                                    sx={{textTransform: 'capitalize', fontWeight: 700}}
-                                />
-                            </Stack>
-                            <Typography fontSize={13}>{item.message || 'Leave activity'}</Typography>
-                            {item.action_by && item.action_by !== item.requested_user_name && (
-                                <Typography color="text.secondary" fontSize={12} mt={0.5}>
-                                    Action by: {item.action_by}
-                                </Typography>
-                            )}
-                            {item.request_note && (
-                                <Typography color="text.secondary" fontSize={12} mt={0.5}>
-                                    Request note: {item.request_note}
-                                </Typography>
-                            )}
-                            {item.action_note && item.action_note !== item.request_note && (
-                                <Typography color="text.secondary" fontSize={12} mt={0.5}>
-                                    {item.action === 'approved' ? 'Approval note'
-                                        : item.action === 'rejected' ? 'Rejection note'
-                                            : item.action === 'cancelled' ? 'Cancellation note'
-                                                : item.action === 'deleted' ? 'Deletion note'
-                                                    : 'Action note'}: {item.action_note}
-                                </Typography>
-                            )}
+                                )}
+                                {item.action_note && item.action_note !== item.request_note && (
+                                    <Typography color="text.secondary" fontSize={12} mt={0.5}>
+                                        {item.action === 'approved' ? 'Approval note'
+                                            : item.action === 'rejected' ? 'Rejection note'
+                                                : item.action === 'cancelled' ? 'Cancellation note'
+                                                    : item.action === 'deleted' ? 'Deletion note'
+                                                        : 'Action note'}: {item.action_note}
+                                    </Typography>
+                                )}
+                            </Box>
+                        ))}
+                    </Stack>
+
+                    {hasMore && (
+                        <Box display="flex" justifyContent="center" my={2}>
+                            <Button
+                                variant="outlined"
+                                disabled={loading}
+                                onClick={handleSeeMore}
+                                startIcon={loading ? <CircularProgress size={16} /> : undefined}
+                            >
+                                See More
+                            </Button>
                         </Box>
-                    ))}
-                </Stack>
+                    )}
+                </Box>
             ) : (
                 <Box sx={{border: '1px dashed #cbd5e1', borderRadius: 2, p: 3, textAlign: 'center'}}>
                     <Typography color="text.secondary">No leave or holiday activity found.</Typography>
@@ -665,8 +711,8 @@ const Leaves = () => {
                 end_date: toApiDate(end),
             };
             const [leavesResponse, overviewResponse] = await Promise.all([
-                api.post('user-leaves/get-list', payload),
-                api.post('user-leaves/overview', payload),
+                api.post('user-leaves/get-list-leaves-web', payload),
+                api.post('user-leaves/overview-web', payload),
             ]);
 
             setData(leavesResponse.data?.data || []);
@@ -852,7 +898,7 @@ const Leaves = () => {
             id: 'select',
             size: 56,
             header: () => (
-                <Stack direction="row" alignItems="center" ml={0.5}>
+                <Stack component="span" direction="row" alignItems="center" ml={0.5}>
                     <CustomCheckbox
                         className="header-checkbox"
                         checked={
@@ -1208,7 +1254,7 @@ const Leaves = () => {
                                                     '&:hover .hoverIcon': {opacity: 1},
                                                 }}
                                             >
-                                                <Typography variant="body2">
+                                                <Typography variant="body2" component="span">
                                                     {flexRender(header.column.columnDef.header, header.getContext())}
                                                 </Typography>
                                                 {isSortable && (

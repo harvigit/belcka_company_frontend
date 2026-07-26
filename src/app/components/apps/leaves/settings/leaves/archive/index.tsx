@@ -50,7 +50,7 @@ const ArchiveLeave: React.FC<ArchiveLeaveProps> = ({
         try {
             setLoading(true);
             const res = await api.get(
-                `company-leaves/archive-list?company_id=${user.company_id}`
+                `company-leaves/archive-list-web?company_id=${user.company_id}`
             );
             if (res.data?.info) {
                 setData(res.data.info);

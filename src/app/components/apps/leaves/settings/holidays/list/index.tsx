@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   TableContainer,
   Table,
@@ -127,9 +127,11 @@ const HolidayList = () => {
 
 
   const fetchHolidays = async () => {
+    if (!user?.company_id) return;
+
     setFetchingHolidays(true);
     try {
-      let url = `holiday/get?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      let url = `holiday/get-web?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
         url += `&search=${encodeURIComponent(searchTerm)}`;
       }
@@ -139,8 +141,6 @@ const HolidayList = () => {
         setPageCount(res.data.data?.totalPages || 0);
         setTotalRows(res.data.data?.totalItems || 0);
       }
-
-      console.log(data, "daata");
     } catch (err) {
       console.error("Failed to fetch holidays", err);
     } finally {
@@ -323,10 +323,8 @@ const HolidayList = () => {
   } = useServerTable({
     data: filteredData,
     columns,
-    fetchData: () => {
-      if (user?.company_id) fetchHolidays();
-    },
-    debounceDependencies: [searchTerm, user?.company_id],
+    fetchData: fetchHolidays,
+    debounceDependencies: [searchTerm],
     state: { columnVisibility },
     onColumnVisibilityChange,
   });
@@ -534,12 +532,10 @@ const HolidayList = () => {
                             "&:hover .hoverIcon": { opacity: 1 },
                           }}
                         >
-                          <Typography variant="subtitle2">
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
-                          </Typography>
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                           {isSortable && (
                             <Box
                               component="span"

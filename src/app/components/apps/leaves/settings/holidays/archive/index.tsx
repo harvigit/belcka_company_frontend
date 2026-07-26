@@ -57,7 +57,7 @@ const ArchiveHoliday: React.FC<ArchiveHolidayProps> = ({open, onClose, onWorkUpd
         try {
             setLoading(true);
             const res: AxiosResponse<any> = await api.get(
-                `holiday/archive-list?company_id=${user.company_id}`,
+                `holiday/archive-list-web?company_id=${user.company_id}`,
             );
             if (res.data?.info) {
                 setData(res.data.info);

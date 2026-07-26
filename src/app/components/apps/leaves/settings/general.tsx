@@ -19,6 +19,7 @@ import { useSession } from 'next-auth/react';
 import { User } from 'next-auth';
 import toast from 'react-hot-toast';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
+import { fetchUserListWeb } from '@/utils/userListWeb';
 
 interface UserLimitEntry {
     user_id: number | null;
@@ -63,7 +64,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
         setLoading(true);
         setRemovedUserIds([]);
         try {
-            const res = await api.get(`setting/leaves-general-settings`);
+            const res = await api.get(`setting/leaves-general-settings-web`);
             if (res.data?.IsSuccess && res.data?.data) {
                 setSetting({
                     ...res.data.data,
@@ -82,9 +83,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
 
     const fetchUsers = async () => {
         try {
-            const res = await api.get(`user/list`, {
-                params: { company_id: user.company_id },
-            });
+            const res = await fetchUserListWeb(user.company_id);
             if (res.data?.IsSuccess) {
                 const rawUsers = res.data.info || [];
                 const normalized = rawUsers.map((u: any) => ({
@@ -392,21 +391,25 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                                         onChange={(_, val) =>
                                                             handleUserLimitChange(index, 'user_id', val?.id ?? null)
                                                         }
-                                                        renderOption={(props, opt) => (
-                                                            <Box
-                                                                component="li"
-                                                                {...props}
-                                                                display="flex"
-                                                                alignItems="center"
-                                                                gap={1}
-                                                            >
-                                                                <Avatar
-                                                                    src={opt.user_image || ''}
-                                                                    sx={{ width: 26, height: 26 }}
-                                                                />
-                                                                <Typography fontSize={13}>{opt.name}</Typography>
-                                                            </Box>
-                                                        )}
+                                                        renderOption={(props, opt) => {
+                                                            const { key, ...optionProps } = props;
+                                                            return (
+                                                                <Box
+                                                                    key={key}
+                                                                    component="li"
+                                                                    {...optionProps}
+                                                                    display="flex"
+                                                                    alignItems="center"
+                                                                    gap={1}
+                                                                >
+                                                                    <Avatar
+                                                                        src={opt.user_image || ''}
+                                                                        sx={{ width: 26, height: 26 }}
+                                                                    />
+                                                                    <Typography fontSize={13}>{opt.name}</Typography>
+                                                                </Box>
+                                                            );
+                                                        }}
                                                         renderInput={(params) => (
                                                             <TextField {...params} placeholder="Select user" />
                                                         )}

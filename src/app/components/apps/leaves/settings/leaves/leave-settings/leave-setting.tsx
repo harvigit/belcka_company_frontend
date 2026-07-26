@@ -20,6 +20,7 @@ import { useSession } from 'next-auth/react';
 import { User } from 'next-auth';
 import toast from 'react-hot-toast';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
+import { fetchUserListWeb } from '@/utils/userListWeb';
 
 interface UserLimitEntry {
     user_id: number | null;
@@ -64,9 +65,7 @@ const LeaveSetting: React.FC<LeaveSettingProps> = ({ open, onClose, onSaveSucces
     const fetchSettings = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`setting/get-leave-settings`, {
-                params: { company_id: user.company_id },
-            });
+            const res = await api.get(`setting/leaves-general-settings-web`);
             if (res.data?.IsSuccess && res.data?.data) {
                 setSetting({
                     ...res.data.data,
@@ -85,9 +84,7 @@ const LeaveSetting: React.FC<LeaveSettingProps> = ({ open, onClose, onSaveSucces
 
     const fetchUsers = async () => {
         try {
-            const res = await api.get(`user/list`, {
-                params: { company_id: user.company_id },
-            });
+            const res = await fetchUserListWeb(user.company_id);
             if (res.data?.IsSuccess) {
                 const rawUsers = res.data.info || [];
                 const normalized = rawUsers.map((u: any) => ({
