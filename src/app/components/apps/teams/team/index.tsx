@@ -51,6 +51,7 @@ import {
   IconTrash,
   IconUserPlus,
   IconArrowLeft,
+  IconEdit,
 } from "@tabler/icons-react";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import api from "@/utils/axios";
@@ -71,6 +72,7 @@ import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import Link from "next/link";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
+import EditTeam from "../edit";
 
 dayjs.extend(customParseFormat);
 
@@ -122,7 +124,7 @@ const TablePagination = () => {
       setSelectedRowIds(new Set());
     }
   };
-
+  const [editDrawer, setEditDrawer] = useState(false);
   const rerender = React.useReducer(() => ({}), {})[1];
   const [users, setUsers] = useState<UserList[]>([]);
   const [user, setUser] = useState<UserList[]>([]);
@@ -942,10 +944,13 @@ const TablePagination = () => {
           }}
         >
           <BlankCard>
-            <Grid display="flex" gap={1} mt={2} ml={2}>
+            <Grid display="flex" gap={1} mt={2} ml={2} alignItems={"center"}>
               <Typography variant="h3">
                 {teamInfo?.team_name || data[0]?.team_name}
               </Typography>
+              <IconButton onClick={() => setEditDrawer(true)} color="primary">
+                <IconEdit size={20}/>
+              </IconButton>
             </Grid>
 
             <Stack
@@ -1763,6 +1768,16 @@ const TablePagination = () => {
           </Grid>
         </Box>
       </Drawer>
+
+      {teamId && (
+        <EditTeam
+          open={editDrawer}
+          onClose={() => setEditDrawer(false)}
+          teamId={Number(teamId)}
+          teams={data}
+          onWorkUpdated={fetchData}
+        />
+      )}
     </PermissionGuard>
   );
 };

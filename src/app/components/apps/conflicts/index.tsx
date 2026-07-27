@@ -33,6 +33,7 @@
     import TeamConflicts from './sections/team-conflicts';
     import StoreConflicts from './sections/store-conflicts';
     import HealthSafetyConflicts from './sections/health-safety-conflicts';
+    import UserConflicts from './sections/user-conflicts';
     
     // Types
     import type { TimesheetConflict } from './sections/timesheet-conflicts';
@@ -40,10 +41,12 @@
     import type { TeamConflict } from './sections/team-conflicts';
     import type { StoreConflict } from './sections/store-conflicts';
     import type { HealthSafetyConflict } from './sections/health-safety-conflicts';
+    import type { UserConflict } from './sections/user-conflicts';
 import PermissionGuard from '@/app/auth/PermissionGuard';
     
     export interface ConflictsApiResponse {
         total_conflicts: number;
+        user_conflicts: { count: number; data: UserConflict[] };
         timesheet_conflicts: { count: number; data: TimesheetConflict[] };
         billing_conflicts: { count: number; data: BillingConflict[] };
         team_conflicts: { count: number; data: TeamConflict[] };
@@ -155,6 +158,7 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
         }, [fetchConflicts]);
     
         const counts = useMemo(() => ({
+            user: data?.user_conflicts?.count ?? 0,
             timesheet: data?.timesheet_conflicts.count ?? 0,
             billing: data?.billing_conflicts.count ?? 0,
             team: data?.team_conflicts.count ?? 0,
@@ -164,7 +168,8 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
         }), [data]);
     
         const tabs = useMemo(() => [
-            { label: 'All', count: counts.total, color: '#6366F1' },
+            { label: 'All', count: counts.total, color: '#5D87FF' },
+            { label: 'User', count: counts.user, color: '#5D87FF' },
             { label: 'Timesheet', count: counts.timesheet, color: '#F59E0B' },
             { label: 'Billing', count: counts.billing, color: '#6366F1' },
             { label: 'Team', count: counts.team, color: '#8B5CF6' },
@@ -239,6 +244,20 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
                         <>
                             {showSection(1) && (
                                 <SectionShell
+                                    icon={<IconUsers size={16} color="#5D87FF" />}
+                                    title="User Conflicts"
+                                    count={counts.user}
+                                    accent="#5D87FF"
+                                >
+                                    <UserConflicts
+                                        data={data.user_conflicts?.data ?? []}
+                                        onResolved={handleResolved}
+                                    />
+                                </SectionShell>
+                            )}
+
+                            {showSection(2) && (
+                                <SectionShell
                                     icon={<IconClock size={16} color="#F59E0B" />}
                                     title="Timesheet Conflicts"
                                     count={counts.timesheet}
@@ -254,7 +273,7 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
                                 </SectionShell>
                             )}
     
-                            {showSection(2) && (
+                            {showSection(3) && (
                                 <SectionShell
                                     icon={<IconCreditCard size={16} color="#6366F1" />}
                                     title="Billing Conflicts"
@@ -269,7 +288,7 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
                                 </SectionShell>
                             )}
     
-                            {showSection(3) && (
+                            {showSection(4) && (
                                 <SectionShell
                                     icon={<IconUsers size={16} color="#8B5CF6" />}
                                     title="Team Conflicts"
@@ -283,7 +302,7 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
                                 </SectionShell>
                             )}
     
-                            {showSection(4) && (
+                            {showSection(5) && (
                                 <SectionShell
                                     icon={<IconShieldExclamation size={16} color="#EF4444" />}
                                     title="Health & Safety Conflicts"
@@ -298,7 +317,7 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
                                 </SectionShell>
                             )}
     
-                            {showSection(5) && (
+                            {showSection(6) && (
                                 <SectionShell
                                     icon={<IconBuildingStore size={16} color="#0891B2" />}
                                     title="Store Conflicts"
