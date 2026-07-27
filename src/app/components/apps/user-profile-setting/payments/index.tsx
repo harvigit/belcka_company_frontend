@@ -16,14 +16,7 @@ interface PayslipListingProps {
   readOnly?: boolean;
 }
 
-const Payments: React.FC<PayslipListingProps> = ({
-                                                     companyId,
-                                                     active,
-                                                     userId,
-                                                     isShow,
-                                                     disableDateFilter = false,
-                                                     readOnly = false,
-                                                 }) => {
+const Payments: React.FC<PayslipListingProps> = ({companyId, active, userId, isShow, disableDateFilter = false, readOnly = false}) => {
     const [activeTab, setActiveTab] = useState(0);
 
     return (

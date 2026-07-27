@@ -818,6 +818,8 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
                             from={startDate}
                             to={endDate}
                             onChange={handleDateRangeChange}
+                            buttonLabelAlign="left"
+                            buttonMinWidth={210}
                         />
                     </Box>
 
@@ -829,6 +831,7 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
                         placeholder="Search..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        sx={{width: {xs: '100%', sm: 220}}}
                         slotProps={{
                             input: {
                                 endAdornment: (
@@ -841,11 +844,14 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
                     />
                     <Button
                         variant="contained"
-                        onClick={handleZip}
-                        sx={{mt: {xs: 1, sm: 0}}}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handleOpenCreateDrawer();
+                        }}
+                        sx={{ mt: { xs: 1, sm: 0 } }}
                     >
-                        {' '}
-                        Zip
+                        <IconPlus width={18} />
+                        Add
                     </Button>
                 </Stack>
 
@@ -949,13 +955,8 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
                         }}
                     >
                         <MenuItem onClick={handleClose}>
-                            <Link
-                                color="body1"
-                                href="#"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    handleOpenCreateDrawer();
-                                }}
+                            <Typography
+                                onClick={handleZip}
                                 style={{
                                     width: '100%',
                                     color: '#11142D',
@@ -965,11 +966,8 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
                                     justifyItems: 'center',
                                 }}
                             >
-                                <ListItemIcon>
-                                    <IconPlus width={18}/>
-                                </ListItemIcon>
-                                Add Invoice
-                            </Link>
+                                Zip
+                            </Typography>
                         </MenuItem>
                     </Menu>
 

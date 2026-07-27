@@ -25,6 +25,8 @@ type Props = {
     onChange:  (range: { from: Date | null; to: Date | null }) => void;
     onApply?:  (range: { from: Date | null; to: Date | null }) => void;
     payrollCycle?: PayrollCycle;
+    buttonLabelAlign?: 'left' | 'space-between';
+    buttonMinWidth?: number | string;
 };
 
 const generatePayrollRanges = (cycle: PayrollCycle, count = 10): { from: Date; to: Date }[] => {
@@ -62,7 +64,15 @@ const generatePayrollRanges = (cycle: PayrollCycle, count = 10): { from: Date; t
     return ranges;
 };
 
-const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply, payrollCycle }) => {
+const DateRangePickerBox: React.FC<Props> = ({
+    from,
+    to,
+    onChange,
+    onApply,
+    payrollCycle,
+    buttonLabelAlign = 'space-between',
+    buttonMinWidth = 230,
+}) => {
     const today     = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 1 });
     const weekEnd   = endOfWeek(today,   { weekStartsOn: 1 });
@@ -106,8 +116,8 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply, payr
         setCalendarMonth(range.from);
     };
 
-    const formatRangeLabel = () => from && to ? `${format(from, "dd MMM yyyy")} ~ ${format(to, "dd MMM yyyy")}`
-        : "Select Date Range";
+    const formatRangeLabel = () => from && to ? 
+        `${format(from, "dd MMM yyyy")} ~ ${format(to, "dd MMM yyyy")}` : "Select Date Range";
 
     const formatPresetLabel = (range: { from: Date; to: Date }) =>
         `${format(range.from, "dd/MM/yyyy")} - ${format(range.to, "dd/MM/yyyy")}`;
@@ -119,16 +129,21 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply, payr
                 variant="outlined"
                 disableRipple
                 sx={{
-                    minWidth: 230,
-                    justifyContent: "space-between",
+                    minWidth: buttonMinWidth,
+                    justifyContent: buttonLabelAlign === 'left' ? "flex-start" : "space-between",
                     borderRadius: "6px",
                     color: "#555",
                     borderColor: "#ccc",
                     textTransform: "none",
                     fontWeight: 400,
                     backgroundColor: "transparent",
+                    ...(buttonLabelAlign === 'left' ? { textAlign: "left" } : {}),
                     '&:hover': { backgroundColor: "transparent", borderColor: "#ccc", color: "#555" },
                     '&:hover .MuiButton-startIcon': { color: "#777" },
+                    ...(buttonLabelAlign === 'left' ? { '& .MuiButton-startIcon': {
+                        ml: 0,
+                        mr: 1,
+                    } } : {}),
                 }}
                 startIcon={<CalendarMonth sx={{ color: "#777" }} />}
             >

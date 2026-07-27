@@ -477,6 +477,8 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
               from={startDate}
               to={endDate}
               onChange={handleDateRangeChange}
+              buttonLabelAlign="left"
+              buttonMinWidth={210}
             />
           </Box>
 
@@ -488,6 +490,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
             placeholder="Search..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ width: { xs: "100%", sm: 220 } }}
             slotProps={{
               input: {
                 endAdornment: (
