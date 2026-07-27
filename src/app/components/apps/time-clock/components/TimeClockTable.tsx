@@ -337,7 +337,9 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
     const DeviceTooltipContent = ({log, isStartTime,}: { log: any; isStartTime: boolean; }) => {
         const deviceType = isStartTime ? log.start_device_type : log.end_device_type;
         const deviceModel = isStartTime ? log.start_device_model_type : log.end_device_model_type;
-        const timeText = isStartTime ? log.start : log.end;
+        const timeText = isStartTime
+            ? (log.actual_work_start_time ?? log.work_start_time ?? log.start_time ?? log.start)
+            : (log.actual_work_end_time ?? log.work_end_time ?? log.end_time ?? log.end);
         const label = isStartTime ? 'Clock-in' : 'Clock-out';
         const deviceInfo = deviceType != null ? getDeviceInfo(deviceType) : null;
 

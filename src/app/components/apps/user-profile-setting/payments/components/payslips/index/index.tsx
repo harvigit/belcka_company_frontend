@@ -612,12 +612,13 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow, disableDateFilter, read
                 const item = row.original;
 
                 const isPdf = item.pdf_extension === '.pdf';
-                const imageUrl = isPdf ? item.thumb_image_url : item.image_url;
+                const imageUrl = isPdf ? item.thumb_pdf_url : item.thumb_image_url || item.image_url;
                 const fullUrl = isPdf ? item.pdf_url : item.image_url;
+                const hasFile = Boolean(fullUrl);
 
                 return (
                     <Stack direction="row" alignItems="center" spacing={1}>
-                        {imageUrl ? (
+                        {hasFile ? (
                             <Box
                                 component="div"
                                 onClick={(e) => {
@@ -644,19 +645,36 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow, disableDateFilter, read
                                     },
                                 }}
                             >
-                                <Image
-                                    src={imageUrl}
-                                    alt="Payslip document"
-                                    width={50}
-                                    height={50}
-                                    style={{
-                                        objectFit: 'cover',
-                                        borderRadius: '4px',
-                                    }}
-                                    onError={(e) => {
-                                        console.error('Image failed to load:', imageUrl);
-                                    }}
-                                />
+                                {imageUrl ? (
+                                    <Image
+                                        src={imageUrl}
+                                        alt="Payslip document"
+                                        width={50}
+                                        height={50}
+                                        style={{
+                                            objectFit: 'cover',
+                                            borderRadius: '4px',
+                                        }}
+                                        onError={() => {
+                                            console.error('Image failed to load:', imageUrl);
+                                        }}
+                                    />
+                                ) : (
+                                    <Box
+                                        sx={{
+                                            width: 50,
+                                            height: 50,
+                                            backgroundColor: '#f5f5f5',
+                                            borderRadius: '4px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#d30000',
+                                        }}
+                                    >
+                                        <PictureAsPdf fontSize="small" />
+                                    </Box>
+                                )}
                                 {isPdf && (
                                     <Box
                                         sx={{
