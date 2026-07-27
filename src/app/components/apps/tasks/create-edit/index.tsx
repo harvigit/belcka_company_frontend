@@ -27,6 +27,7 @@ export interface TaskFormData {
   shift_id?: number | null;
   duration?: string;
   project?: string;
+  project_ids?: any[];
   note?: string;
   is_show?: boolean;
 }
@@ -52,6 +53,7 @@ type GalleryImage = {
   src: string;
   thumb?: string;
   isExisting?: boolean;
+  type?: string;
 };
 
 const TaskAddEdit: React.FC<TaskAddEditProps> = ({
@@ -77,7 +79,8 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
-  const projectOptions = ["All", "Part"];
+  const [projects, setProjects] = useState<any[]>([]);
+
   const fetchTask = async () => {
     if (!taskId || fetching) return;
 
@@ -112,7 +115,8 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
         sub_category_id: null,
         shift_id: null,
         duration: "",
-        project: "",
+        project: "All",
+        project_ids: [],
         note: "",
         is_show: false,
       });
@@ -136,7 +140,8 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
       shift_id: task.shift_id ?? null,
 
       duration: task.duration ?? "",
-      project: task.project ?? "",
+      project: task.project ?? "All",
+      project_ids: task.project_ids ?? [],
       note: task.note ?? "",
       is_show: Boolean(task.is_show),
     });
@@ -146,6 +151,9 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
         id: img.id,
         src: img.image_url,
         isExisting: true,
+        type: img.image_url?.toLowerCase().endsWith(".pdf")
+          ? "application/pdf"
+          : "image/jpeg",
       })),
     );
 
@@ -174,6 +182,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
         setSubCategories(res.data.subCategories);
         setShifts(res.data.shifts);
         setTrades(res.data.trades);
+        setProjects(res.data.projects || []);
       }
     } catch (err) {
       console.error("Failed to fetch inventory resources", err);
@@ -186,7 +195,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
   }, [api]);
 
   const galleryDropzone = useDropzone({
-    accept: { "image/*": [] },
+    accept: { "image/*": [], "application/pdf": [".pdf"] },
     multiple: true,
     onDrop: (files) => {
       setGalleryFiles((p) => [...p, ...files]);
@@ -195,6 +204,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
         ...files.map((file) => ({
           src: URL.createObjectURL(file),
           isExisting: false,
+          type: file.type,
         })),
       ]);
     },
@@ -357,7 +367,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                       <Autocomplete
                         options={subCategories}
                         getOptionLabel={(option) => option.name}
-                         getOptionKey={(option) => option.id}
+                        getOptionKey={(option) => option.id}
                         value={
                           subCategories.find(
                             (item) => item.id === formData.sub_category_id,
@@ -412,14 +422,43 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                       Project
                     </Typography>
                     <Autocomplete
-                      options={projectOptions}
-                      value={formData.project || null}
-                      onChange={(_, value) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          project: value || "",
-                        }))
+                      multiple
+                      options={[
+                        { id: "ALL", name: "All Projects" },
+                        ...projects,
+                      ]}
+                      getOptionLabel={(option) => option.name}
+                      value={
+                        formData.project_ids && formData.project_ids.length > 0
+                          ? projects.filter((p) =>
+                              formData.project_ids?.includes(p.id),
+                            )
+                          : [{ id: "ALL", name: "All Projects" }]
                       }
+                      onChange={(_, value, reason, details) => {
+                        if (details?.option?.id === "ALL") {
+                          setFormData((prev) => ({
+                            ...prev,
+                            project: "All",
+                            project_ids: [],
+                          }));
+                        } else {
+                          const filtered = value.filter((v) => v.id !== "ALL");
+                          if (filtered.length === 0) {
+                            setFormData((prev) => ({
+                              ...prev,
+                              project: "All",
+                              project_ids: [],
+                            }));
+                          } else {
+                            setFormData((prev) => ({
+                              ...prev,
+                              project: "Part",
+                              project_ids: filtered.map((v) => v.id),
+                            }));
+                          }
+                        }
+                      }}
                       renderInput={(params) => (
                         <TextField
                           {...params}
@@ -432,7 +471,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                   </Grid>
                   <Grid size={{ xs: 3 }}>
                     <Typography variant="body2" gutterBottom>
-                      Duration
+                      Duration (m)
                     </Typography>
 
                     <TextField
@@ -441,22 +480,25 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                       fullWidth
                       inputProps={{ maxLength: 150 }}
                       value={formData.duration || ""}
-                      onChange={(e) =>
-                        setFormData((p) => ({
-                          ...p,
-                          duration: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => {
+                        const value = e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 11);
+
+                        setFormData((prev) => ({
+                          ...prev,
+                          duration: value,
+                        }));
+                      }}
                     />
                   </Grid>
-                  <Grid size={{ xs: 3 }}>
+                  <Grid size={{ xs: 6 }}>
                     <Typography variant="body2" gutterBottom>
                       Note
                     </Typography>
 
                     <TextField
                       className="product_input"
-                      multiline
                       placeholder="Enter note..."
                       fullWidth
                       rows={1}
@@ -493,7 +535,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                     >
                       <input
                         {...galleryDropzone.getInputProps()}
-                        accept=".jpg,.png,.jpeg"
+                        accept=".jpg,.png,.jpeg,.pdf"
                       />
 
                       {galleryPreview.length > 0 ? (
@@ -510,24 +552,51 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                                   aspectRatio: "1 / 1",
                                   overflow: "hidden",
                                   borderRadius: 1,
+                                  cursor: "pointer",
                                 }}
-                              >
-                                <Image
-                                  src={
-                                    item.src || "/images/products/product.svg"
-                                  }
-                                  alt="Product image"
-                                  fill
-                                  style={{
-                                    objectFit: "cover",
-                                    cursor: "zoom-in",
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const isPdf =
+                                    item.type === "application/pdf" ||
+                                    item.src?.toLowerCase().endsWith(".pdf");
+                                  if (isPdf) {
+                                    window.open(item.src, "_blank");
+                                  } else {
                                     setPreviewImage(item.src);
                                     setOpenPreview(true);
-                                  }}
-                                />
+                                  }
+                                }}
+                              >
+                                {item.type === "application/pdf" ||
+                                item.src?.toLowerCase().endsWith(".pdf") ? (
+                                  <Box
+                                    display="flex"
+                                    alignItems="center"
+                                    justifyContent="center"
+                                    height="100%"
+                                    bgcolor="#f5f5f5"
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={600}
+                                      color="textSecondary"
+                                    >
+                                      PDF
+                                    </Typography>
+                                  </Box>
+                                ) : (
+                                  <Image
+                                    src={
+                                      item.src || "/images/products/product.svg"
+                                    }
+                                    alt="Product image"
+                                    fill
+                                    style={{
+                                      objectFit: "cover",
+                                      cursor: "zoom-in",
+                                    }}
+                                  />
+                                )}
 
                                 <IconButton
                                   color="error"

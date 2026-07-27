@@ -34,6 +34,11 @@ import {
   IconX,
   IconFilter,
   IconArrowLeft,
+  IconZoomIn,
+  IconZoomOut,
+  IconDownload,
+  IconChevronLeft,
+  IconChevronRight,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
@@ -65,6 +70,8 @@ const CheckinsList = () => {
   const [drawerImages, setDrawerImages] = useState<any[]>([]);
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number>(0);
+  const [zoomScale, setZoomScale] = useState<number>(1);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [isScrollable, setIsScrollable] = useState(false);
@@ -219,27 +226,49 @@ const CheckinsList = () => {
       columnHelper.accessor("project_name", {
         header: "Project",
         cell: ({ row }: any) => (
-          <Typography variant="body2" sx={{ px: 1.5 }}>
-            {row.original.project_name || "-"}
-          </Typography>
+          <Tooltip title={row.original.project_name ?? ""}>
+            <Typography
+              variant="body2"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                minWidth: "100px",
+                width: "100%",
+                maxWidth: "120px",
+                borderRadius: 1,
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                px: 0.5,
+              }}
+            >
+              {row.original.project_name || "-"}
+            </Typography>
+          </Tooltip>
         ),
       }),
-      columnHelper.accessor("start_time", {
-        header: "Start",
+
+      columnHelper.accessor("case_name", {
+        header: "Case",
         cell: ({ row }: any) => (
           <Typography variant="body2" sx={{ px: 1.5 }}>
-            {row.original.formatted_check_in_time || "-"}
+            {row.original.case_name || "-"}
           </Typography>
         ),
       }),
-      columnHelper.accessor("end_time", {
-        header: "End",
+
+      columnHelper.accessor("case_ref", {
+        header: "Ref",
         cell: ({ row }: any) => (
           <Typography variant="body2" sx={{ px: 1.5 }}>
-            {row.original.formatted_check_out_time || "-"}
+            {row.original.case_ref || "-"}
           </Typography>
         ),
       }),
+
       columnHelper.accessor("type", {
         header: "Type",
         cell: ({ row }: any) => (
@@ -248,14 +277,91 @@ const CheckinsList = () => {
           </Typography>
         ),
       }),
+
       columnHelper.accessor("trade", {
         header: "Trade",
         cell: ({ row }: any) => (
-          <Typography variant="body2" sx={{ px: 1.5 }}>
-            {row.original.trade_name || "-"}
-          </Typography>
+          <Tooltip title={row.original.trade_name ?? ""}>
+            <Typography
+              variant="body2"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                minWidth: "80px",
+                width: "100%",
+                maxWidth: "100px",
+                borderRadius: 1,
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                px: 1.5,
+              }}
+            >
+              {row.original.trade_name || "-"}
+            </Typography>
+          </Tooltip>
         ),
       }),
+
+      columnHelper.accessor("category_name", {
+        header: "Category",
+        cell: ({ row }: any) => (
+          <Tooltip title={row.original.category_name ?? ""}>
+            <Typography
+              variant="body2"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                minWidth: "80px",
+                width: "100%",
+                maxWidth: "100px",
+                borderRadius: 1,
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                px: 1.5,
+              }}
+            >
+              {row.original.category_name || "-"}
+            </Typography>
+          </Tooltip>
+        ),
+      }),
+
+      columnHelper.accessor("sub_category_name", {
+        header: "Sub-cat",
+        cell: ({ row }: any) => (
+          <Tooltip title={row.original.sub_category_name ?? ""}>
+            <Typography
+              variant="body2"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                minWidth: "80px",
+                width: "100%",
+                maxWidth: "100px",
+                borderRadius: 1,
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                px: 1.5,
+              }}
+            >
+              {row.original.sub_category_name || "-"}
+            </Typography>
+          </Tooltip>
+        ),
+      }),
+
       columnHelper.accessor("date_added", {
         header: "Create",
         cell: ({ row }: any) => (
@@ -264,10 +370,29 @@ const CheckinsList = () => {
           </Typography>
         ),
       }),
-      columnHelper.accessor("total", {
-        header: "Total",
+
+      columnHelper.accessor("start_time", {
+        header: "Start",
+        cell: ({ row }: any) => (
+          <Typography variant="body2" sx={{ px: 1.5 }}>
+            {row.original.formatted_check_in_time || "-"}
+          </Typography>
+        ),
+      }),
+
+      columnHelper.accessor("end_time", {
+        header: "End",
+        cell: ({ row }: any) => (
+          <Typography variant="body2" sx={{ px: 1.5 }}>
+            {row.original.formatted_check_out_time || "-"}
+          </Typography>
+        ),
+      }),
+
+      columnHelper.accessor("duration", {
+        header: "Duration",
         cell: ({ row }: any) => {
-          const secs = row.original.total_work_seconds || 0;
+          const secs = row.original.duration || 0;
           const hrs = Math.floor(secs / 3600);
           const mins = Math.floor((secs % 3600) / 60);
           return (
@@ -277,6 +402,63 @@ const CheckinsList = () => {
           );
         },
       }),
+
+      columnHelper.accessor("recommendation_duration", {
+        header: "Rec. Time",
+        cell: ({ row }: any) => (
+          <Typography variant="body2" sx={{ px: 1.5 }} width={90}>
+            {row.original.recommendation_duration || "-"}
+          </Typography>
+        ),
+      }),
+
+      columnHelper.accessor("overdue", {
+        header: "Overdue",
+        cell: ({ row }: any) => (
+          <Typography variant="body2" sx={{ px: 1.5 }}>
+            {row.original.overdue || "-"}
+          </Typography>
+        ),
+      }),
+
+      columnHelper.accessor("wast_time", {
+        header: "Wast Time",
+        cell: ({ row }: any) => (
+          <Typography variant="body2" sx={{ px: 1.5 }} width={90}>
+            {row.original.wast_time || "-"}
+          </Typography>
+        ),
+      }),
+
+      columnHelper.accessor("cost", {
+        header: "Cost",
+        cell: ({ row }: any) => (
+          <Typography variant="body2" sx={{ px: 1.5 }}>
+            {row.original.cost || "-"}
+          </Typography>
+        ),
+      }),
+
+      columnHelper.accessor("qty", {
+        header: "Qty",
+        cell: ({ row }: any) => (
+          <Typography variant="body2" sx={{ px: 1.5 }}>
+            {row.original.qty || "-"}
+          </Typography>
+        ),
+      }),
+
+      columnHelper.accessor("total", {
+        header: "Total",
+        cell: ({ row }: any) => {
+          return (
+            <Typography variant="body2" sx={{ px: 1.5 }}>
+              {row.original.total}
+            </Typography>
+          );
+        },
+      }),
+
       columnHelper.accessor("photo_before", {
         header: "Photo Before",
         cell: ({ row }: any) => {
@@ -291,6 +473,7 @@ const CheckinsList = () => {
                 "&:hover": {
                   color: count > 0 ? "primary.main" : "inherit",
                 },
+                width: 105,
               }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -304,6 +487,7 @@ const CheckinsList = () => {
           );
         },
       }),
+
       columnHelper.accessor("photo_after", {
         header: "Photo After",
         cell: ({ row }: any) => {
@@ -313,6 +497,7 @@ const CheckinsList = () => {
               variant="body2"
               sx={{
                 px: 1.5,
+                width: 100,
                 cursor: count > 0 ? "pointer" : "default",
                 color: "inherit",
                 "&:hover": {
@@ -724,7 +909,11 @@ const CheckinsList = () => {
                     <Image
                       onClick={(e) => {
                         e.stopPropagation();
-                        setPreviewImage(item.image || "/images/products/product.svg");
+                        setPreviewImage(
+                          item.image || "/images/products/product.svg",
+                        );
+                        setPreviewIndex(i);
+                        setZoomScale(1);
                         setOpenPreview(true);
                       }}
                       src={item.image || "/images/products/product.svg"}
@@ -851,24 +1040,20 @@ const CheckinsList = () => {
           fullScreen
           PaperProps={{
             sx: {
-              backgroundColor: "transparent",
+              backgroundColor: "rgba(0,0,0,0.9)",
               boxShadow: "none",
             },
           }}
         >
           <IconButton
             onClick={() => setOpenPreview(false)}
-            color="primary"
             sx={{
               position: "fixed",
               top: 16,
               right: 16,
               zIndex: 1301,
               backgroundColor: "#fff",
-              "&:hover": {
-                backgroundColor: "#eee",
-                color: "#1e4db7",
-              },
+              "&:hover": { backgroundColor: "#eee", color: "#1e4db7" },
             }}
           >
             <IconX />
@@ -881,19 +1066,130 @@ const CheckinsList = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              position: "relative",
             }}
             onClick={() => setOpenPreview(false)}
           >
-            <img
-              src={previewImage || ""}
-              alt="Preview"
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: "90% !important",
-                height: "50%",
-                objectFit: "contain",
+            {/* Prev Button */}
+            {drawerImages.length > 1 && (
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPreviewIndex((prev) =>
+                    prev > 0 ? prev - 1 : drawerImages.length - 1,
+                  );
+                  setZoomScale(1);
+                }}
+                sx={{
+                  position: "absolute",
+                  left: 20,
+                  zIndex: 1301,
+                  backgroundColor: "rgba(255,255,255,0.7)",
+                  "&:hover": { backgroundColor: "#fff" },
+                }}
+              >
+                <IconChevronLeft size={30} />
+              </IconButton>
+            )}
+
+            {/* Image */}
+            <Box
+              sx={{
+                width: "80%",
+                height: "80%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
               }}
-            />
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={drawerImages[previewIndex]?.image || previewImage || ""}
+                alt="Preview"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  objectFit: "contain",
+                  transform: `scale(${zoomScale})`,
+                  transition: "transform 0.2s",
+                }}
+              />
+            </Box>
+
+            {/* Next Button */}
+            {drawerImages.length > 1 && (
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPreviewIndex((prev) =>
+                    prev < drawerImages.length - 1 ? prev + 1 : 0,
+                  );
+                  setZoomScale(1);
+                }}
+                sx={{
+                  position: "absolute",
+                  right: 20,
+                  zIndex: 1301,
+                  backgroundColor: "rgba(255,255,255,0.7)",
+                  "&:hover": { backgroundColor: "#fff" },
+                }}
+              >
+                <IconChevronRight size={30} />
+              </IconButton>
+            )}
+
+            {/* Controls Toolbar */}
+            <Stack
+              direction="row"
+              spacing={2}
+              onClick={(e) => e.stopPropagation()}
+              sx={{
+                position: "absolute",
+                bottom: 20,
+                backgroundColor: "rgba(255,255,255,0.8)",
+                padding: "8px 16px",
+                borderRadius: "30px",
+                zIndex: 1301,
+              }}
+            >
+              <IconButton
+                onClick={() => setZoomScale((prev) => Math.min(prev + 0.5, 5))}
+              >
+                <IconZoomIn />
+              </IconButton>
+              <IconButton
+                onClick={() =>
+                  setZoomScale((prev) => Math.max(prev - 0.5, 0.5))
+                }
+              >
+                <IconZoomOut />
+              </IconButton>
+              <IconButton
+                onClick={async () => {
+                  const url =
+                    drawerImages[previewIndex]?.image || previewImage || "";
+                  if (url) {
+                    try {
+                      const response = await fetch(url);
+                      const blob = await response.blob();
+                      const blobUrl = window.URL.createObjectURL(blob);
+                      const link = document.createElement("a");
+                      link.href = blobUrl;
+                      link.download = `checkin_image_${previewIndex + 1}.jpg`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      window.URL.revokeObjectURL(blobUrl);
+                    } catch (error) {
+                      console.error("Failed to download image", error);
+                    }
+                  }
+                }}
+              >
+                <IconDownload />
+              </IconButton>
+            </Stack>
           </Box>
         </Dialog>
       </Box>

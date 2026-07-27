@@ -30,6 +30,8 @@ import {
   Divider,
   Modal,
   LinearProgress,
+  Drawer,
+  Grid,
 } from "@mui/material";
 import {
   IconPlus,
@@ -43,6 +45,12 @@ import {
   IconFileImport,
   IconFileExport,
   IconFilter,
+  IconArrowLeft,
+  IconZoomIn,
+  IconZoomOut,
+  IconDownload,
+  IconChevronLeft,
+  IconChevronRight,
 } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import api from "@/utils/axios";
@@ -115,6 +123,19 @@ const TaskLists = () => {
   const [subCategories, setSubCategories] = useState<any[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
   const [shifts, setShifts] = useState<any[]>([]);
+
+  const [drawerImages, setDrawerImages] = useState<any[]>([]);
+  const [imagesDrawerOpen, setImagesDrawerOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number>(0);
+  const [zoomScale, setZoomScale] = useState<number>(1);
+  const [openPreview, setOpenPreview] = useState(false);
+
+  const handleOpenDrawer = (images: any[]) => {
+    setDrawerImages(images || []);
+    setImagesDrawerOpen(true);
+  };
+
   React.useEffect(() => {
     const checkScroll = () => {
       if (tableContainerRef.current) {
@@ -188,7 +209,8 @@ const TaskLists = () => {
     sub_category_id: 0,
     shift_id: 0,
     duration: "",
-    project: "",
+    project: "All",
+    project_ids: [],
     note: "",
     is_show: false,
   };
@@ -375,7 +397,8 @@ const TaskLists = () => {
           sub_category_id: 0,
           shift_id: 0,
           duration: "",
-          project: "",
+          project: "All",
+          project_ids: [],
           note: "",
           is_show: false,
         });
@@ -696,8 +719,8 @@ const TaskLists = () => {
         },
       }),
       columnHelper.accessor((row) => row?.sub_category_name, {
-        id: "subCategory",
-        header: () => "Sub Category",
+        id: "sub-cat",
+        header: () => "Sub-cat",
         cell: ({ row }) => {
           const item = row.original;
           return (
@@ -767,7 +790,7 @@ const TaskLists = () => {
 
           return (
             <Box display="flex" alignItems="center" sx={{ px: 1.5 }}>
-              <Typography variant="body2">{item.duration ?? "-"}</Typography>
+              <Typography variant="body2">{item.duration ?? "-"}{item.duration? "m":""}</Typography>
             </Box>
           );
         },
@@ -827,6 +850,35 @@ const TaskLists = () => {
                 {item.completed_by_short_name ?? "-"}
               </Typography>
             </Tooltip>
+          );
+        },
+      }),
+      columnHelper.accessor("task_images", {
+        header: "File",
+        cell: ({ row }: any) => {
+          const item = row.original;
+          const count = item.task_images?.length || 0;
+
+          return (
+            <Typography
+              variant="body2"
+              sx={{
+                px: 1.5,
+                cursor: count > 0 ? "pointer" : "default",
+                color: "inherit",
+                "&:hover": {
+                  color: count > 0 ? "primary.main" : "inherit",
+                },
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (count > 0) {
+                  handleOpenDrawer(item.task_images);
+                }
+              }}
+            >
+              {count > 0 ? count : 0}
+            </Typography>
           );
         },
       }),
@@ -1628,6 +1680,306 @@ const TaskLists = () => {
               Apply
             </Button>
           </DialogActions>
+        </Dialog>
+        <Drawer
+          anchor="right"
+          open={imagesDrawerOpen}
+          onClose={() => setImagesDrawerOpen(false)}
+          PaperProps={{
+            sx: {
+              width: { xs: "100%", sm: 450 },
+              display: "flex",
+              flexDirection: "column",
+            },
+          }}
+        >
+          {/* Header */}
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            px={2}
+            py={1.5}
+          >
+            <Box display="flex" alignItems="center" gap={1}>
+              <IconButton onClick={() => setImagesDrawerOpen(false)}>
+                <IconArrowLeft size={20} />
+              </IconButton>
+
+              <Typography variant="h6" fontWeight={600}>
+                Attachments
+              </Typography>
+            </Box>
+
+            <IconButton onClick={() => setImagesDrawerOpen(false)}>
+              <IconX size={20} />
+            </IconButton>
+          </Box>
+
+          <Divider />
+
+          {/* Content */}
+          <Box
+            sx={{
+              flex: 1,
+              overflowY: "auto",
+              p: 2,
+            }}
+          >
+            <Grid container spacing={2}>
+              {drawerImages.map((item, i) => {
+                const isPdf = item.image_url?.toLowerCase().endsWith(".pdf");
+                return (
+                  <Grid size={{ xs: 6 }} key={item.id ?? i}>
+                    <Box
+                      sx={{
+                        position: "relative",
+                        width: "100%",
+                        aspectRatio: "1 / 1",
+                        borderRadius: 2,
+                        overflow: "hidden",
+                        cursor: "pointer",
+                        bgcolor: "grey.100",
+                        transition: "0.2s",
+                        "&:hover": {
+                          transform: "scale(1.03)",
+                        },
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isPdf) {
+                          window.open(item.image_url, "_blank");
+                        } else {
+                          setPreviewImage(
+                            item.image_url || "/images/products/product.svg",
+                          );
+                          setPreviewIndex(i);
+                          setZoomScale(1);
+                          setOpenPreview(true);
+                        }
+                      }}
+                    >
+                      {isPdf ? (
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          height="100%"
+                          bgcolor="#f5f5f5"
+                        >
+                          <Typography
+                            variant="body2"
+                            fontWeight={600}
+                            color="textSecondary"
+                          >
+                            PDF
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Image
+                          src={item.image_url || "/images/products/product.svg"}
+                          alt={`Image ${i + 1}`}
+                          fill
+                          style={{
+                            objectFit: "cover",
+                          }}
+                        />
+                      )}
+                    </Box>
+                  </Grid>
+                );
+              })}
+            </Grid>
+
+            {drawerImages.length === 0 && (
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                height={250}
+              >
+                <Typography color="text.secondary">
+                  No files available
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </Drawer>
+        <Dialog
+          open={openPreview}
+          onClose={() => setOpenPreview(false)}
+          fullScreen
+          PaperProps={{
+            sx: {
+              backgroundColor: "rgba(0,0,0,0.9)",
+              boxShadow: "none",
+            },
+          }}
+        >
+          <IconButton
+            onClick={() => setOpenPreview(false)}
+            sx={{
+              position: "fixed",
+              top: 16,
+              right: 16,
+              zIndex: 1301,
+              backgroundColor: "#fff",
+              "&:hover": { backgroundColor: "#eee", color: "#1e4db7" },
+            }}
+          >
+            <IconX />
+          </IconButton>
+
+          <Box
+            sx={{
+              width: "100vw",
+              height: "100vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative",
+            }}
+            onClick={() => setOpenPreview(false)}
+          >
+            {/* Prev Button */}
+            {drawerImages.length > 1 && (
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPreviewIndex((prev) =>
+                    prev > 0 ? prev - 1 : drawerImages.length - 1,
+                  );
+                  setZoomScale(1);
+                }}
+                sx={{
+                  position: "absolute",
+                  left: 20,
+                  zIndex: 1301,
+                  backgroundColor: "rgba(255,255,255,0.7)",
+                  "&:hover": { backgroundColor: "#fff" },
+                }}
+              >
+                <IconChevronLeft size={30} />
+              </IconButton>
+            )}
+
+            {/* Image */}
+            <Box
+              sx={{
+                width: "80%",
+                height: "80%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {(drawerImages[previewIndex]?.image_url?.toLowerCase().endsWith(".pdf") || previewImage?.toLowerCase().endsWith(".pdf")) ? (
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  height="100%"
+                  width="100%"
+                  bgcolor="#f5f5f5"
+                >
+                  <Typography variant="h4" fontWeight={600} color="textSecondary">
+                    PDF File
+                  </Typography>
+                </Box>
+              ) : (
+                <img
+                  src={
+                    drawerImages[previewIndex]?.image_url || previewImage || ""
+                  }
+                  alt="Preview"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                    transform: `scale(${zoomScale})`,
+                    transition: "transform 0.2s",
+                  }}
+                />
+              )}
+            </Box>
+
+            {/* Next Button */}
+            {drawerImages.length > 1 && (
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPreviewIndex((prev) =>
+                    prev < drawerImages.length - 1 ? prev + 1 : 0,
+                  );
+                  setZoomScale(1);
+                }}
+                sx={{
+                  position: "absolute",
+                  right: 20,
+                  zIndex: 1301,
+                  backgroundColor: "rgba(255,255,255,0.7)",
+                  "&:hover": { backgroundColor: "#fff" },
+                }}
+              >
+                <IconChevronRight size={30} />
+              </IconButton>
+            )}
+
+            {/* Controls Toolbar */}
+            <Stack
+              direction="row"
+              spacing={2}
+              onClick={(e) => e.stopPropagation()}
+              sx={{
+                position: "absolute",
+                bottom: 20,
+                backgroundColor: "rgba(255,255,255,0.8)",
+                padding: "8px 16px",
+                borderRadius: "30px",
+                zIndex: 1301,
+              }}
+            >
+              <IconButton
+                onClick={() => setZoomScale((prev) => Math.min(prev + 0.5, 5))}
+              >
+                <IconZoomIn />
+              </IconButton>
+              <IconButton
+                onClick={() =>
+                  setZoomScale((prev) => Math.max(prev - 0.5, 0.5))
+                }
+              >
+                <IconZoomOut />
+              </IconButton>
+              <IconButton
+                onClick={async () => {
+                  const url =
+                    drawerImages[previewIndex]?.image_url || previewImage || "";
+                  if (url) {
+                    try {
+                      const response = await fetch(url);
+                      const blob = await response.blob();
+                      const blobUrl = window.URL.createObjectURL(blob);
+                      const link = document.createElement("a");
+                      link.href = blobUrl;
+                      const isPdf = url.toLowerCase().endsWith(".pdf");
+                      link.download = isPdf ? `task_file_${previewIndex + 1}.pdf` : `task_image_${previewIndex + 1}.jpg`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      window.URL.revokeObjectURL(blobUrl);
+                    } catch (error) {
+                      console.error("Failed to download image", error);
+                    }
+                  }
+                }}
+              >
+                <IconDownload />
+              </IconButton>
+            </Stack>
+          </Box>
         </Dialog>
       </Box>
     </PermissionGuard>
