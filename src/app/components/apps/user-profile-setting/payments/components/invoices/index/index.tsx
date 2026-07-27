@@ -216,26 +216,6 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
     const [fetchPayslip, setFetchPayslip] = useState<boolean>(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const handleSelectAllAcrossPages = async (checked: boolean) => {
-    if (!checked) {
-      setSelectedRowIds(new Set());
-      return;
-    }
-    try {
-      (window as any).__isSelectingAll = true;
-      await fetchResources();
-      if ((window as any).__lastFetchedIds) {
-        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-      }
-    } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
-        console.error(err);
-      }
-    } finally {
-      (window as any).__isSelectingAll = false;
-      }
-  }
-
     const session = useSession();
     const user = session.data?.user as User & { company_id?: number | null };
   const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
@@ -251,7 +231,6 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-    const [users, setUsers] = useState<any[]>([]);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
     const [openPreview, setOpenPreview] = useState(false);
@@ -310,35 +289,32 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
         setAnchorEl(null);
     };
 
-    const fetchResources = async () => {
-        try {
-            const res = await api.get(
-                `get-inventory-resources?company_id=${user.company_id}`,
-            );
-            if (res.data) {
-                setUsers(res.data.users);
-            }
-        } catch (err) {
-            console.error('Failed to fetch inventory resource', err);
-        }
-    };
-
-    // Fetch data
+    // Fetch data — driven by useServerTable (mount / pagination / debounce deps)
     const fetchInvoices = async (start?: Date | null, end?: Date | null, restorePage?: number) => {
+        if (!user?.company_id) return;
         setFetchPayslip(true);
         try {
             const activeStart = start !== undefined ? start : startDate;
             const activeEnd = end !== undefined ? end : endDate;
             const startParam = activeStart ? format(activeStart, "dd/MM/yyyy") : "";
             const endParam = activeEnd ? format(activeEnd, "dd/MM/yyyy") : "";
-            let url = `bookkeeper-invoices/get?company_id=${user.company_id}&user_id=${userId}&start_date=${startParam}&end_date=${endParam}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+            let url = `bookkeeper-invoices/get-web?company_id=${user.company_id}&start_date=${startParam}&end_date=${endParam}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+
+            const uid = Number(userId);
+            if (Number.isFinite(uid) && uid > 0) {
+                url += `&user_id=${uid}`;
+            }
             
-            if (searchTerm) url += `&search=${searchTerm}`;
+            if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+
+            if (sorting?.length > 0) {
+                url += `&sort_by=${encodeURIComponent(sorting[0].id)}&sort_order=${sorting[0].desc ? 'desc' : 'asc'}`;
+            }
 
             const res = await api.get(url);
             if (res.data) {
                 const responseData = res.data.info?.data || res.data.info || res.data.data || [];
-                setData(responseData);
+                setData(Array.isArray(responseData) ? responseData : []);
 
                 const pagMeta =
                     res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
@@ -352,7 +328,7 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
                 } else if (pagMeta.total !== undefined) {
                     setTotalRows(pagMeta.total);
                 } else {
-                    setTotalRows(responseData.length);
+                    setTotalRows(Array.isArray(responseData) ? responseData.length : 0);
                 }
 
                 if (pagMeta.totalPages !== undefined) {
@@ -374,16 +350,25 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
         }
     };
 
-    useEffect(() => {
-        fetchResources();
-    }, [api]);
-
-    useEffect(() => {
-        if (user?.company_id) {
-            fetchInvoices();
+    const handleSelectAllAcrossPages = async (checked: boolean) => {
+        if (!checked) {
+            setSelectedRowIds(new Set());
+            return;
         }
-    }, [user?.company_id, startDate, endDate]);
-
+        try {
+            (window as any).__isSelectingAll = true;
+            await fetchInvoices(startDate, endDate);
+            if ((window as any).__lastFetchedIds) {
+                setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+            }
+        } catch (err: any) {
+            if (err.message !== 'SELECT_ALL_INTERCEPT') {
+                console.error(err);
+            }
+        } finally {
+            (window as any).__isSelectingAll = false;
+        }
+    };
 
     const handleZip = async () => {
         if (!selectedRowIds.size) {
@@ -515,28 +500,23 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
     };
 
     const flattenedData = useMemo(() => {
-        if (!data) return [];
+        if (!data || !Array.isArray(data)) return [];
 
-        return data.flatMap((group) =>
-            group.data.map((item: any) => ({
-                ...item,
-                date: group.date,
-            })),
-        );
+        // Legacy /get grouped shape: [{ date, data: [...] }]
+        if (data.length > 0 && Array.isArray(data[0]?.data)) {
+            return data.flatMap((group) =>
+                group.data.map((item: any) => ({
+                    ...item,
+                    date: group.date,
+                })),
+            );
+        }
+
+        // get-web flat shape
+        return data;
     }, [data]);
 
-    const filteredData = useMemo(() => {
-        const search = searchTerm.toLowerCase();
-        return flattenedData.filter(
-            (item) =>
-                item.user_name?.toLowerCase().includes(search) ||
-                item.from_date?.toLowerCase().includes(search) ||
-                item.date?.toLowerCase().includes(search) ||
-                item.description?.toLowerCase().includes(search) ||
-                item.invoice_number?.toLowerCase().includes(search) ||
-                item.to_date?.toLowerCase().includes(search),
-        );
-    }, [flattenedData, searchTerm]);
+    const filteredData = flattenedData;
 
     const columnHelper = createColumnHelper<any>();
     const columns = [
@@ -607,7 +587,7 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
                     </Typography>
                 </Stack>
             ),
-            enableSorting: true,
+            enableSorting: false,
             cell: ({row}) => {
                 const item = row.original;
 
@@ -781,13 +761,15 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
         setAnchorEl2(event.currentTarget);
     };
     const handlePopoverClose = () => setAnchorEl2(null);
-    const { table, pagination, setPagination, totalRows, setTotalRows, pageCount, setPageCount } = useServerTable({
+    const { table, pagination, setPagination, totalRows, setTotalRows, pageCount, setPageCount, sorting } = useServerTable({
         data: filteredData,
         columns,
         fetchData: () => fetchInvoices(startDate, endDate),
-        debounceDependencies: [searchTerm],
+        // Dates / company / userId drive list fetches here — no separate useEffect (avoids double GET)
+        debounceDependencies: [searchTerm, startDate, endDate, user?.company_id, userId],
     state: { columnVisibility },
     onColumnVisibilityChange,
+    manualSorting: true,
     });
 
     // Reset to first page when search term changes
@@ -1229,7 +1211,7 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
             <Divider/>
             <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined}
                 table={table}
-                totalRows={table.getPrePaginationRowModel().rows.length}
+                totalRows={totalRows}
             />
         </Box>
     );

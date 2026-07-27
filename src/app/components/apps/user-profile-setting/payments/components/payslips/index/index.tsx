@@ -218,26 +218,6 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
     const [fetchPayslip, setFetchPayslip] = useState<boolean>(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const handleSelectAllAcrossPages = async (checked: boolean) => {
-    if (!checked) {
-      setSelectedRowIds(new Set());
-      return;
-    }
-    try {
-      (window as any).__isSelectingAll = true;
-      await fetchResources();
-      if ((window as any).__lastFetchedIds) {
-        setSelectedRowIds(new Set((window as any).__lastFetchedIds));
-      }
-    } catch (err: any) {
-      if (err.message !== 'SELECT_ALL_INTERCEPT') {
-        console.error(err);
-      }
-    } finally {
-      (window as any).__isSelectingAll = false;
-      }
-  }
-
     const session = useSession();
     const user = session.data?.user as User & { company_id?: number | null };
   const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
@@ -255,7 +235,6 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-    const [users, setUsers] = useState<any[]>([]);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
     const [openPreview, setOpenPreview] = useState(false);
@@ -312,35 +291,32 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
         setAnchorEl(null);
     };
 
-    const fetchResources = async () => {
-        try {
-            const res = await api.get(
-                `get-inventory-resources?company_id=${user.company_id}`,
-            );
-            if (res.data) {
-                setUsers(res.data.users);
-            }
-        } catch (err) {
-            console.error('Failed to fetch inventory resource', err);
-        }
-    };
-
-    // Fetch data
+    // Fetch data — driven by useServerTable (mount / pagination / debounce deps)
     const fetchPayslips = async (start?: Date | null, end?: Date | null, restorePage?: number) => {
+        if (!user?.company_id) return;
         setFetchPayslip(true);
         try {
             const activeStart = start !== undefined ? start : startDate;
             const activeEnd = end !== undefined ? end : endDate;
             const startParam = activeStart ? format(activeStart, 'dd/MM/yyyy') : '';
             const endParam = activeEnd ? format(activeEnd, 'dd/MM/yyyy') : '';
-            let url = `payslips/get?company_id=${user.company_id}&user_id=${userId}&start_date=${startParam}&end_date=${endParam}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+            let url = `payslips/get-web?company_id=${user.company_id}&start_date=${startParam}&end_date=${endParam}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+
+            const uid = Number(userId);
+            if (Number.isFinite(uid) && uid > 0) {
+                url += `&user_id=${uid}`;
+            }
             
-            if (searchTerm) url += `&search=${searchTerm}`;
+            if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+
+            if (sorting?.length > 0) {
+                url += `&sort_by=${encodeURIComponent(sorting[0].id)}&sort_order=${sorting[0].desc ? 'desc' : 'asc'}`;
+            }
             
             const res = await api.get(url);
             if (res.data) {
                 const responseData = res.data.info?.data || res.data.info || res.data.data || [];
-                setData(responseData);
+                setData(Array.isArray(responseData) ? responseData : []);
 
                 const pagMeta =
                     res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
@@ -354,7 +330,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
                 } else if (pagMeta.total !== undefined) {
                     setTotalRows(pagMeta.total);
                 } else {
-                    setTotalRows(responseData.length);
+                    setTotalRows(Array.isArray(responseData) ? responseData.length : 0);
                 }
 
                 if (pagMeta.totalPages !== undefined) {
@@ -376,15 +352,25 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
         }
     };
 
-    useEffect(() => {
-        fetchResources();
-    }, [api]);
-
-    useEffect(() => {
-        if (user?.company_id) {
-            fetchPayslips();
+    const handleSelectAllAcrossPages = async (checked: boolean) => {
+        if (!checked) {
+            setSelectedRowIds(new Set());
+            return;
         }
-    }, [user?.company_id, startDate, endDate]);
+        try {
+            (window as any).__isSelectingAll = true;
+            await fetchPayslips(startDate, endDate);
+            if ((window as any).__lastFetchedIds) {
+                setSelectedRowIds(new Set((window as any).__lastFetchedIds));
+            }
+        } catch (err: any) {
+            if (err.message !== 'SELECT_ALL_INTERCEPT') {
+                console.error(err);
+            }
+        } finally {
+            (window as any).__isSelectingAll = false;
+        }
+    };
 
     const handleZip = async () => {
         if (!selectedRowIds.size) {
@@ -530,14 +516,20 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
     };
 
     const flattenedData = useMemo(() => {
-        if (!data) return [];
+        if (!data || !Array.isArray(data)) return [];
 
-        return data.flatMap((group) =>
-            group.data.map((item: any) => ({
-                ...item,
-                date: group.date,
-            })),
-        );
+        // Legacy /get grouped shape: [{ date, data: [...] }]
+        if (data.length > 0 && Array.isArray(data[0]?.data)) {
+            return data.flatMap((group) =>
+                group.data.map((item: any) => ({
+                    ...item,
+                    date: group.date,
+                })),
+            );
+        }
+
+        // get-web flat shape
+        return data;
     }, [data]);
 
     const filteredData = flattenedData;
@@ -823,13 +815,15 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
         setAnchorEl2(event.currentTarget);
     };
     const handlePopoverClose = () => setAnchorEl2(null);
-    const { table, pagination, setPagination, totalRows, setTotalRows, pageCount, setPageCount } = useServerTable({
+    const { table, pagination, setPagination, totalRows, setTotalRows, pageCount, setPageCount, sorting } = useServerTable({
         data: filteredData,
         columns,
         fetchData: () => fetchPayslips(startDate, endDate),
-        debounceDependencies: [searchTerm],
+        // Dates / company / userId drive list fetches here — no separate useEffect (avoids double GET)
+        debounceDependencies: [searchTerm, startDate, endDate, user?.company_id, userId],
     state: { columnVisibility },
     onColumnVisibilityChange,
+    manualSorting: true,
     });
 
     // Reset to first page when search term changes
@@ -1279,7 +1273,7 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter, readO
             <Divider/>
             <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined}
                 table={table}
-                totalRows={table.getPrePaginationRowModel().rows.length}
+                totalRows={totalRows}
             />
         </Box>
     );

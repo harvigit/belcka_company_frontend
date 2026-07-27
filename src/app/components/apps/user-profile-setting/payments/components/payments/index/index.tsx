@@ -165,8 +165,9 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
     }
   };
 
-  // Fetch data
+  // Fetch data — driven by useServerTable (mount / pagination / debounce deps)
     const fetchPayments = async (start: Date | null, end: Date | null, restorePage?: number): Promise<void> => {
+        if (!user?.company_id) return;
         setFetchPayslip(true);
         try {
             const activeStart = start !== undefined ? start : startDate;
@@ -174,17 +175,24 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
             const startParam = activeStart ? format(activeStart, "dd/MM/yyyy") : "";
             const endParam = activeEnd ? format(activeEnd, "dd/MM/yyyy") : "";
 
+            const uid = Number(userId);
             const params = {
                 company_id: user.company_id,
                 start_date: startParam,
                 end_date: endParam,
-                ...(userId ? { user_id: userId } : {}),
+                ...(Number.isFinite(uid) && uid > 0 ? { user_id: uid } : {}),
                 page: pagination.pageIndex + 1,
                 limit: pagination.pageSize,
-                ...(searchTerm ? { search: searchTerm } : {})
+                ...(searchTerm ? { search: searchTerm } : {}),
+                ...(sorting?.length > 0
+                    ? {
+                          sort_by: sorting[0].id,
+                          sort_order: sorting[0].desc ? "desc" : "asc",
+                      }
+                    : {}),
             };
 
-            const res = await api.get(`payslips/get-bookkeeper-payments`, { params });
+            const res = await api.get(`payslips/get-bookkeeper-payments-web`, { params });
             if (res.data) {
                 const responseData = res.data.info?.data || res.data.info || res.data.data || [];
                 setData(responseData);
@@ -221,12 +229,6 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
         }
         setFetchPayslip(false);
     };
-
-    useEffect(() => {
-        if (user?.company_id) {
-            fetchPayments(startDate, endDate);
-        }
-    }, [user?.company_id, startDate, endDate]);
 
     const handleOpenDrawer = (item: any) => {
     setDrawerOpen(true);
@@ -441,9 +443,11 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
     data,
     columns,
     fetchData: () => fetchPayments(startDate, endDate),
-    debounceDependencies: [searchTerm],
+    // Dates / company / userId drive list fetches here — no separate useEffect (avoids double GET)
+    debounceDependencies: [searchTerm, startDate, endDate, user?.company_id, userId],
     state: { columnVisibility },
     onColumnVisibilityChange,
+    manualSorting: true,
   });
 
   // Reset to first page when search term changes
@@ -728,7 +732,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
       <Divider />
       <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined}
         table={table}
-        totalRows={table.getPrePaginationRowModel().rows.length}
+        totalRows={totalRows}
       />
 
       <Drawer

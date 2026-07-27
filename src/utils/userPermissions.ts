@@ -5,6 +5,7 @@ type UserPermissionsResponse = {
   permissions?: any[];
 };
 
+const cache = new Map<string, AxiosResponse<UserPermissionsResponse>>();
 const inflight = new Map<
   string,
   Promise<AxiosResponse<UserPermissionsResponse>>
@@ -18,10 +19,25 @@ function isValidId(value: number) {
   return Number.isFinite(value) && value > 0;
 }
 
+/** Clear cached permissions (call after role/permission mutations if needed). */
+export function invalidateUserPermissionsCache(
+  userId?: number,
+  companyId?: number,
+) {
+  if (userId !== undefined && companyId !== undefined) {
+    const key = buildKey(userId, companyId);
+    cache.delete(key);
+    inflight.delete(key);
+    return;
+  }
+  cache.clear();
+  inflight.clear();
+}
+
 /**
- * Fetch user permissions with in-flight dedupe only (no session cache).
- * Concurrent callers for the same user/company share one network request.
- * Settled requests are not retained — each new wave refetches as before.
+ * Fetch user permissions with in-flight dedupe + session cache.
+ * Concurrent and sequential callers (sidebar + PermissionGuard) share one
+ * network response until invalidated.
  */
 export function fetchUserPermissions(userId: number, companyId: number) {
   if (!isValidId(userId) || !isValidId(companyId)) {
@@ -29,6 +45,10 @@ export function fetchUserPermissions(userId: number, companyId: number) {
   }
 
   const key = buildKey(userId, companyId);
+
+  const cached = cache.get(key);
+  if (cached) return Promise.resolve(cached);
+
   const pending = inflight.get(key);
   if (pending) return pending;
 
@@ -36,6 +56,10 @@ export function fetchUserPermissions(userId: number, companyId: number) {
     .post<UserPermissionsResponse>("/dashboard/user-permissions", {
       user_id: userId,
       company_id: companyId,
+    })
+    .then((res) => {
+      cache.set(key, res);
+      return res;
     })
     .finally(() => {
       if (inflight.get(key) === request) {

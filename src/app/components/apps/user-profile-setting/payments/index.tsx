@@ -5,7 +5,6 @@ import { Box, Tabs, Tab, Divider } from "@mui/material";
 import PayslipsList from "./components/payslips/index";
 import InvoicesList from "./components/invoices/index";
 import PaymentsList from "./components/payments/index";
-import PermissionGuard from "@/app/auth/PermissionGuard";
 
 interface PayslipListingProps {
   companyId: number | null;
@@ -16,6 +15,10 @@ interface PayslipListingProps {
   readOnly?: boolean;
 }
 
+/**
+ * Payments tabs shell. Callers wrap with PermissionGuard
+ * (Payments on /apps/payments, Users on user profile) — no nested guard here.
+ */
 const Payments: React.FC<PayslipListingProps> = ({
                                                      companyId,
                                                      active,
@@ -27,7 +30,6 @@ const Payments: React.FC<PayslipListingProps> = ({
     const [activeTab, setActiveTab] = useState(0);
 
     return (
-        <PermissionGuard permission={userId && !Number.isNaN(userId) ? "Users" : "Payments"}>
             <Box>
                 <Tabs
                     className="user-tabs"
@@ -57,7 +59,6 @@ const Payments: React.FC<PayslipListingProps> = ({
                     {activeTab === 2 && <InvoicesList userId={userId} isShow={isShow} disableDateFilter={disableDateFilter} readOnly={readOnly} />}
                 </Box>
             </Box>
-        </PermissionGuard>
     );
 };
 

@@ -9,6 +9,7 @@ import CustomTextField from "@/app/components/forms/theme-elements/CustomTextFie
 import api from "@/utils/axios";
 import { useDropzone } from "react-dropzone";
 import toast from "react-hot-toast";
+import { fetchUserListWeb } from "@/utils/userListWeb";
 
 interface AmountMatch {
     label: string;
@@ -64,12 +65,19 @@ const CreatePayslip: React.FC<CreatePayslipProps> = ({
 
     const getUsers = useCallback(async () => {
         try {
-            const res = await api.get(`user/list`);
-            setUsers(res.data.info || []);
+            const res = await fetchUserListWeb(formData.company_id);
+            const rawUsers = res.data.info || [];
+            setUsers(
+                rawUsers.map((u: any) => ({
+                    ...u,
+                    id: Number(u.id),
+                    name: u.name || `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim(),
+                })),
+            );
         } catch (error) {
             console.error("Failed to load users.");
         }
-    }, []);
+    }, [formData.company_id]);
 
     // Called when file is dropped
     const runOcrScan = async (file: File) => {
