@@ -172,6 +172,7 @@ const CheckinsList = () => {
               indeterminate={
                 selectedRowIds.size > 0 && selectedRowIds.size < data.length
               }
+              onClick={(e: any) => e.stopPropagation()}
               onChange={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
@@ -185,16 +186,13 @@ const CheckinsList = () => {
           const isChecked = selectedRowIds.has(item.id);
           const isHovered = hoveredRow === item.id;
           const showCheckbox = isChecked || isHovered;
+
           return (
-            <Stack
-              direction="row"
-              alignItems="center"
-              sx={{ pl: 1 }}
-            >
+            <Stack direction="row" alignItems="center" sx={{ pl: 1 }}>
               <CustomCheckbox
                 checked={isChecked}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => {
+                onClick={(e: any) => e.stopPropagation()}
+                onChange={(e: any) => {
                   e.stopPropagation();
                   e.preventDefault();
                   const newSelected = new Set(selectedRowIds);
@@ -332,7 +330,7 @@ const CheckinsList = () => {
         },
       }),
     ],
-    [],
+    [data, selectedRowIds, hoveredRow],
   );
 
   useEffect(() => {
@@ -396,12 +394,20 @@ const CheckinsList = () => {
 
   return (
     <PermissionGuard permission="Check ins">
-      <Box sx={{ pb: 3, pt: 2, px: 2 }}>
+      <Box
+        sx={{
+          height: "calc(100vh - 100px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Stack
-          direction={{ xs: "column", lg: "row" }}
-          spacing={2}
-          justifyContent="space-between"
+          mr={2}
+          ml={2}
           mb={2}
+          justifyContent="space-between"
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 1, sm: 2, md: 4 }}
         >
           <Box display="flex" gap={1} alignItems="center">
             <TextField
@@ -483,357 +489,356 @@ const CheckinsList = () => {
         </Stack>
 
         <Divider />
+        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+          <TableContainer ref={tableContainerRef}>
+            <Table stickyHeader aria-label="sticky table">
+              <TableHead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const isActive = header.column.getIsSorted();
+                      const isAsc = header.column.getIsSorted() === "asc";
+                      const isSortable = header.column.getCanSort();
 
-        <TableContainer ref={tableContainerRef}>
-          <Table stickyHeader aria-label="sticky table">
-            <TableHead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const isActive = header.column.getIsSorted();
-                    const isAsc = header.column.getIsSorted() === "asc";
-                    const isSortable = header.column.getCanSort();
-
-                    return (
-                      <TableCell
-                        key={header.id}
-                        align="center"
-                        sx={{
-                          paddingTop: "10px",
-                          paddingBottom: "10px",
-                          width: header.column.id === "select" ? 30 : "auto",
-
-                          ...(header.column.id === "actions" && {
-                            position: "sticky",
-                            right: 0,
-                            backgroundColor: "background.paper",
-                            zIndex: 3,
-                            boxShadow: isScrollable
-                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                              : "none",
-                          }),
-                        }}
-                      >
-                        <Box
-                          onClick={
-                            isSortable
-                              ? header.column.getToggleSortingHandler()
-                              : undefined
-                          }
+                      return (
+                        <TableCell
+                          key={header.id}
+                          align="center"
                           sx={{
-                            cursor: isSortable ? "pointer" : "default",
-                            display: "flex",
-                            alignItems: "center",
-                            "&:hover": {
-                              color: isSortable ? "#888" : "inherit",
-                            },
-                            "&:hover .hoverIcon": { opacity: 1 },
+                            paddingTop: "10px",
+                            paddingBottom: "10px",
+                            width: header.column.id === "select" ? 30 : "auto",
+
+                            ...(header.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 3,
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
                           }}
                         >
-                          <Typography variant="subtitle2">
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
+                          <Box
+                            onClick={
+                              isSortable
+                                ? header.column.getToggleSortingHandler()
+                                : undefined
+                            }
+                            sx={{
+                              cursor: isSortable ? "pointer" : "default",
+                              display: "flex",
+                              alignItems: "center",
+                              "&:hover": {
+                                color: isSortable ? "#888" : "inherit",
+                              },
+                              "&:hover .hoverIcon": { opacity: 1 },
+                            }}
+                          >
+                            <Typography variant="subtitle2">
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                            </Typography>
+                            {isSortable && (
+                              <Box
+                                component="span"
+                                className="hoverIcon"
+                                ml={0.5}
+                                sx={{
+                                  transition: "opacity 0.2s",
+                                  opacity: isActive ? 1 : 0,
+                                  fontSize: "0.9rem",
+                                  color: isActive ? "#000" : "#888",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                              </Box>
                             )}
-                          </Typography>
-                          {isSortable && (
-                            <Box
-                              component="span"
-                              className="hoverIcon"
-                              ml={0.5}
-                              sx={{
-                                transition: "opacity 0.2s",
-                                opacity: isActive ? 1 : 0,
-                                fontSize: "0.9rem",
-                                color: isActive ? "#000" : "#888",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <SkeletonLoader
-                  columns={simpleColumns}
-                  rowCount={simpleColumns.length}
-                />
-              ) : table.getRowModel().rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={columns.length}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "calc(50vh - 100px)",
-                      }}
-                    >
-                      <Image
-                        src="/images/no-data.png"
-                        alt="No data"
-                        style={{
-                          maxWidth: "100%",
-                          maxHeight: "100%",
-                        }}
-                        width={200}
-                        height={200}
-                      />
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    hover
-                    sx={{ cursor: "pointer" }}
-                    onMouseEnter={() => setHoveredRow(row.original.id)}
-                    onMouseLeave={() => setHoveredRow(null)}
-                    onClick={() => {
-                      const newSelected = new Set(selectedRowIds);
-                      if (newSelected.has(row.original.id)) {
-                        newSelected.delete(row.original.id);
-                      } else {
-                        newSelected.add(row.original.id);
-                      }
-                      setSelectedRowIds(newSelected);
-                    }}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
+                          </Box>
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  <SkeletonLoader
+                    columns={simpleColumns}
+                    rowCount={simpleColumns.length}
+                  />
+                ) : table.getRowModel().rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length}>
+                      <Box
                         sx={{
-                          padding: "10px",
-                          ...(cell.column.id === "actions" && {
-                            position: "sticky",
-                            right: 0,
-                            backgroundColor: "background.paper",
-                            zIndex: 1,
-                            boxShadow: isScrollable
-                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                              : "none",
-                          }),
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "calc(50vh - 100px)",
                         }}
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
+                        <Image
+                          src="/images/no-data.png"
+                          alt="No data"
+                          style={{
+                            maxWidth: "100%",
+                            maxHeight: "100%",
+                          }}
+                          width={200}
+                          height={200}
+                        />
+                      </Box>
+                    </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        {data.length > 0 && (
-          <Box mt={2}>
-            <TablePaginationFooter
-              table={table}
-              totalRows={totalRows}
-              selectedCount={
-                typeof selectedRowIds !== "undefined"
-                  ? selectedRowIds.size
-                  : undefined
-              }
-            />
-          </Box>
-        )}
-      </Box>
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        PaperProps={{
-          sx: {
-            width: { xs: "100%", sm: 500 },
-            display: "flex",
-            flexDirection: "column",
-          },
-        }}
-      >
-        {/* Header */}
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-          px={2}
-          py={1.5}
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <IconButton onClick={() => setDrawerOpen(false)}>
-              <IconArrowLeft size={20} />
-            </IconButton>
-
-            <Typography variant="h6" fontWeight={600}>
-              Images
-            </Typography>
-          </Box>
-
-          <IconButton onClick={() => setDrawerOpen(false)}>
-            <IconX size={20} />
-          </IconButton>
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      hover
+                      sx={{ cursor: "pointer" }}
+                      onMouseEnter={() => setHoveredRow(row.original.id)}
+                      onMouseLeave={() => setHoveredRow(null)}
+                      onClick={() => {
+                        const newSelected = new Set(selectedRowIds);
+                        if (newSelected.has(row.original.id)) {
+                          newSelected.delete(row.original.id);
+                        } else {
+                          newSelected.add(row.original.id);
+                        }
+                        setSelectedRowIds(newSelected);
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          sx={{
+                            padding: "10px",
+                            ...(cell.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 1,
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Box>
-
         <Divider />
-
-        {/* Content */}
-        <Box
-          sx={{
-            flex: 1,
-            overflowY: "auto",
-            p: 2,
+        {data.length > 0 && (
+          <TablePaginationFooter
+            table={table}
+            totalRows={totalRows}
+            selectedCount={
+              typeof selectedRowIds !== "undefined"
+                ? selectedRowIds.size
+                : undefined
+            }
+          />
+        )}
+        <Drawer
+          anchor="right"
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          PaperProps={{
+            sx: {
+              width: { xs: "100%", sm: 500 },
+              display: "flex",
+              flexDirection: "column",
+            },
           }}
         >
-          <Grid container spacing={2}>
-            {drawerImages.map((item, i) => (
-              <Grid size={{ xs: 6 }} key={item.id ?? i}>
-                <Box
-                  sx={{
-                    position: "relative",
-                    width: "100%",
-                    aspectRatio: "1 / 1",
-                    borderRadius: 2,
-                    overflow: "hidden",
-                    cursor: "pointer",
-                    bgcolor: "grey.100",
-                    transition: "0.2s",
-                    "&:hover": {
-                      transform: "scale(1.03)",
-                    },
-                  }}
-                >
-                  <Image
-                    src={item.image || "/images/products/product.svg"}
-                    alt={`Image ${i + 1}`}
-                    fill
-                    style={{
-                      objectFit: "cover",
-                    }}
-                  />
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
+          {/* Header */}
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            px={2}
+            py={1.5}
+          >
+            <Box display="flex" alignItems="center" gap={1}>
+              <IconButton onClick={() => setDrawerOpen(false)}>
+                <IconArrowLeft size={20} />
+              </IconButton>
 
-          {drawerImages.length === 0 && (
-            <Box
-              display="flex"
-              justifyContent="center"
-              alignItems="center"
-              height={250}
-            >
-              <Typography color="text.secondary">
-                No images available
+              <Typography variant="h6" fontWeight={600}>
+                Images
               </Typography>
             </Box>
-          )}
-        </Box>
-      </Drawer>
-      <Dialog
-        open={openFilter}
-        onClose={() => setOpenFilter(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle sx={{ m: 0, position: "relative", overflow: "visible" }}>
-          Filters
-          <IconButton
-            aria-label="close"
-            onClick={() => setOpenFilter(false)}
-            size="large"
+
+            <IconButton onClick={() => setDrawerOpen(false)}>
+              <IconX size={20} />
+            </IconButton>
+          </Box>
+
+          <Divider />
+
+          {/* Content */}
+          <Box
             sx={{
-              position: "absolute",
-              right: 12,
-              top: 8,
-              color: (theme) => theme.palette.grey[900],
-              backgroundColor: "transparent",
-              zIndex: 10,
-              width: 50,
-              height: 50,
+              flex: 1,
+              overflowY: "auto",
+              p: 2,
             }}
           >
-            <IconX size={40} style={{ width: 40, height: 40 }} />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} mt={1}>
-            <TextField
-              select
-              label="Project"
-              value={tempFilters.project}
-              onChange={(e) =>
-                setTempFilters({ ...tempFilters, project: e.target.value })
-              }
-              fullWidth
-            >
-              <MenuItem value="All">All</MenuItem>
-              {projects.map((p, i) => (
-                <MenuItem key={i} value={p.id}>
-                  {p.name}
-                </MenuItem>
+            <Grid container spacing={2}>
+              {drawerImages.map((item, i) => (
+                <Grid size={{ xs: 6 }} key={item.id ?? i}>
+                  <Box
+                    sx={{
+                      position: "relative",
+                      width: "100%",
+                      aspectRatio: "1 / 1",
+                      borderRadius: 2,
+                      overflow: "hidden",
+                      cursor: "pointer",
+                      bgcolor: "grey.100",
+                      transition: "0.2s",
+                      "&:hover": {
+                        transform: "scale(1.03)",
+                      },
+                    }}
+                  >
+                    <Image
+                      src={item.image || "/images/products/product.svg"}
+                      alt={`Image ${i + 1}`}
+                      fill
+                      style={{
+                        objectFit: "cover",
+                      }}
+                    />
+                  </Box>
+                </Grid>
               ))}
-            </TextField>
-            <TextField
-              select
-              label="Trade"
-              value={tempFilters.trade}
-              onChange={(e) =>
-                setTempFilters({ ...tempFilters, trade: e.target.value })
-              }
-              fullWidth
+            </Grid>
+
+            {drawerImages.length === 0 && (
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                height={250}
+              >
+                <Typography color="text.secondary">
+                  No images available
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </Drawer>
+        <Dialog
+          open={openFilter}
+          onClose={() => setOpenFilter(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle sx={{ m: 0, position: "relative", overflow: "visible" }}>
+            Filters
+            <IconButton
+              aria-label="close"
+              onClick={() => setOpenFilter(false)}
+              size="large"
+              sx={{
+                position: "absolute",
+                right: 12,
+                top: 8,
+                color: (theme) => theme.palette.grey[900],
+                backgroundColor: "transparent",
+                zIndex: 10,
+                width: 50,
+                height: 50,
+              }}
             >
-              <MenuItem value="All">All</MenuItem>
-              {trades.map((p, i) => (
-                <MenuItem key={i} value={p.id}>
-                  {p.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Stack>
-        </DialogContent>
+              <IconX size={40} style={{ width: 40, height: 40 }} />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} mt={1}>
+              <TextField
+                select
+                label="Project"
+                value={tempFilters.project}
+                onChange={(e) =>
+                  setTempFilters({ ...tempFilters, project: e.target.value })
+                }
+                fullWidth
+              >
+                <MenuItem value="All">All</MenuItem>
+                {projects.map((p, i) => (
+                  <MenuItem key={i} value={p.id}>
+                    {p.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Trade"
+                value={tempFilters.trade}
+                onChange={(e) =>
+                  setTempFilters({ ...tempFilters, trade: e.target.value })
+                }
+                fullWidth
+              >
+                <MenuItem value="All">All</MenuItem>
+                {trades.map((p, i) => (
+                  <MenuItem key={i} value={p.id}>
+                    {p.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
+          </DialogContent>
 
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setTempFilters({
-                project: "All",
-                trade: "All",
-              });
-              setFilters({
-                project: "All",
-                trade: "All",
-              });
-              setOpenFilter(false);
-            }}
-            color="inherit"
-          >
-            Clear
-          </Button>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setTempFilters({
+                  project: "All",
+                  trade: "All",
+                });
+                setFilters({
+                  project: "All",
+                  trade: "All",
+                });
+                setOpenFilter(false);
+              }}
+              color="inherit"
+            >
+              Clear
+            </Button>
 
-          <Button
-            variant="contained"
-            onClick={() => {
-              setFilters(tempFilters);
-              setOpenFilter(false);
-            }}
-          >
-            Apply
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <Button
+              variant="contained"
+              onClick={() => {
+                setFilters(tempFilters);
+                setOpenFilter(false);
+              }}
+            >
+              Apply
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
     </PermissionGuard>
   );
 };

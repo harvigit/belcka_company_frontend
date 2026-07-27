@@ -35,6 +35,7 @@ const ACTIVITY_FILTER_OPTIONS = [
   { value: "expense", label: "Expense", requestTypes: [111] },
   { value: "leave", label: "Leave", requestTypes: [110] },
   { value: "pricework", label: "Pricework", requestTypes: [121] },
+  { value: "adjustment", label: "Adjustment", requestTypes: [126] },
 ] as const;
 
 const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {

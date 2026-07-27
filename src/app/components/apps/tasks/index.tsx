@@ -1531,8 +1531,8 @@ const TaskLists = () => {
                 <MenuItem value="All">All</MenuItem>
                 {trades.map((p, i) => (
                   <MenuItem key={i} value={p.name}>
-                      {p.name}
-                    </MenuItem>
+                    {p.name}
+                  </MenuItem>
                 ))}
               </TextField>
 
