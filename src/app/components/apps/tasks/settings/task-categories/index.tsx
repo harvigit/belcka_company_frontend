@@ -587,6 +587,7 @@ const TablePagination = () => {
         setFormData={setFormData}
         EditTaskCategory={editTaskCategory}
         isSaving={isSaving}
+        companyId={company.company_id ?? null}
       />
 
       <Box

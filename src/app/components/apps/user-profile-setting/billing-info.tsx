@@ -405,7 +405,9 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
               </Typography>
 
               {billingInfo?.diff_data &&
-                Object.keys(billingInfo.diff_data).filter(key => ALLOWED_BILLING_FIELDS.includes(key)).length > 0 && (
+                Object.keys(billingInfo.diff_data).filter((key) =>
+                  ALLOWED_BILLING_FIELDS.includes(key),
+                ).length > 0 && (
                   <Box sx={{ mb: 2, flexGrow: 1, overflowY: "auto", pr: 1 }}>
                     <Typography variant="subtitle1" fontWeight={600} mb={1.5}>
                       Requested Changes:
@@ -433,39 +435,89 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                             {key.replace(/_/g, " ")}
                           </Typography>
                           <Box display="flex" gap={2}>
-                            {(!value.old || value.old === "") && (value.new && value.new !== "") ? (
+                            {(!value.old || value.old === "") &&
+                            value.new &&
+                            value.new !== "" ? (
                               <Box flex={1}>
-                                <Typography variant="caption" color="success.main" fontWeight={600} display="block">
+                                <Typography
+                                  variant="caption"
+                                  color="success.main"
+                                  fontWeight={600}
+                                  display="block"
+                                >
                                   Added
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: "success.main", fontWeight: 500, wordBreak: "break-word" }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    color: "success.main",
+                                    fontWeight: 500,
+                                    wordBreak: "break-word",
+                                  }}
+                                >
                                   {value.new}
                                 </Typography>
                               </Box>
-                            ) : (value.old && value.old !== "") && (!value.new || value.new === "") ? (
+                            ) : value.old &&
+                              value.old !== "" &&
+                              (!value.new || value.new === "") ? (
                               <Box flex={1}>
-                                <Typography variant="caption" color="error.main" fontWeight={600} display="block">
+                                <Typography
+                                  variant="caption"
+                                  color="error.main"
+                                  fontWeight={600}
+                                  display="block"
+                                >
                                   Removed
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: "error.main", textDecoration: "line-through", wordBreak: "break-word" }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    color: "error.main",
+                                    textDecoration: "line-through",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
                                   {value.old}
                                 </Typography>
                               </Box>
                             ) : (
                               <>
                                 <Box flex={1}>
-                                  <Typography variant="caption" color="text.secondary" display="block">
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                  >
                                     Old Value
                                   </Typography>
-                                  <Typography variant="body2" sx={{ color: "error.main", textDecoration: "line-through", wordBreak: "break-word" }}>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      color: "error.main",
+                                      textDecoration: "line-through",
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
                                     {value.old}
                                   </Typography>
                                 </Box>
                                 <Box flex={1}>
-                                  <Typography variant="caption" color="text.secondary" display="block">
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                  >
                                     New Value
                                   </Typography>
-                                  <Typography variant="body2" sx={{ color: "success.main", fontWeight: 500, wordBreak: "break-word" }}>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      color: "success.main",
+                                      fontWeight: 500,
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
                                     {value.new}
                                   </Typography>
                                 </Box>
@@ -473,8 +525,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                             )}
                           </Box>
                         </Box>
-                      ),
-                    )}
+                      ))}
                   </Box>
                 )}
 
@@ -545,7 +596,9 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
               </Box>
 
               {billingInfo?.diff_data &&
-                Object.keys(billingInfo.diff_data).filter(key => ALLOWED_BILLING_FIELDS.includes(key)).length > 0 && (
+                Object.keys(billingInfo.diff_data).filter((key) =>
+                  ALLOWED_BILLING_FIELDS.includes(key),
+                ).length > 0 && (
                   <Box sx={{ flexGrow: 1, overflowY: "auto", pr: 1 }}>
                     <Typography variant="subtitle1" fontWeight={600} mb={1.5}>
                       Requested Changes:
@@ -573,39 +626,89 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                             {key.replace(/_/g, " ")}
                           </Typography>
                           <Box display="flex" gap={2}>
-                            {(!value.old || value.old === "") && (value.new && value.new !== "") ? (
+                            {(!value.old || value.old === "") &&
+                            value.new &&
+                            value.new !== "" ? (
                               <Box flex={1}>
-                                <Typography variant="caption" color="success.main" fontWeight={600} display="block">
+                                <Typography
+                                  variant="caption"
+                                  color="success.main"
+                                  fontWeight={600}
+                                  display="block"
+                                >
                                   Added
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: "success.main", fontWeight: 500, wordBreak: "break-word" }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    color: "success.main",
+                                    fontWeight: 500,
+                                    wordBreak: "break-word",
+                                  }}
+                                >
                                   {value.new}
                                 </Typography>
                               </Box>
-                            ) : (value.old && value.old !== "") && (!value.new || value.new === "") ? (
+                            ) : value.old &&
+                              value.old !== "" &&
+                              (!value.new || value.new === "") ? (
                               <Box flex={1}>
-                                <Typography variant="caption" color="error.main" fontWeight={600} display="block">
+                                <Typography
+                                  variant="caption"
+                                  color="error.main"
+                                  fontWeight={600}
+                                  display="block"
+                                >
                                   Removed
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: "error.main", textDecoration: "line-through", wordBreak: "break-word" }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    color: "error.main",
+                                    textDecoration: "line-through",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
                                   {value.old}
                                 </Typography>
                               </Box>
                             ) : (
                               <>
                                 <Box flex={1}>
-                                  <Typography variant="caption" color="text.secondary" display="block">
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                  >
                                     Old Value
                                   </Typography>
-                                  <Typography variant="body2" sx={{ color: "error.main", textDecoration: "line-through", wordBreak: "break-word" }}>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      color: "error.main",
+                                      textDecoration: "line-through",
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
                                     {value.old}
                                   </Typography>
                                 </Box>
                                 <Box flex={1}>
-                                  <Typography variant="caption" color="text.secondary" display="block">
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                  >
                                     New Value
                                   </Typography>
-                                  <Typography variant="body2" sx={{ color: "success.main", fontWeight: 500, wordBreak: "break-word" }}>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      color: "success.main",
+                                      fontWeight: 500,
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
                                     {value.new}
                                   </Typography>
                                 </Box>
@@ -613,8 +716,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                             )}
                           </Box>
                         </Box>
-                      ),
-                    )}
+                      ))}
                   </Box>
                 )}
             </Box>
@@ -769,9 +871,15 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 maxLength:
                   key === "utr_number" ? 11 : key === "nin_number" ? 9 : 50,
               }}
-              label={key
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (c) => c.toUpperCase())}
+              label={
+                key == "nin_number"
+                  ? "NIN Number"
+                  : key == "utr_number"
+                    ? "UTR Number"
+                    : key
+                        .replace(/_/g, " ")
+                        .replace(/\b\w/g, (c) => c.toUpperCase())
+              }
               value={(formData as any)[key] ?? ""}
               onChange={(e) => {
                 let value = e.target.value;

@@ -26,6 +26,7 @@ interface EditTaskCategoryProps {
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
   EditTaskCategory: (e: React.FormEvent) => void;
   isSaving: boolean;
+  companyId: number | null;
 }
 
 const EditTaskCategory: React.FC<EditTaskCategoryProps> = ({
@@ -36,6 +37,7 @@ const EditTaskCategory: React.FC<EditTaskCategoryProps> = ({
   setFormData,
   EditTaskCategory,
   isSaving,
+  companyId,
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,9 @@ const EditTaskCategory: React.FC<EditTaskCategoryProps> = ({
     setError(null);
 
     try {
-      const res = await api.get(`task-categories/get?id=${id}`);
+      const res = await api.get(
+        `task-categories/get?company_id=${companyId}&id=${id}`,
+      );
 
       if (res.data?.info?.[0]) {
         const task = res.data.info[0];

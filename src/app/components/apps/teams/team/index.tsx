@@ -134,12 +134,15 @@ const TablePagination = () => {
     number | undefined
   >(undefined);
   const session = useSession();
-  const id = session.data?.user as User & { company_id?: number | null; id?: string };
-  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
-    storageKey: `cv_${id?.company_id}_${id?.id}_teams_team`,
-    enabled: !!id?.id,
-  });
-
+  const id = session.data?.user as User & {
+    company_id?: number | null;
+    id?: string;
+  };
+  const { columnVisibility, onColumnVisibilityChange } =
+    usePersistentColumnVisibility({
+      storageKey: `cv_${id?.company_id}_${id?.id}_teams_team`,
+      enabled: !!id?.id,
+    });
 
   const searchParams = useSearchParams();
   const teamId = searchParams ? searchParams.get("team_id") : "";
@@ -153,6 +156,11 @@ const TablePagination = () => {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
+
+  const [actionSelectOpen, setActionSelectOpen] = useState(false);
+  const [moveTeamOpen, setMoveTeamOpen] = useState(false);
+  const [teamsList, setTeamsList] = useState<any[]>([]);
+  const [selectedTargetTeamId, setSelectedTargetTeamId] = useState("");
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
@@ -1172,7 +1180,7 @@ const TablePagination = () => {
                           key={col.id}
                           control={
                             <CustomCheckbox
-                          checked={col.getIsVisible()}
+                              checked={col.getIsVisible()}
                               onChange={col.getToggleVisibilityHandler()}
                               disabled={col.id === "conflicts"}
                             />
@@ -1254,7 +1262,7 @@ const TablePagination = () => {
                     onClick={() => {
                       const selectedIds = Array.from(selectedRowIds);
                       setUsersToDelete(selectedIds.filter(Boolean));
-                      setConfirmOpen(true);
+                      setActionSelectOpen(true);
                     }}
                   >
                     Remove
@@ -1307,6 +1315,139 @@ const TablePagination = () => {
                       color="error"
                     >
                       Delete
+                    </Button>
+                  </DialogActions>
+                </Dialog>
+
+                <Dialog
+                  open={actionSelectOpen}
+                  onClose={() => setActionSelectOpen(false)}
+                  fullWidth
+                  maxWidth="xs"
+                >
+                  <DialogTitle>Action Selection</DialogTitle>
+                  <DialogContent>
+                    <Typography mb={2} mt={1}>
+                      What would you like to do with the selected user(s)?
+                    </Typography>
+                    <Stack spacing={2}>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={async () => {
+                          setActionSelectOpen(false);
+                          setMoveTeamOpen(true);
+                          try {
+                            const res = await api.get(
+                              `team/get-team-member-list?company_id=${id.company_id}`,
+                            );
+                            const data =
+                              res.data?.info?.data || res.data?.info || [];
+                            const availableTeams = data.filter(
+                              (t: any) =>
+                                String(t.team_id) !== String(teamId) &&
+                                String(t.id) !== String(teamId),
+                            );
+                            setTeamsList(availableTeams);
+                          } catch (err) {
+                            console.error("Failed to fetch teams", err);
+                          }
+                        }}
+                      >
+                        Move to another team
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => {
+                          setActionSelectOpen(false);
+                          setConfirmOpen(true);
+                        }}
+                      >
+                        Remove from team
+                      </Button>
+                    </Stack>
+                  </DialogContent>
+                  <DialogActions>
+                    <Button
+                      onClick={() => setActionSelectOpen(false)}
+                      color="inherit"
+                    >
+                      Cancel
+                    </Button>
+                  </DialogActions>
+                </Dialog>
+
+                <Dialog
+                  open={moveTeamOpen}
+                  onClose={() => {
+                    setMoveTeamOpen(false);
+                    setSelectedTargetTeamId("");
+                  }}
+                  fullWidth
+                  maxWidth="sm"
+                >
+                  <DialogTitle>Move to Another Team</DialogTitle>
+                  <DialogContent>
+                    <Typography mb={2} mt={1}>
+                      Select a team to move the selected user(s) to:
+                    </Typography>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Select Team"
+                      value={selectedTargetTeamId}
+                      onChange={(e) => setSelectedTargetTeamId(e.target.value)}
+                    >
+                      <MenuItem value="">Select Team</MenuItem>
+                      {teamsList.map((t: any, idx: number) => {
+                        const val = t.team_id || t.id;
+                        return (
+                          <MenuItem key={val || idx} value={val}>
+                            {t.team_name || t.name || `Team ${val}`}
+                          </MenuItem>
+                        );
+                      })}
+                    </TextField>
+                  </DialogContent>
+                  <DialogActions>
+                    <Button
+                      onClick={() => {
+                        setMoveTeamOpen(false);
+                        setSelectedTargetTeamId("");
+                      }}
+                      color="inherit"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      disabled={!selectedTargetTeamId}
+                      onClick={async () => {
+                        try {
+                          const payload = {
+                            current_team_id: Number(teamId),
+                            team_id: Number(selectedTargetTeamId),
+                            user_ids: usersToDelete.join(","),
+                          };
+                          const response = await api.post(
+                            "team/move-users-to-team",
+                            payload,
+                          );
+                          toast.success(
+                            response.data.message || "Users moved successfully",
+                          );
+                          setSelectedRowIds(new Set());
+                          setMoveTeamOpen(false);
+                          setSelectedTargetTeamId("");
+                          await fetchData();
+                        } catch (error) {
+                          console.error("Failed to move users", error);
+                        }
+                      }}
+                    >
+                      Move
                     </Button>
                   </DialogActions>
                 </Dialog>

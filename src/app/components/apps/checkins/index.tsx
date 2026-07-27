@@ -63,6 +63,8 @@ const CheckinsList = () => {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerImages, setDrawerImages] = useState<any[]>([]);
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [isScrollable, setIsScrollable] = useState(false);
@@ -662,7 +664,7 @@ const CheckinsList = () => {
           onClose={() => setDrawerOpen(false)}
           PaperProps={{
             sx: {
-              width: { xs: "100%", sm: 500 },
+              width: { xs: "100%", sm: 450 },
               display: "flex",
               flexDirection: "column",
             },
@@ -720,6 +722,11 @@ const CheckinsList = () => {
                     }}
                   >
                     <Image
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewImage(item.image || "/images/products/product.svg");
+                        setOpenPreview(true);
+                      }}
                       src={item.image || "/images/products/product.svg"}
                       alt={`Image ${i + 1}`}
                       fill
@@ -837,6 +844,57 @@ const CheckinsList = () => {
               Apply
             </Button>
           </DialogActions>
+        </Dialog>
+        <Dialog
+          open={openPreview}
+          onClose={() => setOpenPreview(false)}
+          fullScreen
+          PaperProps={{
+            sx: {
+              backgroundColor: "transparent",
+              boxShadow: "none",
+            },
+          }}
+        >
+          <IconButton
+            onClick={() => setOpenPreview(false)}
+            color="primary"
+            sx={{
+              position: "fixed",
+              top: 16,
+              right: 16,
+              zIndex: 1301,
+              backgroundColor: "#fff",
+              "&:hover": {
+                backgroundColor: "#eee",
+                color: "#1e4db7",
+              },
+            }}
+          >
+            <IconX />
+          </IconButton>
+
+          <Box
+            sx={{
+              width: "100vw",
+              height: "100vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onClick={() => setOpenPreview(false)}
+          >
+            <img
+              src={previewImage || ""}
+              alt="Preview"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "90% !important",
+                height: "50%",
+                objectFit: "contain",
+              }}
+            />
+          </Box>
         </Dialog>
       </Box>
     </PermissionGuard>

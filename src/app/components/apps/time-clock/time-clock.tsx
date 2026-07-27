@@ -38,6 +38,7 @@ import {
     IconDotsVertical,
     IconNotes, IconExclamationCircle, IconX,
     IconSettings, IconRestore, IconTrash,
+    IconClock,
 } from '@tabler/icons-react';
 import {
     createColumnHelper,
@@ -90,6 +91,7 @@ import RecoverWorklogs from './recover-worklogs';
 import {useServerTable} from '@/hooks/useServerTable';
 import TablePaginationFooter from '../../common/TablePaginationFooter';
 import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
+import PenaltyHistory from './penalty';
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -394,6 +396,7 @@ const TimeClock = ({queryParams}: Props) => {
 
     const [fetchTimesheet, setFetchTimesheet] = useState<boolean>(false);
     const [openRecoverWorklogs, setOpenRecoverWorklogs] = useState(false);
+    const [openPenaltyHistory, setOpenPenaltyHistory] = useState(false);
 
     const [selectedConflictUserId, setSelectedConflictUserId] = useState<any>(null);
 
@@ -2024,6 +2027,29 @@ const TimeClock = ({queryParams}: Props) => {
                                         Recover worklogs
                                     </Link>
                                 </MenuItem>
+                                <MenuItem onClick={handleClose}>
+                                    <Link
+                                        color="body1"
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setOpenPenaltyHistory(true);
+                                            handleClose();
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            color: '#11142D',
+                                            textTransform: 'none',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                        }}
+                                    >
+                                        <ListItemIcon>
+                                            <IconClock width={18}/>
+                                        </ListItemIcon>
+                                        Penalty History
+                                    </Link>
+                                </MenuItem>
                             </Menu>
                         </Box>
                     </Box>
@@ -2626,6 +2652,12 @@ const TimeClock = ({queryParams}: Props) => {
                 onClose={() => setOpenRecoverWorklogs(false)}
                 startDate={startDate}
                 endDate={endDate}
+            />
+            
+            {/*  Penalty history */}
+            <PenaltyHistory
+                open={openPenaltyHistory}
+                onClose={() => setOpenPenaltyHistory(false)}
             />
 
             {/* Conflicts */}
