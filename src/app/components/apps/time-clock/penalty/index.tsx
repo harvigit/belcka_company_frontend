@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Typography,
   Box,
@@ -9,17 +9,30 @@ import {
   Drawer,
   CircularProgress,
   Tooltip,
-  TextField,
   Stack,
+  Divider,
   Chip,
-  InputAdornment,
+  Paper,
+  Avatar,
 } from "@mui/material";
-import { IconX, IconArrowLeft, IconSearch } from "@tabler/icons-react";
+import {
+  IconX,
+  IconArrowLeft,
+  IconClock,
+  IconCurrencyDollar,
+  IconUser,
+  IconMessage,
+  IconTimeline,
+  IconNotes,
+  IconCalendarEvent,
+  IconCheck,
+} from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
+import { useRouter } from "next/navigation";
 
 interface PenaltyProps {
   open: boolean;
@@ -27,9 +40,13 @@ interface PenaltyProps {
 }
 
 const PenaltyHistory: React.FC<PenaltyProps> = ({ open, onClose }) => {
+  const router = useRouter();
   const [history, setHistory] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [selectedPenalty, setSelectedPenalty] = useState<any | null>(null);
+  const [penaltyDetail, setPenaltyDetail] = useState<any | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const today = new Date();
   const defaultStart = new Date(today);
@@ -39,8 +56,6 @@ const PenaltyHistory: React.FC<PenaltyProps> = ({ open, onClose }) => {
 
   const [startDate, setStartDate] = useState<Date | null>(defaultStart);
   const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
-
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 
   const limit = 20;
   const session = useSession();
@@ -62,15 +77,38 @@ const PenaltyHistory: React.FC<PenaltyProps> = ({ open, onClose }) => {
       setHistory([]);
       setPage(1);
       setTotalItems(0);
-      fetchHistories(1, selectedTypes, startDate, endDate);
+      fetchHistories(1, startDate, endDate);
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [open, user?.company_id, selectedTypes, startDate, endDate]);
+  }, [open, user?.company_id, startDate, endDate]);
+
+  useEffect(() => {
+    if (selectedPenalty?.id) {
+      fetchPenaltyDetail(selectedPenalty.record_id);
+    } else {
+      setPenaltyDetail(null);
+    }
+  }, [selectedPenalty]);
+
+  const fetchPenaltyDetail = async (penaltyId: string | number) => {
+    setLoadingDetail(true);
+    try {
+      const res = await api.get(
+        `time-clock/penalty-details?penalty_id=${penaltyId}`,
+      );
+      if (res.data) {
+        setPenaltyDetail(res.data.info);
+      }
+    } catch (err) {
+      console.error("Failed to fetch penalty detail", err);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
 
   const fetchHistories = async (
     currentPage: number,
-    typeFilters = selectedTypes,
     start = startDate,
     end = endDate,
   ) => {
@@ -109,6 +147,10 @@ const PenaltyHistory: React.FC<PenaltyProps> = ({ open, onClose }) => {
     fetchHistories(nextPage);
   };
 
+  const handlePenaltyClick = (addr: any) => {
+    setSelectedPenalty(addr);
+  };
+
   const hasMore = history.length < totalItems;
 
   return (
@@ -135,17 +177,6 @@ const PenaltyHistory: React.FC<PenaltyProps> = ({ open, onClose }) => {
             p: 2,
           }}
         >
-          <IconButton
-            onClick={onClose}
-            sx={{
-              position: "absolute",
-              right: 0,
-              top: 8,
-            }}
-          >
-            <IconX size={18} />
-          </IconButton>
-
           <Grid container spacing={2} display="block">
             <Box
               display="flex"
@@ -161,9 +192,19 @@ const PenaltyHistory: React.FC<PenaltyProps> = ({ open, onClose }) => {
                   Penalty Activities
                 </Typography>
               </Box>
+              <IconButton
+                onClick={onClose}
+                sx={{
+                  position: "absolute",
+                  right: 0,
+                  top: 8,
+                }}
+              >
+                <IconX size={18} />
+              </IconButton>
             </Box>
 
-            <Stack direction="row" alignItems="center" spacing={1} mt={2}>
+            <Stack direction="row" alignItems="center" spacing={1} mt={1}>
               <DateRangePickerBox
                 from={startDate}
                 to={endDate}
@@ -216,6 +257,7 @@ const PenaltyHistory: React.FC<PenaltyProps> = ({ open, onClose }) => {
                       position="relative"
                       display="flex"
                       alignItems="center"
+                      onClick={() => handlePenaltyClick(addr)}
                       sx={{
                         width: "100%",
                         height: "100px",
@@ -223,6 +265,12 @@ const PenaltyHistory: React.FC<PenaltyProps> = ({ open, onClose }) => {
                         boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
                         border: "1px solid rgb(240 240 240)",
                         background: "#fff",
+                        cursor: "pointer",
+                        transition: "0.2s",
+                        "&:hover": {
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                          transform: "translateY(-1px)",
+                        },
                       }}
                     >
                       <Box
@@ -274,9 +322,7 @@ const PenaltyHistory: React.FC<PenaltyProps> = ({ open, onClose }) => {
             ) : (
               <Box mt={3} ml={2}>
                 <Typography variant="h5">
-                  {selectedTypes.length > 0
-                    ? "No activities found for selected filter."
-                    : "No activities are found for penalty!!"}
+                  No activities are found for penalty!!
                 </Typography>
 
                 {hasMore && (
@@ -295,6 +341,403 @@ const PenaltyHistory: React.FC<PenaltyProps> = ({ open, onClose }) => {
             )}
           </Grid>
         </Box>
+      </Drawer>
+
+      {/* Penalty Detail Drawer */}
+      <Drawer
+        anchor="right"
+        open={!!selectedPenalty}
+        onClose={() => setSelectedPenalty(null)}
+        PaperProps={{
+          sx: {
+            width: 500,
+            maxWidth: "100%",
+            p: 3,
+            backgroundColor: "#fff",
+          },
+        }}
+      >
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+        >
+          <Box display="flex" alignItems="center">
+            <IconButton onClick={() => setSelectedPenalty(null)}>
+              <IconArrowLeft />
+            </IconButton>
+            <Typography variant="h6" fontWeight={700}>
+              Penalty Detail
+            </Typography>
+          </Box>
+          <IconButton onClick={() => setSelectedPenalty(null)}>
+            <IconX size={18} />
+          </IconButton>
+        </Box>
+
+        {selectedPenalty && (
+          <Box>
+            {/* Header section */}
+            <Box display="flex" alignItems="center" gap={2} mb={3}>
+              <Avatar
+                src={selectedPenalty.user_image}
+                sx={{ width: 56, height: 56 }}
+              ></Avatar>
+              <Box>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Typography variant="h6" fontWeight={600} lineHeight={1.2}>
+                    {selectedPenalty.user_name}
+                  </Typography>
+                  <Chip
+                    label={
+                      penaltyDetail?.penalty_type ||
+                      selectedPenalty.type_name ||
+                      "Penalty"
+                    }
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                    sx={{ height: 20, fontSize: "0.75rem", fontWeight: 600 }}
+                  />
+                </Box>
+                <Typography variant="body2" color="textSecondary" mt={0.5}>
+                  {selectedPenalty.date}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Divider sx={{ mb: 3 }} />
+
+            {/* Basic Info from History */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2,
+                mb: 3,
+                bgcolor: "grey.50",
+                borderRadius: 2,
+                border: "1px solid",
+                borderColor: "grey.200",
+              }}
+            >
+              <Typography
+                variant="subtitle2"
+                color="primary"
+                fontWeight={600}
+                mb={2}
+                display="flex"
+                alignItems="center"
+                gap={1}
+              >
+                <IconMessage size={18} /> General Request Info
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12 }}>
+                  <Typography
+                    variant="caption"
+                    color="textSecondary"
+                    display="block"
+                  >
+                    Message
+                  </Typography>
+                  <Typography variant="body2" fontWeight={500}>
+                    {selectedPenalty.message}
+                  </Typography>
+                </Grid>
+
+                {selectedPenalty.status_text && (
+                  <Grid size={{ xs: 6 }}>
+                    <Typography
+                      variant="caption"
+                      color="textSecondary"
+                      display="block"
+                    >
+                      Status
+                    </Typography>
+                    <Chip
+                      label={selectedPenalty.status_text}
+                      size="small"
+                      color={
+                        selectedPenalty.status_text
+                          .toLowerCase()
+                          .includes("approve")
+                          ? "success"
+                          : selectedPenalty.status_text
+                                .toLowerCase()
+                                .includes("reject")
+                            ? "error"
+                            : "warning"
+                      }
+                      sx={{ mt: 0.5, fontWeight: 500 }}
+                    />
+                  </Grid>
+                )}
+
+                {selectedPenalty.action_by && (
+                  <Grid size={{ xs: 6 }}>
+                    <Typography
+                      variant="caption"
+                      color="textSecondary"
+                      display="block"
+                    >
+                      Action By
+                    </Typography>
+                    <Typography variant="body2" fontWeight={500}>
+                      {selectedPenalty.action_by}
+                    </Typography>
+                  </Grid>
+                )}
+
+                {selectedPenalty.note && (
+                  <Grid size={{ xs: 12 }}>
+                    <Typography
+                      variant="caption"
+                      color="textSecondary"
+                      display="block"
+                    >
+                      Note
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontStyle: "italic" }}>
+                      "{selectedPenalty.note}"
+                    </Typography>
+                  </Grid>
+                )}
+              </Grid>
+            </Paper>
+
+            {loadingDetail ? (
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                height={200}
+              >
+                <CircularProgress size={32} />
+              </Box>
+            ) : penaltyDetail ? (
+              <Box>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={600}
+                  mb={2}
+                  display="flex"
+                  alignItems="center"
+                  gap={1}
+                >
+                  <IconTimeline size={20} /> Time & Penalty Details
+                </Typography>
+
+                <Grid container spacing={2} mb={3}>
+                  <Grid size={{ xs: 4 }}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 1.5,
+                        bgcolor: "#f0f4f8",
+                        borderRadius: 2,
+                        height: "100%",
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        color="textSecondary"
+                        display="flex"
+                        alignItems="center"
+                        gap={0.5}
+                      >
+                        <IconCalendarEvent size={14} /> Start Time
+                      </Typography>
+                      <Typography variant="body2" fontWeight={600} mt={0.5}>
+                        {penaltyDetail.start_time || "--"}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid size={{ xs: 4 }}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 1.5,
+                        bgcolor: "#f0f4f8",
+                        borderRadius: 2,
+                        height: "100%",
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        color="textSecondary"
+                        display="flex"
+                        alignItems="center"
+                        gap={0.5}
+                      >
+                        <IconCalendarEvent size={14} /> End Time
+                      </Typography>
+                      <Typography variant="body2" fontWeight={600} mt={0.5}>
+                        {penaltyDetail.end_time || "--"}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid size={{ xs: 4 }}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 1.5,
+                        bgcolor: "#ffebee",
+                        borderRadius: 2,
+                        height: "100%",
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        color="error.dark"
+                        display="flex"
+                        alignItems="center"
+                        gap={0.5}
+                      >
+                        <IconCurrencyDollar size={14} /> Penalty Amount
+                      </Typography>
+                      <Typography variant="body2" fontWeight={600} mt={0.5}>
+                        {penaltyDetail.penalty_amount ?? "--"}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                </Grid>
+
+                {(penaltyDetail.admin_note ||
+                  penaltyDetail.appeal_note ||
+                  penaltyDetail.approved_by_name ||
+                  penaltyDetail.rejected_by_name) && (
+                  <>
+                    <Divider sx={{ mb: 3 }} />
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={600}
+                      mb={2}
+                      display="flex"
+                      alignItems="center"
+                      gap={1}
+                    >
+                      <IconNotes size={20} /> Additional Notes & Approvals
+                    </Typography>
+
+                    <Stack spacing={2}>
+                      {penaltyDetail.admin_note && (
+                        <Box
+                          pl={2}
+                          borderLeft="3px solid"
+                          borderColor="primary.main"
+                        >
+                          <Typography
+                            variant="caption"
+                            color="textSecondary"
+                            fontWeight={600}
+                          >
+                            Admin Note
+                          </Typography>
+                          <Tooltip title={penaltyDetail.admin_note}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                display: "-webkit-box",
+                                WebkitBoxOrient: "vertical",
+                                WebkitLineClamp: 3,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                wordBreak: "break-word",
+                                width: "100%",
+                                borderRadius: 1,
+                                border: "1px solid transparent",
+                                transition: "all 0.2s ease",
+                                px: 0.5,
+                              }}
+                            >
+                              {penaltyDetail.admin_note}
+                            </Typography>
+                          </Tooltip>
+                        </Box>
+                      )}
+
+                      {penaltyDetail.appeal_note && (
+                        <Box
+                          pl={2}
+                          borderLeft="3px solid"
+                          borderColor="secondary.main"
+                        >
+                          <Typography
+                            variant="caption"
+                            color="textSecondary"
+                            fontWeight={600}
+                          >
+                            Appeal Note
+                          </Typography>
+                          <Tooltip title={penaltyDetail.appeal_note ?? ""}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                display: "-webkit-box",
+                                WebkitBoxOrient: "vertical",
+                                WebkitLineClamp: 3,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                wordBreak: "break-word",
+                                width: "100%",
+                                borderRadius: 1,
+                                border: "1px solid transparent",
+                                transition: "all 0.2s ease",
+                                px: 0.5,
+                              }}
+                            >
+                              {penaltyDetail.appeal_note}
+                            </Typography>
+                          </Tooltip>
+                        </Box>
+                      )}
+
+                      {penaltyDetail.approved_by_name &&
+                        selectedPenalty?.status == 5 && (
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            gap={1}
+                            color="success.main"
+                          >
+                            <IconCheck size={18} />
+                            <Typography variant="body2">
+                              Approved by{" "}
+                              <b>{penaltyDetail.approved_by_name}</b>{" "}
+                              {penaltyDetail.approved_at
+                                ? `on ${penaltyDetail.approved_at}`
+                                : ""}
+                            </Typography>
+                          </Box>
+                        )}
+
+                      {penaltyDetail.rejected_by_name &&
+                        selectedPenalty?.status == 12 && (
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            gap={1}
+                            color="error.main"
+                          >
+                            <IconX size={18} />
+                            <Typography variant="body2">
+                              Rejected by{" "}
+                              <b>{penaltyDetail.rejected_by_name}</b>{" "}
+                              {penaltyDetail.rejected_at
+                                ? `on ${penaltyDetail.rejected_at}`
+                                : ""}
+                            </Typography>
+                          </Box>
+                        )}
+                    </Stack>
+                  </>
+                )}
+              </Box>
+            ) : null}
+          </Box>
+        )}
       </Drawer>
     </Box>
   );
