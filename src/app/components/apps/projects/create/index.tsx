@@ -84,58 +84,22 @@ const CreateProject: React.FC<CreateProjectProps> = ({
   useEffect(() => {
     if (!open || !user?.company_id) return;
 
-    const getShifts = async () => {
+    const loadFormResources = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=shiftList&company_id=${user.company_id}`
-        );
-        if (res.data?.info) setShift(res.data.info);
-      } catch (err) {
-        console.error("Failed loading shifts:", err);
-      }
-    };
-
-    getShifts();
-  }, [open, user?.company_id]);
-
-  useEffect(() => {
-    if (!open || !user?.company_id) return;
-
-    const getTeams = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=teamList&company_id=${user.company_id}`
-        );
-        if (res.data?.info) setTeam(res.data.info);
-      } catch (err) {
-        console.error("Failed loading teams:", err);
-      }
-    };
-
-    getTeams();
-  }, [open, user?.company_id]);
-
-  useEffect(() => {
-    if (!open || !user?.company_id) return;
-
-    const getGeofence = async () => {
-      try {
-        const res = await api.get(
-          `work-zone/get?company_id=${user.company_id}`
+          `project/form-resources-web?company_id=${user.company_id}`,
         );
         if (res.data?.info) {
-          const zones = res.data.info.map((z: any) => ({
-            id: z.id,
-            name: z.name,
-          }));
-          setGeofence(zones);
+          setShift(res.data.info.shifts || []);
+          setTeam(res.data.info.teams || []);
+          setGeofence(res.data.info.workzones || []);
         }
       } catch (err) {
-        console.error("Failed loading geofences:", err);
+        console.error("Failed loading project form resources:", err);
       }
     };
 
-    getGeofence();
+    loadFormResources();
   }, [open, user?.company_id]);
 
   const memoShiftOptions = useMemo(() => shift, [shift]);

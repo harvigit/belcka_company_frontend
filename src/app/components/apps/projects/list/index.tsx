@@ -234,9 +234,12 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
     if (!user?.company_id) return;
     try {
       setLoading(true);
-      let url = `project/get?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      let url = `project/get-web?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
-        url += `&search=${searchTerm}`;
+        url += `&search=${encodeURIComponent(searchTerm)}`;
+      }
+      if (sorting?.length > 0) {
+        url += `&sort_by=${encodeURIComponent(sorting[0].id)}&sort_order=${sorting[0].desc ? "desc" : "asc"}`;
       }
       const res = await api.get(url);
       if (res.data) {
@@ -324,7 +327,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   ) => {
     try {
       setHistoryLoading(true);
-      let url = `project/get-history?page=${currentPage}&limit=${limit}&company_id=${user?.company_id}`;
+      let url = `project/get-history-web?page=${currentPage}&limit=${limit}&company_id=${user?.company_id}`;
       if (projectId !== "all") {
         url += `&project_id=${projectId}`;
       }
@@ -350,17 +353,18 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   }, [openDrawer, historyProjectId, page]);
 
   useEffect(() => {
-    if (openDrawer && allProjects.length === 0) {
-      api.get(`project/get?company_id=${user?.company_id}`).then((res) => {
-        setAllProjects(res.data?.info || []);
-      });
+    if (openDrawer && allProjects.length === 0 && user?.company_id) {
+      api
+        .get(`project/get-web?company_id=${user.company_id}`)
+        .then((res) => {
+          setAllProjects(res.data?.info || []);
+        });
     }
-  }, [openDrawer]);
+  }, [openDrawer, user?.company_id]);
 
+  // Page change is handled by the effect above — avoid a second fetch.
   const handleSeeMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchHistories(nextPage, historyProjectId);
+    setPage((prev) => prev + 1);
   };
 
   const formatDate = (date: string | undefined) => {
@@ -370,13 +374,13 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   const fetchResources = async () => {
     try {
       const res = await api.get(
-        `get-inventory-resources?company_id=${user?.company_id}&is_web=true`,
+        `get-inventory-products-web?company_id=${user?.company_id}`,
       );
       if (res.data) {
         setProducts(res.data.products || []);
       }
     } catch (err) {
-      console.error("Failed to fetch inventory resource", err);
+      console.error("Failed to fetch inventory products", err);
     }
   };
 
@@ -429,11 +433,12 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
     setProductDrawer(false);
   };
 
+  // Load products only when bookmark drawer opens (not on list page mount)
   useEffect(() => {
-    if (user?.company_id) {
+    if (productDrawer && user?.company_id) {
       fetchResources();
     }
-  }, [user?.company_id]);
+  }, [productDrawer, user?.company_id]);
 
   useEffect(() => {
     if (productDrawer && activeProjectId) {
@@ -480,6 +485,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
     () => [
       {
         id: "select",
+        enableSorting: false,
         header: ({ table }: any) => (
           <Stack direction="row" alignItems="center">
             <CustomCheckbox
@@ -624,6 +630,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
 
       columnHelper.display({
         id: "actions",
+        enableSorting: false,
         header: "Actions",
         cell: ({ row }) => {
           const item = row.original;
@@ -680,6 +687,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
     setPageCount,
     totalRows,
     setTotalRows,
+    sorting,
   } = useServerTable({
     data: data,
     columns,
@@ -687,11 +695,8 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
     debounceDependencies: [searchTerm, user?.company_id],
     state: { columnVisibility },
     onColumnVisibilityChange,
+    manualSorting: true,
   });
-
-  useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [searchTerm]);
 
   const simpleColumns = columns.map((column: any) => ({
     name: column.id ?? "Unnamed Column",

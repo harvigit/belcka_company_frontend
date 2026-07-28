@@ -285,66 +285,29 @@ const EditProject: React.FC<EditProjectProps> = ({
   };
 
   useEffect(() => {
-    const getShifts = async () => {
+    if (!open || !user?.company_id) return;
+
+    const loadFormResources = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=shiftList&company_id=${user.company_id}`
+          `project/form-resources-web?company_id=${user.company_id}`,
         );
         if (res.data?.info) {
-          setShift(res.data.info);
+          setShift(res.data.info.shifts || []);
+          setTeam(res.data.info.teams || []);
+          setGeofence(res.data.info.workzones || []);
         }
       } catch (err) {
-        console.error("Failed to refresh project data", err);
+        console.error("Failed to refresh project form resources", err);
       }
     };
-    if (open == true) {
-      getShifts();
-    }
+
+    loadFormResources();
   }, [open, user?.company_id]);
 
   useEffect(() => {
     if (!open) {
       setSettingsOpen(false);
-    }
-  }, [open]);
-
-  useEffect(() => {
-    const getTeams = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=teamList&company_id=${user.company_id}`
-        );
-        if (res.data?.info) {
-          setTeam(res.data.info);
-        }
-      } catch (err) {
-        console.error("Failed to refresh project data", err);
-      }
-    };
-    if (open == true) {
-      getTeams();
-    }
-  }, [open, user?.company_id]);
-
-  useEffect(() => {
-    const getGeofence = async () => {
-      try {
-        const res = await api.get(
-          `work-zone/get?company_id=${user.company_id}`
-        );
-        if (res.data?.info) {
-          const zones: Geofence[] = res.data.info.map((z: any) => ({
-            id: z.id,
-            name: z.name,
-          }));
-          setGeofence(zones);
-        }
-      } catch (err) {
-        console.error("Failed to refresh project data", err);
-      }
-    };
-    if (open == true) {
-      getGeofence();
     }
   }, [open]);
 
