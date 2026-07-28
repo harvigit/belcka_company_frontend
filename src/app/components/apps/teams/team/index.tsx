@@ -301,29 +301,7 @@ const TablePagination = () => {
           setGeoSettings(updatedSettings);
 
           if (!team.users || team.users.length === 0) {
-            return [
-              {
-                supervisor_id: team.supervisor_id,
-                supervisor_name: team.supervisor_name,
-                supervisor_image: team.supervisor_image,
-                supervisor_email: team.supervisor_email,
-                supervisor_phone: team.supervisor_phone,
-                extension: team.extension,
-                company_id: team.company_id,
-                subcontractor_company_id: team.subcontractor_company_id,
-                is_subcontractor: team.is_subcontractor,
-                team_name: team.team_name,
-                name: null,
-                image: null,
-                is_working: null,
-                is_on_break: null,
-                trade_id: null,
-                trade_name: null,
-                last_worked_date: null,
-                status_color: null,
-                new_member: false,
-              },
-            ];
+            return [];
           }
 
           return team.users.map((user: any) => ({
