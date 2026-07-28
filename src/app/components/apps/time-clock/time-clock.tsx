@@ -28,6 +28,12 @@ import {
     Menu,
     ListItemIcon, Tooltip,
     Badge,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Select,
+    FormControl,
 } from '@mui/material';
 import {
     IconSearch,
@@ -39,6 +45,7 @@ import {
     IconNotes, IconExclamationCircle, IconX,
     IconSettings, IconRestore, IconTrash,
     IconClock,
+    IconFilter,
 } from '@tabler/icons-react';
 import {
     createColumnHelper,
@@ -294,10 +301,32 @@ type TimeClockResponse = {
     };
 };
 
-type TimeClockStatus = {
-    status_text: string;
-    status_color: string;
+type FilterOption = {
+    id: number | string;
+    name: string;
+    user_code?: string | null;
+    user_image?: string | null;
+    user_thumb_image?: string | null;
 };
+
+type TimeClockFilterState = {
+    teams: number[];
+    statuses: string[];
+    users: number[];
+};
+
+const EMPTY_TIME_CLOCK_FILTERS: TimeClockFilterState = {
+    teams: [],
+    statuses: [],
+    users: [],
+};
+
+const TIME_CLOCK_TYPE_OPTIONS = [
+    {value: 'day_work', label: 'Day Work'},
+    {value: 'expense', label: 'Expense'},
+    {value: 'pricework', label: 'Pricework'},
+    {value: 'all_data', label: 'All Data'},
+];
 
 interface Props {
     queryParams?: {
@@ -362,6 +391,26 @@ const TimeClock = ({queryParams}: Props) => {
     const [companyId, setCompanyId] = useState<number | null>(null);
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
+    const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
+    const [filters, setFilters] = useState<TimeClockFilterState>(EMPTY_TIME_CLOCK_FILTERS);
+    const [tempFilters, setTempFilters] = useState<TimeClockFilterState>(EMPTY_TIME_CLOCK_FILTERS);
+    const [typeFilterOpen, setTypeFilterOpen] = useState(false);
+    const [typeFilter, setTypeFilter] = useState('all_data');
+    const [tempTypeFilter, setTempTypeFilter] = useState('all_data');
+    const [filterOptions, setFilterOptions] = useState<{
+        teams: FilterOption[];
+        statuses: FilterOption[];
+        users: FilterOption[];
+    }>({
+        teams: [],
+        statuses: [],
+        users: [],
+    });
+    const [filterSearch, setFilterSearch] = useState<Record<keyof TimeClockFilterState, string>>({
+        teams: '',
+        statuses: '',
+        users: '',
+    });
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [anchorEl3, setAnchorEl3] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
@@ -409,9 +458,33 @@ const TimeClock = ({queryParams}: Props) => {
     const dataRequestsRef = useRef<Map<string, Promise<TimeClock[]>>>(new Map());
     const conflictRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
     const hasInitializedFilterResetRef = useRef(false);
+    const filterPopoverOpen = Boolean(filterAnchorEl);
+    const activeFilterCount = filters.teams.length + filters.statuses.length + filters.users.length;
+    const activeTypeFilter = typeFilter !== 'all_data';
     useEffect(() => {
         queryParamsRef.current = queryParams;
     }, [queryParams]);
+
+    useEffect(() => {
+        if (!user?.id) return;
+
+        const fetchFilterOptions = async () => {
+            try {
+                const response = await api.get('/time-clock/resources');
+                if (!response.data?.IsSuccess) return;
+
+                setFilterOptions({
+                    teams: response.data.teams || [],
+                    statuses: response.data.statuses || [],
+                    users: response.data.users || [],
+                });
+            } catch (error) {
+                console.error('Failed to fetch time-clock filter options:', error);
+            }
+        };
+
+        fetchFilterOptions();
+    }, [user?.id]);
 
     const [isFilteredView, setIsFilteredView] = useState(false);
     useEffect(() => {
@@ -455,6 +528,22 @@ const TimeClock = ({queryParams}: Props) => {
 
         if (searchTerm) {
             params.search = searchTerm;
+        }
+
+        if (filters.teams.length > 0) {
+            params.teams = filters.teams.join(',');
+        }
+
+        if (filters.statuses.length > 0) {
+            params.statuses = filters.statuses.join(',');
+        }
+
+        if (filters.users.length > 0) {
+            params.users = filters.users.join(',');
+        }
+
+        if (activeTypeFilter) {
+            params.data_type = typeFilter;
         }
 
         const currentParams = queryParamsRef.current;
@@ -816,6 +905,267 @@ const TimeClock = ({queryParams}: Props) => {
             setEndDate(range.to);
             saveDateRangeToStorage(range.from, range.to, columnVisibility);
         }
+    };
+
+    const handleFilterClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setTempFilters(filters);
+        setFilterAnchorEl(event.currentTarget);
+    };
+
+    const handleFilterClose = () => {
+        setFilterAnchorEl(null);
+        setFilterSearch({teams: '', statuses: '', users: ''});
+    };
+
+    const handleFilterValueChange = (
+        key: keyof TimeClockFilterState,
+        value: string[] | number[],
+        numeric: boolean = true
+    ) => {
+        const rawValue = value as Array<string | number>;
+
+        const normalizedValue = numeric
+            ? rawValue.map((item) => Number(item)).filter((item) => Number.isInteger(item) && item > 0)
+            : rawValue.map((item) => String(item)).filter(Boolean);
+
+        setTempFilters((prev) => ({
+            ...prev,
+            [key]: normalizedValue,
+        }));
+    };
+
+    const handleClearFilters = () => {
+        setTempFilters(EMPTY_TIME_CLOCK_FILTERS);
+        setFilters(EMPTY_TIME_CLOCK_FILTERS);
+        setFilterSearch({teams: '', statuses: '', users: ''});
+        setSelectedRowIds(new Set());
+        setFilterAnchorEl(null);
+    };
+
+    const handleApplyFilters = () => {
+        setFilters(tempFilters);
+        setFilterSearch({teams: '', statuses: '', users: ''});
+        setSelectedRowIds(new Set());
+        setFilterAnchorEl(null);
+    };
+
+    const handleTypeFilterOpen = () => {
+        setTempTypeFilter(typeFilter);
+        setTypeFilterOpen(true);
+    };
+
+    const handleTypeFilterClose = () => {
+        setTypeFilterOpen(false);
+        setTempTypeFilter(typeFilter);
+    };
+
+    const handleClearTypeFilter = () => {
+        setTempTypeFilter('all_data');
+        setTypeFilter('all_data');
+        setSelectedRowIds(new Set());
+        setTypeFilterOpen(false);
+    };
+
+    const handleApplyTypeFilter = () => {
+        setTypeFilter(tempTypeFilter);
+        setSelectedRowIds(new Set());
+        setTypeFilterOpen(false);
+    };
+
+    const renderFilterSelect = (
+        label: string,
+        key: keyof TimeClockFilterState,
+        options: FilterOption[],
+        numeric: boolean = true
+    ) => {
+        const value = tempFilters[key] as Array<number | string>;
+        const selectedValueStrings = value.map(String);
+        const allSelected = options.length > 0 && options.every((option) =>
+            selectedValueStrings.includes(String(option.id))
+        );
+        const searchValue = filterSearch[key].trim().toLowerCase();
+        const filteredOptions = searchValue
+            ? options.filter((option) => `${option.name} ${option.user_code ?? ''}`.toLowerCase().includes(searchValue))
+            : options;
+
+        return (
+            <Stack
+                direction={{xs: 'column', sm: 'row'}}
+                spacing={1.5}
+                alignItems="stretch"
+                sx={{width: '100%', minWidth: 0}}
+            >
+                <FormControl fullWidth sx={{minWidth: 0, flex: 1}}>
+                    <Select
+                        multiple
+                        displayEmpty
+                        value={value}
+                        onChange={(event) => {
+                            const selected = event.target.value;
+                            const selectedValues = typeof selected === 'string'
+                                ? selected.split(',')
+                                : selected as Array<string | number>;
+
+                            if (selectedValues.map(String).includes('__all__')) {
+                                const allOptionValues = options.map((option) =>
+                                    numeric ? Number(option.id) : String(option.id)
+                                );
+
+                                handleFilterValueChange(key, allSelected ? [] : allOptionValues as any, numeric);
+                                return;
+                            }
+
+                            handleFilterValueChange(key, selectedValues as any, numeric);
+                        }}
+                        size="small"
+                        sx={{
+                            minHeight: 56,
+                            '& .MuiSelect-select': {
+                                display: 'flex',
+                                alignItems: 'center',
+                                minHeight: '39px !important',
+                            },
+                            '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#e0e0e0'
+                            },
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#bdbdbd',
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#50ABFF',
+                            },
+                        }}
+                        MenuProps={{
+                            autoFocus: false,
+                            anchorOrigin: {
+                                vertical: 'bottom',
+                                horizontal: 'left',
+                            },
+                            transformOrigin: {
+                                vertical: 'top',
+                                horizontal: 'left',
+                            },
+                            PaperProps: {
+                                sx: {
+                                    maxHeight: 400,
+                                    maxWidth: 420,
+                                },
+                            },
+                        }}
+                        renderValue={(selected) => {
+                            const selectedValues = selected as Array<number | string>;
+                            if (!selectedValues.length) {
+                                return (
+                                    <Typography color="#999" component="span">
+                                        {label}
+                                    </Typography>
+                                );
+                            }
+                            if (allSelected) return 'All';
+
+                            return options
+                                .filter((option) => selectedValues.map(String).includes(String(option.id)))
+                                .map((option) => option.name)
+                                .join(', ');
+                        }}
+                    >
+                        <Box
+                            px={2}
+                            py={1.5}
+                            position="sticky"
+                            top={0}
+                            bgcolor="white"
+                            zIndex={1}
+                        >
+                            <TextField
+                                fullWidth
+                                size="small"
+                                placeholder={`Search ${label}`}
+                                value={filterSearch[key]}
+                                onChange={(event) => setFilterSearch((prev) => ({
+                                    ...prev,
+                                    [key]: event.target.value,
+                                }))}
+                                onClick={(event) => event.stopPropagation()}
+                                onKeyDown={(event) => event.stopPropagation()}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconSearch size={18} color="#999"/>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        '& fieldset': {borderColor: '#e0e0e0'},
+                                        '&:hover fieldset': {borderColor: '#bdbdbd'},
+                                        '&.Mui-focused fieldset': {borderColor: '#50ABFF'},
+                                    },
+                                }}
+                            />
+                        </Box>
+                        {options.length > 0 && (
+                            <MenuItem value="__all__">
+                                <Box display="flex" alignItems="center" gap={1.5} minWidth={0}>
+                                    <Checkbox
+                                        checked={allSelected}
+                                        indeterminate={!allSelected && value.length > 0}
+                                        size="small"
+                                        sx={{p: 0.5}}
+                                    />
+                                    <Typography component="span" variant="body1" className="f-14">
+                                        All {label}
+                                    </Typography>
+                                </Box>
+                            </MenuItem>
+                        )}
+                        {filteredOptions.length === 0 ? (
+                            <MenuItem disabled>
+                                <Typography color="text.secondary" component="span">
+                                    No {label.toLowerCase()} found
+                                </Typography>
+                            </MenuItem>
+                        ) : filteredOptions.map((option) => (
+                            <MenuItem key={option.id} value={numeric ? Number(option.id) : String(option.id)}>
+                                <Box display="flex" alignItems="center" gap={1.5} minWidth={0}>
+                                    <Checkbox
+                                        checked={selectedValueStrings.includes(String(option.id))}
+                                        size="small"
+                                        sx={{p: 0.5}}
+                                    />
+                                    {key === 'users' && (
+                                        <Avatar
+                                            src={option.user_thumb_image || option.user_image || undefined}
+                                            alt={option.name}
+                                            sx={{width: 32, height: 32, fontSize: '14px'}}
+                                        >
+                                            {option.name?.[0]?.toUpperCase()}
+                                        </Avatar>
+                                    )}
+                                    <Typography
+                                        component="span"
+                                        variant="body1"
+                                        className="f-14"
+                                        sx={{
+                                            display: '-webkit-box',
+                                            WebkitBoxOrient: 'vertical',
+                                            WebkitLineClamp: 1,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            maxWidth: 300,
+                                            wordBreak: 'break-word',
+                                        }}
+                                    >
+                                        {option.name}
+                                        {option.user_code ? ` (${option.user_code})` : ''}
+                                    </Typography>
+                                </Box>
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            </Stack>
+        );
     };
 
     const handleRowClick = (timeClock: TimeClock) => {
@@ -1475,7 +1825,7 @@ const TimeClock = ({queryParams}: Props) => {
         columns,
         fetchData: handleFetchData,
         initialPagination: initialStoredState?.pagination,
-        debounceDependencies: [searchTerm, queryParamsRef.current?.user_id, startDate, endDate, cycleReady],
+        debounceDependencies: [searchTerm, filters, typeFilter, queryParamsRef.current?.user_id, startDate, endDate, cycleReady],
         state: {columnVisibility},
         onColumnVisibilityChange: setColumnVisibility,
     });
@@ -1495,6 +1845,8 @@ const TimeClock = ({queryParams}: Props) => {
         setPagination((prev) => ({...prev, pageIndex: 0}));
     }, [
         searchTerm,
+        filters,
+        typeFilter,
         startDate,
         endDate,
         queryParams?.user_id,
@@ -1811,7 +2163,7 @@ const TimeClock = ({queryParams}: Props) => {
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 1,
-                        px: 2,
+                        p: 1,
                     }}
                 >
                     {/* Left controls */}
@@ -1853,6 +2205,27 @@ const TimeClock = ({queryParams}: Props) => {
                                     ),
                                 }}
                             />
+
+                            <Button
+                                color="primary"
+                                variant={activeFilterCount > 0 ? 'contained' : 'outlined'}
+                                size="small"
+                                onClick={handleFilterClick}
+                                startIcon={<IconFilter size={18}/>}
+                                sx={{whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600}}
+                            >
+                                Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                            </Button>
+
+                            <Button
+                                color="primary"
+                                variant={activeTypeFilter ? 'contained' : 'outlined'}
+                                size="small"
+                                onClick={handleTypeFilterOpen}
+                                sx={{whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600}}
+                            >
+                                Types{activeTypeFilter ? `: ${TIME_CLOCK_TYPE_OPTIONS.find((option) => option.value === typeFilter)?.label ?? ''}` : ''}
+                            </Button>
 
                             {isFilteredView && (
                                 <Button
@@ -2055,6 +2428,148 @@ const TimeClock = ({queryParams}: Props) => {
                     </Box>
 
                 </Box>
+
+                <Dialog
+                    open={filterPopoverOpen}
+                    onClose={handleFilterClose}
+                    fullWidth
+                    maxWidth="sm"
+                    PaperProps={{
+                        sx: {
+                            width: {xs: 'calc(100vw - 24px)', sm: '100%'},
+                            maxWidth: 600,
+                            m: {xs: 1.5, sm: 4},
+                            overflow: 'visible',
+                        },
+                    }}
+                >
+                    <DialogTitle
+                        sx={{m: 0, position: 'relative', overflow: 'visible'}}
+                    >
+                        Filters
+                        <IconButton
+                            aria-label="close"
+                            onClick={handleFilterClose}
+                            size="large"
+                            sx={{
+                                position: 'absolute',
+                                right: 12,
+                                top: 8,
+                                color: (theme) => theme.palette.grey[900],
+                                backgroundColor: 'transparent',
+                                zIndex: 10,
+                                width: 50,
+                                height: 50,
+                            }}
+                        >
+                            <IconX size={40} style={{width: 40, height: 40}}/>
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent sx={{overflowX: 'hidden'}}>
+                        <Stack spacing={2} mt={1} sx={{width: '100%', minWidth: 0}}>
+                            {renderFilterSelect('Teams', 'teams', filterOptions.teams)}
+                            {renderFilterSelect('Status', 'statuses', filterOptions.statuses, false)}
+                            {renderFilterSelect('Users', 'users', filterOptions.users)}
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            onClick={handleClearFilters}
+                            color="inherit"
+                        >
+                            Clear
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleApplyFilters}
+                        >
+                            Apply
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Dialog
+                    open={typeFilterOpen}
+                    onClose={handleTypeFilterClose}
+                    fullWidth
+                    maxWidth="sm"
+                    PaperProps={{
+                        sx: {
+                            width: {xs: 'calc(100vw - 24px)', sm: '100%'},
+                            maxWidth: 600,
+                            m: {xs: 1.5, sm: 4},
+                        },
+                    }}
+                >
+                    <DialogTitle sx={{m: 0, position: 'relative'}}>
+                        Types
+                        <IconButton
+                            aria-label="close"
+                            onClick={handleTypeFilterClose}
+                            size="large"
+                            sx={{
+                                position: 'absolute',
+                                right: 12,
+                                top: 8,
+                                color: (theme) => theme.palette.grey[900],
+                                backgroundColor: 'transparent',
+                                zIndex: 10,
+                                width: 50,
+                                height: 50,
+                            }}
+                        >
+                            <IconX size={40} style={{width: 40, height: 40}}/>
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent sx={{overflowX: 'hidden'}}>
+                        <Stack spacing={1.5} mt={1} sx={{width: '100%', minWidth: 0}}>
+                            <FormControl fullWidth>
+                                <Select
+                                    value={tempTypeFilter}
+                                    onChange={(event) => setTempTypeFilter(String(event.target.value))}
+                                    size="small"
+                                    sx={{
+                                        minHeight: 56,
+                                        '& .MuiSelect-select': {
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            minHeight: '39px !important',
+                                        },
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#e0e0e0'
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#bdbdbd',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#50ABFF',
+                                        },
+                                    }}
+                                >
+                                    {TIME_CLOCK_TYPE_OPTIONS.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            onClick={handleClearTypeFilter}
+                            color="inherit"
+                        >
+                            Clear
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleApplyTypeFilter}
+                        >
+                            Apply
+                        </Button>
+                    </DialogActions>
+                </Dialog>
 
                 <BookkeeperHistory open={openDrawer} onClose={() => setOpenDrawer(false)}/>
 
