@@ -16,6 +16,7 @@ interface UseServerTableOptions<TData> {
   onSortingChange?: (updater: any) => void;
   onColumnVisibilityChange?: (updater: any) => void;
   manualSorting?: boolean;
+  shouldResetPageOnDebounce?: () => boolean;
   state?: any;
   getRowId?: (originalRow: TData, index: number, parent?: any) => string;
 }
@@ -30,6 +31,7 @@ export function useServerTable<TData>({
   onSortingChange: controlledOnSortingChange,
   onColumnVisibilityChange,
   manualSorting = false,
+  shouldResetPageOnDebounce,
   state: controlledState,
   getRowId,
 }: UseServerTableOptions<TData>) {
@@ -52,15 +54,22 @@ export function useServerTable<TData>({
 
   // Use a ref to keep track of the latest fetch function to avoid stale closures
   const fetchRef = useRef(fetchData);
+  const shouldResetPageOnDebounceRef = useRef(shouldResetPageOnDebounce);
   useEffect(() => {
     fetchRef.current = fetchData;
   }, [fetchData]);
+  useEffect(() => {
+    shouldResetPageOnDebounceRef.current = shouldResetPageOnDebounce;
+  }, [shouldResetPageOnDebounce]);
 
   // Handle debounced fetch when dependencies like search or filters change
   useEffect(() => {
     const handler = setTimeout(() => {
       // If we're not on page 1, reset to page 1, which will trigger the pageIndex effect below
-      if (pagination.pageIndex !== 0) {
+      if (
+        pagination.pageIndex !== 0 &&
+        (shouldResetPageOnDebounceRef.current?.() ?? true)
+      ) {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
       } else {
         // Otherwise fetch immediately

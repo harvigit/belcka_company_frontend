@@ -7,6 +7,8 @@ interface PersistentColumnVisibilityOptions {
   enabled?: boolean;
 }
 
+const COOKIE_OPTIONS = { expires: 365, path: '/' };
+
 export function usePersistentColumnVisibility({
   storageKey,
   defaultVisibility = {},
@@ -27,7 +29,7 @@ export function usePersistentColumnVisibility({
     setColumnVisibility((prev) => {
       const newVisibility = typeof updater === 'function' ? updater(prev) : updater;
       if (enabled) {
-        Cookies.set(storageKey, JSON.stringify(newVisibility), { expires: 365 });
+        Cookies.set(storageKey, JSON.stringify(newVisibility), COOKIE_OPTIONS);
       }
       return newVisibility;
     });

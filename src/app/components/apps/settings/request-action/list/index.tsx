@@ -33,6 +33,7 @@ import toast from 'react-hot-toast';
 const REQUEST_TYPES = [
     { name: 'Timesheet request', slug: 'timesheet_request' },
     { name: 'Personal detail request', slug: 'personal_detail_request' },
+    { name: 'Billing Info Request', slug: 'billing_info_request' },
     { name: 'Rate request', slug: 'rate_request' },
     { name: 'Expense request', slug: 'expense_request' },
     { name: 'Penalty request', slug: 'penalty_request' },
@@ -332,7 +333,7 @@ const RequestActionList = () => {
                                         {row.request_name}
                                     </Typography>
 
-                                    <Tooltip title={getSelectedUserNames(row.saved?.selected_users ?? '')} placement="top" arrow>
+                                    {/*<Tooltip title={getSelectedUserNames(row.saved?.selected_users ?? '')} placement="top" arrow>*/}
                                         <Typography
                                             variant="body2"
                                             color={row.saved?.selected_users ? 'textPrimary' : 'textSecondary'}
@@ -345,7 +346,7 @@ const RequestActionList = () => {
                                         >
                                             {getSelectedUserNames(row.saved?.selected_users ?? '') || '—'}
                                         </Typography>
-                                    </Tooltip>
+                                    {/*</Tooltip>*/}
 
                                     <Button
                                         size="small"

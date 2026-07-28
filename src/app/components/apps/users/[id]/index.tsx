@@ -146,6 +146,7 @@ const TablePagination = () => {
     const [openImageDialog, setOpenImageDialog] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [registeredOn, setRegisteredOn] = useState('');
 
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<number>();
@@ -245,6 +246,7 @@ const TablePagination = () => {
             }
 
             const data = res.data.info[0];
+            
             setData(data);
             setIsAdmin(!!res.data.is_admin);
             setUserPermissionType(res.data.permission_user_type || '');
@@ -268,6 +270,9 @@ const TablePagination = () => {
                 expired_at: userInfo.expired_at ? userInfo.expired_at.split('T')[0] : '',
                 account_id: userInfo.account_id || 0,
             });
+
+            console.log(userInfo.registered_on, 'userInfo.registered_onuserInfo.registered_onuserInfo.registered_onuserInfo.registered_on')
+            setRegisteredOn(userInfo.registered_on ?? '');
             if (ext && number) {
                 const combined = ext.replace('+', '') + number;
                 setPhone(combined);
@@ -919,6 +924,18 @@ const TablePagination = () => {
                                         inputProps={{ maxLength: 10 }}
                                         disabled={!canModifyUserDetails}
                                         fullWidth
+                                    />
+
+                                    <Typography color="textSecondary" variant="h5" mt={2}>
+                                        Register On
+                                    </Typography>
+                                    <CustomTextField
+                                        className="custom_color"
+                                        id="registered_on"
+                                        placeholder="Registered on"
+                                        fullWidth
+                                        value={registeredOn}
+                                        disabled
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
