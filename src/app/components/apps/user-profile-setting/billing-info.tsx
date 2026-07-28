@@ -44,7 +44,6 @@ interface BillingFormData {
   email: string;
   post_code: string;
   address: string;
-  date_of_birth: string;
   extension: string;
   phone: string;
   name_on_utr: string;
@@ -72,7 +71,6 @@ const emptyBillingInfo: BillingFormData = {
   email: "",
   post_code: "",
   address: "",
-  date_of_birth: "",
   extension: "",
   phone: "",
   name_on_utr: "",
@@ -98,7 +96,6 @@ const ALLOWED_BILLING_FIELDS = [
   "email",
   "post_code",
   "address",
-  "date_of_birth",
   "extension",
   "phone",
   "name_on_utr",
@@ -188,7 +185,6 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
         setBillingInfo({
           ...emptyBillingInfo,
           ...data,
-          date_of_birth: data.date_of_birth,
         });
       } else {
         setHasBillingInfo(false);
@@ -854,19 +850,6 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
             }}
             enableSearch
             inputProps={{ required: true }}
-          />
-        </Grid>
-
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField
-            fullWidth
-            type="date"
-            className="custom_color"
-            disabled={isDisabledField("date_of_birth")}
-            label="Date Of Birth"
-            value={(formData as any)["date_of_birth"] ?? ""}
-            onChange={(e) => handleFieldChange("date_of_birth", e.target.value)}
-            InputLabelProps={{ shrink: true }}
           />
         </Grid>
       </Grid>

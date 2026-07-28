@@ -17,7 +17,7 @@ import {
     DialogContent,
     DialogActions,
     Tooltip,
-    MenuItem,
+    MenuItem, TextField,
 } from '@mui/material';
 import { IconArrowLeft, IconMedal, IconCalendarTime, IconX } from '@tabler/icons-react';
 import api from '@/utils/axios';
@@ -70,6 +70,7 @@ export interface TeamList {
     supervisor_team_id: number | null;
     supervisor_team_name: string | null;
     is_company_owner: boolean;
+    date_of_birth?: string | null;
 }
 
 export interface TradeList {
@@ -136,11 +137,11 @@ const TablePagination = () => {
 
     const param = useParams();
     const userId = param?.id;
-    
+
     const canEditUserDetails = userPermissionType
         ? userPermissionType === 'view_edit'
         : isAdmin || Number(user?.id) === Number(userId);
-  
+
     const canModifyUserDetails = canEditUserDetails && !isReadOnlyUserView;
     const [value, setValue] = useState<number>(0);
     const [openImageDialog, setOpenImageDialog] = useState(false);
@@ -154,6 +155,7 @@ const TablePagination = () => {
     const handleTabChange = (event: any, newValue: any) => {
         setValue(newValue);
     };
+
     const [formData, setFormData] = useState({
         first_name: '',
         last_name: '',
@@ -163,6 +165,7 @@ const TablePagination = () => {
         user_code: '',
         expired_at: '',
         account_id: 0,
+        date_of_birth: '',
     });
 
     const [enabled, setEnabled] = useState<boolean>(false);
@@ -246,7 +249,7 @@ const TablePagination = () => {
             }
 
             const data = res.data.info[0];
-            
+
             setData(data);
             setIsAdmin(!!res.data.is_admin);
             setUserPermissionType(res.data.permission_user_type || '');
@@ -269,6 +272,7 @@ const TablePagination = () => {
                 user_code: userInfo.user_code,
                 expired_at: userInfo.expired_at ? userInfo.expired_at.split('T')[0] : '',
                 account_id: userInfo.account_id || 0,
+                date_of_birth: userInfo.date_of_birth ? dayjs(userInfo.date_of_birth, ['YYYY-MM-DD', 'DD/MM/YYYY']).format('YYYY-MM-DD') : '',
             });
 
             console.log(userInfo.registered_on, 'userInfo.registered_onuserInfo.registered_onuserInfo.registered_onuserInfo.registered_on')
@@ -305,7 +309,13 @@ const TablePagination = () => {
 
     const updateProfile = async () => {
         if (!canModifyUserDetails) return;
-        const payload = { user_id: userId, ...formData };
+        const payload = {
+            user_id: userId,
+            ...formData,
+            date_of_birth: formData.date_of_birth
+                ? dayjs(formData.date_of_birth, 'YYYY-MM-DD').format('DD/MM/YYYY')
+                : formData.date_of_birth,
+        };
         const res = await api.post('user/update-profile', payload);
 
         if (res.data.IsSuccess) {
@@ -577,7 +587,7 @@ const TablePagination = () => {
                 default:
                     setValue(0);
             }
-            
+
             const leaveStart = searchParams?.get('leave_start');
             const leaveEnd = searchParams?.get('leave_end');
             const leaveRangeQuery = leaveStart && leaveEnd
@@ -875,6 +885,26 @@ const TablePagination = () => {
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
+                                        Date of Birth
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        type="date"
+                                        className="custom_color"
+                                        id="date_of_birth"
+                                        name="date_of_birth"
+                                        value={formData.date_of_birth}
+                                        onChange={(e) =>
+                                            handleFieldChange('date_of_birth', e.target.value)
+                                        }
+                                        disabled={!canModifyUserDetails}
+                                        InputLabelProps={{ shrink: true }}
+                                        inputProps={{
+                                            max: dayjs().format('YYYY-MM-DD'),
+                                        }}
+                                    />
+
+                                    <Typography color="textSecondary" variant="h5" mt={2}>
                                         Email
                                     </Typography>
                                     <CustomTextField
@@ -1076,83 +1106,83 @@ const TablePagination = () => {
                                     disabled={!canModifyUserDetails}
                                     style={{ border: 0, margin: 0, minWidth: 0, padding: 0 }}
                                 >
-                                {isReadOnlyUserView ? (
-                                    <>
-                                        <Box hidden={value !== 0}>
-                                            <UserActivity
-                                                companyId={Number(user.company_id)}
-                                                userId={Number(userId)}
-                                                active={value === 0}
-                                                isRemoveUser={isRemovedUser}
-                                                isArchivedUser={isArchivedUser}
-                                            />
-                                        </Box>
-                                        <Box hidden={value !== 1}>
-                                            <BillingInfo
-                                                companyId={Number(user.company_id)}
-                                                onUpdate={fetchData}
-                                                userId={Number(userId)}
-                                                active={value === 1}
-                                            />
-                                        </Box>
+                                    {isReadOnlyUserView ? (
+                                        <>
+                                            <Box hidden={value !== 0}>
+                                                <UserActivity
+                                                    companyId={Number(user.company_id)}
+                                                    userId={Number(userId)}
+                                                    active={value === 0}
+                                                    isRemoveUser={isRemovedUser}
+                                                    isArchivedUser={isArchivedUser}
+                                                />
+                                            </Box>
+                                            <Box hidden={value !== 1}>
+                                                <BillingInfo
+                                                    companyId={Number(user.company_id)}
+                                                    onUpdate={fetchData}
+                                                    userId={Number(userId)}
+                                                    active={value === 1}
+                                                />
+                                            </Box>
 
-                                    </>
-                                ) : (
-                                    <>
-                                        <Box hidden={value !== 0}>
-                                            <HealthInfo
-                                                userId={Number(userId)}
-                                                active={value === 0}
-                                                canEdit={canModifyUserDetails}
-                                                readOnly={!canModifyUserDetails}
-                                            />
-                                        </Box>
-                                        <Box hidden={value !== 1}>
-                                            <UserActivity
-                                                companyId={Number(user.company_id)}
-                                                userId={Number(userId)}
-                                                active={value === 1}
-                                            />
-                                        </Box>
-                                        <Box hidden={value !== 2}>
-                                            <BillingInfo
-                                                companyId={Number(user.company_id)}
-                                                onUpdate={fetchData}
-                                                userId={Number(userId)}
-                                                active={value === 2}
-                                            />
-                                        </Box>
-                                        <Box hidden={value !== 3}>
-                                            <ComapnyRate
-                                                active={value === 3}
-                                                name={formData.first_name}
-                                                userId={Number(userId)}
-                                            />
-                                        </Box>
-                                        <Box hidden={value !== 4}>
-                                            <UserLeaves
-                                                active={value === 4}
-                                                name={formData.first_name}
-                                                userId={Number(userId)}
-                                                companyId={Number(user.company_id)}
-                                            />
-                                        </Box>
-                                        <Box hidden={value !== 5}>
-                                            <Notifications
-                                                companyId={Number(user.company_id)}
-                                                active={value === 5}
-                                                userId={Number(userId)}
-                                            />
-                                        </Box>
-                                        <Box hidden={value !== 7}>
-                                            <GeofencePenalty
-                                                companyId={Number(user.company_id)}
-                                                active={value === 7}
-                                                userId={Number(userId)}
-                                            />
-                                        </Box>
-                                    </>
-                                )}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Box hidden={value !== 0}>
+                                                <HealthInfo
+                                                    userId={Number(userId)}
+                                                    active={value === 0}
+                                                    canEdit={canModifyUserDetails}
+                                                    readOnly={!canModifyUserDetails}
+                                                />
+                                            </Box>
+                                            <Box hidden={value !== 1}>
+                                                <UserActivity
+                                                    companyId={Number(user.company_id)}
+                                                    userId={Number(userId)}
+                                                    active={value === 1}
+                                                />
+                                            </Box>
+                                            <Box hidden={value !== 2}>
+                                                <BillingInfo
+                                                    companyId={Number(user.company_id)}
+                                                    onUpdate={fetchData}
+                                                    userId={Number(userId)}
+                                                    active={value === 2}
+                                                />
+                                            </Box>
+                                            <Box hidden={value !== 3}>
+                                                <ComapnyRate
+                                                    active={value === 3}
+                                                    name={formData.first_name}
+                                                    userId={Number(userId)}
+                                                />
+                                            </Box>
+                                            <Box hidden={value !== 4}>
+                                                <UserLeaves
+                                                    active={value === 4}
+                                                    name={formData.first_name}
+                                                    userId={Number(userId)}
+                                                    companyId={Number(user.company_id)}
+                                                />
+                                            </Box>
+                                            <Box hidden={value !== 5}>
+                                                <Notifications
+                                                    companyId={Number(user.company_id)}
+                                                    active={value === 5}
+                                                    userId={Number(userId)}
+                                                />
+                                            </Box>
+                                            <Box hidden={value !== 7}>
+                                                <GeofencePenalty
+                                                    companyId={Number(user.company_id)}
+                                                    active={value === 7}
+                                                    userId={Number(userId)}
+                                                />
+                                            </Box>
+                                        </>
+                                    )}
                                 </fieldset>
                                 {isReadOnlyUserView ? (
                                     <Box hidden={value !== 2}>
