@@ -34,6 +34,7 @@ import {
     DialogActions,
     Select,
     FormControl,
+    Autocomplete,
 } from '@mui/material';
 import {
     IconSearch,
@@ -69,6 +70,7 @@ import {
     subMonths,
 } from 'date-fns';
 import {AxiosResponse} from 'axios';
+import Cookies from 'js-cookie';
 
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
@@ -105,6 +107,7 @@ const columnHelper = createColumnHelper<TimeClock>();
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
 const TIME_CLOCK_COLUMNS_COOKIE = 'time-clock-column-visibility';
+const TIME_CLOCK_FILTERS_COOKIE_PREFIX = 'time-clock-filters';
 const TIME_CLOCK_AMOUNT_COLUMNS = [
     'daylog_payable_amount',
     'pricework_total_amount',
@@ -328,6 +331,35 @@ const TIME_CLOCK_TYPE_OPTIONS = [
     {value: 'all_data', label: 'All Data'},
 ];
 
+type TimeClockStoredFilters = {
+    filters?: Partial<TimeClockFilterState>;
+    typeFilter?: string;
+};
+
+const TIME_CLOCK_FILTER_COOKIE_OPTIONS = {
+    expires: 365,
+    path: '/',
+};
+
+const isValidTimeClockTypeFilter = (value: unknown): value is string =>
+    typeof value === 'string' && TIME_CLOCK_TYPE_OPTIONS.some((option) => option.value === value);
+
+const normalizeStoredNumberFilter = (value: unknown): number[] => {
+    if (!Array.isArray(value)) return [];
+
+    return value
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item > 0);
+};
+
+const normalizeStoredStringFilter = (value: unknown): string[] => {
+    if (!Array.isArray(value)) return [];
+
+    return value
+        .map((item) => String(item))
+        .filter(Boolean);
+};
+
 interface Props {
     queryParams?: {
         user_id?: string | null;
@@ -397,6 +429,7 @@ const TimeClock = ({queryParams}: Props) => {
     const [typeFilterOpen, setTypeFilterOpen] = useState(false);
     const [typeFilter, setTypeFilter] = useState('all_data');
     const [tempTypeFilter, setTempTypeFilter] = useState('all_data');
+    const [filtersHydrated, setFiltersHydrated] = useState(false);
     const [filterOptions, setFilterOptions] = useState<{
         teams: FilterOption[];
         statuses: FilterOption[];
@@ -406,16 +439,16 @@ const TimeClock = ({queryParams}: Props) => {
         statuses: [],
         users: [],
     });
-    const [filterSearch, setFilterSearch] = useState<Record<keyof TimeClockFilterState, string>>({
-        teams: '',
-        statuses: '',
-        users: '',
-    });
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [anchorEl3, setAnchorEl3] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
     const session = useSession();
     const user = session.data?.user as User & { company_id: number; id?: string } & { user_role_id: number; };
+    const timeClockFiltersCookieKey = useMemo(() => {
+        if (!user?.id || !user?.company_id) return null;
+
+        return `${TIME_CLOCK_FILTERS_COOKIE_PREFIX}_${user.id}_${user.company_id}`;
+    }, [user?.id, user?.company_id]);
 
     const {
         columnVisibility,
@@ -461,9 +494,61 @@ const TimeClock = ({queryParams}: Props) => {
     const filterPopoverOpen = Boolean(filterAnchorEl);
     const activeFilterCount = filters.teams.length + filters.statuses.length + filters.users.length;
     const activeTypeFilter = typeFilter !== 'all_data';
+    const toolbarButtonSx = {
+        minHeight: 34,
+        height: 34,
+        whiteSpace: 'nowrap',
+        textTransform: 'none',
+        fontWeight: 600,
+    };
     useEffect(() => {
         queryParamsRef.current = queryParams;
     }, [queryParams]);
+
+    const saveTimeClockFiltersCookie = useCallback((
+        nextFilters: TimeClockFilterState,
+        nextTypeFilter: string,
+    ) => {
+        if (!timeClockFiltersCookieKey) return;
+
+        Cookies.set(
+            timeClockFiltersCookieKey,
+            JSON.stringify({
+                filters: nextFilters,
+                typeFilter: nextTypeFilter,
+            }),
+            TIME_CLOCK_FILTER_COOKIE_OPTIONS,
+        );
+    }, [timeClockFiltersCookieKey]);
+
+    useEffect(() => {
+        if (!timeClockFiltersCookieKey) return;
+
+        try {
+            const stored = Cookies.get(timeClockFiltersCookieKey);
+            if (stored) {
+                const parsed = JSON.parse(stored) as TimeClockStoredFilters;
+                const nextFilters: TimeClockFilterState = {
+                    teams: normalizeStoredNumberFilter(parsed.filters?.teams),
+                    statuses: normalizeStoredStringFilter(parsed.filters?.statuses),
+                    users: normalizeStoredNumberFilter(parsed.filters?.users),
+                };
+                const nextTypeFilter = isValidTimeClockTypeFilter(parsed.typeFilter)
+                    ? parsed.typeFilter
+                    : 'all_data';
+
+                setFilters(nextFilters);
+                setTempFilters(nextFilters);
+                setTypeFilter(nextTypeFilter);
+                setTempTypeFilter(nextTypeFilter);
+            }
+        } catch (error) {
+            console.error('Failed to load time-clock filters cookie:', error);
+            Cookies.remove(timeClockFiltersCookieKey, {path: '/'});
+        } finally {
+            setFiltersHydrated(true);
+        }
+    }, [timeClockFiltersCookieKey]);
 
     useEffect(() => {
         if (!user?.id) return;
@@ -729,6 +814,7 @@ const TimeClock = ({queryParams}: Props) => {
     }, []);
 
     useEffect(() => {
+        if (!filtersHydrated) return;
         if (!queryParams?.user_id || !queryParams?.start_date || !queryParams?.end_date) return;
 
         const startDateObj = new Date(queryParams.start_date);
@@ -763,6 +849,7 @@ const TimeClock = ({queryParams}: Props) => {
         queryParams?.start_date,
         queryParams?.end_date,
         queryParams?.type,
+        filtersHydrated,
     ]);
 
     // Conflicts count
@@ -914,7 +1001,6 @@ const TimeClock = ({queryParams}: Props) => {
 
     const handleFilterClose = () => {
         setFilterAnchorEl(null);
-        setFilterSearch({teams: '', statuses: '', users: ''});
     };
 
     const handleFilterValueChange = (
@@ -937,14 +1023,22 @@ const TimeClock = ({queryParams}: Props) => {
     const handleClearFilters = () => {
         setTempFilters(EMPTY_TIME_CLOCK_FILTERS);
         setFilters(EMPTY_TIME_CLOCK_FILTERS);
-        setFilterSearch({teams: '', statuses: '', users: ''});
+        saveTimeClockFiltersCookie(EMPTY_TIME_CLOCK_FILTERS, typeFilter);
         setSelectedRowIds(new Set());
         setFilterAnchorEl(null);
     };
 
+    const handleClearAppliedFilters = (event: React.MouseEvent) => {
+        event.stopPropagation();
+        setTempFilters(EMPTY_TIME_CLOCK_FILTERS);
+        setFilters(EMPTY_TIME_CLOCK_FILTERS);
+        saveTimeClockFiltersCookie(EMPTY_TIME_CLOCK_FILTERS, typeFilter);
+        setSelectedRowIds(new Set());
+    };
+
     const handleApplyFilters = () => {
         setFilters(tempFilters);
-        setFilterSearch({teams: '', statuses: '', users: ''});
+        saveTimeClockFiltersCookie(tempFilters, typeFilter);
         setSelectedRowIds(new Set());
         setFilterAnchorEl(null);
     };
@@ -962,12 +1056,14 @@ const TimeClock = ({queryParams}: Props) => {
     const handleClearTypeFilter = () => {
         setTempTypeFilter('all_data');
         setTypeFilter('all_data');
+        saveTimeClockFiltersCookie(filters, 'all_data');
         setSelectedRowIds(new Set());
         setTypeFilterOpen(false);
     };
 
     const handleApplyTypeFilter = () => {
         setTypeFilter(tempTypeFilter);
+        saveTimeClockFiltersCookie(filters, tempTypeFilter);
         setSelectedRowIds(new Set());
         setTypeFilterOpen(false);
     };
@@ -980,159 +1076,82 @@ const TimeClock = ({queryParams}: Props) => {
     ) => {
         const value = tempFilters[key] as Array<number | string>;
         const selectedValueStrings = value.map(String);
+        const selectedOptions = options.filter((option) =>
+            selectedValueStrings.includes(String(option.id))
+        );
         const allSelected = options.length > 0 && options.every((option) =>
             selectedValueStrings.includes(String(option.id))
         );
-        const searchValue = filterSearch[key].trim().toLowerCase();
-        const filteredOptions = searchValue
-            ? options.filter((option) => `${option.name} ${option.user_code ?? ''}`.toLowerCase().includes(searchValue))
-            : options;
 
         return (
             <Stack
-                direction={{xs: 'column', sm: 'row'}}
-                spacing={1.5}
+                direction="row"
+                spacing={0}
                 alignItems="stretch"
                 sx={{width: '100%', minWidth: 0}}
             >
-                <FormControl fullWidth sx={{minWidth: 0, flex: 1}}>
-                    <Select
-                        multiple
-                        displayEmpty
-                        value={value}
-                        onChange={(event) => {
-                            const selected = event.target.value;
-                            const selectedValues = typeof selected === 'string'
-                                ? selected.split(',')
-                                : selected as Array<string | number>;
+                <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    options={options}
+                    value={selectedOptions}
+                    getOptionLabel={(option) => option.user_code ? `${option.name} (${option.user_code})` : option.name}
+                    isOptionEqualToValue={(option, selectedOption) => String(option.id) === String(selectedOption.id)}
+                    filterOptions={(list, state) => {
+                        const query = state.inputValue.trim().toLowerCase();
+                        if (!query) return list;
 
-                            if (selectedValues.map(String).includes('__all__')) {
-                                const allOptionValues = options.map((option) =>
-                                    numeric ? Number(option.id) : String(option.id)
-                                );
+                        return list.filter((option) =>
+                            `${option.name} ${option.user_code ?? ''}`.toLowerCase().includes(query)
+                        );
+                    }}
+                    onChange={(_, selected) => {
+                        const selectedIds = selected.map((option) =>
+                            numeric ? Number(option.id) : String(option.id)
+                        );
+                        handleFilterValueChange(key, selectedIds as any, numeric);
+                    }}
+                    renderTags={(tagValue, getTagProps) =>
+                        tagValue.map((option, index) => {
+                            const {key: chipKey, ...tagProps} = getTagProps({index});
 
-                                handleFilterValueChange(key, allSelected ? [] : allOptionValues as any, numeric);
-                                return;
-                            }
+                            return (
+                                <Chip
+                                    key={chipKey}
+                                    label={option.name}
+                                    color="primary"
+                                    size="small"
+                                    {...tagProps}
+                                    sx={{
+                                        borderRadius: '4px',
+                                        fontSize: '0.9rem',
+                                        height: 32,
+                                        '& .MuiChip-deleteIcon': {
+                                            color: 'rgba(255,255,255,0.85)',
+                                            '&:hover': {color: '#fff'},
+                                        },
+                                    }}
+                                />
+                            );
+                        })
+                    }
+                    renderOption={(props, option, {selected}) => {
+                        const {key: optionKey, ...optionProps} = props;
 
-                            handleFilterValueChange(key, selectedValues as any, numeric);
-                        }}
-                        size="small"
-                        sx={{
-                            minHeight: 56,
-                            '& .MuiSelect-select': {
-                                display: 'flex',
-                                alignItems: 'center',
-                                minHeight: '39px !important',
-                            },
-                            '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: '#e0e0e0'
-                            },
-                            '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: '#bdbdbd',
-                            },
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: '#50ABFF',
-                            },
-                        }}
-                        MenuProps={{
-                            autoFocus: false,
-                            anchorOrigin: {
-                                vertical: 'bottom',
-                                horizontal: 'left',
-                            },
-                            transformOrigin: {
-                                vertical: 'top',
-                                horizontal: 'left',
-                            },
-                            PaperProps: {
-                                sx: {
-                                    maxHeight: 400,
-                                    maxWidth: 420,
-                                },
-                            },
-                        }}
-                        renderValue={(selected) => {
-                            const selectedValues = selected as Array<number | string>;
-                            if (!selectedValues.length) {
-                                return (
-                                    <Typography color="#999" component="span">
-                                        {label}
-                                    </Typography>
-                                );
-                            }
-                            if (allSelected) return 'All';
-
-                            return options
-                                .filter((option) => selectedValues.map(String).includes(String(option.id)))
-                                .map((option) => option.name)
-                                .join(', ');
-                        }}
-                    >
-                        <Box
-                            px={2}
-                            py={1.5}
-                            position="sticky"
-                            top={0}
-                            bgcolor="white"
-                            zIndex={1}
-                        >
-                            <TextField
-                                fullWidth
-                                size="small"
-                                placeholder={`Search ${label}`}
-                                value={filterSearch[key]}
-                                onChange={(event) => setFilterSearch((prev) => ({
-                                    ...prev,
-                                    [key]: event.target.value,
-                                }))}
-                                onClick={(event) => event.stopPropagation()}
-                                onKeyDown={(event) => event.stopPropagation()}
-                                InputProps={{
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            <IconSearch size={18} color="#999"/>
-                                        </InputAdornment>
-                                    ),
-                                }}
+                        return (
+                            <Box
+                                component="li"
+                                key={optionKey}
+                                {...optionProps}
                                 sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        '& fieldset': {borderColor: '#e0e0e0'},
-                                        '&:hover fieldset': {borderColor: '#bdbdbd'},
-                                        '&.Mui-focused fieldset': {borderColor: '#50ABFF'},
+                                    color: selected ? '#fff' : 'inherit',
+                                    bgcolor: selected ? '#0b57d0 !important' : 'transparent',
+                                    '&.Mui-focused': {
+                                        bgcolor: selected ? '#0b57d0 !important' : '#f5f5f5',
                                     },
                                 }}
-                            />
-                        </Box>
-                        {options.length > 0 && (
-                            <MenuItem value="__all__">
-                                <Box display="flex" alignItems="center" gap={1.5} minWidth={0}>
-                                    <Checkbox
-                                        checked={allSelected}
-                                        indeterminate={!allSelected && value.length > 0}
-                                        size="small"
-                                        sx={{p: 0.5}}
-                                    />
-                                    <Typography component="span" variant="body1" className="f-14">
-                                        All {label}
-                                    </Typography>
-                                </Box>
-                            </MenuItem>
-                        )}
-                        {filteredOptions.length === 0 ? (
-                            <MenuItem disabled>
-                                <Typography color="text.secondary" component="span">
-                                    No {label.toLowerCase()} found
-                                </Typography>
-                            </MenuItem>
-                        ) : filteredOptions.map((option) => (
-                            <MenuItem key={option.id} value={numeric ? Number(option.id) : String(option.id)}>
-                                <Box display="flex" alignItems="center" gap={1.5} minWidth={0}>
-                                    <Checkbox
-                                        checked={selectedValueStrings.includes(String(option.id))}
-                                        size="small"
-                                        sx={{p: 0.5}}
-                                    />
+                            >
+                                <Box display="flex" alignItems="center" gap={1.5} minWidth={0} width="100%">
                                     {key === 'users' && (
                                         <Avatar
                                             src={option.user_thumb_image || option.user_image || undefined}
@@ -1147,23 +1166,108 @@ const TimeClock = ({queryParams}: Props) => {
                                         variant="body1"
                                         className="f-14"
                                         sx={{
-                                            display: '-webkit-box',
-                                            WebkitBoxOrient: 'vertical',
-                                            WebkitLineClamp: 1,
+                                            flex: 1,
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
-                                            maxWidth: 300,
-                                            wordBreak: 'break-word',
+                                            whiteSpace: 'nowrap',
                                         }}
                                     >
                                         {option.name}
                                         {option.user_code ? ` (${option.user_code})` : ''}
                                     </Typography>
+                                    {selected && (
+                                        <Typography component="span" sx={{fontSize: 22, lineHeight: 1}}>
+                                            ✓
+                                        </Typography>
+                                    )}
                                 </Box>
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+                            </Box>
+                        );
+                    }}
+                    noOptionsText={`No ${label.toLowerCase()} found`}
+                    slotProps={{
+                        paper: {
+                            sx: {
+                                mt: 1,
+                                boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+                            },
+                        },
+                        listbox: {
+                            sx: {
+                                maxHeight: 360,
+                                py: 0,
+                                '& .MuiAutocomplete-option': {
+                                    minHeight: 54,
+                                    fontSize: '1rem',
+                                },
+                            },
+                        },
+                    }}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            placeholder={selectedOptions.length ? '' : label}
+                            size="small"
+                        />
+                    )}
+                    sx={{
+                        flex: 1,
+                        minWidth: 0,
+                        '& .MuiOutlinedInput-root': {
+                            minHeight: 56,
+                            alignItems: 'center',
+                            borderTopRightRadius: 0,
+                            borderBottomRightRadius: 0,
+                            '& fieldset': {borderColor: '#e0e0e0'},
+                            '&:hover fieldset': {borderColor: '#0d5ef4'},
+                            '&.Mui-focused fieldset': {borderColor: '#0d5ef4'},
+                        },
+                    }}
+                />
+                <Box
+                    onClick={() => {
+                        const allOptionValues = options.map((option) =>
+                            numeric ? Number(option.id) : String(option.id)
+                        );
+
+                        handleFilterValueChange(key, allSelected ? [] : allOptionValues as any, numeric);
+                    }}
+                    sx={{
+                        width: {xs: 100, sm: 110},
+                        minHeight: 56,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                        px: 2,
+                        border: '1px solid',
+                        borderColor: allSelected || value.length > 0 ? '#0d5ef4' : '#e0e0e0',
+                        borderLeft: 0,
+                        borderTopLeftRadius: 0,
+                        borderBottomLeftRadius: 0,
+                        borderTopRightRadius: '6px',
+                        borderBottomRightRadius: '6px',
+                        cursor: 'pointer',
+                        color: '#6b687d',
+                        userSelect: 'none',
+                        transition: 'border-color 150ms ease',
+                        '&:hover': {
+                            borderColor: '#0d5ef4',
+                        },
+                    }}
+                >
+                    <Checkbox
+                        checked={allSelected}
+                        indeterminate={!allSelected && value.length > 0}
+                        size="small"
+                        sx={{
+                            p: 0,
+                            pointerEvents: 'none',
+                        }}
+                    />
+                    <Typography component="span" variant="body1">
+                        All
+                    </Typography>
+                </Box>
             </Stack>
         );
     };
@@ -1801,7 +1905,7 @@ const TimeClock = ({queryParams}: Props) => {
     ];
 
     const handleFetchData = () => {
-        if (!cycleReady || !startDate || !endDate) return;
+        if (!filtersHydrated || !cycleReady || !startDate || !endDate) return;
 
         const start = startDate || defaultStart;
         const end = endDate || defaultEnd;
@@ -1825,7 +1929,7 @@ const TimeClock = ({queryParams}: Props) => {
         columns,
         fetchData: handleFetchData,
         initialPagination: initialStoredState?.pagination,
-        debounceDependencies: [searchTerm, filters, typeFilter, queryParamsRef.current?.user_id, startDate, endDate, cycleReady],
+        debounceDependencies: [searchTerm, filters, typeFilter, queryParamsRef.current?.user_id, startDate, endDate, cycleReady, filtersHydrated],
         state: {columnVisibility},
         onColumnVisibilityChange: setColumnVisibility,
     });
@@ -2208,23 +2312,44 @@ const TimeClock = ({queryParams}: Props) => {
 
                             <Button
                                 color="primary"
-                                variant={activeFilterCount > 0 ? 'contained' : 'outlined'}
+                                variant="contained"
                                 size="small"
                                 onClick={handleFilterClick}
-                                startIcon={<IconFilter size={18}/>}
-                                sx={{whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600}}
+                                sx={{
+                                    ...toolbarButtonSx,
+                                    minWidth: 64,
+                                    px: 1.5,
+                                }}
+                                aria-label="Open filters"
                             >
-                                Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                                <IconFilter size={18}/>
                             </Button>
+
+                            {activeFilterCount > 0 && (
+                                <Button
+                                    color="error"
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={handleClearAppliedFilters}
+                                    sx={{
+                                        ...toolbarButtonSx,
+                                        minWidth: 64,
+                                        px: 1.5,
+                                    }}
+                                    aria-label="Clear filters"
+                                >
+                                    <IconX size={18}/>
+                                </Button>
+                            )}
 
                             <Button
                                 color="primary"
-                                variant={activeTypeFilter ? 'contained' : 'outlined'}
+                                variant='outlined'
                                 size="small"
                                 onClick={handleTypeFilterOpen}
-                                sx={{whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600}}
+                                sx={toolbarButtonSx}
                             >
-                                Types{activeTypeFilter ? `: ${TIME_CLOCK_TYPE_OPTIONS.find((option) => option.value === typeFilter)?.label ?? ''}` : ''}
+                                Types
                             </Button>
 
                             {isFilteredView && (
@@ -2242,7 +2367,7 @@ const TimeClock = ({queryParams}: Props) => {
                                 variant="outlined"
                                 size="small"
                                 onClick={() => setOpenDrawer(true)}
-                                sx={{whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600}}
+                                sx={toolbarButtonSx}
                             >
                                 Activity
                             </Button>
