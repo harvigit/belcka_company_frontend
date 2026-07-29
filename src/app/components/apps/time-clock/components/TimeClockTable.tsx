@@ -1165,7 +1165,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             justifyContent: "center",
                                                             alignItems: "center",
                                                             color: log.is_penalty_edited ? "#ff0000" : "inherit",
-                                                            "&:hover": { color: "#1976d2" },
                                                         }}
                                                     >
                                                         {log.is_penalty_appealed && (
@@ -1175,7 +1174,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                         display: "flex",
                                                                         alignItems: "center",
                                                                         justifyContent: "center",
-                                                                        cursor: "pointer",
                                                                         marginLeft: '-15px',
                                                                     }}
                                                                 >
@@ -1190,7 +1188,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             placement="top"
                                                             disableHoverListener={!log.penalty_message}
                                                         >
-                                                            <Box sx={{ cursor: log.penalty_message ? "pointer" : "default" }}>
+                                                            <Box 
+                                                                sx={{
+                                                                    "&:hover": { color: "#1976d2", cursor: "pointer" },
+                                                                }}
+                                                            >
                                                                 {log.is_pricework ? "--" : formatHour(log?.penalty_hours ?? 0)}
                                                             </Box>
                                                         </Tooltip>
