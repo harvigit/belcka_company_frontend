@@ -446,13 +446,15 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow, disableDateFilter, read
         setIsSaving(true);
 
         try {
+            const formatMonthForBE = (date?: string) =>
+                date ? DateTime.fromISO(date).toFormat('MM/yyyy') : '';
             const formatDateForBE = (date?: string) =>
                 date ? DateTime.fromISO(date).toFormat('dd/MM/yyyy') : '';
 
             const payload = {
                 ...formData,
-                from_date: formatDateForBE(formData.from_date),
-                to_date: formatDateForBE(formData.to_date),
+                from_date: formatMonthForBE(formData.from_date),
+                to_date: formatMonthForBE(formData.to_date),
                 payment_date: formatDateForBE(formData.payment_date),
             };
 
@@ -484,13 +486,15 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow, disableDateFilter, read
         setIsSaving(true);
 
         try {
+            const formatMonthForBE = (date?: string) =>
+                date ? DateTime.fromISO(date).toFormat('MM/yyyy') : '';
             const formatDateForBE = (date?: string) =>
                 date ? DateTime.fromISO(date).toFormat('dd/MM/yyyy') : '';
 
             const payload = {
                 ...formData,
-                from_date: formatDateForBE(formData.from_date),
-                to_date: formatDateForBE(formData.to_date),
+                from_date: formatMonthForBE(formData.from_date),
+                to_date: formatMonthForBE(formData.to_date),
                 payment_date: formatDateForBE(formData.payment_date),
             };
 

@@ -191,22 +191,28 @@ const CreatePayslip: React.FC<CreatePayslipProps> = ({
                             onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
                         >
                             <Box className="form_inputs">
-                                <Typography variant="body2" mt={2}>From Date</Typography>
-                                <CustomTextField
-                                    type="date" name="from_date" fullWidth
-                                    value={formData.from_date} onChange={handleChange}
-                                    onFocus={(e: any) => e.target.showPicker()}
-                                    onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
-                                />
+                                <Box display="flex" gap={2} mt={2}>
+                                    <Box flex={1}>
+                                        <Typography variant="body2">From Date</Typography>
+                                        <CustomTextField
+                                            type="month" name="from_date" fullWidth
+                                            value={formData.from_date} onChange={handleChange}
+                                            onFocus={(e: any) => e.target.showPicker()}
+                                            onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
+                                        />
+                                    </Box>
 
-                                <Typography variant="body2" mt={2}>To Date</Typography>
-                                <CustomTextField
-                                    type="date" name="to_date" fullWidth
-                                    value={formData.to_date} onChange={handleChange}
-                                    inputProps={{ min: formData.from_date || undefined }}
-                                    onFocus={(e: any) => e.target.showPicker()}
-                                    onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
-                                />
+                                    <Box flex={1}>
+                                        <Typography variant="body2">To Date</Typography>
+                                        <CustomTextField
+                                            type="month" name="to_date" fullWidth
+                                            value={formData.to_date} onChange={handleChange}
+                                            inputProps={{ min: formData.from_date || undefined }}
+                                            onFocus={(e: any) => e.target.showPicker()}
+                                            onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
+                                        />
+                                    </Box>
+                                </Box>
 
                                 {isShow && (
                                     <>
@@ -236,7 +242,6 @@ const CreatePayslip: React.FC<CreatePayslipProps> = ({
                                             border: "2px dashed", borderColor: "primary.main",
                                             borderRadius: 3, cursor: "pointer",
                                             display: "flex", alignItems: "center", justifyContent: "center",
-                                            "&:hover": { backgroundColor: "primary.light" },
                                             position: "relative",
                                         }}
                                     >
@@ -305,10 +310,10 @@ const CreatePayslip: React.FC<CreatePayslipProps> = ({
                 </Box>
             </Drawer>
 
-            {/* OCR Amount Picker Dialog — only shows when 2+ different values found */}
+            {/* OCR Amount Picker Dialog */}
             <Dialog
                 open={ocrDialogOpen}
-                onClose={() => {}} // intentionally not closable by clicking outside
+                onClose={() => {}}
                 maxWidth="xs"
                 fullWidth
                 disableEscapeKeyDown
@@ -336,8 +341,6 @@ const CreatePayslip: React.FC<CreatePayslipProps> = ({
                                     justifyContent: "space-between",
                                     px: 2.5, py: 1.5,
                                     borderRadius: 2,
-                                    borderColor: "divider",
-                                    "&:hover": { borderColor: "primary.main", backgroundColor: "primary.50" },
                                 }}
                             >
                                 <Typography variant="body2" color="text.secondary" fontWeight={500}>
@@ -350,7 +353,6 @@ const CreatePayslip: React.FC<CreatePayslipProps> = ({
                         ))}
                     </Stack>
                 </DialogContent>
-                {/* No cancel/skip — user MUST pick */}
             </Dialog>
         </>
     );

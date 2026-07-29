@@ -59,8 +59,39 @@ const toDateInputValue = (value?: string | null): string => {
         return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
     }
 
+    const monthYearMatch = value.match(/^(\d{1,2})\/(\d{4})$/);
+    if (monthYearMatch) {
+        const [, month, year] = monthYearMatch;
+        return `${year}-${month.padStart(2, "0")}-01`;
+    }
+
     const parsed = dayjs(value);
     return parsed.isValid() ? parsed.format("YYYY-MM-DD") : "";
+};
+
+const toMonthInputValue = (value?: string | null): string => {
+    if (!value) return "";
+
+    const isoMonthMatch = value.match(/^(\d{4})-(\d{1,2})/);
+    if (isoMonthMatch) {
+        const [, year, month] = isoMonthMatch;
+        return `${year}-${month.padStart(2, "0")}`;
+    }
+
+    const displayDateMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (displayDateMatch) {
+        const [, , month, year] = displayDateMatch;
+        return `${year}-${month.padStart(2, "0")}`;
+    }
+
+    const monthYearMatch = value.match(/^(\d{1,2})\/(\d{4})$/);
+    if (monthYearMatch) {
+        const [, month, year] = monthYearMatch;
+        return `${year}-${month.padStart(2, "0")}`;
+    }
+
+    const parsed = dayjs(value);
+    return parsed.isValid() ? parsed.format("YYYY-MM") : "";
 };
 
 const EditPayslip: React.FC<EditPayslipProps> = ({
@@ -74,7 +105,6 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
     const [isScanning, setIsScanning] = useState(false);
     const [ocrMatches, setOcrMatches] = useState<AmountMatch[]>([]);
     const [ocrDialogOpen, setOcrDialogOpen] = useState(false);
-    // Edit starts with amountConfirmed=true since existing payslip already has amount
     const [amountConfirmed, setAmountConfirmed] = useState(true);
 
     const getUsers = useCallback(async () => {
@@ -93,8 +123,8 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
                 id: payslip.id,
                 company_id: payslip.company_id,
                 user_id: payslip.user_id,
-                from_date: toDateInputValue(payslip.fromDate ?? payslip.from_date),
-                to_date: toDateInputValue(payslip.toDate ?? payslip.to_date),
+                from_date: toMonthInputValue(payslip.fromDate ?? payslip.from_date),
+                to_date: toMonthInputValue(payslip.toDate ?? payslip.to_date),
                 payment_date: toDateInputValue(payslip.payment_date),
                 amount: payslip.amount || "",
                 payslip_number: payslip.payslip_number || "",
@@ -239,22 +269,28 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
                             className="address-form"
                             onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
                         >
-                            <Typography variant="body2" mt={2}>From Date</Typography>
-                            <CustomTextField
-                                type="date" name="from_date" fullWidth
-                                value={formData.from_date} onChange={handleChange}
-                                onFocus={(e: any) => e.target.showPicker()}
-                                onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
-                            />
+                            <Box display="flex" gap={2} mt={2}>
+                                <Box flex={1}>
+                                    <Typography variant="body2">From Date</Typography>
+                                    <CustomTextField
+                                        type="month" name="from_date" fullWidth
+                                        value={formData.from_date} onChange={handleChange}
+                                        onFocus={(e: any) => e.target.showPicker()}
+                                        onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
+                                    />
+                                </Box>
 
-                            <Typography variant="body2" mt={2}>To Date</Typography>
-                            <CustomTextField
-                                type="date" name="to_date" fullWidth
-                                value={formData.to_date} onChange={handleChange}
-                                inputProps={{ min: formData.from_date || undefined }}
-                                onFocus={(e: any) => e.target.showPicker()}
-                                onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
-                            />
+                                <Box flex={1}>
+                                    <Typography variant="body2">To Date</Typography>
+                                    <CustomTextField
+                                        type="month" name="to_date" fullWidth
+                                        value={formData.to_date} onChange={handleChange}
+                                        inputProps={{ min: formData.from_date || undefined }}
+                                        onFocus={(e: any) => e.target.showPicker()}
+                                        onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
+                                    />
+                                </Box>
+                            </Box>
 
                             {isShow && (
                                 <>
@@ -284,7 +320,6 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
                                         border: "2px dashed", borderColor: "primary.main",
                                         borderRadius: 3, cursor: "pointer",
                                         display: "flex", alignItems: "center", justifyContent: "center",
-                                        "&:hover": { backgroundColor: "primary.light" },
                                     }}
                                 >
                                     <input {...getInputProps()} />
@@ -386,7 +421,7 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
                 </Box>
             </Drawer>
 
-            {/* OCR Amount Picker Dialog — only when 2+ matches found on new file upload */}
+            {/* OCR Amount Picker Dialog */}
             <Dialog
                 open={ocrDialogOpen}
                 onClose={() => {}}
@@ -417,8 +452,6 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
                                     justifyContent: "space-between",
                                     px: 2.5, py: 1.5,
                                     borderRadius: 2,
-                                    borderColor: "divider",
-                                    "&:hover": { borderColor: "primary.main", backgroundColor: "primary.50" },
                                 }}
                             >
                                 <Typography variant="body2" color="text.secondary" fontWeight={500}>
