@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import api from '@/utils/axios';
 import {
     Box,
@@ -17,6 +17,9 @@ import {
     DialogActions,
     Button,
     Tooltip,
+    Alert,
+    FormControl,
+    TextField,
 } from '@mui/material';
 import {
     IconArrowLeft,
@@ -24,6 +27,7 @@ import {
     IconBuilding,
     IconCalendar,
     IconDownload,
+    IconEdit,
     IconFileText,
     IconTag,
     IconUser,
@@ -37,6 +41,7 @@ interface ChecklogDetailPageProps {
     checklogId: number | null;
     open: boolean;
     onClose: () => void;
+    onUpdated?: () => void | Promise<void>;
 }
 
 interface Attachment {
@@ -51,8 +56,12 @@ interface Attachment {
 
 interface ChecklogTask {
     id?: number;
+    address_id?: number | null;
     address_name?: string | null;
     address?: string | null;
+    trade_id?: number | null;
+    company_task_id?: number | null;
+    unit_id?: number | null;
     comment?: string | null;
     note?: string | null;
     checkin_note?: string | null;
@@ -65,6 +74,7 @@ interface ChecklogTask {
     date_added?: string | null;
     status?: string | number | null;
     status_text?: string | null;
+    progress?: string | number | null;
     amount_per_unit?: string | number | null;
     unit_name?: string | null;
     currency?: string | null;
@@ -117,15 +127,68 @@ const shouldShowStatus = (checklog: ChecklogTask, data: any) => {
     return ['6', '7', '9'].includes(status);
 };
 
-export default function ChecklogDetailPage({checklogId, open, onClose}: ChecklogDetailPageProps) {
+export default function ChecklogDetailPage({checklogId, open, onClose, onUpdated}: ChecklogDetailPageProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const [checklogTasks, setChecklogTasks] = useState<ChecklogTask[]>([]);
     const [data, setData] = useState<any>([]);
     const [previewImages, setPreviewImages] = useState<string[]>([]);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [zoom, setZoom] = useState(1);
+    const [editOpen, setEditOpen] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [editError, setEditError] = useState<string | null>(null);
+    const [editForm, setEditForm] = useState({
+        address_name: '',
+        trade_name: '',
+        unit_name: '',
+        work_type: '',
+        amount_per_unit: '',
+        work_complete: '',
+        checkin_note: '',
+        note: '',
+    });
 
     const selectedImage = previewImages[selectedImageIndex] ?? null;
+
+    const editTotalAmount = useMemo(() => {
+        const amountPerUnit = Number(editForm.amount_per_unit || 0);
+        const workDone = Number(editForm.work_complete || 0);
+        const total = Number.isFinite(amountPerUnit) && Number.isFinite(workDone)
+            ? amountPerUnit * workDone : 0;
+
+        return formatCurrencyValue(data?.currency ?? '', total);
+    }, [data?.currency, editForm.amount_per_unit, editForm.work_complete]);
+
+    const readOnlyFieldSx = {
+        textAlign: 'left',
+        '& .MuiInputBase-root': {
+            textAlign: 'left',
+        },
+        '& .MuiInputBase-input': {
+            textAlign: 'left !important',
+        },
+        '& .MuiInputBase-inputMultiline': {
+            textAlign: 'left !important',
+        },
+        '& .MuiInputBase-input.Mui-disabled': {
+            WebkitTextFillColor: '#111827',
+            backgroundColor: '#f8fafc',
+            textAlign: 'left !important',
+        },
+        '& .MuiOutlinedInput-root.Mui-disabled': {
+            backgroundColor: '#f8fafc',
+        },
+    };
+
+    const editableFieldSx = {
+        textAlign: 'left',
+        '& .MuiOutlinedInput-root': {
+            '& fieldset': {borderColor: '#e0e0e0'},
+            '&:hover fieldset': {borderColor: '#bbb'},
+            '&.Mui-focused fieldset': {borderColor: '#50ABFF'},
+        },
+        '& .MuiInputBase-input': {textAlign: 'left !important'},
+    };
 
     const fetchChecklogDetail = useCallback(async () => {
         if (!checklogId) return;
@@ -157,6 +220,57 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
             fetchChecklogDetail();
         }
     }, [checklogId, fetchChecklogDetail, open]);
+
+    const handleOpenEdit = () => {
+        const detail = checklogTasks[0] ?? data;
+        setEditForm({
+            address_name: detail?.address_name || detail?.address || '',
+            trade_name: detail?.trade_name || '',
+            unit_name: detail?.unit_name || '',
+            work_type: detail?.work_type || '',
+            amount_per_unit: detail?.amount_per_unit != null ? String(detail.amount_per_unit) : '',
+            work_complete: detail?.work_complete != null ? String(detail.work_complete) : '',
+            checkin_note: detail?.checkin_note || '',
+            note: detail?.checkout_note || detail?.note || '',
+        });
+        setEditError(null);
+        setEditOpen(true);
+    };
+
+    const updateEditField = (field: keyof typeof editForm, value: string) => {
+        if (['amount_per_unit', 'work_complete'].includes(field) && !/^\d*(?:\.\d{0,2})?$/.test(value)) return;
+
+        setEditForm((current) => ({...current, [field]: value}));
+    };
+
+    const handleSaveEdit = async () => {
+        if (!checklogId) return;
+        if (editForm.amount_per_unit === '' || Number(editForm.amount_per_unit) < 0) return setEditError('Valid amount per unit is required.');
+        if (editForm.work_complete === '' || Number(editForm.work_complete) < 0) return setEditError('Valid work done is required.');
+
+        setSaving(true);
+        setEditError(null);
+        try {
+            const payload = {
+                id: checklogId,
+                amount_per_unit: editForm.amount_per_unit,
+                work_complete: editForm.work_complete,
+            };
+
+            const response = await api.put('user-checklog/update', payload);
+            if (!response.data?.IsSuccess) {
+                throw new Error(response.data?.message || 'Failed to update checklog.');
+            }
+
+            setEditOpen(false);
+            await fetchChecklogDetail();
+            await onUpdated?.();
+        } catch (error: any) {
+            setEditError(error?.response?.data?.message || error?.message || 'Failed to update checklog.');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const getTaskId = (checklog: ChecklogTask, index: number) =>
         checklog.id ?? index;
@@ -375,13 +489,25 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
             }}
         >
             <Box className="checklog_detail_wrapper">
-                <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
-                    <IconButton onClick={onClose}>
-                        <IconArrowLeft/>
-                    </IconButton>
-                    <Typography variant="h6" fontWeight={700}>
-                        Checklog Details
-                    </Typography>
+                <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" mb={2} gap={1}>
+                    <Box display="flex" alignItems="center" flexWrap="wrap">
+                        <IconButton onClick={onClose}>
+                            <IconArrowLeft/>
+                        </IconButton>
+                        <Typography variant="h6" fontWeight={700}>
+                            Checklog Details
+                        </Typography>
+                    </Box>
+                    {checklogTasks.length > 0 && (
+                        <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<IconEdit size={18}/>}
+                            onClick={handleOpenEdit}
+                        >
+                            Edit
+                        </Button>
+                    )}
                 </Box>
 
                 {loading ? (
@@ -652,6 +778,129 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                             onClick={handleDownloadImage}
                         >
                             Download
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Dialog
+                    open={editOpen}
+                    onClose={() => !saving && setEditOpen(false)}
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <DialogTitle>Edit Checklog</DialogTitle>
+                    <DialogContent>
+                        {editError && <Alert severity="error" sx={{mb: 2}}>{editError}</Alert>}
+                        <Stack spacing={2} mt={1}>
+                            <FormControl fullWidth size="small">
+                                <Typography variant="caption">Address</Typography>
+                                <TextField
+                                    fullWidth
+                                    disabled
+                                    size="small"
+                                    value={editForm.address_name || '-'}
+                                    sx={readOnlyFieldSx}
+                                />
+                            </FormControl>
+
+                            <FormControl fullWidth size="small">
+                                <Typography variant="caption">Trade</Typography>
+                                <TextField
+                                    fullWidth
+                                    disabled
+                                    size="small"
+                                    value={editForm.trade_name || '-'}
+                                    sx={readOnlyFieldSx}
+                                />
+                            </FormControl>
+
+                            <FormControl fullWidth size="small">
+                                <Typography variant="caption">Work Type</Typography>
+                                <TextField
+                                    fullWidth
+                                    disabled
+                                    size="small"
+                                    value={editForm.work_type || '-'}
+                                    sx={readOnlyFieldSx}
+                                />
+                            </FormControl>
+
+                            <FormControl fullWidth size="small">
+                                <Typography variant="caption">Unit</Typography>
+                                <TextField
+                                    fullWidth
+                                    disabled
+                                    size="small"
+                                    value={editForm.unit_name || '-'}
+                                    sx={readOnlyFieldSx}
+                                />
+                            </FormControl>
+
+                            <Stack direction={{xs: 'column', sm: 'row'}} spacing={2}>
+                                <FormControl fullWidth size="small">
+                                    <Typography variant="caption">Amount Per Unit</Typography>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        value={editForm.amount_per_unit}
+                                        onChange={(event) => updateEditField('amount_per_unit', event.target.value)}
+                                        placeholder="0.00"
+                                        inputProps={{
+                                            inputMode: 'decimal',
+                                            style: {textAlign: 'left'},
+                                        }}
+                                        sx={editableFieldSx}
+                                    />
+                                </FormControl>
+
+                                <FormControl fullWidth size="small">
+                                    <Typography variant="caption">Work Done</Typography>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        value={editForm.work_complete}
+                                        onChange={(event) => updateEditField('work_complete', event.target.value)}
+                                        placeholder="0.00"
+                                        inputProps={{
+                                            inputMode: 'decimal',
+                                            style: {textAlign: 'left'},
+                                        }}
+                                        sx={editableFieldSx}
+                                    />
+                                </FormControl>
+                            </Stack>
+
+                            <Box
+                                sx={{
+                                    border: '1px solid #d9e2ef',
+                                    borderRadius: 1,
+                                    p: 1.5,
+                                    backgroundColor: '#f8fafc',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 2,
+                                }}
+                            >
+                                <Typography variant="body2" color="text.secondary">
+                                    Total Checklog Amount
+                                </Typography>
+                                <Typography variant="h6" fontWeight={700} color="primary">
+                                    {editTotalAmount}
+                                </Typography>
+                            </Box>
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setEditOpen(false)} disabled={saving}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleSaveEdit}
+                            disabled={saving}
+                        >
+                            {saving ? <CircularProgress size={20}/> : 'Save'}
                         </Button>
                     </DialogActions>
                 </Dialog>

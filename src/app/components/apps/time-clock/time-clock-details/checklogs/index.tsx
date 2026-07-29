@@ -306,6 +306,7 @@ export default function Checklogs({worklogId, onClose}: ChecklogsPageProps) {
                 <ChecklogDetailPage
                     checklogId={selectedChecklogId}
                     open={openSidebar}
+                    onUpdated={fetchChecklogs}
                     onClose={() => {
                         setOpenSidebar(false);
                         setSelectedChecklogId(null);
