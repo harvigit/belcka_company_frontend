@@ -1146,27 +1146,29 @@ const AddressesList = ({
         id: "caseID",
         header: () => "Case Id",
         cell: (info) => (
-          <Typography
-            className="f-14"
-            color="textPrimary"
-            sx={{
-              display: "-webkit-box",
-              WebkitBoxOrient: "vertical",
-              WebkitLineClamp: 1,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              wordBreak: "break-word",
-              minWidth: "100px",
-              width: "100%",
-              maxWidth: "100px",
-              px: 1.5,
-              borderRadius: 1,
-              border: "1px solid transparent",
-              transition: "all 0.2s ease",
-            }}
-          >
-            {info.getValue() ?? "-"}
-          </Typography>
+          <Tooltip title={info.getValue() ?? ""}>
+            <Typography
+              className="f-14"
+              color="textPrimary"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                minWidth: "100px",
+                width: "100%",
+                maxWidth: "100px",
+                px: 1.5,
+                borderRadius: 1,
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+              }}
+            >
+              {info.getValue() ?? "-"}
+            </Typography>
+          </Tooltip>
         ),
       }),
 
@@ -2077,14 +2079,27 @@ const AddressesList = ({
                       )}
                     />
                   </Box>
-
+                  <Box mt={2} mb={2}>
+                    <CustomTextField
+                      fullWidth
+                      label="Reference"
+                      disabled
+                      value={formData.ref || ""}
+                      onChange={(e: any) =>
+                        setFormData((prev: any) => ({
+                          ...prev,
+                          ref: e.target.value,
+                        }))
+                      }
+                    />
+                  </Box>
                   <Box
                     display={"flex"}
                     justifyContent={"space-between"}
                     gap={3}
                   >
                     <TextField
-                      label="Enter address"
+                      label="Address"
                       id="name"
                       name="name"
                       placeholder="Search for address.."
@@ -2184,7 +2199,7 @@ const AddressesList = ({
                           }}
                         />
                       </GoogleMap>
-                      <Box mt={2}>
+                      {/* <Box mt={2}>
                         <Typography>Zone Color</Typography>
                         <input
                           type="color"
@@ -2199,21 +2214,7 @@ const AddressesList = ({
                             border: "none",
                           }}
                         />
-                      </Box>
-                      <Box mt={2}>
-                        <CustomTextField
-                          fullWidth
-                          label="Reference"
-                          disabled
-                          value={formData.ref || ""}
-                          onChange={(e: any) =>
-                            setFormData((prev: any) => ({
-                              ...prev,
-                              ref: e.target.value,
-                            }))
-                          }
-                        />
-                      </Box>
+                      </Box> */}
                     </Box>
                   )}
                 </Grid>
@@ -2320,7 +2321,19 @@ const AddressesList = ({
                       />
                     </Box>
                   )}
-
+                  <Box mt={2} mb={2}>
+                    <CustomTextField
+                      fullWidth
+                      label="Reference"
+                      value={formData.ref || ""}
+                      onChange={(e: any) =>
+                        setFormData((prev: any) => ({
+                          ...prev,
+                          ref: e.target.value,
+                        }))
+                      }
+                    />
+                  </Box>
                   {!parentAddressId && (
                     <Box mb={2} mt={2}>
                       <Autocomplete
@@ -2452,7 +2465,7 @@ const AddressesList = ({
                       gap={1}
                     >
                       <TextField
-                        label="Enter address"
+                        label="Address"
                         id="name"
                         name="name"
                         placeholder="Search for address.."
@@ -2542,7 +2555,7 @@ const AddressesList = ({
                           }}
                         />
                       </GoogleMap>
-                      <Box mt={2}>
+                      {/* <Box mt={2}>
                         <Typography>Zone Color</Typography>
                         <input
                           type="color"
@@ -2556,20 +2569,7 @@ const AddressesList = ({
                             border: "none",
                           }}
                         />
-                      </Box>
-                      <Box mt={2}>
-                        <CustomTextField
-                          fullWidth
-                          label="Reference"
-                          value={formData.ref || ""}
-                          onChange={(e: any) =>
-                            setFormData((prev: any) => ({
-                              ...prev,
-                              ref: e.target.value,
-                            }))
-                          }
-                        />
-                      </Box>
+                      </Box> */}
                     </Box>
                   )}
                 </Grid>
