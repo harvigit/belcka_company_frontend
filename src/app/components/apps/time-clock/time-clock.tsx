@@ -1343,8 +1343,6 @@ const TimeClock = ({queryParams}: Props) => {
             cell: ({row}: any) => {
                 const item = row.original;
                 const isChecked = selectedRowIds.has(item.user_id);
-                const isHovered = hoveredRow === item.user_id;
-                const showCheckbox = isChecked || isHovered;
 
                 return (
                     <Stack
@@ -1364,8 +1362,8 @@ const TimeClock = ({queryParams}: Props) => {
                                 setSelectedRowIds(newSet);
                             }}
                             sx={{
-                                opacity: showCheckbox ? 1 : 0,
-                                pointerEvents: showCheckbox ? 'auto' : 'none',
+                                opacity: 1,
+                                pointerEvents: 'auto',
                                 transition: 'opacity 0.2s ease',
                             }}
                         />

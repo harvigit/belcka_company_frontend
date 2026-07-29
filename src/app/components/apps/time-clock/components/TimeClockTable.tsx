@@ -695,11 +695,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     '&:hover': {
                                                         backgroundColor: '#f4433605',
                                                     },
-                                                    '&:hover .select-icon': {
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                    },
                                                     '&:hover .plus-icon': {
                                                         display: isLogLocked ? 'none' : 'flex',
                                                         alignItems: 'center',
@@ -727,7 +722,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     >
                                                         <Box className="select-icon" sx={{
                                                             height: '100%',
-                                                            display: isRowSelected ? 'flex' : 'none',
+                                                            display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center'
                                                         }}>
@@ -1551,11 +1546,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                             '&:hover': {
                                                 backgroundColor: '#f4433605',
                                             },
-                                            '&:hover .select-icon': {
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                            },
                                             '&:hover .plus-icon': {
                                                 display: isRowLocked ? 'none' : 'flex',
                                                 alignItems: 'center',
@@ -1586,7 +1576,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     >
                                                         <Box className="select-icon" sx={{
                                                             height: '100%',
-                                                            display: isRowSelected ? 'flex' : 'none',
+                                                            display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center'
                                                         }}>
