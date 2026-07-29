@@ -1293,7 +1293,7 @@ const TimeClock = ({queryParams}: Props) => {
         const s = startDate || defaultStart;
         const e = endDate || defaultEnd;
         try {
-            handleDateRangeChange({from: s, to: e});
+            await fetchData(s, e);
             setHasDataChanged(false);
         } catch (error) {
             setErrorMessage('Failed to refresh data. Please try again.');
