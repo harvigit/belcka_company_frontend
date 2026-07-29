@@ -1,25 +1,34 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    Typography,
-    Box,
-    Grid,
-    Button,
-    IconButton,
-    Drawer,
-    CircularProgress,
-    Tooltip,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    TextField,
-    FormGroup,
-    FormControlLabel,
-    Checkbox,
-    Stack,
-    Chip, InputAdornment,
-} from '@mui/material';
-import {IconX, IconArrowLeft, IconFilter, IconSearch} from '@tabler/icons-react';
+  Typography,
+  Box,
+  Grid,
+  Button,
+  IconButton,
+  Drawer,
+  CircularProgress,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  TextField,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Stack,
+  Chip,
+  InputAdornment,
+  Collapse,
+} from "@mui/material";
+import {
+  IconX,
+  IconArrowLeft,
+  IconFilter,
+  IconSearch,
+  IconChevronDown,
+  IconChevronUp,
+} from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
@@ -36,7 +45,169 @@ const ACTIVITY_FILTER_OPTIONS = [
   { value: "leave", label: "Leave", requestTypes: [110] },
   { value: "pricework", label: "Pricework", requestTypes: [121] },
   { value: "adjustment", label: "Adjustment", requestTypes: [126] },
+  { value: "billing_info", label: "Billing info", requestTypes: [103] },
 ] as const;
+
+const getDiffs = (oldData: any, newData: any) => {
+  const diffs: { key: string; old: any; new: any }[] = [];
+  if (!newData) return diffs;
+
+  const IGNORED_KEYS = [
+    "id",
+    "created_at",
+    "updated_at",
+    "deleted_at",
+    "user_id",
+    "company_id",
+  ];
+
+  try {
+    let oldObj =
+      typeof oldData === "string" ? JSON.parse(oldData) : oldData || {};
+    let newObj =
+      typeof newData === "string" ? JSON.parse(newData) : newData || {};
+
+    const safeParse = (val: any) => {
+      if (typeof val === "string") {
+        if (val === "[object Object]") return {};
+        try {
+          return JSON.parse(val);
+        } catch (e) {
+          return val;
+        }
+      }
+      return val;
+    };
+
+    if (newObj.billing_info) {
+      newObj = safeParse(newObj.billing_info);
+      oldObj = safeParse(oldObj.billing_info) || safeParse(oldObj) || {};
+    } else if (newObj.billin_info) {
+      newObj = safeParse(newObj.billin_info);
+      oldObj = safeParse(oldObj.billin_info) || safeParse(oldObj) || {};
+    }
+
+    const isDiffObject = Object.values(newObj).some(
+      (val: any) =>
+        val && typeof val === "object" && ("old" in val || "new" in val),
+    );
+
+    if (isDiffObject) {
+      for (const [key, val] of Object.entries(newObj)) {
+        if (IGNORED_KEYS.includes(key)) continue;
+        const v = val as any;
+        if (v.old !== v.new) {
+          diffs.push({ key, old: v.old, new: v.new });
+        }
+      }
+      return diffs;
+    }
+
+    for (const [key, val] of Object.entries(newObj)) {
+      if (IGNORED_KEYS.includes(key)) continue;
+      if (oldObj[key] !== val) {
+        diffs.push({ key, old: oldObj[key], new: val });
+      }
+    }
+  } catch (e) {
+    // ignore parse errors
+  }
+  return diffs;
+};
+
+const BillingDiffView = ({ diffs }: { diffs: any[] }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <Box>
+      <Box
+        display="flex"
+        alignItems="center"
+        sx={{ cursor: "pointer", width: "fit-content" }}
+        onClick={() => setOpen(!open)}
+      >
+        <Typography fontSize={12} color="primary" fontWeight={600}>
+          {open ? "Hide Changes" : "View Changes"}
+        </Typography>
+      </Box>
+      <Collapse in={open}>
+        <Box
+          mt={1}
+          p={1.5}
+          bgcolor="#f8fafc"
+          borderRadius={2}
+          border="1px solid #e2e8f0"
+        >
+          {diffs.map((diff: any, i: number) => (
+            <Typography
+              key={i}
+              fontSize={11}
+              color="text.secondary"
+              mt={i > 0 ? 0.75 : 0}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 0.5,
+              }}
+            >
+              <Typography
+                component="span"
+                fontSize={11}
+                fontWeight={600}
+                sx={{ textTransform: "uppercase" }}
+              >
+                {diff.key.replace(/_/g, " ")}
+              </Typography>
+              {(!diff.old || diff.old === "") && diff.new && diff.new !== "" ? (
+                <>
+                  {" - added as "}
+                  <Chip
+                    size="small"
+                    label={String(diff.new)}
+                    sx={{
+                      height: 18,
+                      fontSize: 10,
+                      bgcolor: "#E8F5E9",
+                      color: "#2E7D32",
+                      "& .MuiChip-label": { px: 1 },
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  {" - changed from "}
+                  <Chip
+                    size="small"
+                    label={String(diff.old || "none")}
+                    sx={{
+                      height: 18,
+                      fontSize: 10,
+                      bgcolor: "#E8F5E9",
+                      color: "#2E7D32",
+                      "& .MuiChip-label": { px: 1 },
+                    }}
+                  />
+                  {" to "}
+                  <Chip
+                    size="small"
+                    label={String(diff.new || "none")}
+                    sx={{
+                      height: 18,
+                      fontSize: 10,
+                      bgcolor: "#E8F5E9",
+                      color: "#2E7D32",
+                      "& .MuiChip-label": { px: 1 },
+                    }}
+                  />
+                </>
+              )}
+            </Typography>
+          ))}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+};
 
 const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
   const [history, setHistory] = useState<any[]>([]);
@@ -187,7 +358,11 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
           </IconButton>
 
           <Grid container spacing={2} display="block">
-            <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+            >
               <Box display="flex" alignItems="center">
                 <IconButton onClick={onClose}>
                   <IconArrowLeft />
@@ -200,20 +375,20 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
             </Box>
 
             <Stack direction="row" alignItems="center" spacing={1} mt={2}>
-                <TextField
-                    placeholder="Search..."
-                    size="small"
-                    fullWidth
-                    value={activitySearch}
-                    onChange={(e) => setActivitySearch(e.target.value)}
-                    InputProps={{
-                        endAdornment: (
-                            <InputAdornment position="end">
-                                <IconSearch size={16}/>
-                            </InputAdornment>
-                        ),
-                    }}
-                />
+              <TextField
+                placeholder="Search..."
+                size="small"
+                fullWidth
+                value={activitySearch}
+                onChange={(e) => setActivitySearch(e.target.value)}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconSearch size={16} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
               <Tooltip title="Filter activities" arrow>
                 <IconButton
@@ -228,7 +403,9 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
             {selectedTypes.length > 0 && (
               <Stack direction="row" flexWrap="wrap" gap={1} mt={1}>
                 {selectedTypes.map((type) => {
-                  const option = ACTIVITY_FILTER_OPTIONS.find((item) => item.value === type);
+                  const option = ACTIVITY_FILTER_OPTIONS.find(
+                    (item) => item.value === type,
+                  );
                   if (!option) return null;
 
                   return (
@@ -273,6 +450,10 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                       color = "#949090";
                       break;
 
+                    case 103:
+                      color = "#4CBC6D";
+                      break;
+
                     default:
                       color = "#ff3737";
                   }
@@ -287,7 +468,7 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                       alignItems="center"
                       sx={{
                         width: "100%",
-                        height: "100px",
+                        minHeight: "100px",
                         borderRadius: "25px",
                         boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
                         border: "1px solid rgb(240 240 240)",
@@ -310,18 +491,50 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                       <Box width="100%" textAlign="start">
                         <Typography fontSize="14px" className="multi-ellipsis">
                           <b>{addr.user_name}:</b>{" "}
-                          <Tooltip title={addr.message} arrow>
-                            <span>{addr.message}</span>
+                          <Tooltip
+                            title={
+                              addr.request_type === 103 &&
+                              addr.message?.includes(
+                                "changed from [object Object]",
+                              )
+                                ? "Requested to update billing information"
+                                : addr.message
+                            }
+                            arrow
+                          >
+                            <span>
+                              {addr.request_type === 103 &&
+                              addr.message?.includes(
+                                "changed from [object Object]",
+                              )
+                                ? "Requested to update billing information"
+                                : addr.message}
+                            </span>
                           </Tooltip>
                         </Typography>
 
-                        <Typography
-                          fontSize="12px"
-                          textAlign="end"
-                          color="gray"
+                        <Box
+                          display={"flex"}
+                          alignItems={"center"}
+                          justifyContent={"space-between"}
+                          mt={0.5}
                         >
-                          {addr.date}
-                        </Typography>
+                          {addr.request_type === 103 &&
+                            getDiffs(addr.old_data, addr.new_data).length >
+                              0 ? (
+                              <BillingDiffView
+                                diffs={getDiffs(addr.old_data, addr.new_data)}
+                              />
+                            ): <Typography></Typography>}
+
+                          <Typography
+                            fontSize="12px"
+                            textAlign="end"
+                            color="gray"
+                          >
+                            {addr.date}
+                          </Typography>
+                        </Box>
                       </Box>
                     </Box>
                   );

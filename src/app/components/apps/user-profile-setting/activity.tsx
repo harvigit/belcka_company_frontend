@@ -1,4 +1,5 @@
 'use client';
+'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import {
@@ -39,6 +40,8 @@ interface ActivityItem {
     module: string;
     record_id: number | null;
     note: string | null;
+    old_data?: any;
+    new_data?: any;
     date_of_action: string;
     created_at: string;
     time: string;
@@ -199,11 +202,64 @@ const ActorRow: React.FC<{ actor: Actor; role: 'added by' | 'edited by' }> = ({ 
 
 // ─── Single Activity Card ─────────────────────────────────────────────────────
 
+const getDiffs = (oldData: any, newData: any, moduleName: string) => {
+    const diffs: { key: string; old: any; new: any }[] = [];
+    if (!newData) return diffs;
+    if (!moduleName || !moduleName.toLowerCase().includes('billing')) return diffs;
+
+    const IGNORED_KEYS = ['id', 'created_at', 'updated_at', 'deleted_at', 'user_id', 'company_id'];
+
+    try {
+        let oldObj = typeof oldData === 'string' ? JSON.parse(oldData) : oldData || {};
+        let newObj = typeof newData === 'string' ? JSON.parse(newData) : newData || {};
+
+        const safeParse = (val: any) => {
+            if (typeof val === 'string') {
+                if (val === '[object Object]') return {};
+                try { return JSON.parse(val); } catch (e) { return val; }
+            }
+            return val;
+        };
+
+        if (newObj.billing_info) {
+            newObj = safeParse(newObj.billing_info);
+            oldObj = safeParse(oldObj.billing_info) || safeParse(oldObj) || {};
+        } else if (newObj.billin_info) {
+            newObj = safeParse(newObj.billin_info);
+            oldObj = safeParse(oldObj.billin_info) || safeParse(oldObj) || {};
+        }
+
+        const isDiffObject = Object.values(newObj).some((val: any) => val && typeof val === 'object' && ('old' in val || 'new' in val));
+
+        if (isDiffObject) {
+            for (const [key, val] of Object.entries(newObj)) {
+                if (IGNORED_KEYS.includes(key)) continue;
+                const v = val as any;
+                if (v.old !== v.new) {
+                    diffs.push({ key, old: v.old, new: v.new });
+                }
+            }
+            return diffs;
+        }
+
+        for (const [key, val] of Object.entries(newObj)) {
+            if (IGNORED_KEYS.includes(key)) continue;
+            if (oldObj[key] !== val) {
+                diffs.push({ key, old: oldObj[key], new: val });
+            }
+        }
+    } catch (e) {
+        // ignore parse errors
+    }
+    return diffs;
+};
+
 const ActivityCard: React.FC<{ item: ActivityItem; isLast: boolean }> = ({ item, isLast }) => {
     const mc = MODULE_CONFIG[item.module] ?? FALLBACK_MODULE;
     const ModuleIcon = mc.icon;
     const actor = item.edited_by || item.added_by;
     const actorRole = item.edited_by ? 'edited by' : 'added by';
+    const diffs = getDiffs(item.old_data, item.new_data, item.module);
 
     return (
         <Box display="flex" gap={0}>
@@ -292,6 +348,38 @@ const ActivityCard: React.FC<{ item: ActivityItem; isLast: boolean }> = ({ item,
                         >
                             {item.title}
                         </Typography>
+
+                        {/* Note & Diffs */}
+                        {item.note && (
+                            <Typography fontSize={12} color="text.secondary" mt={0.5} fontWeight={500}>
+                                NOTE : {item.note}
+                            </Typography>
+                        )}
+
+                        {diffs.length > 0 && (
+                            <Box mt={0.5}>
+                                {diffs.map((diff, i) => (
+                                    <Typography key={i} fontSize={11} color="text.secondary" mt={0.5} sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                                        <Typography component="span" fontSize={11} fontWeight={600} sx={{ textTransform: 'uppercase' }}>
+                                            {diff.key.replace(/_/g, ' ')}
+                                        </Typography>
+                                        {(!diff.old || diff.old === '') && diff.new && diff.new !== '' ? (
+                                            <>
+                                                {' - added as '}
+                                                <Chip size="small" label={String(diff.new)} sx={{ height: 18, fontSize: 10, bgcolor: '#E8F5E9', color: '#2E7D32', '& .MuiChip-label': { px: 1 } }} />
+                                            </>
+                                        ) : (
+                                            <>
+                                                {' - changed from '}
+                                                <Chip size="small" label={String(diff.old || 'none')} sx={{ height: 18, fontSize: 10, bgcolor: '#E8F5E9', color: '#2E7D32', '& .MuiChip-label': { px: 1 } }} />
+                                                {' to '}
+                                                <Chip size="small" label={String(diff.new || 'none')} sx={{ height: 18, fontSize: 10, bgcolor: '#E8F5E9', color: '#2E7D32', '& .MuiChip-label': { px: 1 } }} />
+                                            </>
+                                        )}
+                                    </Typography>
+                                ))}
+                            </Box>
+                        )}
                     </Box>
 
                     {/* Time */}

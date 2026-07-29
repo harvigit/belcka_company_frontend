@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { User } from "next-auth";
 import Cookies from "js-cookie";
+import Link from "next/link";
 
 const Profile = () => {
   const [anchorEl2, setAnchorEl2] = useState<HTMLElement | null>(null);
@@ -122,40 +123,45 @@ const Profile = () => {
           alignItems={{ xs: "center", sm: "flex-start" }}
           textAlign={{ xs: "center", sm: "left" }}
         >
-          <Avatar
-            src={user?.user_image || "/default-avatar.png"}
-            alt={user?.first_name || "User"}
-            sx={{
-              width: { xs: 70, sm: 85 },
-              height: { xs: 70, sm: 85 },
-            }}
-          />
-
+          <Link href={`/apps/users/${user.id}`} passHref>
+            <Avatar
+              src={user?.user_image || "/default-avatar.png"}
+              alt={user?.first_name || "User"}
+              sx={{
+                width: { xs: 70, sm: 85 },
+                height: { xs: 70, sm: 85 },
+              }}
+            />
+          </Link>
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography
-              variant="h4"
-              sx={{
-                display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 2,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                wordBreak: "break-word",
-              }}
-            >
-              {user?.first_name} {user?.last_name}
-            </Typography>
-
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              sx={{
-                textTransform: "capitalize",
-                mt: 0.5,
-              }}
-            >
-              {user?.trade_name ?? user?.user_role}
-            </Typography>
+            <Link href={`/apps/users/${user.id}`} passHref>
+              <Typography
+                variant="h4"
+                color="textSecondary"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 2,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  cursor: "pointer",
+                  "&:hover": { color: "#173f98" },
+                }}
+              >
+                {user?.first_name} {user?.last_name}
+              </Typography>
+              <Typography
+                variant="body1"
+                color="text.secondary"
+                sx={{
+                  textTransform: "capitalize",
+                  mt: 0.5,
+                }}
+              >
+                {user?.trade_name ?? user?.user_role}
+              </Typography>
+            </Link>
 
             {user?.email && (
               <Box

@@ -930,7 +930,7 @@ const TablePagination = () => {
                                         placeholder="Enter company code.."
                                         value={formData.user_code}
                                         onChange={(e: any) =>
-                                            handleFieldChange('user_code', e.target.value.toUpperCase())
+                                            handleFieldChange('user_code', e.target.value)
                                         }
                                         inputProps={{ maxLength: 10 }}
                                         disabled={!canModifyUserDetails}
@@ -1044,7 +1044,7 @@ const TablePagination = () => {
                             xs: 9,
                             lg: 9,
                         }}
-                        sx={{ boxShadow: (theme) => theme.shadows[8] }}
+                        // sx={{ boxShadow: (theme) => theme.shadows[8] }}
                     >
                         <BlankCard>
                             <Box>

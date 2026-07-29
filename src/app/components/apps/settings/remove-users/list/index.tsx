@@ -29,15 +29,8 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import {
-  createColumnHelper,
-  flexRender,
-} from "@tanstack/react-table";
-import {
-  IconEye,
-  IconSearch,
-  IconUserPlus,
-} from "@tabler/icons-react";
+import { createColumnHelper, flexRender } from "@tanstack/react-table";
+import { IconEye, IconSearch, IconUserPlus } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -89,7 +82,6 @@ const RemoveUsersList = () => {
       setSelectedRowIds(new Set());
     }
   };
-
 
   // Rejoin state
   const [rejoinDialogOpen, setRejoinDialogOpen] = useState(false);
@@ -234,7 +226,11 @@ const RemoveUsersList = () => {
               selectedRowIds.size < filteredData.length
             }
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectAllChange(e.target.checked); }}
+            onChange={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleSelectAllChange(e.target.checked);
+            }}
           />
         </Stack>
       ),
@@ -313,7 +309,19 @@ const RemoveUsersList = () => {
                     {user.name ?? "-"}
                   </Typography>
                   <Tooltip title={user.trade_name ?? "-"} placement="top" arrow>
-                    <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  }} color="textSecondary" variant="subtitle1" width={190} >
+                    <Typography
+                      sx={{
+                        display: "-webkit-box",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        wordBreak: "break-word",
+                      }}
+                      color="textSecondary"
+                      variant="subtitle1"
+                      width={190}
+                    >
                       {user.trade_name}
                     </Typography>
                   </Tooltip>
@@ -350,7 +358,20 @@ const RemoveUsersList = () => {
       ),
       cell: (info) => (
         <Tooltip title={info.getValue() ?? ""} placement="top" arrow>
-          <Typography className="f-14" color="textPrimary" sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  width: 100, ml: 2 }} >
+          <Typography
+            className="f-14"
+            color="textPrimary"
+            sx={{
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: 1,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              wordBreak: "break-word",
+              width: 100,
+              ml: 2,
+            }}
+          >
             {info.getValue() ?? "-"}
           </Typography>
         </Tooltip>
@@ -365,7 +386,20 @@ const RemoveUsersList = () => {
       ),
       cell: (info) => (
         <Tooltip title={info.getValue() ?? ""} placement="top" arrow>
-          <Typography className="f-14" color="textPrimary" sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word",  width: 100, ml: 2 }} >
+          <Typography
+            className="f-14"
+            color="textPrimary"
+            sx={{
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: 1,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              wordBreak: "break-word",
+              width: 100,
+              ml: 2,
+            }}
+          >
             {info.getValue() ?? "-"}
           </Typography>
         </Tooltip>
@@ -583,62 +617,159 @@ const RemoveUsersList = () => {
               onClose={handlePopoverClose}
               anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
               transformOrigin={{ vertical: "top", horizontal: "right" }}
-              PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+              PaperProps={{
+                sx: {
+                  width: 280,
+                  mt: 1,
+                  p: 1,
+                  borderRadius: 2,
+                  boxShadow: "0 12px 32px rgba(15, 23, 42, 0.14)",
+                  border: "1px solid #e5e7eb",
+                  maxHeight: "min(420px, calc(100vh - 140px))",
+                  overflow: "hidden",
+                },
+              }}
             >
               <TextField
                 size="small"
-                placeholder="Search"
+                placeholder="Search columns..."
                 fullWidth
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                sx={{ mb: 1 }}
+                sx={{
+                  mb: 1,
+                  "& .MuiInputBase-root": {
+                    borderRadius: 1.5,
+                    backgroundColor: "#fff",
+                  },
+                }}
               />
-              <FormGroup>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      id="select all"
-                      checked={selectAll}
-                      onChange={handleSelectAllChange}
-                      sx={{ textTransform: "none" }}
-                    />
-                  }
-                  label="Select All"
-                />
-                {table
-                  .getAllLeafColumns()
-                  .filter((col) => {
-                    const excluded = ["conflicts", "select"];
-                    if (excluded.includes(col.id)) return false;
-                    return col.id.toLowerCase().includes(search.toLowerCase());
-                  })
-                  .map((col) => (
-                    <FormControlLabel
-                      key={col.id}
-                      control={
-                        <Checkbox
-                          checked={col.getIsVisible()}
-                          onChange={(e) =>
-                            handleColumnVisibilityChange(
-                              col.id,
-                              e.target.checked,
-                            )
+              <Box
+                sx={{
+                  maxHeight: "calc(min(420px, calc(100vh - 140px)) - 64px)",
+                  overflowY: "auto",
+                  pr: 0.5,
+                }}
+              >
+                <FormGroup sx={{ gap: 0.25 }}>
+                  {(() => {
+                    const columnOptions = table
+                      .getAllLeafColumns()
+                      .filter((col: any) => {
+                        const excludedColumns = ["select"];
+                        if (excludedColumns.includes(col.id)) return false;
+
+                        return col.id
+                          .toLowerCase()
+                          .includes(search.toLowerCase());
+                      });
+                    const allSelected =
+                      columnOptions.length > 0 &&
+                      columnOptions.every((col: any) => col.getIsVisible());
+                    const someSelected = columnOptions.some((col: any) =>
+                      col.getIsVisible(),
+                    );
+
+                    return (
+                      <>
+                        <FormControlLabel
+                          control={
+                            <CustomCheckbox
+                              size="small"
+                              checked={allSelected}
+                              indeterminate={!allSelected && someSelected}
+                              disabled={columnOptions.length === 0}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                columnOptions.forEach((col: any) =>
+                                  col.toggleVisibility(e.target.checked),
+                                );
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              sx={{
+                                p: 0.5,
+                                mr: 1,
+                              }}
+                            />
                           }
+                          sx={{
+                            m: 0,
+                            px: 0.75,
+                            py: 0.375,
+                            width: "100%",
+                            borderRadius: 1.5,
+                            alignItems: "center",
+                            textTransform: "none",
+                            borderBottom: "1px solid #eef2f7",
+                            mb: 0.25,
+                            "&:hover": {
+                              backgroundColor: "#f8fafc",
+                            },
+                            "& .MuiFormControlLabel-label": {
+                              fontSize: "14px",
+                              lineHeight: 1.35,
+                              whiteSpace: "nowrap",
+                              fontWeight: 600,
+                            },
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          label="Select All"
                         />
-                      }
-                      sx={{ textTransform: "none" }}
-                      label={
-                        typeof col.columnDef.header === "string" &&
-                        col.columnDef.header.trim() !== ""
-                          ? col.columnDef.header
-                          : col.id
-                              .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str) => str.toUpperCase())
-                              .trim()
-                      }
-                    />
-                  ))}
-              </FormGroup>
+                        {columnOptions.map((col: any) => (
+                          <FormControlLabel
+                            key={col.id}
+                            control={
+                              <CustomCheckbox
+                                size="small"
+                                checked={col.getIsVisible()}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  col.getToggleVisibilityHandler()(e);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                sx={{
+                                  p: 0.5,
+                                  mr: 1,
+                                }}
+                              />
+                            }
+                            sx={{
+                              m: 0,
+                              px: 0.75,
+                              py: 0.375,
+                              width: "100%",
+                              borderRadius: 1.5,
+                              alignItems: "center",
+                              textTransform: "none",
+                              "&:hover": {
+                                backgroundColor: "#f8fafc",
+                              },
+                              "& .MuiFormControlLabel-label": {
+                                fontSize: "14px",
+                                lineHeight: 1.35,
+                                whiteSpace: "nowrap",
+                              },
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            label={
+                              col.columnDef.meta?.label ||
+                              (typeof col.columnDef.header === "string" &&
+                              col.columnDef.header.trim() !== ""
+                                ? col.columnDef.header
+                                : col.id
+                                    .replace(/([A-Z])/g, " $1")
+                                    .replace(/^./, (str: string) =>
+                                      str.toUpperCase(),
+                                    )
+                                    .trim())
+                            }
+                          />
+                        ))}
+                      </>
+                    );
+                  })()}
+                </FormGroup>
+              </Box>
             </Popover>
           </Stack>
         </Stack>
@@ -770,7 +901,15 @@ const RemoveUsersList = () => {
             padding: "10px",
           }}
         >
-          <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
+          <TablePaginationFooter
+            selectedCount={
+              typeof selectedRowIds !== "undefined"
+                ? selectedRowIds.size
+                : undefined
+            }
+            table={table}
+            totalRows={totalRows}
+          />
         </Box>
 
         <Divider />

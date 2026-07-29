@@ -253,7 +253,7 @@ const TablePagination = () => {
     const restoredTableStateKeyRef = useRef('');
     const skipNextDependencyPageResetRef = useRef(false);
     const [inviteUser, setInviteUser] = useState(false);
-    const [trade, setTrade] = useState<TradeList[]>([]);
+    const [trade, setTrade] = useState<any[]>([]);
     const [teams, setTeams] = useState<any[]>([]);
     const [companyUsers, setCompanyUsers] = useState<any[]>([]);
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -1756,12 +1756,12 @@ const TablePagination = () => {
 
                         <DialogContent sx={{overflowX: 'hidden'}}>
                             <Stack spacing={2} mt={1} sx={{width: '100%', minWidth: 0}}>
-                                {renderFilterSelect('Teams', 'team', uniqueTeams)}
-                                {renderFilterSelect('Trades', 'trade', uniqueTrades)}
+                                {renderFilterSelect('Teams', 'team', teams)}
+                                {renderFilterSelect('Trades', 'trade', trade)}
                                 {renderFilterSelect(
                                     'Supervisors',
                                     'supervisor',
-                                    uniqueSupervisors,
+                                    companyUsers,
                                     true,
                                 )}
                             </Stack>
