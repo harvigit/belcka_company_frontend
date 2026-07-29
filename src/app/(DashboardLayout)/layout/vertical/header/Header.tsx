@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext, useState } from "react";
 import {
   IconButton,
   Box,
@@ -7,75 +7,62 @@ import {
   Toolbar,
   styled,
   Stack,
-  Typography,
 } from "@mui/material";
 import Profile from "./Profile";
 import Search from "./Search";
 import Company from "./Company";
-import { useContext } from "react";
 import config from "@/app/context/config";
 import {
   IconCategory2,
   IconMenu2,
-  IconMoon,
-  IconSun,
   IconX,
 } from "@tabler/icons-react";
 import { CustomizerContext } from "@/app/context/customizerContext";
-import { useTheme } from "@mui/material/styles";
-import { useState } from "react";
 import Navigation from "./Navigation";
-import { useSession } from "next-auth/react";
-import { User } from "next-auth";
-import Cookies from "js-cookie";
+
+const TopbarHeight = config.topbarHeight;
+
+// Stable styled components — must stay outside Header so sidebar toggle
+// re-renders without remounting children (Company would re-fetch APIs).
+const AppBarStyled = styled(AppBar)(({ theme }) => ({
+  boxShadow: "none",
+  background: theme.palette.background.default,
+  justifyContent: "center",
+  backdropFilter: "blur(4px)",
+  [theme.breakpoints.up("lg")]: {
+    minHeight: TopbarHeight,
+  },
+}));
+
+const ToolbarStyled = styled(Toolbar)(({ theme }) => ({
+  width: "100%",
+  color: theme.palette.text.primary,
+  paddingLeft: "16px !important",
+  paddingRight: "16px !important",
+}));
+
+const CollpaseMenubar = styled(Box)(({ theme }) => ({
+  position: "absolute",
+  left: "4px",
+  top: "4px",
+  right: "4px",
+  padding: "7px 15px",
+  background: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  zIndex: 1,
+  borderRadius: "7px",
+}));
 
 const Header = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const lgDown = useMediaQuery((theme) => theme.breakpoints.down("lg"));
-  const session = useSession();
-
-  const user = session.data?.user as User & { company_id?: number | null };
 
   const {
-    activeMode,
-    setActiveMode,
     setIsCollapse,
     isCollapse,
     isMobileSidebar,
     setIsMobileSidebar,
   } = useContext(CustomizerContext);
-  const TopbarHeight = config.topbarHeight;
-
-  const theme = useTheme();
-  const borderColor = theme.palette.divider;
-
-  const AppBarStyled = styled(AppBar)(({ theme }) => ({
-    boxShadow: "none",
-    background: theme.palette.background.default,
-    justifyContent: "center",
-    backdropFilter: "blur(4px)",
-    [theme.breakpoints.up("lg")]: {
-      minHeight: TopbarHeight,
-    },
-  }));
-  const ToolbarStyled = styled(Toolbar)(({ theme }) => ({
-    width: "100%",
-    color: theme.palette.text.primary,
-    paddingLeft: "16px !important",
-    paddingRight: "16px !important",
-  }));
-
-  const CollpaseMenubar = styled(Box)(({ theme }) => ({
-    position: "absolute",
-    left: "4px",
-    top: "4px",
-    right: "4px",
-    padding: "7px 15px",
-    background: theme.palette.background.paper,
-    border: `1px solid ${borderColor}`,
-    zIndex: 1,
-    borderRadius: "7px",
-  }));
 
   const [isVisible, setIsVisible] = useState(false);
 
@@ -117,14 +104,6 @@ const Header = () => {
         <Stack direction="row" alignItems="center">
           <Company />
 
-          {/* <IconButton color="inherit">
-            {activeMode === "light" ? (
-              <IconMoon size="21" onClick={() => setActiveMode("dark")}  className="header-icons"/>
-            ) : (
-              <IconSun size="21" onClick={() => setActiveMode("light")} className="header-icons"/>
-            )}
-          </IconButton> */}
-
           {lgDown ? (
             <IconButton
               color="inherit"
@@ -133,12 +112,6 @@ const Header = () => {
               <IconCategory2 size="21" />
             </IconButton>
           ) : null}
-
-          {/* ------------------------------------------- */}
-          {/* End Ecommerce Dropdown */}
-          {/* ------------------------------------------- */}
-
-          {/* ------------------------------------------- */}
 
           <Box
             mx={1}

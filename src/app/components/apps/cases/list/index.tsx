@@ -135,7 +135,6 @@ const CasesList = () => {
   const handleClickMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl2(event.currentTarget);
   };
-  const [page, setPage] = useState(1);
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -178,9 +177,9 @@ const CasesList = () => {
     if (!user?.company_id) return;
     try {
       const [projRes, addrRes] = await Promise.all([
-        api.get(`project/get?company_id=${user.company_id}`),
+        api.get(`project/get-web?company_id=${user.company_id}`),
         api.get(
-          `address/get-parent?company_id=${user.company_id}&page=1&limit=1000`,
+          `address/get-parent-web?company_id=${user.company_id}&page=1&limit=1000`,
         ),
       ]);
       if (projRes.data?.info) setProjectList(projRes.data.info);
@@ -200,15 +199,18 @@ const CasesList = () => {
     return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
   };
 
+  // Filter/edit dropdowns: load only when filter or edit drawer opens (not on Cases page mount).
   useEffect(() => {
-    fetchProjectsAndAddresses();
-  }, [user?.company_id]);
+    if ((open || editDialogOpen) && user?.company_id) {
+      fetchProjectsAndAddresses();
+    }
+  }, [open, editDialogOpen, user?.company_id]);
 
   const fetchCases = async () => {
     if (!user?.company_id) return;
     setLoading(true);
     try {
-      let url = `address/get?&company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      let url = `address/get-web?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (filters.status && filters.status !== "All")
         url += `&status_text=${filters.status}`;
       if (filters.project_id) url += `&project_id=${filters.project_id}`;
@@ -787,8 +789,6 @@ const CasesList = () => {
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setPage(1);
-                  setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
                 }}
                 InputProps={{
                   startAdornment: (
@@ -947,6 +947,10 @@ const CasesList = () => {
                   <Autocomplete
                     options={projectList}
                     getOptionLabel={(option) => option.name || ""}
+                    getOptionKey={(option) => option.id}
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
                     value={
                       projectList.find(
                         (p) => p.id === tempFilters.project_id,
@@ -966,6 +970,10 @@ const CasesList = () => {
                   <Autocomplete
                     options={parentAddressList}
                     getOptionLabel={(option) => option.name || ""}
+                    getOptionKey={(option) => option.id}
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
                     value={
                       parentAddressList.find(
                         (p) => p.id === tempFilters.parent_address_id,
@@ -998,7 +1006,6 @@ const CasesList = () => {
                       parent_address_id: "",
                     });
                     setOpen(false);
-                    setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
                   }}
                   color="inherit"
                 >
@@ -1010,7 +1017,6 @@ const CasesList = () => {
                   onClick={() => {
                     setFilters(tempFilters);
                     setOpen(false);
-                    setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
                   }}
                 >
                   Apply

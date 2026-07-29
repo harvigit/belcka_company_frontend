@@ -146,8 +146,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   });
   const [tempFilters, setTempFilters] = useState(filters);
   const [sorting, setSorting] = useState<any[]>([]);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
   const [value, setValue] = useState(0);
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -156,7 +154,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [data, setData] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
   const [project, setProject] = useState<ProjectList[]>([]);
   const [allProjects, SetAllProjects] = useState<any[]>([]);
   const session = useSession();
@@ -553,25 +550,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     }
   }, [projectId]);
 
-  const fetchResources = async () => {
-    try {
-      const res = await api.get(
-        `get-inventory-resources?company_id=${user.company_id}&is_web=true`,
-      );
-      if (res.data) {
-        setProducts(res.data.products);
-        setSuppliers(res.data.suppliers);
-        setCategories(res.data.categories);
-      }
-    } catch (err) {
-      console.error("Failed to fetch inventory resource", err);
-    }
-  };
-
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`project/get?company_id=${user.company_id}`);
+      const res = await api.get(`project/get-web?company_id=${user.company_id}`);
       if (res.data?.info) {
         setProject(res.data.info);
         const cookieProjectId = Cookies.get(
@@ -614,14 +596,24 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     }
   };
 
+  // List page only needs projects for cookie/context. Modules + radius load when drawers open.
   useEffect(() => {
     if (user.company_id) {
       fetchProjects();
-      fetchResources();
-      getData();
-      fetchGeneralSettings();
     }
   }, [projectID]);
+
+  useEffect(() => {
+    if (allocateDrawerOpen && user.company_id) {
+      getData();
+    }
+  }, [allocateDrawerOpen, user.company_id]);
+
+  useEffect(() => {
+    if (parentAddressDrawerOpen && user.company_id) {
+      fetchGeneralSettings();
+    }
+  }, [parentAddressDrawerOpen, user.company_id]);
 
   useEffect(() => {
     if (projectId && user?.id) {
@@ -636,7 +628,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const fetchAddresses = async () => {
     setLoading(true);
     try {
-      let url = `address/get-parent?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      let url = `address/get-parent-web?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
         url += `&search=${searchTerm}`;
       }
@@ -1238,10 +1230,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     onSortingChange: setSorting,
     manualSorting: true,
   });
-
-  useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [searchTerm]);
 
   const simpleColumns = columns.map((column: any) => ({
     name: column.id ?? "Unnamed Column",

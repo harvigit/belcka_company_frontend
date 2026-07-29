@@ -48,7 +48,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
   // Fetch data
   const fetchCases = async () => {
     try {
-      let url = "address/archive-list";
+      let url = "address/archive-list-web";
       if (parentAddressId) {
         url += `?parent_address_id=${parentAddressId}`;
       }
@@ -62,9 +62,12 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
     }
   };
 
+  // Fetch only when archive drawer is open (not on parent page mount).
   useEffect(() => {
-    fetchCases();
-  }, [open == true]);
+    if (open) {
+      fetchCases();
+    }
+  }, [open, parentAddressId]);
 
   const handleConfirmAction = async () => {
     if (!selectedItem) return;
