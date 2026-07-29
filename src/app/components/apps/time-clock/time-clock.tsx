@@ -2002,10 +2002,14 @@ const TimeClock = ({queryParams}: Props) => {
             };
 
             const selected = formatMap[option] ?? {format: option, ext: 'xlsx'};
+            const exportStartDate = startDate || defaultStart;
+            const exportEndDate = endDate || defaultEnd;
 
             const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export', {
                 ids,
                 format: selected.format,
+                start_date: format(exportStartDate, 'yyyy-MM-dd'),
+                end_date: format(exportEndDate, 'yyyy-MM-dd'),
             });
 
             if (response.data.IsSuccess) {
