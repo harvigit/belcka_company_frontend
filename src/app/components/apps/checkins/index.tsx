@@ -254,9 +254,28 @@ const CheckinsList = () => {
       columnHelper.accessor("case_name", {
         header: "Case",
         cell: ({ row }: any) => (
-          <Typography variant="body2" sx={{ px: 1.5 }}>
-            {row.original.case_name || "-"}
-          </Typography>
+         <Tooltip title={row.original.case_name ?? ""}>
+            <Typography
+              variant="body2"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                minWidth: "150px",
+                width: "100%",
+                maxWidth: "200px",
+                borderRadius: 1,
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                px: 1.5,
+              }}
+            >
+              {row.original.case_name || "-"}
+            </Typography>
+          </Tooltip>
         ),
       }),
 

@@ -342,7 +342,7 @@ export default function CaseEditDrawer({
 
                 <Box display={"flex"} justifyContent={"space-between"} gap={3}>
                   <TextField
-                    label="Enter address"
+                    label="Address"
                     id="name"
                     name="name"
                     placeholder="Search for address.."
@@ -352,6 +352,7 @@ export default function CaseEditDrawer({
                     variant="outlined"
                     fullWidth
                   />
+
                   {/* <Button
                     variant="contained"
                     color="primary"
@@ -360,7 +361,20 @@ export default function CaseEditDrawer({
                     Search
                   </Button> */}
                 </Box>
-
+                <Box mt={2}>
+                  <CustomTextField
+                    fullWidth
+                    disabled
+                    label="Reference"
+                    value={formData.ref || ""}
+                    onChange={(e: any) =>
+                      setFormData((prev: any) => ({
+                        ...prev,
+                        ref: e.target.value,
+                      }))
+                    }
+                  />
+                </Box>
                 {typedAddress && predictions.length > 0 && (
                   <List
                     sx={{
@@ -442,7 +456,7 @@ export default function CaseEditDrawer({
                         }}
                       />
                     </GoogleMap>
-                    <Box mt={2}>
+                    {/* <Box mt={2}>
                       <Typography>Zone Color</Typography>
                       <input
                         type="color"
@@ -457,21 +471,7 @@ export default function CaseEditDrawer({
                           border: "none",
                         }}
                       />
-                    </Box>
-                    <Box mt={2}>
-                      <CustomTextField
-                        fullWidth
-                        disabled
-                        label="Reference"
-                        value={formData.ref || ""}
-                        onChange={(e: any) =>
-                          setFormData((prev: any) => ({
-                            ...prev,
-                            ref: e.target.value,
-                          }))
-                        }
-                      />
-                    </Box>
+                    </Box> */}
                   </Box>
                 )}
               </Grid>
