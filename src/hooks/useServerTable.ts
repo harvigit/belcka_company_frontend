@@ -4,6 +4,7 @@ import {
   getCoreRowModel,
   SortingState,
   getSortedRowModel,
+  getPaginationRowModel,
 } from '@tanstack/react-table';
 
 interface UseServerTableOptions<TData> {
@@ -16,6 +17,8 @@ interface UseServerTableOptions<TData> {
   onSortingChange?: (updater: any) => void;
   onColumnVisibilityChange?: (updater: any) => void;
   manualSorting?: boolean;
+  manualPagination?: boolean;
+  manualFiltering?: boolean;
   shouldResetPageOnDebounce?: () => boolean;
   state?: any;
   getRowId?: (originalRow: TData, index: number, parent?: any) => string;
@@ -31,6 +34,8 @@ export function useServerTable<TData>({
   onSortingChange: controlledOnSortingChange,
   onColumnVisibilityChange,
   manualSorting = false,
+  manualPagination = true,
+  manualFiltering = true,
   shouldResetPageOnDebounce,
   state: controlledState,
   getRowId,
@@ -91,8 +96,8 @@ export function useServerTable<TData>({
     state: { columnFilters, sorting, pagination, rowSelection, columnVisibility, ...controlledState },
     pageCount: pageCount,
     rowCount: totalRows,
-    manualPagination: true,
-    manualFiltering: true,
+    manualPagination: manualPagination,
+    manualFiltering: manualFiltering,
     manualSorting: manualSorting,
     autoResetPageIndex: false,
     enableRowSelection: true,
@@ -103,6 +108,7 @@ export function useServerTable<TData>({
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     getRowId,
   });
 

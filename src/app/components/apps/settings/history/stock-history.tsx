@@ -33,10 +33,11 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable,
   createColumnHelper,
   SortingState,
 } from "@tanstack/react-table";
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -56,6 +57,7 @@ import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import { IconEye } from "@tabler/icons-react";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 dayjs.extend(customParseFormat);
 
@@ -96,11 +98,9 @@ interface Props {
 const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
   const [data, setData] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [fetchHistory, setFetchHistory] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState({ type: "", user: "" });
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
@@ -108,6 +108,43 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
   const user = session.data?.user as User & { company_id?: number | null } & {
     user_role_id?: number | null;
   };
+
+  const { columnVisibility, onColumnVisibilityChange } =
+    usePersistentColumnVisibility({
+      storageKey: `cv_${user?.company_id}_${user?.id}_stock_history`,
+      enabled: !!user?.id,
+    });
+
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkScroll = () => {
+      if (tableContainerRef.current) {
+        setIsScrollable(
+          tableContainerRef.current.scrollWidth >
+          tableContainerRef.current.clientWidth,
+        );
+      }
+    };
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+
+    const observer = new MutationObserver(checkScroll);
+    if (tableContainerRef.current) {
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    }
+
+    return () => {
+      window.removeEventListener("resize", checkScroll);
+      observer.disconnect();
+    };
+  }, []);
+
   const today = new Date();
   const defaultStart = new Date(today);
   defaultStart.setDate(today.getDate() - today.getDay() + 1);
@@ -387,12 +424,9 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
                     : "text.primary",
             }}
           >
-            {info.getValue() ?? "-"}{" "}
-            {item.is_sub_qty
-              ? item.pack_off_qty && item.pack_off_name
-                ? `(${item.pack_off_qty} ${item.pack_off_name})`
-                : ""
-              : ""}
+            {item.is_sub_qty && item.qty_in_pack
+              ? `${item.qty_in_pack} (${info.getValue()} nos)`
+              : info.getValue() ?? "-"}
           </Typography>
         );
       },
@@ -402,6 +436,8 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
       id: "stockInHand",
       header: () => "Stock in Hand",
       cell: (info) => {
+        const item = info.row.original;
+
         return (
           <Typography
             className="f-14"
@@ -410,7 +446,9 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
             fontWeight={500}
             ml={2}
           >
-            {info.getValue() ?? "-"}
+            {item.is_sub_qty && item.new_qty_in_pack
+              ? `${item.new_qty_in_pack} (${info.getValue()} nos)`
+              : info.getValue() ?? "-"}
           </Typography>
         );
       },
@@ -422,21 +460,14 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
   };
   const handlePopoverClose = () => setAnchorEl2(null);
 
-  const table = useReactTable({
+  const { table } = useServerTable({
     data: filteredData,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
+    fetchData: () => {},
+    manualPagination: false,
+    manualFiltering: false,
+    state: { columnVisibility },
+    onColumnVisibilityChange: onColumnVisibilityChange,
   });
 
   // Reset to first page when search term changes
@@ -797,7 +828,26 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
             overflow: "auto",
           }}
         >
-          <TableContainer>
+          <TableContainer
+            ref={tableContainerRef}
+            sx={{
+              position: "relative",
+              "&::after": {
+                content: '""',
+                position: "absolute",
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: "20px",
+                background:
+                  "linear-gradient(to left, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)",
+                opacity: isScrollable ? 1 : 0,
+                pointerEvents: "none",
+                transition: "opacity 0.2s",
+                zIndex: 2,
+              },
+            }}
+          >
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -922,86 +972,11 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={2}
-          alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary" className="f-14">
-              {table.getPrePaginationRowModel().rows.length} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: {
-                xs: "block",
-                sm: "flex",
-              },
-            }}
-            alignItems="center"
-          >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary" className="f-14">
-                Page
-              </Typography>
-              <Typography
-                color="textSecondary"
-                className="f-14"
-                fontWeight={600}
-                ml={1}
-              >
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"} className="f-14">
-                {" "}
-                | Entries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
-            >
-              <CustomSelect
-                className="custom-select"
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
+        <TablePaginationFooter
+          table={table}
+          totalRows={filteredData.length}
+          selectedCount={selectedRowIds.size}
+        />
       </Box>
     </Drawer>
   );
