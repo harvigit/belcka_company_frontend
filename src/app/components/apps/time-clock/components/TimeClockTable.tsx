@@ -1196,18 +1196,23 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 {/* Pricework Column */}
                                                 {visibleColumnConfigs.priceWork?.visible && (
-                                                    <TableCell align="center" onClick={() => {
-                                                        if (log.is_pricework_record && log.pricework_id) {
-                                                            openPriceworkSidebar?.(log);
-                                                        }
-                                                    }} sx={{
-                                                        py: 0.5,
-                                                        fontSize: '0.875rem',
-                                                        height: '45px',
-                                                        verticalAlign: 'middle',
-                                                        cursor: log.is_pricework_record ? 'pointer' : 'default',
-                                                        color: log.is_pricework_record ? '#1976d2' : 'inherit',
-                                                    }}>
+                                                    <TableCell 
+                                                        align="center" 
+                                                        onClick={() => {
+                                                            if (log.is_pricework_record && log.pricework_id) {
+                                                                openPriceworkSidebar?.(log);
+                                                            }
+                                                        }}
+                                                        sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                            cursor: log.is_pricework_record ? 'pointer' : 'default',
+                                                            color: log.is_pricework_record ? '#1976d2' : 'inherit',
+                                                            fontWeight: !log.is_pricework_record ? 'bold' : 'normal',
+                                                        }}
+                                                    >
                                                         {`${currency}${log.pricework_amount || 0}`}
                                                     </TableCell>
                                                 )}
