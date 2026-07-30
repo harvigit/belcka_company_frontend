@@ -1374,7 +1374,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     </TableCell>
                                                 )}
 
-                                                {/* Net Worklog Amount Column */}
+                                                {/*
+                                                Net Worklog Amount Column
                                                 {visibleColumnConfigs.netWorklogAmount?.visible && (
                                                     <TableCell
                                                         align="center"
@@ -1390,6 +1391,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             : '--'}
                                                     </TableCell>
                                                 )}
+                                                */}
 
                                                 {/* Net Payable Amount Column */}
                                                 {isFirstRow && visibleColumnConfigs.netPayableAmount?.visible && (
@@ -1456,7 +1458,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         py: 0.5,
                                                         fontSize: '0.875rem',
                                                         height: '45px',
-                                                        verticalAlign: 'middle'
+                                                        verticalAlign: 'middle',
+                                                        fontWeight: '700'
                                                     }}>
                                                         {rowData.payableAmount}
                                                     </TableCell>
