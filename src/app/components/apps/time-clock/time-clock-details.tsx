@@ -47,6 +47,7 @@ const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
 const TIME_CLOCK_DETAILS_COLUMNS_COOKIE = 'time-clock-details-column-visibility';
 const TIME_CLOCK_DETAILS_AMOUNT_COLUMNS = [
     'priceWork',
+    'netWorklogAmount',
     'cis_amount',
     'gross_amount',
     'netPayableAmount',
@@ -1075,6 +1076,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         totalHours: '--',
                         penaltyHours: '--',
                         dailyTotal: formatHour(day.daily_total),
+                        netWorklogAmount: `${currency}${day.daily_net_worklog_amount}`,
                         netPayableAmount: `${currency}${day.daily_net_payable_amount}`,
                         daily_adjustment_amount: day.daily_adjustment_amount ?? 0,
                         payableAmount: `${currency}${day.daily_payable_amount}`,
@@ -1840,6 +1842,13 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 header: () => <span style={{display: 'block', textAlign: 'center', color: '#203040' }}>Daily total</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.dailyTotal : null,
                 size: 100,
+            },
+            {
+                id: 'netWorklogAmount',
+                accessorKey: 'netWorklogAmount',
+                header: () => <span style={{display: 'block', textAlign: 'center', color: '#203040' }}>Net Worklog</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? (row.original.netWorklogAmount ?? '--') : null,
+                size: 130,
             },
             // {
             //     id: 'expenseAmount',

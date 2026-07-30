@@ -110,6 +110,7 @@ const TIME_CLOCK_COLUMNS_COOKIE = 'time-clock-column-visibility';
 const TIME_CLOCK_FILTERS_COOKIE_PREFIX = 'time-clock-filters';
 const TIME_CLOCK_AMOUNT_COLUMNS = [
     'daylog_payable_amount',
+    'net_worklog_amount',
     'pricework_total_amount',
     'cis_amount',
     'gross_amount',
@@ -265,6 +266,7 @@ export type TimeClock = {
     total_break_hours?: string | number;
     weekly_total_hours: string | number;
     daylog_payable_amount: number;
+    net_worklog_amount?: number | string;
     pricework_total_amount: number;
     total_expense_amount: number;
     cis_amount: number;
@@ -1589,6 +1591,15 @@ const TimeClock = ({queryParams}: Props) => {
             cell: (info: any) => {
                 const value = info.getValue();
                 return value === 0 ? '0' : value ? `${currency}${value}` : '-';
+            },
+        }),
+
+        columnHelper.accessor((row) => row.net_worklog_amount ?? row.daylog_payable_amount, {
+            id: 'net_worklog_amount',
+            header: 'Net Worklog',
+            cell: (info: any) => {
+                const value = info.getValue();
+                return value === 0 ? `${currency}0` : value ? `${currency}${value}` : '-';
             },
         }),
 

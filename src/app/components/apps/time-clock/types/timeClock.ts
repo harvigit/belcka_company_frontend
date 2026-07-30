@@ -40,6 +40,7 @@ export type DailyBreakdown = {
     checkIns?: string;
     dailyTotal?: string;
     // expenseAmount?: string;
+    netWorklogAmount?: string;
     netPayableAmount?: string;
     payableAmount?: string;
     regular?: string;
