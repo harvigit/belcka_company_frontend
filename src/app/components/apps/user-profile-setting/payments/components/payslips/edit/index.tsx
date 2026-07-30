@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
     Drawer, Box, IconButton, Typography, Button, InputLabel,
-    Avatar, Select, MenuItem, Dialog, DialogTitle, DialogContent,
-    Stack, Chip, CircularProgress,
+    Avatar, Select, MenuItem, Stack, Chip, CircularProgress,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
@@ -43,6 +42,8 @@ interface EditPayslipProps {
     payslip: any;
     companyId: number | null;
 }
+
+const ALLOWED_PAYSLIP_AMOUNT_LABELS = new Set(["Net Total", "Net Payment", "Total Net", "Net"]);
 
 const toDateInputValue = (value?: string | null): string => {
     if (!value) return "";
@@ -103,8 +104,6 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
 
     // OCR state
     const [isScanning, setIsScanning] = useState(false);
-    const [ocrMatches, setOcrMatches] = useState<AmountMatch[]>([]);
-    const [ocrDialogOpen, setOcrDialogOpen] = useState(false);
     const [amountConfirmed, setAmountConfirmed] = useState(true);
 
     const getUsers = useCallback(async () => {
@@ -135,8 +134,6 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
 
             setPreview(payslip.image_url || null);
             // Reset OCR state — existing amount is already confirmed
-            setOcrMatches([]);
-            setOcrDialogOpen(false);
             setAmountConfirmed(true); // existing payslip already has amount
             setIsScanning(false);
             getUsers();
@@ -156,28 +153,21 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
-            const { amount, matches }: { amount: string | null; matches: AmountMatch[] } = res.data;
+            const { matches }: { amount: string | null; matches: AmountMatch[] } = res.data;
+            const selectedMatch = matches.find((match) => ALLOWED_PAYSLIP_AMOUNT_LABELS.has(match.label));
+            const selectedAmount = selectedMatch?.value ?? "";
 
-            if (matches.length >= 2) {
-                // 2+ matches (same or different values) → always show dialog
-                setOcrMatches(matches);
-                setOcrDialogOpen(true);
+            setFormData((prev) => ({ ...prev, amount: selectedAmount }));
+            setAmountConfirmed(true);
 
+            if (selectedMatch) {
+                toast.success(`Amount detected: ${selectedAmount}`);
             } else {
-                // 0 matches → amount="0"  |  1 match → amount=detected value
-                setFormData((prev) => ({ ...prev, amount: amount ?? "0" }));
-                setAmountConfirmed(true);
-
-                if (matches.length === 0) {
-                    toast("No amount detected, saving with 0.", { icon: "ℹ️" });
-                } else {
-                    toast.success(`Amount detected: ${amount}`);
-                }
+                toast("No allowed payslip amount detected.", { icon: "ℹ️" });
             }
         } catch (e) {
             console.error("OCR scan failed", e);
-            // On error: keep existing amount, don't block save
-            setFormData((prev) => ({ ...prev, amount: payslip?.amount || "0" }));
+            setFormData((prev) => ({ ...prev, amount: payslip?.amount || "" }));
             setAmountConfirmed(true);
             toast.error("OCR scan failed, keeping previous amount.");
         } finally {
@@ -225,9 +215,7 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
             return;
         }
         if (!amountConfirmed) {
-            // 2+ matches and user hasn't picked yet — re-open dialog
-            setOcrDialogOpen(true);
-            toast.error("Please select an amount to continue.");
+            toast.error("Please wait until amount scan is complete.");
             return;
         }
 
@@ -421,50 +409,6 @@ const EditPayslip: React.FC<EditPayslipProps> = ({
                 </Box>
             </Drawer>
 
-            {/* OCR Amount Picker Dialog */}
-            <Dialog
-                open={ocrDialogOpen}
-                onClose={() => {}}
-                maxWidth="xs"
-                fullWidth
-                disableEscapeKeyDown
-            >
-                <DialogTitle>
-                    <Typography fontWeight={700}>Select Payslip Amount</Typography>
-                    <Typography variant="body2" color="textSecondary" mt={0.5}>
-                        Multiple amounts were detected. You must select one to continue.
-                    </Typography>
-                </DialogTitle>
-                <DialogContent>
-                    <Stack spacing={1.5} mt={1}>
-                        {ocrMatches.map((match, i) => (
-                            <Button
-                                key={i}
-                                variant="outlined"
-                                fullWidth
-                                onClick={() => {
-                                    setFormData((prev) => ({ ...prev, amount: match.value }));
-                                    setAmountConfirmed(true);
-                                    setOcrDialogOpen(false);
-                                    toast.success(`Amount set: ${match.value}`);
-                                }}
-                                sx={{
-                                    justifyContent: "space-between",
-                                    px: 2.5, py: 1.5,
-                                    borderRadius: 2,
-                                }}
-                            >
-                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                                    {match.label}
-                                </Typography>
-                                <Typography variant="body1" color="primary" fontWeight={700}>
-                                    {match.value}
-                                </Typography>
-                            </Button>
-                        ))}
-                    </Stack>
-                </DialogContent>
-            </Dialog>
         </>
     );
 };

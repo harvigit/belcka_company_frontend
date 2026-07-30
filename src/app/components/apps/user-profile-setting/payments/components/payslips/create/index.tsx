@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
     Drawer, Box, IconButton, Typography, Button, InputLabel,
-    Avatar, Select, MenuItem, Dialog, DialogTitle, DialogContent,
-    DialogActions, Stack, CircularProgress, Chip,
+    Avatar, Select, MenuItem, Stack, CircularProgress, Chip,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
@@ -38,6 +37,8 @@ interface CreatePayslipProps {
     isShow: boolean;
 }
 
+const ALLOWED_PAYSLIP_AMOUNT_LABELS = new Set(["Net Total", "Net Payment", "Total Net", "Net"]);
+
 const CreatePayslip: React.FC<CreatePayslipProps> = ({
                                                          open, onClose, formData, setFormData,
                                                          handleSubmit, isSaving, isShow,
@@ -47,16 +48,12 @@ const CreatePayslip: React.FC<CreatePayslipProps> = ({
 
     // OCR state
     const [isScanning, setIsScanning] = useState(false);
-    const [ocrMatches, setOcrMatches] = useState<AmountMatch[]>([]);
-    const [ocrDialogOpen, setOcrDialogOpen] = useState(false);
     const [amountConfirmed, setAmountConfirmed] = useState(false);
 
     // Reset all OCR state when drawer opens/closes
     useEffect(() => {
         if (open) {
             setPreview(null);
-            setOcrMatches([]);
-            setOcrDialogOpen(false);
             setAmountConfirmed(false);
             getUsers();
         }
@@ -85,33 +82,24 @@ const CreatePayslip: React.FC<CreatePayslipProps> = ({
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
-            const { amount, matches }: { amount: string | null; matches: AmountMatch[] } = res.data;
+            const { matches }: { amount: string | null; matches: AmountMatch[] } = res.data;
+            const selectedMatch = matches.find((match) => ALLOWED_PAYSLIP_AMOUNT_LABELS.has(match.label));
+            const selectedAmount = selectedMatch?.value ?? "";
 
-            if (matches.length >= 2) {
-                // 2+ matches (same or different values) → always show dialog
-                setOcrMatches(matches);
-                setOcrDialogOpen(true);
-                // don't set amountConfirmed yet — wait for user pick
+            setFormData((prev) => ({ ...prev, amount: selectedAmount }));
+            setAmountConfirmed(true);
 
+            if (selectedMatch) {
+                toast.success(`Amount detected: ${selectedAmount}`);
             } else {
-                // 0 matches → amount="0"  |  1 match → amount=value
-                // Both cases: auto-set, no dialog
-                setFormData((prev) => ({ ...prev, amount: amount ?? "0" }));
-                setAmountConfirmed(true);
-
-                if (matches.length === 0) {
-                    toast("No amount detected, saving with 0.", { icon: "ℹ️" });
-                } else {
-                    toast.success(`Amount detected: ${amount}`);
-                }
+                toast("No allowed payslip amount detected.", { icon: "ℹ️" });
             }
 
         } catch (e) {
             console.error("OCR scan failed", e);
-            // On error: default to 0, don't block save
-            setFormData((prev) => ({ ...prev, amount: "0" }));
+            setFormData((prev) => ({ ...prev, amount: "" }));
             setAmountConfirmed(true);
-            toast.error("OCR scan failed, amount set to 0.");
+            toast.error("OCR scan failed, amount left blank.");
         } finally {
             setIsScanning(false);
         }
@@ -152,9 +140,7 @@ const CreatePayslip: React.FC<CreatePayslipProps> = ({
             return;
         }
         if (!amountConfirmed) {
-            // Only hit if 2+ matches and user hasn't picked yet
-            setOcrDialogOpen(true);
-            toast.error("Please select an amount to continue.");
+            toast.error("Please wait until amount scan is complete.");
             return;
         }
 
@@ -310,50 +296,6 @@ const CreatePayslip: React.FC<CreatePayslipProps> = ({
                 </Box>
             </Drawer>
 
-            {/* OCR Amount Picker Dialog */}
-            <Dialog
-                open={ocrDialogOpen}
-                onClose={() => {}}
-                maxWidth="xs"
-                fullWidth
-                disableEscapeKeyDown
-            >
-                <DialogTitle>
-                    <Typography fontWeight={700}>Select Payslip Amount</Typography>
-                    <Typography variant="body2" color="textSecondary" mt={0.5}>
-                        Multiple amounts were detected. You must select one to continue.
-                    </Typography>
-                </DialogTitle>
-                <DialogContent>
-                    <Stack spacing={1.5} mt={1}>
-                        {ocrMatches.map((match, i) => (
-                            <Button
-                                key={i}
-                                variant="outlined"
-                                fullWidth
-                                onClick={() => {
-                                    setFormData((prev) => ({ ...prev, amount: match.value }));
-                                    setAmountConfirmed(true);
-                                    setOcrDialogOpen(false);
-                                    toast.success(`Amount set: ${match.value}`);
-                                }}
-                                sx={{
-                                    justifyContent: "space-between",
-                                    px: 2.5, py: 1.5,
-                                    borderRadius: 2,
-                                }}
-                            >
-                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                                    {match.label}
-                                </Typography>
-                                <Typography variant="body1" color="primary" fontWeight={700}>
-                                    {match.value}
-                                </Typography>
-                            </Button>
-                        ))}
-                    </Stack>
-                </DialogContent>
-            </Dialog>
         </>
     );
 };
