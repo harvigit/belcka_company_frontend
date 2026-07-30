@@ -82,6 +82,7 @@ type PenaltyMapPoint = {
     color: string;
     position: google.maps.LatLngLiteral;
     address?: string | null;
+    time?: string | null;
 };
 
 const OUTSIDE_BOUNDARY = "Outside Boundary";
@@ -98,6 +99,7 @@ const normalizeLocationPoint = (
     label: "Start" | "Stop",
     color: string,
     location?: PenaltyLocation | null,
+    time?: string | null,
 ): PenaltyMapPoint | null => {
     const lat = Number(location?.latitude);
     const lng = Number(location?.longitude);
@@ -109,6 +111,7 @@ const normalizeLocationPoint = (
         color,
         position: { lat, lng },
         address: location?.location,
+        time,
     };
 };
 
@@ -254,10 +257,10 @@ const OutsideBoundaryMap = ({ penalty }: { penalty: PenaltyItem }) => {
     const points = useMemo(
         () =>
             [
-                normalizeLocationPoint("Start", "#1976d2", penalty.start_work_location),
-                normalizeLocationPoint("Stop", "#fc4b6c", penalty.stop_work_location),
+                normalizeLocationPoint("Start", "#1976d2", penalty.start_work_location, penalty.formatted_start_time),
+                normalizeLocationPoint("Stop", "#fc4b6c", penalty.stop_work_location, penalty.formatted_end_time),
             ].filter((point): point is PenaltyMapPoint => point !== null),
-        [penalty.start_work_location, penalty.stop_work_location],
+        [penalty.start_work_location, penalty.stop_work_location, penalty.formatted_start_time, penalty.formatted_end_time],
     );
     const geofences = useMemo(() => normalizeGeofences(penalty.geofences), [penalty.geofences]);
     const hasMapData = points.length > 0 || geofences.length > 0;
@@ -341,8 +344,8 @@ const OutsideBoundaryMap = ({ penalty }: { penalty: PenaltyItem }) => {
             <Box mt={1} display="flex" flexDirection="column" gap={0.75}>
                 {points.map((point) => (
                     <Typography key={point.label} variant="caption" color="text.secondary">
-                        <strong style={{ color: point.color }}>{point.label}:</strong>{" "}
-                        {point.address || `${point.position.lat}, ${point.position.lng}`}
+                        <strong style={{ color: point.color }}>{point.label} Address:</strong>{" "}
+                        {point.address || `${point.position.lat}, ${point.position.lng}`}  {" | "}  {point.time || "--"}
                     </Typography>
                 ))}
             </Box>
