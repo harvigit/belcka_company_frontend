@@ -32,18 +32,18 @@ export interface TradeList {
 }
 
 const calculateRates = (netRate: number, cisPercentage: number) => {
-    if (cisPercentage === 30) {
-        return {
-            cis: (netRate * 0.4286).toFixed(2),
-            gross: (netRate * 1.4286).toFixed(2),
-        };
-    } else {
-        // Default: 20%
-        return {
-            cis: (netRate * 0.25).toFixed(2),
-            gross: (netRate * 1.25).toFixed(2),
-        };
-    }
+  if (cisPercentage === 30) {
+    return {
+      cis: (netRate * 0.4286).toFixed(2),
+      gross: (netRate * 1.4286).toFixed(2),
+    };
+  } else {
+    // Default: 20%
+    return {
+      cis: (netRate * 0.25).toFixed(2),
+      gross: (netRate * 1.25).toFixed(2),
+    };
+  }
 };
 
 const ComapnyRate: React.FC<ProjectListingProps> = ({
@@ -106,10 +106,10 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
         // setCis(cisAmount.toFixed(2));
         // setGross(grossAmount.toFixed(2));
 
-          const { cis, gross } = calculateRates(netRate, cisPercentage);
-          setCis(cis);
-          setGross(gross);
-          
+        const { cis, gross } = calculateRates(netRate, cisPercentage);
+        setCis(cis);
+        setGross(gross);
+
         setFormData({
           trade_id: companyData.trade_id ?? null,
           rate: netRate,
@@ -192,6 +192,9 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       fetchTrades();
     }
   }, [comapny]);
+
+  const hasTradeChange = !!comapny?.new_data?.trade_id;
+  const hasRateChange = !!comapny?.new_net_rate_perday;
 
   const handleUpdate = async () => {
     const currentTradeId = comapny?.trade_id ?? null;
@@ -376,9 +379,9 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
         // setCis(cisAmount.toFixed(2));
         // setGross(grossAmount.toFixed(2));
 
-          const { cis, gross } = calculateRates(netRate, cisPer);
-          setCis(cis);
-          setGross(gross);
+        const { cis, gross } = calculateRates(netRate, cisPer);
+        setCis(cis);
+        setGross(gross);
       }
     }
 
@@ -486,11 +489,34 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                         justifyContent: "space-between",
                       }}
                     >
-                      <Typography sx={{ color: "black !important", mr: 2 }}>
-                        Rate request is pending please take an action.
+                      <Typography sx={{ color: "black", mr: 2 }}>
+                        {hasTradeChange && hasRateChange
+                          ? "Trade and Rate request is pending. Please take an action."
+                          : hasTradeChange
+                            ? "Trade request is pending. Please take an action."
+                            : hasRateChange
+                              ? "Rate request is pending. Please take an action."
+                              : "Request is pending. Please take an action."}
+
                         <Typography color="textSecondary" className="f-14">
-                        Requested Rate: {comapny?.currency}{comapny?.new_net_rate_perday}
-                      </Typography>
+                          {hasTradeChange && (
+                            <>
+                              <strong>Trade:</strong>{" "}
+                              {comapny?.diff_data?.trade_name?.old} →{" "}
+                              {comapny?.diff_data?.trade_name?.new}
+                              <br />
+                            </>
+                          )}
+
+                          {hasRateChange && (
+                            <>
+                              <strong>Rate:</strong> {comapny?.currency}
+                              {comapny?.old_net_rate_perday} →{" "}
+                              {comapny?.currency}
+                              {comapny?.new_net_rate_perday}
+                            </>
+                          )}
+                        </Typography>
                       </Typography>
 
                       <Button
