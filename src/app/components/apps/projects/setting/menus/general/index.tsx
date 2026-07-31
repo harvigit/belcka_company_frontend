@@ -16,14 +16,14 @@ interface GeneralSettingsProps {
 const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSaveSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [locationRadius, setLocationRadius] = useState<number | string>(100);
+  const [locationRadius, setLocationRadius] = useState<number | string>(150);
 
   const fetchSettings = async () => {
     setLoading(true);
     try {
       const res = await api.get("setting/general-settings");
       if (res.data?.IsSuccess) {
-        setLocationRadius(res.data.data?.location_radius ?? 100);
+        setLocationRadius(res.data.data?.location_radius ?? 150);
       }
     } catch (err) {
       console.error("Failed to fetch settings", err);
@@ -38,8 +38,8 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSaveSuccess }) => {
 
   const handleSave = async () => {
     const radiusNum = Number(locationRadius);
-    if (isNaN(radiusNum) || radiusNum < 1 || radiusNum > 100) {
-      toast.error("Location radius must be between 1 and 100 meters.");
+    if (isNaN(radiusNum) || radiusNum < 1 || radiusNum > 150) {
+      toast.error("Location radius must be between 1 and 150 meters.");
       return;
     }
 
@@ -76,8 +76,8 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSaveSuccess }) => {
             value={locationRadius}
             onChange={(e) => setLocationRadius(e.target.value)}
             fullWidth
-            inputProps={{ min: 1, max: 100 }}
-            helperText="Maximum 100 meters"
+            inputProps={{ min: 1, max: 150 }}
+            helperText="Maximum 150 meters"
           />
         </Box>
       )}

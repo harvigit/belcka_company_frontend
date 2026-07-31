@@ -167,7 +167,7 @@ const AddressesList = ({
   const [archiveList, setArchiveList] = useState(false);
   const [address, setAddress] = useState<any>(null);
   const [radius, setRadius] = useState(0);
-  const [defaultRadius, setDefaultRadius] = useState<number>(100);
+  const [defaultRadius, setDefaultRadius] = useState<number>(150);
   const fetched = useRef(false);
   const [progress, setProgress] = useState(false);
   const status = ["Completed", "To Do", "In Progress"];
@@ -537,7 +537,7 @@ const AddressesList = ({
     const currentProject = projects?.find(
       (p: any) => p.id === Number(projectId) || p.id === task.project_id,
     );
-    let initialRadius = task.radius || currentProject?.radius || 100;
+    let initialRadius = task.radius || currentProject?.radius || 150;
 
     let initialLat = task.latitude;
     let initialLng = task.longitude;
@@ -1960,7 +1960,7 @@ const AddressesList = ({
                     <input
                       type="range"
                       min={0}
-                      max={100}
+                      max={150}
                       value={radius}
                       onChange={(e) => setRadius(Number(e.target.value))}
                       style={{
@@ -2373,7 +2373,7 @@ const AddressesList = ({
                           const currentProject = projects?.find(
                             (p: any) => p.id === Number(projectId),
                           );
-                          let newRadius = currentProject?.radius ?? 100;
+                          let newRadius = currentProject?.radius ?? 150;
                           let newColor: string | undefined = undefined;
                           let newName = "";
 
@@ -2389,7 +2389,7 @@ const AddressesList = ({
                               "";
                             newLat = firstCase.lat || firstCase.latitude;
                             newLng = firstCase.lng || firstCase.longitude;
-                            newRadius = firstCase.radius || 100;
+                            newRadius = firstCase.radius || 150;
                             newColor = firstCase.color;
                           } else {
                             if (newVal.lat && newVal.lng) {

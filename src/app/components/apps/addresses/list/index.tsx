@@ -181,7 +181,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     lng: number;
   } | null>(null);
   const [predictions, setPredictions] = useState<UnifiedPrediction[]>([]);
-  const [radius, setRadius] = useState(100);
+  const [radius, setRadius] = useState(150);
   const [typedAddress, setTypedAddress] = useState(false);
   const [formData, setFormData] = useState<any>({
     project_ids: [Number(projectID)],
@@ -222,7 +222,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const circleRef = useRef<any>(null);
   const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
   const lastRadiusRef = useRef<number>(0);
-  const [maxRadius, setMaxRadius] = useState<number>(100);
+  const [maxRadius, setMaxRadius] = useState<number>(150);
   const [postcodeQuery, setPostcodeQuery] = useState("");
   const [addressOptions, setAddressOptions] = useState<any[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
@@ -439,8 +439,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       setParentAddressType("address");
       setShowLocationPin(true);
       setSelectedLocation(null);
-      setParentAddressRadius(maxRadius || 100);
-      setRadius(maxRadius || 100);
+      setParentAddressRadius(maxRadius || 150);
+      setRadius(maxRadius || 150);
     }
     setAddressOptions([]);
     setParentAddressDrawerOpen(true);

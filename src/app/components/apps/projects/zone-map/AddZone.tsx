@@ -248,7 +248,7 @@ const AddZone = ({
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [color, setColor] = useState("#1976d2");
-  const [radius, setRadius] = useState(100);
+  const [radius, setRadius] = useState(150);
   const [isSaving, setIsSaving] = useState(false);
   const [location, setLocation] = useState(LONDON_CENTER);
   const [typedAddress, setTypedAddress] = useState(false);
@@ -290,7 +290,7 @@ const AddZone = ({
     if (addr) {
       const loc = { lat: Number(addr.latitude), lng: Number(addr.longitude) };
       setLocation(loc);
-      setRadius(addr.radius || 200);
+      setRadius(addr.radius || 150);
       mapRef.current?.panTo(loc);
     }
   };
