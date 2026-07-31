@@ -152,6 +152,8 @@ const StockList = () => {
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [stockQty, setStockQty] = useState("0.00");
+  const [qty, setQty] = useState("0.00");
+  const [packOfUnit, setPackOfUnit] = useState("");
   const [productName, setProductName] = useState("");
   const [isSubQty, setIsSubQty] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
@@ -325,7 +327,7 @@ const StockList = () => {
       if (res.data) {
         const pagMeta =
           res.data.data?.totalPages !== undefined ||
-            res.data.data?.totalItems !== undefined
+          res.data.data?.totalItems !== undefined
             ? res.data.data
             : res.data.info && res.data.info.totalPages !== undefined
               ? res.data.info
@@ -370,11 +372,15 @@ const StockList = () => {
       if (res.data && res.data.IsSuccess) {
         setHistory(res.data.info ?? []);
         setStockQty(res.data.stock_qty ?? "0.00");
+        setQty(res.data.qty ?? "0.00");
+        setPackOfUnit(res.data.pack_of_unit ?? "");
         setProductName(res.data.product_name ?? "");
         setIsSubQty(res.data.is_sub_qty);
       } else {
         setHistory([]);
         setStockQty("0.00");
+        setPackOfUnit("");
+        setQty("0.00")
         setProductName("");
         setIsSubQty(false);
       }
@@ -537,7 +543,7 @@ const StockList = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
           tableContainerRef.current.scrollWidth >
-          tableContainerRef.current.clientWidth,
+            tableContainerRef.current.clientWidth,
         );
       }
     };
@@ -676,7 +682,9 @@ const StockList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Tooltip title={item.short_name ? item.short_name : item.name ?? ""}>
+            <Tooltip
+              title={item.short_name ? item.short_name : (item.name ?? "")}
+            >
               <Typography
                 className="f-14"
                 variant="body1"
@@ -725,18 +733,22 @@ const StockList = () => {
         return (
           <Stack direction="row" alignItems="center">
             <Tooltip title={item.supplier_code ? item.supplier_code : "-"}>
-              <Typography textTransform="capitalize" className="f-14" sx={{
-                width: "100%",
-                minWidth: "80px",
-                display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 1,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                lineHeight: 1.25,
-                maxWidth: "150px",
-                wordBreak: "break-word",
-              }}>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  width: "100%",
+                  minWidth: "80px",
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.25,
+                  maxWidth: "150px",
+                  wordBreak: "break-word",
+                }}
+              >
                 {item.supplier_code ? item.supplier_code : "-"}
               </Typography>
             </Tooltip>
@@ -1295,14 +1307,14 @@ const StockList = () => {
                             label={
                               col.columnDef.meta?.label ||
                               (typeof col.columnDef.header === "string" &&
-                                col.columnDef.header.trim() !== ""
+                              col.columnDef.header.trim() !== ""
                                 ? col.columnDef.header
                                 : col.id
-                                  .replace(/([A-Z])/g, " $1")
-                                  .replace(/^./, (str: string) =>
-                                    str.toUpperCase(),
-                                  )
-                                  .trim())
+                                    .replace(/([A-Z])/g, " $1")
+                                    .replace(/^./, (str: string) =>
+                                      str.toUpperCase(),
+                                    )
+                                    .trim())
                             }
                           />
                         ))}
@@ -1515,7 +1527,7 @@ const StockList = () => {
                             paddingBottom: "10px",
                             width:
                               header.column.id === "actions" ||
-                                header.column.id === "barcode"
+                              header.column.id === "barcode"
                                 ? 80
                                 : header.column.id === "Qty"
                                   ? 120
@@ -1524,7 +1536,7 @@ const StockList = () => {
                                     : header.column.id === "QrCode"
                                       ? 120
                                       : header.column.id === "supplierCode" ||
-                                        header.column.id === "stockStatus"
+                                          header.column.id === "stockStatus"
                                         ? 140
                                         : header.column.id === "QrCode"
                                           ? 120
@@ -1704,7 +1716,8 @@ const StockList = () => {
                 fontWeight={500}
                 fontSize={20}
               >
-                {isSubQty ? "Sub qty" : "Qty"} in Stock: {stockQty}
+                Qty in Stock: {isSubQty ? qty : stockQty}{" "}
+                {isSubQty ? `(${stockQty} ${packOfUnit})` : ""}
               </Typography>
               <IconButton onClick={() => setDrawerOpen(false)}>
                 <IconX size={18} />
@@ -1788,7 +1801,9 @@ const StockList = () => {
                                 fontWeight: "bold",
                               }}
                             >
-                              {isSubQty && h.qty_in_pack ? h.qty_in_pack : (h.qty ?? 0)}
+                              {isSubQty && h.qty_in_pack
+                                ? h.qty_in_pack
+                                : (h.qty ?? 0)}
                             </Typography>
 
                             <Typography
@@ -1797,7 +1812,8 @@ const StockList = () => {
                               fontWeight={"bold"}
                               ml={0.5}
                             >
-                              {isSubQty && h.qty_in_pack &&
+                              {isSubQty &&
+                                h.qty_in_pack &&
                                 `(${h.qty} ${h.pack_off_unit_name})`}
                             </Typography>
                           </Box>
@@ -1833,30 +1849,36 @@ const StockList = () => {
                         <TableCell>{h.price ?? "-"}</TableCell>
 
                         <TableCell sx={{ fontWeight: "bold" }}>
-                          {isSubQty && h.new_qty_in_pack
-                            ? (
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <Typography color={qtyColor}  className="f-14" sx={{ fontWeight: "bold" }}>
-                                  {Number(h.qty_in_pack || 0).toFixed(2)}
-                                </Typography>
-                                <Typography className="f-14" fontWeight="bold">
-                                  ({Number(h.new_qty_in_pack || 0).toFixed(2)})
-                                </Typography>
-                              </Box>
-                            )
-                            : (
-                              // <Typography color={qtyColor} className="f-14" sx={{ fontWeight: "bold" }}>
-                              //   {Number(h.new_qty || 0).toFixed(2)}
-                              // </Typography>
-                               <Box display="flex" alignItems="center" gap={1}>
-                                <Typography color={qtyColor}  className="f-14" sx={{ fontWeight: "bold" }}>
-                                  {Number(h.qty_in_pack || 0).toFixed(2)}
-                                </Typography>
-                                <Typography className="f-14" fontWeight="bold">
-                                 ({Number(h.new_qty || 0).toFixed(2)})
-                                </Typography>
-                              </Box>
-                            )}
+                          {isSubQty && h.new_qty_in_pack ? (
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Typography
+                                color={qtyColor}
+                                className="f-14"
+                                sx={{ fontWeight: "bold" }}
+                              >
+                                {Number(h.qty_in_pack || 0).toFixed(2)}
+                              </Typography>
+                              <Typography className="f-14" fontWeight="bold">
+                                ({Number(h.new_qty_in_pack || 0).toFixed(2)})
+                              </Typography>
+                            </Box>
+                          ) : (
+                            // <Typography color={qtyColor} className="f-14" sx={{ fontWeight: "bold" }}>
+                            //   {Number(h.new_qty || 0).toFixed(2)}
+                            // </Typography>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Typography
+                                color={qtyColor}
+                                className="f-14"
+                                sx={{ fontWeight: "bold" }}
+                              >
+                                {Number(h.qty_in_pack || 0).toFixed(2)}
+                              </Typography>
+                              <Typography className="f-14" fontWeight="bold">
+                                ({Number(h.new_qty || 0).toFixed(2)})
+                              </Typography>
+                            </Box>
+                          )}
                         </TableCell>
                       </TableRow>
                     </>
