@@ -1009,7 +1009,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                 fontWeight={600}
                                 component="span"
                             >
-                                {calculateTotalDays()} work days
+                                {calculateTotalDays()} days
                             </Typography>
                         </Box>
                     </Box>
