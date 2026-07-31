@@ -105,13 +105,12 @@ const TeamPricing = () => {
     return calculatedPrice.toFixed(2);
   };
 
-  const handleOpenDrawer = async (team: any) => {
+  const fetchDrawerData = async (
+    team: any,
+    currentPage: number,
+    targetSearch: string
+  ) => {
     try {
-      setSelectedTeam(team);
-      setTeamPercentage(team.percentage);
-      setOpenDrawer(true);
-      setPage(1);
-      setProducts([]);
       setLoadingProducts(true);
 
       const teamPercentageStr =
@@ -121,25 +120,38 @@ const TeamPricing = () => {
 
       const [productRes, pricingRes] = await Promise.all([
         api.get(
-          `products/get?company_id=${user.company_id}&is_products=true&page=1&limit=20&team_id=${team.team_id}`,
+          `products/get?company_id=${user.company_id}&is_products=true&page=${currentPage}&limit=20&team_id=${team.team_id}${
+            targetSearch ? `&search=${targetSearch}` : ""
+          }`,
         ),
         api.get(
-          `team/get-team-pricing-details?company_id=${user.company_id}&team_id=${team.team_id}`,
+          `team/get-team-pricing-details?company_id=${user.company_id}&team_id=${team.team_id}&page=${currentPage}&limit=20${
+            targetSearch ? `&search=${targetSearch}` : ""
+          }`,
         ),
       ]);
 
-      const allProducts = productRes.data?.info || [];
+      const newProducts = productRes.data?.info || [];
       const total = productRes.data?.data?.totalItems || 0;
-      setTotalItems(total);
+      if (currentPage === 1) {
+        setTotalItems(total);
+      }
 
       const pricingProducts = pricingRes.data?.info?.products || [];
-      const map = new Map<number, any>(
+      const newPricingMap = new Map<number, any>(
         pricingProducts.map((x: any) => [Number(x.product_id), x]),
       );
-      setPricingMap(map);
 
-      const mergedProducts = allProducts.map((product: any) => {
-        const matched = map.get(Number(product.id));
+      setPricingMap((prev) => {
+        const updatedMap = currentPage === 1 ? new Map() : new Map(prev);
+        pricingProducts.forEach((x: any) => {
+          updatedMap.set(Number(x.product_id), x);
+        });
+        return updatedMap;
+      });
+
+      const mergedProducts = newProducts.map((product: any) => {
+        const matched = newPricingMap.get(Number(product.id));
 
         const resolvedPercentage =
           matched?.percentage !== undefined &&
@@ -168,7 +180,9 @@ const TeamPricing = () => {
         };
       });
 
-      setProducts(mergedProducts);
+      setProducts((prev) =>
+        currentPage === 1 ? mergedProducts : [...prev, ...mergedProducts]
+      );
     } catch (err) {
       console.error(err);
     } finally {
@@ -176,61 +190,31 @@ const TeamPricing = () => {
     }
   };
 
+  const handleOpenDrawer = (team: any) => {
+    setSelectedTeam(team);
+    setTeamPercentage(team.percentage);
+    setOpenDrawer(true);
+    setPage(1);
+    setSearch("");
+    setProducts([]);
+  };
+
+  useEffect(() => {
+    if (openDrawer && selectedTeam) {
+      const delayDebounceFn = setTimeout(() => {
+        setPage(1);
+        fetchDrawerData(selectedTeam, 1, search);
+      }, 500);
+
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [search, openDrawer, selectedTeam]);
+
   const handleSeeMore = async () => {
     if (!selectedTeam) return;
     const nextPage = page + 1;
     setPage(nextPage);
-    setLoadingProducts(true);
-
-    try {
-      const productRes = await api.get(
-        `products/get?company_id=${user.company_id}&is_products=true&is_web=true&page=${nextPage}&limit=20`,
-      );
-
-      const newProducts = productRes.data?.info || [];
-
-      const teamPercentageStr =
-        selectedTeam.percentage !== undefined &&
-        selectedTeam.percentage !== null
-          ? String(selectedTeam.percentage)
-          : "";
-
-      const mergedProducts = newProducts.map((product: any) => {
-        const matched = pricingMap.get(Number(product.id));
-
-        const resolvedPercentage =
-          matched?.percentage !== undefined &&
-          matched?.percentage !== null &&
-          String(matched.percentage) !== ""
-            ? String(matched.percentage)
-            : teamPercentageStr;
-
-        const buyingPrice = Number(product.price || product.buying_price || 0);
-        const marketPrice = Number(product.market_price || 0);
-
-        const calculatedPrice =
-          matched?.calculated_price !== undefined &&
-          matched?.calculated_price !== null
-            ? Number(matched.calculated_price).toFixed(2)
-            : calculateProductPrice(
-                buyingPrice,
-                marketPrice,
-                resolvedPercentage,
-              );
-
-        return {
-          ...product,
-          percentage: resolvedPercentage,
-          calculated_price: calculatedPrice,
-        };
-      });
-
-      setProducts((prev) => [...prev, ...mergedProducts]);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingProducts(false);
-    }
+    await fetchDrawerData(selectedTeam, nextPage, search);
   };
 
   const autoApplyPricing = async (teamId: number, percentageStr: string) => {
@@ -335,15 +319,6 @@ const TeamPricing = () => {
     }
   };
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((item: any) => {
-      return (
-        item.name?.toLowerCase().includes(search.toLowerCase()) ||
-        item.short_name?.toLowerCase().includes(search.toLowerCase()) ||
-        item.uuid?.toLowerCase().includes(search.toLowerCase())
-      );
-    });
-  }, [products, search]);
 
   return (
     <Box
@@ -567,9 +542,9 @@ const TeamPricing = () => {
             <Box display="flex" justifyContent="center" mt={5}>
               <CircularProgress />
             </Box>
-          ) : filteredProducts?.length > 0 ? (
+          ) : products?.length > 0 ? (
             <Stack spacing={1.5}>
-              {filteredProducts.map((item: any) => (
+              {products.map((item: any) => (
                 <Box
                   key={item.id}
                   sx={{

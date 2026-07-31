@@ -232,6 +232,22 @@ const ConflictItemDisplay = React.memo(
                                         {formatFieldLabel(key)}
                                     </Typography>
 
+                                    {oldValue && (
+                                        <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{
+                                            wordBreak: 'break-word',
+                                            maxWidth: '45%',
+                                            whiteSpace: 'pre-wrap',
+                                            textTransform: 'none',
+                                        }}
+                                    >
+                                      {oldValue ? "Old: " :""}  {String(oldValue ?? '')}
+                                    </Typography>
+                                    )}
+                                    
+                                    {newValue && (
                                     <Typography
                                         variant="body2"
                                         color="text.secondary"
@@ -242,21 +258,9 @@ const ConflictItemDisplay = React.memo(
                                             textTransform: 'none',
                                         }}
                                     >
-                                        {String(oldValue ?? '')}
+                                        {newValue ? "New: " :""}{String(newValue ?? '')}
                                     </Typography>
-
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                        sx={{
-                                            wordBreak: 'break-word',
-                                            maxWidth: '45%',
-                                            whiteSpace: 'pre-wrap',
-                                            textTransform: 'none',
-                                        }}
-                                    >
-                                        {String(newValue ?? '')}
-                                    </Typography>
+                                    )}
                                 </Box>
                             );
                         })}
