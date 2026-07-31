@@ -15,6 +15,7 @@ import {
   DialogActions,
   Autocomplete,
   Badge,
+  Drawer,
 } from "@mui/material";
 import { Stack } from "@mui/system";
 import {
@@ -33,17 +34,20 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import ChecklogDetailPage from "../../../time-clock/time-clock-details/checklogs/checklog-details";
+import AddPricework from "../../../time-clock/time-clock-details/pricework/add-pricework";
+import PriceworkDetails from "../../../time-clock/time-clock-details/pricework/pricework-details";
 
 interface WorksTabProps {
   addressId: number;
   companyId: number;
+  currency?: string | null;
 }
 
 type FilterState = {
   type: string;
 };
 
-export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
+export const WorksTab = ({ addressId, companyId, currency }: WorksTabProps) => {
   const [tabData, setTabData] = useState<any[]>([]);
   const [searchWork, setSearchWork] = useState<string>("");
   const [openDialog, setOpenDialog] = useState(false);
@@ -54,9 +58,13 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
   const [tempFilters, setTempFilters] = useState<FilterState>(filters);
   const [openSidebar, setOpenSidebar] = useState(false);
   const [openChecklogSidebar, setOpenChecklogSidebar] = useState(false);
+  const [openPriceworkDetailsSidebar, setOpenPriceworkDetailsSidebar] =
+    useState(false);
+  const [openAddPriceworkSidebar, setOpenAddPriceworkSidebar] = useState(false);
   const [selectedChecklogId, setSelectedChecklogId] = useState<number | null>(
     null,
   );
+  const [selectedPricework, setSelectedPricework] = useState<any>(null);
   const [selectedWorkId, setSelectedWorkId] = useState(null);
   const [fetchWork, setFetchWork] = useState(false);
   const [trade, setTrade] = useState<any[]>([]);
@@ -209,6 +217,43 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
   const handleWorkClick = (workId: any) => {
     setSelectedWorkId(workId);
     setOpenSidebar(true);
+  };
+
+  const getCurrencySymbol = (record?: any) =>
+    currency ||
+    record?.currency ||
+    record?.company_currency ||
+    record?.currency_symbol ||
+    "";
+
+  const formatCurrencyAmount = (
+    record: any,
+    value: string | number | null | undefined,
+  ) => {
+    const amount = Number(value ?? 0);
+    return `${getCurrencySymbol(record)}${Number.isFinite(amount) ? amount.toFixed(2) : "0.00"}`;
+  };
+
+  const handlePriceworkClick = (pricework: any) => {
+    setSelectedPricework(pricework);
+    setOpenPriceworkDetailsSidebar(true);
+  };
+
+  const handleEditPricework = (pricework: any) => {
+    setSelectedPricework(pricework);
+    setOpenPriceworkDetailsSidebar(false);
+    setOpenAddPriceworkSidebar(true);
+  };
+
+  const closePriceworkDetailsSidebar = () => {
+    setOpenPriceworkDetailsSidebar(false);
+    setSelectedPricework(null);
+  };
+
+  const closeAddPriceworkSidebar = async () => {
+    setOpenAddPriceworkSidebar(false);
+    setSelectedPricework(null);
+    await fetchWorkTabData();
   };
 
   interface Work {
@@ -396,19 +441,14 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
         filteredData.map((work, idx) =>
           work.is_pricework_record ? (
             <Box
-              key={work.id}
+              key={`pricework-${work.id}`}
               mb={2}
-              onClick={() => {
-                if (work.check_log_id) {
-                  setSelectedChecklogId(work.check_log_id);
-                  setOpenChecklogSidebar(true);
-                }
-              }}
+              onClick={() => handlePriceworkClick(work)}
               sx={{
                 border: "1px solid #ccc",
                 borderRadius: 2,
                 p: 2,
-                cursor: work.check_log_id ? "pointer" : "default",
+                cursor: "pointer",
                 "&:hover": { boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)" },
               }}
             >
@@ -440,7 +480,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     {work.work_complete || "0"} {work.unit_name} ×{" "}
-                    {Number(work.amount_per_unit || 0).toFixed(2)}
+                    {formatCurrencyAmount(work, work.amount_per_unit)}
                     {work.date ? ` · ${work.date}` : ""}
                   </Typography>
                 </Box>
@@ -449,7 +489,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                   fontSize="1.1rem"
                   sx={{ whiteSpace: "nowrap" }}
                 >
-                  {Number(work.pricework_amount || 0).toFixed(2)}
+                  {formatCurrencyAmount(work, work.pricework_amount)}
                 </Typography>
               </Stack>
             </Box>
@@ -624,7 +664,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                     <Typography variant="caption" color="text.secondary">
                       {work.work_complete} {work.unit_name}
                       {work.amount_per_unit
-                        ? ` × ${Number(work.amount_per_unit).toFixed(2)}`
+                        ? ` × ${formatCurrencyAmount(work, work.amount_per_unit)}`
                         : ""}
                       {work.date ? ` · ${work.date}` : ""}
                     </Typography>
@@ -648,7 +688,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                   <Stack>
                     <Typography fontWeight="bold" fontSize="1.25rem">
                       {work.pricework_amount
-                        ? Number(work.pricework_amount).toFixed(2)
+                        ? formatCurrencyAmount(work, work.pricework_amount)
                         : null}
                     </Typography>
                     {parseFloat(work.total_work_hours) > 0 && (
@@ -720,6 +760,55 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
           setSelectedChecklogId(null);
         }}
       />
+      <Drawer
+        anchor="right"
+        open={openPriceworkDetailsSidebar}
+        onClose={closePriceworkDetailsSidebar}
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            boxShadow: "none",
+            overflow: "hidden",
+            width: "504px",
+            borderTopLeftRadius: 18,
+            borderBottomLeftRadius: 18,
+          },
+        }}
+      >
+        <PriceworkDetails
+          pricework={selectedPricework}
+          currency={getCurrencySymbol(selectedPricework)}
+          onClose={closePriceworkDetailsSidebar}
+          onEdit={handleEditPricework}
+        />
+      </Drawer>
+      <Drawer
+        anchor="right"
+        open={openAddPriceworkSidebar}
+        onClose={closeAddPriceworkSidebar}
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            boxShadow: "none",
+            overflow: "hidden",
+            width: "504px",
+            borderTopLeftRadius: 18,
+            borderBottomLeftRadius: 18,
+          },
+        }}
+      >
+        <AddPricework
+          onClose={closeAddPriceworkSidebar}
+          userId={
+            selectedPricework?.user_id
+              ? Number(selectedPricework.user_id)
+              : undefined
+          }
+          companyId={companyId}
+          pricework={selectedPricework}
+          onDataRefresh={fetchWorkTabData}
+        />
+      </Drawer>
     </Box>
   );
 };

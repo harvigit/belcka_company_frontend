@@ -1068,6 +1068,11 @@ const AddressesList = ({
                       companyId: item.company_id,
                       projectId: item.project_id,
                       addressId: item.id,
+                      currency:
+                        item.currency ||
+                        projects?.find(
+                          (project: any) => project.id === item.project_id,
+                        )?.currency,
                       info: [true],
                     })
                   }
@@ -1790,6 +1795,7 @@ const AddressesList = ({
                 <WorksTab
                   companyId={sidebarData.companyId}
                   addressId={sidebarData.addressId}
+                  currency={sidebarData.currency}
                 />
               )}
               {value === 1 && (
