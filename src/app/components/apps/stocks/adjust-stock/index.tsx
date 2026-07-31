@@ -558,7 +558,8 @@ const AdjustStock: React.FC<Props> = ({
                   // Allow empty, integers, and up to 2 decimal places
                   if (/^\d*(\.\d{0,2})?$/.test(val)) {
                     const num = Number(val);
-                    if (val === "" || num <= 10000) {
+                    // Allow intermediate "." while typing (e.g. ".5" / "1.")
+                    if (val === "" || Number.isNaN(num) || num <= 10000) {
                       setAdjustQty(val);
                     }
                   }
