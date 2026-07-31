@@ -22,7 +22,7 @@ import { debounce } from "lodash";
 import "react-day-picker/dist/style.css";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
-import { format } from "date-fns";
+import { endOfWeek, format, startOfWeek } from "date-fns";
 import { DayPicker } from "react-day-picker";
 import { styled } from "@mui/material/styles";
 import { AxiosResponse } from "axios";
@@ -87,6 +87,12 @@ const StyledDayPicker = styled(Box)(({ theme }) => ({
         backgroundColor: "#e6f3ff",
     },
 }));
+
+const PAID_OR_LOCKED_WEEK_MESSAGE =
+    "This week already has a Paid or Locked timesheet.";
+
+const isPaidOrLockedStatus = (status: any): boolean =>
+    status === 6 || status === "6" || status === 9 || status === "9";
 
 const AddWorklog: React.FC<AddWorklogProps> = ({
                                                    onClose,
@@ -262,6 +268,32 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
             : format(new Date(), "dd/MM/yyyy");
     };
 
+    const hasPaidOrLockedTimesheetInWeek = async (): Promise<boolean> => {
+        if (!singleDate || !newRecord.userId) return false;
+
+        const weekStart = startOfWeek(singleDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(singleDate, { weekStartsOn: 1 });
+
+        const response = await api.get("/time-clock/details", {
+            params: {
+                user_id: newRecord.userId,
+                start_date: format(weekStart, "dd/MM/yyyy"),
+                end_date: format(weekEnd, "dd/MM/yyyy"),
+            },
+        });
+
+        const weeks = response.data?.info || [];
+
+        return weeks.some((week: any) =>
+            (week.days || []).some((day: any) =>
+                isPaidOrLockedStatus(day.status) ||
+                (day.worklogs || []).some((log: any) =>
+                    isPaidOrLockedStatus(log.status),
+                ),
+            ),
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (
@@ -296,6 +328,11 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
         setLoading(true);
 
         try {
+            if (await hasPaidOrLockedTimesheetInWeek()) {
+                toast.error(PAID_OR_LOCKED_WEEK_MESSAGE);
+                return;
+            }
+
             const response = await api.post("/time-clock/add-worklog", params);
 
             if (response.data.IsSuccess) {

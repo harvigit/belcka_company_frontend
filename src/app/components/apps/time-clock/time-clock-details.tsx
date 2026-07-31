@@ -97,6 +97,12 @@ const DELETE_ENDPOINTS: Record<RecordType, string> = {
     pricework: '/pricework/delete',
 };
 
+const PAID_OR_LOCKED_WEEK_MESSAGE = 'This week already has a Paid or Locked timesheet.';
+
+const isPaidOrLockedStatus = (status: any): boolean => {
+    return status === 6 || status === '6' || status === 9 || status === '9';
+};
+
 const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, columnVisibility: VisibilityState) => {
     try {
         const pageState = loadStorageState(TIME_CLOCK_PAGE);
@@ -394,7 +400,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     };
 
     const isRecordLocked = (log: any): boolean => {
-        return log?.status === 6 || log?.status === '6' || log?.status === 9 || log?.status === '9';
+        return isPaidOrLockedStatus(log?.status);
     };
 
     const isRecordUnlocked = (log: any): boolean => {
@@ -952,6 +958,20 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             console.error('Invalid date format:', newRecord.date);
             return;
         }
+
+        const selectedWeek = data.find((week: any) =>
+            (week.days || []).some((day: any) => day.date === newRecord.date)
+        );
+        const hasPaidOrLockedTimesheetInWeek = (selectedWeek?.days || []).some((day: any) =>
+            isPaidOrLockedStatus(day.status) ||
+            (day.worklogs || []).some((log: any) => isPaidOrLockedStatus(log.status))
+        );
+
+        if (hasPaidOrLockedTimesheetInWeek) {
+            toast.error(PAID_OR_LOCKED_WEEK_MESSAGE);
+            return;
+        }
+
         const formattedDate = parsedDate.toFormat('yyyy-MM-dd');
 
         setSavingNewRecords((prev) => new Set(prev).add(recordKey));

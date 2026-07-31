@@ -811,8 +811,8 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         {rejectDialog.isBulk
-                            ? 'Please provide a reason for rejecting all pending requests:'
-                            : 'Please provide a reason for rejecting this request:'
+                            ? 'Add a reason for rejecting all pending requests (optional):'
+                            : 'Add a reason for rejecting this request (optional):'
                         }
                     </Typography>
                     <TextField

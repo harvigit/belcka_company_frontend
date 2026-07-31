@@ -406,10 +406,6 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
     const handleSubmitAction = async () => {
         if (!selectedId || !actionType) return;
 
-        if (actionType === "reject" && !note.trim()) {
-            return toast.error("Rejection note is required");
-        }
-
         try {
             setLoading(true);
             const url =
@@ -1266,7 +1262,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                             <Typography mb={1}>
                                 {actionType === "approve"
                                     ? "Add approval note (optional)"
-                                    : "Rejection reason (required)"}
+                                    : "Rejection reason (optional)"}
                             </Typography>
 
                             <TextField
@@ -1280,12 +1276,6 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                     actionType === "approve"
                                         ? "Enter approval note..."
                                         : "Enter rejection reason..."
-                                }
-                                error={actionType === "reject" && !note.trim()}
-                                helperText={
-                                    actionType === "reject" && !note.trim()
-                                        ? "Rejection note is required"
-                                        : ""
                                 }
                             />
                         </DialogContent>
@@ -1301,7 +1291,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                             <Button
                                 variant="contained"
                                 color={actionType === "approve" ? "success" : "error"}
-                                disabled={loading || (actionType === "reject" && !note.trim())}
+                                disabled={loading}
                                 onClick={handleSubmitAction}
                             >
                                 {loading

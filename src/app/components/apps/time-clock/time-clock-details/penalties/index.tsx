@@ -400,17 +400,12 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
             return;
         }
 
-        if (!adminNote.trim()) {
-            toast.error("Please enter an admin note");
-            return;
-        }
-
         try {
             setProcessingAppealId(selectedPenalty.appeal_id);
             const res = await api.post("time-clock/appeal-action", {
                 appeal_id: selectedPenalty.appeal_id,
                 status: appealAction ? 5 : 12,
-                admin_note: adminNote.trim(),
+                admin_note: adminNote.trim() || null,
             });
 
             if (res.data?.IsSuccess) {
@@ -600,7 +595,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                     <TextField
                         autoFocus
                         margin="dense"
-                        label="Admin Note"
+                        label="Admin Note (optional)"
                         placeholder="Enter your note here..."
                         multiline
                         rows={4}
