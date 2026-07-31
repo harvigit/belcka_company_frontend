@@ -76,8 +76,18 @@ export default function CaseEditDrawer({
   const [predictions, setPredictions] = useState<UnifiedPrediction[]>([]);
   const defaultRadius = 150;
   const circleRef = useRef<google.maps.Circle | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
   const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
   const lastRadiusRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (mapRef.current && circleRef.current) {
+      const bounds = circleRef.current.getBounds();
+      if (bounds) {
+        mapRef.current.fitBounds(bounds);
+      }
+    }
+  }, [formData.radius, selectedLocation]);
 
   const isIEPostcode = (value: string) =>
     /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
@@ -423,6 +433,7 @@ export default function CaseEditDrawer({
                     <GoogleMap
                       zoom={17}
                       center={selectedLocation}
+                      onLoad={(map) => { mapRef.current = map; }}
                       mapContainerStyle={{
                         width: "100%",
                         height: "400px",
@@ -444,6 +455,15 @@ export default function CaseEditDrawer({
                       <Circle
                         center={selectedLocation}
                         radius={formData.radius}
+                        onLoad={(circle) => {
+                          circleRef.current = circle;
+                          if (mapRef.current) {
+                            const bounds = circle.getBounds();
+                            if (bounds) {
+                              mapRef.current.fitBounds(bounds);
+                            }
+                          }
+                        }}
                         options={{
                           draggable: false,
                           editable: false,

@@ -189,6 +189,7 @@ const AddressesList = ({
     onSelectionChange(Array.from(selectedRowIds));
   }, [selectedRowIds]);
   const circleRef = useRef<google.maps.Circle | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
   const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
   const lastRadiusRef = useRef<number | null>(null);
 
@@ -359,6 +360,15 @@ const AddressesList = ({
       setFetchAddress(false);
     }
   };
+
+  useEffect(() => {
+    if (mapRef.current && circleRef.current) {
+      const bounds = circleRef.current.getBounds();
+      if (bounds) {
+        mapRef.current.fitBounds(bounds);
+      }
+    }
+  }, [formData.radius, selectedLocation]);
 
   useEffect(() => {
     if (projectId) {
@@ -2172,6 +2182,9 @@ const AddressesList = ({
                       <GoogleMap
                         zoom={17}
                         center={selectedLocation}
+                        onLoad={(map) => {
+                          mapRef.current = map;
+                        }}
                         mapContainerStyle={{
                           width: "100%",
                           height: "400px",
@@ -2193,6 +2206,15 @@ const AddressesList = ({
                         <Circle
                           center={selectedLocation}
                           radius={formData.radius}
+                          onLoad={(circle) => {
+                            circleRef.current = circle;
+                            if (mapRef.current) {
+                              const bounds = circle.getBounds();
+                              if (bounds) {
+                                mapRef.current.fitBounds(bounds);
+                              }
+                            }
+                          }}
                           options={{
                             draggable: false,
                             editable: false,
@@ -2538,6 +2560,9 @@ const AddressesList = ({
                       <GoogleMap
                         zoom={17}
                         center={selectedLocation}
+                        onLoad={(map) => {
+                          mapRef.current = map;
+                        }}
                         mapContainerStyle={{
                           width: "100%",
                           height: "400px",
@@ -2549,6 +2574,15 @@ const AddressesList = ({
                         <Circle
                           center={selectedLocation}
                           radius={formData.radius}
+                          onLoad={(circle) => {
+                            circleRef.current = circle;
+                            if (mapRef.current) {
+                              const bounds = circle.getBounds();
+                              if (bounds) {
+                                mapRef.current.fitBounds(bounds);
+                              }
+                            }
+                          }}
                           options={{
                             draggable: false,
                             editable: false,
