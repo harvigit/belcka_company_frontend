@@ -43,6 +43,7 @@ import {
   IconChevronRight,
   IconFilter,
   IconSearch,
+  IconFileExport,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -101,6 +102,7 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
   const [fetchHistory, setFetchHistory] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const [isSelectAll, setIsSelectAll] = useState<boolean>(false);
   const [filters, setFilters] = useState({ type: "", user: "" });
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
@@ -123,7 +125,7 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
       if (tableContainerRef.current) {
         setIsScrollable(
           tableContainerRef.current.scrollWidth >
-          tableContainerRef.current.clientWidth,
+            tableContainerRef.current.clientWidth,
         );
       }
     };
@@ -176,14 +178,48 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
   const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
 
   // Fetch histories
-  const fetchHistories = async (start?: string, end?: string) => {
+  const fetchHistories = async () => {
+    if (!openDrawer || !user?.company_id || !startDate || !endDate) return;
     setFetchHistory(true);
     try {
-      const res = await api.get(
-        `stocks/stock-history?company_id=${user.company_id}&start_date=${start}&end_date=${end}`,
-      );
+      const formattedStart = dayjs(startDate).format("DD/MM/YYYY");
+      const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
+      let url = `stocks/stock-history?company_id=${user.company_id}&start_date=${formattedStart}&end_date=${formattedEnd}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (searchTerm) {
+        url += `&search=${searchTerm}`;
+      }
+      if (filters.user && filters.user !== "All") {
+        const userId = users.find((c) => c.name === filters.user)?.id;
+        if (userId) {
+          url += `&user_ids=${userId}`;
+        }
+      }
+      const res = await api.get(url);
       if (res.data) {
-        setData(res.data.info);
+        const responseData = res.data.info || [];
+        setData(responseData);
+
+        const pagMeta =
+          res.data.data?.totalPages !== undefined ||
+          res.data.data?.totalItems !== undefined
+            ? res.data.data
+            : res.data.info && res.data.info.totalPages !== undefined
+              ? res.data.info
+              : res.data.data || {};
+
+        if (pagMeta.totalItems !== undefined) {
+          setTotalRows(pagMeta.totalItems);
+        } else if (pagMeta.total !== undefined) {
+          setTotalRows(pagMeta.total);
+        } else {
+          setTotalRows(responseData.length);
+        }
+
+        if (pagMeta.totalPages !== undefined) {
+          setPageCount(pagMeta.totalPages);
+        } else if (pagMeta.last_page !== undefined) {
+          setPageCount(pagMeta.last_page);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch location", err);
@@ -202,14 +238,6 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
     }
   };
 
-  useEffect(() => {
-    if (openDrawer && startDate && endDate && user?.company_id) {
-      const formattedStart = dayjs(startDate).format("DD/MM/YYYY");
-      const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
-      fetchHistories(formattedStart, formattedEnd);
-    }
-  }, [startDate, endDate, openDrawer, user?.company_id]);
-
   const handleDateRangeChange = (range: {
     from: Date | null;
     to: Date | null;
@@ -227,24 +255,51 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
     }
   }, [openDrawer, user?.company_id]);
 
+  const exportStockHistory = async () => {
+    try {
+      const selectedIds = Array.from(selectedRowIds);
+      const ids = isSelectAll ? "" : selectedIds.length > 0 ? selectedIds.join(",") : "";
+      const formattedStart = startDate
+        ? dayjs(startDate).format("DD/MM/YYYY")
+        : "";
+      const formattedEnd = endDate ? dayjs(endDate).format("DD/MM/YYYY") : "";
+      const payload = {
+        company_id: user.company_id,
+        ids: ids,
+        start_date: formattedStart,
+        end_date: formattedEnd,
+      };
+      const res = await api.post(`stocks/export-history`, payload, {
+        responseType: "blob",
+      });
+
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `stock_history.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      setSelectedRowIds(new Set());
+      setIsSelectAll(false);
+    } catch (err) {
+      console.error("Failed to export stock history", err);
+    }
+  };
+
   const uniqueSupervisors = useMemo(
     () => [...new Set(users.map((item) => item.name).filter(Boolean))],
     [users],
   );
 
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
-      if (filters.user == "All") return data;
-      const matchesUser = filters.user ? item.user_name === filters.user : true;
-      const matchesSearch =
-        item.short_name?.toLowerCase().includes(search) ||
-        item.uuid?.toLowerCase().includes(search) ||
-        item.note?.toLowerCase().includes(search);
-
-      return matchesSearch && matchesUser;
-    });
-  }, [data, filters, searchTerm]);
+    return data;
+  }, [data]);
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
@@ -255,11 +310,11 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
           <CustomCheckbox
             className="header-checkbox"
             checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
+              isSelectAll || (selectedRowIds.size === filteredData.length &&
+              filteredData.length > 0)
             }
             indeterminate={
-              selectedRowIds.size > 0 &&
+              !isSelectAll && selectedRowIds.size > 0 &&
               selectedRowIds.size < filteredData.length
             }
             onClick={(e) => e.stopPropagation()}
@@ -267,9 +322,10 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
               e.stopPropagation();
               e.preventDefault();
               const isChecked = e.target.checked;
-
+              
+              setIsSelectAll(isChecked);
               if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+                setSelectedRowIds(new Set());
               } else {
                 setSelectedRowIds(new Set());
               }
@@ -279,7 +335,7 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
       ),
       cell: ({ row }: any) => {
         const item = row.original;
-        const isChecked = selectedRowIds.has(item.id);
+        const isChecked = isSelectAll || selectedRowIds.has(item.id);
         const isHovered = hoveredRow === item.id;
         const showCheckbox = isChecked || isHovered;
 
@@ -297,13 +353,21 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
               onChange={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                const newSelected = new Set(selectedRowIds);
-                if (isChecked) {
+                
+                if (isSelectAll) {
+                  setIsSelectAll(false);
+                  const newSelected = new Set(filteredData.map((row) => row.id));
                   newSelected.delete(item.id);
+                  setSelectedRowIds(newSelected);
                 } else {
-                  newSelected.add(item.id);
+                  const newSelected = new Set(selectedRowIds);
+                  if (isChecked) {
+                    newSelected.delete(item.id);
+                  } else {
+                    newSelected.add(item.id);
+                  }
+                  setSelectedRowIds(newSelected);
                 }
-                setSelectedRowIds(newSelected);
               }}
               sx={{
                 opacity: showCheckbox ? 1 : 0,
@@ -426,7 +490,7 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
           >
             {item.is_sub_qty && item.qty_in_pack
               ? `${item.qty_in_pack} (${info.getValue()} nos)`
-              : info.getValue() ?? "-"}
+              : (info.getValue() ?? "-")}
           </Typography>
         );
       },
@@ -448,7 +512,7 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
           >
             {item.is_sub_qty && item.new_qty_in_pack
               ? `${item.new_qty_in_pack} (${info.getValue()} nos)`
-              : info.getValue() ?? "-"}
+              : (info.getValue() ?? "-")}
           </Typography>
         );
       },
@@ -459,17 +523,28 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
     setAnchorEl2(event.currentTarget);
   };
   const handlePopoverClose = () => setAnchorEl2(null);
-
-  const { table } = useServerTable({
+  const formattedStart = dayjs(startDate).format("DD/MM/YYYY");
+  const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
+  const {
+    table,
+    pagination,
+    setPagination,
+    totalRows,
+    setTotalRows,
+    pageCount,
+    setPageCount,
+  } = useServerTable({
     data: filteredData,
     columns,
-    fetchData: () => {},
-    manualPagination: false,
-    manualFiltering: false,
-    state: { columnVisibility },
-    onColumnVisibilityChange: onColumnVisibilityChange,
+    fetchData: fetchHistories,
+    debounceDependencies: [
+      searchTerm,
+      formattedStart,
+      formattedEnd,
+      filters,
+      openDrawer,
+    ],
   });
-
   // Reset to first page when search term changes
   useEffect(() => {
     table.setPageIndex(0);
@@ -650,6 +725,13 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
+            <Button
+              variant="contained"
+              onClick={exportStockHistory}
+              sx={{ minWidth: "40px", px: 1, mr: 1 }}
+            >
+              <IconFileExport size={18} />Export
+            </Button>
             <IconButton
               onClick={handlePopoverOpen}
               sx={{ ml: 1 }}
