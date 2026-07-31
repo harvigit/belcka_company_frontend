@@ -286,6 +286,7 @@ export type TimeClock = {
     has_leave_request?: boolean;
     has_expense_request?: boolean;
     has_worklog_request?: boolean;
+    has_penalty_appeal_request?: boolean;
 
     user_status_color: string;
 };
@@ -1319,6 +1320,12 @@ const TimeClock = ({queryParams}: Props) => {
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
 
+    const hasPendingRequest = (row: TimeClock): boolean =>
+        row.has_leave_request === true ||
+        row.has_expense_request === true ||
+        row.has_worklog_request === true ||
+        row.has_penalty_appeal_request === true;
+
     const columns = [
         {
             id: 'select',
@@ -1561,16 +1568,11 @@ const TimeClock = ({queryParams}: Props) => {
                 const value = info.getValue();
                 const formatted = formatHour(value) || '-';
 
-                const hasPendingRequest =
-                    row.has_leave_request === true ||
-                    row.has_expense_request === true ||
-                    row.has_worklog_request === true;
-
                 return (
                     <Typography
                         variant="h6"
                         sx={{
-                            color: hasPendingRequest ? '#f97316' : 'inherit',
+                            color: hasPendingRequest(row) ? '#f97316' : 'inherit',
                         }}
                     >
                         {formatted}
@@ -1612,16 +1614,11 @@ const TimeClock = ({queryParams}: Props) => {
                 const displayValue =
                     value === 0 ? '0' : value ? `${currency}${value}` : '-';
 
-                const hasPendingRequest =
-                    row.has_leave_request === true ||
-                    row.has_expense_request === true ||
-                    row.has_worklog_request === true;
-
                 return (
                     <Typography
                         variant="h6"
                         sx={{
-                            color: hasPendingRequest ? '#f97316' : 'inherit',
+                            color: hasPendingRequest(row) ? '#f97316' : 'inherit',
                         }}
                     >
                         {displayValue}
@@ -1639,16 +1636,11 @@ const TimeClock = ({queryParams}: Props) => {
                 const displayValue =
                     value === 0 ? '0' : value ? `${currency}${value}` : '-';
 
-                const hasPendingRequest =
-                    row.has_leave_request === true ||
-                    row.has_expense_request === true ||
-                    row.has_worklog_request === true;
-
                 return (
                     <Typography
                         variant="h6"
                         sx={{
-                            color: hasPendingRequest ? '#f97316' : 'inherit',
+                            color: hasPendingRequest(row) ? '#f97316' : 'inherit',
                         }}
                     >
                         {displayValue}
