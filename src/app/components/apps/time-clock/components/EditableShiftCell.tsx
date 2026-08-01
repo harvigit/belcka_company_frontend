@@ -77,7 +77,15 @@ const EditableShiftCell: React.FC<EditableShiftCellProps> = ({
     }
 
     return (
-        <Tooltip title={currentShiftName || ''} arrow placement="top">
+        <Tooltip
+            title={
+                isLocked
+                    ? 'This worklog is locked and cannot be edited'
+                    : currentShiftName || 'Click to edit shift'
+            }
+            arrow
+            placement="top"
+        >
             <Box
                 onClick={() => !isLocked && startEditingShift(worklogId, currentShiftId, log)}
                 sx={{
@@ -102,7 +110,6 @@ const EditableShiftCell: React.FC<EditableShiftCellProps> = ({
                         }
                         : {},
                 }}
-                title={isLocked ? 'This worklog is locked and cannot be edited' : 'Click to edit shift'}
             >
                 {getTruncatedName(currentShiftName)}
             </Box>

@@ -3032,7 +3032,7 @@ const TimeClock = ({queryParams}: Props) => {
                                                         '&:hover .hoverIcon': {opacity: 1},
                                                     }}
                                                 >
-                                                    <Typography variant="body2">
+                                                    <Typography variant="body2" component="span">
                                                         {flexRender(header.column.columnDef.header, header.getContext())}
                                                     </Typography>
                                                     {isSortable && (

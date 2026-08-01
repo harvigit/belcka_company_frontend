@@ -27,6 +27,8 @@ import toast from 'react-hot-toast';
 interface ExpensesPageProps {
     expenseId: number;
     onClose: () => void;
+    /** When true, only the attachments section is shown (Expense list page). */
+    attachmentsOnly?: boolean;
 }
 
 interface Attachment {
@@ -73,7 +75,7 @@ interface ExpenseDetail {
     attachments: Attachment[];
 }
 
-export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
+export default function Expenses({expenseId, onClose, attachmentsOnly = false}: ExpensesPageProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const [expenseDetail, setExpenseDetail] = useState<ExpenseDetail | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
@@ -214,7 +216,7 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                         <IconArrowLeft/>
                     </IconButton>
                     <Typography variant="h6" fontWeight={700} ml={1}>
-                        Expense Details
+                        {attachmentsOnly ? 'Attachments' : 'Expense Details'}
                     </Typography>
                 </Box>
                 {/*<IconButton*/}
@@ -236,15 +238,18 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
             {/*</Box>*/}
 
             {/* Amount */}
+            {!attachmentsOnly && (
             <Box mb={3}>
                 <Typography variant="h4" fontWeight={700} color="primary">
                     {expenseDetail.currency}{expenseDetail.total_amount.toFixed(2)}
                 </Typography>
             </Box>
+            )}
 
-            <Divider sx={{my: 2}}/>
+            {!attachmentsOnly && <Divider sx={{my: 2}}/>}
 
             {/* Details Grid */}
+            {!attachmentsOnly && (
             <Box
                 sx={{
                     display: 'flex',
@@ -347,10 +352,12 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                     </Stack>
                 </Box>
             </Box>
+            )}
 
-            <Divider sx={{my: 2}}/>
+            {!attachmentsOnly && <Divider sx={{my: 2}}/>}
 
             {/* Address */}
+            {!attachmentsOnly && (
             <Box mb={3}>
                 <Typography variant="caption" color="text.secondary" mb={0.5} display="block">
                     Address
@@ -359,9 +366,10 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                     {expenseDetail.address_name}
                 </Typography>
             </Box>
+            )}
 
             {/* Note */}
-            {expenseDetail.note && (
+            {!attachmentsOnly && expenseDetail.note && (
                 <Box mb={3}>
                     <Typography variant="caption" color="text.secondary" mb={0.5} display="block">
                         Note
@@ -373,11 +381,13 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
             )}
 
             {/* Attachments */}
-            {expenseDetail.attachments && expenseDetail.attachments.length > 0 && (
+            {expenseDetail.attachments && expenseDetail.attachments.length > 0 ? (
                 <Box>
+                    {!attachmentsOnly && (
                     <Typography variant="caption" color="text.secondary" mb={1} display="block">
                         Attachments ({expenseDetail.attachments.length})
                     </Typography>
+                    )}
                     <Box
                         sx={{
                             display: 'flex',
@@ -419,7 +429,11 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                         ))}
                     </Box>
                 </Box>
-            )}
+            ) : attachmentsOnly ? (
+                <Typography variant="body2" color="text.secondary" py={2}>
+                    No attachments found
+                </Typography>
+            ) : null}
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
