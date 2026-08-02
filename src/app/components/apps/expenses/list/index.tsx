@@ -5,6 +5,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -25,7 +26,13 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { IconEye, IconFilter, IconSearch, IconX } from "@tabler/icons-react";
+import {
+  IconDownload,
+  IconEye,
+  IconFilter,
+  IconSearch,
+  IconX,
+} from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import { format, subDays } from "date-fns";
@@ -34,6 +41,7 @@ import {
   flexRender,
   SortingState,
 } from "@tanstack/react-table";
+import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
@@ -80,6 +88,7 @@ const ExpenseList = () => {
 
   const [data, setData] = useState<ExpenseRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState(defaultFilters);
   const [tempFilters, setTempFilters] = useState(defaultFilters);
@@ -100,6 +109,12 @@ const ExpenseList = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
+
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [isSelectAll, setIsSelectAll] = useState(false);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedExpenseId, setSelectedExpenseId] = useState<number | null>(
@@ -137,6 +152,80 @@ const ExpenseList = () => {
 
   const columns = useMemo(
     () => [
+      {
+        id: "select",
+        enableSorting: false,
+        enableHiding: false,
+        header: () => (
+          <Stack direction="row" alignItems="center">
+            <CustomCheckbox
+              className="header-checkbox"
+              checked={
+                isSelectAll ||
+                (selectedRowIds.size === data.length && data.length > 0)
+              }
+              indeterminate={
+                !isSelectAll &&
+                selectedRowIds.size > 0 &&
+                selectedRowIds.size < data.length
+              }
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const isChecked = e.target.checked;
+                setIsSelectAll(isChecked);
+                setSelectedRowIds(new Set());
+              }}
+            />
+          </Stack>
+        ),
+        cell: ({ row }: any) => {
+          const item = row.original as ExpenseRow;
+          const isChecked = isSelectAll || selectedRowIds.has(item.id);
+          const isHovered = hoveredRow === item.id;
+          const showCheckbox = isChecked || isHovered;
+
+          return (
+            <Stack
+              direction="row"
+              alignItems="center"
+              onMouseEnter={() => setHoveredRow(item.id)}
+              onMouseLeave={() => setHoveredRow(null)}
+              sx={{ pl: 1 }}
+            >
+              <CustomCheckbox
+                checked={isChecked}
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+
+                  if (isSelectAll) {
+                    setIsSelectAll(false);
+                    const newSelected = new Set(data.map((r) => r.id));
+                    newSelected.delete(item.id);
+                    setSelectedRowIds(newSelected);
+                  } else {
+                    const newSelected = new Set(selectedRowIds);
+                    if (isChecked) {
+                      newSelected.delete(item.id);
+                    } else {
+                      newSelected.add(item.id);
+                    }
+                    setSelectedRowIds(newSelected);
+                  }
+                }}
+                sx={{
+                  opacity: showCheckbox ? 1 : 0,
+                  pointerEvents: showCheckbox ? "auto" : "none",
+                  transition: "opacity 0.2s ease",
+                }}
+              />
+            </Stack>
+          );
+        },
+      },
       columnHelper.accessor("receipt_date", {
         id: "receipt_date",
         header: "Receipt Date",
@@ -275,7 +364,7 @@ const ExpenseList = () => {
         ),
       }),
     ],
-    [],
+    [data, isSelectAll, selectedRowIds, hoveredRow],
   );
 
   const simpleColumns = columns.map((column: any) => ({
@@ -364,6 +453,82 @@ const ExpenseList = () => {
     setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
   };
 
+  const parseBlobError = async (blob: Blob) => {
+    try {
+      const text = await blob.text();
+      const json = JSON.parse(text);
+      const message = json?.message ?? json?.Message;
+      if (Array.isArray(message)) return message.join(", ");
+      if (typeof message === "string" && message.trim()) return message;
+      return "Failed to download attachments";
+    } catch {
+      return "Failed to download attachments";
+    }
+  };
+
+  const handleDownloadAttachments = async () => {
+    if (!isSelectAll && selectedRowIds.size === 0) {
+      toast.error("Please select at least one expense");
+      return;
+    }
+
+    setDownloading(true);
+    try {
+      const payload: Record<string, any> = {
+        select_all: isSelectAll,
+      };
+
+      if (isSelectAll) {
+        if (search) payload.search = search;
+        if (startDate) payload.start_date = format(startDate, "dd/MM/yyyy");
+        if (endDate) payload.end_date = format(endDate, "dd/MM/yyyy");
+        if (filters.user_id) payload.user_id = filters.user_id;
+        if (filters.project_id) payload.project_id = filters.project_id;
+        if (filters.category_id) payload.category_id = filters.category_id;
+        if (filters.trade_id) payload.trade_id = filters.trade_id;
+        if (filters.team_id) payload.team_id = filters.team_id;
+      } else {
+        payload.ids = Array.from(selectedRowIds);
+      }
+
+      const response = await api.post(
+        "expense/download-attachments-zip",
+        payload,
+        { responseType: "blob" },
+      );
+
+      const contentType = String(
+        response.headers?.["content-type"] || "",
+      ).toLowerCase();
+      if (contentType.includes("application/json")) {
+        toast.error(await parseBlobError(response.data));
+        return;
+      }
+
+      const blob = new Blob([response.data], { type: "application/zip" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "expense-attachments.zip");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      const blob = error?.response?.data;
+      if (blob instanceof Blob) {
+        toast.error(await parseBlobError(blob));
+      } else {
+        toast.error(
+          error?.response?.data?.message ||
+            "Failed to download attachments",
+        );
+      }
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const getUserLabel = (option: any) => {
     if (!option) return "";
     if (option.name) return option.name;
@@ -419,6 +584,21 @@ const ExpenseList = () => {
           >
             <IconFilter width={18} />
           </Button>
+          <Button
+            variant="outlined"
+            startIcon={
+              downloading ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <IconDownload size={18} />
+              )
+            }
+            onClick={handleDownloadAttachments}
+            disabled={downloading}
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            Download Attachments
+          </Button>
         </Box>
 
         <Box display="flex" justifyContent="flex-end">
@@ -436,7 +616,10 @@ const ExpenseList = () => {
             transformOrigin={{ vertical: "top", horizontal: "right" }}
           >
             <FormGroup sx={{ p: 2 }}>
-              {table.getAllLeafColumns().map((column) => (
+              {table
+                .getAllLeafColumns()
+                .filter((column) => column.id !== "select")
+                .map((column) => (
                 <FormControlLabel
                   key={column.id}
                   control={
@@ -531,7 +714,11 @@ const ExpenseList = () => {
         </Table>
       </TableContainer>
 
-      <TablePaginationFooter table={table} totalRows={totalRows} />
+      <TablePaginationFooter
+        table={table}
+        totalRows={totalRows}
+        selectedCount={isSelectAll ? totalRows : selectedRowIds.size}
+      />
 
       <Dialog
         open={filterOpen}
