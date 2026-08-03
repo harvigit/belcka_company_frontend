@@ -235,8 +235,14 @@ const AdjustStock: React.FC<Props> = ({
   };
 
   const submitStock = async (type: "add" | "deduct") => {
-    if (!adjustQty) {
+    if (adjustQty === "" || adjustQty === null || adjustQty === undefined) {
       toast.error("Quantity required!");
+      return;
+    }
+
+    const parsedQty = Number(adjustQty);
+    if (isNaN(parsedQty) || parsedQty <= 0) {
+      toast.error("Please enter a valid quantity!");
       return;
     }
 
@@ -248,7 +254,7 @@ const AdjustStock: React.FC<Props> = ({
     try {
       setLoading(true);
 
-      let qty = Number(adjustQty);
+      let qty = Number(parsedQty.toFixed(2));
 
       if (type === "deduct") {
         qty = -Math.abs(qty);
@@ -543,13 +549,25 @@ const AdjustStock: React.FC<Props> = ({
                 fullWidth
                 id="packOffQty"
                 type="text"
+                inputMode="decimal"
                 placeholder="Quantity"
                 value={adjustQty}
                 onChange={(e) => {
                   const val = e.target.value;
 
-                  if (/^\d*\.?\d*$/.test(val)) {
-                    setAdjustQty(val);
+                  // Allow empty, integers, and up to 2 decimal places
+                  if (/^\d*(\.\d{0,2})?$/.test(val)) {
+                    const num = Number(val);
+                    // Allow intermediate "." while typing (e.g. ".5" / "1.")
+                    if (val === "" || Number.isNaN(num) || num <= 10000) {
+                      setAdjustQty(val);
+                    }
+                  }
+                }}
+                onKeyDown={(e) => {
+                  // Block non-numeric keys that browsers may allow on text inputs
+                  if (["e", "E", "+", "-"].includes(e.key)) {
+                    e.preventDefault();
                   }
                 }}
               />
