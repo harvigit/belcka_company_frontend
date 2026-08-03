@@ -553,7 +553,7 @@ const Company = () => {
       </Badge>
       <UserRequests
         open={requestDrawer}
-        onRequestCountChange={fetchFeeds}
+        onRequestCountChange={(count: number) => setRequestCount(count || 0)}
         onClose={() => setRequestDrawer(false)}
       />
       <Drawer
