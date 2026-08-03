@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import api from '@/utils/axios';
 import {
     Box,
@@ -12,21 +12,22 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Chip,
-    Divider,
     Card,
     CardMedia,
+    Divider,
 } from '@mui/material';
 import {
-    IconArrowLeft, IconTrash, IconFileText, IconCalendar, IconUser, IconBuilding, IconTag, IconCamper, IconDownload,
-    IconX
+    IconArrowLeft, IconFileText, IconCalendar, IconUser, IconBuilding, IconTag, IconCamper,
 } from '@tabler/icons-react';
 import {Stack} from '@mui/system';
 import toast from 'react-hot-toast';
+import AttachmentLightbox from '@/app/components/common/AttachmentLightbox';
 
 interface ExpensesPageProps {
     expenseId: number;
     onClose: () => void;
+    /** When true, only the attachments section is shown (Expense list page). */
+    attachmentsOnly?: boolean;
 }
 
 interface Attachment {
@@ -73,12 +74,17 @@ interface ExpenseDetail {
     attachments: Attachment[];
 }
 
-export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
+const isPdfAttachment = (attachment: Attachment) =>
+    attachment.type === 'application/pdf' ||
+    attachment.image_url?.toLowerCase().includes('.pdf');
+
+export default function Expenses({expenseId, onClose, attachmentsOnly = false}: ExpensesPageProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const [expenseDetail, setExpenseDetail] = useState<ExpenseDetail | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [lightboxIndex, setLightboxIndex] = useState(0);
 
     useEffect(() => {
         if (expenseId > 0) {
@@ -114,7 +120,7 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
             const response = await api.post('expense/delete', {expense_id: expenseDetail.id});
             if (response.data && typeof response.data === 'object' && response.data.IsSuccess) {
                 toast.success(response.data.message || 'Expense deleted successfully');
-                onClose(); // Close the detail view after successful deletion
+                onClose();
             } else {
                 toast.error(response.data?.message || 'Failed to delete expense');
             }
@@ -127,47 +133,39 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
         }
     };
 
-    const handleDownloadImage = async () => {
-        if (!selectedImage) return;
+    const imageAttachments = useMemo(
+        () =>
+            (expenseDetail?.attachments || []).filter(
+                (attachment) => !isPdfAttachment(attachment),
+            ),
+        [expenseDetail?.attachments],
+    );
 
-        const imageName = selectedImage.split('?')[0].split('/').pop() || 'expense-attachment.jpg';
+    const lightboxSlides = useMemo(
+        () =>
+            imageAttachments.map((attachment) => {
+                const filename =
+                    attachment.image_url.split('?')[0].split('/').pop() ||
+                    `expense-attachment-${attachment.id}.jpg`;
+                return {
+                    src: attachment.image_url,
+                    alt: `Attachment ${attachment.id}`,
+                    downloadFilename: filename,
+                };
+            }),
+        [imageAttachments],
+    );
 
-        try {
-            const response = await fetch(selectedImage);
-            if (!response.ok) throw new Error('Failed to fetch attachment');
-
-            const blob = await response.blob();
-            const objectUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = objectUrl;
-            link.download = imageName;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            URL.revokeObjectURL(objectUrl);
-        } catch {
-            const link = document.createElement('a');
-            link.href = selectedImage;
-            link.download = imageName;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
+    const openAttachment = (attachment: Attachment) => {
+        if (isPdfAttachment(attachment)) {
+            window.open(attachment.image_url, '_blank');
+            return;
         }
-    };
 
-    const getStatusLabel = (status: number) => {
-        switch (status) {
-            case 0:
-                return {label: 'Pending', color: 'warning'};
-            case 1:
-                return {label: 'Approved', color: 'success'};
-            case 2:
-                return {label: 'Rejected', color: 'error'};
-            default:
-                return {label: 'Unknown', color: 'default'};
-        }
+        const index = imageAttachments.findIndex((item) => item.id === attachment.id);
+        if (index < 0) return;
+        setLightboxIndex(index);
+        setLightboxOpen(true);
     };
 
     if (loading) {
@@ -198,11 +196,8 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
         );
     }
 
-    // const statusInfo = getStatusLabel(expenseDetail.status);
-
     return (
         <Box p={2}>
-            {/* Header */}
             <Box
                 display="flex"
                 alignItems="center"
@@ -214,37 +209,22 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                         <IconArrowLeft/>
                     </IconButton>
                     <Typography variant="h6" fontWeight={700} ml={1}>
-                        Expense Details
+                        {attachmentsOnly ? 'Attachments' : 'Expense Details'}
                     </Typography>
                 </Box>
-                {/*<IconButton*/}
-                {/*    color="error"*/}
-                {/*    aria-label="Delete expense"*/}
-                {/*    onClick={() => setOpenDialog(true)}*/}
-                {/*>*/}
-                {/*    <IconTrash width={20}/>*/}
-                {/*</IconButton>*/}
             </Box>
 
-            {/* Status Badge */}
-            {/*<Box mb={2}>*/}
-            {/*    <Chip*/}
-            {/*        label={statusInfo.label}*/}
-            {/*        color={statusInfo.color as any}*/}
-            {/*        size="small"*/}
-            {/*    />*/}
-            {/*</Box>*/}
-
-            {/* Amount */}
+            {!attachmentsOnly && (
             <Box mb={3}>
                 <Typography variant="h4" fontWeight={700} color="primary">
                     {expenseDetail.currency}{expenseDetail.total_amount.toFixed(2)}
                 </Typography>
             </Box>
+            )}
 
-            <Divider sx={{my: 2}}/>
+            {!attachmentsOnly && <Divider sx={{my: 2}}/>}
 
-            {/* Details Grid */}
+            {!attachmentsOnly && (
             <Box
                 sx={{
                     display: 'flex',
@@ -320,7 +300,7 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                                 {expenseDetail.project_name}
                             </Typography>
                         </Box>
-                        
+
                         <Box>
                             <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
                                 <IconUser size={18} color="#666"/>
@@ -347,10 +327,11 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                     </Stack>
                 </Box>
             </Box>
+            )}
 
-            <Divider sx={{my: 2}}/>
+            {!attachmentsOnly && <Divider sx={{my: 2}}/>}
 
-            {/* Address */}
+            {!attachmentsOnly && (
             <Box mb={3}>
                 <Typography variant="caption" color="text.secondary" mb={0.5} display="block">
                     Address
@@ -359,9 +340,9 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                     {expenseDetail.address_name}
                 </Typography>
             </Box>
+            )}
 
-            {/* Note */}
-            {expenseDetail.note && (
+            {!attachmentsOnly && expenseDetail.note && (
                 <Box mb={3}>
                     <Typography variant="caption" color="text.secondary" mb={0.5} display="block">
                         Note
@@ -372,12 +353,13 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                 </Box>
             )}
 
-            {/* Attachments */}
-            {expenseDetail.attachments && expenseDetail.attachments.length > 0 && (
+            {expenseDetail.attachments && expenseDetail.attachments.length > 0 ? (
                 <Box>
+                    {!attachmentsOnly && (
                     <Typography variant="caption" color="text.secondary" mb={1} display="block">
                         Attachments ({expenseDetail.attachments.length})
                     </Typography>
+                    )}
                     <Box
                         sx={{
                             display: 'flex',
@@ -399,18 +381,12 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                                             boxShadow: 3,
                                         },
                                     }}
-                                    onClick={() => {
-                                        if (attachment.type === 'application/pdf') {
-                                            window.open(attachment.image_url, '_blank');
-                                        } else {
-                                            setSelectedImage(attachment.image_url);
-                                        }
-                                    }}
+                                    onClick={() => openAttachment(attachment)}
                                 >
                                     <CardMedia
                                         component="img"
                                         height="140"
-                                        image={attachment.type === 'application/pdf' ? attachment.thumb_url : attachment.image_url}
+                                        image={isPdfAttachment(attachment) ? attachment.thumb_url : attachment.image_url}
                                         alt={`Attachment ${attachment.id}`}
                                         sx={{objectFit: 'cover'}}
                                     />
@@ -419,9 +395,12 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                         ))}
                     </Box>
                 </Box>
-            )}
+            ) : attachmentsOnly ? (
+                <Typography variant="body2" color="text.secondary" py={2}>
+                    No attachments found
+                </Typography>
+            ) : null}
 
-            {/* Delete Confirmation Dialog */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
                 <DialogTitle>Confirm Deletion</DialogTitle>
                 <DialogContent>
@@ -449,52 +428,12 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                 </DialogActions>
             </Dialog>
 
-            {/* Image Preview Dialog */}
-            <Dialog
-                open={!!selectedImage}
-                onClose={() => setSelectedImage(null)}
-                maxWidth="md"
-                fullWidth
-            >
-                <DialogTitle>
-                    Image Preview
-                    <IconButton
-                        aria-label="close"
-                        onClick={() => setSelectedImage(null)}
-                        sx={{
-                            position: 'absolute',
-                            right: 8,
-                            top: 8,
-                        }}
-                    >
-                        <IconX />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent>
-                    {selectedImage && (
-                        <Box
-                            component="img"
-                            src={selectedImage}
-                            alt="Full size attachment"
-                            sx={{
-                                width: '100%',
-                                height: 'auto',
-                                maxHeight: '70vh',
-                                objectFit: 'contain',
-                            }}
-                        />
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button
-                        variant="contained"
-                        startIcon={<IconDownload size={18}/>}
-                        onClick={handleDownloadImage}
-                    >
-                        Download
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            <AttachmentLightbox
+                open={lightboxOpen}
+                index={lightboxIndex}
+                slides={lightboxSlides}
+                onClose={() => setLightboxOpen(false)}
+            />
         </Box>
     );
 }

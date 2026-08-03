@@ -25,6 +25,7 @@ import {
   IconHome2,
   IconMapPin,
   IconUserPin,
+  IconReceipt,
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
@@ -113,6 +114,13 @@ const MenuItems: NavGroup[] = [
     slug: "cases",
     icon: IconFiles,
     href: "/apps/cases/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Expense",
+    slug: "expenses",
+    icon: IconReceipt,
+    href: "/apps/expenses/list",
   },
   {
     id: uniqueId(),

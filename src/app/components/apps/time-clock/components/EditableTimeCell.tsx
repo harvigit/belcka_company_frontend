@@ -233,7 +233,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
             placement="top"
             sx={tooltipStyles}
         >
-            <Box title={isLocked ? 'This worklog is locked and cannot be edited' : ''}>
+            <Box>
                 {cellContent}
             </Box>
         </Tooltip>

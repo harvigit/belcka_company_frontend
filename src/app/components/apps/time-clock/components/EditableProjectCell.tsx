@@ -79,7 +79,15 @@ const EditableProjectCell: React.FC<EditableProjectCellProps> = ({
     }
 
     return (
-        <Tooltip title={currentProjectName || ''} arrow placement="top">
+        <Tooltip
+            title={
+                isLocked
+                    ? 'This worklog is locked and cannot be edited'
+                    : currentProjectName || 'Click to edit project'
+            }
+            arrow
+            placement="top"
+        >
             <Box
                 onClick={() => !isLocked && startEditingProject(worklogId, currentProjectId, log)}
                 sx={{
@@ -104,7 +112,6 @@ const EditableProjectCell: React.FC<EditableProjectCellProps> = ({
                         }
                         : {},
                 }}
-                title={isLocked ? 'This worklog is locked and cannot be edited' : 'Click to edit project'}
             >
                 {displayName}
             </Box>

@@ -68,7 +68,14 @@ export function useServerTable<TData>({
   }, [shouldResetPageOnDebounce]);
 
   // Handle debounced fetch when dependencies like search or filters change
+  // Skip the initial mount run — the pagination effect already fetches once on mount.
+  const isFirstDebounceRun = useRef(true);
   useEffect(() => {
+    if (isFirstDebounceRun.current) {
+      isFirstDebounceRun.current = false;
+      return;
+    }
+
     const handler = setTimeout(() => {
       // If we're not on page 1, reset to page 1, which will trigger the pageIndex effect below
       if (
