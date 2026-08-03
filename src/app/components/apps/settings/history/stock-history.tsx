@@ -110,6 +110,7 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
   const user = session.data?.user as User & { company_id?: number | null } & {
     user_role_id?: number | null;
   };
+  const [sorting, setSorting] = useState<any[]>([]);
 
   const { columnVisibility, onColumnVisibilityChange } =
     usePersistentColumnVisibility({
@@ -258,7 +259,11 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
   const exportStockHistory = async () => {
     try {
       const selectedIds = Array.from(selectedRowIds);
-      const ids = isSelectAll ? "" : selectedIds.length > 0 ? selectedIds.join(",") : "";
+      const ids = isSelectAll
+        ? ""
+        : selectedIds.length > 0
+          ? selectedIds.join(",")
+          : "";
       const formattedStart = startDate
         ? dayjs(startDate).format("DD/MM/YYYY")
         : "";
@@ -310,11 +315,13 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
           <CustomCheckbox
             className="header-checkbox"
             checked={
-              isSelectAll || (selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0)
+              isSelectAll ||
+              (selectedRowIds.size === filteredData.length &&
+                filteredData.length > 0)
             }
             indeterminate={
-              !isSelectAll && selectedRowIds.size > 0 &&
+              !isSelectAll &&
+              selectedRowIds.size > 0 &&
               selectedRowIds.size < filteredData.length
             }
             onClick={(e) => e.stopPropagation()}
@@ -322,7 +329,7 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
               e.stopPropagation();
               e.preventDefault();
               const isChecked = e.target.checked;
-              
+
               setIsSelectAll(isChecked);
               if (isChecked) {
                 setSelectedRowIds(new Set());
@@ -353,10 +360,12 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
               onChange={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                
+
                 if (isSelectAll) {
                   setIsSelectAll(false);
-                  const newSelected = new Set(filteredData.map((row) => row.id));
+                  const newSelected = new Set(
+                    filteredData.map((row) => row.id),
+                  );
                   newSelected.delete(item.id);
                   setSelectedRowIds(newSelected);
                 } else {
@@ -544,6 +553,10 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
       filters,
       openDrawer,
     ],
+    state: { columnVisibility, sorting },
+    onColumnVisibilityChange,
+    onSortingChange: setSorting,
+    manualSorting: true,
   });
   // Reset to first page when search term changes
   useEffect(() => {
@@ -730,7 +743,8 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
               onClick={exportStockHistory}
               sx={{ minWidth: "40px", px: 1, mr: 1 }}
             >
-              <IconFileExport size={18} />Export
+              <IconFileExport size={18} />
+              Export
             </Button>
             <IconButton
               onClick={handlePopoverOpen}
@@ -903,156 +917,160 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
         </Stack>
         <Divider />
 
-        <Box
+        {/* <Box
           sx={{
             flex: 1,
             minHeight: 0,
             overflow: "auto",
           }}
+        > */}
+        <TableContainer
+          ref={tableContainerRef}
+          sx={{
+            position: "relative",
+            "&::after": {
+              content: '""',
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: "20px",
+              background:
+                "linear-gradient(to left, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)",
+              opacity: isScrollable ? 1 : 0,
+              pointerEvents: "none",
+              transition: "opacity 0.2s",
+              zIndex: 2,
+              flex: 1,
+              minHeight: 0,
+              overflowX: "auto",
+              overflowY: "auto",
+            },
+          }}
         >
-          <TableContainer
-            ref={tableContainerRef}
-            sx={{
-              position: "relative",
-              "&::after": {
-                content: '""',
-                position: "absolute",
-                top: 0,
-                right: 0,
-                bottom: 0,
-                width: "20px",
-                background:
-                  "linear-gradient(to left, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)",
-                opacity: isScrollable ? 1 : 0,
-                pointerEvents: "none",
-                transition: "opacity 0.2s",
-                zIndex: 2,
-              },
-            }}
-          >
-            <Table stickyHeader aria-label="sticky table">
-              <TableHead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      const isActive = header.column.getIsSorted();
-                      const isAsc = header.column.getIsSorted() === "asc";
-                      const isSortable = header.column.getCanSort();
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const isActive = header.column.getIsSorted();
+                    const isAsc = header.column.getIsSorted() === "asc";
+                    const isSortable = header.column.getCanSort();
 
-                      return (
-                        <TableCell
-                          key={header.id}
-                          align="center"
-                          sx={{
-                            paddingTop: "10px",
-                            paddingBottom: "10px",
-                            width:
-                              header.column.id === "actions"
-                                ? 120
-                                : header.column.id === "select"
-                                  ? 30
-                                  : "auto",
-                          }}
-                        >
-                          <Box
-                            onClick={header.column.getToggleSortingHandler()}
-                            p={0}
-                            sx={{
-                              cursor: isSortable ? "pointer" : "default",
-                              border: "2px solid transparent",
-                              borderRadius: "6px",
-                              display: "flex",
-                              justifyContent: "flex-start",
-                              "&:hover": { color: "#888" },
-                              "&:hover .hoverIcon": { opacity: 1 },
-                            }}
-                          >
-                            <Typography variant="subtitle2">
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext(),
-                              )}
-                            </Typography>
-                            {isSortable && (
-                              <Box
-                                component="span"
-                                className="hoverIcon"
-                                ml={0.5}
-                                sx={{
-                                  transition: "opacity 0.2s",
-                                  opacity: isActive ? 1 : 0,
-                                  fontSize: "0.9rem",
-                                  color: isActive ? "#000" : "#888",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                              </Box>
-                            )}
-                          </Box>
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-              </TableHead>
-              <TableBody>
-                {fetchHistory ? (
-                  <SkeletonLoader
-                    columns={simpleColumns}
-                    rowCount={simpleColumns.length}
-                  />
-                ) : data.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length}>
-                      <Box
+                    return (
+                      <TableCell
+                        key={header.id}
+                        align="center"
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          height: "calc(50vh - 100px)",
+                          paddingTop: "10px",
+                          paddingBottom: "10px",
+                          width:
+                            header.column.id === "actions"
+                              ? 120
+                              : header.column.id === "select"
+                                ? 30
+                                : "auto",
                         }}
                       >
-                        <Image
-                          src="/images/no-data.png"
-                          alt="No data"
-                          style={{
-                            maxWidth: "100%",
-                            maxHeight: "100%",
+                        <Box
+                          onClick={header.column.getToggleSortingHandler()}
+                          p={0}
+                          sx={{
+                            cursor: isSortable ? "pointer" : "default",
+                            border: "2px solid transparent",
+                            borderRadius: "6px",
+                            display: "flex",
+                            justifyContent: "flex-start",
+                            "&:hover": { color: "#888" },
+                            "&:hover .hoverIcon": { opacity: 1 },
                           }}
-                          width={200}
-                          height={200}
-                        />
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      hover
-                      sx={{ cursor: "pointer" }}
-                      onMouseEnter={() => setHoveredRow(row.original.id)}
-                      onMouseLeave={() => setHoveredRow(null)}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
+                        >
+                          <Typography variant="subtitle2">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                          </Typography>
+                          {isSortable && (
+                            <Box
+                              component="span"
+                              className="hoverIcon"
+                              ml={0.5}
+                              sx={{
+                                transition: "opacity 0.2s",
+                                opacity: isActive ? 1 : 0,
+                                fontSize: "0.9rem",
+                                color: isActive ? "#000" : "#888",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                            </Box>
                           )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          {data.length ? <Divider /> : <></>}
-        </Box>
+                        </Box>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHead>
+            <TableBody>
+              {fetchHistory ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={simpleColumns.length}
+                />
+              ) : data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/no-data.png"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    hover
+                    sx={{ cursor: "pointer" }}
+                    onMouseEnter={() => setHoveredRow(row.original.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} sx={{ padding: "10px" }}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {data.length ? <Divider /> : <></>}
+        {/* </Box> */}
         <Divider />
         <TablePaginationFooter
           table={table}

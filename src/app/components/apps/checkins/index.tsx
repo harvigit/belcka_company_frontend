@@ -806,8 +806,11 @@ const CheckinsList = () => {
         </Stack>
 
         <Divider />
-        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-          <TableContainer ref={tableContainerRef}>
+        {/* <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}> */}
+          <TableContainer ref={tableContainerRef} sx={{ flex: 1,
+                minHeight: 0,
+                overflowX: "auto",
+                overflowY: "auto",}}>
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -960,7 +963,7 @@ const CheckinsList = () => {
               </TableBody>
             </Table>
           </TableContainer>
-        </Box>
+        {/* </Box> */}
         <Divider />
         {data.length > 0 && (
           <TablePaginationFooter

@@ -380,7 +380,7 @@ const StockList = () => {
         setHistory([]);
         setStockQty("0.00");
         setPackOfUnit("");
-        setQty("0.00")
+        setQty("0.00");
         setProductName("");
         setIsSubQty(false);
       }
@@ -1511,14 +1511,17 @@ const StockList = () => {
         </Stack>
         <Divider />
 
-        <Box
+        {/* <Box
           sx={{
             flex: 1,
             minHeight: 0,
             overflow: "auto",
           }}
-        >
-          <TableContainer ref={tableContainerRef}>
+        > */}
+          <TableContainer
+            ref={tableContainerRef}
+            sx={{ flex: 1, minHeight: 0, overflowX: "auto", overflowY: "auto" }}
+          >
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -1665,9 +1668,9 @@ const StockList = () => {
                 )}
               </TableBody>
             </Table>
-          </TableContainer>
           {data.length ? <Divider /> : <></>}
-        </Box>
+          </TableContainer>
+        {/* </Box> */}
         <Divider />
         <TablePaginationFooter
           selectedCount={

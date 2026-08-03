@@ -1111,185 +1111,185 @@ const TablePagination = () => {
           />
         )}
 
-        <Box
+        <TableContainer
+          ref={tableContainerRef}
           sx={{
             flex: 1,
             minHeight: 0,
-            overflow: "auto",
+            overflowX: "auto",
+            overflowY: "auto",
           }}
         >
-          <TableContainer ref={tableContainerRef}>
-            <Table stickyHeader aria-label="sticky table">
-              <TableHead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      const isActive = header.column.getIsSorted();
-                      const isAsc = header.column.getIsSorted() === "asc";
-                      const isSortable = header.column.getCanSort();
-
-                      return (
-                        <TableCell
-                          key={header.id}
-                          align="center"
-                          sx={{
-                            paddingTop: "10px",
-                            paddingBottom: "10px",
-                            width:
-                              header.column.id === "actions"
-                                ? 120
-                                : header.column.id === "select"
-                                  ? 30
-                                  : "auto",
-
-                            ...(header.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 3,
-                              boxShadow: isScrollable
-                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                                : "none",
-                            }),
-                          }}
-                        >
-                          <Box
-                            onClick={header.column.getToggleSortingHandler()}
-                            p={0}
-                            sx={{
-                              cursor: isSortable ? "pointer" : "default",
-                              border: "2px solid transparent",
-                              borderRadius: "6px",
-                              display: "flex",
-                              justifyContent: "flex-start",
-                              "&:hover": { color: "#888" },
-                              "&:hover .hoverIcon": { opacity: 1 },
-                            }}
-                          >
-                            <Typography variant="subtitle2">
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext(),
-                              )}
-                            </Typography>
-                            {isSortable && (
-                              <Box
-                                component="span"
-                                className="hoverIcon"
-                                ml={0.5}
-                                sx={{
-                                  transition: "opacity 0.2s",
-                                  opacity: isActive ? 1 : 0,
-                                  fontSize: "0.9rem",
-                                  color: isActive ? "#000" : "#888",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                              </Box>
-                            )}
-                          </Box>
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-              </TableHead>
-              <TableBody>
-                {fetchTeam ? (
-                  <SkeletonLoader
-                    columns={simpleColumns}
-                    rowCount={simpleColumns.length}
-                    hasAvatar={true}
-                  />
-                ) : data.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          height: "calc(50vh - 100px)",
-                        }}
-                      >
-                        <Image
-                          src="/images/no-data.png"
-                          alt="No data"
-                          style={{
-                            maxWidth: "100%",
-                            maxHeight: "100%",
-                          }}
-                          width={200}
-                          height={200}
-                        />
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  table.getRowModel().rows.map((row) => {
-                    const item = row.original;
-                    const isDisabled =
-                      item.is_subcontractor === true &&
-                      item.company_id !== item.subcontractor_company_id;
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const isActive = header.column.getIsSorted();
+                    const isAsc = header.column.getIsSorted() === "asc";
+                    const isSortable = header.column.getCanSort();
 
                     return (
-                      <TableRow
-                        key={row.id}
-                        hover
+                      <TableCell
+                        key={header.id}
+                        align="center"
                         sx={{
-                          cursor: isDisabled ? "default" : "pointer",
+                          paddingTop: "10px",
+                          paddingBottom: "10px",
+                          width:
+                            header.column.id === "actions"
+                              ? 120
+                              : header.column.id === "select"
+                                ? 30
+                                : "auto",
+
+                          ...(header.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 3,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
                         }}
                       >
-                        {row.getVisibleCells().map((cell) => {
-                          const isActionCell = cell.column.id === "actions";
-                          const isCheckboxCell = cell.column.id === "name";
-
-                          return (
-                            <TableCell
-                              key={cell.id}
+                        <Box
+                          onClick={header.column.getToggleSortingHandler()}
+                          p={0}
+                          sx={{
+                            cursor: isSortable ? "pointer" : "default",
+                            border: "2px solid transparent",
+                            borderRadius: "6px",
+                            display: "flex",
+                            justifyContent: "flex-start",
+                            "&:hover": { color: "#888" },
+                            "&:hover .hoverIcon": { opacity: 1 },
+                          }}
+                        >
+                          <Typography variant="subtitle2">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                          </Typography>
+                          {isSortable && (
+                            <Box
+                              component="span"
+                              className="hoverIcon"
+                              ml={0.5}
                               sx={{
-                                padding: "10px",
-                                ...(cell.column.id === "actions" && {
-                                  position: "sticky",
-                                  right: 0,
-                                  backgroundColor: "background.paper",
-                                  zIndex: 1,
-                                  boxShadow: isScrollable
-                                    ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                                    : "none",
-                                }),
-                              }}
-                              onClick={() => {
-                                if (
-                                  !isDisabled &&
-                                  !isActionCell &&
-                                  !isCheckboxCell
-                                ) {
-                                  router.push(
-                                    `/apps/teams/team?team_id=${row.original.team_id}`,
-                                  );
-                                }
+                                transition: "opacity 0.2s",
+                                opacity: isActive ? 1 : 0,
+                                fontSize: "0.9rem",
+                                color: isActive ? "#000" : "#888",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
                               }}
                             >
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext(),
-                              )}
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
+                              {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
                     );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          {data.length ? <Divider /> : <></>}
-        </Box>
+                  })}
+                </TableRow>
+              ))}
+            </TableHead>
+            <TableBody>
+              {fetchTeam ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={simpleColumns.length}
+                  hasAvatar={true}
+                />
+              ) : data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/no-data.png"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                table.getRowModel().rows.map((row) => {
+                  const item = row.original;
+                  const isDisabled =
+                    item.is_subcontractor === true &&
+                    item.company_id !== item.subcontractor_company_id;
+
+                  return (
+                    <TableRow
+                      key={row.id}
+                      hover
+                      sx={{
+                        cursor: isDisabled ? "default" : "pointer",
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const isActionCell = cell.column.id === "actions";
+                        const isCheckboxCell = cell.column.id === "name";
+
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            sx={{
+                              padding: "10px",
+                              ...(cell.column.id === "actions" && {
+                                position: "sticky",
+                                right: 0,
+                                backgroundColor: "background.paper",
+                                zIndex: 1,
+                                boxShadow: isScrollable
+                                  ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                  : "none",
+                              }),
+                            }}
+                            onClick={() => {
+                              if (
+                                !isDisabled &&
+                                !isActionCell &&
+                                !isCheckboxCell
+                              ) {
+                                router.push(
+                                  `/apps/teams/team?team_id=${row.original.team_id}`,
+                                );
+                              }
+                            }}
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {data.length ? <Divider /> : <></>}
         <Divider />
         <TablePaginationFooter
           selectedCount={

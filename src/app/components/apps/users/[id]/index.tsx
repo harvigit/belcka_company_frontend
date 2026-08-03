@@ -750,7 +750,7 @@ const TablePagination = () => {
                                     </Button>
                                 )}
 
-                                {canModifyUserDetails && data?.user_role_id == 2 && user.user_role_id == 1 && (
+                                {/* {canModifyUserDetails && data?.user_role_id == 2 && user.user_role_id == 1 && (
                                     <Button
                                         variant="outlined"
                                         color="primary"
@@ -760,7 +760,7 @@ const TablePagination = () => {
                                     >
                                         Make an admin
                                     </Button>
-                                )}
+                                )} */}
 
                                 {canModifyUserDetails && !data?.is_company_owner && data?.user_role_id == 1 && companyUsers.find((u: any) => Number(u.id) === Number(user.id))?.is_company_owner && (
                                     <Button

@@ -31,13 +31,13 @@ import SkeletonLoader from '@/app/components/SkeletonLoader';
 import toast from 'react-hot-toast';
 
 const REQUEST_TYPES = [
-    { name: 'Timesheet request', slug: 'timesheet_request' },
+    { name: 'Add Timesheet', slug: 'timesheet_request' },
     { name: 'Personal detail request', slug: 'personal_detail_request' },
     { name: 'Billing Info Request', slug: 'billing_info_request' },
     { name: 'Rate request', slug: 'rate_request' },
     { name: 'Expense request', slug: 'expense_request' },
     { name: 'Penalty request', slug: 'penalty_request' },
-    { name: 'Timesheet Approve', slug: 'timesheet_approve' },
+    { name: 'Edit Timesheet', slug: 'timesheet_approve' },
 ];
 
 export interface RequestAction {

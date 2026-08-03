@@ -1550,136 +1550,131 @@ const TablePagination = () => {
                 flexDirection: "column",
               }}
             >
-              <Box
+              <TableContainer
                 sx={{
                   flex: 1,
                   minHeight: 0,
-                  overflow: "auto",
+                  overflowX: "auto",
+                  overflowY: "auto",
                 }}
               >
-                <TableContainer>
-                  <Table stickyHeader aria-label="sticky table">
-                    <TableHead>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => {
-                            const isActive = header.column.getIsSorted();
-                            const isAsc = header.column.getIsSorted() === "asc";
-                            const isSortable = header.column.getCanSort();
+                <Table stickyHeader aria-label="sticky table">
+                  <TableHead>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => {
+                          const isActive = header.column.getIsSorted();
+                          const isAsc = header.column.getIsSorted() === "asc";
+                          const isSortable = header.column.getCanSort();
 
-                            return (
-                              <TableCell
-                                key={header.id}
-                                align="center"
-                                sx={{
-                                  paddingTop: "10px",
-                                  paddingBottom: "10px",
-                                  width:
-                                    header.column.id === "actions"
-                                      ? 120
-                                      : header.column.id === "select"
-                                        ? 30
-                                        : "auto",
-                                }}
-                              >
-                                <Box
-                                  onClick={header.column.getToggleSortingHandler()}
-                                  p={0}
-                                  sx={{
-                                    cursor: isSortable ? "pointer" : "default",
-                                    border: "2px solid transparent",
-                                    borderRadius: "6px",
-                                    display: "flex",
-                                    justifyContent: "flex-start",
-                                    "&:hover": { color: "#888" },
-                                    "&:hover .hoverIcon": { opacity: 1 },
-                                  }}
-                                >
-                                  <Typography variant="subtitle2">
-                                    {flexRender(
-                                      header.column.columnDef.header,
-                                      header.getContext(),
-                                    )}
-                                  </Typography>
-                                  {isSortable && (
-                                    <Box
-                                      component="span"
-                                      className="hoverIcon"
-                                      ml={0.5}
-                                      sx={{
-                                        transition: "opacity 0.2s",
-                                        opacity: isActive ? 1 : 0,
-                                        fontSize: "0.9rem",
-                                        color: isActive ? "#000" : "#888",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                      }}
-                                    >
-                                      {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                                    </Box>
-                                  )}
-                                </Box>
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      ))}
-                    </TableHead>
-                    <TableBody>
-                      {fetchTeam ? (
-                        <SkeletonLoader
-                          columns={simpleColumns}
-                          rowCount={simpleColumns.length}
-                          hasAvatar={true}
-                        />
-                      ) : data.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={columns.length}>
-                            <Box
+                          return (
+                            <TableCell
+                              key={header.id}
+                              align="center"
                               sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                height: "calc(50vh - 100px)",
+                                paddingTop: "10px",
+                                paddingBottom: "10px",
+                                width:
+                                  header.column.id === "actions"
+                                    ? 120
+                                    : header.column.id === "select"
+                                      ? 30
+                                      : "auto",
                               }}
                             >
-                              <Image
-                                src="/images/no-data.png"
-                                alt="No data"
-                                style={{
-                                  maxWidth: "100%",
-                                  maxHeight: "100%",
+                              <Box
+                                onClick={header.column.getToggleSortingHandler()}
+                                p={0}
+                                sx={{
+                                  cursor: isSortable ? "pointer" : "default",
+                                  border: "2px solid transparent",
+                                  borderRadius: "6px",
+                                  display: "flex",
+                                  justifyContent: "flex-start",
+                                  "&:hover": { color: "#888" },
+                                  "&:hover .hoverIcon": { opacity: 1 },
                                 }}
-                                width={200}
-                                height={200}
-                              />
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            hover
-                            sx={{ cursor: "pointer" }}
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext(),
+                              >
+                                <Typography variant="subtitle2">
+                                  {flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext(),
+                                  )}
+                                </Typography>
+                                {isSortable && (
+                                  <Box
+                                    component="span"
+                                    className="hoverIcon"
+                                    ml={0.5}
+                                    sx={{
+                                      transition: "opacity 0.2s",
+                                      opacity: isActive ? 1 : 0,
+                                      fontSize: "0.9rem",
+                                      color: isActive ? "#000" : "#888",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                    }}
+                                  >
+                                    {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                                  </Box>
                                 )}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                {data.length ? <Divider /> : <></>}
-              </Box>
+                              </Box>
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableHead>
+                  <TableBody>
+                    {fetchTeam ? (
+                      <SkeletonLoader
+                        columns={simpleColumns}
+                        rowCount={simpleColumns.length}
+                        hasAvatar={true}
+                      />
+                    ) : data.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={columns.length}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              height: "calc(50vh - 100px)",
+                            }}
+                          >
+                            <Image
+                              src="/images/no-data.png"
+                              alt="No data"
+                              style={{
+                                maxWidth: "100%",
+                                maxHeight: "100%",
+                              }}
+                              width={200}
+                              height={200}
+                            />
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id} sx={{ padding: "10px" }}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext(),
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {data.length ? <Divider /> : <></>}
               <Divider />
               <TablePaginationFooter
                 selectedCount={

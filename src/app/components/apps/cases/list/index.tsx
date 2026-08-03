@@ -129,11 +129,11 @@ const CasesList = () => {
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
-  const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
-    storageKey: `cv_${user?.company_id}_${user?.id}_cases`,
-    enabled: !!user?.id,
-  });
-
+  const { columnVisibility, onColumnVisibilityChange } =
+    usePersistentColumnVisibility({
+      storageKey: `cv_${user?.company_id}_${user?.id}_cases`,
+      enabled: !!user?.id,
+    });
 
   React.useEffect(() => {
     const checkScroll = () => {
@@ -1060,146 +1060,147 @@ const CasesList = () => {
           </DialogActions>
         </Dialog>
         <Divider />
-        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      const isActive = header.column.getIsSorted();
-                      const isAsc = header.column.getIsSorted() === "asc";
-                      const isSortable = header.column.getCanSort();
+        <TableContainer
+          sx={{ flex: 1, minHeight: 0, overflowX: "auto", overflowY: "auto" }}
+        >
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const isActive = header.column.getIsSorted();
+                    const isAsc = header.column.getIsSorted() === "asc";
+                    const isSortable = header.column.getCanSort();
 
-                      return (
-                        <TableCell
-                          key={header.id}
-                          align="center"
-                          sx={{
-                            paddingTop: "10px",
-                            paddingBottom: "10px",
-                            width: header.column.id === "select" ? 30 : "auto",
-
-                            ...(header.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 3,
-                              boxShadow: isScrollable
-                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                                : "none",
-                            }),
-                          }}
-                        >
-                          <Box
-                            onClick={
-                              isSortable
-                                ? header.column.getToggleSortingHandler()
-                                : undefined
-                            }
-                            sx={{
-                              cursor: isSortable ? "pointer" : "default",
-                              display: "flex",
-                              alignItems: "center",
-                              "&:hover": {
-                                color: isSortable ? "#888" : "inherit",
-                              },
-                              "&:hover .hoverIcon": { opacity: 1 },
-                            }}
-                          >
-                            <Typography variant="subtitle2">
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext(),
-                              )}
-                            </Typography>
-                            {isSortable && (
-                              <Box
-                                component="span"
-                                className="hoverIcon"
-                                ml={0.5}
-                                sx={{
-                                  transition: "opacity 0.2s",
-                                  opacity: isActive ? 1 : 0,
-                                  fontSize: "0.9rem",
-                                  color: isActive ? "#000" : "#888",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                              </Box>
-                            )}
-                          </Box>
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <SkeletonLoader
-                    columns={simpleColumns}
-                    rowCount={simpleColumns.length}
-                  />
-                ) : table.getRowModel().rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length}>
-                      <Box
+                    return (
+                      <TableCell
+                        key={header.id}
+                        align="center"
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          height: "calc(50vh - 100px)",
+                          paddingTop: "10px",
+                          paddingBottom: "10px",
+                          width: header.column.id === "select" ? 30 : "auto",
+
+                          ...(header.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 3,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
                         }}
                       >
-                        <Image
-                          src="/images/no-data.png"
-                          alt="No data"
-                          style={{
-                            maxWidth: "100%",
-                            maxHeight: "100%",
-                          }}
-                          width={200}
-                          height={200}
-                        />
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
+                        <Box
+                          onClick={
+                            isSortable
+                              ? header.column.getToggleSortingHandler()
+                              : undefined
+                          }
                           sx={{
-                            padding: "10px",
-                            ...(cell.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 1,
-                              boxShadow: isScrollable
-                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                                : "none",
-                            }),
+                            cursor: isSortable ? "pointer" : "default",
+                            display: "flex",
+                            alignItems: "center",
+                            "&:hover": {
+                              color: isSortable ? "#888" : "inherit",
+                            },
+                            "&:hover .hoverIcon": { opacity: 1 },
                           }}
                         >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
+                          <Typography variant="subtitle2">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                          </Typography>
+                          {isSortable && (
+                            <Box
+                              component="span"
+                              className="hoverIcon"
+                              ml={0.5}
+                              sx={{
+                                transition: "opacity 0.2s",
+                                opacity: isActive ? 1 : 0,
+                                fontSize: "0.9rem",
+                                color: isActive ? "#000" : "#888",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                            </Box>
                           )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
+                        </Box>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={simpleColumns.length}
+                />
+              ) : table.getRowModel().rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/no-data.png"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        sx={{
+                          padding: "10px",
+                          ...(cell.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 1,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+          <Divider />
+        </TableContainer>
         <Divider />
 
         <TablePaginationFooter
