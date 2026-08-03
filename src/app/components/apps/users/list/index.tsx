@@ -252,6 +252,8 @@ const TablePagination = () => {
     );
     const restoredTableStateKeyRef = useRef('');
     const skipNextDependencyPageResetRef = useRef(false);
+    const fetchRequestIdRef = useRef(0);
+    const [isTableStateReady, setIsTableStateReady] = useState(false);
     const [inviteUser, setInviteUser] = useState(false);
     const [trade, setTrade] = useState<any[]>([]);
     const [teams, setTeams] = useState<any[]>([]);
@@ -321,6 +323,11 @@ const TablePagination = () => {
     }
 
     const fetchUsers = async (restorePage?: number) => {
+        if (!isTableStateReady || !user?.company_id) {
+            return;
+        }
+
+        const requestId = ++fetchRequestIdRef.current;
         setFetchUser(true);
         try {
             let url = `user/get-user-lists?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -337,7 +344,7 @@ const TablePagination = () => {
                     .join(',');
 
             if (searchTerm) {
-                url += `&search=${searchTerm}`;
+                url += `&search=${encodeURIComponent(searchTerm)}`;
             }
             if (filters.team.length) {
                 const teamIds = resolveSelectedIds(filters.team, teams);
@@ -353,6 +360,9 @@ const TablePagination = () => {
             }
 
             const res: AxiosResponse<any> = await api.get(url);
+            if (requestId !== fetchRequestIdRef.current) {
+                return;
+            }
             if (res.data) {
                 const responseData =
                     res.data.info?.data || res.data.info || res.data.data || [];
@@ -395,9 +405,13 @@ const TablePagination = () => {
                 }
             }
         } catch (err) {
-            console.error('Failed to fetch users', err);
+            if (requestId === fetchRequestIdRef.current) {
+                console.error('Failed to fetch users', err);
+            }
         }
-        setFetchUser(false);
+        if (requestId === fetchRequestIdRef.current) {
+            setFetchUser(false);
+        }
     };
 
     const handleExportData = async (option: string) => {
@@ -1344,6 +1358,7 @@ const TablePagination = () => {
             user?.company_id,
             teams.length,
             trade.length,
+            isTableStateReady,
         ],
         state: {columnVisibility},
         onColumnVisibilityChange,
@@ -1358,7 +1373,11 @@ const TablePagination = () => {
     });
 
     useEffect(() => {
-        if (!usersTableStateKey) return;
+        if (!usersTableStateKey) {
+            setIsTableStateReady(false);
+            restoredTableStateKeyRef.current = '';
+            return;
+        }
         if (restoredTableStateKeyRef.current === usersTableStateKey) return;
 
         const savedState = readUsersTableStateCookie(usersTableStateKey);
@@ -1387,6 +1406,10 @@ const TablePagination = () => {
                 pageSize: savedPagination.pageSize,
             });
         }
+
+        // Mark ready after restoring cookie state so the first list fetch
+        // uses the restored search/filters instead of empty defaults.
+        setIsTableStateReady(true);
     }, [usersTableStateKey, setPagination]);
 
     useEffect(() => {
@@ -2561,13 +2584,6 @@ const TablePagination = () => {
                                         ))}
                                     </TableRow>
                                 ))
-                            )}
-                            {data.length ? (
-                                <>
-                                    <Divider/>
-                                </>
-                            ) : (
-                                <></>
                             )}
                         </TableBody>
                     </Table>

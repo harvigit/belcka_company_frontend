@@ -702,7 +702,12 @@ const StockList = () => {
                 }}
               >
                 {item.short_name ? item.short_name : "-"}
-                <Typography color="textSecondary" className="f-14">
+                <Typography
+                  component="span"
+                  display="block"
+                  color="textSecondary"
+                  className="f-14"
+                >
                   {item.name}
                 </Typography>
               </Typography>
@@ -815,7 +820,11 @@ const StockList = () => {
               >
                 {item?.qty?.toFixed(2)}
                 <br />
-                <Typography variant="body2" color="textSecondary">
+                <Typography
+                  component="span"
+                  variant="body2"
+                  color="textSecondary"
+                >
                   {" "}
                   {item.is_sub_qty && Number(item?.pack_off_qty) > 0
                     ? item?.pack_off_unit
