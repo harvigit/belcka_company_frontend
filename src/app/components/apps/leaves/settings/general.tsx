@@ -257,7 +257,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                         Enable leave limit
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                        You'll be notified when a limit is exceeded
+                                        You&apos;ll be notified when a limit is exceeded
                                     </Typography>
                                 </Box>
 

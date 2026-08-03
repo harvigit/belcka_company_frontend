@@ -1022,19 +1022,22 @@ const InductionTraining = ({ companyId }: Props) => {
                                         </li>
                                     )}
                                     renderTags={(value, getTagProps) =>
-                                        value.map((option: any, index: number) => (
-                                            <Stack direction="row" alignItems="center" spacing={0.5}
-                                                   sx={{
-                                                       px: 1, py: 0.4, borderRadius: '20px',
-                                                       bgcolor: 'action.selected', mr: 0.5, mb: 0.5,
-                                                   }}
-                                                   {...getTagProps({ index })}>
-                                                <Avatar src={option.user_thumb_image || ''} sx={{ width: 20, height: 20 }}>
-                                                    {option.name?.charAt(0)}
-                                                </Avatar>
-                                                <Typography variant="caption">{option.name}</Typography>
-                                            </Stack>
-                                        ))
+                                        value.map((option: any, index: number) => {
+                                            const { key, ...tagProps } = getTagProps({ index });
+                                            return (
+                                                <Stack key={key} direction="row" alignItems="center" spacing={0.5}
+                                                       sx={{
+                                                           px: 1, py: 0.4, borderRadius: '20px',
+                                                           bgcolor: 'action.selected', mr: 0.5, mb: 0.5,
+                                                       }}
+                                                       {...tagProps}>
+                                                    <Avatar src={option.user_thumb_image || ''} sx={{ width: 20, height: 20 }}>
+                                                        {option.name?.charAt(0)}
+                                                    </Avatar>
+                                                    <Typography variant="caption">{option.name}</Typography>
+                                                </Stack>
+                                            );
+                                        })
                                     }
                                     renderInput={params => (
                                         <CustomTextField

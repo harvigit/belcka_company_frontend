@@ -3416,7 +3416,7 @@ const ProductList = () => {
             }}
           >
             <Typography variant="h5">
-              You don't have permission to view products.
+              You don&apos;t have permission to view products.
             </Typography>
           </Box>
         ) : (

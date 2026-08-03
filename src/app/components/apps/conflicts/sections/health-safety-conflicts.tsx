@@ -149,7 +149,7 @@ export const HSConflictRow = React.memo(({ item, onClick }: {
                         border: '1px solid #E5E7EB', borderRadius: '6px',
                     }}>
                         <Typography sx={{ fontSize: '0.72rem', color: '#374151', fontStyle: 'italic' }}>
-                            "{item.description}"
+                            &quot;{item.description}&quot;
                         </Typography>
                     </Box>
                 )}
@@ -234,7 +234,7 @@ const HSDetailPanel = React.memo(({ conflict, onClose, onResolved }: {
                             border: '1px solid #E5E7EB', borderRadius: '8px',
                         }}>
                             <Typography sx={{ fontSize: '0.78rem', color: '#374151', fontStyle: 'italic' }}>
-                                "{conflict.description}"
+                                &quot;{conflict.description}&quot;
                             </Typography>
                         </Box>
                     </Box>

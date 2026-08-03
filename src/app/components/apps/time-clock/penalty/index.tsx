@@ -500,7 +500,7 @@ const PenaltyHistory: React.FC<PenaltyProps> = ({ open, onClose }) => {
                       Note
                     </Typography>
                     <Typography variant="body2" sx={{ fontStyle: "italic" }}>
-                      "{selectedPenalty.note}"
+                      &quot;{selectedPenalty.note}&quot;
                     </Typography>
                   </Grid>
                 )}

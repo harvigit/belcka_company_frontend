@@ -293,7 +293,7 @@ const LeaveSetting: React.FC<LeaveSettingProps> = ({ open, onClose, onSaveSucces
                                         Enable leave limit
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                        You'll be notified when a limit is exceeded
+                                        You&apos;ll be notified when a limit is exceeded
                                     </Typography>
                                 </Box>
 
