@@ -21,7 +21,7 @@ import {
 } from '@tabler/icons-react';
 import {Stack} from '@mui/system';
 import toast from 'react-hot-toast';
-import AttachmentLightbox from '@/app/components/common/AttachmentLightbox';
+// import AttachmentLightbox from '@/app/components/common/AttachmentLightbox';
 
 interface ExpensesPageProps {
     expenseId: number;
@@ -428,12 +428,12 @@ export default function Expenses({expenseId, onClose, attachmentsOnly = false}: 
                 </DialogActions>
             </Dialog>
 
-            <AttachmentLightbox
+            {/* <AttachmentLightbox
                 open={lightboxOpen}
                 index={lightboxIndex}
                 slides={lightboxSlides}
                 onClose={() => setLightboxOpen(false)}
-            />
+            /> */}
         </Box>
     );
 }
