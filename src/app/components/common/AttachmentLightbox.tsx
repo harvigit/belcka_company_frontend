@@ -37,7 +37,7 @@ const AttachmentLightbox = ({
         alt: slide.alt,
         download: {
           url: slide.src,
-          filename: slide.downloadFilename,
+          filename: slide.downloadFilename ?? `image-${index + 1}.jpg`,
         },
       })),
     [slides],

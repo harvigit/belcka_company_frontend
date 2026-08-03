@@ -82,8 +82,8 @@ export default function WorkZone({
     if (!user?.company_id) return;
     setLoading(true);
     try {
-      const res: AxiosResponse<any> = await api.get(
-        `work-zone/get?company_id=${user.company_id}&is_project=${true}`,
+      const res : AxiosResponse<any>= await api.get(
+        `work-zone/get?company_id=${user.company_id}&is_project=${true}`
       );
       setSites(res.data.info || []);
     } catch (err) {
@@ -96,9 +96,7 @@ export default function WorkZone({
   const getJobList = async () => {
     if (!user?.company_id) return;
     try {
-      const res: AxiosResponse<any> = await api.get(
-        `project/get?company_id=${user.company_id}`,
-      );
+      const res : AxiosResponse<any>= await api.get(`project/get?company_id=${user.company_id}`);
       if (res.data.IsSuccess) setProject(res.data.info);
     } catch (err) {}
   };
@@ -198,9 +196,7 @@ export default function WorkZone({
       drawingOverlayRef.current = null;
     }
     if (drawingManagerRef.current) {
-      (
-        drawingManagerRef.current as google.maps.drawing.DrawingManager
-      )?.setDrawingMode(null);
+      drawingManagerRef.current.setDrawingMode(null);
     }
   };
 
@@ -315,9 +311,7 @@ export default function WorkZone({
   const handleDeleteSite = async (id: number) => {
     try {
       setLoading(true);
-      const response: AxiosResponse<any> = await api.delete(
-        `work-zone/delete?id=${id}`,
-      );
+      const response : AxiosResponse<any>= await api.delete(`work-zone/delete?id=${id}`);
       toast.success(response.data.message);
       onSiteUpdate?.(response.data.info?.id || id);
       await getWorkzones();
@@ -383,8 +377,8 @@ export default function WorkZone({
             <Box
               sx={{
                 p: 2,
-                maxHeight: 600,
-                overflowY: "auto",
+                maxHeight: 600, 
+                overflowY: "auto", 
               }}
             >
               {sites.map((s) => (
@@ -530,7 +524,7 @@ export default function WorkZone({
                     onChange={(event, newValue) =>
                       updateActiveSite(
                         "project_id",
-                        newValue ? newValue.id : null,
+                        newValue ? newValue.id : null
                       )
                     }
                     getOptionLabel={(option) => option.name}
@@ -613,7 +607,7 @@ export default function WorkZone({
                         prev.lat !== newCenter.lat ||
                         prev.lng !== newCenter.lng
                           ? newCenter
-                          : prev,
+                          : prev
                       );
 
                       setActiveSite((prev: any) => {
@@ -711,7 +705,7 @@ export default function WorkZone({
                     if (c) setCircleCenter({ lat: c.lat(), lng: c.lng() });
                   });
                   circle.addListener("radius_changed", () =>
-                    updateActiveSite("circleRadius", circle.getRadius()),
+                    updateActiveSite("circleRadius", circle.getRadius())
                   );
 
                   drawingOverlayRef.current = circle;
