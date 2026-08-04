@@ -359,6 +359,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
     const [day, setDay] = useState("");
     const [date, setDate] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isEditingPenaltyTime, setIsEditingPenaltyTime] = useState(false);
     const [processingAppealId, setProcessingAppealId] = useState<number | null>(null);
 
     // Admin note dialog state
@@ -366,6 +367,16 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
     const [adminNote, setAdminNote] = useState("");
     const [selectedPenalty, setSelectedPenalty] = useState<PenaltyItem | null>(null);
     const [appealAction, setAppealAction] = useState<boolean>(false); // true = approve, false = reject
+
+    // Delete penalty dialog state
+    const [openDeletePenaltyDialog, setOpenDeletePenaltyDialog] = useState(false);
+    const [deletePenaltyNote, setDeletePenaltyNote] = useState("");
+    const [penaltyToDelete, setPenaltyToDelete] = useState<PenaltyItem | null>(null);
+
+    // Edit penalty time dialog state
+    const [openEditPenaltyTimeDialog, setOpenEditPenaltyTimeDialog] = useState(false);
+    const [editPenaltyMinutes, setEditPenaltyMinutes] = useState("");
+    const [penaltyToEdit, setPenaltyToEdit] = useState<PenaltyItem | null>(null);
 
     useEffect(() => {
         if (worklogId > 0) fetchPenalties();
@@ -429,20 +440,92 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
         setSelectedPenalty(null);
     };
 
-    const handleDeletePenalty = async (penalty: PenaltyItem) => {
+    const openDeletePenaltyPrompt = (penalty: PenaltyItem) => {
+        setPenaltyToDelete(penalty);
+        setDeletePenaltyNote("");
+        setOpenDeletePenaltyDialog(true);
+    };
+
+    const closeDeletePenaltyDialog = () => {
+        if (isDeleting) return;
+        setOpenDeletePenaltyDialog(false);
+        setDeletePenaltyNote("");
+        setPenaltyToDelete(null);
+    };
+
+    const handleDeletePenalty = async () => {
+        if (!penaltyToDelete?.penalty_id) {
+            toast.error("Penalty ID not found");
+            return;
+        }
+
         try {
             setIsDeleting(true);
-            const res = await api.post("time-clock/delete-penalty", {
-                penalty_id: penalty.penalty_id,
+            const res = await api.post("user-worklog/delete-worklog-penalty", {
+                worklog_id: worklogId,
+                penalty_id: penaltyToDelete.penalty_id,
+                note: deletePenaltyNote.trim() || null,
             });
 
             if (res.data?.IsSuccess) {
-                fetchPenalties();
+                toast.success("Penalty deleted successfully");
+                closeDeletePenaltyDialog();
+                await fetchPenalties();
                 onClose();
+            } else {
+                toast.error(res.data?.message || "Failed to delete penalty");
             }
         } catch {
+            toast.error("Something went wrong");
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    const openEditPenaltyTimePrompt = (penalty: PenaltyItem) => {
+        setPenaltyToEdit(penalty);
+        setEditPenaltyMinutes(String(penalty.penalty_minutes ?? ""));
+        setOpenEditPenaltyTimeDialog(true);
+    };
+
+    const closeEditPenaltyTimeDialog = () => {
+        if (isEditingPenaltyTime) return;
+        setOpenEditPenaltyTimeDialog(false);
+        setEditPenaltyMinutes("");
+        setPenaltyToEdit(null);
+    };
+
+    const handleEditPenaltyTime = async () => {
+        if (!penaltyToEdit?.penalty_id) {
+            toast.error("Penalty ID not found");
+            return;
+        }
+
+        const minutes = Number(editPenaltyMinutes);
+        if (!Number.isFinite(minutes) || minutes < 0) {
+            toast.error("Enter valid penalty minutes");
+            return;
+        }
+
+        try {
+            setIsEditingPenaltyTime(true);
+            const res = await api.post("user-worklog/edit-worklog-penalty-time", {
+                worklog_id: worklogId,
+                penalty_id: penaltyToEdit.penalty_id,
+                penalty_minutes: minutes,
+            });
+
+            if (res.data?.IsSuccess) {
+                toast.success("Penalty time updated successfully");
+                closeEditPenaltyTimeDialog();
+                await fetchPenalties();
+            } else {
+                toast.error(res.data?.message || "Failed to update penalty time");
+            }
+        } catch {
+            toast.error("Something went wrong");
+        } finally {
+            setIsEditingPenaltyTime(false);
         }
     };
 
@@ -528,16 +611,28 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                                     </Button>
                                 </Box>
                             ) : (
-                                <Button
-                                    variant="outlined"
-                                    color="error"
-                                    size="small"
-                                    disabled={isDeleting}
-                                    onClick={() => handleDeletePenalty(penalty)}
-                                    sx={{ borderRadius: 2, textTransform: "none" }}
-                                >
-                                    Delete
-                                </Button>
+                                <Box display="flex" gap={1}>
+                                    <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        size="small"
+                                        disabled={isEditingPenaltyTime}
+                                        onClick={() => openEditPenaltyTimePrompt(penalty)}
+                                        sx={{ borderRadius: 2, textTransform: "none" }}
+                                    >
+                                        Edit Time
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
+                                        size="small"
+                                        disabled={isDeleting}
+                                        onClick={() => openDeletePenaltyPrompt(penalty)}
+                                        sx={{ borderRadius: 2, textTransform: "none" }}
+                                    >
+                                        Delete
+                                    </Button>
+                                </Box>
                             )}
                         </Box>
 
@@ -621,6 +716,92 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                         sx={{ textTransform: "none" }}
                     >
                         {appealAction ? "Approve" : "Reject"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Penalty Note Dialog */}
+            <Dialog
+                open={openDeletePenaltyDialog}
+                onClose={closeDeletePenaltyDialog}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Delete Penalty</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" mb={1}>
+                        Add a reason for deleting this penalty. This note is optional.
+                    </Typography>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="Reason note (optional)"
+                        placeholder="Enter reason..."
+                        multiline
+                        rows={4}
+                        fullWidth
+                        variant="outlined"
+                        value={deletePenaltyNote}
+                        onChange={(e) => setDeletePenaltyNote(e.target.value)}
+                    />
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button
+                        onClick={closeDeletePenaltyDialog}
+                        disabled={isDeleting}
+                        sx={{ textTransform: "none" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleDeletePenalty}
+                        variant="contained"
+                        color="error"
+                        disabled={isDeleting}
+                        sx={{ textTransform: "none" }}
+                    >
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Edit Penalty Time Dialog */}
+            <Dialog
+                open={openEditPenaltyTimeDialog}
+                onClose={closeEditPenaltyTimeDialog}
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle>Edit Penalty Time</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="Penalty minutes"
+                        type="number"
+                        fullWidth
+                        variant="outlined"
+                        value={editPenaltyMinutes}
+                        onChange={(e) => setEditPenaltyMinutes(e.target.value)}
+                        inputProps={{ min: 0, step: 1 }}
+                        sx={{ mt: 1 }}
+                    />
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button
+                        onClick={closeEditPenaltyTimeDialog}
+                        disabled={isEditingPenaltyTime}
+                        sx={{ textTransform: "none" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleEditPenaltyTime}
+                        variant="contained"
+                        disabled={isEditingPenaltyTime}
+                        sx={{ textTransform: "none" }}
+                    >
+                        Save
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -139,7 +139,14 @@ const parseLeaveDate = (value?: string | null) => {
 const toApiDate = (date: Date) => format(date, 'dd/MM/yyyy');
 
 const getLeaveType = (leave: any) =>
-    String(leave?.leave_type ?? leave?.type ?? leave?.paid_type ?? '').toLowerCase();
+    String(
+        leave?.leave_type ??
+        leave?.type ??
+        leave?.paid_type ??
+        leave?.companyLeave?.type ??
+        leave?.company_leave?.type ??
+        '',
+    ).toLowerCase();
 
 const getLeaveStatusText = (leave: any) =>
     String(leave?.status_text ?? leave?.request_status_text ?? '').toLowerCase();
@@ -483,12 +490,14 @@ function LeaveDetailsDrawer({
     onClose,
     title,
     leaves,
+    loading = false,
     onOpenUser,
 }: {
     open: boolean;
     onClose: () => void;
     title: string;
     leaves: any[];
+    loading?: boolean;
     onOpenUser: (leave: any) => void;
 }) {
     const sortedLeaves = [...leaves].sort((first, second) => {
@@ -518,7 +527,9 @@ function LeaveDetailsDrawer({
                 <IconButton onClick={onClose}><IconX /></IconButton>
             </Stack>
 
-            {sortedLeaves.length ? (
+            {loading ? (
+                <Box display="flex" justifyContent="center" py={5}><CircularProgress size={28} /></Box>
+            ) : sortedLeaves.length ? (
                 <Stack spacing={1.25}>
                     {sortedLeaves.map((leave, index) => (
                         <Box
@@ -655,7 +666,7 @@ const Leaves = () => {
     );
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-    const [detailDrawer, setDetailDrawer] = useState<{ title: string; leaves: any[] } | null>(null);
+    const [detailDrawer, setDetailDrawer] = useState<{ title: string; leaves: any[]; loading?: boolean } | null>(null);
 
     const fetchLeaves = async (start: Date, end: Date) => {
         setLoading(true);
@@ -723,9 +734,20 @@ const Leaves = () => {
             if (column.key === 'holiday') return isHoliday;
 
             // Holidays have their own column, so keep these categories mutually exclusive.
-            return !isHoliday && getLeaveType(leave) === column.leaveType;
+            if (isHoliday) return false;
+
+            if (getLeaveType(leave) === column.leaveType) return true;
+
+            const leaveId = Number(leave.leave_id ?? leave.id);
+            if (!leaveId) return false;
+
+            return leaveTypes.some(
+                (leaveType) =>
+                    Number(leaveType.id) === leaveId &&
+                    getLeaveType(leaveType) === column.leaveType,
+            );
         },
-        [],
+        [leaveTypes],
     );
 
     const getLeaveColumnKey = useCallback((leave: any) => {
@@ -822,28 +844,61 @@ const Leaves = () => {
             return sameUser && sameLeave;
         });
 
-    const openLeaveDetails = (row: any, column?: (typeof SUMMARY_COLUMNS)[number]) => {
-        const leaves = column?.key === 'holiday'
+    const openLeaveDetails = async (row: any, column?: (typeof SUMMARY_COLUMNS)[number]) => {
+        const buildAbsenceLeaves = () =>
+            (row.absence_details || []).map((absence: any, index: number) => ({
+                ...absence,
+                id: `absence-${row.user_id}-${absence.date}-${absence.shift_id || index}`,
+                is_absence: true,
+                user_id: row.user_id,
+                user_name: row.user_name,
+                user_image: row.user_image,
+                user_thumb_image: row.user_thumb_image,
+                start_date: absence.date_formatted || absence.date,
+                start_time: absence.shift_start_time,
+                end_time: absence.shift_end_time,
+            }));
+
+        const rowLeaveDetails = column ? row[`${column.key}_details`] : null;
+
+        let leaves = column?.key === 'holiday'
             ? (row.holiday_details || []).map((holiday: any) => ({
                 ...holiday,
                 is_holiday: true,
                 user_id: row.user_id,
             }))
             : column
-                ? getRowLeaves(row.user_id, column)
-                : (row.absence_details || []).map((absence: any, index: number) => ({
-                    ...absence,
-                    id: `absence-${row.user_id}-${absence.date}-${absence.shift_id || index}`,
-                    is_absence: true,
-                    user_id: row.user_id,
-                    user_name: row.user_name,
-                    user_image: row.user_image,
-                    user_thumb_image: row.user_thumb_image,
-                    start_date: absence.date_formatted || absence.date,
-                    start_time: absence.shift_start_time,
-                    end_time: absence.shift_end_time,
-                }));
+                ? Array.isArray(rowLeaveDetails) && rowLeaveDetails.length
+                    ? rowLeaveDetails.map((leave: any) => ({
+                        ...leave,
+                        user_id: row.user_id,
+                        user_name: leave.user_name || row.user_name,
+                        user_image: leave.user_image || row.user_image,
+                        user_thumb_image: leave.user_thumb_image || row.user_thumb_image,
+                    }))
+                    : getRowLeaves(row.user_id, column)
+                : buildAbsenceLeaves();
         const title = column ? `${row.user_name || 'User'} - ${column.label}` : `${row.user_name || 'User'} - Absence`;
+
+        const hasExpectedRecords = column && column.key !== 'holiday' && getSummaryColumnCount(row, column) > 0;
+        if (hasExpectedRecords && leaves.length === 0 && startDate && endDate) {
+            setDetailDrawer({ title, leaves: [], loading: true });
+
+            try {
+                const res = await api.get('user-leaves/get-list', {
+                    params: {
+                        start_date: toApiDate(startDate),
+                        end_date: toApiDate(endDate),
+                        user_id: row.user_id,
+                    },
+                });
+
+                leaves = (res.data?.data || []).filter((leave: any) => matchesSummaryColumn(leave, column));
+            } catch (err) {
+                console.error('Failed to fetch user leave details', err);
+            }
+        }
+
         setDetailDrawer({ title, leaves });
     };
 
@@ -1613,6 +1668,7 @@ const Leaves = () => {
                 onClose={() => setDetailDrawer(null)}
                 title={detailDrawer?.title || 'Leave Details'}
                 leaves={detailDrawer?.leaves || []}
+                loading={detailDrawer?.loading}
                 onOpenUser={(leave) => openUserLeaveDetails(leave.user_id, leave)}
             />
 

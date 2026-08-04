@@ -434,6 +434,10 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
         setAlert(prev => ({ ...prev, open: false }));
     }, []);
 
+    const getApiErrorMessage = useCallback((error: any, fallback: string) => {
+        return error?.response?.data?.message || error?.message || fallback;
+    }, []);
+
     const openRejectDialog = useCallback((requestId: number | null, isBulk: boolean = false) => {
         setRejectDialog({
             open: true,
@@ -461,7 +465,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
         }));
     }, []);
 
-    const fetchRequests = useCallback(async (start?: Date, end?: Date, retryCount = 0) => {
+    const fetchRequests = useCallback(async (start?: Date, end?: Date) => {
         try {
             setLoading(true);
 
@@ -495,18 +499,12 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
             }
         } catch (error) {
             console.error('Error fetching requests data:', error);
-
-            if (retryCount < 2) {
-                await delay(1000);
-                return fetchRequests(start, end, retryCount + 1);
-            }
-
-            showAlert('Error fetching requests data', 'error');
+            showAlert(getApiErrorMessage(error, 'Error fetching requests data'), 'error');
             setRequestList([]);
         } finally {
             setLoading(false);
         }
-    }, [selectedDateRange, user_id, showAlert]);
+    }, [selectedDateRange, user_id, showAlert, getApiErrorMessage]);
 
     const handleSingleRequest = useCallback(
         async (requestId: number, action: 'approve' | 'reject', comment?: string) => {
@@ -538,7 +536,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                     showAlert(response.data.message || `Error ${action}ing request`, 'error');
                 }
             } catch (error) {
-                // showAlert(`Error ${action}ing request`, 'error');
+                showAlert(getApiErrorMessage(error, `Error ${action}ing request`), 'error');
             } finally {
                 setProcessingIds(prev => {
                     const newSet = new Set(prev);
@@ -547,7 +545,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                 });
             }
         },
-        [fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, user_id]
+        [fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, getApiErrorMessage, user_id]
     );
 
     const handleBulkAction = useCallback(async (action: 'approve' | 'reject', reason?: string) => {
@@ -585,11 +583,11 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                 showAlert(response.data.message || `Error ${action}ing all requests`, 'error');
             }
         } catch (error) {
-            // showAlert(`Error ${action}ing all requests`, 'error');
+            showAlert(getApiErrorMessage(error, `Error ${action}ing all requests`), 'error');
         } finally {
             setLoading(false);
         }
-    }, [pendingRequests, fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, user_id]);
+    }, [pendingRequests, fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, getApiErrorMessage, user_id]);
 
     const handleApproveRequest = useCallback((requestId: number) => {
         return handleSingleRequest(requestId, 'approve');
