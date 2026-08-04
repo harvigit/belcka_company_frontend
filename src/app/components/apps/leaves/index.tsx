@@ -665,8 +665,8 @@ const Leaves = () => {
                 end_date: toApiDate(end),
             };
             const [leavesResponse, overviewResponse] = await Promise.all([
-                api.get('user-leaves/get-list', payload),
-                api.get('user-leaves/overview', payload),
+                api.get('user-leaves/get-list', { params: payload }),
+                api.get('user-leaves/overview', { params: payload }),
             ]);
 
             setData(leavesResponse.data?.data || []);
