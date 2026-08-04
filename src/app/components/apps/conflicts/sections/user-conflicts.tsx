@@ -424,11 +424,11 @@ const UserDetailPanel = React.memo(
                           <Button
                             size="small"
                             variant="contained"
-                            color="primary"
+                            color="success"
                             disabled={isSaving}
                             onClick={() => handleSave(user.user_id)}
                           >
-                            Save
+                            Approve
                           </Button>
                         </Stack>
                       </Box>

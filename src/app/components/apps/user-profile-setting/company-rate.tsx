@@ -62,6 +62,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
   const [ratePermisison, setRatePermission] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
+  const [actionUsers, setActionUsers] = useState<number[]>([]);
   const { data: session, update } = useSession();
   const user = session?.user as User & { user_role_id?: number | null } & {
     id: number;
@@ -90,6 +91,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       const res = await api.get(`company/active-company?user_id=${userId}`);
       if (res.data.info) {
         const companyData = res.data.info;
+        setActionUsers(res.data.users || []);
         setCompany(companyData);
         const cisPercentage = Number(companyData.cis) || 0;
         setCisPer(cisPercentage);
@@ -424,7 +426,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       height="450px !important"
     >
       <Box display={"flex"} justifyContent={"space-between"} mb={2}>
-        {user.user_role_id !== 1 &&
+        {user.user_role_id !== 1 && !actionUsers.includes(user.id) &&
         comapny.is_pending_request &&
         (payRate
           ? payRate === "view" || payRate === "view_edit"
@@ -459,7 +461,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       </Box>
       {ratePermisison ? (
         <>
-          {user.user_role_id === 1 ? (
+          {user.user_role_id === 1 || actionUsers.includes(user.id) ? (
             <>
               <Box display={"flex"} justifyContent={"space-between"} mb={1}>
                 <Typography

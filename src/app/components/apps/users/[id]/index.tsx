@@ -611,7 +611,7 @@ const TablePagination = () => {
     }
 
     return (
-        <PermissionGuard permission="Users">
+        <PermissionGuard permission="Users" isUserProfile={Number(userId) === Number(user?.id)}>
             <Box>
                 <BlankCard>
                     <Dialog

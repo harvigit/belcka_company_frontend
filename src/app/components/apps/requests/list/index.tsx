@@ -315,6 +315,28 @@ export default function UserRequests({
       if (params.length > 0) url += `?${params.join("&")}`;
       return url;
     },
+    "Work log": (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+      params.push("type=worklog");
+      params.push(`open=true`);
+      if (params.length > 0) url += `?${params.join("&")}`;
+      return url;
+    },
+    Worklog: (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+      params.push("type=worklog");
+      params.push(`open=true`);
+      if (params.length > 0) url += `?${params.join("&")}`;
+      return url;
+    },
     // Pass leave dates directly in URL params - no localStorage needed
     Leave: (recordId, startDate, endDate) => {
       let url = `/apps/users/${recordId}?tab=leave`;
@@ -433,7 +455,7 @@ export default function UserRequests({
                   onClick={() => {
                     const routeFn = REQUEST_ROUTE_MAP[work.type_name];
                     if (routeFn) {
-                      if (work.type_name === "Shift") {
+                      if (["Shift", "Penalty", "Work log", "Worklog"].includes(work.type_name)) {
                         const dateAdded = work.date_added
                           ? parse(
                               work.date_added,
@@ -452,20 +474,6 @@ export default function UserRequests({
                         const leaveDate = getLeaveDate(work);
                         router.push(
                           routeFn(work.user_id, leaveDate, leaveDate),
-                        );
-                      } else if (work.type_name === "Penalty") {
-                        const dateAdded = work.date_added
-                          ? parse(
-                              work.date_added,
-                              "d MMMM yyyy HH:mm",
-                              new Date(),
-                            )
-                          : undefined;
-                        const formattedDate = dateAdded
-                          ? format(dateAdded, "yyyy-MM-dd")
-                          : undefined;
-                        router.push(
-                          routeFn(work.user_id, formattedDate, formattedDate),
                         );
                       } else if (work.type_name === "Team") {
                         router.push(routeFn(work.team_id));
