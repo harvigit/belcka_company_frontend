@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * LEGACY Expense list (pre-redesign). Kept for reference.
+ * Active UI: ./ExpenseListUI.tsx
+ * Do not delete until the new UI is fully validated and this file is no longer needed.
+ */
+
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Autocomplete,
