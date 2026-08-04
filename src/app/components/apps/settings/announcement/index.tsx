@@ -229,7 +229,7 @@ export default function AnnouncementsList({
                         }}
                       >
                         <Typography variant="h6" color="inherit">
-                          Announcement from {it.sender_name} • {it.type}
+                          Announcement from {it.sender_name} • {it.announcement_type == 2 ? it.sender_name : it.type}
                         </Typography>
                         <Typography
                           color="textSecondary"
