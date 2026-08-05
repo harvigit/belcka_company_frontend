@@ -897,7 +897,7 @@ const StockList = () => {
                   setInputValue(item.sub_qty?.toString() || "0");
                 }}
               >
-                {item.sub_qty > 0 ? item.sub_qty : "-"}
+                {item?.is_sub_qty  && item.sub_qty > 0 ? item.sub_qty : "-"}
               </Typography>
             )}
           </Stack>
