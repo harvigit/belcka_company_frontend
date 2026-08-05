@@ -2460,11 +2460,13 @@ const TimeClock = ({queryParams}: Props) => {
                                 </IconButton>
                             </Tooltip>
 
+                            {user.user_role_id === 1 && (
                             <Tooltip title="Settings">
                                 <IconButton onClick={handleSettingOpen} color="primary" size="small">
                                     <IconSettings size={20}/>
                                 </IconButton>
                             </Tooltip>
+                            )}
 
                             <Settings
                                 settingOpen={settingOpen}

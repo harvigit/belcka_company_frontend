@@ -641,7 +641,7 @@ function LeaveDetailsDrawer({
 const Leaves = () => {
     const router = useRouter();
     const session = useSession();
-    const user = session.data?.user as User & { company_id?: number | null };
+    const user = session.data?.user as User & { company_id?: number | null } & { user_role_id: number; };
     const today = new Date();
     const storedRange = typeof window !== 'undefined' ? loadDateRangeFromStorage() : null;
     const defaultStart = startOfMonth(today);
@@ -1176,11 +1176,13 @@ const Leaves = () => {
                                 <IconEye size={20} />
                             </IconButton>
                         </Tooltip>
+                        { user.user_role_id === 1 && (
                         <Tooltip title="Settings">
                             <IconButton color="primary" onClick={() => setSettingsOpen(true)}>
                                 <IconSettings size={20} />
                             </IconButton>
                         </Tooltip>
+                        )}
                     </Stack>
                 </Stack>
             </Box>
