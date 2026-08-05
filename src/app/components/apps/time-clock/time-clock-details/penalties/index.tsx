@@ -24,8 +24,10 @@ import {
     Polygon,
     Polyline,
     useJsApiLoader,
-} from '@react-google-maps/api';
-import {GOOGLE_MAPS_SHARED_LOADER_OPTIONS} from '@/utils/googleMaps';
+} from "@react-google-maps/api";
+import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 interface ChecklogsPageProps {
     worklogId: number;
@@ -402,6 +404,9 @@ export default function Penalties({worklogId, onClose, requestOnly = false, vari
     const [penaltyToEdit, setPenaltyToEdit] = useState<PenaltyItem | null>(null);
     const isTimeTrackingSidebar = variant === 'time-tracking';
 
+    const [actionUsers, setActionUsers] = useState<number[]>([]);
+    const { data: session } = useSession();
+    const user = session?.user as User & { id: number; role_id: number };
     useEffect(() => {
         if (worklogId > 0) fetchPenalties();
     }, [worklogId]);
@@ -412,8 +417,9 @@ export default function Penalties({worklogId, onClose, requestOnly = false, vari
             const res = await api.get(`user-worklog/get-worklog-penalties?worklog_id=${worklogId}`);
             if (res.data?.IsSuccess) {
                 setPenalties(res.data.info || []);
-                setDay(res.data.worklog_day || '');
-                setDate(res.data.worklog_date || '');
+                setDay(res.data.worklog_day || "");
+                setDate(res.data.worklog_date || "");
+                setActionUsers(res.data.users || []);
             }
         } catch (err) {
             toast.error('Failed to fetch penalties');
@@ -647,7 +653,7 @@ export default function Penalties({worklogId, onClose, requestOnly = false, vari
                             </Box>
 
                             {/* Conditional Buttons */}
-                            {penalty.is_penalty_appeal ? (
+                            {penalty.is_penalty_appeal && actionUsers.includes(user?.id) ? (
                                 <Box display="flex" gap={1}>
                                     {!isTimeTrackingSidebar && (
                                         <>

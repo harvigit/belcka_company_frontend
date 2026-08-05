@@ -2530,7 +2530,7 @@ const ProductList = () => {
             >
               <IconEye />
             </IconButton>
-            {canView && (
+            {user.user_role_id === 1 && (
               <Tooltip title="Settings">
                 <IconButton
                   color="primary"

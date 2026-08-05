@@ -30,6 +30,8 @@ import { AxiosResponse } from 'axios';
 import { TimeClock } from '../time-clock';
 import api from '@/utils/axios';
 import { DateTime } from 'luxon';
+import { useSession } from 'next-auth/react';
+import { User } from 'next-auth';
 
 // Move interfaces to top for better organization
 interface RequestItem {
@@ -72,6 +74,7 @@ interface RequestListResponse {
     IsSuccess: boolean;
     message: string;
     info: RequestItem[];
+    users: [];
 }
 
 interface RequestDetailsProps {
@@ -128,7 +131,8 @@ const RequestCard = React.memo<{
     onReject: (id: number) => void;
     formatHour: (val: string | number | null | undefined, isPricework?: boolean) => string;
     formatDate: (val: string | number | null | undefined) => string;
-}>(({ request, isProcessing, onApprove, onReject, formatHour, formatDate }) => {
+    canAction: boolean;
+}>(({ request, isProcessing, onApprove, onReject, formatHour, formatDate, canAction }) => {
 
     const formatPayableHour = (val: string | number | null | undefined, isPricework: boolean = false): string => {
         if (val === null || val === undefined) return isPricework ? '--' : '00:00';
@@ -259,16 +263,16 @@ const RequestCard = React.memo<{
                                         Request Note
                                     </Typography>
                                     <Tooltip title={request.note} placement='top'>
-                                        <Typography variant="body2" color="primary.main" 
-                                        sx={{
-                                            display: "-webkit-box",
-                                            WebkitBoxOrient: "vertical",
-                                            WebkitLineClamp: 2,
-                                            overflow: "hidden",
-                                            textOverflow: "ellipsis",
-                                            lineHeight: 1.15,
-                                            wordBreak: "break-word",
-                                        }}>
+                                        <Typography variant="body2" color="primary.main"
+                                            sx={{
+                                                display: "-webkit-box",
+                                                WebkitBoxOrient: "vertical",
+                                                WebkitLineClamp: 2,
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                lineHeight: 1.15,
+                                                wordBreak: "break-word",
+                                            }}>
                                             {request.note}
                                         </Typography>
                                     </Tooltip>
@@ -284,9 +288,9 @@ const RequestCard = React.memo<{
                         gap: 1,
                         alignItems: 'flex-end',
                         minWidth: 100,
-                        width:"30%"
+                        width: "30%"
                     }}>
-                        {request.status === PENDING_STATUS ? (
+                        {request.status === PENDING_STATUS && canAction ? (
                             <>
                                 <Button
                                     variant="text"
@@ -342,16 +346,16 @@ const RequestCard = React.memo<{
                                         </Typography>
                                         <Tooltip title={request.reject_reason} placement='top'>
                                             <Typography variant="body2" color="primary.main"
-                                            sx={{
-                                                display: "-webkit-box",
-                                                WebkitBoxOrient: "vertical",
-                                                WebkitLineClamp: 2,
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                lineHeight: 1.15,
-                                                maxWidth:500,
-                                                wordBreak: "break-word",
-                                            }}>
+                                                sx={{
+                                                    display: "-webkit-box",
+                                                    WebkitBoxOrient: "vertical",
+                                                    WebkitLineClamp: 2,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    lineHeight: 1.15,
+                                                    maxWidth: 500,
+                                                    wordBreak: "break-word",
+                                                }}>
                                                 {request.reject_reason}
                                             </Typography>
                                         </Tooltip>
@@ -368,7 +372,11 @@ const RequestCard = React.memo<{
 
 RequestCard.displayName = 'RequestCard';
 
-const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_id, startDate, endDate, onClose }) => {
+const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_id, startDate, endDate, onClose }) => {
+    const { data: session } = useSession();
+    const user = session?.user as User & { id: number; role_id: number };
+    const [actionUsers, setActionUsers] = useState<number[]>([]);
+
     // State management
     const [requestList, setRequestList] = useState<RequestItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -397,7 +405,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
         return { defaultStart, defaultEnd };
     }, [today]);
 
-    const pendingRequestsCount = useMemo(() => 
+    const pendingRequestsCount = useMemo(() =>
         requestList.filter(req => req.status === PENDING_STATUS).length, [requestList]
     );
 
@@ -493,6 +501,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
 
             if (response.data.IsSuccess) {
                 setRequestList(response.data.info || []);
+                setActionUsers(response.data.users || []);
             } else {
                 showAlert(response.data.message || 'Failed to fetch requests', 'error');
                 setRequestList([]);
@@ -527,7 +536,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                 const response: AxiosResponse<{ IsSuccess: boolean; message?: string }> = await api.post(endpoint, payload);
 
                 if (response.data.IsSuccess) {
-                    showAlert(`Request ${action == 'approve' ? `approved` : action == 'reject' ? 'rejected' :""} successfully`, 'success');
+                    showAlert(`Request ${action == 'approve' ? `approved` : action == 'reject' ? 'rejected' : ""} successfully`, 'success');
 
                     await delay(1500);
 
@@ -574,7 +583,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
             const response: AxiosResponse<{ IsSuccess: boolean; message?: string }> = await api.post(endpoint, payload);
 
             if (response.data.IsSuccess) {
-                showAlert(`All requests ${action == 'approve' ? `approved` : action == 'reject' ? 'rejected' :""} successfully`, 'success');
+                showAlert(`All requests ${action == 'approve' ? `approved` : action == 'reject' ? 'rejected' : ""} successfully`, 'success');
 
                 await delay(2000);
 
@@ -726,6 +735,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                                 onReject={handleRejectRequest}
                                 formatHour={formatHour}
                                 formatDate={formatDate}
+                                canAction={actionUsers.includes(user?.id)}
                             />
                         ))}
                     </Stack>
@@ -733,7 +743,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
             </Box>
 
             {/* Footer Actions */}
-            {pendingRequestsCount > 0 && (
+            {pendingRequestsCount > 0 && (actionUsers.includes(user?.id)) && (
                 <Box sx={{
                     p: 2,
                     borderTop: 1,
