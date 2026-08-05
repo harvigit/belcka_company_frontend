@@ -64,7 +64,7 @@ export const useTimeClockData = (
                 setUserHasRatePermission(response.data.user_rate_permission);
                 setRatePermissionLoaded(true);
 
-                await fetchConflicts(start, end, user_id);
+                await fetchConflicts(user_id);
 
                 fetchTimeClockResources(response.data.company_id);
             }
@@ -74,12 +74,9 @@ export const useTimeClockData = (
         }
     }, [user_id, isRemovedUser, isArchivedUser]);
 
-    const fetchConflicts = useCallback(async (start: Date, end: Date, userId?: any): Promise<void> => {
+    const fetchConflicts = useCallback(async (userId?: any): Promise<void> => {
         try {
-            const params: Record<string, string> = {
-                start_date: format(start, 'dd/MM/yyyy'),
-                end_date: format(end, 'dd/MM/yyyy'),
-            };
+            const params: Record<string, string> = {};
             if (userId) {
                 params.user_id = userId;
             }

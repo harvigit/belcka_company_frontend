@@ -667,7 +667,7 @@ const TimeClock = ({queryParams}: Props) => {
                     }
 
                     // Fetch conflicts separately
-                    await fetchConflictsData(start, end);
+                    await fetchConflictsData();
                     const pagMeta = response.data.data;
                     setTotalRows(pagMeta?.totalItems ?? response.data.info.length);
                     setPageCount(pagMeta?.totalPages ?? 1);
@@ -690,11 +690,8 @@ const TimeClock = ({queryParams}: Props) => {
         }
     };
 
-    const fetchConflictsData = async (start: Date, end: Date) => {
-        const params: Record<string, string> = {
-            start_date: format(start, 'dd/MM/yyyy'),
-            end_date: format(end, 'dd/MM/yyyy'),
-        };
+    const fetchConflictsData = async () => {
+        const params: Record<string, string> = {};
         const requestKey = JSON.stringify(params);
         const pendingRequest = conflictRequestsRef.current.get(requestKey);
         if (pendingRequest) return pendingRequest;
@@ -727,7 +724,7 @@ const TimeClock = ({queryParams}: Props) => {
             if (fullRefresh) {
                 await fetchData(s, e);
             } else {
-                await fetchConflictsData(s, e);
+                await fetchConflictsData();
             }
         } catch (error) {
             setErrorMessage('Failed to refresh data.');
@@ -874,9 +871,7 @@ const TimeClock = ({queryParams}: Props) => {
         setConflictSidebar(false);
         setSelectedConflictUserId(null);
         try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchConflictsData(defaultStartDate, defaultEndDate);
+            await fetchConflictsData();
         } catch (error) {
             console.error('Error fetching time clock data after closing conflict sidebar:', error);
         }
