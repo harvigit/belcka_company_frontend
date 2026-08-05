@@ -645,12 +645,19 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         >
                                                             <Box
                                                                 onClick={() => {
-                                                                    if (!log.is_pricework && log.worklog_id) {
+                                                                    const hasActivePenalty = !log.is_pricework
+                                                                        && log.worklog_id
+                                                                        && log.has_penalty
+                                                                        && Number(log.penalty_count ?? 0) > 0
+                                                                        && log.penalty_hours !== '--'
+                                                                        && log.penalty_hours !== '00:00';
+
+                                                                    if (hasActivePenalty) {
                                                                         onPenaltyClick?.(Number(log.worklog_id));
                                                                     }
                                                                 }}
                                                                 sx={{
-                                                                    cursor: !log.is_pricework && log.worklog_id ? 'pointer' : 'default',
+                                                                    cursor: log.has_penalty && log.penalty_hours !== '--' && log.penalty_hours !== '00:00' ? 'pointer' : 'default',
                                                                 }}>
                                                                 {log.is_pricework ? '--' : formatHour(log?.penalty_hours ?? 0)}
                                                             </Box>
