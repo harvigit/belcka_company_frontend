@@ -1318,7 +1318,8 @@ const ProductList = () => {
         const code = item.supplier_code ? item.supplier_code : "-";
         return (
           <Stack direction="row" alignItems="center">
-            <Typography
+           <Tooltip title={item.supplier_code ? item.supplier_code : "-"}>
+             <Typography
               textTransform="capitalize"
               className="f-14"
               sx={{
@@ -1328,6 +1329,7 @@ const ProductList = () => {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 wordBreak: "break-word",
+                width: "85px",
                 px: 1,
                 py: 0.5,
                 borderRadius: 1,
@@ -1356,6 +1358,7 @@ const ProductList = () => {
             >
               {item.supplier_code ? item.supplier_code : "-"}
             </Typography>
+           </Tooltip>
           </Stack>
         );
       },
