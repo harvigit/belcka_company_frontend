@@ -27,6 +27,8 @@ import {
     useJsApiLoader,
 } from "@react-google-maps/api";
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 interface ChecklogsPageProps {
     worklogId: number;
@@ -378,6 +380,9 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
     const [editPenaltyMinutes, setEditPenaltyMinutes] = useState("");
     const [penaltyToEdit, setPenaltyToEdit] = useState<PenaltyItem | null>(null);
 
+    const [actionUsers, setActionUsers] = useState<number[]>([]);
+    const { data: session } = useSession();
+    const user = session?.user as User & { id: number; role_id: number };
     useEffect(() => {
         if (worklogId > 0) fetchPenalties();
     }, [worklogId]);
@@ -390,6 +395,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                 setPenalties(res.data.info || []);
                 setDay(res.data.worklog_day || "");
                 setDate(res.data.worklog_date || "");
+                setActionUsers(res.data.users || []);
             }
         } catch (err) {
             toast.error("Failed to fetch penalties");
@@ -587,7 +593,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                             </Box>
 
                             {/* Conditional Buttons */}
-                            {penalty.is_penalty_appeal ? (
+                            {penalty.is_penalty_appeal && actionUsers.includes(user?.id) ? (
                                 <Box display="flex" gap={1}>
                                     <Button
                                         variant="contained"
