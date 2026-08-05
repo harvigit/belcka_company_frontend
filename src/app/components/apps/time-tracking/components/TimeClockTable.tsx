@@ -53,6 +53,7 @@ interface TimeClockTableProps {
     saveFieldChanges: (worklogId: string, originalLog: any) => void,
     onDeleteClick: (id: string, type: RecordType) => void,
     openPriceworkSidebar?: (pricework: any) => void | Promise<void>,
+    onPenaltyClick?: (worklogId: number) => void,
 }
 
 const TimeClockTable: React.FC<TimeClockTableProps> = ({
@@ -72,6 +73,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            saveFieldChanges,
                                                            onDeleteClick,
                                                            openPriceworkSidebar,
+                                                           onPenaltyClick,
                                                        }) => {
     const [locationDrawer, setLocationDrawer] = useState<LocationDrawerState>({
         open: false,
@@ -642,7 +644,14 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             disableHoverListener={!log.penalty_message}
                                                         >
                                                             <Box
-                                                                sx={{cursor: log.penalty_message ? 'pointer' : 'default'}}>
+                                                                onClick={() => {
+                                                                    if (!log.is_pricework && log.worklog_id) {
+                                                                        onPenaltyClick?.(Number(log.worklog_id));
+                                                                    }
+                                                                }}
+                                                                sx={{
+                                                                    cursor: !log.is_pricework && log.worklog_id ? 'pointer' : 'default',
+                                                                }}>
                                                                 {log.is_pricework ? '--' : formatHour(log?.penalty_hours ?? 0)}
                                                             </Box>
                                                         </Tooltip>

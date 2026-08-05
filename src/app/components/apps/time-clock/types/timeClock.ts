@@ -59,6 +59,7 @@ export type DailyBreakdown = {
     status_color?: string;
     userChecklogs?: CheckLog[];
     allUserChecklogs?: CheckLog[];
+    has_pending_worklog_request?: boolean;
     has_pending_leave_request?: boolean;
     is_timesheet_locked?: boolean;
     timesheet_status?: string;

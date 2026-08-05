@@ -1079,6 +1079,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     return [{
                         rowType: 'day' as const,
                         date: day.date ?? '--',
+                        has_pending_worklog_request: day.has_pending_worklog_request ?? false,
                         has_pending_leave_request: day.has_pending_leave_request ?? false,
                         is_timesheet_paid: day.status === '9' || day.status === 9,
                         timesheet_ids: day.timesheet_ids ?? '--',
@@ -1118,7 +1119,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         rowsData: worklogs,
                         rowSpan: 1,
                         status_text: '--',
-                        is_requested: false,
+                        is_requested: day.has_pending_worklog_request ?? false,
                         is_edited: false,
                     }];
                 }
@@ -1126,6 +1127,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 return [{
                     rowType: 'day' as const,
                     date: day.date ?? '--',
+                    has_pending_worklog_request: day.has_pending_worklog_request ?? false,
                     has_pending_leave_request: day.has_pending_leave_request ?? false,
                     is_timesheet_paid: day.status === '9' || day.status === 9,
                     timesheet_ids: day.timesheet_ids ?? null,
@@ -1161,7 +1163,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     check_out: '--',
                     rowSpan: 1,
                     status_text: '--',
-                    is_requested: false,
+                    is_requested: day.has_pending_worklog_request ?? false,
                     is_edited: false,
                     isMoreThanWork: false,
                     isLessThanWork: false,
@@ -2191,6 +2193,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 <Penalties
                     worklogId={selectedWorkId}
                     onClose={closePenaltiesSidebar}
+                    requestOnly
+                    variant="time-clock"
                 />
             </Drawer>
 

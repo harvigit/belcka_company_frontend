@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import api from "@/utils/axios";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import api from '@/utils/axios';
 import {
     Box,
     Typography,
@@ -9,15 +9,14 @@ import {
     IconButton,
     Button,
     Divider,
-    Chip,
     Dialog,
     DialogTitle,
     DialogContent,
     DialogActions,
     TextField,
-} from "@mui/material";
-import { IconArrowLeft, IconMapPin } from "@tabler/icons-react";
-import toast from "react-hot-toast";
+} from '@mui/material';
+import {IconArrowLeft, IconMapPin} from '@tabler/icons-react';
+import toast from 'react-hot-toast';
 import {
     Circle,
     GoogleMap,
@@ -25,12 +24,14 @@ import {
     Polygon,
     Polyline,
     useJsApiLoader,
-} from "@react-google-maps/api";
-import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
+} from '@react-google-maps/api';
+import {GOOGLE_MAPS_SHARED_LOADER_OPTIONS} from '@/utils/googleMaps';
 
 interface ChecklogsPageProps {
     worklogId: number;
     onClose: () => void;
+    requestOnly?: boolean;
+    variant?: 'time-clock' | 'time-tracking';
 }
 
 interface PenaltyItem {
@@ -43,6 +44,20 @@ interface PenaltyItem {
     penalty_minutes?: string | null;
     is_penalty_appeal?: boolean;
     appeal_id?: number;
+    appeal_status?: number | null;
+    is_requested?: boolean;
+    request_status?: number | null;
+    request_id?: number | null;
+    request_action?: string | null;
+    request_note?: string | null;
+    request_old_data?: {
+        penalty_minutes?: string | number | null;
+        [key: string]: unknown;
+    } | null;
+    request_new_data?: {
+        penalty_minutes?: string | number | null;
+        [key: string]: unknown;
+    } | null;
     geofences?: PenaltyGeofenceApi[] | null;
     start_work_location?: PenaltyLocation | null;
     stop_work_location?: PenaltyLocation | null;
@@ -54,7 +69,7 @@ type PenaltyLocation = {
     location?: string | null;
 };
 
-type PenaltyGeofenceType = "circle" | "polygon" | "polyline";
+type PenaltyGeofenceType = 'circle' | 'polygon' | 'polyline';
 
 type PenaltyGeofenceApi = {
     id?: number | string | null;
@@ -78,25 +93,32 @@ type PenaltyGeofence = {
 };
 
 type PenaltyMapPoint = {
-    label: "Start" | "Stop";
+    label: 'Start' | 'Stop';
     color: string;
     position: google.maps.LatLngLiteral;
     address?: string | null;
     time?: string | null;
 };
 
-const OUTSIDE_BOUNDARY = "Outside Boundary";
-const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 };
+const OUTSIDE_BOUNDARY = 'Outside Boundary';
+const DEFAULT_CENTER = {lat: 51.5074, lng: -0.1278};
 const DEFAULT_ZOOM = 16;
 
-const isOutsideBoundaryPenalty = (penaltyType?: string | null) =>
-    String(penaltyType ?? "").trim().toLowerCase() === OUTSIDE_BOUNDARY.toLowerCase();
+const isOutsideBoundaryPenalty = (penaltyType?: string | null) => 
+    String(penaltyType ?? '').trim().toLowerCase() === OUTSIDE_BOUNDARY.toLowerCase();
+
+const formatPenaltyMinutes = (value?: string | number | null) => {
+    if (value === null || value === undefined || value === '') return '-';
+    const minutes = Number(value);
+    if (!Number.isFinite(minutes)) return String(value);
+    return `${minutes} Minute${minutes === 1 ? '' : 's'}`;
+};
 
 const isValidLatLng = (lat: number, lng: number) =>
     Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 
 const normalizeLocationPoint = (
-    label: "Start" | "Stop",
+    label: 'Start' | 'Stop',
     color: string,
     location?: PenaltyLocation | null,
     time?: string | null,
@@ -109,7 +131,7 @@ const normalizeLocationPoint = (
     return {
         label,
         color,
-        position: { lat, lng },
+        position: {lat, lng},
         address: location?.location,
         time,
     };
@@ -120,12 +142,12 @@ const parseGeofencePath = (raw: unknown): google.maps.LatLngLiteral[] => {
 
     return raw
         .map((point) => {
-            if (!point || typeof point !== "object") return null;
+            if (!point || typeof point !== 'object') return null;
             const value = point as Record<string, unknown>;
             const lat = Number(value.lat ?? value.latitude);
             const lng = Number(value.lng ?? value.longitude);
 
-            return isValidLatLng(lat, lng) ? { lat, lng } : null;
+            return isValidLatLng(lat, lng) ? {lat, lng} : null;
         })
         .filter((point): point is google.maps.LatLngLiteral => point !== null);
 };
@@ -134,54 +156,54 @@ const normalizeGeofences = (geofences?: PenaltyGeofenceApi[] | null): PenaltyGeo
     (Array.isArray(geofences) ? geofences : [])
         .map((zone, index) => {
             const type: PenaltyGeofenceType =
-                zone?.type === "polygon" || zone?.type === "polyline" ? zone.type : "circle";
+                zone?.type === 'polygon' || zone?.type === 'polyline' ? zone.type : 'circle';
             const lat = Number(zone?.latitude);
             const lng = Number(zone?.longitude);
-            const center = isValidLatLng(lat, lng) ? { lat, lng } : null;
+            const center = isValidLatLng(lat, lng) ? {lat, lng} : null;
             const path = parseGeofencePath(zone?.coordinates);
             const radius = Number(zone?.radius);
             const validRadius = Number.isFinite(radius) && radius > 0 ? radius : 0;
 
-            if (type === "circle" && (!center || validRadius <= 0)) return null;
-            if (type === "polygon" && path.length < 3) return null;
-            if (type === "polyline" && path.length < 2) return null;
+            if (type === 'circle' && (!center || validRadius <= 0)) return null;
+            if (type === 'polygon' && path.length < 3) return null;
+            if (type === 'polyline' && path.length < 2) return null;
 
             const fallbackCenter = center ?? path[0];
             if (!fallbackCenter) return null;
 
             return {
                 id: String(zone?.id ?? `zone-${index}`),
-                name: String(zone?.name ?? "Work zone"),
+                name: String(zone?.name ?? 'Work zone'),
                 type,
                 center: fallbackCenter,
                 radius: validRadius,
-                color: typeof zone?.color === "string" && zone.color.trim() ? zone.color : "#1976d2",
+                color: typeof zone?.color === 'string' && zone.color.trim() ? zone.color : '#1976d2',
                 path,
             };
         })
         .filter((zone): zone is PenaltyGeofence => zone !== null);
 
 const extendBoundsWithGeofence = (bounds: google.maps.LatLngBounds, geofence: PenaltyGeofence) => {
-    if (geofence.type === "circle") {
+    if (geofence.type === 'circle') {
         const latDelta = geofence.radius / 111320;
         const lngDelta = geofence.radius / (111320 * Math.cos((geofence.center.lat * Math.PI) / 180) || 1);
 
-        bounds.extend({ lat: geofence.center.lat + latDelta, lng: geofence.center.lng + lngDelta });
-        bounds.extend({ lat: geofence.center.lat - latDelta, lng: geofence.center.lng - lngDelta });
+        bounds.extend({lat: geofence.center.lat + latDelta, lng: geofence.center.lng + lngDelta});
+        bounds.extend({lat: geofence.center.lat - latDelta, lng: geofence.center.lng - lngDelta});
         return;
     }
 
     geofence.path.forEach((point) => bounds.extend(point));
 };
 
-const MapPinOverlay = ({ point }: { point: PenaltyMapPoint }) => (
+const MapPinOverlay = ({point}: { point: PenaltyMapPoint }) => (
     <OverlayView position={point.position} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
         <Box
             sx={{
-                transform: "translate(-50%, -100%)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
+                transform: 'translate(-50%, -100%)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
                 gap: 0.5,
             }}
         >
@@ -190,24 +212,24 @@ const MapPinOverlay = ({ point }: { point: PenaltyMapPoint }) => (
                     px: 1,
                     py: 0.35,
                     borderRadius: 1,
-                    bgcolor: "#fff",
+                    bgcolor: '#fff',
                     border: `1px solid ${point.color}`,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                     fontSize: 11,
                     fontWeight: 700,
                     color: point.color,
-                    whiteSpace: "nowrap",
+                    whiteSpace: 'nowrap',
                 }}
             >
                 {point.label}
             </Box>
-            <IconMapPin size={30} color={point.color} />
+            <IconMapPin size={30} color={point.color}/>
         </Box>
     </OverlayView>
 );
 
-const GeofenceOverlay = ({ zone }: { zone: PenaltyGeofence }) => {
-    if (zone.type === "circle") {
+const GeofenceOverlay = ({zone}: { zone: PenaltyGeofence }) => {
+    if (zone.type === 'circle') {
         return (
             <Circle
                 center={zone.center}
@@ -222,7 +244,7 @@ const GeofenceOverlay = ({ zone }: { zone: PenaltyGeofence }) => {
         );
     }
 
-    if (zone.type === "polygon") {
+    if (zone.type === 'polygon') {
         return (
             <Polygon
                 paths={zone.path}
@@ -247,9 +269,9 @@ const GeofenceOverlay = ({ zone }: { zone: PenaltyGeofence }) => {
     );
 };
 
-const OutsideBoundaryMap = ({ penalty }: { penalty: PenaltyItem }) => {
+const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
     const mapRef = useRef<google.maps.Map | null>(null);
-    const { isLoaded } = useJsApiLoader({
+    const {isLoaded} = useJsApiLoader({
         ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
     });
@@ -257,8 +279,8 @@ const OutsideBoundaryMap = ({ penalty }: { penalty: PenaltyItem }) => {
     const points = useMemo(
         () =>
             [
-                normalizeLocationPoint("Start", "#1976d2", penalty.start_work_location, penalty.formatted_start_time),
-                normalizeLocationPoint("Stop", "#fc4b6c", penalty.stop_work_location, penalty.formatted_end_time),
+                normalizeLocationPoint('Start', '#1976d2', penalty.start_work_location, penalty.formatted_start_time),
+                normalizeLocationPoint('Stop', '#fc4b6c', penalty.stop_work_location, penalty.formatted_end_time),
             ].filter((point): point is PenaltyMapPoint => point !== null),
         [penalty.start_work_location, penalty.stop_work_location, penalty.formatted_start_time, penalty.formatted_end_time],
     );
@@ -290,7 +312,7 @@ const OutsideBoundaryMap = ({ penalty }: { penalty: PenaltyItem }) => {
             return;
         }
 
-        map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
+        map.fitBounds(bounds, {top: 50, right: 50, bottom: 50, left: 50});
     }, [geofences, points]);
 
     useEffect(() => {
@@ -310,16 +332,16 @@ const OutsideBoundaryMap = ({ penalty }: { penalty: PenaltyItem }) => {
     if (!isLoaded) {
         return (
             <Box height={260} display="flex" alignItems="center" justifyContent="center">
-                <CircularProgress size={24} />
+                <CircularProgress size={24}/>
             </Box>
         );
     }
 
     return (
         <Box>
-            <Box sx={{ height: 260, borderRadius: 1.5, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+            <Box sx={{height: 260, borderRadius: 1.5, overflow: 'hidden', border: '1px solid #e5e7eb'}}>
                 <GoogleMap
-                    mapContainerStyle={{ width: "100%", height: "100%" }}
+                    mapContainerStyle={{width: '100%', height: '100%'}}
                     center={points[0]?.position ?? geofences[0]?.center ?? DEFAULT_CENTER}
                     zoom={DEFAULT_ZOOM}
                     onLoad={(map) => {
@@ -333,10 +355,10 @@ const OutsideBoundaryMap = ({ penalty }: { penalty: PenaltyItem }) => {
                     }}
                 >
                     {geofences.map((zone) => (
-                        <GeofenceOverlay key={zone.id} zone={zone} />
+                        <GeofenceOverlay key={zone.id} zone={zone}/>
                     ))}
                     {points.map((point) => (
-                        <MapPinOverlay key={point.label} point={point} />
+                        <MapPinOverlay key={point.label} point={point}/>
                     ))}
                 </GoogleMap>
             </Box>
@@ -344,8 +366,8 @@ const OutsideBoundaryMap = ({ penalty }: { penalty: PenaltyItem }) => {
             <Box mt={1} display="flex" flexDirection="column" gap={0.75}>
                 {points.map((point) => (
                     <Typography key={point.label} variant="caption" color="text.secondary">
-                        <strong style={{ color: point.color }}>{point.label} Address:</strong>{" "}
-                        {point.address || `${point.position.lat}, ${point.position.lng}`}  {" | "}  {point.time || "--"}
+                        <strong style={{color: point.color}}>{point.label} Address:</strong>{' '}
+                        {point.address || `${point.position.lat}, ${point.position.lng}`} {' | '} {point.time || '--'}
                     </Typography>
                 ))}
             </Box>
@@ -353,30 +375,32 @@ const OutsideBoundaryMap = ({ penalty }: { penalty: PenaltyItem }) => {
     );
 };
 
-export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
+export default function Penalties({worklogId, onClose, requestOnly = false, variant = 'time-clock'}: ChecklogsPageProps) {
     const [loading, setLoading] = useState(false);
     const [penalties, setPenalties] = useState<PenaltyItem[]>([]);
-    const [day, setDay] = useState("");
-    const [date, setDate] = useState("");
+    const [day, setDay] = useState('');
+    const [date, setDate] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditingPenaltyTime, setIsEditingPenaltyTime] = useState(false);
+    const [isAppealingPenalty, setIsAppealingPenalty] = useState(false);
     const [processingAppealId, setProcessingAppealId] = useState<number | null>(null);
 
     // Admin note dialog state
     const [openAdminNoteDialog, setOpenAdminNoteDialog] = useState(false);
-    const [adminNote, setAdminNote] = useState("");
+    const [adminNote, setAdminNote] = useState('');
     const [selectedPenalty, setSelectedPenalty] = useState<PenaltyItem | null>(null);
     const [appealAction, setAppealAction] = useState<boolean>(false); // true = approve, false = reject
 
     // Delete penalty dialog state
     const [openDeletePenaltyDialog, setOpenDeletePenaltyDialog] = useState(false);
-    const [deletePenaltyNote, setDeletePenaltyNote] = useState("");
+    const [deletePenaltyNote, setDeletePenaltyNote] = useState('');
     const [penaltyToDelete, setPenaltyToDelete] = useState<PenaltyItem | null>(null);
 
     // Edit penalty time dialog state
     const [openEditPenaltyTimeDialog, setOpenEditPenaltyTimeDialog] = useState(false);
-    const [editPenaltyMinutes, setEditPenaltyMinutes] = useState("");
+    const [editPenaltyMinutes, setEditPenaltyMinutes] = useState('');
     const [penaltyToEdit, setPenaltyToEdit] = useState<PenaltyItem | null>(null);
+    const isTimeTrackingSidebar = variant === 'time-tracking';
 
     useEffect(() => {
         if (worklogId > 0) fetchPenalties();
@@ -388,11 +412,11 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
             const res = await api.get(`user-worklog/get-worklog-penalties?worklog_id=${worklogId}`);
             if (res.data?.IsSuccess) {
                 setPenalties(res.data.info || []);
-                setDay(res.data.worklog_day || "");
-                setDate(res.data.worklog_date || "");
+                setDay(res.data.worklog_day || '');
+                setDate(res.data.worklog_date || '');
             }
         } catch (err) {
-            toast.error("Failed to fetch penalties");
+            toast.error('Failed to fetch penalties');
         } finally {
             setLoading(false);
         }
@@ -401,7 +425,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
     const openAdminNotePrompt = (penalty: PenaltyItem, isApproved: boolean) => {
         setSelectedPenalty(penalty);
         setAppealAction(isApproved);
-        setAdminNote("");
+        setAdminNote('');
         setOpenAdminNoteDialog(true);
     };
 
@@ -413,6 +437,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
 
         try {
             setProcessingAppealId(selectedPenalty.appeal_id);
+            
             const res = await api.post("time-clock/appeal-action", {
                 appeal_id: selectedPenalty.appeal_id,
                 status: appealAction ? 5 : 12,
@@ -425,10 +450,10 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                 onClose();
                 handleCloseDialog();
             } else {
-                toast.error(res.data?.message || "Failed to process appeal");
+                toast.error(res.data?.message || 'Failed to process appeal');
             }
         } catch {
-            toast.error("Something went wrong");
+            toast.error('Something went wrong');
         } finally {
             setProcessingAppealId(null);
         }
@@ -436,32 +461,32 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
 
     const handleCloseDialog = () => {
         setOpenAdminNoteDialog(false);
-        setAdminNote("");
+        setAdminNote('');
         setSelectedPenalty(null);
     };
 
     const openDeletePenaltyPrompt = (penalty: PenaltyItem) => {
         setPenaltyToDelete(penalty);
-        setDeletePenaltyNote("");
+        setDeletePenaltyNote('');
         setOpenDeletePenaltyDialog(true);
     };
 
     const closeDeletePenaltyDialog = () => {
         if (isDeleting) return;
         setOpenDeletePenaltyDialog(false);
-        setDeletePenaltyNote("");
+        setDeletePenaltyNote('');
         setPenaltyToDelete(null);
     };
 
     const handleDeletePenalty = async () => {
         if (!penaltyToDelete?.penalty_id) {
-            toast.error("Penalty ID not found");
+            toast.error('Penalty ID not found');
             return;
         }
 
         try {
             setIsDeleting(true);
-            const res = await api.post("user-worklog/delete-worklog-penalty", {
+            const res = await api.post('user-worklog/delete-worklog-penalty', {
                 worklog_id: worklogId,
                 penalty_id: penaltyToDelete.penalty_id,
                 note: deletePenaltyNote.trim() || null,
@@ -473,10 +498,10 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                 await fetchPenalties();
                 onClose();
             } else {
-                toast.error(res.data?.message || "Failed to delete penalty");
+                toast.error(res.data?.message || 'Failed to delete penalty');
             }
         } catch {
-            toast.error("Something went wrong");
+            toast.error('Something went wrong');
         } finally {
             setIsDeleting(false);
         }
@@ -484,35 +509,36 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
 
     const openEditPenaltyTimePrompt = (penalty: PenaltyItem) => {
         setPenaltyToEdit(penalty);
-        setEditPenaltyMinutes(String(penalty.penalty_minutes ?? ""));
+        setEditPenaltyMinutes(String(penalty.penalty_minutes ?? ''));
         setOpenEditPenaltyTimeDialog(true);
     };
 
     const closeEditPenaltyTimeDialog = () => {
         if (isEditingPenaltyTime) return;
         setOpenEditPenaltyTimeDialog(false);
-        setEditPenaltyMinutes("");
+        setEditPenaltyMinutes('');
         setPenaltyToEdit(null);
     };
 
     const handleEditPenaltyTime = async () => {
         if (!penaltyToEdit?.penalty_id) {
-            toast.error("Penalty ID not found");
+            toast.error('Penalty ID not found');
             return;
         }
 
         const minutes = Number(editPenaltyMinutes);
         if (!Number.isFinite(minutes) || minutes < 0) {
-            toast.error("Enter valid penalty minutes");
+            toast.error('Enter valid penalty minutes');
             return;
         }
 
         try {
             setIsEditingPenaltyTime(true);
-            const res = await api.post("user-worklog/edit-worklog-penalty-time", {
+            const res = await api.post('user-worklog/edit-worklog-penalty-time', {
                 worklog_id: worklogId,
                 penalty_id: penaltyToEdit.penalty_id,
                 penalty_minutes: minutes,
+                request_only: requestOnly,
             });
 
             if (res.data?.IsSuccess) {
@@ -520,29 +546,61 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                 closeEditPenaltyTimeDialog();
                 await fetchPenalties();
             } else {
-                toast.error(res.data?.message || "Failed to update penalty time");
+                toast.error(res.data?.message || 'Failed to update penalty time');
             }
         } catch {
-            toast.error("Something went wrong");
+            toast.error('Something went wrong');
         } finally {
             setIsEditingPenaltyTime(false);
         }
     };
 
+    const handleAppealPenaltyRemove = async (penalty: PenaltyItem) => {
+        if (!penalty?.penalty_id) {
+            toast.error('Penalty ID not found');
+            return;
+        }
+
+        try {
+            setIsAppealingPenalty(true);
+            const res = await api.post('time-clock/appeal-penalty', {
+                worklog_id: worklogId,
+                penalty_id: penalty.penalty_id,
+                appeal_note: 'Penalty remove request from time tracking',
+            });
+
+            if (res.data?.IsSuccess) {
+                toast.success('Penalty remove appeal request submitted successfully');
+                await fetchPenalties();
+            } else {
+                toast.error(res.data?.message || 'Failed to submit penalty remove request');
+            }
+        } catch {
+            toast.error('Something went wrong');
+        } finally {
+            setIsAppealingPenalty(false);
+        }
+    };
+
     const formatHour = (val: string | number | null | undefined): string => {
-        if (val === null || val === undefined) return "-";
+        if (val === null || val === undefined) return '-';
         const num = parseFloat(val.toString());
-        if (isNaN(num)) return "-";
+        if (isNaN(num)) return '-';
 
         const h = Math.floor(num);
         const m = Math.round((num - h) * 60);
-        return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    };
+
+    const formatHourOrZero = (val: string | number | null | undefined): string => {
+        const formatted = formatHour(val);
+        return formatted === '-' ? '00:00' : formatted;
     };
 
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
-                <CircularProgress />
+                <CircularProgress/>
             </Box>
         );
     }
@@ -552,7 +610,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
             {/* Header */}
             <Box display="flex" alignItems="center" mb={3}>
                 <IconButton onClick={onClose}>
-                    <IconArrowLeft />
+                    <IconArrowLeft/>
                 </IconButton>
                 <Typography variant="h6" fontWeight={700}>
                     {date} {day}
@@ -566,105 +624,214 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                         key={idx}
                         mb={2}
                         sx={{
-                            borderRadius: 1,
+                            borderRadius: 3,
                             p: 2,
-                            boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+                            bgcolor: '#fff',
+                            border: '1px solid',
+                            borderColor: 'rgba(15, 23, 42, 0.08)',
+                            boxShadow: '0 6px 18px rgba(15, 23, 42, 0.06)',
                         }}
                     >
                         {/* Top Row */}
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                            <Box display="flex" alignItems="center" gap={1}>
-                                <Typography fontWeight={700}>
-                                    {penalty.penalty_type || "Penalty"}
+                        <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2}>
+                            <Box display="flex" flexDirection="column" gap={0.75} minWidth={0}>
+                                <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                                    <Typography fontWeight={800} color="#0f172a">
+                                        {penalty.penalty_type || 'Penalty'}
+                                    </Typography>
+
+                                </Box>
+                                <Typography variant="caption" color="text.secondary">
+                                    Worklog {penalty.formatted_start_time || '-'}–{penalty.formatted_end_time || '-'}
                                 </Typography>
-                                {penalty.is_penalty_appeal && (
-                                    <Chip
-                                        label="Appeal"
-                                        size="small"
-                                        color="warning"
-                                    />
-                                )}
                             </Box>
 
                             {/* Conditional Buttons */}
                             {penalty.is_penalty_appeal ? (
                                 <Box display="flex" gap={1}>
-                                    <Button
-                                        variant="contained"
-                                        color="success"
-                                        size="small"
-                                        disabled={processingAppealId === penalty.appeal_id}
-                                        onClick={() => openAdminNotePrompt(penalty, true)}
-                                        sx={{ borderRadius: 2, textTransform: "none" }}
-                                    >
-                                        Approve
-                                    </Button>
-                                    <Button
-                                        variant="outlined"
-                                        color="error"
-                                        size="small"
-                                        disabled={processingAppealId === penalty.appeal_id}
-                                        onClick={() => openAdminNotePrompt(penalty, false)}
-                                        sx={{ borderRadius: 2, textTransform: "none" }}
-                                    >
-                                        Reject
-                                    </Button>
+                                    {!isTimeTrackingSidebar && (
+                                        <>
+                                            <Button
+                                                variant="contained"
+                                                size="small"
+                                                disabled={processingAppealId === penalty.appeal_id}
+                                                onClick={() => openAdminNotePrompt(penalty, true)}
+                                                sx={{
+                                                    borderRadius: 999,
+                                                    textTransform: 'none',
+                                                    bgcolor: '#10b981',
+                                                    boxShadow: 'none',
+                                                    fontWeight: 700,
+                                                    '&:hover': {bgcolor: '#059669', boxShadow: 'none'},
+                                                }}
+                                            >
+                                                Approve
+                                            </Button>
+                                            <Button
+                                                variant="outlined"
+                                                size="small"
+                                                disabled={processingAppealId === penalty.appeal_id}
+                                                onClick={() => openAdminNotePrompt(penalty, false)}
+                                                sx={{
+                                                    borderRadius: 999,
+                                                    textTransform: 'none',
+                                                    borderColor: '#fb7185',
+                                                    color: '#e11d48',
+                                                    fontWeight: 700,
+                                                    '&:hover': {borderColor: '#e11d48', bgcolor: '#fff1f2'},
+                                                }}
+                                            >
+                                                Reject
+                                            </Button>
+                                        </>
+                                    )}
                                 </Box>
                             ) : (
                                 <Box display="flex" gap={1}>
-                                    <Button
-                                        variant="outlined"
-                                        color="primary"
-                                        size="small"
-                                        disabled={isEditingPenaltyTime}
-                                        onClick={() => openEditPenaltyTimePrompt(penalty)}
-                                        sx={{ borderRadius: 2, textTransform: "none" }}
-                                    >
-                                        Edit Time
-                                    </Button>
-                                    <Button
-                                        variant="outlined"
-                                        color="error"
-                                        size="small"
-                                        disabled={isDeleting}
-                                        onClick={() => openDeletePenaltyPrompt(penalty)}
-                                        sx={{ borderRadius: 2, textTransform: "none" }}
-                                    >
-                                        Delete
-                                    </Button>
+                                    {!isTimeTrackingSidebar && penalty.is_requested && (
+                                        <>
+                                            <Button
+                                                variant="contained"
+                                                size="small"
+                                                disabled={processingAppealId === penalty.request_id}
+                                                onClick={() => openAdminNotePrompt(penalty, true)}
+                                                sx={{
+                                                    borderRadius: 999,
+                                                    textTransform: 'none',
+                                                    bgcolor: '#10b981',
+                                                    boxShadow: 'none',
+                                                    fontWeight: 700,
+                                                    '&:hover': {bgcolor: '#059669', boxShadow: 'none'},
+                                                }}
+                                            >
+                                                Approve
+                                            </Button>
+                                            <Button
+                                                variant="outlined"
+                                                size="small"
+                                                disabled={processingAppealId === penalty.request_id}
+                                                onClick={() => openAdminNotePrompt(penalty, false)}
+                                                sx={{
+                                                    borderRadius: 999,
+                                                    textTransform: 'none',
+                                                    borderColor: '#fb7185',
+                                                    color: '#e11d48',
+                                                    fontWeight: 700,
+                                                    '&:hover': {borderColor: '#e11d48', bgcolor: '#fff1f2'},
+                                                }}
+                                            >
+                                                Reject
+                                            </Button>
+                                        </>
+                                    )}
+                                    {!penalty.is_requested && !isTimeTrackingSidebar && (
+                                        <>
+                                            <Button
+                                                variant="outlined"
+                                                color="primary"
+                                                size="small"
+                                                disabled={isEditingPenaltyTime}
+                                                onClick={() => openEditPenaltyTimePrompt(penalty)}
+                                                sx={{borderRadius: 2, textTransform: 'none'}}
+                                            >
+                                                Edit Time
+                                            </Button>
+                                            <Button
+                                                variant="outlined"
+                                                color="error"
+                                                size="small"
+                                                disabled={isDeleting}
+                                                onClick={() => openDeletePenaltyPrompt(penalty)}
+                                                sx={{borderRadius: 2, textTransform: 'none'}}
+                                            >
+                                                Delete
+                                            </Button>
+                                        </>
+                                    )}
+                                    {isTimeTrackingSidebar && (
+                                        <Button
+                                            variant="outlined"
+                                            color="warning"
+                                            size="small"
+                                            disabled={isAppealingPenalty || penalty.is_requested}
+                                            onClick={() => handleAppealPenaltyRemove(penalty)}
+                                            sx={{borderRadius: 2, textTransform: 'none'}}
+                                        >
+                                            Appeal Remove
+                                        </Button>
+                                    )}
                                 </Box>
                             )}
                         </Box>
 
-                        <Divider sx={{ my: 1 }} />
+                        <Divider sx={{my: 1.5}}/>
 
                         {/* Info Section */}
-                        <Box display="flex" flexDirection="column" gap={1}>
-                            <Box display="flex" alignItems="center" gap={1}>
-                                <Typography variant="body2">
-                                    Worklog Time:{" "}
-                                    {formatHour(penalty.payable_hours)} H
-                                    ({penalty.formatted_start_time || "-"}-{penalty.formatted_end_time || "-"})
-                                </Typography>
+                        <Box display="flex" flexDirection="column" gap={1.25}>
+                            <Box
+                                display="grid"
+                                gridTemplateColumns="1fr 1fr"
+                                gap={1}
+                                sx={{
+                                    '@media (max-width: 520px)': {
+                                        gridTemplateColumns: '1fr',
+                                    },
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        p: 1.25,
+                                        borderRadius: 2,
+                                        bgcolor: '#f8fafc',
+                                        border: '1px solid #e2e8f0',
+                                    }}
+                                >
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                                        Worklog Time
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={800} color="#0f172a">
+                                        {formatHourOrZero(penalty.payable_hours)}
+                                    </Typography>
+                                </Box>
+
+                                <Box
+                                    sx={{
+                                        p: 1.25,
+                                        borderRadius: 2,
+                                        bgcolor: '#f8fafc',
+                                        border: '1px solid #e2e8f0',
+                                    }}
+                                >
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                                        Current Penalty
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={800} color="#0f172a">
+                                        {formatPenaltyMinutes(penalty.penalty_minutes)}
+                                    </Typography>
+                                </Box>
                             </Box>
 
-                            <Box display="flex" alignItems="center" gap={1}>
-                                <Typography variant="body2">
-                                    Penalty Minute:{" "}
-                                    <strong>{penalty.penalty_minutes || 0} Minutes</strong>
-                                </Typography>
-                            </Box>
-                            {penalty.appeal_note !== null && (
-                                <Box display="flex" alignItems="center" gap={1}>
-                                    <Typography variant="body2">
-                                        Appeal Note:{" "}
-                                        <strong>{penalty.appeal_note}</strong>
+                            {penalty.is_penalty_appeal && penalty.appeal_note && (
+                                <Box
+                                    sx={{
+                                        p: 1.25,
+                                        borderRadius: 2,
+                                        bgcolor: '#fffbeb',
+                                        border: '1px solid #fde68a',
+                                    }}
+                                >
+                                    <Typography variant="caption" color="#92400e" fontWeight={700}>
+                                        Appeal Note
+                                    </Typography>
+                                    <Typography variant="body2" color="#451a03">
+                                        {penalty.appeal_note}
                                     </Typography>
                                 </Box>
                             )}
+                            
                             {isOutsideBoundaryPenalty(penalty.penalty_type) && (
                                 <Box mt={1.5}>
-                                    <OutsideBoundaryMap penalty={penalty} />
+                                    <OutsideBoundaryMap penalty={penalty}/>
                                 </Box>
                             )}
                         </Box>
@@ -684,7 +851,9 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                 fullWidth
             >
                 <DialogTitle>
-                    {appealAction ? "Approve Appeal" : "Reject Appeal"}
+                    {selectedPenalty?.is_requested
+                        ? (appealAction ? 'Approve Request' : 'Reject Request')
+                        : (appealAction ? 'Approve Appeal' : 'Reject Appeal')}
                 </DialogTitle>
                 <DialogContent>
                     <TextField
@@ -698,24 +867,24 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                         variant="outlined"
                         value={adminNote}
                         onChange={(e) => setAdminNote(e.target.value)}
-                        sx={{ mt: 1 }}
+                        sx={{mt: 1}}
                     />
                 </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
+                <DialogActions sx={{p: 2}}>
                     <Button
                         onClick={handleCloseDialog}
-                        sx={{ textTransform: "none" }}
+                        sx={{textTransform: 'none'}}
                     >
                         Cancel
                     </Button>
                     <Button
                         onClick={handleAdminNoteSubmit}
                         variant="contained"
-                        color={appealAction ? "success" : "error"}
+                        color={appealAction ? 'success' : 'error'}
                         disabled={processingAppealId !== null}
-                        sx={{ textTransform: "none" }}
+                        sx={{textTransform: 'none'}}
                     >
-                        {appealAction ? "Approve" : "Reject"}
+                        {appealAction ? 'Approve' : 'Reject'}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -745,11 +914,11 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                         onChange={(e) => setDeletePenaltyNote(e.target.value)}
                     />
                 </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
+                <DialogActions sx={{p: 2}}>
                     <Button
                         onClick={closeDeletePenaltyDialog}
                         disabled={isDeleting}
-                        sx={{ textTransform: "none" }}
+                        sx={{textTransform: 'none'}}
                     >
                         Cancel
                     </Button>
@@ -758,7 +927,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                         variant="contained"
                         color="error"
                         disabled={isDeleting}
-                        sx={{ textTransform: "none" }}
+                        sx={{textTransform: 'none'}}
                     >
                         Delete
                     </Button>
@@ -783,15 +952,15 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                         variant="outlined"
                         value={editPenaltyMinutes}
                         onChange={(e) => setEditPenaltyMinutes(e.target.value)}
-                        inputProps={{ min: 0, step: 1 }}
-                        sx={{ mt: 1 }}
+                        inputProps={{min: 0, step: 1}}
+                        sx={{mt: 1}}
                     />
                 </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
+                <DialogActions sx={{p: 2}}>
                     <Button
                         onClick={closeEditPenaltyTimeDialog}
                         disabled={isEditingPenaltyTime}
-                        sx={{ textTransform: "none" }}
+                        sx={{textTransform: 'none'}}
                     >
                         Cancel
                     </Button>
@@ -799,7 +968,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                         onClick={handleEditPenaltyTime}
                         variant="contained"
                         disabled={isEditingPenaltyTime}
-                        sx={{ textTransform: "none" }}
+                        sx={{textTransform: 'none'}}
                     >
                         Save
                     </Button>

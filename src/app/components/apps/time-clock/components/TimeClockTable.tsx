@@ -272,6 +272,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         return dailyData.some(row => {
             if (row.rowType !== 'day') return false;
             const rowsData = (row as any).rowsData;
+            if ((row as any).is_requested) return true;
             if (Array.isArray(rowsData)) {
                 return rowsData.some((log: any) => log.is_requested || log.is_penalty_appealed);
             }

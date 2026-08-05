@@ -76,6 +76,7 @@ import type {User} from 'next-auth';
 import AddExpense from '@/app/components/apps/time-clock/time-clock-details/expenses/add-expense';
 import AddWorklog from '@/app/components/apps/time-clock/time-clock-details/worklog/add-worklog';
 import AddPricework from '@/app/components/apps/time-clock/time-clock-details/pricework/add-pricework';
+import Penalties from '@/app/components/apps/time-clock/time-clock-details/penalties';
 import {GOOGLE_MAPS_SHARED_LOADER_OPTIONS} from '@/utils/googleMaps';
 import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
 
@@ -1137,7 +1138,9 @@ const TimeTracking: React.FC<Props> = () => {
     const [addExpenseSidebar, setAddExpenseSidebar] = useState(false);
     const [addWorklogSidebar, setAddWorklogSidebar] = useState(false);
     const [addPriceworkSidebar, setAddPriceworkSidebar] = useState(false);
+    const [penaltySidebar, setPenaltySidebar] = useState(false);
     const [selectedPricework, setSelectedPricework] = useState<any>(null);
+    const [selectedPenaltyWorklogId, setSelectedPenaltyWorklogId] = useState<number | null>(null);
 
     const latestTodayClockRequestRef = useRef(0);
     const mapRef = useRef<google.maps.Map | null>(null);
@@ -1397,6 +1400,7 @@ const TimeTracking: React.FC<Props> = () => {
                 const base = {
                     rowType: 'day' as const,
                     date: day.date ?? '--',
+                    has_pending_worklog_request: day.has_pending_worklog_request ?? false,
                     has_pending_leave_request: day.has_pending_leave_request ?? false,
                     is_timesheet_paid: ['9', 9].includes(day.status),
                     timesheet_ids: day.timesheet_ids ?? null,
@@ -1404,7 +1408,7 @@ const TimeTracking: React.FC<Props> = () => {
                     priceWork: '--', expense: '--', cis_amount: '--', gross_amount: '--',
                     checkIns: '--', totalHours: '--', penaltyHours: '--',
                     regular: '--', address: '--', check_in: '--', check_out: '--',
-                    rowSpan: 1, status_text: '--', is_requested: false, is_edited: false,
+                    rowSpan: 1, status_text: '--', is_requested: day.has_pending_worklog_request ?? false, is_edited: false,
                     isMoreThanWork: day.isMoreThanWork ?? false,
                     isLessThanWork: day.isLessThanWork ?? false,
                     weekLabel: week.week_range,
@@ -1437,6 +1441,23 @@ const TimeTracking: React.FC<Props> = () => {
             })
         );
     }, [data, currency, formatHour, parseDate]);
+
+    const handlePenaltyClick = useCallback((worklogId: number) => {
+        if (!worklogId) return;
+        setSelectedPenaltyWorklogId(worklogId);
+        setPenaltySidebar(true);
+    }, []);
+
+    const findPenaltyWorklogId = useCallback((row: DailyBreakdown): number | null => {
+        const worklogs = Array.isArray(row.rowsData) ? row.rowsData : [];
+        const penaltyWorklog = worklogs.find((log: any) => {
+            if (!log?.worklog_id || log?.is_pricework) return false;
+            const penaltyMinutes = Number(log.penalty_minutes ?? log.total_penalty_minutes ?? log.penalty_hours ?? 0);
+            return penaltyMinutes > 0 || log.is_penalty_appealed || log.penalty_message;
+        }) ?? worklogs.find((log: any) => log?.worklog_id && !log?.is_pricework);
+
+        return penaltyWorklog?.worklog_id ? Number(penaltyWorklog.worklog_id) : null;
+    }, []);
 
     const headerStyle: React.CSSProperties = {
         display: 'block',
@@ -1528,8 +1549,17 @@ const TimeTracking: React.FC<Props> = () => {
                     const isPricework = row.original.rowsData?.some(
                         (log: any) => log.is_pricework
                     ) ?? false;
+                    const penaltyWorklogId = !isPricework ? findPenaltyWorklogId(row.original) : null;
                     return (
-                        <span style={{color: row.original.is_edited ? '#ff0000' : 'inherit'}}>
+                        <span
+                            onClick={() => {
+                                if (penaltyWorklogId) handlePenaltyClick(penaltyWorklogId);
+                            }}
+                            style={{
+                                color: row.original.is_edited ? '#ff0000' : 'inherit',
+                                cursor: penaltyWorklogId ? 'pointer' : 'default',
+                            }}
+                        >
                             {isPricework ? '--' : row.original.penaltyHours}
                         </span>
                     );
@@ -1635,7 +1665,7 @@ const TimeTracking: React.FC<Props> = () => {
                 size: 100,
             },
         ],
-        []
+        [findPenaltyWorklogId, handlePenaltyClick]
     );
 
     const table = useReactTable({
@@ -1847,6 +1877,18 @@ const TimeTracking: React.FC<Props> = () => {
         setSelectedPricework(null);
     }, []);
 
+    const closePenaltySidebar = useCallback(async () => {
+        setPenaltySidebar(false);
+        setSelectedPenaltyWorklogId(null);
+        try {
+            await Promise.all([
+                fetchTimeClockData(startDate, endDate),
+                fetchTodayClock(),
+            ]);
+        } catch { /* ignore */
+        }
+    }, [fetchTimeClockData, fetchTodayClock, startDate, endDate]);
+
     const handleAddPricework = useCallback(() => {
         setSelectedPricework(null);
         setAddPriceworkSidebar(true);
@@ -2056,12 +2098,15 @@ const TimeTracking: React.FC<Props> = () => {
                                             Total Payable
                                         </Typography>
                                     </Box>
-                                    <IconButton size="small" onClick={() => setShowPayableAmounts(!showPayableAmounts)}
-                                                sx={{
-                                                    padding: '4px',
-                                                    color: '#1b5e20',
-                                                    '&:hover': {backgroundColor: 'rgba(27,94,32,0.08)'}
-                                                }}>
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => setShowPayableAmounts(!showPayableAmounts)}
+                                        sx={{
+                                            padding: '4px',
+                                            color: '#1b5e20',
+                                            '&:hover': {backgroundColor: 'rgba(27,94,32,0.08)'}
+                                        }}
+                                    >
                                         {showPayableAmounts ? <IconEye size={18}/> : <IconEyeOff size={18}/>}
                                     </IconButton>
                                 </Box>
@@ -2245,6 +2290,7 @@ const TimeTracking: React.FC<Props> = () => {
                                 cancelEditingField={cancelEditingField} saveFieldChanges={saveFieldChanges}
                                 onDeleteClick={handleDeleteRecord}
                                 openPriceworkSidebar={handleEditPricework}
+                                onPenaltyClick={handlePenaltyClick}
                             />
                         </Box>
                     </Box>
@@ -2318,6 +2364,25 @@ const TimeTracking: React.FC<Props> = () => {
                             fetchTodayClock(),
                         ]).then(() => undefined)}
                     />
+                </Drawer>
+
+                <Drawer anchor="right" open={penaltySidebar} onClose={closePenaltySidebar}
+                        PaperProps={{
+                            sx: {
+                                width: '500px',
+                                borderTopLeftRadius: 18,
+                                borderBottomLeftRadius: 18,
+                                overflow: 'hidden'
+                            }
+                        }}>
+                    {selectedPenaltyWorklogId !== null && (
+                        <Penalties
+                            worklogId={selectedPenaltyWorklogId}
+                            onClose={closePenaltySidebar}
+                            requestOnly
+                            variant="time-tracking"
+                        />
+                    )}
                 </Drawer>
 
                 <Snackbar open={toast.open} autoHideDuration={4000}
