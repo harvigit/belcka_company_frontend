@@ -36,6 +36,7 @@ import { useServerTable } from "@/hooks/useServerTable";
 import {
   IconDownload,
   IconEye,
+  IconFileInvoice,
   IconFileSignal,
   IconFilter,
   IconMenuOrder,
@@ -2235,6 +2236,25 @@ Team Belcka
                     <IconFileSignal width={18} />
                   </ListItemIcon>
                   Terms and Conditions
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="/apps/invoices/list"
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconFileInvoice width={18} />
+                  </ListItemIcon>
+                  Invoices
                 </Link>
               </MenuItem>
             </Menu>
