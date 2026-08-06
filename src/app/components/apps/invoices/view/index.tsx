@@ -11,6 +11,7 @@ import {
   IconButton,
   Stack,
   Typography,
+  Grid,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { IconFileTypePdf } from "@tabler/icons-react";
@@ -57,7 +58,7 @@ const DetailRow = ({
     <Typography variant="caption" color="text.secondary">
       {label}
     </Typography>
-    <Typography variant="body1" fontWeight={500} sx={{ wordBreak: "break-word" }}>
+    <Typography variant="body1" fontWeight={500} sx={{ wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
       {value?.trim() ? value : "-"}
     </Typography>
   </Box>
@@ -179,23 +180,27 @@ const InvoiceView = ({
                 label="Expected Delivery Date"
                 value={invoice.expectedDeliveryDate}
               />
-              <DetailRow
-                label="Total Amount (Excl. VAT)"
-                value={formatMoney(invoice.totalExclVat)}
-              />
-              <DetailRow
-                label="Total Amount (Incl. VAT)"
-                value={formatMoney(invoice.totalInclVat)}
-              />
-              <DetailRow
-                label="Credit Note Amount"
-                value={formatMoney(invoice.creditNoteAmount)}
-              />
-              <DetailRow
-                label="Description"
-                value={stripHtml(invoice.description) || "-"}
-              />
-              <DetailRow label="Note" value={stripHtml(invoice.note) || "-"} />
+              <Box display="grid" gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr 1fr" }} gap={2}>
+                <DetailRow
+                  label="Total Amount (Excl. VAT)"
+                  value={formatMoney(invoice.totalExclVat)}
+                />
+                <DetailRow
+                  label="Total Amount (Incl. VAT)"
+                  value={formatMoney(invoice.totalInclVat)}
+                />
+                <DetailRow
+                  label="Description"
+                  value={stripHtml(invoice.description) || "-"}
+                />
+              </Box>
+              <Box display="grid" gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr" }} gap={2}>
+                <DetailRow label="Note" value={stripHtml(invoice.note) || "-"} />
+                <DetailRow
+                  label="Credit Note Amount"
+                  value={formatMoney(invoice.creditNoteAmount)}
+                />
+              </Box>
             </Stack>
 
             <Divider sx={{ my: 2.5 }} />
@@ -205,67 +210,44 @@ const InvoiceView = ({
             </Typography>
 
             {documents.length > 0 ? (
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+              <Grid container spacing={2}>
                 {documents.map((doc) => {
                   const isPdf = isPdfAttachment(doc);
                   const previewSrc = isPdf
                     ? doc.thumb || ""
                     : doc.url || doc.thumb || "";
                   return (
-                    <Box
-                      key={doc.id}
-                      sx={{
-                        width: {
-                          xs: "calc(50% - 8px)",
-                          sm: "calc(50% - 8px)",
-                        },
-                      }}
-                    >
-                      <Card
-                        sx={{
-                          cursor: doc.url ? "pointer" : "default",
-                          "&:hover": { boxShadow: 3 },
-                        }}
-                        onClick={() => openAttachment(doc)}
-                      >
-                        {previewSrc ? (
-                          <CardMedia
-                            component="img"
-                            height="120"
-                            image={previewSrc}
-                            alt={
-                              doc.original_name ||
-                              doc.file ||
-                              `Attachment ${doc.id}`
-                            }
-                            sx={{ objectFit: "cover" }}
-                          />
-                        ) : (
-                          <Box
-                            height={120}
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="center"
-                            bgcolor="#f5f5f5"
-                          >
-                            <IconFileTypePdf size={40} color="#d32f2f" />
-                          </Box>
-                        )}
-                      </Card>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        noWrap
-                        display="block"
-                        mt={0.5}
-                        title={doc.original_name || doc.file || ""}
-                      >
-                        {doc.original_name || doc.file}
-                      </Typography>
-                    </Box>
+                    <Grid  key={doc.id} style={{ position: "relative" }}>
+                      {previewSrc ? (
+                        <img
+                          src={previewSrc}
+                          alt={doc.original_name || doc.file || `Attachment ${doc.id}`}
+                          width={80}
+                          height={80}
+                          style={{ objectFit: "cover", borderRadius: 4, cursor: doc.url ? "pointer" : "default" }}
+                          onClick={() => openAttachment(doc)}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            width: 80,
+                            height: 80,
+                            bgcolor: "#f5f5f5",
+                            borderRadius: 1,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: doc.url ? "pointer" : "default"
+                          }}
+                          onClick={() => openAttachment(doc)}
+                        >
+                          <Typography variant="caption">PDF</Typography>
+                        </Box>
+                      )}
+                    </Grid>
                   );
                 })}
-              </Box>
+              </Grid>
             ) : (
               <Typography variant="body2" color="text.secondary">
                 No attachments found

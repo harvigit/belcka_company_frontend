@@ -8,15 +8,15 @@ import {
   Drawer,
   IconButton,
   Typography,
+  Grid,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { IconCloudUpload, IconX } from "@tabler/icons-react";
+import { IconCloudUpload, IconX, IconTrash } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
-import TiptapEditor from "@/app/(DashboardLayout)/forms/form-tiptap/TiptapEditor";
 import {
   InvoiceDocument,
   InvoiceRow,
@@ -58,22 +58,10 @@ const parseDateForInput = (dateStr?: string) => {
 
 const toEditorHtml = (value?: string) => {
   if (!value) return "";
-  if (value.includes("<")) return value;
-  return `<p>${value}</p>`;
+  return value;
 };
 
-const stripHtml = (html: string) =>
-  html
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .trim();
-
-const SECTION_TITLE_SX = {
-  fontWeight: 700,
-  color: "primary.main",
-  mb: 2.5,
-  fontSize: "1rem",
-};
+const stripHtml = (html: string) => html.trim();
 
 const CARD_SX = {
   bgcolor: "#fff",
@@ -150,8 +138,6 @@ const CreateInvoice = ({
   const [formData, setFormData] = useState(emptyForm);
   const [dragOver, setDragOver] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
-  const [initialDescription, setInitialDescription] = useState("");
-  const [initialNote, setInitialNote] = useState("");
   const [projects, setProjects] = useState<ResourceOption[]>([]);
   const [addresses, setAddresses] = useState<ResourceOption[]>([]);
   const [orderedByOptions, setOrderedByOptions] = useState<ResourceOption[]>(
@@ -195,8 +181,6 @@ const CreateInvoice = ({
     loadResources();
 
     if (isEdit && invoice) {
-      const descriptionHtml = toEditorHtml(invoice.description);
-      const noteHtml = toEditorHtml(invoice.note);
       setFormData({
         project_id: invoice.project_id ?? null,
         address_id: invoice.address_id ?? null,
@@ -208,8 +192,8 @@ const CreateInvoice = ({
             "",
         supplier_id: invoice.supplier_id ?? null,
         expected_delivery_date: parseDateForInput(invoice.expectedDeliveryDate),
-        description: descriptionHtml,
-        note: noteHtml,
+        description: invoice.description,
+        note: invoice.note,
         total_excl_vat:
           invoice.totalExclVat != null ? String(invoice.totalExclVat) : "",
         total_incl_vat:
@@ -222,14 +206,10 @@ const CreateInvoice = ({
       });
       setExistingDocuments(invoice.documents || []);
       setRemovedAttachmentIds([]);
-      setInitialDescription(descriptionHtml);
-      setInitialNote(noteHtml);
     } else {
       setFormData(emptyForm);
       setExistingDocuments([]);
       setRemovedAttachmentIds([]);
-      setInitialDescription("");
-      setInitialNote("");
     }
     setEditorKey((k) => k + 1);
     setDragOver(false);
@@ -433,7 +413,6 @@ const CreateInvoice = ({
           }}
         >
           <Box sx={CARD_SX}>
-            <Typography sx={SECTION_TITLE_SX}>Order Information</Typography>
             <Box
               display="grid"
               gridTemplateColumns={{
@@ -583,68 +562,6 @@ const CreateInvoice = ({
                 />
               </Box>
             </Box>
-          </Box>
-
-          <Box sx={CARD_SX}>
-            <Typography sx={SECTION_TITLE_SX}>Order Details</Typography>
-
-            <Box
-              display="grid"
-              gridTemplateColumns={{ xs: "1fr", md: "1fr 1fr" }}
-              gap={2.5}
-              mb={2.5}
-            >
-              <Box>
-                <FieldLabel required>Description</FieldLabel>
-                <Box
-                  className="custom_tiptap_editor"
-                  sx={{
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 1.5,
-                    overflow: "hidden",
-                    bgcolor: "#fff",
-                    "& .MuiTiptap-FieldContainer-root": { minHeight: 140 },
-                  }}
-                >
-                  {open && (
-                    <TiptapEditor
-                      key={`create-invoice-description-${editorKey}`}
-                      content={initialDescription}
-                      onChange={(html: string) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          description: html,
-                        }))
-                      }
-                    />
-                  )}
-                </Box>
-              </Box>
-
-              <Box>
-                <FieldLabel>Note</FieldLabel>
-                <Box
-                  className="custom_tiptap_editor"
-                  sx={{
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 1.5,
-                    overflow: "hidden",
-                    bgcolor: "#fff",
-                    "& .MuiTiptap-FieldContainer-root": { minHeight: 140 },
-                  }}
-                >
-                  {open && (
-                    <TiptapEditor
-                      key={`create-invoice-note-${editorKey}`}
-                      content={initialNote}
-                      onChange={(html: string) =>
-                        setFormData((prev) => ({ ...prev, note: html }))
-                      }
-                    />
-                  )}
-                </Box>
-              </Box>
-            </Box>
 
             <Box
               display="grid"
@@ -655,6 +572,7 @@ const CreateInvoice = ({
               }}
               gap={2.5}
               mb={2.5}
+              mt={1}
             >
               <CurrencyField
                 label="Total Amount (Excl. VAT)"
@@ -683,10 +601,44 @@ const CreateInvoice = ({
                 }
               />
             </Box>
-          </Box>
 
-          <Box sx={CARD_SX}>
-            <Typography sx={SECTION_TITLE_SX}>Document Upload</Typography>
+            <Box
+              display="grid"
+              gridTemplateColumns={{ xs: "1fr", md: "1fr 1fr 1fr" }}
+              gap={2.5}
+              mb={2.5}
+            >
+              <Box>
+                <FieldLabel required>Description</FieldLabel>
+                <CustomTextField
+                  multiline
+                  rows={1}
+                  fullWidth
+                  value={formData.description}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                />
+              </Box>
+              <Box>
+                <FieldLabel>Note</FieldLabel>
+                <CustomTextField
+                  multiline
+                  rows={1}
+                  fullWidth
+                  value={formData.note}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      note: e.target.value,
+                    }))
+                  }
+                />
+              </Box>
+            </Box>
             <Box
               component="label"
               onDragOver={(e: React.DragEvent) => {
@@ -700,23 +652,14 @@ const CreateInvoice = ({
                 addFiles(e.dataTransfer.files);
               }}
               sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 1,
-                py: 4,
-                px: 2,
-                border: "1px dashed",
-                borderColor: dragOver ? "primary.main" : "#d0d5dd",
+                border: "2px dashed #1976d2",
                 borderRadius: 2,
-                bgcolor: dragOver ? "action.selected" : "#fafbfc",
+                p: 5,
+                textAlign: "center",
                 cursor: "pointer",
-                transition: "all 0.18s",
-                "&:hover": {
-                  borderColor: "primary.main",
-                  bgcolor: "action.hover",
-                },
+                mb: 2.5,
+                display: "block",
+                width: "50%",
               }}
             >
               <input
@@ -729,101 +672,109 @@ const CreateInvoice = ({
                   e.target.value = "";
                 }}
               />
-              <Box
-                sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 1.5,
-                  bgcolor: "#E6F1FB",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  mb: 0.5,
-                }}
-              >
-                <IconCloudUpload size={24} color="#185FA5" />
-              </Box>
-              <Typography variant="body2" fontWeight={600}>
-                Upload Documents (Invoice, Quote, or Receipt){" "}
-                <Box component="span" sx={{ color: "error.main" }}>
-                  *
-                </Box>
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Drag & drop files here or click to browse (multiple allowed)
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                PDF, JPG, PNG up to 10MB each
-              </Typography>
+              <Typography>Drag & drop or paste images</Typography>
             </Box>
-            <Box
-              mt={2}
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, minmax(250px, 1fr))",
-                gap: 2,
-              }}
-            >
-              {[...existingDocuments, ...formData.documentFiles].map(
-                (item: any, index) => {
-                  const isExisting = "id" in item;
-
-                  return (
+            <Grid container spacing={2}>
+              {existingDocuments.map((doc) => (
+                <Grid
+                  key={`existing-${doc.id}`}
+                  style={{ position: "relative" }}
+                >
+                  {doc.url &&
+                  (doc.url.toLowerCase().includes(".pdf") ||
+                    doc.type === "application/pdf") ? (
                     <Box
-                      key={
-                        isExisting
-                          ? `existing-${item.id}`
-                          : `new-${item.name}-${index}`
-                      }
                       sx={{
+                        width: 80,
+                        height: 80,
+                        bgcolor: "#f5f5f5",
+                        borderRadius: 1,
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "space-between",
-                        p: 1.5,
-                        border: "1px solid #eef0f4",
-                        borderRadius: 2,
-                        bgcolor: "#fff",
-                        minWidth: 0,
+                        justifyContent: "center",
                       }}
                     >
-                      <Typography
-                        variant="body2"
-                        component={isExisting && item.url ? "a" : "span"}
-                        href={isExisting ? item.url : undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                        noWrap
-                        sx={{
-                          flex: 1,
-                          mr: 1,
-                          color:
-                            isExisting && item.url
-                              ? "primary.main"
-                              : "text.primary",
-                          textDecoration:
-                            isExisting && item.url ? "underline" : "none",
-                        }}
-                      >
-                        {isExisting
-                          ? item.original_name || item.file
-                          : item.name}
-                      </Typography>
-
-                      <IconButton
-                        size="small"
-                        onClick={() =>
-                          isExisting
-                            ? removeExistingDocument(item)
-                            : removeNewFile(index - existingDocuments.length)
-                        }
-                      >
-                        <IconX size={16} />
-                      </IconButton>
+                      <Typography variant="caption">PDF</Typography>
                     </Box>
-                  );
-                },
-              )}
-            </Box>
+                  ) : (
+                    <img
+                      src={doc.url || doc.thumb || ""}
+                      alt={doc.original_name || doc.file}
+                      width={80}
+                      height={80}
+                      style={{ objectFit: "cover", borderRadius: 4 }}
+                    />
+                  )}
+                  <IconButton
+                    color="error"
+                    size="small"
+                    sx={{
+                      position: "absolute",
+                      top: 6,
+                      right: -10,
+                      backgroundColor: "#fff",
+                      zIndex: 2,
+                      "&:hover": {
+                        backgroundColor: "#fff",
+                        color: "red",
+                      },
+                    }}
+                    onClick={() => removeExistingDocument(doc)}
+                  >
+                    <IconTrash size={16} />
+                  </IconButton>
+                </Grid>
+              ))}
+
+              {formData.documentFiles.map((file, index) => (
+                <Grid
+                  key={`new-${file.name}-${index}`}
+                  style={{ position: "relative" }}
+                >
+                  {file.type === "application/pdf" ? (
+                    <Box
+                      sx={{
+                        width: 80,
+                        height: 80,
+                        bgcolor: "#f5f5f5",
+                        borderRadius: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Typography variant="caption">PDF</Typography>
+                    </Box>
+                  ) : (
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      width={80}
+                      height={80}
+                      style={{ objectFit: "cover", borderRadius: 4 }}
+                    />
+                  )}
+                  <IconButton
+                    color="error"
+                    size="small"
+                    sx={{
+                      position: "absolute",
+                      top: 6,
+                      right: -10,
+                      backgroundColor: "#fff",
+                      zIndex: 2,
+                      "&:hover": {
+                        backgroundColor: "#fff",
+                        color: "red",
+                      },
+                    }}
+                    onClick={() => removeNewFile(index)}
+                  >
+                    <IconTrash size={16} />
+                  </IconButton>
+                </Grid>
+              ))}
+            </Grid>
           </Box>
         </form>
       </Box>

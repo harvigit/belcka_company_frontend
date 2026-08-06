@@ -1,13 +1,13 @@
 'use client';
 
-import React, {useCallback, useRef, useState} from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import api from '@/utils/axios';
 import toast from 'react-hot-toast';
 import {
     Box, Button, FormControl, InputLabel, List, ListItem, ListItemButton,
     MenuItem, Select, Slider, TextField, Tooltip, Typography,
 } from '@mui/material';
-import {Circle as GCircle, GoogleMap, Marker, Polygon, Polyline} from '@react-google-maps/api';
+import { Circle as GCircle, GoogleMap, Marker, Polygon, Polyline } from '@react-google-maps/api';
 
 interface EditZoneProps {
     zone: any;
@@ -26,25 +26,25 @@ const CLOSE_THRESHOLD_PX = 20;
 
 const HandSvg = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-         strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
-        <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
-        <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
-        <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+        strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
+        <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
+        <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
+        <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
     </svg>
 );
 
 const PolygonSvg = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-         strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="12 3 21 9 18 20 6 20 3 9"/>
+        strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12 3 21 9 18 20 6 20 3 9" />
     </svg>
 );
 
 const CircleSvg = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-         strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="9"/>
+        strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
     </svg>
 );
 
@@ -56,11 +56,11 @@ interface ToolbarProps {
     activeTab?: number;
 }
 
-const MapToolbar = ({drawMode, onMode, pointCount, isActive, activeTab}: ToolbarProps) => {
+const MapToolbar = ({ drawMode, onMode, pointCount, isActive, activeTab }: ToolbarProps) => {
     const tools: { mode: DrawMode; icon: React.ReactNode; tip: string }[] = [
-        {mode: 'pan', icon: <HandSvg/>, tip: 'Pan / Move map'},
-        {mode: 'polygon', icon: <PolygonSvg/>, tip: 'Draw polygon'},
-        {mode: 'circle', icon: <CircleSvg/>, tip: 'Circle zone'},
+        { mode: 'pan', icon: <HandSvg />, tip: 'Pan / Move map' },
+        { mode: 'polygon', icon: <PolygonSvg />, tip: 'Draw polygon' },
+        { mode: 'circle', icon: <CircleSvg />, tip: 'Circle zone' },
     ];
 
     const visibleTools = activeTab === 1 ? tools.filter(t => t.mode !== 'polygon') : tools;
@@ -95,7 +95,7 @@ const MapToolbar = ({drawMode, onMode, pointCount, isActive, activeTab}: Toolbar
             boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
             pointerEvents: 'all',
         }}>
-            {visibleTools.map(({mode, icon, tip}) => {
+            {visibleTools.map(({ mode, icon, tip }) => {
                 const active = drawMode === mode;
                 return (
                     <Tooltip key={mode} title={tip} placement="bottom" arrow>
@@ -106,7 +106,7 @@ const MapToolbar = ({drawMode, onMode, pointCount, isActive, activeTab}: Toolbar
                                 color: active ? '#1565c0' : '#555',
                                 backgroundColor: active ? '#dbeafe' : 'transparent',
                                 border: active ? '1.5px solid #1976d2' : '1.5px solid transparent',
-                                '&:hover': {backgroundColor: active ? '#dbeafe' : '#f0f4ff', color: '#1976d2'},
+                                '&:hover': { backgroundColor: active ? '#dbeafe' : '#f0f4ff', color: '#1976d2' },
                             }}
                         >
                             {icon}
@@ -145,14 +145,14 @@ function latLngToPixel(map: google.maps.Map, latLng: { lat: number; lng: number 
     const scale = Math.pow(2, map.getZoom() ?? 10);
     const pt = proj.fromLatLngToPoint(new google.maps.LatLng(latLng.lat, latLng.lng));
     if (!pt) return null;
-    return {x: (pt.x - sw.x) * scale, y: (pt.y - ne.y) * scale};
+    return { x: (pt.x - sw.x) * scale, y: (pt.y - ne.y) * scale };
 }
 
 function pixelDistance(a: { x: number; y: number }, b: { x: number; y: number }) {
     return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
-const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, activeTab}: EditZoneProps) => {
+const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, activeTab }: EditZoneProps) => {
     const [name, setName] = useState(zone.name);
     const [color, setColor] = useState(zone.color || '#1976d2');
     const [address, setAddress] = useState(zone.address);
@@ -160,10 +160,10 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
     const [isSaving, setIsSaving] = useState(false);
     const [addressId, setAddressId] = useState<number | null>(zone.address_id || null);
 
-    const initType: ZoneType = zone.type === 'polyline' ? 'polygon' : (zone.type || 'circle');
+    const initType: ZoneType = activeTab === 1 ? 'circle' : (zone.type === 'polyline' ? 'polygon' : (zone.type || 'circle'));
     const [zoneType, setZoneType] = useState<ZoneType>(initType);
     const [drawMode, setDrawMode] = useState<DrawMode>(initType === 'circle' ? 'circle' : 'pan');
-    const [location, setLocation] = useState({lat: Number(zone.latitude), lng: Number(zone.longitude)});
+    const [location, setLocation] = useState({ lat: Number(zone.latitude), lng: Number(zone.longitude) });
     const [drawPath, setDrawPath] = useState<{ lat: number; lng: number }[]>(zone.coordinates || []);
     const [isClosed, setIsClosed] = useState(initType === 'polygon' && (zone.coordinates?.length ?? 0) >= 3);
     const [cursorLatLng, setCursorLatLng] = useState<{ lat: number; lng: number } | null>(null);
@@ -207,7 +207,7 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
     // ── Circle handlers ──────────────────────────────────────────────────────
     const onMarkerDragEnd = (e: google.maps.MapMouseEvent) => {
         if (!e.latLng) return;
-        const nl = {lat: e.latLng.lat(), lng: e.latLng.lng()};
+        const nl = { lat: e.latLng.lat(), lng: e.latLng.lng() };
         setLocation(nl);
         circleRef.current?.setCenter(nl);
     };
@@ -223,7 +223,7 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
 
     const syncFromPolygon = () => {
         if (!polygonRef.current) return;
-        setDrawPath(polygonRef.current.getPath().getArray().map((p) => ({lat: p.lat(), lng: p.lng()})));
+        setDrawPath(polygonRef.current.getPath().getArray().map((p) => ({ lat: p.lat(), lng: p.lng() })));
     };
 
     // ── Search helpers ───────────────────────────────────────────────────────
@@ -245,8 +245,7 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
             else if (isNZPostcode(input)) country = "NZ";
 
             const res = await fetch(
-                `https://ws.postcoder.com/pcw/${
-                    process.env.NEXT_PUBLIC_POSTCODER_KEY
+                `https://ws.postcoder.com/pcw/${process.env.NEXT_PUBLIC_POSTCODER_KEY
                 }/address/${country}/${encodeURIComponent(input)}?format=json`
             );
 
@@ -303,7 +302,7 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
         stateRef.current.drawMode = mode;
         stateRef.current.isClosed = false;
         stateRef.current.drawPath = [];
-        mapRef.current?.setOptions({draggableCursor: mode === 'polygon' ? 'crosshair' : ''});
+        mapRef.current?.setOptions({ draggableCursor: mode === 'polygon' ? 'crosshair' : '' });
         if (mode === 'circle') {
             setZoneType('circle');
             setDrawPath([]);
@@ -318,7 +317,7 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
     const handleMouseMove = useCallback((e: google.maps.MapMouseEvent) => {
         if (stateRef.current.drawMode !== 'polygon' || stateRef.current.isClosed) return;
         if (!e.latLng) return;
-        const pos = {lat: e.latLng.lat(), lng: e.latLng.lng()};
+        const pos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
         setCursorLatLng(pos);
         if (stateRef.current.drawPath.length >= 3 && mapRef.current) {
             const sp = latLngToPixel(mapRef.current, stateRef.current.drawPath[0]);
@@ -338,7 +337,7 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
             return;
         }
 
-        const pt = {lat: e.latLng.lat(), lng: e.latLng.lng()};
+        const pt = { lat: e.latLng.lat(), lng: e.latLng.lng() };
         const currentPath = stateRef.current.drawPath;
 
         if (currentPath.length >= 3 && mapRef.current) {
@@ -374,7 +373,7 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
             let boundary: any;
             let lat = location.lat, lng = location.lng;
             if (zoneType === 'circle') {
-                boundary = {lat, lng, radius};
+                boundary = { lat, lng, radius };
             } else {
                 boundary = drawPath;
                 const c = getCenter(drawPath);
@@ -403,7 +402,7 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                     name: zone.address_name || zone.name,
                     short_name: zone.short_name,
                     pin_code: zone.address || address,
-                    type: zone.type || 'address',
+                    type: 'location',
                     latitude: lat,
                     longitude: lng,
                     boundary: JSON.stringify(boundary),
@@ -426,15 +425,15 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                p: {xs: 1, sm: 2},
+                p: { xs: 1, sm: 2 },
                 minHeight: 0,
             }}
         >
-            <Box sx={{flex: 1, overflowY: 'auto', minHeight: 0, pr: {xs: 0, sm: 0.5}}}>
+            <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0, pr: { xs: 0, sm: 0.5 } }}>
                 <Typography variant="h6" mb={2}>Edit Zone</Typography>
 
                 {activeTab === 1 && (
-                    <FormControl fullWidth sx={{mb: 2}}>
+                    <FormControl fullWidth sx={{ mb: 2 }}>
                         <InputLabel>Address</InputLabel>
                         <Select
                             value={zone.id || ''}
@@ -453,10 +452,10 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Name"
-                        InputLabelProps={{shrink: true}}
+                        InputLabelProps={{ shrink: true }}
                         sx={{
                             mb: 2,
-                            '& .MuiInputLabel-root': {overflow: 'visible'},
+                            '& .MuiInputLabel-root': { overflow: 'visible' },
                             '& .MuiOutlinedInput-notchedOutline > legend > span': {
                                 paddingRight: '6px',
                                 paddingLeft: '2px',
@@ -469,16 +468,16 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                 )}
 
                 {activeTab === 0 && (
-                    <Box sx={{position: 'relative', mb: 2}}>
+                    <Box sx={{ position: 'relative', mb: 2 }}>
                         <TextField
                             fullWidth
                             label="Search location"
                             value={address}
                             onChange={handleInputChange}
                             placeholder="Search location..."
-                            InputLabelProps={{shrink: true}}
+                            InputLabelProps={{ shrink: true }}
                             sx={{
-                                '& .MuiInputLabel-root': {overflow: 'visible'},
+                                '& .MuiInputLabel-root': { overflow: 'visible' },
                                 '& .MuiOutlinedInput-notchedOutline > legend > span': {
                                     paddingRight: '6px',
                                     paddingLeft: '2px',
@@ -519,13 +518,13 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                         <Typography fontWeight={600} mb={1}>
                             Area size [{Math.round(radius)} Meter]
                         </Typography>
-                        <Box sx={{px: 1.5, boxSizing: 'border-box', width: '100%', overflow: 'hidden'}}>
+                        <Box sx={{ px: 1.5, boxSizing: 'border-box', width: '100%', overflow: 'hidden' }}>
                             <Slider
                                 min={0}
                                 max={10000}
                                 value={radius}
                                 onChange={(_, v) => setRadius(v as number)}
-                                sx={{width: '100%', display: 'block'}}
+                                sx={{ width: '100%', display: 'block' }}
                             />
                         </Box>
                     </>
@@ -549,7 +548,7 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                             borderRadius: '50%',
                             flexShrink: 0,
                             backgroundColor: isClosed ? '#43a047' : '#1976d2'
-                        }}/>
+                        }} />
                         <Typography variant="caption" color={isClosed ? 'success.main' : 'primary'} fontWeight={600}>
                             {isClosed
                                 ? `Zone closed · ${drawPath.length} points · ready to save ✓`
@@ -563,13 +562,13 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                         position: 'relative',
                         borderRadius: 1,
                         overflow: 'hidden',
-                        height: {xs: 280, sm: 340, md: 400},
+                        height: { xs: 280, sm: 340, md: 400 },
                     }}
                 >
                     <GoogleMap
                         zoom={17}
                         center={location}
-                        mapContainerStyle={{height: '100%', width: '100%'}}
+                        mapContainerStyle={{ height: '100%', width: '100%' }}
                         onMouseMove={handleMouseMove}
                         onClick={handleMapClick}
                         onLoad={(map) => {
@@ -583,7 +582,7 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                     >
                         {(drawMode === 'circle' || (drawMode === 'pan' && zoneType === 'circle')) && (
                             <>
-                                <Marker position={location} draggable onDragEnd={onMarkerDragEnd}/>
+                                <Marker position={location} draggable onDragEnd={onMarkerDragEnd} />
                                 <GCircle
                                     center={location}
                                     radius={radius}
@@ -683,15 +682,15 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                     />
                 </Box>
                 {activeTab === 0 && (
-                <Box mt={2}>
-                    <Typography mb={0.5}>Zone Color</Typography>
-                    <input
-                        type="color"
-                        value={color || '#000000'}
-                        onChange={(e) => setColor(e.target.value)}
-                        style={{width: '100%', height: 40, border: 'none', cursor: 'pointer'}}
-                    />
-                </Box>
+                    <Box mt={2}>
+                        <Typography mb={0.5}>Zone Color</Typography>
+                        <input
+                            type="color"
+                            value={color || '#000000'}
+                            onChange={(e) => setColor(e.target.value)}
+                            style={{ width: '100%', height: 40, border: 'none', cursor: 'pointer' }}
+                        />
+                    </Box>
                 )}
             </Box>
 
@@ -699,7 +698,7 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                 display="flex"
                 gap={2}
                 mt={2}
-                sx={{flexShrink: 0, pt: 1.5, borderTop: '1px solid #f0f0f0'}}
+                sx={{ flexShrink: 0, pt: 1.5, borderTop: '1px solid #f0f0f0' }}
             >
                 <Button variant="contained" onClick={handleSave} disabled={isSaving}>
                     {isSaving ? 'Saving...' : 'Save'}
