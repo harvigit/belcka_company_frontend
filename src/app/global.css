@@ -554,6 +554,25 @@ input[type="range"]::-moz-range-thumb {
   min-height: 300px;
 }
 
+.custom_tiptap_editor .MuiTiptap-FieldContainer-root {
+  min-height: 250px;
+  max-height: 250px;
+  overflow: hidden;
+}
+
+.custom_tiptap_editor .MuiTiptap-RichTextContent-root {
+  height: 100%;
+}
+
+.custom_tiptap_editor .ProseMirror {
+  height: 100%;
+  min-height: 250px;
+  max-height: 250px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: normal;
+}
+
 .report_range {
   width: 90%;
 }

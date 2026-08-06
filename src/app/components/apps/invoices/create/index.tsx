@@ -17,7 +17,10 @@ import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import TiptapEditor from "@/app/(DashboardLayout)/forms/form-tiptap/TiptapEditor";
-import { InvoiceDocument, InvoiceRow } from "@/app/components/apps/invoices/list/mockData";
+import {
+  InvoiceDocument,
+  InvoiceRow,
+} from "@/app/components/apps/invoices/list/mockData";
 import { ResourceOption } from "./mockData";
 
 type Props = {
@@ -60,7 +63,10 @@ const toEditorHtml = (value?: string) => {
 };
 
 const stripHtml = (html: string) =>
-  html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+  html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
 
 const SECTION_TITLE_SX = {
   fontWeight: 700,
@@ -119,7 +125,9 @@ const CurrencyField = ({
       }}
       InputProps={{
         startAdornment: (
-          <Typography sx={{ mr: 0.75, color: "text.secondary", fontWeight: 500 }}>
+          <Typography
+            sx={{ mr: 0.75, color: "text.secondary", fontWeight: 500 }}
+          >
             £
           </Typography>
         ),
@@ -299,8 +307,7 @@ const CreateInvoice = ({
       }
     }
 
-    const totalDocs =
-      existingDocuments.length + formData.documentFiles.length;
+    const totalDocs = existingDocuments.length + formData.documentFiles.length;
     if (totalDocs === 0) return "At least one document file is required!";
 
     return null;
@@ -364,7 +371,9 @@ const CreateInvoice = ({
       }
     } catch (err: any) {
       toast.error(
-        err?.response?.data?.message || err?.message || "Failed to save invoice",
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to save invoice",
       );
     } finally {
       setSaving(false);
@@ -588,6 +597,7 @@ const CreateInvoice = ({
               <Box>
                 <FieldLabel required>Description</FieldLabel>
                 <Box
+                  className="custom_tiptap_editor"
                   sx={{
                     border: "1px solid #e5e7eb",
                     borderRadius: 1.5,
@@ -614,6 +624,7 @@ const CreateInvoice = ({
               <Box>
                 <FieldLabel>Note</FieldLabel>
                 <Box
+                  className="custom_tiptap_editor"
                   sx={{
                     border: "1px solid #e5e7eb",
                     borderRadius: 1.5,
@@ -745,72 +756,74 @@ const CreateInvoice = ({
                 PDF, JPG, PNG up to 10MB each
               </Typography>
             </Box>
+            <Box
+              mt={2}
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, minmax(250px, 1fr))",
+                gap: 2,
+              }}
+            >
+              {[...existingDocuments, ...formData.documentFiles].map(
+                (item: any, index) => {
+                  const isExisting = "id" in item;
 
-            {(existingDocuments.length > 0 ||
-              formData.documentFiles.length > 0) && (
-              <Box mt={2} display="flex" flexDirection="column" gap={1}>
-                {existingDocuments.map((doc) => (
-                  <Box
-                    key={`existing-${doc.id}`}
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{
-                      px: 1.5,
-                      py: 1,
-                      border: "1px solid #eef0f4",
-                      borderRadius: 1.5,
-                      bgcolor: "#fff",
-                    }}
-                  >
-                    <Typography
-                      variant="body2"
-                      component={doc.url ? "a" : "span"}
-                      href={doc.url || undefined}
-                      target={doc.url ? "_blank" : undefined}
-                      rel={doc.url ? "noreferrer" : undefined}
+                  return (
+                    <Box
+                      key={
+                        isExisting
+                          ? `existing-${item.id}`
+                          : `new-${item.name}-${index}`
+                      }
                       sx={{
-                        color: doc.url ? "primary.main" : "text.primary",
-                        textDecoration: doc.url ? "underline" : "none",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        p: 1.5,
+                        border: "1px solid #eef0f4",
+                        borderRadius: 2,
+                        bgcolor: "#fff",
+                        minWidth: 0,
                       }}
                     >
-                      {doc.original_name || doc.file}
-                    </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={() => removeExistingDocument(doc)}
-                      aria-label="Remove document"
-                    >
-                      <IconX size={16} />
-                    </IconButton>
-                  </Box>
-                ))}
-                {formData.documentFiles.map((file, index) => (
-                  <Box
-                    key={`new-${file.name}-${index}`}
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{
-                      px: 1.5,
-                      py: 1,
-                      border: "1px solid #eef0f4",
-                      borderRadius: 1.5,
-                      bgcolor: "#fff",
-                    }}
-                  >
-                    <Typography variant="body2">{file.name}</Typography>
-                    <IconButton
-                      size="small"
-                      onClick={() => removeNewFile(index)}
-                      aria-label="Remove file"
-                    >
-                      <IconX size={16} />
-                    </IconButton>
-                  </Box>
-                ))}
-              </Box>
-            )}
+                      <Typography
+                        variant="body2"
+                        component={isExisting && item.url ? "a" : "span"}
+                        href={isExisting ? item.url : undefined}
+                        target="_blank"
+                        rel="noreferrer"
+                        noWrap
+                        sx={{
+                          flex: 1,
+                          mr: 1,
+                          color:
+                            isExisting && item.url
+                              ? "primary.main"
+                              : "text.primary",
+                          textDecoration:
+                            isExisting && item.url ? "underline" : "none",
+                        }}
+                      >
+                        {isExisting
+                          ? item.original_name || item.file
+                          : item.name}
+                      </Typography>
+
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          isExisting
+                            ? removeExistingDocument(item)
+                            : removeNewFile(index - existingDocuments.length)
+                        }
+                      >
+                        <IconX size={16} />
+                      </IconButton>
+                    </Box>
+                  );
+                },
+              )}
+            </Box>
           </Box>
         </form>
       </Box>

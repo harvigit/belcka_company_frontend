@@ -53,14 +53,17 @@ interface ToolbarProps {
     onMode: (m: DrawMode) => void;
     pointCount: number;
     isActive: boolean;
+    activeTab?: number;
 }
 
-const MapToolbar = ({drawMode, onMode, pointCount, isActive}: ToolbarProps) => {
+const MapToolbar = ({drawMode, onMode, pointCount, isActive, activeTab}: ToolbarProps) => {
     const tools: { mode: DrawMode; icon: React.ReactNode; tip: string }[] = [
         {mode: 'pan', icon: <HandSvg/>, tip: 'Pan / Move map'},
         {mode: 'polygon', icon: <PolygonSvg/>, tip: 'Draw polygon'},
         {mode: 'circle', icon: <CircleSvg/>, tip: 'Circle zone'},
     ];
+
+    const visibleTools = activeTab === 1 ? tools.filter(t => t.mode !== 'polygon') : tools;
 
     const btn = {
         width: 30,
@@ -92,7 +95,7 @@ const MapToolbar = ({drawMode, onMode, pointCount, isActive}: ToolbarProps) => {
             boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
             pointerEvents: 'all',
         }}>
-            {tools.map(({mode, icon, tip}) => {
+            {visibleTools.map(({mode, icon, tip}) => {
                 const active = drawMode === mode;
                 return (
                     <Tooltip key={mode} title={tip} placement="bottom" arrow>
@@ -166,7 +169,16 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
     const [cursorLatLng, setCursorLatLng] = useState<{ lat: number; lng: number } | null>(null);
     const [nearStart, setNearStart] = useState(false);
     const [typedAddress, setTypedAddress] = useState(false);
-    const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+    type PostcoderAddress = {
+        summaryline: string;
+        postcode: string;
+    };
+
+    type UnifiedPrediction =
+        | ({ source: 'google' } & google.maps.places.AutocompletePrediction)
+        | ({ source: 'postcoder' } & PostcoderAddress);
+
+    const [predictions, setPredictions] = useState<UnifiedPrediction[]>([]);
 
     const mapRef = useRef<google.maps.Map | null>(null);
     const circleRef = useRef<google.maps.Circle | null>(null);
@@ -215,11 +227,40 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
     };
 
     // ── Search helpers ───────────────────────────────────────────────────────
-    const fetchPredictions = (input: string) => {
-        if (!input) return setPredictions([]);
-        new google.maps.places.AutocompleteService().getPlacePredictions({input}, (p) =>
-            setPredictions(p || [])
-        );
+    const isIEPostcode = (value: string) =>
+        /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
+    const isAUPostcode = (value: string) => /^\d{4}$/.test(value.trim());
+    const isNZPostcode = (value: string) => /^\d{4}$/.test(value.trim());
+
+    const fetchPredictions = async (input: string) => {
+        if (!input) {
+            setPredictions([]);
+            return;
+        }
+
+        try {
+            let country = "UK";
+            if (isIEPostcode(input)) country = "IE";
+            else if (isAUPostcode(input)) country = "AU";
+            else if (isNZPostcode(input)) country = "NZ";
+
+            const res = await fetch(
+                `https://ws.postcoder.com/pcw/${
+                    process.env.NEXT_PUBLIC_POSTCODER_KEY
+                }/address/${country}/${encodeURIComponent(input)}?format=json`
+            );
+
+            const data = await res.json();
+            if (data && data.length > 0) {
+                setPredictions(data.map((item: any) => ({ ...item, source: "postcoder" })));
+                return;
+            } else {
+                setPredictions([]);
+            }
+        } catch (err) {
+            console.error("Postcoder search failed", err);
+            setPredictions([]);
+        }
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -228,13 +269,17 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
         fetchPredictions(e.target.value);
     };
 
-    const selectPrediction = (placeId: string) => {
-        new google.maps.places.PlacesService(document.createElement('div')).getDetails(
-            {placeId},
-            (place, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
-                    setAddress(place.formatted_address || '');
-                    const loc = {lat: place.geometry.location.lat(), lng: place.geometry.location.lng()};
+    const selectPostcoderPrediction = (item: { source: "postcoder" } & PostcoderAddress) => {
+        setAddress(item.summaryline);
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode(
+            { address: `${item.summaryline}, ${item.postcode}` },
+            (results, status) => {
+                if (status === "OK" && results?.[0]?.geometry?.location) {
+                    const loc = {
+                        lat: results[0].geometry.location.lat(),
+                        lng: results[0].geometry.location.lng(),
+                    };
                     setLocation(loc);
                     mapRef.current?.panTo(loc);
                     mapRef.current?.setZoom(15);
@@ -243,6 +288,10 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                 setPredictions([]);
             }
         );
+    };
+
+    const selectPrediction = (p: UnifiedPrediction) => {
+        selectPostcoderPrediction(p as { source: "postcoder" } & PostcoderAddress);
     };
 
     // ── Mode switch ──────────────────────────────────────────────────────────
@@ -332,19 +381,34 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                 lat = c.lat;
                 lng = c.lng;
             }
-            const res = await api.put('work-zone/update', {
-                id: zone.id,
-                company_id: companyId,
-                project_id: projectId,
-                name,
-                address,
-                address_id: activeTab === 1 ? addressId : null,
-                lat,
-                lng,
-                type: zoneType,
-                boundary: JSON.stringify(boundary),
-                color,
-            });
+            let res;
+            if (activeTab === 0) {
+                res = await api.put('work-zone/update', {
+                    id: zone.id,
+                    company_id: companyId,
+                    project_id: projectId,
+                    name,
+                    address,
+                    address_id: zone.address_id || null,
+                    lat,
+                    lng,
+                    type: zoneType,
+                    boundary: JSON.stringify(boundary),
+                    color,
+                });
+            } else {
+                res = await api.put('address/parent-update', {
+                    id: zone.id,
+                    company_id: companyId,
+                    name: zone.address_name || zone.name,
+                    short_name: zone.short_name,
+                    pin_code: zone.address || address,
+                    type: zone.type || 'address',
+                    latitude: lat,
+                    longitude: lng,
+                    boundary: JSON.stringify(boundary),
+                });
+            }
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
                 onSaved();
@@ -371,15 +435,13 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
 
                 {activeTab === 1 && (
                     <FormControl fullWidth sx={{mb: 2}}>
-                        <InputLabel>Address title</InputLabel>
+                        <InputLabel>Address</InputLabel>
                         <Select
-                            value={addressId || ''}
-                            label="Address title"
-                            onChange={(e) => setAddressId(Number(e.target.value))}
+                            value={zone.id || ''}
+                            label="Address"
+                            disabled
                         >
-                            {addresses.map((a: any) => (
-                                <MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>
-                            ))}
+                            <MenuItem value={zone.id}>{zone.name}</MenuItem>
                         </Select>
                     </FormControl>
                 )}
@@ -406,49 +468,51 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                     />
                 )}
 
-                <Box sx={{position: 'relative', mb: 2}}>
-                    <TextField
-                        fullWidth
-                        label="Search location"
-                        value={address}
-                        onChange={handleInputChange}
-                        placeholder="Search location..."
-                        InputLabelProps={{shrink: true}}
-                        sx={{
-                            '& .MuiInputLabel-root': {overflow: 'visible'},
-                            '& .MuiOutlinedInput-notchedOutline > legend > span': {
-                                paddingRight: '6px',
-                                paddingLeft: '2px',
-                                maxWidth: 'unset',
-                                overflow: 'visible',
-                                display: 'inline-block',
-                            },
-                        }}
-                    />
-                    {typedAddress && predictions.length > 0 && (
-                        <List sx={{
-                            position: 'absolute',
-                            top: '100%',
-                            left: 0,
-                            right: 0,
-                            zIndex: 9999,
-                            border: '1px solid #ccc',
-                            borderRadius: 1,
-                            maxHeight: 200,
-                            backgroundColor: '#fff',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                            overflow: 'auto',
-                        }}>
-                            {predictions.map((p) => (
-                                <ListItem key={p.place_id} disablePadding>
-                                    <ListItemButton onClick={() => selectPrediction(p.place_id)}>
-                                        {p.description}
-                                    </ListItemButton>
-                                </ListItem>
-                            ))}
-                        </List>
-                    )}
-                </Box>
+                {activeTab === 0 && (
+                    <Box sx={{position: 'relative', mb: 2}}>
+                        <TextField
+                            fullWidth
+                            label="Search location"
+                            value={address}
+                            onChange={handleInputChange}
+                            placeholder="Search location..."
+                            InputLabelProps={{shrink: true}}
+                            sx={{
+                                '& .MuiInputLabel-root': {overflow: 'visible'},
+                                '& .MuiOutlinedInput-notchedOutline > legend > span': {
+                                    paddingRight: '6px',
+                                    paddingLeft: '2px',
+                                    maxWidth: 'unset',
+                                    overflow: 'visible',
+                                    display: 'inline-block',
+                                },
+                            }}
+                        />
+                        {typedAddress && predictions.length > 0 && (
+                            <List sx={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                zIndex: 9999,
+                                border: '1px solid #ccc',
+                                borderRadius: 1,
+                                maxHeight: 200,
+                                backgroundColor: '#fff',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                overflow: 'auto',
+                            }}>
+                                {predictions.map((p, idx) => (
+                                    <ListItem key={idx} disablePadding>
+                                        <ListItemButton onClick={() => selectPrediction(p)}>
+                                            {p.source === 'google' ? p.description : p.summaryline}
+                                        </ListItemButton>
+                                    </ListItem>
+                                ))}
+                            </List>
+                        )}
+                    </Box>
+                )}
 
                 {drawMode === 'circle' && (
                     <>
@@ -615,9 +679,10 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                         onMode={handleModeChange}
                         pointCount={drawPath.length}
                         isActive={isDrawingActive}
+                        activeTab={activeTab}
                     />
                 </Box>
-
+                {activeTab === 0 && (
                 <Box mt={2}>
                     <Typography mb={0.5}>Zone Color</Typography>
                     <input
@@ -627,6 +692,7 @@ const EditZone = ({zone, onSaved, onCancel, projectId, companyId, addresses, act
                         style={{width: '100%', height: 40, border: 'none', cursor: 'pointer'}}
                     />
                 </Box>
+                )}
             </Box>
 
             <Box

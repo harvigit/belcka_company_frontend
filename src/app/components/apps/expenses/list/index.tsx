@@ -24,6 +24,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import {
@@ -101,7 +102,9 @@ const ExpenseList = () => {
     null,
   );
 
-  const [startDate, setStartDate] = useState<Date | null>(subDays(new Date(), 6));
+  const [startDate, setStartDate] = useState<Date | null>(
+    subDays(new Date(), 6),
+  );
   const [endDate, setEndDate] = useState<Date | null>(new Date());
 
   const [users, setUsers] = useState<any[]>([]);
@@ -110,9 +113,7 @@ const ExpenseList = () => {
   const [teams, setTeams] = useState<any[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
 
-  const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(
-    new Set(),
-  );
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [isSelectAll, setIsSelectAll] = useState(false);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
@@ -192,7 +193,6 @@ const ExpenseList = () => {
               alignItems="center"
               onMouseEnter={() => setHoveredRow(item.id)}
               onMouseLeave={() => setHoveredRow(null)}
-              sx={{ pl: 1 }}
             >
               <CustomCheckbox
                 checked={isChecked}
@@ -230,7 +230,7 @@ const ExpenseList = () => {
         id: "receipt_date",
         header: "Receipt Date",
         cell: ({ getValue }) => (
-          <Typography className="f-14" sx={{ px: 1.5 }}>
+          <Typography className="f-14" sx={{ px: 0.5 }}>
             {getValue() || "-"}
           </Typography>
         ),
@@ -239,7 +239,7 @@ const ExpenseList = () => {
         id: "date_added",
         header: "Date Added",
         cell: ({ getValue }) => (
-          <Typography className="f-14" sx={{ px: 1.5 }}>
+          <Typography className="f-14" sx={{ px: 0.5 }}>
             {getValue() || "-"}
           </Typography>
         ),
@@ -249,9 +249,19 @@ const ExpenseList = () => {
         header: "User Name",
         enableSorting: false,
         cell: ({ getValue }) => (
-          <Typography className="f-14" sx={{ px: 1.5 }}>
-            {getValue() || "-"}
-          </Typography>
+          <Tooltip title={getValue() || ""}>
+            <Typography
+              className="f-14"
+              sx={{
+                maxWidth: 100,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {getValue() || "-"}
+            </Typography>
+          </Tooltip>
         ),
       }),
       columnHelper.accessor("project_name", {
@@ -259,9 +269,19 @@ const ExpenseList = () => {
         header: "Project",
         enableSorting: false,
         cell: ({ getValue }) => (
-          <Typography className="f-14" sx={{ px: 1.5 }}>
-            {getValue() || "-"}
-          </Typography>
+          <Tooltip title={getValue() || ""}>
+            <Typography
+              className="f-14"
+              sx={{
+                maxWidth: 100,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {getValue() || "-"}
+            </Typography>
+          </Tooltip>
         ),
       }),
       columnHelper.accessor("category_name", {
@@ -269,9 +289,19 @@ const ExpenseList = () => {
         header: "Category",
         enableSorting: false,
         cell: ({ getValue }) => (
-          <Typography className="f-14" sx={{ px: 1.5 }}>
-            {getValue() || "-"}
-          </Typography>
+          <Tooltip title={getValue() || ""}>
+            <Typography
+              className="f-14"
+              sx={{
+                maxWidth: 100,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {getValue() || "-"}
+            </Typography>
+          </Tooltip>
         ),
       }),
       columnHelper.accessor("trade_name", {
@@ -279,9 +309,19 @@ const ExpenseList = () => {
         header: "Trade",
         enableSorting: false,
         cell: ({ getValue }) => (
-          <Typography className="f-14" sx={{ px: 1.5 }}>
-            {getValue() || "-"}
-          </Typography>
+          <Tooltip title={getValue() || ""}>
+            <Typography
+              className="f-14"
+              sx={{
+                maxWidth: 100,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {getValue() || "-"}
+            </Typography>
+          </Tooltip>
         ),
       }),
       columnHelper.accessor("team_name", {
@@ -289,9 +329,19 @@ const ExpenseList = () => {
         header: "Team",
         enableSorting: false,
         cell: ({ getValue }) => (
-          <Typography className="f-14" sx={{ px: 1.5 }}>
-            {getValue() || "-"}
-          </Typography>
+          <Tooltip title={getValue() || ""}>
+            <Typography
+              className="f-14"
+              sx={{
+                maxWidth: 100,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {getValue() || "-"}
+            </Typography>
+          </Tooltip>
         ),
       }),
       columnHelper.accessor("total_amount", {
@@ -338,19 +388,19 @@ const ExpenseList = () => {
         header: "Note",
         enableSorting: false,
         cell: ({ getValue }) => (
-          <Typography
-            className="f-14"
-            sx={{
-              px: 1.5,
-              maxWidth: 220,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-            title={getValue() || ""}
-          >
-            {getValue() || "-"}
-          </Typography>
+          <Tooltip title={getValue() || ""}>
+            <Typography
+              className="f-14"
+              sx={{
+                maxWidth: 150,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {getValue() || "-"}
+            </Typography>
+          </Tooltip>
         ),
       }),
       columnHelper.accessor("address_name", {
@@ -358,9 +408,19 @@ const ExpenseList = () => {
         header: "Address",
         enableSorting: false,
         cell: ({ getValue }) => (
-          <Typography className="f-14" sx={{ px: 1.5 }}>
-            {getValue() || "-"}
-          </Typography>
+          <Tooltip title={getValue() || ""}>
+            <Typography
+              className="f-14"
+              sx={{
+                maxWidth: 220,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {getValue() || "-"}
+            </Typography>
+          </Tooltip>
         ),
       }),
     ],
@@ -520,8 +580,7 @@ const ExpenseList = () => {
         toast.error(await parseBlobError(blob));
       } else {
         toast.error(
-          error?.response?.data?.message ||
-            "Failed to download attachments",
+          error?.response?.data?.message || "Failed to download attachments",
         );
       }
     } finally {
@@ -620,21 +679,21 @@ const ExpenseList = () => {
                 .getAllLeafColumns()
                 .filter((column) => column.id !== "select")
                 .map((column) => (
-                <FormControlLabel
-                  key={column.id}
-                  control={
-                    <CustomCheckbox
-                      checked={column.getIsVisible()}
-                      onChange={column.getToggleVisibilityHandler()}
-                    />
-                  }
-                  label={
-                    typeof column.columnDef.header === "string"
-                      ? column.columnDef.header
-                      : column.id
-                  }
-                />
-              ))}
+                  <FormControlLabel
+                    key={column.id}
+                    control={
+                      <CustomCheckbox
+                        checked={column.getIsVisible()}
+                        onChange={column.getToggleVisibilityHandler()}
+                      />
+                    }
+                    label={
+                      typeof column.columnDef.header === "string"
+                        ? column.columnDef.header
+                        : column.id
+                    }
+                  />
+                ))}
             </FormGroup>
           </Popover>
         </Box>

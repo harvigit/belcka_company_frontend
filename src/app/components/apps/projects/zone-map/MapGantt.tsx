@@ -652,10 +652,51 @@ export default function MapGantt({
         const res = await api.get("work-zone/get", { params });
         setGeofences(res.data.info ?? []);
       } else {
-        const res: AxiosResponse<any> = await api.get("address/zones", {
-          params,
+        const res: AxiosResponse<any> = await api.get("address/get-parent", {
+          params: { ...params, page: 1, limit: 10000 },
         });
-        setGeofences(res.data.info?.zones ?? []);
+        const responseData =
+          res.data.info?.data || res.data.info || res.data.data || [];
+        const filteredData = responseData.filter(
+          (p: any) => p.type == "location",
+        );
+        const mapped = filteredData
+          .map((p: any) => {
+            let radius = 150;
+            if (p.boundary) {
+              try {
+                const b =
+                  typeof p.boundary === "string"
+                    ? JSON.parse(p.boundary)
+                    : p.boundary;
+                if (b.radius) radius = Number(b.radius);
+              } catch (e) {}
+            }
+            return {
+              ...p,
+              id: p.id,
+              name: p.short_name || p.name,
+              address_name: p.name,
+              address: p.pin_code,
+              latitude: p.lat ?? p.latitude,
+              longitude: p.lng ?? p.longitude,
+              radius: radius,
+              type: "circle",
+            };
+          })
+          .filter((p: any) => {
+            const lat = Number(p.latitude);
+            const lng = Number(p.longitude);
+            return (
+              p.latitude != null &&
+              p.latitude !== "" &&
+              p.longitude != null &&
+              p.longitude !== "" &&
+              !isNaN(lat) &&
+              !isNaN(lng)
+            );
+          });
+        setGeofences(mapped);
       }
     } catch (err) {
       console.error("Geofence fetch error:", err);
@@ -713,7 +754,14 @@ export default function MapGantt({
   const handleDeleteZone = async () => {
     if (!deleteId) return;
     try {
-      const res = await api.delete(`work-zone/delete?id=${deleteId}`);
+      let res;
+      if (activeTab === 0) {
+        res = await api.delete(`work-zone/delete?id=${deleteId}`);
+      } else {
+        res = await api.post("address/parent-delete", {
+          address_ids: deleteId.toString(),
+        });
+      }
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
         onUpdate?.();
@@ -1381,7 +1429,7 @@ export default function MapGantt({
         sx={{
           "& .MuiDrawer-paper": {
             height: "95vh",
-            width: { xs: "100%"},
+            width: { xs: "100%" },
             display: "flex",
             flexDirection: "column",
             backgroundColor: "#fff",
