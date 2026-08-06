@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Autocomplete,
+  Avatar,
   Box,
   Button,
   Drawer,
@@ -33,10 +34,11 @@ type Props = {
 
 const emptyForm = {
   project_id: null as number | null,
+  project_manual: "",
   address_id: null as number | null,
   ordered_by: null as number | null,
-  supplier_manual: "",
   supplier_id: null as number | null,
+  invoice_id: "",
   expected_delivery_date: "",
   description: "",
   note: "",
@@ -56,12 +58,12 @@ const parseDateForInput = (dateStr?: string) => {
   return dateStr;
 };
 
-const toEditorHtml = (value?: string) => {
-  if (!value) return "";
-  return value;
-};
-
-const stripHtml = (html: string) => html.trim();
+const stripHtml = (html: string) =>
+  html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 const CARD_SX = {
   bgcolor: "#fff",
@@ -137,7 +139,6 @@ const CreateInvoice = ({
 
   const [formData, setFormData] = useState(emptyForm);
   const [dragOver, setDragOver] = useState(false);
-  const [editorKey, setEditorKey] = useState(0);
   const [projects, setProjects] = useState<ResourceOption[]>([]);
   const [addresses, setAddresses] = useState<ResourceOption[]>([]);
   const [orderedByOptions, setOrderedByOptions] = useState<ResourceOption[]>(
@@ -154,9 +155,13 @@ const CreateInvoice = ({
   const isEdit = mode === "edit";
 
   const filteredAddresses = useMemo(() => {
-    if (!formData.project_id) return addresses;
-    return addresses.filter((a) => a.project_id === formData.project_id);
-  }, [addresses, formData.project_id]);
+    if (formData.project_id) {
+      return addresses.filter((a) => a.project_id === formData.project_id);
+    }
+    // Custom project: allow any company address
+    if (formData.project_manual.trim()) return addresses;
+    return addresses;
+  }, [addresses, formData.project_id, formData.project_manual]);
 
   const loadResources = useCallback(async () => {
     if (!companyId) return;
@@ -183,17 +188,18 @@ const CreateInvoice = ({
     if (isEdit && invoice) {
       setFormData({
         project_id: invoice.project_id ?? null,
+        project_manual: invoice.project_id
+          ? ""
+          : invoice.projectManual ||
+            (invoice.project !== "-" ? invoice.project : "") ||
+            "",
         address_id: invoice.address_id ?? null,
         ordered_by: invoice.ordered_by ?? null,
-        supplier_manual: invoice.supplier_id
-          ? ""
-          : invoice.supplier_manual ||
-            (invoice.supplier !== "-" ? invoice.supplier : "") ||
-            "",
         supplier_id: invoice.supplier_id ?? null,
+        invoice_id: invoice.invoiceId || "",
         expected_delivery_date: parseDateForInput(invoice.expectedDeliveryDate),
-        description: invoice.description,
-        note: invoice.note,
+        description: stripHtml(invoice.description || ""),
+        note: stripHtml(invoice.note || ""),
         total_excl_vat:
           invoice.totalExclVat != null ? String(invoice.totalExclVat) : "",
         total_incl_vat:
@@ -211,7 +217,6 @@ const CreateInvoice = ({
       setExistingDocuments([]);
       setRemovedAttachmentIds([]);
     }
-    setEditorKey((k) => k + 1);
     setDragOver(false);
   }, [open, isEdit, invoice, loadResources]);
 
@@ -250,35 +255,31 @@ const CreateInvoice = ({
   };
 
   const validate = () => {
-    if (!formData.project_id) return "Project is required!";
-    if (!formData.address_id) return "Delivery address is required!";
+    if (!formData.invoice_id.trim()) return "Invoice Id is required!";
+    if (!formData.project_id && !formData.project_manual.trim()) {
+      return "Project is required!";
+    }
+    if (!formData.address_id) return "Address is required!";
     if (!formData.ordered_by) return "Ordered by is required!";
-
-    const hasPreselect = !!formData.supplier_id;
-    const hasManual = !!formData.supplier_manual.trim();
-    if (!hasPreselect && !hasManual) {
-      return "Please select a supplier or enter a manual supplier name!";
-    }
-    if (hasPreselect && hasManual) {
-      return "Use either Supplier (Preselect) or Supplier (Manual), not both!";
-    }
+    if (!formData.supplier_id) return "Supplier is required!";
 
     if (!formData.expected_delivery_date) {
-      return "Expected delivery date is required!";
+      return "Date is required!";
     }
-    if (!stripHtml(formData.description)) return "Description is required!";
 
-    const excl = Number(formData.total_excl_vat);
     const incl = Number(formData.total_incl_vat);
-    if (formData.total_excl_vat === "" || !Number.isFinite(excl)) {
-      return "Total amount (excl. VAT) is required!";
-    }
+    const excl = Number(formData.total_excl_vat);
     if (formData.total_incl_vat === "" || !Number.isFinite(incl)) {
       return "Total amount (incl. VAT) is required!";
+    }
+    if (formData.total_excl_vat === "" || !Number.isFinite(excl)) {
+      return "Total amount (excl. VAT) is required!";
     }
     if (excl < 0 || incl < 0) {
       return "Total amounts cannot be negative!";
     }
+
+    if (!stripHtml(formData.description)) return "Description is required!";
 
     if (formData.credit_note_amount !== "") {
       const credit = Number(formData.credit_note_amount);
@@ -308,14 +309,15 @@ const CreateInvoice = ({
     try {
       const fd = new FormData();
       fd.append("company_id", String(companyId));
-      fd.append("project_id", String(formData.project_id));
+      if (formData.project_id) {
+        fd.append("project_id", String(formData.project_id));
+      } else {
+        fd.append("project_manual", formData.project_manual.trim());
+      }
       fd.append("address_id", String(formData.address_id));
       fd.append("ordered_by", String(formData.ordered_by));
-      if (formData.supplier_id) {
-        fd.append("supplier_id", String(formData.supplier_id));
-      } else {
-        fd.append("supplier_manual", formData.supplier_manual.trim());
-      }
+      fd.append("supplier_id", String(formData.supplier_id));
+      fd.append("invoice_id", formData.invoice_id.trim());
       fd.append("expected_delivery_date", formData.expected_delivery_date);
       fd.append("description", formData.description);
       fd.append("note", formData.note || "");
@@ -421,33 +423,107 @@ const CreateInvoice = ({
                 md: "1fr 1fr 1fr",
               }}
               gap={2.5}
+              alignItems="start"
             >
+              <Box className="form_inputs">
+                <FieldLabel required>Invoice ID</FieldLabel>
+                <CustomTextField
+                  fullWidth
+                  placeholder="Enter invoice id"
+                  value={formData.invoice_id}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      invoice_id: e.target.value,
+                    }))
+                  }
+                />
+              </Box>
+
               <Box className="form_inputs">
                 <FieldLabel required>Project</FieldLabel>
                 <Autocomplete
                   fullWidth
+                  freeSolo
                   options={projects}
                   value={
-                    projects.find((p) => p.id === formData.project_id) || null
+                    formData.project_id
+                      ? projects.find((p) => p.id === formData.project_id) ||
+                        null
+                      : formData.project_manual || null
                   }
-                  getOptionLabel={(o) => o.name}
-                  getOptionKey={(o) => String(o.id)}
-                  isOptionEqualToValue={(a, b) => a.id === b.id}
-                  onChange={(_, value) =>
+                  getOptionLabel={(o) =>
+                    typeof o === "string" ? o : o.name || ""
+                  }
+                  getOptionKey={(o) =>
+                    typeof o === "string" ? o : String(o.id)
+                  }
+                  isOptionEqualToValue={(a, b) => {
+                    if (typeof a === "string" || typeof b === "string") {
+                      return (
+                        (typeof a === "string" ? a : a.name) ===
+                        (typeof b === "string" ? b : b.name)
+                      );
+                    }
+                    return a.id === b.id;
+                  }}
+                  onChange={(_, value) => {
+                    if (typeof value === "string") {
+                      const match = projects.find(
+                        (p) =>
+                          p.name.toLowerCase() === value.trim().toLowerCase(),
+                      );
+                      setFormData((prev) => ({
+                        ...prev,
+                        project_id: match?.id ?? null,
+                        project_manual: match ? "" : value,
+                        address_id: null,
+                      }));
+                      return;
+                    }
+                    if (value && typeof value === "object") {
+                      setFormData((prev) => ({
+                        ...prev,
+                        project_id: value.id,
+                        project_manual: "",
+                        address_id: null,
+                      }));
+                      return;
+                    }
                     setFormData((prev) => ({
                       ...prev,
-                      project_id: value?.id ?? null,
+                      project_id: null,
+                      project_manual: "",
                       address_id: null,
-                    }))
-                  }
+                    }));
+                  }}
+                  onInputChange={(_, value, reason) => {
+                    if (reason !== "input") return;
+                    const match = projects.find(
+                      (p) =>
+                        p.name.toLowerCase() === value.trim().toLowerCase(),
+                    );
+                    setFormData((prev) => ({
+                      ...prev,
+                      project_id: match?.id ?? null,
+                      project_manual: match ? "" : value,
+                      address_id:
+                        match?.id && match.id === prev.project_id
+                          ? prev.address_id
+                          : null,
+                    }));
+                  }}
                   renderInput={(params) => (
-                    <CustomTextField {...params} placeholder="Select project" />
+                    <CustomTextField
+                      {...params}
+                      placeholder="Select or type project"
+                    />
                   )}
                 />
               </Box>
 
               <Box className="form_inputs">
-                <FieldLabel required>Delivery Address</FieldLabel>
+                <FieldLabel required>Address</FieldLabel>
                 <Autocomplete
                   fullWidth
                   options={filteredAddresses}
@@ -490,31 +566,75 @@ const CreateInvoice = ({
                       ordered_by: value?.id ?? null,
                     }))
                   }
-                  renderInput={(params) => (
-                    <CustomTextField {...params} placeholder="Select user" />
-                  )}
+                  renderOption={(props, option) => {
+                    const { key, ...optionProps } = props as any;
+                    return (
+                      <Box
+                        component="li"
+                        key={key}
+                        {...optionProps}
+                        sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                      >
+                        <Avatar
+                          src={
+                            option.user_thumb_image ||
+                            option.user_image ||
+                            "/images/users/user.png"
+                          }
+                          alt={option.name}
+                          sx={{ width: 28, height: 28, fontSize: "12px" }}
+                        >
+                          {option.name?.[0]?.toUpperCase()}
+                        </Avatar>
+                        <Typography component="span" variant="body2">
+                          {option.name}
+                        </Typography>
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => {
+                    const selected = orderedByOptions.find(
+                      (u) => u.id === formData.ordered_by,
+                    );
+                    return (
+                      <CustomTextField
+                        {...params}
+                        placeholder="Select user"
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: selected ? (
+                            <>
+                              <Avatar
+                                src={
+                                  selected.user_thumb_image ||
+                                  selected.user_image ||
+                                  "/images/users/user.png"
+                                }
+                                alt={selected.name}
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  fontSize: "11px",
+                                  ml: 0.5,
+                                  mr: 0.5,
+                                }}
+                              >
+                                {selected.name?.[0]?.toUpperCase()}
+                              </Avatar>
+                              {params.InputProps.startAdornment}
+                            </>
+                          ) : (
+                            params.InputProps.startAdornment
+                          ),
+                        }}
+                      />
+                    );
+                  }}
                 />
               </Box>
 
               <Box className="form_inputs">
-                <FieldLabel>Supplier (Manual)</FieldLabel>
-                <CustomTextField
-                  fullWidth
-                  placeholder="Enter supplier name"
-                  value={formData.supplier_manual}
-                  disabled={!!formData.supplier_id}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      supplier_manual: e.target.value,
-                      supplier_id: null,
-                    }))
-                  }
-                />
-              </Box>
-
-              <Box className="form_inputs">
-                <FieldLabel>Supplier (Preselect)</FieldLabel>
+                <FieldLabel required>Supplier</FieldLabel>
                 <Autocomplete
                   fullWidth
                   options={suppliers}
@@ -528,7 +648,6 @@ const CreateInvoice = ({
                     setFormData((prev) => ({
                       ...prev,
                       supplier_id: value?.id ?? null,
-                      supplier_manual: "",
                     }))
                   }
                   renderInput={(params) => (
@@ -541,10 +660,11 @@ const CreateInvoice = ({
               </Box>
 
               <Box className="form_inputs">
-                <FieldLabel required>Expected Delivery Date</FieldLabel>
+                <FieldLabel required>Date</FieldLabel>
                 <CustomTextField
                   type="date"
                   fullWidth
+                  placeholder="dd/mm/yyyy"
                   value={formData.expected_delivery_date}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setFormData((prev) => ({
@@ -561,27 +681,7 @@ const CreateInvoice = ({
                   }}
                 />
               </Box>
-            </Box>
 
-            <Box
-              display="grid"
-              gridTemplateColumns={{
-                xs: "1fr",
-                sm: "1fr 1fr",
-                md: "1fr 1fr 1fr",
-              }}
-              gap={2.5}
-              mb={2.5}
-              mt={1}
-            >
-              <CurrencyField
-                label="Total Amount (Excl. VAT)"
-                required
-                value={formData.total_excl_vat}
-                onChange={(value) =>
-                  setFormData((prev) => ({ ...prev, total_excl_vat: value }))
-                }
-              />
               <CurrencyField
                 label="Total Amount (Incl. VAT)"
                 required
@@ -590,6 +690,32 @@ const CreateInvoice = ({
                   setFormData((prev) => ({ ...prev, total_incl_vat: value }))
                 }
               />
+              <CurrencyField
+                label="Total Amount (Excl. VAT)"
+                required
+                value={formData.total_excl_vat}
+                onChange={(value) =>
+                  setFormData((prev) => ({ ...prev, total_excl_vat: value }))
+                }
+              />
+
+              <Box className="form_inputs">
+                <FieldLabel required>Description</FieldLabel>
+                <CustomTextField
+                  multiline
+                  rows={3}
+                  fullWidth
+                  placeholder="Enter description"
+                  value={formData.description}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                />
+              </Box>
+
               <CurrencyField
                 label="Credit Note Amount"
                 value={formData.credit_note_amount}
@@ -600,35 +726,14 @@ const CreateInvoice = ({
                   }))
                 }
               />
-            </Box>
 
-            <Box
-              display="grid"
-              gridTemplateColumns={{ xs: "1fr", md: "1fr 1fr 1fr" }}
-              gap={2.5}
-              mb={2.5}
-            >
-              <Box>
-                <FieldLabel required>Description</FieldLabel>
+              <Box className="form_inputs">
+                <FieldLabel>Credit Note Description</FieldLabel>
                 <CustomTextField
                   multiline
-                  rows={1}
+                  rows={3}
                   fullWidth
-                  value={formData.description}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
-                  }
-                />
-              </Box>
-              <Box>
-                <FieldLabel>Note</FieldLabel>
-                <CustomTextField
-                  multiline
-                  rows={1}
-                  fullWidth
+                  placeholder="Enter credit note description"
                   value={formData.note}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setFormData((prev) => ({
@@ -638,43 +743,55 @@ const CreateInvoice = ({
                   }
                 />
               </Box>
+
+              <Box className="form_inputs" sx={{ height: "100%" }}>
+                <FieldLabel>Upload Document</FieldLabel>
+                <Box
+                  component="label"
+                  onDragOver={(e: React.DragEvent) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e: React.DragEvent) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    addFiles(e.dataTransfer.files);
+                  }}
+                  sx={{
+                    border: `2px dashed ${dragOver ? "#1565c0" : "#1976d2"}`,
+                    borderRadius: 2,
+                    px: 2,
+                    py: 2.5,
+                    minHeight: 96,
+                    height: "calc(100% - 28px)",
+                    textAlign: "center",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: dragOver ? "rgba(25, 118, 210, 0.04)" : "transparent",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <input
+                    type="file"
+                    hidden
+                    multiple
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(e) => {
+                      addFiles(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Typography color="text.secondary">
+                    Drag & drop or paste images
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
-            <Box
-              component="label"
-              onDragOver={(e: React.DragEvent) => {
-                e.preventDefault();
-                setDragOver(true);
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={(e: React.DragEvent) => {
-                e.preventDefault();
-                setDragOver(false);
-                addFiles(e.dataTransfer.files);
-              }}
-              sx={{
-                border: "2px dashed #1976d2",
-                borderRadius: 2,
-                p: 5,
-                textAlign: "center",
-                cursor: "pointer",
-                mb: 2.5,
-                display: "block",
-                width: "50%",
-              }}
-            >
-              <input
-                type="file"
-                hidden
-                multiple
-                accept=".pdf,.jpg,.jpeg,.png,.webp"
-                onChange={(e) => {
-                  addFiles(e.target.files);
-                  e.target.value = "";
-                }}
-              />
-              <Typography>Drag & drop or paste images</Typography>
-            </Box>
-            <Grid container spacing={2}>
+
+            <Grid container spacing={2} sx={{ mt: 1 }}>
               {existingDocuments.map((doc) => (
                 <Grid
                   key={`existing-${doc.id}`}

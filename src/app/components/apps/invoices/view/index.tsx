@@ -2,7 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  Avatar,
   Box,
+  Button,
   Card,
   CardMedia,
   CircularProgress,
@@ -11,10 +13,17 @@ import {
   IconButton,
   Stack,
   Typography,
-  Grid,
 } from "@mui/material";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { IconFileTypePdf } from "@tabler/icons-react";
+import IconArrowLeft from "@mui/icons-material/ArrowBack";
+import {
+  IconBuildingStore,
+  IconCalendar,
+  IconFileText,
+  IconHash,
+  IconMapPin,
+  IconReceipt,
+  IconUser,
+} from "@tabler/icons-react";
 import api from "@/utils/axios";
 import AttachmentLightbox from "@/app/components/common/AttachmentLightbox";
 import {
@@ -47,20 +56,33 @@ const isPdfAttachment = (doc: InvoiceDocument) =>
   !!doc.url?.toLowerCase().includes(".pdf") ||
   !!doc.original_name?.toLowerCase().endsWith(".pdf");
 
-const DetailRow = ({
+const InfoBlock = ({
+  icon,
   label,
   value,
+  children,
 }: {
+  icon: React.ReactNode;
   label: string;
   value?: string | null;
+  children?: React.ReactNode;
 }) => (
   <Box>
-    <Typography variant="caption" color="text.secondary">
-      {label}
-    </Typography>
-    <Typography variant="body1" fontWeight={500} sx={{ wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
-      {value?.trim() ? value : "-"}
-    </Typography>
+    <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+      {icon}
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+    </Stack>
+    {children || (
+      <Typography
+        variant="body1"
+        fontWeight={500}
+        sx={{ wordBreak: "break-word", whiteSpace: "pre-wrap" }}
+      >
+        {value?.trim() ? value : "-"}
+      </Typography>
+    )}
   </Box>
 );
 
@@ -134,23 +156,48 @@ const InvoiceView = ({
     setLightboxOpen(true);
   };
 
+  const displayInvoiceId = invoice?.invoiceId?.trim() || "-";
+
   return (
     <Drawer
       anchor="right"
       open={open}
       onClose={onClose}
       PaperProps={{
-        sx: { width: { xs: "100%", sm: 420 } },
+        sx: {
+          width: { xs: "100%", sm: 460 },
+          backgroundColor: "#f9f9f9",
+        },
       }}
     >
       <Box p={2} height="100%" display="flex" flexDirection="column">
-        <Box display="flex" alignItems="center" mb={2}>
-          <IconButton onClick={onClose}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" fontWeight={700} ml={1}>
-            Invoice Details
-          </Typography>
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+        >
+          <Box display="flex" alignItems="center">
+            <IconButton onClick={onClose}>
+              <IconArrowLeft />
+            </IconButton>
+            <Typography variant="h6" fontWeight={700} ml={1}>
+              Invoice Details
+            </Typography>
+          </Box>
+          {invoice && onEdit && (
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => {
+                onEdit(invoice);
+                onClose();
+              }}
+              sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+            >
+              Edit
+            </Button>
+          )}
         </Box>
 
         {loading ? (
@@ -168,112 +215,225 @@ const InvoiceView = ({
           </Typography>
         ) : (
           <Box sx={{ overflowY: "auto", flex: 1, pr: 0.5 }}>
-            <Stack spacing={2}>
-              <DetailRow label="Project" value={invoice.project} />
-              <DetailRow
-                label="Delivery Address"
-                value={invoice.deliveryAddress}
-              />
-              <DetailRow label="Ordered By" value={invoice.orderedBy} />
-              <DetailRow label="Supplier" value={invoice.supplier} />
-              <DetailRow
-                label="Expected Delivery Date"
-                value={invoice.expectedDeliveryDate}
-              />
-              <Box display="grid" gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr 1fr" }} gap={2}>
-                <DetailRow
-                  label="Total Amount (Excl. VAT)"
-                  value={formatMoney(invoice.totalExclVat)}
-                />
-                <DetailRow
-                  label="Total Amount (Incl. VAT)"
-                  value={formatMoney(invoice.totalInclVat)}
-                />
-                <DetailRow
-                  label="Description"
-                  value={stripHtml(invoice.description) || "-"}
-                />
-              </Box>
-              <Box display="grid" gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr" }} gap={2}>
-                <DetailRow label="Note" value={stripHtml(invoice.note) || "-"} />
-                <DetailRow
-                  label="Credit Note Amount"
-                  value={formatMoney(invoice.creditNoteAmount)}
-                />
-              </Box>
+            <Box mb={1.5}>
+              <Typography variant="h4" fontWeight={700} color="primary">
+                {formatMoney(invoice.totalInclVat)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" mt={0.5}>
+                Incl. VAT · Excl. VAT {formatMoney(invoice.totalExclVat)}
+              </Typography>
+            </Box>
+
+            <Stack direction="row" spacing={1} alignItems="center" mb={2}>
+              <IconHash size={16} color="#666" />
+              <Typography variant="body2" fontWeight={600}>
+                Invoice ID: {displayInvoiceId}
+              </Typography>
             </Stack>
 
-            <Divider sx={{ my: 2.5 }} />
+            <Divider sx={{ my: 2 }} />
 
-            <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 2,
+                mb: 3,
+              }}
+            >
+              <Box sx={{ flex: 1 }}>
+                <Stack spacing={2.5}>
+                  <InfoBlock
+                    icon={<IconFileText size={18} color="#666" />}
+                    label="Project"
+                    value={invoice.project}
+                  />
+                  <InfoBlock
+                    icon={<IconBuildingStore size={18} color="#666" />}
+                    label="Supplier"
+                    value={invoice.supplier}
+                  />
+                  <InfoBlock
+                    icon={<IconCalendar size={18} color="#666" />}
+                    label="Date"
+                    value={invoice.expectedDeliveryDate}
+                  />
+                </Stack>
+              </Box>
+
+              <Box sx={{ flex: 1 }}>
+                <Stack spacing={2.5}>
+                  <InfoBlock
+                    icon={<IconUser size={18} color="#666" />}
+                    label="Ordered By"
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Avatar
+                        src={
+                          invoice.orderedByImage || "/images/users/user.png"
+                        }
+                        alt={invoice.orderedBy}
+                        sx={{ width: 28, height: 28, fontSize: "12px" }}
+                      >
+                        {invoice.orderedBy?.[0]?.toUpperCase()}
+                      </Avatar>
+                      <Typography
+                        variant="body1"
+                        fontWeight={500}
+                        sx={{ wordBreak: "break-word" }}
+                      >
+                        {invoice.orderedBy?.trim() ? invoice.orderedBy : "-"}
+                      </Typography>
+                    </Stack>
+                  </InfoBlock>
+                  <InfoBlock
+                    icon={<IconReceipt size={18} color="#666" />}
+                    label="Credit Amt"
+                    value={formatMoney(invoice.creditNoteAmount)}
+                  />
+                </Stack>
+              </Box>
+            </Box>
+
+            <Divider sx={{ my: 2 }} />
+
+            <Box mb={3}>
+              <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+                <IconMapPin size={18} color="#666" />
+                <Typography variant="caption" color="text.secondary">
+                  Address
+                </Typography>
+              </Stack>
+              <Typography
+                variant="body1"
+                fontWeight={500}
+                sx={{ wordBreak: "break-word" }}
+              >
+                {invoice.deliveryAddress?.trim()
+                  ? invoice.deliveryAddress
+                  : "-"}
+              </Typography>
+            </Box>
+
+            <Box mb={3}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                mb={0.5}
+                display="block"
+              >
+                Description
+              </Typography>
+              <Typography
+                variant="body1"
+                fontWeight={500}
+                sx={{ wordBreak: "break-word", whiteSpace: "pre-wrap" }}
+              >
+                {stripHtml(invoice.description) || "-"}
+              </Typography>
+            </Box>
+
+            {stripHtml(invoice.note) && (
+              <Box mb={3}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  mb={0.5}
+                  display="block"
+                >
+                  Credit Note Description
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ wordBreak: "break-word", whiteSpace: "pre-wrap" }}
+                >
+                  {stripHtml(invoice.note)}
+                </Typography>
+              </Box>
+            )}
+
+            <Divider sx={{ my: 2 }} />
+
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              mb={1}
+              display="block"
+            >
               Attachments ({documents.length})
             </Typography>
 
             {documents.length > 0 ? (
-              <Grid container spacing={2}>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
                 {documents.map((doc) => {
                   const isPdf = isPdfAttachment(doc);
                   const previewSrc = isPdf
                     ? doc.thumb || ""
                     : doc.url || doc.thumb || "";
                   return (
-                    <Grid  key={doc.id} style={{ position: "relative" }}>
-                      {previewSrc ? (
-                        <img
-                          src={previewSrc}
-                          alt={doc.original_name || doc.file || `Attachment ${doc.id}`}
-                          width={80}
-                          height={80}
-                          style={{ objectFit: "cover", borderRadius: 4, cursor: doc.url ? "pointer" : "default" }}
-                          onClick={() => openAttachment(doc)}
-                        />
-                      ) : (
-                        <Box
-                          sx={{
-                            width: 80,
-                            height: 80,
-                            bgcolor: "#f5f5f5",
-                            borderRadius: 1,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: doc.url ? "pointer" : "default"
-                          }}
-                          onClick={() => openAttachment(doc)}
+                    <Box
+                      key={doc.id}
+                      sx={{
+                        width: {
+                          xs: "calc(50% - 8px)",
+                          sm: "calc(50% - 8px)",
+                        },
+                      }}
+                    >
+                      <Card
+                        sx={{
+                          cursor: doc.url ? "pointer" : "default",
+                          "&:hover": doc.url ? { boxShadow: 3 } : undefined,
+                          bgcolor: "#fff",
+                        }}
+                        onClick={() => openAttachment(doc)}
+                      >
+                        {previewSrc ? (
+                          <CardMedia
+                            component="img"
+                            height="140"
+                            image={previewSrc}
+                            alt={
+                              doc.original_name ||
+                              doc.file ||
+                              `Attachment ${doc.id}`
+                            }
+                            sx={{ objectFit: "cover" }}
+                          />
+                        ) : (
+                          <Box
+                            height={140}
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            bgcolor="#f5f5f5"
+                          >
+                            <Typography variant="caption" fontWeight={600}>
+                              PDF
+                            </Typography>
+                          </Box>
+                        )}
+                      </Card>
+                      {(doc.original_name || doc.file) && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          noWrap
+                          display="block"
+                          mt={0.5}
+                          title={doc.original_name || doc.file || ""}
                         >
-                          <Typography variant="caption">PDF</Typography>
-                        </Box>
+                          {doc.original_name || doc.file}
+                        </Typography>
                       )}
-                    </Grid>
+                    </Box>
                   );
                 })}
-              </Grid>
+              </Box>
             ) : (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" py={1}>
                 No attachments found
               </Typography>
-            )}
-
-            {onEdit && (
-              <Box mt={3}>
-                <Typography
-                  component="button"
-                  onClick={() => {
-                    onEdit(invoice);
-                    onClose();
-                  }}
-                  sx={{
-                    border: "none",
-                    background: "none",
-                    color: "primary.main",
-                    cursor: "pointer",
-                    fontWeight: 600,
-                    p: 0,
-                  }}
-                >
-                  Edit Invoice
-                </Typography>
-              </Box>
             )}
           </Box>
         )}

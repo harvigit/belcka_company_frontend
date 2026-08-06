@@ -10,15 +10,17 @@ export type InvoiceDocument = {
 export type InvoiceRow = {
   id: number;
   company_id?: number;
-  project_id?: number;
+  project_id?: number | null;
   project: string;
+  projectManual?: string | null;
   address_id?: number;
   deliveryAddress: string;
   ordered_by?: number;
   orderedBy: string;
+  orderedByImage?: string | null;
   supplier_id?: number | null;
   supplier: string;
-  supplier_manual?: string | null;
+  invoiceId: string;
   expectedDeliveryDate: string;
   description: string;
   note: string;
@@ -58,14 +60,17 @@ export const mapInvoiceApiRow = (row: any): InvoiceRow => {
     id: row.id,
     company_id: row.company_id,
     project_id: row.project_id,
-    project: row.project || "-",
+    project: row.project || row.project_manual || "-",
+    projectManual: row.project_manual || null,
     address_id: row.address_id,
     deliveryAddress: row.delivery_address || "-",
     ordered_by: row.ordered_by,
     orderedBy: row.ordered_by_name || "-",
+    orderedByImage:
+      row.ordered_by_thumb || row.ordered_by_image || null,
     supplier_id: row.supplier_id,
-    supplier: row.supplier || row.supplier_manual || "-",
-    supplier_manual: row.supplier_manual,
+    supplier: row.supplier || "-",
+    invoiceId: row.invoice_id || "",
     expectedDeliveryDate: row.expected_delivery_date || "-",
     description: row.description || "",
     note: row.note || "",
