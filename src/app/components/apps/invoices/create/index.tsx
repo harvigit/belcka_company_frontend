@@ -9,10 +9,9 @@ import {
   Drawer,
   IconButton,
   Typography,
-  Grid,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { IconCloudUpload, IconX, IconTrash } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import toast from "react-hot-toast";
@@ -73,6 +72,47 @@ const CARD_SX = {
   p: { xs: 2, sm: 3 },
   mb: 2.5,
 };
+
+const REMOVE_DOC_BTN_SX = {
+  position: "absolute",
+  top: -6,
+  right: -6,
+  width: 22,
+  height: 22,
+  minWidth: 22,
+  minHeight: 22,
+  maxWidth: 22,
+  maxHeight: 22,
+  padding: "0 !important",
+  margin: 0,
+  lineHeight: 0,
+  fontSize: 0,
+  borderRadius: "50%",
+  aspectRatio: "1 / 1",
+  boxSizing: "border-box",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden",
+  appearance: "none",
+  WebkitAppearance: "none",
+  bgcolor: "#fff",
+  border: "1px solid #e5e7eb",
+  boxShadow: "0 2px 6px rgba(15, 23, 42, 0.15)",
+  color: "#d32f2f",
+  zIndex: 2,
+  cursor: "pointer",
+  "&:hover": {
+    bgcolor: "#fff",
+    color: "#b71c1c",
+  },
+  "& svg": {
+    width: 12,
+    height: 12,
+    display: "block",
+    flexShrink: 0,
+  },
+} as const;
 
 const FieldLabel = ({
   children,
@@ -770,7 +810,9 @@ const CreateInvoice = ({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    bgcolor: dragOver ? "rgba(25, 118, 210, 0.04)" : "transparent",
+                    bgcolor: dragOver
+                      ? "rgba(25, 118, 210, 0.04)"
+                      : "transparent",
                     boxSizing: "border-box",
                   }}
                 >
@@ -791,107 +833,135 @@ const CreateInvoice = ({
               </Box>
             </Box>
 
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              {existingDocuments.map((doc) => (
-                <Grid
-                  key={`existing-${doc.id}`}
-                  style={{ position: "relative" }}
-                >
-                  {doc.url &&
-                  (doc.url.toLowerCase().includes(".pdf") ||
-                    doc.type === "application/pdf") ? (
+            {(existingDocuments.length > 0 ||
+              formData.documentFiles.length > 0) && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 2,
+                  mt: 2,
+                }}
+              >
+                {existingDocuments.map((doc) => (
+                  <Box
+                    key={`existing-${doc.id}`}
+                    sx={{
+                      position: "relative",
+                      width: 80,
+                      height: 80,
+                      flexShrink: 0,
+                    }}
+                  >
                     <Box
                       sx={{
-                        width: 80,
-                        height: 80,
-                        bgcolor: "#f5f5f5",
+                        width: "100%",
+                        height: "100%",
                         borderRadius: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        overflow: "hidden",
+                        border: "1px solid #e5e7eb",
+                        bgcolor: "#f5f5f5",
                       }}
                     >
-                      <Typography variant="caption">PDF</Typography>
+                      {doc.url &&
+                      (doc.url.toLowerCase().includes(".pdf") ||
+                        doc.type === "application/pdf") ? (
+                        <Box
+                          sx={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Typography variant="caption">PDF</Typography>
+                        </Box>
+                      ) : (
+                        <Box
+                          component="img"
+                          src={doc.url || doc.thumb || ""}
+                          alt={doc.original_name || doc.file}
+                          sx={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                      )}
                     </Box>
-                  ) : (
-                    <img
-                      src={doc.url || doc.thumb || ""}
-                      alt={doc.original_name || doc.file}
-                      width={80}
-                      height={80}
-                      style={{ objectFit: "cover", borderRadius: 4 }}
-                    />
-                  )}
-                  <IconButton
-                    color="error"
-                    size="small"
-                    sx={{
-                      position: "absolute",
-                      top: 6,
-                      right: -10,
-                      backgroundColor: "#fff",
-                      zIndex: 2,
-                      "&:hover": {
-                        backgroundColor: "#fff",
-                        color: "red",
-                      },
-                    }}
-                    onClick={() => removeExistingDocument(doc)}
-                  >
-                    <IconTrash size={16} />
-                  </IconButton>
-                </Grid>
-              ))}
+                    <Box
+                      component="button"
+                      type="button"
+                      aria-label="Remove document"
+                      onClick={() => removeExistingDocument(doc)}
+                      sx={REMOVE_DOC_BTN_SX}
+                    >
+                      <IconX size={12} stroke={2.5} />
+                    </Box>
+                  </Box>
+                ))}
 
-              {formData.documentFiles.map((file, index) => (
-                <Grid
-                  key={`new-${file.name}-${index}`}
-                  style={{ position: "relative" }}
-                >
-                  {file.type === "application/pdf" ? (
+                {formData.documentFiles.map((file, index) => (
+                  <Box
+                    key={`new-${file.name}-${index}`}
+                    sx={{
+                      position: "relative",
+                      width: 80,
+                      height: 80,
+                      flexShrink: 0,
+                    }}
+                  >
                     <Box
                       sx={{
-                        width: 80,
-                        height: 80,
-                        bgcolor: "#f5f5f5",
+                        width: "100%",
+                        height: "100%",
                         borderRadius: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        overflow: "hidden",
+                        border: "1px solid #e5e7eb",
+                        bgcolor: "#f5f5f5",
                       }}
                     >
-                      <Typography variant="caption">PDF</Typography>
+                      {file.type === "application/pdf" ? (
+                        <Box
+                          sx={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Typography variant="caption">PDF</Typography>
+                        </Box>
+                      ) : (
+                        <Box
+                          component="img"
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          sx={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                      )}
                     </Box>
-                  ) : (
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={file.name}
-                      width={80}
-                      height={80}
-                      style={{ objectFit: "cover", borderRadius: 4 }}
-                    />
-                  )}
-                  <IconButton
-                    color="error"
-                    size="small"
-                    sx={{
-                      position: "absolute",
-                      top: 6,
-                      right: -10,
-                      backgroundColor: "#fff",
-                      zIndex: 2,
-                      "&:hover": {
-                        backgroundColor: "#fff",
-                        color: "red",
-                      },
-                    }}
-                    onClick={() => removeNewFile(index)}
-                  >
-                    <IconTrash size={16} />
-                  </IconButton>
-                </Grid>
-              ))}
-            </Grid>
+                    <Box
+                      component="button"
+                      type="button"
+                      aria-label="Remove document"
+                      onClick={() => removeNewFile(index)}
+                      sx={REMOVE_DOC_BTN_SX}
+                    >
+                      <IconX size={12} stroke={2.5} />
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            )}
           </Box>
         </form>
       </Box>
