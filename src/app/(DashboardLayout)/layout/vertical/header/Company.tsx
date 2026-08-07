@@ -38,6 +38,7 @@ import { getFcmToken, onForegroundMessage } from "@/utils/firebase";
 import AnnouncementsList from "@/app/components/apps/settings/announcement";
 import UserRequests from "@/app/components/apps/requests/list";
 import { useRouter } from "next/navigation";
+import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 import { format, parse } from "date-fns";
 import { AxiosResponse } from "axios";
 import CompanyRegistration from "@/app/components/apps/modals/register-company";
@@ -422,18 +423,17 @@ const Company = () => {
 
       return url;
     },
-    "Billing Info": (id) => `/apps/users/${id}?tab=billing`,
-    User: (id) => `/apps/users/${id}?tab=health_info`,
-    Company: (id) => `/apps/users/${id}?tab=rate`,
-    Comapny: (id) => `/apps/users/${id}?tab=billing`,
+    "Billing Info": (id) => getUserDetailsHref(id, { tab: "billing" }),
+    User: (id) => getUserDetailsHref(id, { tab: "health_info" }),
+    Company: (id) => getUserDetailsHref(id, { tab: "rate" }),
+    Comapny: (id) => getUserDetailsHref(id, { tab: "billing" }),
     Project: (id) => `/apps/projects/index?id=${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
     Leave: (userId, recordId, startDate, endDate) => {
-      let url = `/apps/users/${userId}?tab=leave`;
       if (startDate && endDate) {
         saveDateRangeToStorage(startDate, endDate);
       }
-      return url;
+      return getUserDetailsHref(userId, { tab: "leave" });
     },
     Stock: (userId, recordId) => {
       let url = `/apps/stocks/list`;

@@ -5,7 +5,7 @@ import PageContainer from "@/app/components/container/PageContainer";
 import BlankCard from "@/app/components/shared/BlankCard";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 // import ExpenseList from "@/app/components/apps/expenses/list";
-import ExpenseListUI from "@/app/components/apps/expenses/list/ExpenseListUI";
+import Index from "@/app/components/apps/expenses/list";
 
 const ExpenseListing = () => {
   return (
@@ -17,7 +17,7 @@ const ExpenseListing = () => {
           ===== END OLD UI ===== */}
 
           {/* ===== NEW UI ===== */}
-          <ExpenseListUI />
+          <Index />
           {/* ===== END NEW UI ===== */}
         </BlankCard>
       </PermissionGuard>

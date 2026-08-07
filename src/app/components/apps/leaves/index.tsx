@@ -76,6 +76,7 @@ import TablePaginationFooter from '@/app/components/common/TablePaginationFooter
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import GeneralSetting from '@/app/components/apps/leaves/settings/general';
 import Link from 'next/link';
+import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import Image from 'next/image';
 
@@ -806,11 +807,11 @@ const Leaves = () => {
         if (startDate && endDate) saveDateRangeToStorage(startDate, endDate, columnVisibility);
 
         const leaveDate = parseLeaveDate(leave?.start_date ?? leave?.date ?? leave?.date_formatted);
-        const query = leaveDate
-            ? `?tab=leave&leave_start=${format(startOfWeek(leaveDate), 'yyyy-MM-dd')}&leave_end=${format(endOfWeek(leaveDate), 'yyyy-MM-dd')}`
-            : '?tab=leave';
-
-        router.push(`/apps/users/${userId}${query}`);
+        router.push(getUserDetailsHref(userId, {
+            tab: 'leave',
+            leave_start: leaveDate ? format(startOfWeek(leaveDate), 'yyyy-MM-dd') : undefined,
+            leave_end: leaveDate ? format(endOfWeek(leaveDate), 'yyyy-MM-dd') : undefined,
+        }));
     };
 
     const getSummaryColumnCount = (row: any, column: (typeof SUMMARY_COLUMNS)[number]) => {
@@ -976,9 +977,7 @@ const Leaves = () => {
                             sx={{ cursor: 'pointer' }}
                         >
                             <Link
-                                href={{
-                                    pathname: `/apps/users/${row?.user_id}`,
-                                }}
+                                href={getUserDetailsHref(row?.user_id)}
                                 passHref
                                 onClick={(e) => e.stopPropagation()}
                             >

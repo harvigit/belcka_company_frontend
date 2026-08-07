@@ -28,6 +28,7 @@ import { IconArrowLeft, IconX, IconSearch, IconFilter } from "@tabler/icons-reac
 import { format, parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { useRouter } from "next/navigation";
+import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 
 dayjs.extend(customParseFormat);
 
@@ -299,9 +300,9 @@ export default function UserRequests({
       if (params.length > 0) url += `?${params.join("&")}`;
       return url;
     },
-    "Billing Info": (id) => `/apps/users/${id}?tab=billing`,
-    Company: (id) => `/apps/users/${id}?tab=rate`,
-    Comapny: (id) => `/apps/users/${id}?tab=billing`,
+    "Billing Info": (id) => getUserDetailsHref(id, { tab: "billing" }),
+    Company: (id) => getUserDetailsHref(id, { tab: "rate" }),
+    Comapny: (id) => getUserDetailsHref(id, { tab: "billing" }),
     Project: (id) => `/apps/projects/index?id=${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
     Penalty: (recordId, startDate, endDate) => {
@@ -339,11 +340,11 @@ export default function UserRequests({
     },
     // Pass leave dates directly in URL params - no localStorage needed
     Leave: (recordId, startDate, endDate) => {
-      let url = `/apps/users/${recordId}?tab=leave`;
-      if (startDate) url += `&leave_start=${startDate}`;
-      if (endDate) url += `&leave_end=${endDate}`;
-
-      return url;
+      return getUserDetailsHref(recordId, {
+        tab: "leave",
+        leave_start: startDate,
+        leave_end: endDate,
+      });
     },
   };
 

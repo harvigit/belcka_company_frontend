@@ -65,6 +65,7 @@ import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import {Avatar} from '@mui/material';
 import Link from 'next/link';
+import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import toast from 'react-hot-toast';
 import {useSession} from 'next-auth/react';
@@ -591,18 +592,11 @@ const TablePagination = () => {
 
     // Check if user can access permissions drawer
     const canAccessPermissions = () => {
-        return isAdmin || hasPermissionUser;
+        return isAdmin;
     };
 
     // Check if user can edit permissions
     const canEditPermissions = () => {
-        // A specific access-list entry is more restrictive than the user's role.
-        // For example, an admin explicitly set to "View only" must not edit user
-        // permissions from this drawer.
-        if (hasPermissionUser) {
-            return permissionUserType === 'view_edit';
-        }
-
         return isAdmin;
     };
 
@@ -855,7 +849,7 @@ const TablePagination = () => {
 
                 return (
                     <Stack direction="row" alignItems="center" spacing={4}>
-                        <Link href={`/apps/users/${user.id}`} passHref>
+                        <Link href={getUserDetailsHref(user.id)} passHref>
                             <Stack
                                 direction="row"
                                 alignItems="center"

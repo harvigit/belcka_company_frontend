@@ -89,6 +89,7 @@ import Image from 'next/image';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
 import Link from 'next/link';
+import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import LeaveLists from './time-clock-details/leaves';
 import Conflicts from '@/app/components/apps/time-clock/time-clock-details/conflicts/conflicts';
 import {ConflictDetail} from '@/app/components/apps/time-clock/types/timeClock';
@@ -1446,17 +1447,14 @@ const TimeClock = ({queryParams}: Props) => {
                             sx={{cursor: 'pointer'}}
                         >
                             <Link
-                                href={{
-                                    pathname: `/apps/users/${row?.user_id}`,
-                                    query: {
-                                        tab: 'billing',
-                                        ...(isReadOnlyUser
-                                            ? (isRemovedUser
-                                                ? {is_removed_user: 'true'}
-                                                : {is_archived_user: 'true'})
-                                            : {}),
-                                    },
-                                }}
+                                href={getUserDetailsHref(row?.user_id, {
+                                    tab: 'billing',
+                                    ...(isReadOnlyUser
+                                        ? (isRemovedUser
+                                            ? {is_removed_user: 'true'}
+                                            : {is_archived_user: 'true'})
+                                        : {}),
+                                })}
                                 passHref
                                 onClick={(e) => e.stopPropagation()}
                                 style={{textDecoration: 'none', color: 'inherit'}}
