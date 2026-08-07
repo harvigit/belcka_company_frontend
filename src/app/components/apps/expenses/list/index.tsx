@@ -6,7 +6,6 @@ import {
     Avatar,
     Box,
     Button,
-    CircularProgress
     Dialog,
     DialogActions,
     DialogContent,
@@ -18,6 +17,7 @@ import {
     InputAdornment,
     Popover,
     Stack,
+    Tabs,
     Tab,
     Table,
     TableBody,
@@ -25,14 +25,12 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Tabs,
     TextField,
     Tooltip,
     Typography,
 } from '@mui/material';
 import {
     IconCheck,
-    IconChevronDown,
     IconExternalLink,
     IconEye,
     IconFilter,
@@ -187,6 +185,8 @@ const ExpenseList = () => {
     );
     const [sendDateDialogOpen, setSendDateDialogOpen] = useState(false);
     const [sendDate, setSendDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const openExpenseDetail = (expenseId: number) => {
         setSelectedExpenseId(expenseId);
         setDetailOpen(true);
@@ -713,6 +713,43 @@ const ExpenseList = () => {
             await refreshAfterAction();
         } catch (error: any) {
             toast.error(error?.response?.data?.message || 'Failed to reject expense');
+        }
+    };
+
+    const openDeleteDialog = () => {
+        const ids = getActionExpenseIds();
+        if (ids.length === 0) {
+            toast.error('Please select at least one expense');
+            return;
+        }
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteExpenses = async () => {
+        const ids = getActionExpenseIds();
+        if (ids.length === 0) {
+            toast.error('Please select at least one expense');
+            setDeleteDialogOpen(false);
+            return;
+        }
+
+        setIsDeleting(true);
+        try {
+            const res = await api.post('/expense/bulk-delete', {ids});
+            if (res.data?.IsSuccess === false) {
+                toast.error(res.data?.message || 'Failed to delete expenses');
+                return;
+            }
+
+            toast.success(res.data?.message || 'Expense deleted successfully');
+            setDeleteDialogOpen(false);
+            await refreshAfterAction();
+        } catch (error: any) {
+            toast.error(
+                error?.response?.data?.message || 'An error occurred while deleting expenses',
+            );
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -1367,10 +1404,11 @@ const ExpenseList = () => {
                                 variant="outlined"
                                 color="error"
                                 size="small"
-                                onClick={() => toast('Delete Selected — coming soon')}
+                                onClick={openDeleteDialog}
+                                disabled={isDeleting}
                                 sx={BULK_BUTTON_SX}
                             >
-                                Delete Selected
+                                {isDeleting ? 'Deleting…' : 'Delete Selected'}
                             </Button>
                         </Stack>
                     </Stack>
@@ -1415,6 +1453,48 @@ const ExpenseList = () => {
                         disabled={!sendDate}
                     >
                         Send
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={() => !isDeleting && setDeleteDialogOpen(false)}
+                fullWidth
+                maxWidth="xs"
+            >
+                <DialogTitle sx={{m: 0, position: 'relative'}}>
+                    Confirm Deletion
+                    <IconButton
+                        aria-label="close"
+                        onClick={() => setDeleteDialogOpen(false)}
+                        disabled={isDeleting}
+                        sx={{position: 'absolute', right: 12, top: 8}}
+                    >
+                        <IconX size={24}/>
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        Are you sure you want to delete {selectedCount} selected
+                        expense{selectedCount === 1 ? '' : 's'}? This action cannot be undone.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        color="inherit"
+                        onClick={() => setDeleteDialogOpen(false)}
+                        disabled={isDeleting}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={handleDeleteExpenses}
+                        disabled={isDeleting}
+                    >
+                        {isDeleting ? 'Deleting…' : 'Delete'}
                     </Button>
                 </DialogActions>
             </Dialog>
