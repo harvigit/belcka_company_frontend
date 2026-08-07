@@ -132,6 +132,8 @@ export interface UserList {
     account_id: string;
     supervisor_team_id: number | null;
     supervisor_team_name: string | null;
+    name_on_account: string;
+    name_on_utr: string;
 }
 
 export interface TradeList {
@@ -1018,13 +1020,46 @@ const TablePagination = () => {
                 const user = info.row.original;
 
                 return (
-                    <Typography className="f-14" color="textPrimary">
+                    <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
                         {user.extension ?? '0'}
                         {info.getValue() ?? '-'}
                     </Typography>
                 );
             },
         }),
+
+        columnHelper.accessor((row) => row.name_on_utr, {
+            id: 'nameOnUtr',
+            header: () => (
+                <Typography variant="subtitle2" noWrap>
+                    Name on UTR
+                </Typography>
+            ),
+            cell: (info) => {
+                return (
+                    <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
+                        {info.getValue() ?? '-'}
+                    </Typography>
+                );
+            },
+        }),
+
+        columnHelper.accessor((row) => row.name_on_account, {
+            id: 'nameOnAccount',
+            header: () => (
+                <Typography variant="subtitle2" noWrap>
+                    Name on Account
+                </Typography>
+            ),
+            cell: (info) => {
+                return (
+                    <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
+                        {info.getValue() ?? '-'}
+                    </Typography>
+                );
+            },
+        }),
+
 
         columnHelper.accessor((row) => row.permissions, {
             id: 'permissions',
