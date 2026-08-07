@@ -150,7 +150,7 @@ const CurrencyField = ({
       value={value}
       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
         const next = e.target.value;
-        if (!/^\d*\.?\d{0,2}$/.test(next)) return;
+        if (!/^\d*\.?\d{0,5}$/.test(next)) return;
         onChange(next);
       }}
       InputProps={{
@@ -706,19 +706,16 @@ const CreateInvoice = ({
                   fullWidth
                   placeholder="dd/mm/yyyy"
                   value={formData.expected_delivery_date}
+                  onFocus={(e: any) => e.target.showPicker()}
+                  onClick={(e: any) =>
+                    (e.target as HTMLInputElement).showPicker()
+                  }
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setFormData((prev) => ({
                       ...prev,
                       expected_delivery_date: e.target.value,
                     }))
                   }
-                  onClick={(e: React.MouseEvent<HTMLInputElement>) => {
-                    try {
-                      e.currentTarget.showPicker?.();
-                    } catch {
-                      // ignore
-                    }
-                  }}
                 />
               </Box>
 
@@ -726,17 +723,31 @@ const CreateInvoice = ({
                 label="Total Amount (Incl. VAT)"
                 required
                 value={formData.total_incl_vat}
-                onChange={(value) =>
-                  setFormData((prev) => ({ ...prev, total_incl_vat: value }))
-                }
+                onChange={(value) => {
+                  const val = value.toString();
+
+                  if (/^\d{0,6}(\.\d{0,5})?$/.test(val)) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      total_incl_vat: val,
+                    }));
+                  }
+                }}
               />
               <CurrencyField
                 label="Total Amount (Excl. VAT)"
                 required
                 value={formData.total_excl_vat}
-                onChange={(value) =>
-                  setFormData((prev) => ({ ...prev, total_excl_vat: value }))
-                }
+                onChange={(value) => {
+                  const val = value.toString();
+
+                  if (/^\d{0,6}(\.\d{0,5})?$/.test(val)) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      total_excl_vat: val,
+                    }));
+                  }
+                }}
               />
 
               <Box className="form_inputs">
@@ -759,12 +770,16 @@ const CreateInvoice = ({
               <CurrencyField
                 label="Credit Note Amount"
                 value={formData.credit_note_amount}
-                onChange={(value) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    credit_note_amount: value,
-                  }))
-                }
+                onChange={(value) => {
+                  const val = value.toString();
+
+                  if (/^\d{0,6}(\.\d{0,5})?$/.test(val)) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      credit_note_amount: val,
+                    }));
+                  }
+                }}
               />
 
               <Box className="form_inputs">

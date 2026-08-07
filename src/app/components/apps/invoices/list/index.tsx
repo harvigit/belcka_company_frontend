@@ -130,7 +130,10 @@ const normalizeInvoiceFilters = (
 });
 
 const getColumnLabel = (col: any) => {
-  if (typeof col.columnDef?.header === "string" && col.columnDef.header.trim()) {
+  if (
+    typeof col.columnDef?.header === "string" &&
+    col.columnDef.header.trim()
+  ) {
     return col.columnDef.header;
   }
   return String(col.id || "")
@@ -140,12 +143,15 @@ const getColumnLabel = (col: any) => {
 
 const formatMoney = (amount: number | null | undefined) => {
   if (amount === null || amount === undefined) return "-";
-  return `£${Number(amount).toFixed(2)}`;
+  return `£${amount}`;
 };
 
 const stripHtml = (value?: string | null) => {
   if (!value) return "";
-  return value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return value
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 };
 
 const EllipsisCell = ({
@@ -162,7 +168,6 @@ const EllipsisCell = ({
         className="f-14"
         noWrap
         sx={{
-          px: 1.5,
           maxWidth,
           overflow: "hidden",
           textOverflow: "ellipsis",
@@ -199,8 +204,9 @@ const InvoiceList = () => {
   const [addresses, setAddresses] = useState<FilterOption[]>([]);
   const [orderedByOptions, setOrderedByOptions] = useState<FilterOption[]>([]);
   const [suppliers, setSuppliers] = useState<FilterOption[]>([]);
-  const [columnMenuAnchor, setColumnMenuAnchor] =
-    useState<null | HTMLElement>(null);
+  const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(
+    null,
+  );
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
@@ -410,7 +416,6 @@ Team Belcka
               alignItems="center"
               onMouseEnter={() => setHoveredRow(item.id)}
               onMouseLeave={() => setHoveredRow(null)}
-              sx={{ pl: 1 }}
             >
               <CustomCheckbox
                 checked={isChecked}
@@ -522,7 +527,17 @@ Team Belcka
         id: "total_incl_vat",
         header: "Incl. VAT",
         cell: ({ getValue }) => (
-          <Typography className="f-14" fontWeight={600} sx={{ px: 1.5 }} noWrap>
+          <Typography
+            className="f-14"
+            fontWeight={600}
+            sx={{
+              px: 1.5,
+              maxWidth: 130,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             {formatMoney(getValue())}
           </Typography>
         ),
@@ -531,7 +546,17 @@ Team Belcka
         id: "total_excl_vat",
         header: "Excl. VAT",
         cell: ({ getValue }) => (
-          <Typography className="f-14" fontWeight={600} sx={{ px: 1.5 }} noWrap>
+          <Typography
+            className="f-14"
+            fontWeight={600}
+            sx={{
+              px: 1.5,
+              maxWidth: 130,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             {formatMoney(getValue())}
           </Typography>
         ),
@@ -548,7 +573,16 @@ Team Belcka
         id: "credit_note_amount",
         header: "Credit Amt",
         cell: ({ getValue }) => (
-          <Typography className="f-14" sx={{ px: 1.5 }} noWrap>
+          <Typography
+            className="f-14"
+            sx={{
+              px: 1.5,
+              maxWidth: 130,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             {formatMoney(getValue())}
           </Typography>
         ),
@@ -643,11 +677,14 @@ Team Belcka
         limit: String(pagination.pageSize),
       });
       if (search.trim()) params.set("search", search.trim());
-      if (filters.project_id) params.set("project_id", String(filters.project_id));
+      if (filters.project_id)
+        params.set("project_id", String(filters.project_id));
       else if (filters.project_manual.trim())
         params.set("project_manual", filters.project_manual.trim());
-      if (filters.address_id) params.set("address_id", String(filters.address_id));
-      if (filters.ordered_by) params.set("ordered_by", String(filters.ordered_by));
+      if (filters.address_id)
+        params.set("address_id", String(filters.address_id));
+      if (filters.ordered_by)
+        params.set("ordered_by", String(filters.ordered_by));
       if (filters.supplier_id)
         params.set("supplier_id", String(filters.supplier_id));
       if (sorting.length > 0) {
@@ -1496,7 +1533,11 @@ Team Belcka
                       return;
                     }
                     urls.forEach((url) => {
-                      window.open(url as string, "_blank", "noopener,noreferrer");
+                      window.open(
+                        url as string,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
                     });
                   } catch (error) {
                     console.error(error);
