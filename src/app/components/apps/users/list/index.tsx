@@ -1432,7 +1432,7 @@ const TablePagination = () => {
     useEffect(() => {
         const eligibleColumns = table
             .getAllLeafColumns()
-            .filter((col) => col.id !== 'conflicts');
+            .filter((col) => col.id !== 'conflicts' && col.id !== 'select');
 
         const allSelected = eligibleColumns.every((col) => col.getIsVisible());
         const visibleCount = eligibleColumns.filter((col) => col.getIsVisible()).length;
@@ -1445,7 +1445,7 @@ const TablePagination = () => {
         const checked = e.target.checked;
         const newVisibility: Record<string, boolean> = {};
         table.getAllLeafColumns().forEach((col) => {
-            if (col.id !== 'conflicts') {
+            if (col.id !== 'conflicts' && col.id !== 'select') {
                 newVisibility[col.id] = checked;
             }
         });
@@ -1454,7 +1454,7 @@ const TablePagination = () => {
 
     const visibleColumns = table
         .getAllLeafColumns()
-        .filter((col) => col.id !== 'conflicts' && col.getIsVisible());
+        .filter((col) => col.id !== 'conflicts' && col.id !== 'select' && col.getIsVisible());
     const columnData = visibleColumns.length ? visibleColumns : columns;
     const simpleColumns = columnData.map((column: any) => ({
         name: column.id ?? 'Unnamed Column',
