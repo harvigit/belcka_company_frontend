@@ -248,7 +248,7 @@ const ProductList = () => {
   const [openDrawer, setOpenDrawer] = useState(false);
   const [editing, setEditing] = useState<{
     id: number | null;
-    field: "price" | "market_price" | "max_stock" | null;
+    field: "price" | "market_price" | "max_stock" | "cutoff" | null;
   }>({ id: null, field: null });
   const [inputValue, setInputValue] = useState("");
   const [rowCategories, setRowCategories] = useState<Record<string, any[]>>({});
@@ -977,6 +977,24 @@ const ProductList = () => {
     }
   };
 
+  const updateLowStock = async (id: string, limit: any) => {
+    try {
+      const payload = {
+        id: Number(id),
+        company_id: Number(user.company_id),
+        cutoff: limit,
+      };
+      const res = await api.post("products/update", payload);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchProducts();
+        setOpenCategoryModal(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const updateSubQty = async (id: string, is_sub_qty: boolean) => {
     try {
       const payload = {
@@ -1318,47 +1336,47 @@ const ProductList = () => {
         const code = item.supplier_code ? item.supplier_code : "-";
         return (
           <Stack direction="row" alignItems="center">
-           <Tooltip title={item.supplier_code ? item.supplier_code : "-"}>
-             <Typography
-              textTransform="capitalize"
-              className="f-14"
-              sx={{
-                display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 1,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                wordBreak: "break-word",
-                width: "85px",
-                px: 1,
-                py: 0.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                border: "1px solid transparent",
-                transition: "all 0.2s ease",
-              }}
-              onClick={() => {
-                if (!code) {
-                  toast.error("No code to copy!");
-                  return;
-                }
+            <Tooltip title={item.supplier_code ? item.supplier_code : "-"}>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  width: "85px",
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                }}
+                onClick={() => {
+                  if (!code) {
+                    toast.error("No code to copy!");
+                    return;
+                  }
 
-                if (navigator?.clipboard?.writeText) {
-                  navigator.clipboard
-                    .writeText(code)
-                    .then(() => toast.success("Code copied!"))
-                    .catch((err) => {
-                      console.error("Clipboard API failed:", err);
-                      fallbackCopy(code);
-                    });
-                } else {
-                  fallbackCopy(code);
-                }
-              }}
-            >
-              {item.supplier_code ? item.supplier_code : "-"}
-            </Typography>
-           </Tooltip>
+                  if (navigator?.clipboard?.writeText) {
+                    navigator.clipboard
+                      .writeText(code)
+                      .then(() => toast.success("Code copied!"))
+                      .catch((err) => {
+                        console.error("Clipboard API failed:", err);
+                        fallbackCopy(code);
+                      });
+                  } else {
+                    fallbackCopy(code);
+                  }
+                }}
+              >
+                {item.supplier_code ? item.supplier_code : "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },
@@ -1588,6 +1606,103 @@ const ProductList = () => {
                 }}
               >
                 {item.max_stock || "0"}
+              </Typography>
+            )}
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.cutoff, {
+      id: "lowStock",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Low Stock
+          </Typography>
+        </Stack>
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+        const isEditing = editing.id === item.id && editing.field === "cutoff";
+
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            {isEditing ? (
+              <TextField
+                className="f-14"
+                size="small"
+                value={inputValue}
+                autoFocus
+                type="text"
+                inputMode="decimal"
+                variant="standard"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  if (/^\d*$/.test(value)) {
+                    if (value === "" || Number(value) <= 9999) {
+                      setInputValue(value);
+                    }
+                  }
+                }}
+                onBlur={async () => {
+                  if (inputValue === "") return;
+                  let number = Number(inputValue);
+                  if (number > 9999) {
+                    return;
+                  }
+                  updateLowStock(item.id, number);
+
+                  setEditing({ id: null, field: null });
+                }}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    let number = Number(inputValue);
+                    if (number > 9999) {
+                      return;
+                    }
+                    updateLowStock(item.id, number);
+                    setEditing({ id: null, field: null });
+                  }
+                }}
+              />
+            ) : (
+              <Typography
+                className="f-14"
+                sx={{
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    border: "1px solid #1976d2",
+                  },
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!canEdit) return;
+                  setEditing({ id: item.id, field: "cutoff" });
+                  const initVal =
+                    item.cutoff !== null && item.cutoff !== undefined
+                      ? String(item.cutoff).replace(/,/g, "")
+                      : "0";
+                  setInputValue(initVal);
+                }}
+              >
+                {item.cutoff || "0"}
               </Typography>
             )}
           </Stack>

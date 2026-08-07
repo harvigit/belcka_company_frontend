@@ -146,7 +146,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   }, []);
 
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & { company_id?: number | null } & { user_role_id : number };
   const { columnVisibility, onColumnVisibilityChange } =
     usePersistentColumnVisibility({
       storageKey: `cv_${user?.company_id}_${user?.id}_projects`,
@@ -743,7 +743,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                 Archive
               </Button>
             )}
-
+          { user.user_role_id === 1 && (
             <Tooltip title="Settings">
               <IconButton
                 color="primary"
@@ -753,6 +753,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                 <IconSettings />
               </IconButton>
             </Tooltip>
+          )}
             <IconButton
               onClick={handlePopoverOpen}
               sx={{ ml: 1 }}
