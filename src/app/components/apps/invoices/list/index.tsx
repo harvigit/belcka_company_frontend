@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Autocomplete,
+  Avatar,
   Box,
   Button,
   Dialog,
@@ -41,9 +42,11 @@ import {
   IconDownload,
   IconEye,
   IconFilter,
+  IconNotes,
   IconPlus,
   IconSearch,
   IconShare,
+  IconTrash,
   IconX,
 } from "@tabler/icons-react";
 import Image from "next/image";
@@ -61,6 +64,7 @@ import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibi
 import CreateInvoice from "@/app/components/apps/invoices/create";
 import InvoiceAttachments from "@/app/components/apps/invoices/attachments";
 import InvoiceView from "@/app/components/apps/invoices/view";
+import ArchiveInvoice from "@/app/components/apps/invoices/archive";
 import { InvoiceDocument, InvoiceRow, mapInvoiceApiRow } from "./mockData";
 
 const columnHelper = createColumnHelper<InvoiceRow>();
@@ -69,10 +73,13 @@ type FilterOption = {
   id: number;
   name: string;
   project_id?: number;
+  user_image?: string | null;
+  user_thumb_image?: string | null;
 };
 
 const defaultFilters = {
   project_id: "" as string | number,
+  project_manual: "" as string,
   address_id: "" as string | number,
   ordered_by: "" as string | number,
   supplier_id: "" as string | number,
@@ -116,6 +123,7 @@ const normalizeInvoiceFilters = (
   filters?: Partial<InvoiceFilters>,
 ): InvoiceFilters => ({
   project_id: filters?.project_id ?? "",
+  project_manual: filters?.project_manual ?? "",
   address_id: filters?.address_id ?? "",
   ordered_by: filters?.ordered_by ?? "",
   supplier_id: filters?.supplier_id ?? "",
@@ -211,6 +219,11 @@ const InvoiceList = () => {
     mouseY: number;
   } | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [archiveListOpen, setArchiveListOpen] = useState(false);
+  const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
+  const [invoicesToArchive, setInvoicesToArchive] = useState<number[]>([]);
   const shareMenuOpen = Boolean(shareMenuPos);
   const openMenu = Boolean(menuAnchor);
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -220,12 +233,23 @@ const InvoiceList = () => {
   const restoredTableStateKeyRef = useRef("");
   const skipNextDependencyPageResetRef = useRef(false);
 
+  const handleSelectAllRows = (checked: boolean) => {
+    if (checked) {
+      setSelectedRowIds(new Set(data.map((item) => item.id)));
+    } else {
+      setSelectedRowIds(new Set());
+    }
+  };
+
   const filteredAddressOptions = useMemo(() => {
-    if (!tempFilters.project_id) return addresses;
-    return addresses.filter(
-      (a) => String(a.project_id) === String(tempFilters.project_id),
-    );
-  }, [addresses, tempFilters.project_id]);
+    if (tempFilters.project_id) {
+      return addresses.filter(
+        (a) => String(a.project_id) === String(tempFilters.project_id),
+      );
+    }
+    if (tempFilters.project_manual.trim()) return addresses;
+    return addresses;
+  }, [addresses, tempFilters.project_id, tempFilters.project_manual]);
 
   useEffect(() => {
     const loadFilterOptions = async () => {
@@ -330,11 +354,13 @@ const InvoiceList = () => {
       .map((d) => d.url)
       .filter(Boolean)
       .join("\n");
-    const subject = encodeURIComponent(`Invoice #${invoice.id}`);
+    const subject = encodeURIComponent(
+      `Invoice ${invoice.invoiceId || `#${invoice.id}`}`,
+    );
     const body = encodeURIComponent(`
 Please find the invoice documents below.
 
-Invoice No: ${invoice.id}
+Invoice Id: ${invoice.invoiceId || invoice.id}
 Project: ${invoice.project}
 Supplier: ${invoice.supplier}
 
@@ -349,6 +375,82 @@ Team Belcka
 
   const columns = useMemo(
     () => [
+      {
+        id: "select",
+        enableSorting: false,
+        enableHiding: false,
+        header: () => (
+          <Stack direction="row" alignItems="center">
+            <CustomCheckbox
+              className="header-checkbox"
+              checked={
+                selectedRowIds.size > 0 && selectedRowIds.size >= data.length
+              }
+              indeterminate={
+                selectedRowIds.size > 0 && selectedRowIds.size < data.length
+              }
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleSelectAllRows(e.target.checked);
+              }}
+            />
+          </Stack>
+        ),
+        cell: ({ row }: any) => {
+          const item = row.original as InvoiceRow;
+          const isChecked = selectedRowIds.has(item.id);
+          const isHovered = hoveredRow === item.id;
+          const showCheckbox = isChecked || isHovered;
+
+          return (
+            <Stack
+              direction="row"
+              alignItems="center"
+              onMouseEnter={() => setHoveredRow(item.id)}
+              onMouseLeave={() => setHoveredRow(null)}
+              sx={{ pl: 1 }}
+            >
+              <CustomCheckbox
+                checked={isChecked}
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const newSelected = new Set(selectedRowIds);
+                  if (isChecked) {
+                    newSelected.delete(item.id);
+                  } else {
+                    newSelected.add(item.id);
+                  }
+                  setSelectedRowIds(newSelected);
+                }}
+                sx={{
+                  opacity: showCheckbox ? 1 : 0,
+                  pointerEvents: showCheckbox ? "auto" : "none",
+                  transition: "opacity 0.2s ease",
+                }}
+              />
+            </Stack>
+          );
+        },
+      },
+      columnHelper.accessor("invoiceId", {
+        id: "invoice_id",
+        header: "Invoice ID",
+        enableSorting: false,
+        cell: ({ getValue }) => (
+          <Typography
+            className="f-14"
+            fontWeight={600}
+            noWrap
+            sx={{ px: 1.5, maxWidth: 160 }}
+          >
+            {getValue()?.trim() ? getValue() : "-"}
+          </Typography>
+        ),
+      }),
       columnHelper.accessor("project", {
         id: "project",
         header: "Project",
@@ -358,7 +460,7 @@ Team Belcka
       }),
       columnHelper.accessor("deliveryAddress", {
         id: "delivery_address",
-        header: "Delivery Address",
+        header: "Address",
         enableSorting: false,
         cell: ({ getValue }) => (
           <EllipsisCell value={getValue()} maxWidth={180} />
@@ -368,9 +470,38 @@ Team Belcka
         id: "ordered_by",
         header: "Ordered By",
         enableSorting: false,
-        cell: ({ getValue }) => (
-          <EllipsisCell value={getValue()} maxWidth={140} />
-        ),
+        cell: ({ row }) => {
+          const name = row.original.orderedBy || "-";
+          return (
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1}
+              sx={{ px: 1.5, maxWidth: 180 }}
+            >
+              <Avatar
+                src={row.original.orderedByImage || "/images/users/user.png"}
+                alt={name}
+                sx={{ width: 28, height: 28, fontSize: "12px" }}
+              >
+                {name?.[0]?.toUpperCase()}
+              </Avatar>
+              <Tooltip title={name !== "-" ? name : ""} placement="top" arrow>
+                <Typography
+                  className="f-14"
+                  noWrap
+                  sx={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {name}
+                </Typography>
+              </Tooltip>
+            </Stack>
+          );
+        },
       }),
       columnHelper.accessor("supplier", {
         id: "supplier",
@@ -382,9 +513,27 @@ Team Belcka
       }),
       columnHelper.accessor("expectedDeliveryDate", {
         id: "expected_delivery_date",
-        header: "Expected Delivery Date",
+        header: "Date",
         cell: ({ getValue }) => (
           <EllipsisCell value={getValue()} maxWidth={140} />
+        ),
+      }),
+      columnHelper.accessor("totalInclVat", {
+        id: "total_incl_vat",
+        header: "Incl. VAT",
+        cell: ({ getValue }) => (
+          <Typography className="f-14" fontWeight={600} sx={{ px: 1.5 }} noWrap>
+            {formatMoney(getValue())}
+          </Typography>
+        ),
+      }),
+      columnHelper.accessor("totalExclVat", {
+        id: "total_excl_vat",
+        header: "Excl. VAT",
+        cell: ({ getValue }) => (
+          <Typography className="f-14" fontWeight={600} sx={{ px: 1.5 }} noWrap>
+            {formatMoney(getValue())}
+          </Typography>
         ),
       }),
       columnHelper.accessor("description", {
@@ -395,27 +544,26 @@ Team Belcka
           <EllipsisCell value={stripHtml(getValue())} maxWidth={220} />
         ),
       }),
-      columnHelper.accessor("totalExclVat", {
-        id: "total_excl_vat",
-        header: "Total Amount (Excl. VAT)",
+      columnHelper.accessor("creditNoteAmount", {
+        id: "credit_note_amount",
+        header: "Credit Amt",
         cell: ({ getValue }) => (
-          <Typography className="f-14" fontWeight={600} sx={{ px: 1.5 }} noWrap>
+          <Typography className="f-14" sx={{ px: 1.5 }} noWrap>
             {formatMoney(getValue())}
           </Typography>
         ),
       }),
-      columnHelper.accessor("totalInclVat", {
-        id: "total_incl_vat",
-        header: "Total Amount (Incl. VAT)",
+      columnHelper.accessor("note", {
+        id: "note",
+        header: "Credit Note",
+        enableSorting: false,
         cell: ({ getValue }) => (
-          <Typography className="f-14" fontWeight={600} sx={{ px: 1.5 }} noWrap>
-            {formatMoney(getValue())}
-          </Typography>
+          <EllipsisCell value={stripHtml(getValue())} maxWidth={200} />
         ),
       }),
       columnHelper.accessor("document_count", {
         id: "document",
-        header: "Document",
+        header: "Docs",
         enableSorting: false,
         cell: ({ row }) => {
           const count = Number(row.original.document_count || 0);
@@ -437,23 +585,6 @@ Team Belcka
             </Typography>
           );
         },
-      }),
-      columnHelper.accessor("creditNoteAmount", {
-        id: "credit_note_amount",
-        header: "Credit Note Amount",
-        cell: ({ getValue }) => (
-          <Typography className="f-14" sx={{ px: 1.5 }} noWrap>
-            {formatMoney(getValue())}
-          </Typography>
-        ),
-      }),
-      columnHelper.accessor("note", {
-        id: "note",
-        header: "Note",
-        enableSorting: false,
-        cell: ({ getValue }) => (
-          <EllipsisCell value={stripHtml(getValue())} maxWidth={200} />
-        ),
       }),
       columnHelper.display({
         id: "actions",
@@ -490,7 +621,7 @@ Team Belcka
         },
       }),
     ],
-    [],
+    [selectedRowIds, hoveredRow, data],
   );
 
   const skeletonColumns = columns.map((column: any) => ({
@@ -513,6 +644,8 @@ Team Belcka
       });
       if (search.trim()) params.set("search", search.trim());
       if (filters.project_id) params.set("project_id", String(filters.project_id));
+      else if (filters.project_manual.trim())
+        params.set("project_manual", filters.project_manual.trim());
       if (filters.address_id) params.set("address_id", String(filters.address_id));
       if (filters.ordered_by) params.set("ordered_by", String(filters.ordered_by));
       if (filters.supplier_id)
@@ -713,6 +846,20 @@ Team Belcka
             justifyContent="flex-end"
             spacing={0}
           >
+            {selectedRowIds.size > 0 && (
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<IconTrash width={18} />}
+                sx={{ marginRight: "5px" }}
+                onClick={() => {
+                  setInvoicesToArchive(Array.from(selectedRowIds));
+                  setConfirmArchiveOpen(true);
+                }}
+              >
+                Archive
+              </Button>
+            )}
             <IconButton
               onClick={(e) => setColumnMenuAnchor(e.currentTarget)}
               sx={{ ml: 1 }}
@@ -769,7 +916,7 @@ Team Belcka
                     const columnOptions = table
                       .getAllLeafColumns()
                       .filter((col: any) => {
-                        const excludedColumns = ["actions"];
+                        const excludedColumns = ["actions", "select"];
                         if (excludedColumns.includes(col.id)) return false;
                         const label = getColumnLabel(col);
                         const q = columnSearch.toLowerCase();
@@ -920,9 +1067,85 @@ Team Belcka
                   Add Invoice
                 </Link>
               </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setMenuAnchor(null);
+                  setArchiveListOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <IconNotes width={18} />
+                </ListItemIcon>
+                Archived Invoice
+              </MenuItem>
             </Menu>
           </Stack>
         </Stack>
+
+        <Dialog
+          open={confirmArchiveOpen}
+          onClose={() => setConfirmArchiveOpen(false)}
+        >
+          <DialogTitle>Confirm Archive</DialogTitle>
+          <DialogContent>
+            <Typography color="textSecondary">
+              {(() => {
+                const labels = invoicesToArchive.map((id) => {
+                  const row = data.find((item) => item.id === id);
+                  return row?.invoiceId?.trim() || String(id);
+                });
+                if (labels.length === 1) {
+                  return (
+                    <>
+                      Are you sure you want to archive invoice{" "}
+                      <strong>{labels[0]}</strong>?
+                    </>
+                  );
+                }
+                return (
+                  <>
+                    Are you sure you want to archive these invoices:{" "}
+                    <strong>{labels.join(", ")}</strong>?
+                  </>
+                );
+              })()}
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setConfirmArchiveOpen(false)}
+              variant="outlined"
+              color="primary"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  const response = await api.post("po-invoices/archive", {
+                    invoice_ids: invoicesToArchive.join(","),
+                  });
+                  toast.success(
+                    response.data?.message || "Invoice archived successfully!",
+                  );
+                  setSelectedRowIds(new Set());
+                  setRefreshKey((k) => k + 1);
+                } catch (error: any) {
+                  toast.error(
+                    error?.response?.data?.message ||
+                      "Failed to archive invoices",
+                  );
+                } finally {
+                  setConfirmArchiveOpen(false);
+                }
+              }}
+              variant="outlined"
+              color="error"
+            >
+              Archive
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         <Divider />
 
@@ -958,12 +1181,25 @@ Team Belcka
                               ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
                               : "none",
                           }),
+                          ...(header.column.id === "select" && {
+                            width: 48,
+                            minWidth: 48,
+                            maxWidth: 48,
+                            px: 0.5,
+                          }),
                         }}
                       >
                         <Box
-                          onClick={header.column.getToggleSortingHandler()}
+                          onClick={
+                            header.column.id === "select"
+                              ? undefined
+                              : header.column.getToggleSortingHandler()
+                          }
                           sx={{
-                            cursor: isSortable ? "pointer" : "default",
+                            cursor:
+                              isSortable && header.column.id !== "select"
+                                ? "pointer"
+                                : "default",
                             border: "2px solid transparent",
                             borderRadius: "6px",
                             display: "flex",
@@ -1050,9 +1286,16 @@ Team Belcka
                               ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
                               : "none",
                           }),
+                          ...(cell.column.id === "select" && {
+                            width: 48,
+                            minWidth: 48,
+                            maxWidth: 48,
+                            px: 0.5,
+                          }),
                         }}
                         onClick={
-                          cell.column.id === "actions"
+                          cell.column.id === "actions" ||
+                          cell.column.id === "select"
                             ? (e) => e.stopPropagation()
                             : undefined
                         }
@@ -1071,6 +1314,7 @@ Team Belcka
         </TableContainer>
 
         <TablePaginationFooter
+          selectedCount={selectedRowIds.size}
           table={table}
           totalRows={totalRows}
         />
@@ -1081,6 +1325,13 @@ Team Belcka
           mode={formMode}
           invoice={selectedInvoice}
           onSaved={() => setRefreshKey((k) => k + 1)}
+        />
+
+        <ArchiveInvoice
+          open={archiveListOpen}
+          companyId={companyId}
+          onClose={() => setArchiveListOpen(false)}
+          onWorkUpdated={() => setRefreshKey((k) => k + 1)}
         />
 
         <Drawer
@@ -1294,26 +1545,79 @@ Team Belcka
           <DialogContent>
             <Stack spacing={2} mt={1}>
               <Autocomplete
+                freeSolo
                 options={projects}
-                getOptionLabel={(option) => option.name || ""}
-                getOptionKey={(option) => String(option.id)}
-                isOptionEqualToValue={(option, value) =>
-                  String(option.id) === String(value?.id)
+                getOptionLabel={(option) =>
+                  typeof option === "string" ? option : option.name || ""
                 }
+                getOptionKey={(option) =>
+                  typeof option === "string" ? option : String(option.id)
+                }
+                isOptionEqualToValue={(option, value) => {
+                  if (typeof option === "string" || typeof value === "string") {
+                    return (
+                      (typeof option === "string" ? option : option.name) ===
+                      (typeof value === "string" ? value : value.name)
+                    );
+                  }
+                  return String(option.id) === String(value?.id);
+                }}
                 value={
-                  projects.find(
-                    (p) => String(p.id) === String(tempFilters.project_id),
-                  ) || null
+                  tempFilters.project_id
+                    ? projects.find(
+                        (p) => String(p.id) === String(tempFilters.project_id),
+                      ) || null
+                    : tempFilters.project_manual || null
                 }
-                onChange={(_, value) =>
+                onChange={(_, value) => {
+                  if (typeof value === "string") {
+                    const match = projects.find(
+                      (p) =>
+                        p.name.toLowerCase() === value.trim().toLowerCase(),
+                    );
+                    setTempFilters({
+                      ...tempFilters,
+                      project_id: match ? match.id : "",
+                      project_manual: match ? "" : value,
+                      address_id: "",
+                    });
+                    return;
+                  }
+                  if (value && typeof value === "object") {
+                    setTempFilters({
+                      ...tempFilters,
+                      project_id: value.id,
+                      project_manual: "",
+                      address_id: "",
+                    });
+                    return;
+                  }
                   setTempFilters({
                     ...tempFilters,
-                    project_id: value ? value.id : "",
+                    project_id: "",
+                    project_manual: "",
                     address_id: "",
-                  })
-                }
+                  });
+                }}
+                onInputChange={(_, value, reason) => {
+                  if (reason !== "input") return;
+                  const match = projects.find(
+                    (p) => p.name.toLowerCase() === value.trim().toLowerCase(),
+                  );
+                  setTempFilters((prev) => ({
+                    ...prev,
+                    project_id: match ? match.id : "",
+                    project_manual: match ? "" : value,
+                    address_id: "",
+                  }));
+                }}
                 renderInput={(params) => (
-                  <TextField {...params} label="Project" fullWidth />
+                  <TextField
+                    {...params}
+                    label="Project"
+                    placeholder="Select or type project"
+                    fullWidth
+                  />
                 )}
               />
               <Autocomplete
@@ -1335,7 +1639,7 @@ Team Belcka
                   })
                 }
                 renderInput={(params) => (
-                  <TextField {...params} label="Delivery Address" fullWidth />
+                  <TextField {...params} label="Address" fullWidth />
                 )}
               />
               <Autocomplete
@@ -1356,9 +1660,71 @@ Team Belcka
                     ordered_by: value ? value.id : "",
                   })
                 }
-                renderInput={(params) => (
-                  <TextField {...params} label="Ordered By" fullWidth />
-                )}
+                renderOption={(props, option) => {
+                  const { key, ...optionProps } = props as any;
+                  return (
+                    <Box
+                      component="li"
+                      key={key}
+                      {...optionProps}
+                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                    >
+                      <Avatar
+                        src={
+                          option.user_thumb_image ||
+                          option.user_image ||
+                          "/images/users/user.png"
+                        }
+                        alt={option.name}
+                        sx={{ width: 28, height: 28, fontSize: "12px" }}
+                      >
+                        {option.name?.[0]?.toUpperCase()}
+                      </Avatar>
+                      <Typography component="span" variant="body2">
+                        {option.name}
+                      </Typography>
+                    </Box>
+                  );
+                }}
+                renderInput={(params) => {
+                  const selected = orderedByOptions.find(
+                    (u) => String(u.id) === String(tempFilters.ordered_by),
+                  );
+                  return (
+                    <TextField
+                      {...params}
+                      label="Ordered By"
+                      fullWidth
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: selected ? (
+                          <>
+                            <Avatar
+                              src={
+                                selected.user_thumb_image ||
+                                selected.user_image ||
+                                "/images/users/user.png"
+                              }
+                              alt={selected.name}
+                              sx={{
+                                width: 24,
+                                height: 24,
+                                fontSize: "11px",
+                                ml: 0.5,
+                                mr: 0.5,
+                              }}
+                            >
+                              {selected.name?.[0]?.toUpperCase()}
+                            </Avatar>
+                            {params.InputProps.startAdornment}
+                          </>
+                        ) : (
+                          params.InputProps.startAdornment
+                        ),
+                      }}
+                    />
+                  );
+                }}
               />
               <Autocomplete
                 options={suppliers}
