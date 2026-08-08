@@ -582,7 +582,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 </Typography>
                                             ) : null
                                         ) : (
-                                            <Typography sx={{ color: '#203040' }}>
+                                            <Typography component="div" sx={{ color: '#203040' }}>
                                                 {flexRender(header.column.columnDef.header, header.getContext())}
                                             </Typography>
                                         )}

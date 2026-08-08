@@ -47,6 +47,7 @@ interface TimeClockHeaderProps {
     onAddExpense: () => void;
     onAddAdjustment: () => void;
     onAddPricework: () => void;
+    onActivity?: () => void;
     payrollCycle?: string;
     isRemovedUser?: boolean;
 }
@@ -72,6 +73,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                                              onAddExpense,
                                                              onAddAdjustment,
                                                              onAddPricework,
+                                                             onActivity,
                                                              payrollCycle,
                                                              isRemovedUser
                                                          }) => {
@@ -293,6 +295,25 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                 </Stack>
 
                 <Stack direction="row" spacing={1}>
+                    {onActivity && (
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                            sx={{
+                                p: 1,
+                                '&:hover': {
+                                    backgroundColor: 'transparent',
+                                    borderColor: 'inherit',
+                                    boxShadow: 'none',
+                                    color: '#1e4db7',
+                                },
+                            }}
+                            onClick={onActivity}
+                        >
+                            <Typography sx={{fontWeight: 600}}>Activity</Typography>
+                        </Button>
+                    )}
                     {!isRemovedUser && (
                         <>
                             <Button
