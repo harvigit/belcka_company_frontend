@@ -221,6 +221,8 @@ export default function AnnouncementsList({
                   />
                   <ListItemText
                     sx={{ cursor: "pointer" }}
+                    primaryTypographyProps={{ component: "div" }}
+                    secondaryTypographyProps={{ component: "div" }}
                     primary={
                       <Box
                         onClick={(e) => {
