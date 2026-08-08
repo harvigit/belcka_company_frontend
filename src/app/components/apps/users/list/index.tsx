@@ -795,6 +795,8 @@ const TablePagination = () => {
     const columns = [
         {
             id: 'select',
+            enableHiding: false,
+            enableSorting: false,
             header: ({table}: any) => (
                 <Stack direction="row" alignItems="center">
                     <CustomCheckbox
@@ -1360,11 +1362,26 @@ const TablePagination = () => {
         userId ? `cv_${userId}_users` : 'cv_users';
     const columnVisibilityKey = getColumnVisibilityKey(userId);
 
+    // Always keep the row-select checkbox column visible. limitedVisibility used to
+    // mark every non-limited column (including `select`) as false, so after hide/show
+    // or remount the cookie merge hid the checkbox column.
+    const alwaysVisibleColumns = useMemo(() => ['select'], []);
     const limitedColumns = new Set(['name', 'user_code', 'email', 'phone']);
-    const limitedVisibility = columns.reduce((acc, col) => {
-        acc[col.id as string] = limitedColumns.has(col.id as string);
-        return acc;
-    }, {} as Record<string, boolean>);
+    const limitedVisibility = useMemo(
+        () =>
+            columns.reduce((acc, col) => {
+                const columnId = col.id as string;
+                if (alwaysVisibleColumns.includes(columnId)) {
+                    acc[columnId] = true;
+                } else {
+                    acc[columnId] = limitedColumns.has(columnId);
+                }
+                return acc;
+            }, {} as Record<string, boolean>),
+        // columns is rebuilt each render; visibility keys are stable by column id
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [alwaysVisibleColumns],
+    );
 
     const canShowAllColumns =
         isAdmin ||
@@ -1375,6 +1392,7 @@ const TablePagination = () => {
         storageKey: columnVisibilityKey,
         defaultVisibility: limitedVisibility,
         enabled: !!(userId && columnAccessLoaded && canShowAllColumns),
+        alwaysVisibleColumns,
     });
 
     const {
@@ -1490,7 +1508,7 @@ const TablePagination = () => {
 
     const handleSelectAllChange = (e: any) => {
         const checked = e.target.checked;
-        const newVisibility: Record<string, boolean> = {};
+        const newVisibility: Record<string, boolean> = {select: true};
         table.getAllLeafColumns().forEach((col) => {
             if (col.id !== 'conflicts' && col.id !== 'select') {
                 newVisibility[col.id] = checked;
