@@ -26,6 +26,7 @@ import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import {useRouter} from 'next/navigation';
 import {capitalize} from 'lodash';
 import {useSearchParams} from 'next/navigation';
+import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 
 dayjs.extend(customParseFormat);
 
@@ -216,7 +217,7 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
             if (startDate && endDate) {
                 saveDateRangeToStorage(new Date(startDate), new Date(endDate));
             }
-            return `/apps/users/${id}?tab=leave`;
+            return getUserDetailsHref(id, { tab: 'leave' });
         },
     };
 
@@ -230,7 +231,7 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
         if (startDate && endDate) {
             saveDateRangeToStorage(startDate, endDate);
         }
-        router.push(`/apps/users/${userId}?tab=leave`);
+        router.push(getUserDetailsHref(userId, { tab: 'leave' }));
         onClose();
     };
 

@@ -116,6 +116,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
 }) => {
   const [billingInfo, setBillingInfo] = useState<BillingFormData | null>(null);
   const [hasBillingInfo, setHasBillingInfo] = useState(false);
+  const [actionUsers, setActionUsers] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [phone, setPhone] = useState("");
   const [postcodeQuery, setPostcodeQuery] = useState("");
@@ -176,6 +177,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
         `user-billing/get-user-billing-info?user_id=${userId}&company_id=${companyId}`,
       );
       const data = res.data.info;
+      setActionUsers(res.data.users || []);
 
       if (
         data &&
@@ -388,7 +390,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
             </Typography>
           </Box>
 
-          {user.user_role_id == 1 ? (
+          {user.user_role_id == 1 || actionUsers.includes(user.id) ? (
             <Box
               sx={{
                 display: "flex",

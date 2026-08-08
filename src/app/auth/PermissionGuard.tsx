@@ -23,6 +23,7 @@ export default function PermissionGuard({
   requireAll = false,
   fallback,
   redirectTo = "/dashboard",
+  isUserProfile = false,
 }: any) {
   const router = useRouter();
   const pathname = usePathname();
@@ -81,14 +82,16 @@ export default function PermissionGuard({
 
         const webPermissions = permissions.filter((p) => p.is_web);
 
-        if (!webPermissions.length) {
+        if (!webPermissions.length && !isUserProfile) {
             router.push("/");
             return;
         }
 
         let authorized = true;
 
-        if (permission) {
+        if (isUserProfile) {
+            authorized = true;
+        } else if (permission) {
             authorized = hasPermission(permissions, permission);
         } else if (requiredPermissions?.length) {
             authorized = requireAll
@@ -100,7 +103,7 @@ export default function PermissionGuard({
 
         setIsAuthorized(authorized);
 
-    }, [loading, permissions, profile, pathname]);
+    }, [loading, permissions, profile, pathname, isUserProfile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -350,7 +350,8 @@ const RateSetting = () => {
 
         {/* Displaying Pay Rate Users */}
         <List className={enabled ? "" : "disabled_location"}>
-          {data.map((user: any) => (
+          {data
+            .filter((item: any) => item?.permission !== null).map((user: any) => (
             <Box key={user.id}>
               <ListItem
                 key={user.id}

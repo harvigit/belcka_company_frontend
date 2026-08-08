@@ -54,6 +54,7 @@ import PermissionGuard from "@/app/auth/PermissionGuard";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Link from 'next/link';
+import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 
 dayjs.extend(customParseFormat);
 
@@ -332,7 +333,7 @@ const ArchiveUserList = () => {
                             }}
                         />
                         <Stack direction="row" alignItems="center" spacing={4}>
-                            <Link href={`/apps/users/${rowUser.id}?is_archived_user=true`} passHref>
+                            <Link href={getUserDetailsHref(rowUser.id, { is_archived_user: true })} passHref>
                                 <Stack
                                     direction="row"
                                     alignItems="center"

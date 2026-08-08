@@ -74,7 +74,7 @@ export default function CaseEditDrawer({
   } | null>(null);
   const [typedAddress, setTypedAddress] = useState(false);
   const [predictions, setPredictions] = useState<UnifiedPrediction[]>([]);
-  const defaultRadius = 150;
+  const defaultRadius = 200;
   const circleRef = useRef<google.maps.Circle | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);

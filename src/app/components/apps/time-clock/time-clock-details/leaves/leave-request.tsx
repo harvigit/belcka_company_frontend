@@ -367,7 +367,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({open, startDate, endDate, on
 
                             <Box sx={{ mb: 2 }}>
                                 <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
-                                    Note
+                                    {request.is_delete_request ? 'Delete Note' : 'Note'}
                                 </Typography>
                                 <Typography variant="body2">{request.note || request.manager_note || '-'}</Typography>
                             </Box>

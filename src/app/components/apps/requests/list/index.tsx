@@ -1,25 +1,34 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import {
+  Autocomplete,
   Box,
+  CircularProgress,
   Grid,
   Stack,
   Drawer,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Typography,
   TextField,
   Avatar,
   Tooltip,
+  Button,
+  InputAdornment,
 } from "@mui/material";
-import { IconArrowLeft, IconX } from "@tabler/icons-react";
+import { IconArrowLeft, IconX, IconSearch, IconFilter } from "@tabler/icons-react";
 import { format, parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { useRouter } from "next/navigation";
+import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 
 dayjs.extend(customParseFormat);
 
@@ -28,6 +37,15 @@ interface Props {
   onClose: () => void;
   onRequestCountChange: any;
 }
+
+type FilterOption = { id: number; name?: string };
+
+const defaultFilters = {
+  users: "" as string | number,
+  status: "" as string | number,
+  types: "" as string | number,
+};
+
 const STORAGE_KEY = "request-date-range";
 
 const loadDateRangeFromStorage = () => {
@@ -92,11 +110,18 @@ export default function UserRequests({
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [startDate, setStartDate] = useState<Date | null>(
     initialDates.startDate,
   );
   const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
   const [requestCount, setRequestCount] = useState<number>(0);
+  const [filters, setFilters] = useState(defaultFilters);
+  const [tempFilters, setTempFilters] = useState(defaultFilters);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [statusOptions, setStatusOptions] = useState<FilterOption[]>([]);
+  const [typeOptions, setTypeOptions] = useState<FilterOption[]>([]);
+  const [userOptions, setUserOptions] = useState<FilterOption[]>([]);
   const session = useSession();
   const user = session.data?.user as User & {
     company_id?: string | null;
@@ -106,20 +131,64 @@ export default function UserRequests({
     user_role_id: number;
   };
 
-  const fetchRequests = async (start: Date, end: Date): Promise<void> => {
+  const buildFiltersPayload = (activeFilters = filters) => {
+    const payload: { users?: string; status?: string; types?: string } = {};
+    if (activeFilters.users !== "" && activeFilters.users != null) {
+      payload.users = String(activeFilters.users);
+    }
+    if (activeFilters.status !== "" && activeFilters.status != null) {
+      payload.status = String(activeFilters.status);
+    }
+    if (activeFilters.types !== "" && activeFilters.types != null) {
+      payload.types = String(activeFilters.types);
+    }
+    return Object.keys(payload).length ? payload : undefined;
+  };
+
+  const fetchFilterOptions = async () => {
+    try {
+      const res = await api.get("requests/get-filters");
+      const info = res.data?.info || [];
+      const statusFilter = info.find((item: any) => item.key === "status");
+      const typesFilter = info.find((item: any) => item.key === "types");
+      const usersFilter = info.find((item: any) => item.key === "users");
+      setStatusOptions(statusFilter?.data || []);
+      setTypeOptions(typesFilter?.data || []);
+      setUserOptions(usersFilter?.data || []);
+    } catch (err) {
+      console.error("Failed to fetch request filters", err);
+    }
+  };
+
+  const fetchRequests = async (
+    start: Date,
+    end: Date,
+    activeFilters = filters,
+    search = debouncedSearch,
+  ): Promise<void> => {
     try {
       setLoading(true);
-      const payload = {
+      const filterPayload = buildFiltersPayload(activeFilters);
+      const payload: any = {
         user_id: Number(user?.id),
         company_id: Number(user?.company_id),
         start_date: format(start, "dd/MM/yyyy"),
         end_date: format(end, "dd/MM/yyyy"),
       };
-      const param = {
+      const param: any = {
         company_id: Number(user?.company_id),
         start_date: format(start, "dd/MM/yyyy"),
         end_date: format(end, "dd/MM/yyyy"),
       };
+      if (filterPayload) {
+        payload.filters = filterPayload;
+        param.filters = filterPayload;
+      }
+      const trimmedSearch = search.trim();
+      if (trimmedSearch) {
+        payload.search = trimmedSearch;
+        param.search = trimmedSearch;
+      }
       let res;
       if (user?.user_role_id === 1) {
         res = await api.post(`requests/get-all-request`, param);
@@ -127,8 +196,15 @@ export default function UserRequests({
         res = await api.post(`requests/get-all-request`, payload);
       }
       if (res.data?.requests) setData(res.data.requests);
-      setRequestCount(res.data.requests?.[0]?.count);
-      onRequestCountChange(requestCount);
+      else setData([]);
+      const pendingCount = res.data.requests?.[0]?.count ?? 0;
+      setRequestCount(pendingCount);
+
+      const hasActiveFilters = Boolean(buildFiltersPayload(activeFilters));
+      const hasSearch = Boolean(trimmedSearch);
+      if (!hasActiveFilters && !hasSearch) {
+        onRequestCountChange?.(pendingCount);
+      }
     } catch (err) {
       console.error("Failed to fetch requests", err);
     } finally {
@@ -137,11 +213,25 @@ export default function UserRequests({
   };
 
   useEffect(() => {
-    if (startDate && endDate) fetchRequests(startDate, endDate);
-  }, [startDate && endDate, open]);
+    if (open) fetchFilterOptions();
+  }, [open]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (open && startDate && endDate) {
+      fetchRequests(startDate, endDate, filters, debouncedSearch);
+    }
+  }, [startDate, endDate, open, filters, debouncedSearch]);
 
   useEffect(() => {
     setSearchTerm("");
+    setDebouncedSearch("");
   }, [onClose]);
 
   const handleDateRangeChange = (range: {
@@ -210,9 +300,9 @@ export default function UserRequests({
       if (params.length > 0) url += `?${params.join("&")}`;
       return url;
     },
-    "Billing Info": (id) => `/apps/users/${id}?tab=billing`,
-    Company: (id) => `/apps/users/${id}?tab=rate`,
-    Comapny: (id) => `/apps/users/${id}?tab=billing`,
+    "Billing Info": (id) => getUserDetailsHref(id, { tab: "billing" }),
+    Company: (id) => getUserDetailsHref(id, { tab: "rate" }),
+    Comapny: (id) => getUserDetailsHref(id, { tab: "billing" }),
     Project: (id) => `/apps/projects/index?id=${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
     Penalty: (recordId, startDate, endDate) => {
@@ -226,34 +316,37 @@ export default function UserRequests({
       if (params.length > 0) url += `?${params.join("&")}`;
       return url;
     },
-    // Pass leave dates directly in URL params - no localStorage needed
-    Leave: (recordId, startDate, endDate) => {
-      let url = `/apps/users/${recordId}?tab=leave`;
-      if (startDate) url += `&leave_start=${startDate}`;
-      if (endDate) url += `&leave_end=${endDate}`;
-
+    "Work log": (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+      params.push("type=worklog");
+      params.push(`open=true`);
+      if (params.length > 0) url += `?${params.join("&")}`;
       return url;
     },
+    Worklog: (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+      params.push("type=worklog");
+      params.push(`open=true`);
+      if (params.length > 0) url += `?${params.join("&")}`;
+      return url;
+    },
+    // Pass leave dates directly in URL params - no localStorage needed
+    Leave: (recordId, startDate, endDate) => {
+      return getUserDetailsHref(recordId, {
+        tab: "leave",
+        leave_start: startDate,
+        leave_end: endDate,
+      });
+    },
   };
-
-  const filteredData = useMemo(() => {
-    return data.filter((item) =>
-      [
-        item.table_name,
-        item.date,
-        item.status_text,
-        item.message,
-        item.company,
-        item.action,
-        item.user_name,
-        item.type_name,
-      ]
-        .filter(Boolean)
-        .some((field) =>
-          field.toLowerCase().includes(searchTerm.toLowerCase()),
-        ),
-    );
-  }, [data, searchTerm]);
 
   const STATUS_COLOR: Record<string, string> = {
     pending: "#FF7F00",
@@ -274,6 +367,7 @@ export default function UserRequests({
   };
 
   return (
+    <>
     <Drawer
       anchor="right"
       open={open}
@@ -303,18 +397,38 @@ export default function UserRequests({
         </IconButton>
       </Box>
 
-      {/* Search */}
-      <Box mb={2} display={"flex"} gap={1} alignContent={"center"}>
-        <TextField
-          placeholder="Search requests..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      {/* Search / filters */}
+      <Box mb={2} display="flex" gap={1} alignItems="center" flexWrap="wrap">
         <DateRangePickerBox
           from={startDate}
           to={endDate}
           onChange={handleDateRangeChange}
+          buttonMinWidth={200}
         />
+        <TextField
+          size="small"
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <IconSearch size={20} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ flex: 1, minWidth: 140 }}
+        />
+        <Button
+          variant="contained"
+          onClick={() => {
+            setTempFilters(filters);
+            setFilterOpen(true);
+          }}
+          sx={{ minWidth: "40px", px: 1 }}
+        >
+          <IconFilter width={18} />
+        </Button>
       </Box>
 
       {/* Content */}
@@ -326,16 +440,23 @@ export default function UserRequests({
         sx={{ maxHeight: "calc(95vh - 120px)" }}
       >
         {loading ? (
-          <></>
-        ) : filteredData.length > 0 ? (
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            minHeight={240}
+          >
+            <CircularProgress size={36} />
+          </Box>
+        ) : data.length > 0 ? (
           <Grid container spacing={2}>
-            {filteredData.map((work, idx) => (
+            {data.map((work, idx) => (
               <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
                 <Box
                   onClick={() => {
                     const routeFn = REQUEST_ROUTE_MAP[work.type_name];
                     if (routeFn) {
-                      if (work.type_name === "Shift") {
+                      if (["Shift", "Penalty", "Work log", "Worklog"].includes(work.type_name)) {
                         const dateAdded = work.date_added
                           ? parse(
                               work.date_added,
@@ -354,20 +475,6 @@ export default function UserRequests({
                         const leaveDate = getLeaveDate(work);
                         router.push(
                           routeFn(work.user_id, leaveDate, leaveDate),
-                        );
-                      } else if (work.type_name === "Penalty") {
-                        const dateAdded = work.date_added
-                          ? parse(
-                              work.date_added,
-                              "d MMMM yyyy HH:mm",
-                              new Date(),
-                            )
-                          : undefined;
-                        const formattedDate = dateAdded
-                          ? format(dateAdded, "yyyy-MM-dd")
-                          : undefined;
-                        router.push(
-                          routeFn(work.user_id, formattedDate, formattedDate),
                         );
                       } else if (work.type_name === "Team") {
                         router.push(routeFn(work.team_id));
@@ -515,5 +622,115 @@ export default function UserRequests({
         )}
       </Box>
     </Drawer>
+
+    <Dialog
+      open={filterOpen}
+      onClose={() => setFilterOpen(false)}
+      fullWidth
+      maxWidth="sm"
+    >
+      <DialogTitle sx={{ m: 0, position: "relative" }}>
+        Filters
+        <IconButton
+          aria-label="close"
+          onClick={() => setFilterOpen(false)}
+          sx={{ position: "absolute", right: 12, top: 8 }}
+        >
+          <IconX size={24} />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} mt={1}>
+          <Autocomplete
+            options={userOptions}
+            getOptionLabel={(option) => option.name || ""}
+            getOptionKey={(option) => String(option.id)}
+            isOptionEqualToValue={(option, value) =>
+              String(option.id) === String(value?.id)
+            }
+            value={
+              userOptions.find(
+                (u) => String(u.id) === String(tempFilters.users),
+              ) || null
+            }
+            onChange={(_, value) =>
+              setTempFilters({
+                ...tempFilters,
+                users: value ? value.id : "",
+              })
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="User" fullWidth />
+            )}
+          />
+          <Autocomplete
+            options={statusOptions}
+            getOptionLabel={(option) => option.name || ""}
+            getOptionKey={(option) => String(option.id)}
+            isOptionEqualToValue={(option, value) =>
+              String(option.id) === String(value?.id)
+            }
+            value={
+              statusOptions.find(
+                (s) => String(s.id) === String(tempFilters.status),
+              ) || null
+            }
+            onChange={(_, value) =>
+              setTempFilters({
+                ...tempFilters,
+                status: value ? value.id : "",
+              })
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="Status" fullWidth />
+            )}
+          />
+          <Autocomplete
+            options={typeOptions}
+            getOptionLabel={(option) => option.name || ""}
+            getOptionKey={(option) => String(option.id)}
+            isOptionEqualToValue={(option, value) =>
+              String(option.id) === String(value?.id)
+            }
+            value={
+              typeOptions.find(
+                (t) => String(t.id) === String(tempFilters.types),
+              ) || null
+            }
+            onChange={(_, value) =>
+              setTempFilters({
+                ...tempFilters,
+                types: value ? value.id : "",
+              })
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="Types" fullWidth />
+            )}
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button
+          color="inherit"
+          onClick={() => {
+            setTempFilters(defaultFilters);
+            setFilters(defaultFilters);
+            setFilterOpen(false);
+          }}
+        >
+          Clear
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => {
+            setFilters(tempFilters);
+            setFilterOpen(false);
+          }}
+        >
+          Apply
+        </Button>
+      </DialogActions>
+    </Dialog>
+    </>
   );
 }

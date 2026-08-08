@@ -35,6 +35,7 @@ import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import Link from "next/link";
+import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
@@ -284,7 +285,7 @@ const RemoveUsersList = () => {
 
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
-            <Link href={`/apps/users/${user.id}?is_removed_user=true`} passHref>
+            <Link href={getUserDetailsHref(user.id, { is_removed_user: true })} passHref>
               <Stack
                 direction="row"
                 alignItems="center"
