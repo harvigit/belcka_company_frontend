@@ -272,34 +272,18 @@ const UserDetailPanel = React.memo(
     onClose: () => void;
     onResolved: () => void;
   }) => {
-    const [editingUserId, setEditingUserId] = useState<number | null>(null);
-    const [editFirstName, setEditFirstName] = useState("");
-    const [editLastName, setEditLastName] = useState("");
     const [isSaving, setIsSaving] = useState(false);
 
-    const handleEditClick = (user: UserConflictDetails) => {
-      setEditingUserId(user.user_id);
-      setEditFirstName(user.first_name);
-      setEditLastName(user.last_name);
-    };
-
-    const handleSave = async (user_id: number) => {
-      if (!editFirstName.trim() || !editLastName.trim()) {
-        toast.error("First and Last name are required");
-        return;
-      }
-
+    const handleApprove = async () => {
       setIsSaving(true);
       try {
+        const userIds = conflict.users.map(u => u.user_id);
         const res = await api.post("/user/resolve-user-conflict", {
-          user_id,
-          first_name: editFirstName,
-          last_name: editLastName,
+          user_ids: userIds,
         });
 
         if (res.data.IsSuccess) {
-          toast.success(res.data.message || "User updated successfully");
-          setEditingUserId(null);
+          toast.success(res.data.message || "Conflict resolved successfully");
           onResolved();
         } else {
           toast.error(res.data.message || "Failed to resolve conflict");
@@ -370,69 +354,6 @@ const UserDetailPanel = React.memo(
                     size={48}
                   />
                   <Box sx={{ flex: 1 }}>
-                    {editingUserId === user.user_id ? (
-                      <Box
-                        sx={{
-                          mb: 1.5,
-                          p: 2,
-                          borderRadius: "8px",
-                          border: "1px solid #E5E7EB",
-                          bgcolor: "#F9FAFB",
-                        }}
-                      >
-                        <Stack spacing={2} sx={{ mb: 2 }}>
-                          <CustomTextField
-                            size="small"
-                            label="First Name"
-                            value={editFirstName}
-                            onChange={(e: any) =>
-                              setEditFirstName(e.target.value)
-                            }
-                            fullWidth
-                            sx={{
-                              bgcolor: "#fff",
-                            }}
-                            inputProps={{ style: { textAlign: 'left' } }}
-                          />
-                          <CustomTextField
-                            size="small"
-                            label="Last Name"
-                            value={editLastName}
-                            onChange={(e: any) =>
-                              setEditLastName(e.target.value)
-                            }
-                            fullWidth
-                            sx={{
-                              bgcolor: "#fff",
-                            }}
-                            inputProps={{ style: { textAlign: 'left' } }}
-                          />
-                        </Stack>
-                        <Stack
-                          direction="row"
-                          spacing={1}
-                          justifyContent="flex-end"
-                        >
-                          <Button
-                            size="small"
-                            variant="text"
-                            onClick={() => setEditingUserId(null)}
-                            color="error"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="primary"
-                            disabled={isSaving}
-                            onClick={() => handleSave(user.user_id)}
-                          >
-                            Save
-                          </Button>
-                        </Stack>
-                      </Box>
-                    ) : (
                       <Stack
                         direction="row"
                         alignItems="center"
@@ -447,15 +368,7 @@ const UserDetailPanel = React.memo(
                         >
                           {user.first_name} {user.last_name}
                         </Typography>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEditClick(user)}
-                          sx={{ color: "#6366F1" }}
-                        >
-                          <IconEdit size={16} />
-                        </IconButton>
                       </Stack>
-                    )}
                     <Divider sx={{ my: 1.5 }} />
                     <Stack spacing={1.5}>
                       <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -489,23 +402,16 @@ const UserDetailPanel = React.memo(
             ))}
           </Stack>
 
-          <Box
-            sx={{
-              mt: 3,
-              p: 2,
-              borderRadius: "8px",
-              bgcolor: "#EEF2FF",
-              border: "1px solid #C7D2FE",
-            }}
-          >
-            <Typography
-              sx={{ fontSize: "0.75rem", color: "#4338CA", fontWeight: 500 }}
-            >
-              Tip: Edit the first name or last name of the users to
-              differentiate them. Once the names are unique, the conflict will
-              be resolved.
-            </Typography>
           </Box>
+          <Box sx={{ m: 2, display: "flex", justifyContent: "flex-start" }}>
+            <Button
+              variant="contained"
+              color="success"
+              disabled={isSaving}
+              onClick={handleApprove}
+            >
+              {isSaving ? "Approving..." : "Approve"}
+            </Button>
         </Box>
       </Box>
     );

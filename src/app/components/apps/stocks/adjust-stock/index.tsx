@@ -340,8 +340,8 @@ const AdjustStock: React.FC<Props> = ({
       <Box sx={{ flex: 1, overflowY: "auto" }}>
         {!is_product && (
           <>
-            <Box p={3} display="flex" justifyContent="space-between">
-              <Box display="flex" gap={2}>
+            <Box p={3} pb={1} display="flex" justifyContent="space-between">
+              <Box display="flex" gap={1}>
                 <Image
                   src={editData?.image_url || "/images/products/product.svg"}
                   alt="product"
@@ -362,11 +362,16 @@ const AdjustStock: React.FC<Props> = ({
                     {editData?.supplier_name}
                   </Typography>
                 </Box>
-              </Box>
-
-              <Typography fontWeight="bold" variant="h3">
+              <Box>
+                <Typography fontWeight="bold" variant="h3">
                 {editData?.qty}
               </Typography>
+                <Typography variant="caption" color="textSecondary" fontWeight={600} noWrap>
+                  {editData?.is_sub_qty ? `(${editData?.sub_qty} ${editData?.pack_off_unit})` :""}
+                </Typography>
+              </Box>
+              </Box>
+
             </Box>
 
             <Divider />
@@ -426,11 +431,8 @@ const AdjustStock: React.FC<Props> = ({
             </Button>
           </Box>
         </Box>
-
-        <Divider />
-
         {/* NOTE / USER */}
-        <Box p={3}>
+        <Box p={3} pt={0}>
           <Typography variant="body2" fontWeight={600} mb={1}>
             {mode === "note" ? "Note / Reference" : "Select User"}
           </Typography>

@@ -45,6 +45,7 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
 
 import UserActivity from '../../user-profile-setting/activity';
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
+import { getUserDetailsHref, resolveUserDetailsId } from '@/utils/userDetailsRoute';
 
 dayjs.extend(customParseFormat);
 
@@ -81,6 +82,7 @@ export interface TradeList {
 const TablePagination = () => {
     const [data, setData] = useState<TeamList>();
     const [loading, setLoading] = useState<boolean>(true);
+    const [adminLoading, setAdminLoading] = useState<boolean>(false);
     const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
     const [archiveLoading, setArchiveLoading] = useState<boolean>(false);
     const [isAdmin, setIsAdmin] = useState(false);
@@ -123,7 +125,6 @@ const TablePagination = () => {
 
     const userRole = user?.user_role_id;
     const [phone, setPhone] = useState('');
-    const [openModel, setOpenModel] = useState(false);
     const [openRemoveAdminModel, setOpenRemoveAdminModel] = useState(false);
     const [openIdCard, setOpenIdCard] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -133,10 +134,24 @@ const TablePagination = () => {
     });
     const [otpModalOpen, setOtpModalOpen] = useState(false);
     const [otpValue, setOtpValue] = useState('');
+    const [otpMessage, setOtpMessage] = useState('Enter OTP');
     const [otpResolve, setOtpResolve] = useState<(otp: string | null) => void>();
 
     const param = useParams();
-    const userId = param?.id;
+    const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
+    const userId = resolvedUserId;
+
+    useEffect(() => {
+        const nextUserId = resolveUserDetailsId(param?.id);
+        if (!nextUserId) {
+            toast.error('User details link is invalid or expired', {
+                id: 'user-details-invalid-link',
+            });
+            router.replace('/apps/users/list');
+            return;
+        }
+        setResolvedUserId(nextUserId);
+    }, [param?.id, router]);
 
     const canEditUserDetails = userPermissionType
         ? userPermissionType === 'view_edit'
@@ -337,9 +352,10 @@ const TablePagination = () => {
         }
     };
 
-    const askOtp = (): Promise<string | null> => {
+    const askOtp = (message = 'Enter OTP'): Promise<string | null> => {
         return new Promise((resolve) => {
             setOtpValue('');
+            setOtpMessage(message);
             setOtpResolve(() => resolve);
             setOtpModalOpen(true);
         });
@@ -457,7 +473,8 @@ const TablePagination = () => {
 
     const handleConfirmAdmin = async () => {
         if (!canModifyUserDetails) return;
-        setLoading(true);
+        setAdminLoading(true);
+        let shouldRefresh = false;
         try {
             const payload = {
                 company_id: user.company_id,
@@ -465,31 +482,71 @@ const TablePagination = () => {
             };
 
             const res = await api.post('company/make-admin', payload);
+
+            if (res.data?.requires_otp) {
+                setAdminLoading(false);
+                const otp = await askOtp(
+                    res.data.message ||
+                    `Please verify OTP from ${res.data.company_created_by_name || 'Company Owner'}.`,
+                );
+
+                if (otp === null) {
+                    return;
+                }
+
+                if (!otp.trim()) {
+                    toast.error('OTP is required');
+                    return;
+                }
+
+                setAdminLoading(true);
+                const verifyRes = await api.post('company/make-admin', {
+                    ...payload,
+                    otp: otp.trim(),
+                });
+
+                if (!verifyRes.data.IsSuccess) {
+                    toast.error(verifyRes.data.message || 'Invalid OTP');
+                    return;
+                }
+
+                toast.success(verifyRes.data.message);
+                await refreshLoggedInUserRole();
+                shouldRefresh = true;
+                return;
+            }
+
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
-                setOpenModel(false);
-                try {
-                    const res = await api.get(`user/get-user-lists?user_id=${user.id}`);
-
-                    if (res.data?.info?.length) {
-                        const data = res.data.info[0];
-
-                        await update({
-                            user: {
-                                ...session?.user,
-                                user_role_id: data.user_role_id,
-                            },
-                        });
-                    }
-                } catch (err) {
-                    console.error('Failed to fetch users', err);
-                }
+                await refreshLoggedInUserRole();
+                shouldRefresh = true;
             }
         } catch (error) {
             console.error(error);
         } finally {
-            setLoading(false);
-            fetchData();
+            setAdminLoading(false);
+            if (shouldRefresh) {
+                fetchData();
+            }
+        }
+    };
+
+    const refreshLoggedInUserRole = async () => {
+        try {
+            const res = await api.get(`user/get-user-lists?user_id=${user.id}`);
+
+            if (res.data?.info?.length) {
+                const data = res.data.info[0];
+
+                await update({
+                    user: {
+                        ...session?.user,
+                        user_role_id: data.user_role_id,
+                    },
+                });
+            }
+        } catch (err) {
+            console.error('Failed to fetch users', err);
         }
     };
 
@@ -546,7 +603,6 @@ const TablePagination = () => {
             const res = await api.post('user-worklog/stop-work', payload);
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
-                setOpenModel(false);
                 try {
                     const res = await api.get(`user/get-user-lists?user_id=${user.id}`);
 
@@ -593,11 +649,11 @@ const TablePagination = () => {
             const leaveRangeQuery = leaveStart && leaveEnd
                 ? `?leave_start=${encodeURIComponent(leaveStart)}&leave_end=${encodeURIComponent(leaveEnd)}`
                 : '';
-            router.replace(`/apps/users/${userId}${leaveRangeQuery}`);
+            router.replace(getUserDetailsHref(userId, Object.fromEntries(new URLSearchParams(leaveRangeQuery.replace('?', '')))));
         }
     }, [searchParams]);
 
-    if (loading) {
+    if (!userId || loading) {
         return (
             <Box
                 display="flex"
@@ -611,7 +667,7 @@ const TablePagination = () => {
     }
 
     return (
-        <PermissionGuard permission="Users">
+        <PermissionGuard permission="Users" isUserProfile={Number(userId) === Number(user?.id)}>
             <Box>
                 <BlankCard>
                     <Dialog
@@ -620,16 +676,18 @@ const TablePagination = () => {
                         onClose={() => {
                             setOtpModalOpen(false);
                             otpResolve?.(null);
+                            setOtpResolve(undefined);
                         }}
                     >
                         <DialogTitle>
                             <Typography color="GrayText" fontWeight={700}>
-                                Enter OTP
+                                Verify OTP
                             </Typography>
                             <IconButton
                                 onClick={() => {
                                     setOtpModalOpen(false);
                                     otpResolve?.(null);
+                                    setOtpResolve(undefined);
                                 }}
                                 sx={{
                                     position: 'absolute',
@@ -642,6 +700,9 @@ const TablePagination = () => {
                             </IconButton>
                         </DialogTitle>
                         <DialogContent>
+                            <Typography color="textSecondary" mb={2}>
+                                {otpMessage}
+                            </Typography>
                             <CustomTextField
                                 fullWidth
                                 value={otpValue}
@@ -654,6 +715,7 @@ const TablePagination = () => {
                                 onClick={() => {
                                     setOtpModalOpen(false);
                                     otpResolve?.(null);
+                                    setOtpResolve(undefined);
                                 }}
                             >
                                 Cancel
@@ -662,6 +724,7 @@ const TablePagination = () => {
                                 onClick={() => {
                                     setOtpModalOpen(false);
                                     otpResolve?.(otpValue);
+                                    setOtpResolve(undefined);
                                 }}
                                 variant="contained"
                                 color="primary"
@@ -750,17 +813,16 @@ const TablePagination = () => {
                                     </Button>
                                 )}
 
-                                {/* {canModifyUserDetails && data?.user_role_id == 2 && user.user_role_id == 1 && (
+                                {canModifyUserDetails && data?.user_role_id == 2 && isAdmin && (
                                     <Button
                                         variant="outlined"
                                         color="primary"
-                                        onClick={() => {
-                                            setOpenModel(true);
-                                        }}
+                                        onClick={handleConfirmAdmin}
+                                        disabled={adminLoading}
                                     >
-                                        Make an admin
+                                        {adminLoading ? 'Updating...' : 'Make an admin'}
                                     </Button>
-                                )} */}
+                                )}
 
                                 {canModifyUserDetails && !data?.is_company_owner && data?.user_role_id == 1 && companyUsers.find((u: any) => Number(u.id) === Number(user.id))?.is_company_owner && (
                                     <Button
@@ -1474,48 +1536,6 @@ const TablePagination = () => {
                             color="primary"
                         >
                             Confirm & Archive
-                        </Button>
-                    </DialogActions>
-                </Dialog>
-
-                <Dialog open={openModel} onClose={() => setOpenModel(false)}>
-                    <DialogTitle>
-                        Confirmation
-                        <IconButton
-                            aria-label="close"
-                            onClick={() => setOpenModel(false)}
-                            sx={{
-                                position: 'absolute',
-                                right: 8,
-                                top: 8,
-                                color: (theme) => theme.palette.grey[500],
-                            }}
-                        >
-                            <IconX />
-                        </IconButton>
-                    </DialogTitle>
-                    <DialogContent>
-                        <Typography>
-                            Are you sure you want to make this user an admin?
-                        </Typography>
-                    </DialogContent>
-
-                    <DialogActions>
-                        <Button
-                            onClick={() => setOpenModel(false)}
-                            variant="outlined"
-                            color="error"
-                        >
-                            Cancel
-                        </Button>
-
-                        <Button
-                            onClick={handleConfirmAdmin}
-                            color="primary"
-                            variant="contained"
-                            disabled={loading}
-                        >
-                            {loading ? 'Updating...' : 'Yes, Confirm'}
                         </Button>
                     </DialogActions>
                 </Dialog>

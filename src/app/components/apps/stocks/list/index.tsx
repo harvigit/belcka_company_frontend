@@ -818,7 +818,7 @@ const StockList = () => {
                   setInputValue(item.qty?.toString() || "0");
                 }}
               >
-                {item?.qty?.toFixed(2)}
+                {item?.qty}
                 <br />
                 <Typography
                   component="span"
@@ -897,7 +897,7 @@ const StockList = () => {
                   setInputValue(item.sub_qty?.toString() || "0");
                 }}
               >
-                {item.sub_qty > 0 ? item.sub_qty : "-"}
+                {item?.is_sub_qty  && item.sub_qty > 0 ? item.sub_qty : "-"}
               </Typography>
             )}
           </Stack>

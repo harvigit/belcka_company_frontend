@@ -71,6 +71,7 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import Link from "next/link";
+import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import EditTeam from "../edit";
 
@@ -620,7 +621,7 @@ const TablePagination = () => {
 
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Link href={`/apps/users/${item.id}`} passHref>
+            <Link href={getUserDetailsHref(item.id)} passHref>
               <Stack
                 direction="row"
                 alignItems="center"

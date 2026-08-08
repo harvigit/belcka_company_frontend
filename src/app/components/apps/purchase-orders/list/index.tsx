@@ -36,6 +36,7 @@ import { useServerTable } from "@/hooks/useServerTable";
 import {
   IconDownload,
   IconEye,
+  IconFileInvoice,
   IconFileSignal,
   IconFilter,
   IconMenuOrder,
@@ -795,7 +796,7 @@ const PurchaseOrderList = () => {
       id: "orderDate",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2" fontWeight="inherit">
+          <Typography variant="subtitle2" fontWeight="inherit" width={70}>
             Order Date
           </Typography>
         </Stack>
@@ -843,13 +844,20 @@ const PurchaseOrderList = () => {
             spacing={4}
             sx={{ pl: 0.3, ml: 1 }}
           >
-            <Typography
-              textTransform="capitalize"
-              className="f-14"
-              sx={{ whiteSpace: "nowrap" }}
-            >
-              {item.order_id ? item.order_id : "-"}
-            </Typography>
+            <Tooltip title={item.order_id ? item.order_id : ""}>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  maxWidth: 100,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {item.order_id ? item.order_id : "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },
@@ -859,7 +867,11 @@ const PurchaseOrderList = () => {
       id: "receivedBy",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2" fontWeight="inherit">
+          <Typography
+            variant="subtitle2"
+            fontWeight="inherit"
+            sx={{ whiteSpace: "nowrap" }}
+          >
             Received By
           </Typography>
         </Stack>
@@ -889,7 +901,7 @@ const PurchaseOrderList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" ml={1}>
+          <Stack direction="row" alignItems="center" ml={1} width={85}>
             <Typography textTransform="capitalize" className="f-14">
               {item.order_qty ? item.order_qty : "-"}
             </Typography>
@@ -904,7 +916,7 @@ const PurchaseOrderList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" ml={1}>
+          <Stack direction="row" alignItems="center" ml={1} width={100}>
             <Typography textTransform="capitalize" className="f-14">
               {item.receive_qty ? item.receive_qty : "-"}
             </Typography>
@@ -927,7 +939,11 @@ const PurchaseOrderList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center">
+          <Stack
+            direction="row"
+            alignItems="center"
+            sx={{ whiteSpace: "nowrap" }}
+          >
             <Typography
               textTransform="capitalize"
               className="f-14"
@@ -955,26 +971,23 @@ const PurchaseOrderList = () => {
           <Stack direction="row" alignItems="center" spacing={4} ml={1}>
             <Box
               sx={{
-                minWidth: 50,
                 px: 1,
                 py: 0.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                border: "1px solid transparent",
-                transition: "all 0.2s ease",
               }}
             >
-              <Typography
-                variant="subtitle2"
-                sx={{
-                  fontSize: 14,
-                  display: "flex",
-                  textAlign: "center",
-                  color: item.supplier_name ? "inherit" : "text.secondary",
-                }}
-              >
-                {item.supplier_name || "-"}
-              </Typography>
+              <Tooltip title={item.supplier_name || ""}>
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    maxWidth: 100,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {item.supplier_name || "-"}
+                </Typography>
+              </Tooltip>
             </Box>
           </Stack>
         );
@@ -984,7 +997,12 @@ const PurchaseOrderList = () => {
     columnHelper.accessor((row) => row?.expected_delivery_date, {
       id: "expectedDeliveryDate",
       header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={4}
+          sx={{ whiteSpace: "nowrap" }}
+        >
           <Typography variant="subtitle2">Expect Delivery Date</Typography>
         </Stack>
       ),
@@ -1072,17 +1090,10 @@ const PurchaseOrderList = () => {
                 className="f-14"
                 fontWeight={500}
                 sx={{
-                  minWidth: "150px",
-                  width: "100%",
-                  maxWidth: "500px",
-                  display: "-webkit-box",
-                  WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 1,
+                  maxWidth: 100,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  lineHeight: 1.25,
-
-                  wordBreak: "break-word",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {item.ref ? item.ref : "-"}
@@ -2235,6 +2246,25 @@ Team Belcka
                     <IconFileSignal width={18} />
                   </ListItemIcon>
                   Terms and Conditions
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="/apps/invoices/list"
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconFileInvoice width={18} />
+                  </ListItemIcon>
+                  Invoices
                 </Link>
               </MenuItem>
             </Menu>

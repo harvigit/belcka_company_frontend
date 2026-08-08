@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { User } from "next-auth";
 import Cookies from "js-cookie";
 import Link from "next/link";
+import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 
 const Profile = () => {
   const [anchorEl2, setAnchorEl2] = useState<HTMLElement | null>(null);
@@ -123,7 +124,7 @@ const Profile = () => {
           alignItems={{ xs: "center", sm: "flex-start" }}
           textAlign={{ xs: "center", sm: "left" }}
         >
-          <Link href={`/apps/users/${user.id}`} passHref>
+          <Link href={getUserDetailsHref(user.id)} passHref>
             <Avatar
               src={user?.user_image || "/default-avatar.png"}
               alt={user?.first_name || "User"}
@@ -134,7 +135,7 @@ const Profile = () => {
             />
           </Link>
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Link href={`/apps/users/${user.id}`} passHref>
+            <Link href={getUserDetailsHref(user.id)} passHref>
               <Typography
                 variant="h4"
                 color="textSecondary"

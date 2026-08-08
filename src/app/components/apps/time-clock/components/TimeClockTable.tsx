@@ -272,6 +272,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         return dailyData.some(row => {
             if (row.rowType !== 'day') return false;
             const rowsData = (row as any).rowsData;
+            if ((row as any).is_requested) return true;
             if (Array.isArray(rowsData)) {
                 return rowsData.some((log: any) => log.is_requested || log.is_penalty_appealed);
             }
@@ -1150,7 +1151,18 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 {visibleColumnConfigs.penaltyHours?.visible && (
                                                     <TableCell
                                                         align="center"
-                                                        onClick={() => openPenaltiesSidebar?.(log.worklog_id)}
+                                                        onClick={() => {
+                                                            const hasActivePenalty = !log.is_pricework
+                                                                && log.worklog_id
+                                                                && log.has_penalty
+                                                                && Number(log.penalty_count ?? 0) > 0
+                                                                && log.penalty_hours !== '--'
+                                                                && log.penalty_hours !== '00:00';
+
+                                                            if (hasActivePenalty) {
+                                                                openPenaltiesSidebar?.(log.worklog_id);
+                                                            }
+                                                        }}
                                                         sx={{
                                                             py: 0.5,
                                                             fontSize: "0.875rem",
@@ -1185,7 +1197,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         >
                                                             <Box 
                                                                 sx={{
-                                                                    "&:hover": { color: "#1976d2", cursor: "pointer" },
+                                                                    "&:hover": {
+                                                                        color: log.has_penalty && log.penalty_hours !== '--' && log.penalty_hours !== '00:00' ? "#1976d2" : "inherit",
+                                                                        cursor: log.has_penalty && log.penalty_hours !== '--' && log.penalty_hours !== '00:00' ? "pointer" : "default",
+                                                                    },
                                                                 }}
                                                             >
                                                                 {log.is_pricework ? "--" : formatHour(log?.penalty_hours ?? 0)}

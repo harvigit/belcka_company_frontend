@@ -89,6 +89,7 @@ import Image from 'next/image';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
 import Link from 'next/link';
+import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import LeaveLists from './time-clock-details/leaves';
 import Conflicts from '@/app/components/apps/time-clock/time-clock-details/conflicts/conflicts';
 import {ConflictDetail} from '@/app/components/apps/time-clock/types/timeClock';
@@ -667,7 +668,7 @@ const TimeClock = ({queryParams}: Props) => {
                     }
 
                     // Fetch conflicts separately
-                    await fetchConflictsData(start, end);
+                    await fetchConflictsData();
                     const pagMeta = response.data.data;
                     setTotalRows(pagMeta?.totalItems ?? response.data.info.length);
                     setPageCount(pagMeta?.totalPages ?? 1);
@@ -690,11 +691,8 @@ const TimeClock = ({queryParams}: Props) => {
         }
     };
 
-    const fetchConflictsData = async (start: Date, end: Date) => {
-        const params: Record<string, string> = {
-            start_date: format(start, 'dd/MM/yyyy'),
-            end_date: format(end, 'dd/MM/yyyy'),
-        };
+    const fetchConflictsData = async () => {
+        const params: Record<string, string> = {};
         const requestKey = JSON.stringify(params);
         const pendingRequest = conflictRequestsRef.current.get(requestKey);
         if (pendingRequest) return pendingRequest;
@@ -727,7 +725,7 @@ const TimeClock = ({queryParams}: Props) => {
             if (fullRefresh) {
                 await fetchData(s, e);
             } else {
-                await fetchConflictsData(s, e);
+                await fetchConflictsData();
             }
         } catch (error) {
             setErrorMessage('Failed to refresh data.');
@@ -874,9 +872,7 @@ const TimeClock = ({queryParams}: Props) => {
         setConflictSidebar(false);
         setSelectedConflictUserId(null);
         try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchConflictsData(defaultStartDate, defaultEndDate);
+            await fetchConflictsData();
         } catch (error) {
             console.error('Error fetching time clock data after closing conflict sidebar:', error);
         }
@@ -1451,17 +1447,14 @@ const TimeClock = ({queryParams}: Props) => {
                             sx={{cursor: 'pointer'}}
                         >
                             <Link
-                                href={{
-                                    pathname: `/apps/users/${row?.user_id}`,
-                                    query: {
-                                        tab: 'billing',
-                                        ...(isReadOnlyUser
-                                            ? (isRemovedUser
-                                                ? {is_removed_user: 'true'}
-                                                : {is_archived_user: 'true'})
-                                            : {}),
-                                    },
-                                }}
+                                href={getUserDetailsHref(row?.user_id, {
+                                    tab: 'billing',
+                                    ...(isReadOnlyUser
+                                        ? (isRemovedUser
+                                            ? {is_removed_user: 'true'}
+                                            : {is_archived_user: 'true'})
+                                        : {}),
+                                })}
                                 passHref
                                 onClick={(e) => e.stopPropagation()}
                                 style={{textDecoration: 'none', color: 'inherit'}}
@@ -2460,11 +2453,13 @@ const TimeClock = ({queryParams}: Props) => {
                                 </IconButton>
                             </Tooltip>
 
+                            {user.user_role_id === 1 && (
                             <Tooltip title="Settings">
                                 <IconButton onClick={handleSettingOpen} color="primary" size="small">
                                     <IconSettings size={20}/>
                                 </IconButton>
                             </Tooltip>
+                            )}
 
                             <Settings
                                 settingOpen={settingOpen}
