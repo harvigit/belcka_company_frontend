@@ -60,12 +60,16 @@ export function useServerTable<TData>({
   // Use a ref to keep track of the latest fetch function to avoid stale closures
   const fetchRef = useRef(fetchData);
   const shouldResetPageOnDebounceRef = useRef(shouldResetPageOnDebounce);
+  const paginationRef = useRef(pagination);
   useEffect(() => {
     fetchRef.current = fetchData;
   }, [fetchData]);
   useEffect(() => {
     shouldResetPageOnDebounceRef.current = shouldResetPageOnDebounce;
   }, [shouldResetPageOnDebounce]);
+  useEffect(() => {
+    paginationRef.current = pagination;
+  }, [pagination]);
 
   // Handle debounced fetch when dependencies like search or filters change
   // Skip the initial mount run — the pagination effect already fetches once on mount.
@@ -77,9 +81,10 @@ export function useServerTable<TData>({
     }
 
     const handler = setTimeout(() => {
+      const currentPageIndex = paginationRef.current.pageIndex;
       // If we're not on page 1, reset to page 1, which will trigger the pageIndex effect below
       if (
-        pagination.pageIndex !== 0 &&
+        currentPageIndex !== 0 &&
         (shouldResetPageOnDebounceRef.current?.() ?? true)
       ) {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));

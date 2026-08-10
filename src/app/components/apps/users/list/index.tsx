@@ -395,6 +395,18 @@ const TablePagination = () => {
 
                 if (pagMeta.totalPages !== undefined) {
                     setPageCount(pagMeta.totalPages);
+                    // If search/filters reduced pages below current page, jump back to page 1
+                    if (
+                        pagMeta.totalPages > 0 &&
+                        pagination.pageIndex >= pagMeta.totalPages
+                    ) {
+                        setPagination((prev) => ({...prev, pageIndex: 0}));
+                    } else if (
+                        pagMeta.totalPages === 0 &&
+                        pagination.pageIndex !== 0
+                    ) {
+                        setPagination((prev) => ({...prev, pageIndex: 0}));
+                    }
                 } else if (pagMeta.last_page !== undefined) {
                     setPageCount(pagMeta.last_page);
                 }
@@ -1712,7 +1724,17 @@ const TablePagination = () => {
                             variant="outlined"
                             placeholder="Search..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => {
+                                // User-driven search must never skip the page reset
+                                // (cookie-restore skip flag can otherwise keep page=2).
+                                skipNextDependencyPageResetRef.current = false;
+                                setSearchTerm(e.target.value);
+                                setPagination((prev) =>
+                                    prev.pageIndex === 0
+                                        ? prev
+                                        : {...prev, pageIndex: 0},
+                                );
+                            }}
                             slotProps={{
                                 input: {
                                     endAdornment: (
@@ -1787,8 +1809,14 @@ const TablePagination = () => {
                         <DialogActions>
                             <Button
                                 onClick={() => {
+                                    skipNextDependencyPageResetRef.current = false;
                                     setTempFilters(DEFAULT_USER_FILTERS);
                                     setFilters(DEFAULT_USER_FILTERS);
+                                    setPagination((prev) =>
+                                        prev.pageIndex === 0
+                                            ? prev
+                                            : {...prev, pageIndex: 0},
+                                    );
                                     setOpen(false);
                                 }}
                                 color="inherit"
@@ -1798,7 +1826,13 @@ const TablePagination = () => {
                             <Button
                                 variant="contained"
                                 onClick={() => {
+                                    skipNextDependencyPageResetRef.current = false;
                                     setFilters(normalizeUserFilters(tempFilters));
+                                    setPagination((prev) =>
+                                        prev.pageIndex === 0
+                                            ? prev
+                                            : {...prev, pageIndex: 0},
+                                    );
                                     setOpen(false);
                                 }}
                             >
