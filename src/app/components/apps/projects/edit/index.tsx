@@ -373,7 +373,7 @@ const EditProject: React.FC<EditProjectProps> = ({
     );
 
     onClose();
-    router.push("/apps/timesheet/list");
+    router.push("/apps/time-clock/list");
   };
 
   return (

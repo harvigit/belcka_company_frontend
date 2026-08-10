@@ -376,7 +376,7 @@ const Company = () => {
     ) => string
   > = {
     Shift: (userId, recordId, startDate, endDate) => {
-      let url = `/apps/timesheet/list`;
+      let url = `/apps/time-clock/list`;
       const params: any[] = [];
 
       if (userId) params.push(`user_id=${userId}`);
@@ -392,7 +392,7 @@ const Company = () => {
       return url;
     },
     Expense: (userId, recordId, startDate, endDate) => {
-      let url = `/apps/timesheet/list`;
+      let url = `/apps/time-clock/list`;
       const params: any[] = [];
 
       if (userId) params.push(`user_id=${userId}`);
@@ -409,7 +409,7 @@ const Company = () => {
       return url;
     },
     Timesheet: (userId, recordId, startDate, endDate) => {
-      let url = `/apps/timesheet/list`;
+      let url = `/apps/time-clock/list`;
       const params: any[] = [];
 
       if (userId) params.push(`user_id=${userId}`);

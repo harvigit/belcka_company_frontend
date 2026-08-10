@@ -55,19 +55,11 @@ import {
 } from '@tanstack/react-table';
 import {
     addDays,
-    addMonths,
     endOfMonth,
     endOfWeek,
     format,
-    isSameDay,
-    isSameMonth,
-    isValid,
-    parse,
-    parseISO,
-    startOfDay,
     startOfMonth,
     startOfWeek,
-    subMonths,
 } from 'date-fns';
 import {AxiosResponse} from 'axios';
 import Cookies from 'js-cookie';
@@ -82,20 +74,20 @@ import 'react-day-picker/dist/style.css';
 import '@/app/global.css';
 import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
+import {usePathname, useRouter, useSearchParams} from 'next/navigation';
 import AddExpense from './time-clock-details/expenses/add-expense';
 import AddWorklog from './time-clock-details/worklog/add-worklog';
 import AddPricework from './time-clock-details/pricework/add-pricework';
 import Image from 'next/image';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
-import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
 import Link from 'next/link';
 import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import LeaveLists from './time-clock-details/leaves';
 import Conflicts from '@/app/components/apps/time-clock/time-clock-details/conflicts/conflicts';
 import {ConflictDetail} from '@/app/components/apps/time-clock/types/timeClock';
 import ConfirmationDialog from './components/ConfirmationDialog';
-import {IconCalendar, IconEye} from '@tabler/icons-react';
-import Settings from '../timesheet/setting/settings';
+import {IconEye} from '@tabler/icons-react';
+import Settings from './setting/inex';
 import BookkeeperHistory from './history';
 import RecoverWorklogs from './recover-worklogs';
 import {useServerTable} from '@/hooks/useServerTable';
@@ -350,6 +342,28 @@ const TIME_CLOCK_FILTER_COOKIE_OPTIONS = {
     path: '/',
 };
 
+type QueryParams = {
+    user_id: string | null;
+    is_removed_user: boolean;
+    is_archived_user: boolean;
+    start_date: string | null;
+    end_date: string | null;
+    open: string | null;
+    type: string | null;
+    recordId: string | null;
+};
+
+const EMPTY_QUERY_PARAMS: QueryParams = {
+    user_id: null,
+    is_removed_user: false,
+    is_archived_user: false,
+    start_date: null,
+    end_date: null,
+    open: null,
+    type: null,
+    recordId: null,
+};
+
 const isValidTimeClockTypeFilter = (value: unknown): value is string =>
     typeof value === 'string' && TIME_CLOCK_TYPE_OPTIONS.some((option) => option.value === value);
 
@@ -370,16 +384,7 @@ const normalizeStoredStringFilter = (value: unknown): string[] => {
 };
 
 interface Props {
-    queryParams?: {
-        user_id?: string | null;
-        is_removed_user: boolean;
-        is_archived_user?: boolean;
-        start_date?: string | null;
-        end_date?: string | null;
-        open?: string | null;
-        type?: string | null;
-        recordId?: string | null;
-    };
+    queryParams?: Partial<QueryParams>;
 }
 
 const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
@@ -397,6 +402,15 @@ const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
 };
 
 const TimeClock = ({queryParams}: Props) => {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+    const [resolvedQueryParams, setResolvedQueryParams] = useState<QueryParams>({
+        ...EMPTY_QUERY_PARAMS,
+        ...queryParams,
+    });
+    const [queryParamsInitialized, setQueryParamsInitialized] = useState(Boolean(queryParams));
+
     // Initialize default date range (current week)
     const today = new Date();
     const defaultStart = new Date(today);
@@ -461,7 +475,6 @@ const TimeClock = ({queryParams}: Props) => {
 
     const {
         columnVisibility,
-        onColumnVisibilityChange,
         onColumnVisibilityChange: setColumnVisibility
     } = usePersistentColumnVisibility({
         storageKey: `cv_${user?.company_id}_${user?.id}_time_clock`,
@@ -496,8 +509,7 @@ const TimeClock = ({queryParams}: Props) => {
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
     const [ratePermissionLoaded, setRatePermissionLoaded] = useState<boolean>(false);
 
-
-    const queryParamsRef = useRef(queryParams);
+    const queryParamsRef = useRef<QueryParams>(resolvedQueryParams);
     const dataRequestsRef = useRef<Map<string, Promise<Index[]>>>(new Map());
     const conflictRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
     const hasInitializedFilterResetRef = useRef(false);
@@ -512,8 +524,85 @@ const TimeClock = ({queryParams}: Props) => {
         fontWeight: 600,
     };
     useEffect(() => {
-        queryParamsRef.current = queryParams;
+        if (queryParams) {
+            setResolvedQueryParams({
+                ...EMPTY_QUERY_PARAMS,
+                ...queryParams,
+                is_removed_user: queryParams.is_removed_user === true,
+                is_archived_user: queryParams.is_archived_user === true,
+            });
+            setQueryParamsInitialized(true);
+        }
     }, [queryParams]);
+
+    useEffect(() => {
+        if (queryParams || !searchParams) return;
+
+        const urlUserId = searchParams.get('user_id');
+        const isRemovedUserParam = searchParams.get('is_removed_user');
+        const isArchivedUserParam = searchParams.get('is_archived_user') || searchParams.get('is_archive_user');
+        const hasSensitiveUserParams = Boolean(urlUserId || isRemovedUserParam || isArchivedUserParam);
+
+        let userId: string | null = null;
+        let isRemoved = false;
+        let isArchived = false;
+
+        if (hasSensitiveUserParams) {
+            isRemoved = isRemovedUserParam === 'true' || isRemovedUserParam === '1';
+            isArchived = isArchivedUserParam === 'true' || isArchivedUserParam === '1';
+            userId = urlUserId;
+
+            sessionStorage.setItem(
+                'timesheet_sensitive_params',
+                JSON.stringify({
+                    user_id: userId,
+                    is_removed_user: isRemoved,
+                    is_archived_user: isArchived,
+                })
+            );
+
+            const newSearchParams = new URLSearchParams(searchParams);
+            newSearchParams.delete('user_id');
+            newSearchParams.delete('is_removed_user');
+            newSearchParams.delete('is_archived_user');
+            newSearchParams.delete('is_archive_user');
+
+            const currentPath = pathname || '/apps/time-clock/list';
+            const newUrl = newSearchParams.toString()
+                ? `${currentPath}?${newSearchParams.toString()}`
+                : currentPath;
+
+            router.replace(newUrl);
+        } else {
+            const stored = sessionStorage.getItem('timesheet_sensitive_params');
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    userId = parsed.user_id || null;
+                    isRemoved = parsed.is_removed_user || false;
+                    isArchived = parsed.is_archived_user || false;
+                } catch {
+                    sessionStorage.removeItem('timesheet_sensitive_params');
+                }
+            }
+        }
+
+        setResolvedQueryParams({
+            user_id: userId,
+            is_removed_user: isRemoved,
+            is_archived_user: isArchived,
+            start_date: searchParams.get('start_date'),
+            end_date: searchParams.get('end_date'),
+            open: searchParams.get('open'),
+            type: searchParams.get('type'),
+            recordId: searchParams.get('id'),
+        });
+        setQueryParamsInitialized(true);
+    }, [queryParams, searchParams, router, pathname]);
+
+    useEffect(() => {
+        queryParamsRef.current = resolvedQueryParams;
+    }, [resolvedQueryParams]);
 
     const saveTimeClockFiltersCookie = useCallback((
         nextFilters: TimeClockFilterState,
@@ -583,9 +672,9 @@ const TimeClock = ({queryParams}: Props) => {
 
     const [isFilteredView, setIsFilteredView] = useState(false);
     useEffect(() => {
-        const hasUserFilter = Boolean(queryParamsRef.current?.user_id);
+        const hasUserFilter = Boolean(resolvedQueryParams.user_id);
         setIsFilteredView(hasUserFilter);
-    }, [queryParamsRef.current?.user_id]);
+    }, [resolvedQueryParams.user_id]);
 
     useEffect(() => {
         if (!ratePermissionLoaded) return;
@@ -757,12 +846,15 @@ const TimeClock = ({queryParams}: Props) => {
     const handleClearSessionFilter = () => {
         sessionStorage.removeItem('timesheet_sensitive_params');
 
-        queryParamsRef.current = {
-            ...queryParamsRef.current,
+        const nextQueryParams = {
+            ...resolvedQueryParams,
             user_id: null,
             is_removed_user: false,
             is_archived_user: false,
         };
+
+        queryParamsRef.current = nextQueryParams;
+        setResolvedQueryParams(nextQueryParams);
 
         const s = startDate || defaultStart;
         const e = endDate || defaultEnd;
@@ -770,12 +862,12 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const isRemovedUser = useMemo(() => {
-        return Boolean(queryParams?.is_removed_user === true || queryParamsRef.current?.is_removed_user === true);
-    }, [queryParams?.is_removed_user]);
+        return Boolean(resolvedQueryParams.is_removed_user === true || queryParamsRef.current?.is_removed_user === true);
+    }, [resolvedQueryParams.is_removed_user]);
 
     const isArchivedUser = useMemo(() => {
-        return Boolean(queryParams?.is_archived_user === true || queryParamsRef.current?.is_archived_user === true);
-    }, [queryParams?.is_archived_user]);
+        return Boolean(resolvedQueryParams.is_archived_user === true || queryParamsRef.current?.is_archived_user === true);
+    }, [resolvedQueryParams.is_archived_user]);
 
     const isReadOnlyUser = isRemovedUser || isArchivedUser;
 
@@ -822,10 +914,10 @@ const TimeClock = ({queryParams}: Props) => {
 
     useEffect(() => {
         if (!filtersHydrated) return;
-        if (!queryParams?.user_id || !queryParams?.start_date || !queryParams?.end_date) return;
+        if (!resolvedQueryParams.user_id || !resolvedQueryParams.start_date || !resolvedQueryParams.end_date) return;
 
-        const startDateObj = new Date(queryParams.start_date);
-        const endDateObj = new Date(queryParams.end_date);
+        const startDateObj = new Date(resolvedQueryParams.start_date);
+        const endDateObj = new Date(resolvedQueryParams.end_date);
 
         setStartDate(startDateObj);
         setEndDate(endDateObj);
@@ -836,7 +928,7 @@ const TimeClock = ({queryParams}: Props) => {
 
                 const foundUser = fetchedData.find(
                     (item) =>
-                        Number(item.user_id) === Number(queryParams.user_id)
+                        Number(item.user_id) === Number(resolvedQueryParams.user_id)
                 );
 
                 if (!foundUser) return;
@@ -844,7 +936,7 @@ const TimeClock = ({queryParams}: Props) => {
                 saveDateToStorage(startDateObj, endDateObj);
                 setSelectedTimeClock(foundUser);
 
-                if (queryParams?.type) {
+                if (resolvedQueryParams.type) {
                     setDetailsOpen(true);
                 }
             } catch (err) {
@@ -852,10 +944,10 @@ const TimeClock = ({queryParams}: Props) => {
             }
         })();
     }, [
-        queryParams?.user_id,
-        queryParams?.start_date,
-        queryParams?.end_date,
-        queryParams?.type,
+        resolvedQueryParams.user_id,
+        resolvedQueryParams.start_date,
+        resolvedQueryParams.end_date,
+        resolvedQueryParams.type,
         filtersHydrated,
     ]);
 
@@ -1928,7 +2020,7 @@ const TimeClock = ({queryParams}: Props) => {
     ];
 
     const handleFetchData = () => {
-        if (!filtersHydrated || !cycleReady || !startDate || !endDate) return;
+        if (!queryParamsInitialized || !filtersHydrated || !cycleReady || !startDate || !endDate) return;
 
         const start = startDate || defaultStart;
         const end = endDate || defaultEnd;
@@ -1952,7 +2044,19 @@ const TimeClock = ({queryParams}: Props) => {
         columns,
         fetchData: handleFetchData,
         initialPagination: initialStoredState?.pagination,
-        debounceDependencies: [searchTerm, filters, typeFilter, queryParamsRef.current?.user_id, startDate, endDate, cycleReady, filtersHydrated],
+        debounceDependencies: [
+            searchTerm,
+            filters,
+            typeFilter,
+            resolvedQueryParams.user_id,
+            resolvedQueryParams.is_removed_user,
+            resolvedQueryParams.is_archived_user,
+            startDate,
+            endDate,
+            cycleReady,
+            filtersHydrated,
+            queryParamsInitialized,
+        ],
         state: {columnVisibility},
         onColumnVisibilityChange: setColumnVisibility,
     });
@@ -1976,17 +2080,17 @@ const TimeClock = ({queryParams}: Props) => {
         typeFilter,
         startDate,
         endDate,
-        queryParams?.user_id,
-        queryParams?.is_removed_user,
-        queryParams?.is_archived_user,
+        resolvedQueryParams.user_id,
+        resolvedQueryParams.is_removed_user,
+        resolvedQueryParams.is_archived_user,
         cycleReady,
     ]);
 
     useEffect(() => {
-        if (queryParams?.open && queryParams.type == null) {
+        if (resolvedQueryParams.open && resolvedQueryParams.type == null) {
             setOpenLeaves(true);
         }
-    }, [queryParams]);
+    }, [resolvedQueryParams.open, resolvedQueryParams.type]);
 
     const handleExportClick = (event: React.MouseEvent<HTMLButtonElement>) => {
         setAnchorEl(event.currentTarget);
@@ -3194,7 +3298,7 @@ const TimeClock = ({queryParams}: Props) => {
                     onDataChange={handleDataChange}
                     isRemovedUser={isRemovedUser}
                     isArchivedUser={isArchivedUser}
-                    queryParams={queryParams}
+                    queryParams={resolvedQueryParams}
                 />
             </Drawer>
 
@@ -3335,7 +3439,7 @@ const TimeClock = ({queryParams}: Props) => {
             </Drawer>
 
             {/*  Leave list */}
-            <LeaveLists open={openLeaves} onClose={() => setOpenLeaves(false)} queryParams={queryParams}/>
+            <LeaveLists open={openLeaves} onClose={() => setOpenLeaves(false)} queryParams={resolvedQueryParams}/>
             
             {/* Request list */}
             <UserRequests open={requestList} onRequestCountChange={() => {}} onClose={() => setRequestList(false)} isAdmin={true}/>

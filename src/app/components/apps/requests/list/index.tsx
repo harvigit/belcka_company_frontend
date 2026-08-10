@@ -299,7 +299,7 @@ export default function UserRequests({
     (recordId?: number, startDate?: string, endDate?: string) => string
   > = {
     Shift: (recordId, startDate, endDate) => {
-      let url = `/apps/timesheet/list`;
+      let url = `/apps/time-clock/list`;
       const params: any[] = [];
       if (recordId) params.push(`user_id=${recordId}`);
       if (startDate) params.push(`start_date=${startDate}`);
@@ -315,7 +315,7 @@ export default function UserRequests({
     Project: (id) => `/apps/projects/index?id=${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
     Penalty: (recordId, startDate, endDate) => {
-      let url = `/apps/timesheet/list`;
+      let url = `/apps/time-clock/list`;
       const params: any[] = [];
       if (recordId) params.push(`user_id=${recordId}`);
       if (startDate) params.push(`start_date=${startDate}`);
@@ -326,7 +326,7 @@ export default function UserRequests({
       return url;
     },
     "Work log": (recordId, startDate, endDate) => {
-      let url = `/apps/timesheet/list`;
+      let url = `/apps/time-clock/list`;
       const params: any[] = [];
       if (recordId) params.push(`user_id=${recordId}`);
       if (startDate) params.push(`start_date=${startDate}`);
@@ -337,7 +337,7 @@ export default function UserRequests({
       return url;
     },
     Worklog: (recordId, startDate, endDate) => {
-      let url = `/apps/timesheet/list`;
+      let url = `/apps/time-clock/list`;
       const params: any[] = [];
       if (recordId) params.push(`user_id=${recordId}`);
       if (startDate) params.push(`start_date=${startDate}`);

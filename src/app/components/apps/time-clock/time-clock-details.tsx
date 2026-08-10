@@ -604,7 +604,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         handledRef.current = true;
 
         const timer = setTimeout(() => {
-            router.replace('/apps/timesheet/list');
+            router.replace('/apps/time-clock/list');
         }, 4000);
 
         return () => clearTimeout(timer);

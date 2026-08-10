@@ -50,7 +50,7 @@ interface SettingsProps {
     initialProjectId?: number | null;
 }
 
-const Settings: React.FC<SettingsProps> = ({
+const Inex: React.FC<SettingsProps> = ({
     settingOpen,
     onClose,
     initialActiveMenuItem = null,
@@ -216,4 +216,4 @@ const Settings: React.FC<SettingsProps> = ({
     );
 };
 
-export default Settings;
+export default Inex;

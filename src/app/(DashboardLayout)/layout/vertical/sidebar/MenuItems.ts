@@ -64,7 +64,7 @@ const MenuItems: NavGroup[] = [
     title: "Bookkeeper",
     slug: "bookkeeper",
     icon: IconTicket,
-    href: "/apps/timesheet/list",
+    href: "/apps/time-clock/list",
   },
   {
     id: uniqueId(),

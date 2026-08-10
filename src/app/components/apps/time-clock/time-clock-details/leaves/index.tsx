@@ -177,12 +177,12 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
                 if (foundUser) {
                     saveDateToStorage(startDateObj, endDateObj);
                     setSelectedTimeClock(foundUser);
-                    router.replace('/apps/timesheet/list', {scroll: false});
+                    router.replace('/apps/time-clock/list', {scroll: false});
                 }
             } catch (err) {
                 console.error('Failed to load data from query params:', err);
             }
-            router.replace('/apps/timesheet/list', {scroll: false});
+            router.replace('/apps/time-clock/list', {scroll: false});
         };
 
         fetchDataFromQueryParams();

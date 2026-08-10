@@ -31,7 +31,7 @@ const Menuitems = [
         id: uniqueId(),
         title: "Timesheet",
         icon: IconTicket,
-        href: "/apps/timesheet/list",
+        href: "/apps/time-clock/list",
       },
       {
         id: uniqueId(),

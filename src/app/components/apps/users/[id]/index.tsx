@@ -850,7 +850,7 @@ const TablePagination = () => {
                                                         is_archived_user: isArchivedUser,
                                                     })
                                                 );
-                                                router.push('/apps/timesheet/list');
+                                                router.push('/apps/time-clock/list');
                                             }}
                                         >
                                             <IconCalendarTime size={30} style={{ cursor: 'pointer' }} />
