@@ -102,6 +102,7 @@ import {useServerTable} from '@/hooks/useServerTable';
 import TablePaginationFooter from '../../common/TablePaginationFooter';
 import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
 import PenaltyHistory from './penalty';
+import UserRequests from '../requests/list';
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -471,6 +472,7 @@ const TimeClock = ({queryParams}: Props) => {
     const [addWorklogSidebar, setAddWorklogSidebar] = useState<boolean>(false);
     const [addPriceworkSidebar, setAddPriceworkSidebar] = useState<boolean>(false);
     const [openLeaves, setOpenLeaves] = useState(false);
+    const [requestList ,setRequestList] = useState(false);
 
     // Conflict sidebar
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
@@ -2554,6 +2556,28 @@ const TimeClock = ({queryParams}: Props) => {
                                         Penalty History
                                     </Link>
                                 </MenuItem>
+                                <MenuItem onClick={handleClose}>
+                                    <Link
+                                        color="body1"
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setRequestList(true);
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            color: '#11142D',
+                                            textTransform: 'none',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                        }}
+                                    >
+                                        <ListItemIcon>
+                                            <IconNotes width={18}/>
+                                        </ListItemIcon>
+                                        Request List
+                                    </Link>
+                                </MenuItem>
                             </Menu>
                         </Box>
                     </Box>
@@ -3291,6 +3315,9 @@ const TimeClock = ({queryParams}: Props) => {
 
             {/*  Leave list */}
             <LeaveLists open={openLeaves} onClose={() => setOpenLeaves(false)} queryParams={queryParams}/>
+            
+            {/* Request list */}
+            <UserRequests open={requestList} onRequestCountChange={() => {}} onClose={() => setRequestList(false)} isAdmin={true}/>
 
             {/*  Recover Worklogs list */}
             <RecoverWorklogs

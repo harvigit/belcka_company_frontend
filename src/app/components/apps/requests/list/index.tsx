@@ -24,7 +24,12 @@ import {
   Button,
   InputAdornment,
 } from "@mui/material";
-import { IconArrowLeft, IconX, IconSearch, IconFilter } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconX,
+  IconSearch,
+  IconFilter,
+} from "@tabler/icons-react";
 import { format, parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { useRouter } from "next/navigation";
@@ -36,6 +41,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onRequestCountChange: any;
+  isAdmin?: boolean;
 }
 
 type FilterOption = { id: number; name?: string };
@@ -83,6 +89,7 @@ export default function UserRequests({
   open,
   onClose,
   onRequestCountChange,
+  isAdmin,
 }: Props) {
   const router = useRouter();
   const today = new Date();
@@ -190,7 +197,9 @@ export default function UserRequests({
         param.search = trimmedSearch;
       }
       let res;
-      if (user?.user_role_id === 1) {
+      if (isAdmin) {
+        res = await api.post(`requests/get-all-request`, param);
+      } else if (user?.user_role_id === 1) {
         res = await api.post(`requests/get-all-request`, param);
       } else {
         res = await api.post(`requests/get-all-request`, payload);
@@ -368,369 +377,377 @@ export default function UserRequests({
 
   return (
     <>
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      sx={{
-        width: 500,
-        flexShrink: 0,
-        "& .MuiDrawer-paper": {
+      <Drawer
+        anchor="right"
+        open={open}
+        onClose={onClose}
+        sx={{
           width: 500,
-          padding: 2,
-          backgroundColor: "#f9f9f9",
-        },
-      }}
-    >
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <IconButton onClick={onClose}>
-            <IconArrowLeft />
-          </IconButton>
-          <Typography variant="h6" fontWeight={700}>
-            {user?.user_role_id == 1 ? "Requests" : "My Requests"}
-          </Typography>
-        </Stack>
-        <IconButton onClick={onClose}>
-          <IconX />
-        </IconButton>
-      </Box>
-
-      {/* Search / filters */}
-      <Box mb={2} display="flex" gap={1} alignItems="center" flexWrap="wrap">
-        <DateRangePickerBox
-          from={startDate}
-          to={endDate}
-          onChange={handleDateRangeChange}
-          buttonMinWidth={200}
-        />
-        <TextField
-          size="small"
-          placeholder="Search..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <IconSearch size={20} />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ flex: 1, minWidth: 140 }}
-        />
-        <Button
-          variant="contained"
-          onClick={() => {
-            setTempFilters(filters);
-            setFilterOpen(true);
-          }}
-          sx={{ minWidth: "40px", px: 1 }}
-        >
-          <IconFilter width={18} />
-        </Button>
-      </Box>
-
-      {/* Content */}
-      <Box
-        flex={1}
-        overflow="auto"
-        px={2}
-        pb={2}
-        sx={{ maxHeight: "calc(95vh - 120px)" }}
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 500,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+          },
+        }}
       >
-        {loading ? (
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            minHeight={240}
+        {/* Header */}
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <IconButton onClick={onClose}>
+              <IconArrowLeft />
+            </IconButton>
+            <Typography variant="h6" fontWeight={700}>
+              {isAdmin || user?.user_role_id == 1 ? "Requests" : "My Requests"}
+            </Typography>
+          </Stack>
+          <IconButton onClick={onClose}>
+            <IconX />
+          </IconButton>
+        </Box>
+
+        {/* Search / filters */}
+        <Box mb={2} display="flex" gap={1} alignItems="center" flexWrap="wrap">
+          <DateRangePickerBox
+            from={startDate}
+            to={endDate}
+            onChange={handleDateRangeChange}
+            buttonMinWidth={200}
+          />
+          <TextField
+            size="small"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <IconSearch size={20} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ flex: 1, minWidth: 140 }}
+          />
+          <Button
+            variant="contained"
+            onClick={() => {
+              setTempFilters(filters);
+              setFilterOpen(true);
+            }}
+            sx={{ minWidth: "40px", px: 1 }}
           >
-            <CircularProgress size={36} />
-          </Box>
-        ) : data.length > 0 ? (
-          <Grid container spacing={2}>
-            {data.map((work, idx) => (
-              <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
-                <Box
-                  onClick={() => {
-                    const routeFn = REQUEST_ROUTE_MAP[work.type_name];
-                    if (routeFn) {
-                      if (["Shift", "Penalty", "Work log", "Worklog"].includes(work.type_name)) {
-                        const dateAdded = work.date_added
-                          ? parse(
-                              work.date_added,
-                              "d MMMM yyyy HH:mm",
-                              new Date(),
-                            )
-                          : undefined;
-                        const formattedDate = dateAdded
-                          ? format(dateAdded, "yyyy-MM-dd")
-                          : undefined;
-                        router.push(
-                          routeFn(work.user_id, formattedDate, formattedDate),
-                        );
-                      } else if (work.type_name === "Leave") {
-                        // Use the actual leave date, not the request creation date
-                        const leaveDate = getLeaveDate(work);
-                        router.push(
-                          routeFn(work.user_id, leaveDate, leaveDate),
-                        );
-                      } else if (work.type_name === "Team") {
-                        router.push(routeFn(work.team_id));
-                      } else if (work.type_name === "Project") {
-                        router.push(
-                          routeFn(work?.project_id ?? work?.record_id),
-                        );
-                      } else {
-                        router.push(routeFn(work.user_id));
-                      }
-                      onClose();
-                    }
-                  }}
-                  sx={{
-                    border: "1px solid #ddd",
-                    borderRadius: 2,
-                    position: "relative",
-                    p: 2,
-                    bgcolor: "white",
-                    transition: "0.2s",
-                    cursor: "pointer",
-                    "&:hover": {
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                      transform: "translateY(-1px)",
-                    },
-                  }}
-                >
+            <IconFilter width={18} />
+          </Button>
+        </Box>
+
+        {/* Content */}
+        <Box
+          flex={1}
+          overflow="auto"
+          px={2}
+          pb={2}
+          sx={{ maxHeight: "calc(95vh - 120px)" }}
+        >
+          {loading ? (
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              minHeight={240}
+            >
+              <CircularProgress size={36} />
+            </Box>
+          ) : data.length > 0 ? (
+            <Grid container spacing={2}>
+              {data.map((work, idx) => (
+                <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
                   <Box
-                    justifyContent="space-between"
-                    alignItems="center"
-                    mb={1}
-                    sx={{ top: -8, position: "absolute" }}
-                    flexWrap="wrap"
+                    onClick={() => {
+                      const routeFn = REQUEST_ROUTE_MAP[work.type_name];
+                      if (routeFn) {
+                        if (
+                          ["Shift", "Penalty", "Work log", "Worklog"].includes(
+                            work.type_name,
+                          )
+                        ) {
+                          const dateAdded = work.date_added
+                            ? parse(
+                                work.date_added,
+                                "d MMMM yyyy HH:mm",
+                                new Date(),
+                              )
+                            : undefined;
+                          const formattedDate = dateAdded
+                            ? format(dateAdded, "yyyy-MM-dd")
+                            : undefined;
+                          router.push(
+                            routeFn(work.user_id, formattedDate, formattedDate),
+                          );
+                        } else if (work.type_name === "Leave") {
+                          // Use the actual leave date, not the request creation date
+                          const leaveDate = getLeaveDate(work);
+                          router.push(
+                            routeFn(work.user_id, leaveDate, leaveDate),
+                          );
+                        } else if (work.type_name === "Team") {
+                          router.push(routeFn(work.team_id));
+                        } else if (work.type_name === "Project") {
+                          router.push(
+                            routeFn(work?.project_id ?? work?.record_id),
+                          );
+                        } else {
+                          router.push(routeFn(work.user_id));
+                        }
+                        onClose();
+                      }
+                    }}
+                    sx={{
+                      border: "1px solid #ddd",
+                      borderRadius: 2,
+                      position: "relative",
+                      p: 2,
+                      bgcolor: "white",
+                      transition: "0.2s",
+                      cursor: "pointer",
+                      "&:hover": {
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                        transform: "translateY(-1px)",
+                      },
+                    }}
                   >
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        px: 1.2,
-                        py: 0.2,
-                        borderRadius: "12px",
-                        bgcolor: TYPE_COLOR[work.type_name] || "#757575",
-                        color: "#fff",
-                        fontSize: "0.75rem",
-                        fontWeight: 500,
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {work.type_name}
-                    </Typography>
-                  </Box>
-                  <Box display={"flex"} gap={1} mt={1}>
-                    <Avatar
-                      src={work.user_image}
-                      alt={work.user_name}
-                      sx={{ width: 36, height: 36 }}
-                    />
                     <Box
-                      display={"flex"}
-                      justifyContent={"space-between"}
-                      width={"100%"}
+                      justifyContent="space-between"
+                      alignItems="center"
+                      mb={1}
+                      sx={{ top: -8, position: "absolute" }}
+                      flexWrap="wrap"
                     >
-                      <Box>
-                        <Typography variant="h1" fontSize={"16px !important"}>
-                          {work.user_name}:
-                        </Typography>
-                        <Typography variant="h5">{work.message}</Typography>
-                        {work.request_note && (
-                          <Box display={"flex"} alignItems={"center"} gap={0.3}>
-                            <Typography
-                              variant="subtitle1"
-                              color="textSecondary"
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          px: 1.2,
+                          py: 0.2,
+                          borderRadius: "12px",
+                          bgcolor: TYPE_COLOR[work.type_name] || "#757575",
+                          color: "#fff",
+                          fontSize: "0.75rem",
+                          fontWeight: 500,
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {work.type_name}
+                      </Typography>
+                    </Box>
+                    <Box display={"flex"} gap={1} mt={1}>
+                      <Avatar
+                        src={work.user_image}
+                        alt={work.user_name}
+                        sx={{ width: 36, height: 36 }}
+                      />
+                      <Box
+                        display={"flex"}
+                        justifyContent={"space-between"}
+                        width={"100%"}
+                      >
+                        <Box>
+                          <Typography variant="h1" fontSize={"16px !important"}>
+                            {work.user_name}:
+                          </Typography>
+                          <Typography variant="h5">{work.message}</Typography>
+                          {work.request_note && (
+                            <Box
+                              display={"flex"}
+                              alignItems={"center"}
+                              gap={0.3}
                             >
-                              Note:
-                            </Typography>
-                            <Tooltip title={work.request_note ?? ""}>
                               <Typography
                                 variant="subtitle1"
                                 color="textSecondary"
-                                sx={{
-                                  display: "-webkit-box",
-                                  WebkitBoxOrient: "vertical",
-                                  WebkitLineClamp: 1,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  wordBreak: "break-word",
-                                  maxWidth: "500px",
-                                  borderRadius: 1,
-                                  border: "1px solid transparent",
-                                  transition: "all 0.2s ease",
-                                }}
                               >
-                                {work.request_note}
+                                Note:
                               </Typography>
-                            </Tooltip>
-                          </Box>
-                        )}
-                      </Box>
-                      <Box justifyContent={"flex-end"}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            px: 1.6,
-                            py: 0.7,
-                            borderRadius: "18px",
-                            border: 2,
-                            borderColor:
-                              STATUS_COLOR[work.status_text.toLowerCase()] ||
-                              "#757575",
-                            color:
-                              STATUS_COLOR[work.status_text.toLowerCase()] ||
-                              "#757575",
-                            fontSize: "0.75rem",
-                            fontWeight: 500,
-                            textTransform: "capitalize",
-                          }}
-                        >
-                          {work.status_text}
-                        </Typography>
+                              <Tooltip title={work.request_note ?? ""}>
+                                <Typography
+                                  variant="subtitle1"
+                                  color="textSecondary"
+                                  sx={{
+                                    display: "-webkit-box",
+                                    WebkitBoxOrient: "vertical",
+                                    WebkitLineClamp: 1,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    wordBreak: "break-word",
+                                    maxWidth: "500px",
+                                    borderRadius: 1,
+                                    border: "1px solid transparent",
+                                    transition: "all 0.2s ease",
+                                  }}
+                                >
+                                  {work.request_note}
+                                </Typography>
+                              </Tooltip>
+                            </Box>
+                          )}
+                        </Box>
+                        <Box justifyContent={"flex-end"}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              px: 1.6,
+                              py: 0.7,
+                              borderRadius: "18px",
+                              border: 2,
+                              borderColor:
+                                STATUS_COLOR[work.status_text.toLowerCase()] ||
+                                "#757575",
+                              color:
+                                STATUS_COLOR[work.status_text.toLowerCase()] ||
+                                "#757575",
+                              fontSize: "0.75rem",
+                              fontWeight: 500,
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {work.status_text}
+                          </Typography>
+                        </Box>
                       </Box>
                     </Box>
-                  </Box>
 
-                  <Box display={"flex"} justifyContent={"flex-end"} mt={0}>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      fontSize={"12px !important"}
-                    >
-                      {work.date}
-                    </Typography>
+                    <Box display={"flex"} justifyContent={"flex-end"} mt={0}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontSize={"12px !important"}
+                      >
+                        {work.date}
+                      </Typography>
+                    </Box>
                   </Box>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        ) : (
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            textAlign="center"
-            mt={4}
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              textAlign="center"
+              mt={4}
+            >
+              No requests found.
+            </Typography>
+          )}
+        </Box>
+      </Drawer>
+
+      <Dialog
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ m: 0, position: "relative" }}>
+          Filters
+          <IconButton
+            aria-label="close"
+            onClick={() => setFilterOpen(false)}
+            sx={{ position: "absolute", right: 12, top: 8 }}
           >
-            No requests found.
-          </Typography>
-        )}
-      </Box>
-    </Drawer>
-
-    <Dialog
-      open={filterOpen}
-      onClose={() => setFilterOpen(false)}
-      fullWidth
-      maxWidth="sm"
-    >
-      <DialogTitle sx={{ m: 0, position: "relative" }}>
-        Filters
-        <IconButton
-          aria-label="close"
-          onClick={() => setFilterOpen(false)}
-          sx={{ position: "absolute", right: 12, top: 8 }}
-        >
-          <IconX size={24} />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} mt={1}>
-          <Autocomplete
-            options={userOptions}
-            getOptionLabel={(option) => option.name || ""}
-            getOptionKey={(option) => String(option.id)}
-            isOptionEqualToValue={(option, value) =>
-              String(option.id) === String(value?.id)
-            }
-            value={
-              userOptions.find(
-                (u) => String(u.id) === String(tempFilters.users),
-              ) || null
-            }
-            onChange={(_, value) =>
-              setTempFilters({
-                ...tempFilters,
-                users: value ? value.id : "",
-              })
-            }
-            renderInput={(params) => (
-              <TextField {...params} label="User" fullWidth />
-            )}
-          />
-          <Autocomplete
-            options={statusOptions}
-            getOptionLabel={(option) => option.name || ""}
-            getOptionKey={(option) => String(option.id)}
-            isOptionEqualToValue={(option, value) =>
-              String(option.id) === String(value?.id)
-            }
-            value={
-              statusOptions.find(
-                (s) => String(s.id) === String(tempFilters.status),
-              ) || null
-            }
-            onChange={(_, value) =>
-              setTempFilters({
-                ...tempFilters,
-                status: value ? value.id : "",
-              })
-            }
-            renderInput={(params) => (
-              <TextField {...params} label="Status" fullWidth />
-            )}
-          />
-          <Autocomplete
-            options={typeOptions}
-            getOptionLabel={(option) => option.name || ""}
-            getOptionKey={(option) => String(option.id)}
-            isOptionEqualToValue={(option, value) =>
-              String(option.id) === String(value?.id)
-            }
-            value={
-              typeOptions.find(
-                (t) => String(t.id) === String(tempFilters.types),
-              ) || null
-            }
-            onChange={(_, value) =>
-              setTempFilters({
-                ...tempFilters,
-                types: value ? value.id : "",
-              })
-            }
-            renderInput={(params) => (
-              <TextField {...params} label="Types" fullWidth />
-            )}
-          />
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button
-          color="inherit"
-          onClick={() => {
-            setTempFilters(defaultFilters);
-            setFilters(defaultFilters);
-            setFilterOpen(false);
-          }}
-        >
-          Clear
-        </Button>
-        <Button
-          variant="contained"
-          onClick={() => {
-            setFilters(tempFilters);
-            setFilterOpen(false);
-          }}
-        >
-          Apply
-        </Button>
-      </DialogActions>
-    </Dialog>
+            <IconX size={24} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <Autocomplete
+              options={userOptions}
+              getOptionLabel={(option) => option.name || ""}
+              getOptionKey={(option) => String(option.id)}
+              isOptionEqualToValue={(option, value) =>
+                String(option.id) === String(value?.id)
+              }
+              value={
+                userOptions.find(
+                  (u) => String(u.id) === String(tempFilters.users),
+                ) || null
+              }
+              onChange={(_, value) =>
+                setTempFilters({
+                  ...tempFilters,
+                  users: value ? value.id : "",
+                })
+              }
+              renderInput={(params) => (
+                <TextField {...params} label="User" fullWidth />
+              )}
+            />
+            <Autocomplete
+              options={statusOptions}
+              getOptionLabel={(option) => option.name || ""}
+              getOptionKey={(option) => String(option.id)}
+              isOptionEqualToValue={(option, value) =>
+                String(option.id) === String(value?.id)
+              }
+              value={
+                statusOptions.find(
+                  (s) => String(s.id) === String(tempFilters.status),
+                ) || null
+              }
+              onChange={(_, value) =>
+                setTempFilters({
+                  ...tempFilters,
+                  status: value ? value.id : "",
+                })
+              }
+              renderInput={(params) => (
+                <TextField {...params} label="Status" fullWidth />
+              )}
+            />
+            <Autocomplete
+              options={typeOptions}
+              getOptionLabel={(option) => option.name || ""}
+              getOptionKey={(option) => String(option.id)}
+              isOptionEqualToValue={(option, value) =>
+                String(option.id) === String(value?.id)
+              }
+              value={
+                typeOptions.find(
+                  (t) => String(t.id) === String(tempFilters.types),
+                ) || null
+              }
+              onChange={(_, value) =>
+                setTempFilters({
+                  ...tempFilters,
+                  types: value ? value.id : "",
+                })
+              }
+              renderInput={(params) => (
+                <TextField {...params} label="Types" fullWidth />
+              )}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="inherit"
+            onClick={() => {
+              setTempFilters(defaultFilters);
+              setFilters(defaultFilters);
+              setFilterOpen(false);
+            }}
+          >
+            Clear
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setFilters(tempFilters);
+              setFilterOpen(false);
+            }}
+          >
+            Apply
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
