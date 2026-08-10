@@ -74,6 +74,8 @@ import { TradesTab } from "./address-sidebar-tab/trades-tab";
 import { IconX } from "@tabler/icons-react";
 import { IconFilter } from "@tabler/icons-react";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+import { format } from "date-fns";
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
 import {
   Circle,
@@ -195,6 +197,8 @@ const AddressesList = ({
 
   const [typedAddress, setTypedAddress] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [checkinStartDate, setCheckinStartDate] = useState<Date | null>(null);
+  const [checkinEndDate, setCheckinEndDate] = useState<Date | null>(null);
   const openMenu = Boolean(anchorEl);
   const openMenu1 = Boolean(anchorEl1);
   const [filters, setFilters] = useState({
@@ -321,6 +325,10 @@ const AddressesList = ({
       if (searchTerm) {
         url += `&search=${searchTerm}`;
       }
+      if (checkinStartDate && checkinEndDate) {
+        url += `&checkin_start_date=${format(checkinStartDate, "dd/MM/yyyy")}`;
+        url += `&checkin_end_date=${format(checkinEndDate, "dd/MM/yyyy")}`;
+      }
       const res = await api.get(url);
       if (res.data) {
         const responseData =
@@ -374,7 +382,15 @@ const AddressesList = ({
     if (projectId) {
       fetchAddresses();
     }
-  }, [projectId, processedIds, shouldRefresh, parentAddressId, searchTerm]);
+  }, [
+    projectId,
+    processedIds,
+    shouldRefresh,
+    parentAddressId,
+    searchTerm,
+    checkinStartDate,
+    checkinEndDate,
+  ]);
 
   useEffect(() => {
     if (sidebarData !== null) {
@@ -1318,6 +1334,29 @@ const AddressesList = ({
             <Typography variant="h6" fontWeight={600}>
               Cases
             </Typography>
+            <DateRangePickerBox
+              from={checkinStartDate}
+              to={checkinEndDate}
+              onChange={({ from, to }) => {
+                setCheckinStartDate(from);
+                setCheckinEndDate(to);
+                setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
+              }}
+              buttonMinWidth={230}
+            />
+            {(checkinStartDate || checkinEndDate) && (
+              <IconButton
+                size="small"
+                aria-label="Clear date range"
+                onClick={() => {
+                  setCheckinStartDate(null);
+                  setCheckinEndDate(null);
+                  setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
+                }}
+              >
+                <IconX size={16} />
+              </IconButton>
+            )}
             <TextField
               id="search"
               type="text"
