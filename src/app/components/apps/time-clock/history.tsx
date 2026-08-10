@@ -32,10 +32,14 @@ import {
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
+import { format } from "date-fns";
 
 interface BookkeeperProps {
   open: boolean;
   onClose: () => void;
+  userId?: number | null;
+  startDate?: Date | null;
+  endDate?: Date | null;
 }
 
 const ACTIVITY_FILTER_OPTIONS = [
@@ -209,7 +213,13 @@ const BillingDiffView = ({ diffs }: { diffs: any[] }) => {
   );
 };
 
-const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
+const BookkeeperHistory: React.FC<BookkeeperProps> = ({
+  open,
+  onClose,
+  userId,
+  startDate,
+  endDate,
+}) => {
   const [history, setHistory] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -243,7 +253,15 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [open, user?.company_id, selectedTypes, activitySearch]);
+  }, [
+    open,
+    user?.company_id,
+    selectedTypes,
+    activitySearch,
+    userId,
+    startDate,
+    endDate,
+  ]);
 
   const fetchHistories = async (
     currentPage: number,
@@ -260,6 +278,13 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
           limit,
           ...(typeFilters.length > 0 ? { types: typeFilters.join(",") } : {}),
           ...(searchValue.trim() ? { search: searchValue.trim() } : {}),
+          ...(userId ? { user_id: userId } : {}),
+          ...(startDate && endDate
+            ? {
+                start_date: format(startDate, "dd/MM/yyyy"),
+                end_date: format(endDate, "dd/MM/yyyy"),
+              }
+            : {}),
         },
       });
 
@@ -599,7 +624,7 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
             pb: 1,
           }}
         >
-          <Typography variant="h6" fontWeight={700}>
+          <Typography variant="h6" fontWeight={700} component="span">
             Filter Activities
           </Typography>
           <IconButton onClick={handleFilterClose} size="small">

@@ -34,6 +34,7 @@ import AddAdjustment from './time-clock-details/adjustments/add-adjustment';
 import AddPricework from './time-clock-details/pricework/add-pricework';
 import PriceworkDetails from './time-clock-details/pricework/pricework-details';
 import AdjustmentActivitySidebar from './time-clock-details/adjustments/activity-sidebar';
+import BookkeeperHistory from './history';
 import {formatHour} from '@/app/components/apps/time-clock/utils/recordHelpers';
 import {Stack} from '@mui/system';
 
@@ -207,6 +208,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [selectedPricework, setSelectedPricework] = useState<any>(null);
     const [adjustmentActivitySidebar, setAdjustmentActivitySidebar] = useState<boolean>(false);
     const [selectedAdjustmentActivities, setSelectedAdjustmentActivities] = useState<AdjustmentActivity[]>([]);
+    const [bookkeeperActivityOpen, setBookkeeperActivityOpen] = useState<boolean>(false);
     const [expensesSidebar, setExpensesSidebar] = useState<boolean>(false);
     const [selectedExpenseId, setSelectedExpenseId] = useState<number>(0);
     const router = useRouter();
@@ -2002,6 +2004,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 onAddExpense={handleAddExpense}
                 onAddAdjustment={handleAddAdjustment}
                 onAddPricework={handleAddPricework}
+                onActivity={() => setBookkeeperActivityOpen(true)}
                 payrollCycle={payrollCycle}
                 isRemovedUser={Boolean(isRemovedUser || isArchivedUser)}
             />
@@ -2385,6 +2388,14 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     actionType={confirmDialog.actionType}
                 />
             )}
+
+            <BookkeeperHistory
+                open={bookkeeperActivityOpen}
+                onClose={() => setBookkeeperActivityOpen(false)}
+                userId={user_id ? Number(user_id) : null}
+                startDate={startDate}
+                endDate={endDate}
+            />
         </Box>
     );
 };
