@@ -35,6 +35,7 @@ const TeamPricing = () => {
   const [openDrawer, setOpenDrawer] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [teamPercentage, setTeamPercentage] = useState("");
+  const [teamSearch, setTeamSearch] = useState("");
   const [search, setSearch] = useState("");
   const [savingTeamId, setSavingTeamId] = useState<number | null>(null);
   const [cachedAllProducts, setCachedAllProducts] = useState<any[] | null>(
@@ -43,6 +44,16 @@ const TeamPricing = () => {
   const [page, setPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pricingMap, setPricingMap] = useState<Map<number, any>>(new Map());
+
+  const filteredTeams = useMemo(() => {
+    const s = teamSearch.toLowerCase().trim();
+    if (!s) return data;
+    return data.filter((team) =>
+      String(team.name || "")
+        .toLowerCase()
+        .includes(s),
+    );
+  }, [data, teamSearch]);
 
   const session = useSession();
   const user = session.data?.user as User & {
@@ -328,9 +339,33 @@ const TeamPricing = () => {
         p: 2,
       }}
     >
-      <Typography variant="h4" fontWeight={700} mb={3}>
-        Team Pricing
-      </Typography>
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={3}
+        flexWrap="wrap"
+        gap={2}
+      >
+        <Typography variant="h4" fontWeight={700}>
+          Team Pricing
+        </Typography>
+
+        <TextField
+          size="small"
+          placeholder="Search teams..."
+          value={teamSearch}
+          onChange={(e) => setTeamSearch(e.target.value)}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconSearch size={16} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ width: 250 }}
+        />
+      </Box>
 
       <Box
         sx={{
@@ -343,7 +378,7 @@ const TeamPricing = () => {
           gap: 2,
         }}
       >
-        {data.map((item: any) => {
+        {filteredTeams.map((item: any) => {
           const highlight = shouldHighlight(item);
 
           return (
@@ -463,9 +498,9 @@ const TeamPricing = () => {
         })}
       </Box>
 
-      {!loadingTeams && data.length === 0 && (
+      {!loadingTeams && filteredTeams.length === 0 && (
         <Typography textAlign="center" mt={5} color="text.secondary">
-          No teams found.
+          {teamSearch.trim() ? "No teams match your search." : "No teams found."}
         </Typography>
       )}
 
@@ -573,6 +608,7 @@ const TeamPricing = () => {
 
                         <Box>
                           <Typography
+                            component="div"
                             fontWeight={700}
                             sx={{
                               display: "-webkit-box",

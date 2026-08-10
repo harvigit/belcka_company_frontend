@@ -132,6 +132,8 @@ export interface UserList {
     account_id: string;
     supervisor_team_id: number | null;
     supervisor_team_name: string | null;
+    name_on_account: string;
+    name_on_utr: string;
 }
 
 export interface TradeList {
@@ -1030,13 +1032,46 @@ const TablePagination = () => {
                 const user = info.row.original;
 
                 return (
-                    <Typography className="f-14" color="textPrimary">
+                    <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
                         {user.extension ?? '0'}
                         {info.getValue() ?? '-'}
                     </Typography>
                 );
             },
         }),
+
+        columnHelper.accessor((row) => row.name_on_utr, {
+            id: 'nameOnUtr',
+            header: () => (
+                <Typography variant="subtitle2" noWrap>
+                    Name on UTR
+                </Typography>
+            ),
+            cell: (info) => {
+                return (
+                    <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
+                        {info.getValue() ?? '-'}
+                    </Typography>
+                );
+            },
+        }),
+
+        columnHelper.accessor((row) => row.name_on_account, {
+            id: 'nameOnAccount',
+            header: () => (
+                <Typography variant="subtitle2" noWrap>
+                    Name on Account
+                </Typography>
+            ),
+            cell: (info) => {
+                return (
+                    <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
+                        {info.getValue() ?? '-'}
+                    </Typography>
+                );
+            },
+        }),
+
 
         columnHelper.accessor((row) => row.permissions, {
             id: 'permissions',
@@ -1444,7 +1479,7 @@ const TablePagination = () => {
     useEffect(() => {
         const eligibleColumns = table
             .getAllLeafColumns()
-            .filter((col) => col.id !== 'conflicts');
+            .filter((col) => col.id !== 'conflicts' && col.id !== 'select');
 
         const allSelected = eligibleColumns.every((col) => col.getIsVisible());
         const visibleCount = eligibleColumns.filter((col) => col.getIsVisible()).length;
@@ -1457,7 +1492,7 @@ const TablePagination = () => {
         const checked = e.target.checked;
         const newVisibility: Record<string, boolean> = {};
         table.getAllLeafColumns().forEach((col) => {
-            if (col.id !== 'conflicts') {
+            if (col.id !== 'conflicts' && col.id !== 'select') {
                 newVisibility[col.id] = checked;
             }
         });
@@ -1466,7 +1501,7 @@ const TablePagination = () => {
 
     const visibleColumns = table
         .getAllLeafColumns()
-        .filter((col) => col.id !== 'conflicts' && col.getIsVisible());
+        .filter((col) => col.id !== 'conflicts' && col.id !== 'select' && col.getIsVisible());
     const columnData = visibleColumns.length ? visibleColumns : columns;
     const simpleColumns = columnData.map((column: any) => ({
         name: column.id ?? 'Unnamed Column',

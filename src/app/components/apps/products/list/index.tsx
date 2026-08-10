@@ -1289,6 +1289,7 @@ const ProductList = () => {
               arrow
             >
               <Typography
+                component="div"
                 className="f-14"
                 variant="body1"
                 sx={{
@@ -1305,7 +1306,7 @@ const ProductList = () => {
                 }}
               >
                 {item.short_name ? item.short_name : "-"}
-                <Typography color="textSecondary" className="f-14">
+                <Typography color="textSecondary" className="f-14" component="span" display="block">
                   {item.name}
                 </Typography>
               </Typography>
