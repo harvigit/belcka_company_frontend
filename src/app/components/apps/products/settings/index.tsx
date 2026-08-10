@@ -14,7 +14,7 @@ import TeamPricing from "@/app/components/apps/team-pricing/index";
 import StoreSettings from "@/app/components/apps/settings/store-settings";
 import UnitList from "../../units/list";
 import StoreLimit from "./store-limit";
-import ProductSetting from "../../timesheet/setting/product-settings";
+import ProductSetting from "../../time-clock/setting/product-settings";
 
 const menuItems = [
   { icon: <IconCoin size={18} />, label: "Team Pricing" },
