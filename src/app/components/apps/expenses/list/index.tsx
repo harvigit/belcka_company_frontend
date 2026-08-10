@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
     Autocomplete,
     Avatar,
@@ -188,6 +188,7 @@ const ExpenseList = () => {
     const [sendDate, setSendDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const loadedFilterCompanyIdRef = useRef<number | null>(null);
     const openExpenseDetail = (expenseId: number) => {
         setSelectedExpenseId(expenseId);
         setDetailOpen(true);
@@ -211,6 +212,9 @@ const ExpenseList = () => {
     useEffect(() => {
         const fetchFilterOptions = async () => {
             if (!user?.company_id) return;
+            if (loadedFilterCompanyIdRef.current === Number(user.company_id)) return;
+
+            loadedFilterCompanyIdRef.current = Number(user.company_id);
             try {
                 const res = await api.get('expense/list-filters');
                 const info = res.data?.info || {};
@@ -221,6 +225,7 @@ const ExpenseList = () => {
                 setTeams(info.teams || []);
                 setTrades(info.trades || []);
             } catch (error) {
+                loadedFilterCompanyIdRef.current = null;
                 console.error('Failed to load expense filter options', error);
             }
         };

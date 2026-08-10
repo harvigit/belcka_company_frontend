@@ -1252,7 +1252,24 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             }
                                                         }}
                                                     >
-                                                        {`${currency}${log.total_expense_amount || 0}`}
+                                                        <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.75}>
+                                                            <span>{`${currency}${log.total_expense_amount || 0}`}</span>
+                                                            {log.bookkeeper_notification?.has_green_dot && (
+                                                                <Tooltip title={log.bookkeeper_notification?.tooltip || ''} arrow>
+                                                                    <Box
+                                                                        component="span"
+                                                                        sx={{
+                                                                            width: 8,
+                                                                            height: 8,
+                                                                            borderRadius: '50%',
+                                                                            backgroundColor: '#2fb344',
+                                                                            display: 'inline-block',
+                                                                            flexShrink: 0,
+                                                                        }}
+                                                                    />
+                                                                </Tooltip>
+                                                            )}
+                                                        </Stack>
                                                     </TableCell>
                                                 )}
 

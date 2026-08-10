@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import api from '@/utils/axios';
 import {ConflictDetail, Shift, Project, TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
-import { TimeClock } from '@/app/components/apps/time-clock/time-clock';
+import { Index } from '@/app/components/apps/time-clock';
 
 export const useTimeClockData = (
     user_id: any,
@@ -10,7 +10,7 @@ export const useTimeClockData = (
     isRemovedUser?: boolean,
     isArchivedUser?: boolean,
 ) => {
-    const [data, setData] = useState<TimeClock[]>([]);
+    const [data, setData] = useState<Index[]>([]);
     const [headerDetail, setHeaderDetail] = useState<TimeClockDetailResponse | null>(null);
     const [pendingRequestCount, setPendingRequestCount] = useState<number>(0);
     const [totalConflicts, setTotalConflicts] = useState<number>(0);

@@ -5,7 +5,7 @@ import { Box } from '@mui/material';
 import 'react-day-picker/dist/style.css';
 import '@/app/global.css';
 
-import TimeClock from '@/app/components/apps/time-clock/time-clock';
+import TimeClock from '@/app/components/apps/time-clock';
 import PermissionGuard from '@/app/auth/PermissionGuard';
 import { useSearchParams, useRouter } from 'next/navigation';
 

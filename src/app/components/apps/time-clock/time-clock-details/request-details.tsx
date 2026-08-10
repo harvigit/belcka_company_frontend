@@ -27,7 +27,7 @@ import {
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { AxiosResponse } from 'axios';
-import { TimeClock } from '../time-clock';
+import { Index } from '../index';
 import api from '@/utils/axios';
 import { DateTime } from 'luxon';
 import { useSession } from 'next-auth/react';
@@ -79,14 +79,14 @@ interface RequestListResponse {
 
 interface RequestDetailsProps {
     open: boolean;
-    timeClock: TimeClock | null;
+    timeClock: Index | null;
     user_id: any;
     currency: string;
-    allUsers: TimeClock[];
+    allUsers: Index[];
     startDate?: Date | null;
     endDate?: Date | null;
     onClose: () => void;
-    onUserChange?: (user: TimeClock) => void;
+    onUserChange?: (user: Index) => void;
 }
 
 interface AlertState {

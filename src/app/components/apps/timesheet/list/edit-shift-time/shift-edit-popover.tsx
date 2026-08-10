@@ -75,6 +75,13 @@ const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({
     const handleSubmitShiftUpdate = async (): Promise<void> => {
         if (isSubmitting || !selectedWorklog?.id || !selectedWorklog?.user_id) return;
 
+        const trimmedNote = note.trim();
+
+        if (!trimmedNote) {
+            toast.error('Note is required to create request.');
+            return;
+        }
+
         if (submitBtnRef.current) submitBtnRef.current.disabled = true;
         setIsSubmitting(true);
 
@@ -83,13 +90,13 @@ const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({
             user_id: selectedWorklog.user_id,
             start_time: startTime,
             end_time: endTime,
-            note: note,
+            note: trimmedNote,
         };
 
         setInitialData({
             startTime,
             endTime,
-            note,
+            note: trimmedNote,
         });
 
         try {
@@ -125,6 +132,7 @@ const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({
     }, [endTime, selectedWorklog?.date_added]);
 
     const hasChanges = startTime !== initialData?.startTime || endTime !== initialData?.endTime;
+    const isNoteMissing = hasChanges && note.trim().length === 0;
 
     return (
         <Popover
@@ -342,9 +350,14 @@ const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({
                     </Box>
 
                     <TextField
-                        label="Note (Optional)"
+                        label="Note"
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
+                        required
+                        multiline
+                        minRows={2}
+                        error={isNoteMissing}
+                        helperText={isNoteMissing ? 'Note is required to create request.' : ''}
                         fullWidth
                         sx={{ mb: 2 }}
                     />
@@ -355,7 +368,7 @@ const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({
                             variant="contained"
                             color="primary"
                             onClick={handleSubmitShiftUpdate}
-                            disabled={isSubmitting || !hasChanges || !startTime || !endTime}
+                            disabled={isSubmitting || !hasChanges || !startTime || !endTime || isNoteMissing}
                             sx={{
                                 textTransform: 'none',
                                 borderRadius: '10px',

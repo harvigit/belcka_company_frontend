@@ -1,4 +1,4 @@
-import {TimeClock} from '../time-clock';
+import {Index} from '../index';
 
 export type DailyBreakdown = {
     total_break_hours?: null | string;
@@ -77,20 +77,20 @@ export type AdjustmentActivity = {
 
 export interface TimeClockDetailsProps {
     open: boolean;
-    timeClock: TimeClock | null;
+    timeClock: Index | null;
     user_id: any;
     companyId: any;
     currency: string;
-    allUsers: TimeClock[];
+    allUsers: Index[];
     onClose: () => void;
-    onUserChange?: (user: TimeClock) => void;
+    onUserChange?: (user: Index) => void;
 }
 
 export type TimeClockDetailResponse = {
     conflicts: any[];
     company_id: number;
     IsSuccess: boolean;
-    info: TimeClock[];
+    info: Index[];
     type_of_works: any[];
     shifts: any[];
     projects: any[];

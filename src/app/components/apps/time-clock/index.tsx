@@ -103,7 +103,7 @@ import TablePaginationFooter from '../../common/TablePaginationFooter';
 import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
 import PenaltyHistory from './penalty';
 
-const columnHelper = createColumnHelper<TimeClock>();
+const columnHelper = createColumnHelper<Index>();
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
@@ -242,7 +242,7 @@ const getRangeForCycle = (cycle: string): { from: Date; to: Date } => {
     };
 };
 
-export type TimeClock = {
+export type Index = {
     company_id: string;
     week_range: any;
     user_id: any;
@@ -288,6 +288,10 @@ export type TimeClock = {
     has_expense_request?: boolean;
     has_worklog_request?: boolean;
     has_penalty_appeal_request?: boolean;
+    bookkeeper_notification?: {
+        has_green_dot?: boolean;
+        tooltip?: string | null;
+    };
 
     user_status_color: string;
 };
@@ -297,7 +301,7 @@ type TimeClockResponse = {
     conflicts: any[];
     company_id: number;
     IsSuccess: boolean;
-    info: TimeClock[];
+    info: Index[];
     currency: string;
     data?: {
         totalItems: number;
@@ -405,7 +409,7 @@ const TimeClock = ({queryParams}: Props) => {
     const [cycleReady, setCycleReady] = useState<boolean>(false);
 
     // State management
-    const [data, setData] = useState<TimeClock[]>([]);
+    const [data, setData] = useState<Index[]>([]);
     const [currency, setCurrency] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
@@ -419,7 +423,7 @@ const TimeClock = ({queryParams}: Props) => {
         }
     };
 
-    const [selectedTimeClock, setSelectedTimeClock] = useState<TimeClock | null>(null);
+    const [selectedTimeClock, setSelectedTimeClock] = useState<Index | null>(null);
     const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
     const [hasDataChanged, setHasDataChanged] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -492,7 +496,7 @@ const TimeClock = ({queryParams}: Props) => {
 
 
     const queryParamsRef = useRef(queryParams);
-    const dataRequestsRef = useRef<Map<string, Promise<TimeClock[]>>>(new Map());
+    const dataRequestsRef = useRef<Map<string, Promise<Index[]>>>(new Map());
     const conflictRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
     const hasInitializedFilterResetRef = useRef(false);
     const filterPopoverOpen = Boolean(filterAnchorEl);
@@ -607,7 +611,7 @@ const TimeClock = ({queryParams}: Props) => {
         conflictCount: number;
     } | null>(null);
 
-    const fetchData = async (start: Date, end: Date): Promise<TimeClock[]> => {
+    const fetchData = async (start: Date, end: Date): Promise<Index[]> => {
         const params: Record<string, string> = {
             start_date: format(start, 'dd/MM/yyyy'),
             end_date: format(end, 'dd/MM/yyyy'),
@@ -653,7 +657,7 @@ const TimeClock = ({queryParams}: Props) => {
         const pendingRequest = dataRequestsRef.current.get(requestKey);
         if (pendingRequest) return pendingRequest;
 
-        const request = (async (): Promise<TimeClock[]> => {
+        const request = (async (): Promise<Index[]> => {
             try {
                 setFetchTimesheet(true);
                 const response: AxiosResponse<TimeClockResponse> = await api.get('/time-clock/get', {params});
@@ -1271,12 +1275,12 @@ const TimeClock = ({queryParams}: Props) => {
         );
     };
 
-    const handleRowClick = (timeClock: TimeClock) => {
+    const handleRowClick = (timeClock: Index) => {
         setSelectedTimeClock(timeClock);
         setDetailsOpen(true);
     };
 
-    const handleUserChange = (newUser: TimeClock) => {
+    const handleUserChange = (newUser: Index) => {
         const updatedUser = {
             ...newUser,
             start_date: selectedTimeClock?.start_date || startDate?.toISOString() || '',
@@ -1316,7 +1320,7 @@ const TimeClock = ({queryParams}: Props) => {
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
 
-    const hasPendingRequest = (row: TimeClock): boolean =>
+    const hasPendingRequest = (row: Index): boolean =>
         row.has_leave_request === true ||
         row.has_expense_request === true ||
         row.has_worklog_request === true ||
@@ -1626,18 +1630,35 @@ const TimeClock = ({queryParams}: Props) => {
             cell: (info: any) => {
                 const row = info.row.original;
                 const value = info.getValue();
-                const displayValue =
-                    value === 0 ? '0' : value ? `${currency}${value}` : '-';
+                const displayValue = value === 0 ? '0' : value ? `${currency}${value}` : '-';
+                const hasBookkeeperDot = Boolean(row.bookkeeper_notification?.has_green_dot);
 
                 return (
-                    <Typography
-                        variant="h6"
-                        sx={{
-                            color: hasPendingRequest(row) ? '#f97316' : 'inherit',
-                        }}
-                    >
-                        {displayValue}
-                    </Typography>
+                    <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.75}>
+                        <Typography
+                            variant="h6"
+                            sx={{
+                                color: hasPendingRequest(row) ? '#f97316' : 'inherit',
+                            }}
+                        >
+                            {displayValue}
+                        </Typography>
+                        {hasBookkeeperDot && (
+                            <Tooltip title={row.bookkeeper_notification?.tooltip || ''} arrow>
+                                <Box
+                                    component="span"
+                                    sx={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        backgroundColor: '#2fb344',
+                                        display: 'inline-block',
+                                        flexShrink: 0,
+                                    }}
+                                />
+                            </Tooltip>
+                        )}
+                    </Stack>
                 );
             },
         }),
@@ -1858,7 +1879,7 @@ const TimeClock = ({queryParams}: Props) => {
             header: 'Status',
             cell: (info) => {
                 const statusText = info.getValue() as string;
-                const statusColorFromApi = (info.row.original as TimeClock).status_color;
+                const statusColorFromApi = (info.row.original as Index).status_color;
 
                 if (!statusText || !statusColorFromApi) {
                     return (

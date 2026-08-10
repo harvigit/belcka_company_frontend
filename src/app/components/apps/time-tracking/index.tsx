@@ -25,6 +25,7 @@ import {
     FormControl,
     InputLabel,
     MenuItem,
+    TextField,
     Card,
     CardContent,
     IconButton,
@@ -219,6 +220,13 @@ type ToastState = {
     open: boolean;
     message: string;
     severity: 'success' | 'error';
+};
+
+type PendingWorklogEdit = {
+    worklogId: string;
+    originalLog: any;
+    startTime: string;
+    endTime: string;
 };
 
 interface LocationPoint {
@@ -1141,6 +1149,9 @@ const TimeTracking: React.FC<Props> = () => {
     const [penaltySidebar, setPenaltySidebar] = useState(false);
     const [selectedPricework, setSelectedPricework] = useState<any>(null);
     const [selectedPenaltyWorklogId, setSelectedPenaltyWorklogId] = useState<number | null>(null);
+    const [pendingWorklogEdit, setPendingWorklogEdit] = useState<PendingWorklogEdit | null>(null);
+    const [worklogEditNote, setWorklogEditNote] = useState('');
+    const [worklogEditNoteError, setWorklogEditNoteError] = useState(false);
 
     const latestTodayClockRequestRef = useRef(0);
     const mapRef = useRef<google.maps.Map | null>(null);
@@ -1680,7 +1691,7 @@ const TimeTracking: React.FC<Props> = () => {
     });
 
     // ── Handlers ──
-    const saveFieldChanges = useCallback(async (worklogId: string, originalLog: any) => {
+    const saveFieldChanges = useCallback((worklogId: string, originalLog: any) => {
         const editedData = editingWorklogs[worklogId];
         if (!editedData || isRecordLocked(originalLog)) {
             cancelEditingField(worklogId);
@@ -1695,17 +1706,53 @@ const TimeTracking: React.FC<Props> = () => {
             return;
         }
 
+        setPendingWorklogEdit({
+            worklogId,
+            originalLog,
+            startTime: newStart,
+            endTime: newEnd,
+        });
+        setWorklogEditNote('');
+        setWorklogEditNoteError(false);
+    }, [editingWorklogs, isRecordLocked, cancelEditingField, validateAndFormatTime, sanitizeDateTime]);
+
+    const closeWorklogEditNoteDialog = useCallback(() => {
+        if (pendingWorklogEdit) {
+            cancelEditingField(pendingWorklogEdit.worklogId);
+        }
+        setPendingWorklogEdit(null);
+        setWorklogEditNote('');
+        setWorklogEditNoteError(false);
+    }, [pendingWorklogEdit, cancelEditingField]);
+
+    const submitWorklogEditRequest = useCallback(async () => {
+        if (!pendingWorklogEdit) return;
+
+        const note = worklogEditNote.trim();
+
+        if (!note) {
+            setWorklogEditNoteError(true);
+            return;
+        }
+
+        const {worklogId, originalLog, startTime, endTime} = pendingWorklogEdit;
+
         setSavingWorklogs((p) => new Set(p).add(worklogId));
         try {
             await api.post('/time-clock/edit-worklog', {
                 user_worklog_id: originalLog.worklog_id,
                 date: originalLog.date_added,
-                start_time: newStart,
-                end_time: newEnd,
+                start_time: startTime,
+                end_time: endTime,
+                note,
             });
             await fetchTimeClockData(startDate, endDate);
-        } catch {
-            showToast('Failed to save changes', 'error');
+            showToast('Worklog change request created successfully!', 'success');
+            setPendingWorklogEdit(null);
+            setWorklogEditNote('');
+            setWorklogEditNoteError(false);
+        } catch (error: any) {
+            showToast(error?.response?.data?.message || 'Failed to save changes', 'error');
         } finally {
             setSavingWorklogs((p) => {
                 const s = new Set(p);
@@ -1714,7 +1761,7 @@ const TimeTracking: React.FC<Props> = () => {
             });
             cancelEditingField(worklogId);
         }
-    }, [editingWorklogs, isRecordLocked, cancelEditingField, validateAndFormatTime, sanitizeDateTime, setSavingWorklogs, fetchTimeClockData, startDate, endDate, showToast]);
+    }, [pendingWorklogEdit, worklogEditNote, setSavingWorklogs, fetchTimeClockData, startDate, endDate, showToast, cancelEditingField]);
 
     const handleDeleteRecord = useCallback(async (id: string, type: string) => {
         const endpoints: Record<string, string> = {
@@ -2305,6 +2352,54 @@ const TimeTracking: React.FC<Props> = () => {
                     lastKnownLocation={lastKnownLocation}
                     setLastKnownLocation={setLastKnownLocation}
                 />
+
+                <Dialog
+                    open={Boolean(pendingWorklogEdit)}
+                    onClose={closeWorklogEditNoteDialog}
+                    fullWidth
+                    maxWidth="xs"
+                >
+                    <DialogTitle>Request time change</DialogTitle>
+                    <DialogContent>
+                        <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
+                            Add a note before creating this request.
+                        </Typography>
+                        <TextField
+                            label="Note"
+                            value={worklogEditNote}
+                            onChange={(event) => {
+                                setWorklogEditNote(event.target.value);
+                                if (event.target.value.trim()) setWorklogEditNoteError(false);
+                            }}
+                            required
+                            multiline
+                            minRows={3}
+                            fullWidth
+                            autoFocus
+                            error={worklogEditNoteError}
+                            helperText={worklogEditNoteError ? 'Note is required to create request.' : ''}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={closeWorklogEditNoteDialog}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={submitWorklogEditRequest}
+                            disabled={
+                                !worklogEditNote.trim() ||
+                                (pendingWorklogEdit ? savingWorklogs.has(pendingWorklogEdit.worklogId) : false)
+                            }
+                        >
+                            {pendingWorklogEdit && savingWorklogs.has(pendingWorklogEdit.worklogId) ? (
+                                <CircularProgress size={20} sx={{color: 'white'}} />
+                            ) : (
+                                'Submit'
+                            )}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
 
                 <Drawer anchor="right" open={addExpenseSidebar} onClose={closeAddExpenseSidebar}
                         PaperProps={{
