@@ -48,7 +48,55 @@ interface ActivityItem {
     company: { id: number; name: string; image: string | null } | null;
     added_by: Actor | null;
     edited_by: Actor | null;
+    deleted_by?: Actor | null;
 }
+
+type ActorRole =
+    | 'added by'
+    | 'edited by'
+    | 'requested by'
+    | 'approved by'
+    | 'rejected by';
+
+const getActivityActor = (
+    item: ActivityItem,
+): { actor: Actor | null; role: ActorRole } => {
+    const title = (item.title || '').toLowerCase();
+    const isApproved = /approved by|has been approved/.test(title);
+    const isRejected = /rejected by|has been rejected/.test(title);
+    const isRequested = /^requested\b|requested to\b/.test(title);
+
+    if (isRejected) {
+        return {
+            actor: item.deleted_by || item.edited_by || item.added_by,
+            role: 'rejected by',
+        };
+    }
+
+    if (isApproved) {
+        return {
+            actor: item.added_by || item.edited_by,
+            role: 'approved by',
+        };
+    }
+
+    if (isRequested) {
+        return {
+            actor: item.edited_by || item.added_by,
+            role: 'requested by',
+        };
+    }
+
+    if (item.edited_by) {
+        return { actor: item.edited_by, role: 'edited by' };
+    }
+
+    if (item.added_by) {
+        return { actor: item.added_by, role: 'added by' };
+    }
+
+    return { actor: null, role: 'added by' };
+};
 
 interface ActivityGroup {
     label: string;
@@ -167,8 +215,11 @@ const getInitials = (name: string): string =>
 
 // ─── Actor Footer ─────────────────────────────────────────────────────────────
 
-const ActorRow: React.FC<{ actor: Actor; role: 'added by' | 'edited by' }> = ({ actor, role }) => {
+const ActorRow: React.FC<{ actor: Actor; role: ActorRole }> = ({ actor, role }) => {
     const isEdit = role === 'edited by';
+    const isRequested = role === 'requested by';
+    const isApproved = role === 'approved by';
+    const isRejected = role === 'rejected by';
     return (
         <Box
             display="flex"
@@ -184,8 +235,20 @@ const ActorRow: React.FC<{ actor: Actor; role: 'added by' | 'edited by' }> = ({ 
                     height: 20,
                     fontSize: 9,
                     fontWeight: 600,
-                    bgcolor: isEdit ? '#FEF9C3' : '#DBEAFE',
-                    color: isEdit ? '#92400E' : '#1E40AF',
+                    bgcolor: isRejected
+                        ? '#FEE2E2'
+                        : isApproved
+                          ? '#DCFCE7'
+                          : isRequested || isEdit
+                            ? '#FEF9C3'
+                            : '#DBEAFE',
+                    color: isRejected
+                        ? '#991B1B'
+                        : isApproved
+                          ? '#166534'
+                          : isRequested || isEdit
+                            ? '#92400E'
+                            : '#1E40AF',
                 }}
             >
                 {getInitials(actor.name)}
@@ -257,8 +320,7 @@ const getDiffs = (oldData: any, newData: any, moduleName: string) => {
 const ActivityCard: React.FC<{ item: ActivityItem; isLast: boolean }> = ({ item, isLast }) => {
     const mc = MODULE_CONFIG[item.module] ?? FALLBACK_MODULE;
     const ModuleIcon = mc.icon;
-    const actor = item.edited_by || item.added_by;
-    const actorRole = item.edited_by ? 'edited by' : 'added by';
+    const { actor, role: actorRole } = getActivityActor(item);
     const diffs = getDiffs(item.old_data, item.new_data, item.module);
 
     return (
@@ -359,7 +421,14 @@ const ActivityCard: React.FC<{ item: ActivityItem; isLast: boolean }> = ({ item,
                         {diffs.length > 0 && (
                             <Box mt={0.5}>
                                 {diffs.map((diff, i) => (
-                                    <Typography key={i} fontSize={11} color="text.secondary" mt={0.5} sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                                    <Typography
+                                        key={i}
+                                        component="div"
+                                        fontSize={11}
+                                        color="text.secondary"
+                                        mt={0.5}
+                                        sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}
+                                    >
                                         <Typography component="span" fontSize={11} fontWeight={600} sx={{ textTransform: 'uppercase' }}>
                                             {diff.key.replace(/_/g, ' ')}
                                         </Typography>
@@ -395,7 +464,7 @@ const ActivityCard: React.FC<{ item: ActivityItem; isLast: boolean }> = ({ item,
                 </Box>
 
                 {/* Actor */}
-                {actor && <ActorRow actor={actor} role={actorRole as any} />}
+                {actor && <ActorRow actor={actor} role={actorRole} />}
             </Box>
         </Box>
     );
