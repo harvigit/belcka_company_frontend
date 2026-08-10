@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
     Avatar,
     Box,
@@ -155,11 +155,12 @@ const RequestCard = React.memo<{
     isProcessing: boolean;
     onApprove: (id: number, edit?: RequestTimeEdit) => void;
     onReject: (id: number) => void;
+    onAutoUpdate: (id: number, edit: RequestTimeEdit) => Promise<boolean>;
     onTimeEditChange: (id: number, edit: RequestTimeEdit) => void;
     formatHour: (val: string | number | null | undefined, isPricework?: boolean) => string;
     formatDate: (val: string | number | null | undefined) => string;
     canAction: boolean;
-}>(({ request, isProcessing, onApprove, onReject, onTimeEditChange, formatHour, formatDate, canAction }) => {
+}>(({ request, isProcessing, onApprove, onReject, onAutoUpdate, onTimeEditChange, formatHour, formatDate, canAction }) => {
 
     const formatPayableHour = (val: string | number | null | undefined, isPricework: boolean = false): string => {
         if (val === null || val === undefined) return isPricework ? '--' : '00:00';
@@ -189,11 +190,39 @@ const RequestCard = React.memo<{
     const initialEndTime = useMemo(() => toTimeInputValue(request.new_data?.end_time), [request.new_data?.end_time]);
     const [editedStartTime, setEditedStartTime] = useState(initialStartTime);
     const [editedEndTime, setEditedEndTime] = useState(initialEndTime);
+    const savedTimeKeyRef = useRef(`${initialStartTime}-${initialEndTime}`);
+    const timeInputsRef = useRef<HTMLDivElement | null>(null);
+    const blurCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         setEditedStartTime(initialStartTime);
         setEditedEndTime(initialEndTime);
+        savedTimeKeyRef.current = `${initialStartTime}-${initialEndTime}`;
     }, [initialStartTime, initialEndTime]);
+
+    useEffect(() => {
+        return () => {
+            if (blurCommitTimerRef.current) {
+                clearTimeout(blurCommitTimerRef.current);
+            }
+        };
+    }, []);
+
+    const commitTimeUpdate = useCallback(async (startTime: string, endTime: string) => {
+        if (!startTime || !endTime || request.status !== PENDING_STATUS || !canAction) return;
+
+        const timeKey = `${startTime}-${endTime}`;
+        if (timeKey === savedTimeKeyRef.current) return;
+
+        const isSuccess = await onAutoUpdate(request.id, {
+            start_time: startTime,
+            end_time: endTime,
+        });
+
+        if (isSuccess) {
+            savedTimeKeyRef.current = timeKey;
+        }
+    }, [canAction, onAutoUpdate, request.id, request.status]);
 
     const handleStartTimeChange = useCallback((value: string) => {
         setEditedStartTime(value);
@@ -210,6 +239,21 @@ const RequestCard = React.memo<{
             end_time: value,
         });
     }, [editedStartTime, onTimeEditChange, request.id]);
+
+    const handleTimeBlur = useCallback(() => {
+        if (blurCommitTimerRef.current) {
+            clearTimeout(blurCommitTimerRef.current);
+        }
+
+        blurCommitTimerRef.current = setTimeout(() => {
+            const activeElement = document.activeElement;
+            if (activeElement && timeInputsRef.current?.contains(activeElement)) {
+                return;
+            }
+
+            void commitTimeUpdate(editedStartTime, editedEndTime);
+        }, 0);
+    }, [commitTimeUpdate, editedEndTime, editedStartTime]);
 
     const getStatusLabel = useCallback((status: number) => {
         return STATUS_LABELS[status as keyof typeof STATUS_LABELS] || 'Unknown';
@@ -298,7 +342,11 @@ const RequestCard = React.memo<{
                                 {formatDate(request.date)}
                             </Typography>
                             {request.status === PENDING_STATUS && canAction ? (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 0.5, flexWrap: 'wrap' }}>
+                                <Box
+                                    ref={timeInputsRef}
+                                    onBlur={handleTimeBlur}
+                                    sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 0.5, flexWrap: 'wrap' }}
+                                >
                                     <TextField
                                         type="time"
                                         size="small"
@@ -725,6 +773,40 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
         openRejectDialog(requestId, false);
     }, [openRejectDialog]);
 
+    const handleUpdateRequestTime = useCallback(async (requestId: number, edit: RequestTimeEdit): Promise<boolean> => {
+        try {
+            setProcessingIds(prev => new Set([...prev, requestId]));
+
+            const response: AxiosResponse<{ IsSuccess: boolean; message?: string }> = await api.post(
+                '/time-clock/request-time-update',
+                {
+                    request_log_id: requestId,
+                    userId: user_id,
+                    start_time: edit.start_time,
+                    end_time: edit.end_time,
+                }
+            );
+
+            if (response.data.IsSuccess) {
+                showAlert(response.data.message || 'Requested work time updated successfully', 'success');
+                await fetchRequests(selectedDateRange.start, selectedDateRange.end);
+                return true;
+            } else {
+                showAlert(response.data.message || 'Failed to update requested work time', 'error');
+                return false;
+            }
+        } catch (error) {
+            showAlert(getApiErrorMessage(error, 'Failed to update requested work time'), 'error');
+            return false;
+        } finally {
+            setProcessingIds(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(requestId);
+                return newSet;
+            });
+        }
+    }, [fetchRequests, getApiErrorMessage, selectedDateRange.end, selectedDateRange.start, showAlert, user_id]);
+
     const handleRequestTimeEditChange = useCallback((requestId: number, edit: RequestTimeEdit) => {
         setRequestTimeEdits(prev => ({
             ...prev,
@@ -859,6 +941,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
                                 isProcessing={processingIds.has(request.id)}
                                 onApprove={handleApproveRequest}
                                 onReject={handleRejectRequest}
+                                onAutoUpdate={handleUpdateRequestTime}
                                 onTimeEditChange={handleRequestTimeEditChange}
                                 formatHour={formatHour}
                                 formatDate={formatDate}

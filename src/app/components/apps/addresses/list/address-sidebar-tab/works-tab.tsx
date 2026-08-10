@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -68,6 +68,7 @@ export const WorksTab = ({ addressId, companyId, currency }: WorksTabProps) => {
   const [selectedWorkId, setSelectedWorkId] = useState(null);
   const [fetchWork, setFetchWork] = useState(false);
   const [trade, setTrade] = useState<any[]>([]);
+  const requestSequenceRef = useRef(0);
   const session = useSession();
 
   const user = session.data?.user as User & {
@@ -88,14 +89,28 @@ export const WorksTab = ({ addressId, companyId, currency }: WorksTabProps) => {
     fetchTrades();
   }, [user?.company_id]);
 
-  const fetchWorkTabData = async () => {
+  const fetchWorkTabData = useCallback(async () => {
+    const requestId = ++requestSequenceRef.current;
+    const trimmedSearch = searchWork.trim();
+    const workParams = {
+      address_id: addressId,
+      company_id: companyId,
+      ...(trimmedSearch ? { search: trimmedSearch } : {}),
+      ...(filters.type ? { trade_id: filters.type } : {}),
+    };
+    const priceworkParams = {
+      address_id: addressId,
+      ...(trimmedSearch ? { search: trimmedSearch } : {}),
+      ...(filters.type ? { trade_id: filters.type } : {}),
+    };
+
     setFetchWork(true);
     try {
       const [worksResult, priceworksResult] = await Promise.allSettled([
         api.get("/project/get-works", {
-          params: { address_id: addressId, company_id: companyId },
+          params: workParams,
         }),
-        api.get("/pricework/list", { params: { address_id: addressId } }),
+        api.get("/pricework/list", { params: priceworkParams }),
       ]);
 
       const worksResponse =
@@ -121,15 +136,22 @@ export const WorksTab = ({ addressId, companyId, currency }: WorksTabProps) => {
         is_pricework_record: true,
       }));
 
-      setTabData([...priceworks, ...works]);
+      if (requestId === requestSequenceRef.current) {
+        setTabData([...priceworks, ...works]);
+      }
     } catch {
-      setTabData([]);
+      if (requestId === requestSequenceRef.current) {
+        setTabData([]);
+      }
+    } finally {
+      if (requestId === requestSequenceRef.current) {
+        setFetchWork(false);
+      }
     }
-    setFetchWork(false);
-  };
+  }, [addressId, companyId, filters.type, searchWork]);
 
   useEffect(() => {
-    if (!tabData || tabData.length === 0) {
+    if (!trade || trade.length === 0) {
       setFilterOptions([]);
       return;
     }
@@ -146,7 +168,7 @@ export const WorksTab = ({ addressId, companyId, currency }: WorksTabProps) => {
     });
 
     setFilterOptions(Array.from(uniqueTradesMap.values()));
-  }, [tabData, trade]);
+  }, [trade]);
 
   const formatHour = (val: string | number | null | undefined): string => {
     if (val === null || val === undefined) return "-";
@@ -167,35 +189,16 @@ export const WorksTab = ({ addressId, companyId, currency }: WorksTabProps) => {
 
   useEffect(() => {
     if (addressId) {
-      fetchWorkTabData();
+      const debounce = window.setTimeout(
+        () => {
+          fetchWorkTabData();
+        },
+        searchWork.trim() ? 400 : 0,
+      );
+
+      return () => window.clearTimeout(debounce);
     }
-  }, [addressId]);
-
-  const filteredData = useMemo(() => {
-    let data = [...tabData];
-
-    if (filters.type) {
-      data = data.filter((item) => {
-        const tId = item.trade_id || item.trade?.id;
-        return tId?.toString() === filters.type;
-      });
-    }
-
-    if (searchWork.trim()) {
-      const search = searchWork.trim().toLowerCase();
-      data = data.filter((item) => {
-        const tName = item.trade_name || item.trade?.name || "";
-        return (
-          item.name?.toLowerCase().includes(search) ||
-          tName.toLowerCase().includes(search) ||
-          item.user_name?.toLowerCase().includes(search) ||
-          item.team_name?.toLowerCase().includes(search)
-        );
-      });
-    }
-
-    return data;
-  }, [searchWork, tabData, filters]);
+  }, [addressId, companyId, filters.type, searchWork, fetchWorkTabData]);
 
   const handleTaskDelete = async () => {
     try {
@@ -338,7 +341,10 @@ export const WorksTab = ({ addressId, companyId, currency }: WorksTabProps) => {
         />
         <Button
           variant="contained"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setTempFilters(filters);
+            setOpen(true);
+          }}
           sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
         >
           <IconFilter width={18} />
@@ -437,8 +443,8 @@ export const WorksTab = ({ addressId, companyId, currency }: WorksTabProps) => {
       {/* List of works */}
       {fetchWork ? (
         <SkeletonLoader columns={[{ name: "Id" }]} rowCount={1} />
-      ) : filteredData.length > 0 ? (
-        filteredData.map((work, idx) =>
+      ) : tabData.length > 0 ? (
+        tabData.map((work, idx) =>
           work.is_pricework_record ? (
             <Box
               key={`pricework-${work.id}`}
