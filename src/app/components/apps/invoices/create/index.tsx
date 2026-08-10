@@ -268,15 +268,72 @@ const CreateInvoice = ({
     onClose();
   };
 
-  const addFiles = useCallback((incoming: FileList | File[] | null) => {
-    if (!incoming) return;
-    const list = Array.from(incoming);
-    if (!list.length) return;
-    setFormData((prev) => ({
-      ...prev,
-      documentFiles: [...prev.documentFiles, ...list],
-    }));
-  }, []);
+  const addFiles = useCallback(
+    async (incoming: FileList | File[] | null) => {
+      if (!incoming) return;
+      const list = Array.from(incoming);
+      if (!list.length) return;
+
+      setFormData((prev) => ({
+        ...prev,
+        documentFiles: [...prev.documentFiles, ...list],
+      }));
+
+      if (
+        list.length === 1 &&
+        existingDocuments.length === 0 &&
+        formData.documentFiles.length === 0
+      ) {
+        const toastId = toast.loading("Scanning document...");
+        try {
+          const fd = new FormData();
+          fd.append("file_name", list[0]);
+          const res = await api.post("po-invoices/ocr-scan", fd, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+
+          if (res.data) {
+            toast.success("Document scanned", { id: toastId });
+
+            const { amount, total_excl_vat, invoice_number, supplier } =
+              res.data;
+
+            setFormData((prev) => {
+              const next = { ...prev };
+              if (amount && !prev.total_incl_vat) next.total_incl_vat = amount;
+              if (total_excl_vat && !prev.total_excl_vat)
+                next.total_excl_vat = total_excl_vat;
+              if (invoice_number && !prev.invoice_id)
+                next.invoice_id = invoice_number;
+              return next;
+            });
+
+            if (supplier) {
+              const lowerSupplier = supplier.toLowerCase();
+              // Find matching supplier
+              const match = suppliers.find((s) => {
+                const sName = s.name.toLowerCase();
+                return (
+                  sName.includes(lowerSupplier) || lowerSupplier.includes(sName)
+                );
+              });
+              if (match) {
+                setFormData((prev) =>
+                  prev.supplier_id ? prev : { ...prev, supplier_id: match.id },
+                );
+              }
+            }
+          } else {
+            toast.dismiss(toastId);
+          }
+        } catch (e) {
+          toast.dismiss(toastId);
+          console.error("OCR Scan failed", e);
+        }
+      }
+    },
+    [existingDocuments.length, formData.documentFiles.length, suppliers],
+  );
 
   const removeNewFile = (index: number) => {
     setFormData((prev) => ({
