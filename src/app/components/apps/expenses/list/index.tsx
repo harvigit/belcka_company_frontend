@@ -126,6 +126,7 @@ const mapApiRowToListItem = (row: ExpenseRow): ExpenseListItem => {
         amount: Number(row.total_amount || 0),
         currency: row.currency || '£',
         status: apiStatus ?? 'pending',
+        canReject: Boolean(row.can_reject),
         attachmentCount: Number(row.attachment_count || 0),
         statusUpdatedBy: row.status_updated_by ?? null,
         statusUpdatedByName: row.status_updated_by_name ?? null,
@@ -1374,6 +1375,17 @@ const ExpenseList = () => {
                             </Button>
 
                             <Button
+                                startIcon={<IconX size={15}/>}
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                onClick={() => handleRejectExpenses(getActionExpenseIds())}
+                                sx={BULK_BUTTON_SX}
+                            >
+                                Reject Selected
+                            </Button>
+
+                            <Button
                                 startIcon={<IconSend size={15}/>}
                                 variant="contained"
                                 color="primary"
@@ -1670,8 +1682,16 @@ const ExpenseList = () => {
                 anchor="right"
                 open={detailOpen}
                 onClose={closeExpenseDetail}
-                PaperProps={{
-                    sx: {width: {xs: '100%', sm: 420}},
+                sx={{
+                    width: 520,
+                    flexShrink: 0,
+                    '& .MuiDrawer-paper': {
+                        width: {xs: '100%', sm: 520},
+                        maxWidth: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        bgcolor: '#fff',
+                    },
                 }}
             >
                 {selectedExpenseId ? (

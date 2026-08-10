@@ -36,6 +36,7 @@ export type ExpenseApiRow = {
     attachment_count?: number;
     status?: ExpenseStatus | string | number | null;
     status_value?: string | number | null;
+    can_reject?: boolean | null;
     status_updated_by?: number | null;
     status_updated_by_name?: string | null;
     status_updated_at?: string | null;
@@ -63,6 +64,7 @@ export type ExpenseListItem = {
     amount: number;
     currency: string;
     status: ExpenseStatus;
+    canReject?: boolean;
     attachmentCount: number;
     statusUpdatedBy?: number | null;
     statusUpdatedByName?: string | null;

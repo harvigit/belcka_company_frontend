@@ -84,6 +84,27 @@ const formatReceiptDate = (date?: Date) => {
 const getOptionLabel = (option: Option | null) =>
     option?.name || option?.title || '';
 
+const selectMenuProps = {
+    anchorOrigin: {
+        vertical: 'bottom' as const,
+        horizontal: 'right' as const,
+    },
+    transformOrigin: {
+        vertical: 'top' as const,
+        horizontal: 'right' as const,
+    },
+    PaperProps: {
+        sx: {
+            maxHeight: 320,
+            maxWidth: {xs: 'calc(100vw - 32px)', sm: 460},
+            '& .MuiMenuItem-root': {
+                whiteSpace: 'normal',
+                wordBreak: 'break-word',
+            },
+        },
+    },
+};
+
 const userAvatar = (
     name?: string | null,
     image?: string | null,
@@ -177,7 +198,9 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
     const currency = detail?.currency || expense?.currency || '£';
     const amount = Number(detail?.total_amount ?? expense?.amount ?? 0);
     const hasReceipt = Number(detail?.attachments?.length || expense?.attachmentCount || 0) > 0;
-    const canReview = status === 'pending';
+    const canReject = Boolean(detail?.can_reject ?? expense?.canReject);
+    const showApproveButton = status === 'pending' || status === 'rejected';
+    const showRejectButton = status === 'pending' || (status === 'sent' && canReject);
     const receiptDatePickerOpen = Boolean(receiptDateAnchorEl);
 
     const setFormFromDetail = (item: ExpenseDetail) => {
@@ -190,6 +213,22 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
             note: item.note || '',
             car_register_number: item.car_register_number || '',
         });
+    };
+
+    const handleCancelEdit = () => {
+        if (detail) setFormFromDetail(detail);
+        setEditing(false);
+        setAddressSearch('');
+        setReceiptDateAnchorEl(null);
+    };
+
+    const handleClose = () => {
+        if (editing) {
+            handleCancelEdit();
+            return;
+        }
+
+        onClose();
     };
 
     const loadDetail = async () => {
@@ -296,12 +335,18 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
                         <Stack direction="row" spacing={1}>
                             <IconButton
                                 size="small"
-                                onClick={() => setEditing((value) => !value)}
+                                onClick={() => {
+                                    if (editing) {
+                                        handleCancelEdit();
+                                        return;
+                                    }
+                                    setEditing(true);
+                                }}
                                 aria-label="Edit expense"
                             >
                                 <IconPencil size={20}/>
                             </IconButton>
-                            <IconButton size="small" onClick={onClose} aria-label="Close">
+                            <IconButton size="small" onClick={handleClose} aria-label={editing ? 'Cancel editing' : 'Close'}>
                                 <IconX size={20}/>
                             </IconButton>
                         </Stack>
@@ -368,6 +413,7 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
                                                 <Select
                                                     value={form.project_id}
                                                     displayEmpty
+                                                    MenuProps={selectMenuProps}
                                                     onChange={(e) => {
                                                         setForm((prev) => ({
                                                             ...prev,
@@ -405,7 +451,7 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
                                                         }))
                                                     }
                                                     MenuProps={{
-                                                        PaperProps: {style: {maxHeight: 400}},
+                                                        ...selectMenuProps,
                                                         autoFocus: false,
                                                     }}
                                                     renderValue={(selected) => {
@@ -457,6 +503,7 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
                                                 <Select
                                                     value={form.expense_category_id}
                                                     displayEmpty
+                                                    MenuProps={selectMenuProps}
                                                     onChange={(e) =>
                                                         setForm((prev) => ({
                                                             ...prev,
@@ -579,10 +626,7 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
                                             </Button>
                                             <Button
                                                 color="inherit"
-                                                onClick={() => {
-                                                    if (detail) setFormFromDetail(detail);
-                                                    setEditing(false);
-                                                }}
+                                                onClick={handleCancelEdit}
                                             >
                                                 Cancel
                                             </Button>
@@ -678,7 +722,7 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
                         </Box>
                     )}
 
-                    {canReview && (
+                    {(showApproveButton || showRejectButton) && (
                         <Box
                             sx={{
                                 px: 2.5,
@@ -689,26 +733,30 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
                                 gap: 1.5,
                             }}
                         >
-                            <Button
-                                fullWidth
-                                startIcon={<IconCheck size={15}/>}
-                                variant="outlined"
-                                color="success"
-                                size="small"
-                                onClick={() => onApprove?.(expense.id)}
-                            >
-                                Approve
-                            </Button>
-                            <Button
-                                fullWidth
-                                startIcon={<IconX size={15}/>}
-                                variant="outlined"
-                                color="error"
-                                size="small"
-                                onClick={() => onReject?.(expense.id)}
-                            >
-                                Reject
-                            </Button>
+                            {showApproveButton && (
+                                <Button
+                                    fullWidth
+                                    startIcon={<IconCheck size={15}/>}
+                                    variant="outlined"
+                                    color="success"
+                                    size="small"
+                                    onClick={() => onApprove?.(expense.id)}
+                                >
+                                    Approve
+                                </Button>
+                            )}
+                            {showRejectButton && (
+                                <Button
+                                    fullWidth
+                                    startIcon={<IconX size={15}/>}
+                                    variant="outlined"
+                                    color="error"
+                                    size="small"
+                                    onClick={() => onReject?.(expense.id)}
+                                >
+                                    Reject
+                                </Button>
+                            )}
                         </Box>
                     )}
                 </>

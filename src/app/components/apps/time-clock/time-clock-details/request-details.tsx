@@ -103,6 +103,11 @@ interface RejectDialogState {
     isBulk?: boolean;
 }
 
+interface RequestTimeEdit {
+    start_time: string;
+    end_time: string;
+}
+
 // Constants moved outside component to prevent recreation
 const STATUS_LABELS = {
     5: 'Approved',
@@ -123,16 +128,38 @@ const REJECTED_STATUS = 12;
 // Helper function to delay execution
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+const toTimeInputValue = (val: string | number | null | undefined): string => {
+    if (val === null || val === undefined) return '';
+
+    const str = val.toString().trim();
+
+    if (str.includes(' ') && str.includes('/')) {
+        const timePart = str.split(' ')[1];
+        if (!timePart) return '';
+
+        const [h, m] = timePart.split(':');
+        return `${(parseInt(h) || 0).toString().padStart(2, '0')}:${(parseInt(m) || 0).toString().padStart(2, '0')}`;
+    }
+
+    if (/^\d{1,2}:\d{1,2}/.test(str)) {
+        const [h, m] = str.split(':');
+        return `${(parseInt(h) || 0).toString().padStart(2, '0')}:${(parseInt(m) || 0).toString().padStart(2, '0')}`;
+    }
+
+    return '';
+};
+
 // Memoized components for better performance
 const RequestCard = React.memo<{
     request: RequestItem;
     isProcessing: boolean;
-    onApprove: (id: number) => void;
+    onApprove: (id: number, edit?: RequestTimeEdit) => void;
     onReject: (id: number) => void;
+    onTimeEditChange: (id: number, edit: RequestTimeEdit) => void;
     formatHour: (val: string | number | null | undefined, isPricework?: boolean) => string;
     formatDate: (val: string | number | null | undefined) => string;
     canAction: boolean;
-}>(({ request, isProcessing, onApprove, onReject, formatHour, formatDate, canAction }) => {
+}>(({ request, isProcessing, onApprove, onReject, onTimeEditChange, formatHour, formatDate, canAction }) => {
 
     const formatPayableHour = (val: string | number | null | undefined, isPricework: boolean = false): string => {
         if (val === null || val === undefined) return isPricework ? '--' : '00:00';
@@ -157,6 +184,32 @@ const RequestCard = React.memo<{
         }
         return isPricework ? '--' : '00:00';
     };
+
+    const initialStartTime = useMemo(() => toTimeInputValue(request.new_data?.start_time), [request.new_data?.start_time]);
+    const initialEndTime = useMemo(() => toTimeInputValue(request.new_data?.end_time), [request.new_data?.end_time]);
+    const [editedStartTime, setEditedStartTime] = useState(initialStartTime);
+    const [editedEndTime, setEditedEndTime] = useState(initialEndTime);
+
+    useEffect(() => {
+        setEditedStartTime(initialStartTime);
+        setEditedEndTime(initialEndTime);
+    }, [initialStartTime, initialEndTime]);
+
+    const handleStartTimeChange = useCallback((value: string) => {
+        setEditedStartTime(value);
+        onTimeEditChange(request.id, {
+            start_time: value,
+            end_time: editedEndTime,
+        });
+    }, [editedEndTime, onTimeEditChange, request.id]);
+
+    const handleEndTimeChange = useCallback((value: string) => {
+        setEditedEndTime(value);
+        onTimeEditChange(request.id, {
+            start_time: editedStartTime,
+            end_time: value,
+        });
+    }, [editedStartTime, onTimeEditChange, request.id]);
 
     const getStatusLabel = useCallback((status: number) => {
         return STATUS_LABELS[status as keyof typeof STATUS_LABELS] || 'Unknown';
@@ -244,15 +297,49 @@ const RequestCard = React.memo<{
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                                 {formatDate(request.date)}
                             </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                <Typography variant="h6" fontWeight={600} color="success.main">
-                                    {formatHour(request.new_data?.start_time)}
-                                </Typography>
-                                <Typography variant="body2">→</Typography>
-                                <Typography variant="h6" fontWeight={600} color="success.main">
-                                    {formatHour(request.new_data?.end_time)}
-                                </Typography>
-                            </Box>
+                            {request.status === PENDING_STATUS && canAction ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 0.5, flexWrap: 'wrap' }}>
+                                    <TextField
+                                        type="time"
+                                        size="small"
+                                        value={editedStartTime}
+                                        onChange={(event) => handleStartTimeChange(event.target.value)}
+                                        inputProps={{ step: 60 }}
+                                        sx={{
+                                            width: 140,
+                                            flexShrink: 0,
+                                            '& .MuiInputBase-input': {
+                                                minWidth: 88,
+                                            },
+                                        }}
+                                    />
+                                    <Typography variant="body2">→</Typography>
+                                    <TextField
+                                        type="time"
+                                        size="small"
+                                        value={editedEndTime}
+                                        onChange={(event) => handleEndTimeChange(event.target.value)}
+                                        inputProps={{ step: 60 }}
+                                        sx={{
+                                            width: 140,
+                                            flexShrink: 0,
+                                            '& .MuiInputBase-input': {
+                                                minWidth: 88,
+                                            },
+                                        }}
+                                    />
+                                </Box>
+                            ) : (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                    <Typography variant="h6" fontWeight={600} color="success.main">
+                                        {formatHour(request.new_data?.start_time)}
+                                    </Typography>
+                                    <Typography variant="body2">→</Typography>
+                                    <Typography variant="h6" fontWeight={600} color="success.main">
+                                        {formatHour(request.new_data?.end_time)}
+                                    </Typography>
+                                </Box>
+                            )}
                             <Typography variant="caption" color="success.main" sx={{ display: 'block' }}>
                                 {formatPayableHour(request.new_payable_hour)}
                             </Typography>
@@ -295,8 +382,11 @@ const RequestCard = React.memo<{
                                 <Button
                                     variant="text"
                                     size="small"
-                                    onClick={() => onApprove(request.id)}
-                                    disabled={isProcessing}
+                                    onClick={() => onApprove(request.id, {
+                                        start_time: editedStartTime,
+                                        end_time: editedEndTime,
+                                    })}
+                                    disabled={isProcessing || !editedStartTime || !editedEndTime}
                                     startIcon={isProcessing ? <CircularProgress size={14} /> : <IconCheck size={16} />}
                                     sx={{
                                         color: '#4caf50',
@@ -379,6 +469,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
 
     // State management
     const [requestList, setRequestList] = useState<RequestItem[]>([]);
+    const [requestTimeEdits, setRequestTimeEdits] = useState<Record<number, RequestTimeEdit>>({});
     const [loading, setLoading] = useState(false);
     const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
     const [alert, setAlert] = useState<AlertState>({
@@ -500,23 +591,35 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
             );
 
             if (response.data.IsSuccess) {
-                setRequestList(response.data.info || []);
+                const requests = response.data.info || [];
+                setRequestList(requests);
+                setRequestTimeEdits(
+                    requests.reduce<Record<number, RequestTimeEdit>>((acc, request) => {
+                        acc[request.id] = {
+                            start_time: toTimeInputValue(request.new_data?.start_time),
+                            end_time: toTimeInputValue(request.new_data?.end_time),
+                        };
+                        return acc;
+                    }, {})
+                );
                 setActionUsers(response.data.users || []);
             } else {
                 showAlert(response.data.message || 'Failed to fetch requests', 'error');
                 setRequestList([]);
+                setRequestTimeEdits({});
             }
         } catch (error) {
             console.error('Error fetching requests data:', error);
             showAlert(getApiErrorMessage(error, 'Error fetching requests data'), 'error');
             setRequestList([]);
+            setRequestTimeEdits({});
         } finally {
             setLoading(false);
         }
     }, [selectedDateRange, user_id, showAlert, getApiErrorMessage]);
 
     const handleSingleRequest = useCallback(
-        async (requestId: number, action: 'approve' | 'reject', comment?: string) => {
+        async (requestId: number, action: 'approve' | 'reject', comment?: string, edit?: RequestTimeEdit) => {
             try {
                 setProcessingIds(prev => new Set([...prev, requestId]));
 
@@ -531,6 +634,12 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
 
                 if (action === 'reject') {
                     payload.reason = comment || '';
+                }
+
+                if (action === 'approve' && edit) {
+                    payload.requestEdits = {
+                        [requestId]: edit,
+                    };
                 }
 
                 const response: AxiosResponse<{ IsSuccess: boolean; message?: string }> = await api.post(endpoint, payload);
@@ -580,6 +689,16 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
                 payload.reason = reason || '';
             }
 
+            if (action === 'approve') {
+                payload.requestEdits = pendingRequests.reduce<Record<number, RequestTimeEdit>>((acc, request) => {
+                    const edit = requestTimeEdits[request.id];
+                    if (edit?.start_time && edit?.end_time) {
+                        acc[request.id] = edit;
+                    }
+                    return acc;
+                }, {});
+            }
+
             const response: AxiosResponse<{ IsSuccess: boolean; message?: string }> = await api.post(endpoint, payload);
 
             if (response.data.IsSuccess) {
@@ -596,15 +715,22 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
         } finally {
             setLoading(false);
         }
-    }, [pendingRequests, fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, getApiErrorMessage, user_id]);
+    }, [pendingRequests, requestTimeEdits, fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, getApiErrorMessage, user_id]);
 
-    const handleApproveRequest = useCallback((requestId: number) => {
-        return handleSingleRequest(requestId, 'approve');
+    const handleApproveRequest = useCallback((requestId: number, edit?: RequestTimeEdit) => {
+        return handleSingleRequest(requestId, 'approve', undefined, edit);
     }, [handleSingleRequest]);
 
     const handleRejectRequest = useCallback((requestId: number) => {
         openRejectDialog(requestId, false);
     }, [openRejectDialog]);
+
+    const handleRequestTimeEditChange = useCallback((requestId: number, edit: RequestTimeEdit) => {
+        setRequestTimeEdits(prev => ({
+            ...prev,
+            [requestId]: edit,
+        }));
+    }, []);
 
     const handleApproveAll = useCallback(() => handleBulkAction('approve'), [handleBulkAction]);
 
@@ -733,6 +859,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
                                 isProcessing={processingIds.has(request.id)}
                                 onApprove={handleApproveRequest}
                                 onReject={handleRejectRequest}
+                                onTimeEditChange={handleRequestTimeEditChange}
                                 formatHour={formatHour}
                                 formatDate={formatDate}
                                 canAction={actionUsers.includes(user?.id)}
