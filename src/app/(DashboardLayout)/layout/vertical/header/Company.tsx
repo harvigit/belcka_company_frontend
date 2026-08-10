@@ -243,7 +243,7 @@ const Company = () => {
       setFeed(feeds);
       setCount(feeds?.[0]?.unread_feeds);
       setRequestCount(feeds?.[0]?.request_count);
-
+      setAnnouncemntCount(res.data?.announcement_count ?? 0);
       const unreadIds = feeds
         .filter((f: any) => !f.status)
         .map((f: any) => f.id)
@@ -345,7 +345,7 @@ const Company = () => {
       );
       const data = res.data.info || [];
       setItems(data);
-      setAnnouncemntCount(data[0]?.unread_count ?? 0);
+      setAnnouncemntCount(data[0]?.announcement_count ?? 0);
     } catch (err) {
       console.error("Error fetching announcements:", err);
     } finally {
