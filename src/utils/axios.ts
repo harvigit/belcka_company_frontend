@@ -19,7 +19,9 @@ const userLogout = async () => {
 
   isLoggingOut = true;
 
-  // toast.error("You are not part of this company!");
+  toast.error(
+    "Your session has ended. Please sign in again to continue.",
+  );
 
   await signOut({
     callbackUrl: "/auth",
@@ -179,14 +181,17 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (error.config?.skipToast) {
+    if (error.config?.skipToast || isLoggingOut) {
       return Promise.reject(error);
     }
 
     if (!error.config?.__handled && error.message !== 'SELECT_ALL_INTERCEPT') {
       error.config.__handled = true;
 
-      toast.error(error.response?.data?.message || "Something went wrong");
+      toast.error(
+        error.response?.data?.message ||
+          "Something went wrong. Please try again.",
+      );
     }
 
     return Promise.reject(error);
