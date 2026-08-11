@@ -8,6 +8,7 @@ import {
   Button,
   Autocomplete,
   TextField,
+  Avatar,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
@@ -23,6 +24,7 @@ interface FormData {
   code: number;
   // shift_ids: string;
   team_ids: string;
+  user_ids?: string;
   company_id: number;
   workzone_ids?: string;
 }
@@ -35,6 +37,13 @@ interface FormData {
 interface Team {
   id: number | null;
   name: string;
+}
+
+interface AssignedUser {
+  id: number;
+  name: string;
+  user_image?: string | null;
+  user_thumb_image?: string | null;
 }
 
 interface Geofence {
@@ -76,6 +85,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
 
   // const [shift, setShift] = useState<Shift[]>([]);
   const [team, setTeam] = useState<Team[]>([]);
+  const [users, setUsers] = useState<AssignedUser[]>([]);
   const [geofence, setGeofence] = useState<Geofence[]>([]);
 
   const session = useSession();
@@ -118,6 +128,32 @@ const CreateProject: React.FC<CreateProjectProps> = ({
   useEffect(() => {
     if (!open || !user?.company_id) return;
 
+    const getUsers = async () => {
+      try {
+        const res = await api.get(
+          `get-company-resources?flag=usersList&company_id=${user.company_id}`
+        );
+        if (res.data?.info) {
+          const uniqueUsers = Array.from(
+            new Map(
+              (res.data.info as AssignedUser[])
+                .filter((item) => item?.id != null)
+                .map((item) => [item.id, item]),
+            ).values(),
+          );
+          setUsers(uniqueUsers);
+        }
+      } catch (err) {
+        console.error("Failed loading users:", err);
+      }
+    };
+
+    getUsers();
+  }, [open, user?.company_id]);
+
+  useEffect(() => {
+    if (!open || !user?.company_id) return;
+
     const getGeofence = async () => {
       try {
         const res = await api.get(
@@ -140,6 +176,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
 
   // const memoShiftOptions = useMemo(() => shift, [shift]);
   const memoTeamOptions = useMemo(() => team, [team]);
+  const memoUserOptions = useMemo(() => users, [users]);
   const memoGeofenceOptions = useMemo(() => geofence, [geofence]);
 
   // const memoSelectedShifts = useMemo(() => {
@@ -151,6 +188,11 @@ const CreateProject: React.FC<CreateProjectProps> = ({
     const ids = formData.team_ids?.split(",") ?? [];
     return memoTeamOptions.filter((item) => ids.includes(String(item.id)));
   }, [formData.team_ids, memoTeamOptions]);
+
+  const memoSelectedUsers = useMemo(() => {
+    const ids = formData.user_ids?.split(",") ?? [];
+    return memoUserOptions.filter((item) => ids.includes(String(item.id)));
+  }, [formData.user_ids, memoUserOptions]);
 
   const memoSelectedGeofence = useMemo(() => {
     const ids = formData.workzone_ids?.split(",") ?? [];
@@ -256,6 +298,62 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                   )}
                   renderInput={(params) => (
                     <CustomTextField {...params} placeholder="Select Teams" />
+                  )}
+                />
+
+                {/* ASSIGNED USERS */}
+                <Typography variant="h5" mt={2}>
+                  Assigned Users
+                </Typography>
+                <Autocomplete
+                  multiple
+                  options={memoUserOptions}
+                  value={memoSelectedUsers}
+                  onChange={(e, newValue) => {
+                    const ids = newValue.map((i) => i.id).filter(Boolean);
+                    setFormData({
+                      ...formData,
+                      user_ids: ids.join(","),
+                    });
+                  }}
+                  getOptionLabel={(option) => option.name}
+                  getOptionKey={(option) => option.id}
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
+                  }
+                  renderOption={(props, option) => {
+                    const { key, ...optionProps } = props as typeof props & {
+                      key?: React.Key;
+                    };
+                    return (
+                      <Box
+                        component="li"
+                        key={option.id ?? key}
+                        {...optionProps}
+                        sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                      >
+                        <Avatar
+                          src={
+                            option.user_thumb_image ||
+                            option.user_image ||
+                            "/images/users/user.png"
+                          }
+                          alt={option.name}
+                          sx={{ width: 28, height: 28, fontSize: "12px" }}
+                        >
+                          {option.name?.[0]?.toUpperCase()}
+                        </Avatar>
+                        <Typography component="span" variant="body2">
+                          {option.name}
+                        </Typography>
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <CustomTextField
+                      {...params}
+                      placeholder="Select Assigned Users"
+                    />
                   )}
                 />
 

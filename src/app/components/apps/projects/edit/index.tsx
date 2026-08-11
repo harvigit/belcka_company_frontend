@@ -9,6 +9,7 @@ import {
   Autocomplete,
   TextField,
   Stack,
+  Avatar,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
@@ -28,6 +29,7 @@ interface FormData {
   code: number;
   // shift_ids: string;
   team_ids: string;
+  user_ids?: string;
   company_id: number;
   workzone_ids?: string;
 }
@@ -40,6 +42,13 @@ interface FormData {
 interface Team {
   id: number | null;
   name: string;
+}
+
+interface AssignedUser {
+  id: number;
+  name: string;
+  user_image?: string | null;
+  user_thumb_image?: string | null;
 }
 
 interface Geofence {
@@ -155,6 +164,7 @@ const EditProject: React.FC<EditProjectProps> = ({
         company_id: project.company_id || 0,
         // shift_ids: (project.shifts || []).map((s: any) => s.id).join(","),
         team_ids: (project.teams || []).map((t: any) => t.id).join(","),
+        user_ids: (project.assigned_users || []).map((u: any) => u.id).join(","),
         workzone_ids: (project.project_address || [])
           .map((g: any) => g.workzone_id)
           .join(","),
@@ -167,6 +177,7 @@ const EditProject: React.FC<EditProjectProps> = ({
 
   // const [shift, setShift] = useState<Shift[]>([]);
   const [team, setTeam] = useState<Team[]>([]);
+  const [users, setUsers] = useState<AssignedUser[]>([]);
   const [geofence, setGeofence] = useState<Geofence[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [currency, setCurrency] = useState("");
@@ -326,6 +337,31 @@ const EditProject: React.FC<EditProjectProps> = ({
     };
     if (open == true) {
       getTeams();
+    }
+  }, [open, user?.company_id]);
+
+  useEffect(() => {
+    const getUsers = async () => {
+      try {
+        const res = await api.get(
+          `get-company-resources?flag=usersList&company_id=${user.company_id}`
+        );
+        if (res.data?.info) {
+          const uniqueUsers = Array.from(
+            new Map(
+              (res.data.info as AssignedUser[])
+                .filter((item) => item?.id != null)
+                .map((item) => [item.id, item]),
+            ).values(),
+          );
+          setUsers(uniqueUsers);
+        }
+      } catch (err) {
+        console.error("Failed to load users", err);
+      }
+    };
+    if (open == true) {
+      getUsers();
     }
   }, [open, user?.company_id]);
 
@@ -506,6 +542,66 @@ const EditProject: React.FC<EditProjectProps> = ({
                   }
                   renderInput={(params) => (
                     <CustomTextField {...params} placeholder="Select Teams" />
+                  )}
+                />
+                <Typography variant="h5" mt={2}>
+                  Assigned Users
+                </Typography>
+                <Autocomplete
+                  fullWidth
+                  multiple
+                  id="user_ids"
+                  options={users}
+                  value={users.filter((item) =>
+                    formData.user_ids?.split(",").includes(String(item.id))
+                  )}
+                  onChange={(event, newValue) => {
+                    const selectedIds = newValue
+                      .map((item) => item.id)
+                      .filter(Boolean);
+                    setFormData({
+                      ...formData,
+                      user_ids: selectedIds.join(","),
+                    });
+                  }}
+                  getOptionLabel={(option) => option.name}
+                  getOptionKey={(option) => option.id}
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
+                  }
+                  renderOption={(props, option) => {
+                    const { key, ...optionProps } = props as typeof props & {
+                      key?: React.Key;
+                    };
+                    return (
+                      <Box
+                        component="li"
+                        key={option.id ?? key}
+                        {...optionProps}
+                        sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                      >
+                        <Avatar
+                          src={
+                            option.user_thumb_image ||
+                            option.user_image ||
+                            "/images/users/user.png"
+                          }
+                          alt={option.name}
+                          sx={{ width: 28, height: 28, fontSize: "12px" }}
+                        >
+                          {option.name?.[0]?.toUpperCase()}
+                        </Avatar>
+                        <Typography component="span" variant="body2">
+                          {option.name}
+                        </Typography>
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <CustomTextField
+                      {...params}
+                      placeholder="Select Assigned Users"
+                    />
                   )}
                 />
                 <Typography variant="h5" mt={2}>
