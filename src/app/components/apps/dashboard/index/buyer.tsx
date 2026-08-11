@@ -205,8 +205,8 @@ const BuyerDashboard = () => {
 
     const payload = {
       company_id: user.company_id,
-      start_date: startDate,
-      end_date: endDate,
+      start_date: startDate ? `${String(startDate.getDate()).padStart(2, "0")}/${String(startDate.getMonth() + 1).padStart(2, "0")}/${startDate.getFullYear()}` : null,
+      end_date: endDate ? `${String(endDate.getDate()).padStart(2, "0")}/${String(endDate.getMonth() + 1).padStart(2, "0")}/${endDate.getFullYear()}` : null,
       report_type: selectedReportType,
       module_ids: isAllSelected ? "all" : idsArray,
     };
