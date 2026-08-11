@@ -656,6 +656,7 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
+                    setSelectedTaskId(null);
                     setDrawerOpen(true);
                   }}
                   style={{
@@ -678,19 +679,10 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
         </Stack>
         <Divider />
 
-        {/* Add set */}
         <AddEditSet
           open={drawerOpen}
           companyId={Number(user.company_id)}
-          onClose={() => setDrawerOpen(false)}
-          onWorkUpdated={fetchSets}
-        />
-
-        {/* Edit set */}
-        <AddEditSet
-          open={drawerOpen}
-          companyId={Number(user.company_id)}
-          onClose={() => handleModelClose()}
+          onClose={handleModelClose}
           onWorkUpdated={fetchSets}
           setId={selectedTaskId}
         />
