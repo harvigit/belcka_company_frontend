@@ -27,6 +27,7 @@ import {
   DialogContent,
   MenuItem,
   DialogActions,
+  Avatar,
 } from "@mui/material";
 import {
   IconSearch,
@@ -83,11 +84,17 @@ const CheckinsList = () => {
 
   const [projects, setProjects] = useState<any[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
 
-  const [filters, setFilters] = useState({ project: "All", trade: "All" });
+  const [filters, setFilters] = useState({
+    project: "All",
+    trade: "All",
+    user: "All",
+  });
   const [tempFilters, setTempFilters] = useState({
     project: "All",
     trade: "All",
+    user: "All",
   });
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -103,6 +110,7 @@ const CheckinsList = () => {
       if (res.data) {
         setProjects(res.data.projects || []);
         setTrades(res.data.trades || []);
+        setUsers(res.data.users || []);
       }
     } catch (err) {
       console.error("Failed to fetch checklog resources", err);
@@ -136,6 +144,9 @@ const CheckinsList = () => {
       }
       if (filters.trade && filters.trade !== "All") {
         url += `&trade_id=${filters.trade}`;
+      }
+      if (filters.user && filters.user !== "All") {
+        url += `&user_id=${filters.user}`;
       }
 
       const res = await api.get(url);
@@ -222,6 +233,63 @@ const CheckinsList = () => {
           );
         },
       },
+      columnHelper.accessor("user_name", {
+        id: "user",
+        header: () => (
+          <Stack direction="row" alignItems="center" spacing={4}>
+            <Typography variant="subtitle2">User</Typography>
+          </Stack>
+        ),
+        enableSorting: true,
+
+        cell: ({ row }) => {
+          const user = row.original;
+
+          return (
+            <Stack direction="row" alignItems="center" spacing={4}>
+              <Stack
+                direction="row"
+                alignItems="center"
+                spacing={2}
+                sx={{ cursor: "pointer" }}
+              >
+                <Avatar
+                  src={
+                    user?.user_image
+                      ? user.user_image
+                      : "/images/users/user.png"
+                  }
+                  alt={user?.user_name}
+                  sx={{ width: 36, height: 36, cursor: "pointer" }}
+                />
+                <Tooltip title={user.user_name ?? ""}>
+                  <Typography
+                    className="f-14"
+                    color="textPrimary"
+                    sx={{
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      wordBreak: "break-word",
+                      minWidth: "150px",
+                      width: "100%",
+                      maxWidth: "160px",
+                      borderRadius: 1,
+                      border: "1px solid transparent",
+                      transition: "all 0.2s ease",
+                      px: 0.5,
+                    }}
+                  >
+                    {user.user_name ?? "-"}
+                  </Typography>
+                </Tooltip>
+              </Stack>
+            </Stack>
+          );
+        },
+      }),
 
       columnHelper.accessor("project_name", {
         header: "Project",
@@ -295,6 +363,27 @@ const CheckinsList = () => {
             {row.original.type || "-"}
           </Typography>
         ),
+      }),
+      
+      columnHelper.accessor("pricework_amount", {
+        header: "Amount",
+        cell: ({ row }: any) => {
+          const amount = row.original.pricework_amount;
+          const currency = row.original.currency;
+
+          return (
+            <Typography
+              variant="body2"
+              color="inherit"
+              fontWeight={500}
+              sx={{ px: 1.5 }}
+            >
+              {row.original.type === "Pricework" && amount
+                ? `${currency || "$"}${Number(amount).toFixed(2)}`
+                : "-"}
+            </Typography>
+          );
+        },
       }),
 
       columnHelper.accessor("trade", {
@@ -807,162 +896,162 @@ const CheckinsList = () => {
 
         <Divider />
         {/* <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}> */}
-          <TableContainer ref={tableContainerRef} sx={{ flex: 1,
-                minHeight: 0,
-                overflowX: "auto",
-                overflowY: "auto",}}>
-            <Table stickyHeader aria-label="sticky table">
-              <TableHead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      const isActive = header.column.getIsSorted();
-                      const isAsc = header.column.getIsSorted() === "asc";
-                      const isSortable = header.column.getCanSort();
+        <TableContainer
+          ref={tableContainerRef}
+          sx={{ flex: 1, minHeight: 0, overflowX: "auto", overflowY: "auto" }}
+        >
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const isActive = header.column.getIsSorted();
+                    const isAsc = header.column.getIsSorted() === "asc";
+                    const isSortable = header.column.getCanSort();
 
-                      return (
-                        <TableCell
-                          key={header.id}
-                          align="center"
-                          sx={{
-                            paddingTop: "10px",
-                            paddingBottom: "10px",
-                            width: header.column.id === "select" ? 30 : "auto",
-
-                            ...(header.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 3,
-                              boxShadow: isScrollable
-                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                                : "none",
-                            }),
-                          }}
-                        >
-                          <Box
-                            onClick={
-                              isSortable
-                                ? header.column.getToggleSortingHandler()
-                                : undefined
-                            }
-                            sx={{
-                              cursor: isSortable ? "pointer" : "default",
-                              display: "flex",
-                              alignItems: "center",
-                              "&:hover": {
-                                color: isSortable ? "#888" : "inherit",
-                              },
-                              "&:hover .hoverIcon": { opacity: 1 },
-                            }}
-                          >
-                            <Typography variant="subtitle2">
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext(),
-                              )}
-                            </Typography>
-                            {isSortable && (
-                              <Box
-                                component="span"
-                                className="hoverIcon"
-                                ml={0.5}
-                                sx={{
-                                  transition: "opacity 0.2s",
-                                  opacity: isActive ? 1 : 0,
-                                  fontSize: "0.9rem",
-                                  color: isActive ? "#000" : "#888",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                              </Box>
-                            )}
-                          </Box>
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <SkeletonLoader
-                    columns={simpleColumns}
-                    rowCount={simpleColumns.length}
-                  />
-                ) : table.getRowModel().rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length}>
-                      <Box
+                    return (
+                      <TableCell
+                        key={header.id}
+                        align="center"
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          height: "calc(50vh - 100px)",
+                          paddingTop: "10px",
+                          paddingBottom: "10px",
+                          width: header.column.id === "select" ? 30 : "auto",
+
+                          ...(header.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 3,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
                         }}
                       >
-                        <Image
-                          src="/images/no-data.png"
-                          alt="No data"
-                          style={{
-                            maxWidth: "100%",
-                            maxHeight: "100%",
-                          }}
-                          width={200}
-                          height={200}
-                        />
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      hover
-                      sx={{ cursor: "pointer" }}
-                      onMouseEnter={() => setHoveredRow(row.original.id)}
-                      onMouseLeave={() => setHoveredRow(null)}
-                      onClick={() => {
-                        const newSelected = new Set(selectedRowIds);
-                        if (newSelected.has(row.original.id)) {
-                          newSelected.delete(row.original.id);
-                        } else {
-                          newSelected.add(row.original.id);
-                        }
-                        setSelectedRowIds(newSelected);
-                      }}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
+                        <Box
+                          onClick={
+                            isSortable
+                              ? header.column.getToggleSortingHandler()
+                              : undefined
+                          }
                           sx={{
-                            padding: "10px",
-                            ...(cell.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 1,
-                              boxShadow: isScrollable
-                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                                : "none",
-                            }),
+                            cursor: isSortable ? "pointer" : "default",
+                            display: "flex",
+                            alignItems: "center",
+                            "&:hover": {
+                              color: isSortable ? "#888" : "inherit",
+                            },
+                            "&:hover .hoverIcon": { opacity: 1 },
                           }}
                         >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
+                          <Typography variant="subtitle2">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                          </Typography>
+                          {isSortable && (
+                            <Box
+                              component="span"
+                              className="hoverIcon"
+                              ml={0.5}
+                              sx={{
+                                transition: "opacity 0.2s",
+                                opacity: isActive ? 1 : 0,
+                                fontSize: "0.9rem",
+                                color: isActive ? "#000" : "#888",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                            </Box>
                           )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                        </Box>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={simpleColumns.length}
+                />
+              ) : table.getRowModel().rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/no-data.png"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    hover
+                    sx={{ cursor: "pointer" }}
+                    onMouseEnter={() => setHoveredRow(row.original.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    onClick={() => {
+                      const newSelected = new Set(selectedRowIds);
+                      if (newSelected.has(row.original.id)) {
+                        newSelected.delete(row.original.id);
+                      } else {
+                        newSelected.add(row.original.id);
+                      }
+                      setSelectedRowIds(newSelected);
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        sx={{
+                          padding: "10px",
+                          ...(cell.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 1,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
         {/* </Box> */}
         <Divider />
         {data.length > 0 && (
@@ -1135,6 +1224,22 @@ const CheckinsList = () => {
                   </MenuItem>
                 ))}
               </TextField>
+              <TextField
+                select
+                label="User"
+                value={tempFilters.user}
+                onChange={(e) =>
+                  setTempFilters({ ...tempFilters, user: e.target.value })
+                }
+                fullWidth
+              >
+                <MenuItem value="All">All</MenuItem>
+                {users.map((p, i) => (
+                  <MenuItem key={i} value={p.id}>
+                    {p.name}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Stack>
           </DialogContent>
 
@@ -1144,10 +1249,12 @@ const CheckinsList = () => {
                 setTempFilters({
                   project: "All",
                   trade: "All",
+                  user: "All",
                 });
                 setFilters({
                   project: "All",
                   trade: "All",
+                  user: "All",
                 });
                 setOpenFilter(false);
               }}
