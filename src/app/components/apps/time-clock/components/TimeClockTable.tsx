@@ -618,7 +618,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 backgroundColor: '#f0f1f2',
                                                 fontWeight: 600,
                                                 textAlign: 'center',
-                                                color: '#8b939c'
+                                                color: '#000000'
                                             }}
                                         >
                                             <Stack direction="row" alignItems="center" sx={{ width: '100%', position: 'relative' }}>
