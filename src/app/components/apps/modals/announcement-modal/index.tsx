@@ -22,6 +22,7 @@ import CustomTextField from "@/app/components/forms/theme-elements/CustomTextFie
 import { useDropzone } from "react-dropzone";
 import { AxiosResponse } from "axios";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   open: boolean;
@@ -40,6 +41,7 @@ interface Users {
 }
 
 export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [companyUsers, setCompanyUsers] = useState(true);
@@ -75,7 +77,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
 
     onDropRejected: () => {
       toast.error(
-        "Invalid file type. Please upload an image, video, audio, or PDF.",
+        t("Invalid file type. Please upload an image, video, audio, or PDF."),
       );
     },
   });
@@ -192,7 +194,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      toast.error("Title is required");
+      toast.error(t("Title is required"));
       return;
     }
 
@@ -243,7 +245,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
           <IconArrowLeft />
         </IconButton>
         <Typography variant="h6" color="inherit" fontWeight={700}>
-          Announcement
+          {t("Announcement")}
         </Typography>
       </Box>
 
@@ -270,7 +272,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                     fontSize: "24px",
                   }}
                 >
-                  New Announcement
+                  {t("New Announcement")}
                 </Typography>
 
                 <Grid container spacing={2} alignItems="center">
@@ -291,7 +293,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                           }}
                         />
                       }
-                      label="All company users"
+                      label={t("All company users")}
                       sx={{ mb: 1 }}
                     />
 
@@ -311,7 +313,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                             )
                           }
                           renderInput={(params) => (
-                            <TextField {...params} placeholder="Select Team" />
+                            <TextField {...params} placeholder={t("Select Team")} />
                           )}
                           sx={{ mb: 1.5 }}
                         />
@@ -330,7 +332,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                             )
                           }
                           renderInput={(params) => (
-                            <TextField {...params} placeholder="Select Users" />
+                            <TextField {...params} placeholder={t("Select Users")} />
                           )}
                         />
                       </>
@@ -339,7 +341,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                     {/* Send As */}
                     <Box mt={2}>
                       <Typography fontSize="14px" fontWeight={500} mb={1}>
-                        Send notification as:
+                        {t("Send notification as:")}
                       </Typography>
 
                       <RadioGroup
@@ -358,7 +360,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                         <FormControlLabel
                           value="company"
                           control={<Radio sx={{ display: "none" }} />}
-                          label="Company"
+                          label={t("Company")}
                           sx={{
                             m: 0,
                             px: 2,
@@ -376,7 +378,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                         <FormControlLabel
                           value="admin"
                           control={<Radio sx={{ display: "none" }} />}
-                          label="Admin"
+                          label={t("Admin")}
                           sx={{
                             m: 0,
                             px: 2,
@@ -416,7 +418,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
 
                       <IconCamera />
                       <Typography fontWeight={700} fontSize="13px">
-                        UPLOAD
+                        {t("UPLOAD")}
                       </Typography>
                     </Box>
                   </Grid>
@@ -435,7 +437,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                 }}
               >
                 <Typography fontSize="16px" fontWeight={600} mb={1}>
-                  Write Announcement
+                  {t("Write Announcement")}
                 </Typography>
 
                 <CustomTextField
@@ -443,8 +445,8 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                   rows={8}
                   placeholder={
                     companyUsers
-                      ? "What's the latest news?"
-                      : "Write announcement"
+                      ? t("What's the latest news?")
+                      : t("Write announcement")
                   }
                   fullWidth
                   value={title}
@@ -463,7 +465,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
               {uploadedFiles.length > 0 && (
                 <Box mt={2}>
                   <Typography variant="h6" fontSize="15px" mb={1}>
-                    Files Preview
+                    {t("Files Preview")}
                   </Typography>
                   {fileList}
                 </Box>
@@ -489,7 +491,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
               sx={{ borderRadius: 3 }}
               className="drawer_buttons"
             >
-              {loading ? "Saving..." : "Save"}
+              {loading ? t("Saving...") : t("Save")}
             </Button>
 
             <Button
@@ -503,7 +505,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                 color: "GrayText",
               }}
             >
-              Close
+              {t("Close")}
             </Button>
           </Box>
         </form>

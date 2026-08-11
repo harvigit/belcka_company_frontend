@@ -24,6 +24,7 @@ import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import { useServerTable } from '@/hooks/useServerTable';
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
+import { useTranslation } from 'react-i18next';
 
 export type TrainingRow = {
     id: number;
@@ -443,6 +444,7 @@ const AttachmentViewerCard = React.memo(({ af, onDownload }: {
 AttachmentViewerCard.displayName = 'AttachmentViewerCard';
 
 const InductionTraining = ({ companyId }: Props) => {
+    const { t } = useTranslation();
     const [data, setData]               = useState<TrainingRow[]>([]);
     const [searchTerm, setSearchTerm]   = useState('');
     const [fetchLoading, setFetchLoading] = useState(false);
@@ -813,7 +815,7 @@ const InductionTraining = ({ companyId }: Props) => {
                 );
             },
         },
-    ], [filteredData, selectedRowIds, hoveredRow, handleViewAttachments, handleEdit, handleDeleteClick]);
+    ], [filteredData, selectedRowIds, hoveredRow, handleViewAttachments, handleEdit, handleDeleteClick, t]);
 
     
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
@@ -863,7 +865,7 @@ const InductionTraining = ({ companyId }: Props) => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', px: 2, py: 1.5 }}>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                     <TextField
-                        placeholder="Search..."
+                        placeholder={t('Search...')}
                         size="small"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
@@ -874,7 +876,7 @@ const InductionTraining = ({ companyId }: Props) => {
                 <Button size="small" variant="contained" color="primary"
                         startIcon={<IconPlus size={16} />} onClick={openCreateDrawer}
                         sx={{ textTransform: 'none', fontWeight: 600 }}>
-                    Add Training
+                    {t('Add Training')}
                 </Button>
             </Box>
 
@@ -901,7 +903,9 @@ const InductionTraining = ({ companyId }: Props) => {
                                                  py: 1.5, px: 1.5,
                                                  fontWeight: header.column.getIsSorted() ? 600 : 500,
                                              }}>
-                                            {flexRender(header.column.columnDef.header, header.getContext())}
+                                            {typeof header.column.columnDef.header === 'string'
+                                                ? t(header.column.columnDef.header)
+                                                : flexRender(header.column.columnDef.header, header.getContext())}
                                         </Box>
                                     </TableCell>
                                 ))}
@@ -915,8 +919,8 @@ const InductionTraining = ({ companyId }: Props) => {
                             <TableRow>
                                 <TableCell colSpan={columns.length} align="center">
                                     <Box sx={{ py: 8 }}>
-                                        <Image src="/images/no-data.png" alt="No data" width={180} height={180} />
-                                        <Typography mt={2} color="text.secondary">No induction trainings found</Typography>
+                                        <Image src="/images/no-data.png" alt={t('No data')} width={180} height={180} />
+                                        <Typography mt={2} color="text.secondary">{t('No induction trainings found')}</Typography>
                                     </Box>
                                 </TableCell>
                             </TableRow>

@@ -61,8 +61,10 @@ export type ExpenseCategoryList = {
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
+import { useTranslation } from "react-i18next";
 
 const TablePagination = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState<ExpenseCategoryList[]>([]);
   const [fetchCategory, setFetchCategory] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -345,13 +347,7 @@ const TablePagination = () => {
     },
     columnHelper.accessor("name", {
       id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Name
-          </Typography>
-        </Stack>
-      ),
+      header: "Name",
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
@@ -366,13 +362,7 @@ const TablePagination = () => {
 
     columnHelper.accessor("is_transport_category", {
       id: "is_transport_category",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Transport
-          </Typography>
-        </Stack>
-      ),
+      header: "Transport",
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
@@ -409,7 +399,7 @@ const TablePagination = () => {
         const item = row.original;
         return (
           <Stack direction="row" spacing={1}>
-            <Tooltip title="Edit">
+            <Tooltip title={t("Edit")}>
               <IconButton onClick={() => handleEdit(item.id)} color="primary">
                 <IconEdit size={18} />
               </IconButton>
@@ -475,7 +465,7 @@ const TablePagination = () => {
             type="text"
             size="small"
             variant="outlined"
-            placeholder="Search..."
+            placeholder={t("Search...")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             slotProps={{
@@ -537,7 +527,7 @@ const TablePagination = () => {
           >
             <TextField
               size="small"
-              placeholder="Search columns..."
+              placeholder={t("Search columns...")}
               fullWidth
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -618,7 +608,7 @@ const TablePagination = () => {
                           },
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        label="Select All"
+                        label={t("Select All")}
                       />
                       {columnOptions.map((col: any) => (
                         <FormControlLabel
@@ -677,13 +667,10 @@ const TablePagination = () => {
             </Box>
           </Popover>
           <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogTitle>{t("Confirm Deletion")}</DialogTitle>
             <DialogContent>
               <Typography color="textSecondary">
-                Are you sure you want to archive {usersToDelete.length} expense
-                category
-                {usersToDelete.length > 1 ? "s" : ""} from the expense
-                categories?
+                {t("expenseCategory.archiveConfirm", {count: usersToDelete.length})}
               </Typography>
             </DialogContent>
             <DialogActions>
@@ -692,7 +679,7 @@ const TablePagination = () => {
                 variant="outlined"
                 color="primary"
               >
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button
                 onClick={async () => {
@@ -716,7 +703,7 @@ const TablePagination = () => {
                 variant="outlined"
                 color="error"
               >
-                Archive
+                {t("Archive")}
               </Button>
             </DialogActions>
           </Dialog>
@@ -761,7 +748,7 @@ const TablePagination = () => {
                 <ListItemIcon>
                   <IconPlus width={18} />
                 </ListItemIcon>
-                Add Expense Category
+                {t("Add Expense Category")}
               </Link>
             </MenuItem>
             <MenuItem onClick={handleClose}>
@@ -784,7 +771,7 @@ const TablePagination = () => {
                 <ListItemIcon>
                   <IconNotes width={18} />
                 </ListItemIcon>
-                Archived List
+                {t("Archived List")}
               </Link>
             </MenuItem>
           </Menu>
@@ -874,10 +861,12 @@ const TablePagination = () => {
                           }}
                         >
                           <Typography variant="subtitle2">
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
+                            {typeof header.column.columnDef.header === "string"
+                              ? t(header.column.columnDef.header)
+                              : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
                           </Typography>
                           {isSortable && (
                             <Box

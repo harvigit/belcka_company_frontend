@@ -34,6 +34,7 @@ import { format, parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { useRouter } from "next/navigation";
 import { getUserDetailsHref } from "@/utils/userDetailsRoute";
+import { useTranslation } from "react-i18next";
 
 dayjs.extend(customParseFormat);
 
@@ -53,6 +54,16 @@ const defaultFilters = {
 };
 
 const STORAGE_KEY = "request-date-range";
+
+const REQUEST_MESSAGE_TRANSLATION_KEYS = [
+  "Requested to add leave on",
+  "Requested to change timesheet hours from",
+  "hours to",
+  "hours on",
+  "Rate change has been requested",
+  "User requested to create billing info",
+  "Requested to update billing information",
+];
 
 const loadDateRangeFromStorage = () => {
   try {
@@ -91,6 +102,7 @@ export default function UserRequests({
   onRequestCountChange,
   isAdmin,
 }: Props) {
+  const { t } = useTranslation();
   const router = useRouter();
   const today = new Date();
   const defaultStart = new Date(today);
@@ -378,6 +390,15 @@ export default function UserRequests({
     Adjustment: "#0066ffff",
   };
 
+  const translateRequestText = (value?: string | null) => {
+    if (!value) return "";
+
+    return REQUEST_MESSAGE_TRANSLATION_KEYS.reduce(
+      (message, key) => message.replaceAll(key, t(key)),
+      value,
+    );
+  };
+
   return (
     <>
       <Drawer
@@ -401,7 +422,7 @@ export default function UserRequests({
               <IconArrowLeft />
             </IconButton>
             <Typography variant="h6" fontWeight={700}>
-              {isAdmin || user?.user_role_id == 1 ? "Requests" : "My Requests"}
+              {isAdmin || user?.user_role_id == 1 ? t("Requests") : t("My Requests")}
             </Typography>
           </Stack>
           <IconButton onClick={onClose}>
@@ -419,7 +440,7 @@ export default function UserRequests({
           />
           <TextField
             size="small"
-            placeholder="Search..."
+            placeholder={t("Search...")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
@@ -538,7 +559,7 @@ export default function UserRequests({
                           textTransform: "capitalize",
                         }}
                       >
-                        {work.type_name}
+                        {t(work.type_name)}
                       </Typography>
                     </Box>
                     <Box display={"flex"} gap={1} mt={1}>
@@ -556,7 +577,7 @@ export default function UserRequests({
                           <Typography variant="h1" fontSize={"16px !important"}>
                             {work.user_name}:
                           </Typography>
-                          <Typography variant="h5">{work.message}</Typography>
+                          <Typography variant="h5">{translateRequestText(work.message)}</Typography>
                           {work.request_note && (
                             <Box
                               display={"flex"}
@@ -567,7 +588,7 @@ export default function UserRequests({
                                 variant="subtitle1"
                                 color="textSecondary"
                               >
-                                Note:
+                                {t("Note:")}
                               </Typography>
                               <Tooltip title={work.request_note ?? ""}>
                                 <Typography
@@ -611,7 +632,7 @@ export default function UserRequests({
                               textTransform: "capitalize",
                             }}
                           >
-                            {work.status_text}
+                            {t(work.status_text)}
                           </Typography>
                         </Box>
                       </Box>
@@ -637,7 +658,7 @@ export default function UserRequests({
               textAlign="center"
               mt={4}
             >
-              No requests found.
+              {t("No requests found.")}
             </Typography>
           )}
         </Box>
@@ -650,9 +671,9 @@ export default function UserRequests({
         maxWidth="sm"
       >
         <DialogTitle sx={{ m: 0, position: "relative" }}>
-          Filters
+          {t("Filters")}
           <IconButton
-            aria-label="close"
+            aria-label={t("Close")}
             onClick={() => setFilterOpen(false)}
             sx={{ position: "absolute", right: 12, top: 8 }}
           >
@@ -663,7 +684,7 @@ export default function UserRequests({
           <Stack spacing={2} mt={1}>
             <Autocomplete
               options={userOptions}
-              getOptionLabel={(option) => option.name || ""}
+              getOptionLabel={(option) => option.name ? t(option.name) : ""}
               getOptionKey={(option) => String(option.id)}
               isOptionEqualToValue={(option, value) =>
                 String(option.id) === String(value?.id)
@@ -680,12 +701,12 @@ export default function UserRequests({
                 })
               }
               renderInput={(params) => (
-                <TextField {...params} label="User" fullWidth />
+                <TextField {...params} label={t("User")} fullWidth />
               )}
             />
             <Autocomplete
               options={statusOptions}
-              getOptionLabel={(option) => option.name || ""}
+              getOptionLabel={(option) => option.name ? t(option.name) : ""}
               getOptionKey={(option) => String(option.id)}
               isOptionEqualToValue={(option, value) =>
                 String(option.id) === String(value?.id)
@@ -702,12 +723,12 @@ export default function UserRequests({
                 })
               }
               renderInput={(params) => (
-                <TextField {...params} label="Status" fullWidth />
+                <TextField {...params} label={t("Status")} fullWidth />
               )}
             />
             <Autocomplete
               options={typeOptions}
-              getOptionLabel={(option) => option.name || ""}
+              getOptionLabel={(option) => option.name ? t(option.name) : ""}
               getOptionKey={(option) => String(option.id)}
               isOptionEqualToValue={(option, value) =>
                 String(option.id) === String(value?.id)
@@ -724,7 +745,7 @@ export default function UserRequests({
                 })
               }
               renderInput={(params) => (
-                <TextField {...params} label="Types" fullWidth />
+                <TextField {...params} label={t("Types")} fullWidth />
               )}
             />
           </Stack>
@@ -738,7 +759,7 @@ export default function UserRequests({
               setFilterOpen(false);
             }}
           >
-            Clear
+            {t("Clear")}
           </Button>
           <Button
             variant="contained"
@@ -747,7 +768,7 @@ export default function UserRequests({
               setFilterOpen(false);
             }}
           >
-            Apply
+            {t("Apply")}
           </Button>
         </DialogActions>
       </Dialog>

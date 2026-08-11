@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 
 const ConfirmDialog = ({
   open,
@@ -24,6 +25,7 @@ const ConfirmDialog = ({
   onClose: () => void;
   onConfirm: () => void;
 }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -48,14 +50,14 @@ const ConfirmDialog = ({
         },
       }}
     >
-      <DialogTitle id="responsive-dialog-title">{title}</DialogTitle>
+      <DialogTitle id="responsive-dialog-title">{t(title)}</DialogTitle>
       <DialogContent>
-        <DialogContentText>{content}</DialogContentText>
+        <DialogContentText>{t(content)}</DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('Cancel')}</Button>
         <Button onClick={onConfirm} autoFocus color="error">
-          Delete
+          {t('Delete')}
         </Button>
       </DialogActions>
     </Dialog>

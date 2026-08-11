@@ -17,6 +17,7 @@ import { User } from "next-auth";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
+import { useTranslation } from "react-i18next";
 
 interface GeofencePenaltyProps {
     companyId: number;
@@ -33,6 +34,7 @@ interface SettingItem {
 }
 
 const GeofencePenalty: React.FC<GeofencePenaltyProps> = ({companyId, active, userId}) => {
+    const { t } = useTranslation();
     const { data: session } = useSession();
     const user = session?.user as User & {
         company_id?: number | null;
@@ -131,7 +133,7 @@ const GeofencePenalty: React.FC<GeofencePenaltyProps> = ({companyId, active, use
 
             const res = await api.post("user/update-geofence-penalty-settings", payload);
             if (res.data?.IsSuccess) {
-                toast.success(res.data.message || "Setting updated");
+                toast.success(res.data.message || t("Setting updated"));
             } else {
                 setGeofenceSettings((prev) =>
                     prev.map((item) =>
@@ -186,7 +188,7 @@ const GeofencePenalty: React.FC<GeofencePenaltyProps> = ({companyId, active, use
                         fontWeight: 400,
                     }}
                 >
-                    {label}
+                    {t(label)}
                 </Typography>
             </TableCell>
             <TableCell
@@ -206,7 +208,7 @@ const GeofencePenalty: React.FC<GeofencePenaltyProps> = ({companyId, active, use
                         fontWeight: 400,
                     }}
                 >
-                    Action
+                    {t("Action")}
                 </Typography>
             </TableCell>
         </TableRow>
@@ -250,7 +252,7 @@ const GeofencePenalty: React.FC<GeofencePenaltyProps> = ({companyId, active, use
                                             color: "#2c3e50",
                                         }}
                                     >
-                                        {item.label}
+                                        {t(item.label)}
                                     </Typography>
                                 </TableCell>
                                 <TableCell
@@ -303,7 +305,7 @@ const GeofencePenalty: React.FC<GeofencePenaltyProps> = ({companyId, active, use
                                             color: item.key !== "geofence_main_setting" && !isGeofenceMainEnabled ? "#aab4be" : "#2c3e50", 
                                         }}
                                     >
-                                        {item.label}
+                                        {t(item.label)}
                                     </Typography>
                                 </TableCell>
                                 <TableCell

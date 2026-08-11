@@ -17,6 +17,7 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import { useTranslation } from "react-i18next";
 
 interface ProjectListingProps {
   userId: number;
@@ -64,6 +65,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
   canEdit,
   readOnly = false,
 }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [healthInfo, setHealthInfo] = useState<HealthInfoData | null>(null);
   const [allHealthIssueOptions, setAllHealthIssueOptions] = useState<
@@ -78,6 +80,13 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
   const hasStandardEditAccess = user.id === userId || user.user_role_id === 1;
   const canEditHealthInfo = !readOnly && (canEdit ?? hasStandardEditAccess);
   const canViewHealthInfo = readOnly || canEditHealthInfo;
+  const emergencyContactLabels: Record<string, string> = {
+    first_name: "First Name",
+    last_name: "Last Name",
+    email: "Email",
+    address: "Address",
+    post_code: "Post Code",
+  };
 
   useEffect(() => {
     const fetchHealthInfo = async () => {
@@ -312,7 +321,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
         alignItems="center"
         minHeight="450px"
       >
-        <Typography>Health Info not found!</Typography>
+        <Typography>{t("Health Info not found!")}</Typography>
       </Box>
     );
   }
@@ -326,7 +335,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
             fontSize="16px !important"
             sx={{ mb: 2 }}
           >
-            Emergency Contact
+            {t("Emergency Contact")}
           </Typography>
 
           <Grid container spacing={2} mb={2}>
@@ -339,9 +348,9 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                     <TextField
                       fullWidth
                       className="custom_color"
-                      label={key
+                      label={t(emergencyContactLabels[key] || key
                         .replace(/_/g, " ")
-                        .replace(/\b\w/g, (c) => c.toUpperCase())}
+                        .replace(/\b\w/g, (c) => c.toUpperCase()))}
                       value={(healthInfo.emergency_contact as any)[key] || ""}
                       disabled={!canEditHealthInfo}
                       onChange={(e) =>
@@ -380,7 +389,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
             fontSize="16px !important"
             sx={{ mt: 4, mb: 2 }}
           >
-            Health Info
+            {t("Health Info")}
           </Typography>
 
           <Grid container spacing={2} mb={4}>
@@ -389,7 +398,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                 className="custom_color"
                 fullWidth
                 inputMode="numeric"
-                label="Height (cm)"
+                label={t("Height (cm)")}
                 value={healthInfo.height}
                 disabled={!canEditHealthInfo}
                 inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
@@ -404,7 +413,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
               <TextField
                 fullWidth
                 className="custom_color"
-                label="Weight (kg)"
+                label={t("Weight (kg)")}
                 value={healthInfo.weight}
                 disabled={!canEditHealthInfo}
                 inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
@@ -423,14 +432,14 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
             fontSize="16px !important"
             sx={{ mt: 4, mb: 2 }}
           >
-            Questions
+            {t("Questions")}
           </Typography>
 
           <Box mb={2}>
             {healthInfo.health_issues.map((issue, index) => (
               <Grid size={{ xs: 12 }} key={issue.health_issue_id}>
                 <Typography sx={{ mb: 1 }} color="textSecondary">
-                  {issue.name}
+                  {issue.name ? t(issue.name.trim()) : ""}
                 </Typography>
 
                 <Box display="flex" gap={3} mb={2}>
@@ -443,7 +452,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                         handleHealthIssueChange(index, "is_check", true)
                       }
                     />{" "}
-                    Yes
+                    {t("Yes")}
                   </label>
 
                   <label>
@@ -455,7 +464,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                         handleHealthIssueChange(index, "is_check", false)
                       }
                     />{" "}
-                    No
+                    {t("No")}
                   </label>
                 </Box>
 
@@ -464,7 +473,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                     fullWidth
                     className="custom_color"
                     rows={2}
-                    label="Detail"
+                    label={t("Detail")}
                     value={issue.comment || ""}
                     disabled={!canEditHealthInfo}
                     required
@@ -483,13 +492,13 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
             onClick={handleSaveOrUpdate}
             disabled={!canEditHealthInfo}
           >
-            {hasExistingInfo ? "Update" : "Save"}
+            {hasExistingInfo ? t("Update") : t("Save")}
           </Button>
         </Box>
       ) : (
         <Box mt={4} display={"flex"} height={"450px"} justifyContent={"center"}>
           <Typography color="textSecondary" className="f-18">
-            You do not have permission to view this information.
+            {t("You do not have permission to view this information.")}
           </Typography>
         </Box>
       )}

@@ -16,6 +16,7 @@ import {
 import { CalendarMonth } from "@mui/icons-material";
 import "react-day-picker/dist/style.css";
 import "../../global.css";
+import { useTranslation } from "react-i18next";
 
 type PayrollCycle = '1_week' | '2_week' | '4_week' | '1_month' | '3_month' | string;
 
@@ -73,6 +74,7 @@ const DateRangePickerBox: React.FC<Props> = ({
     buttonLabelAlign = 'space-between',
     buttonMinWidth = 230,
 }) => {
+    const { t } = useTranslation();
     const today     = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 1 });
     const weekEnd   = endOfWeek(today,   { weekStartsOn: 1 });
@@ -205,8 +207,8 @@ const DateRangePickerBox: React.FC<Props> = ({
                             weekStartsOn={1}
                         />
                         <Stack direction="row" justifyContent="flex-end" spacing={1} mt={2}>
-                            <Button onClick={handleCancel}>Cancel</Button>
-                            <Button variant="contained" onClick={handleOk}>OK</Button>
+                            <Button onClick={handleCancel}>{t('Cancel')}</Button>
+                            <Button variant="contained" onClick={handleOk}>{t('OK')}</Button>
                         </Stack>
                     </Box>
                 </Box>

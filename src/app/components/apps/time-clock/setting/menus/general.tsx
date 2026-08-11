@@ -25,6 +25,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import toast from 'react-hot-toast';
 import { User } from 'next-auth';
 import { useSession } from 'next-auth/react';
+import { useTranslation } from 'react-i18next';
 
 interface Timezone {
     id: string | number;
@@ -245,6 +246,7 @@ const useSearchableDropdown = () => {
 };
 
 const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
+    const { t } = useTranslation();
     const { settings: companySettings, loading: settingsLoading, error: settingsError } = useCompanySettings();
     const { allTimezones, companyUsers, loading: resourcesLoading } = useApiData(companySettings?.users.map(id => ({
         id,
@@ -514,9 +516,9 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                         size="small"
                                     />
                                     <Box>
-                                        <Typography variant="body2">Daily limit</Typography>
+                                        <Typography variant="body2">{t('Daily limit')}</Typography>
                                         <Typography variant="body2" color="text.secondary">
-                                            You&apos;ll be notified when a limit is exceeded
+                                            {t("You'll be notified when a limit is exceeded")}
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -543,9 +545,9 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                         size="small"
                                     />
                                     <Box>
-                                        <Typography variant="body2">Auto clock out</Typography>
+                                        <Typography variant="body2">{t('Auto clock out')}</Typography>
                                         <Typography variant="body2" color="text.secondary">
-                                            Employees will be automatically clocked out once they exceed their daily working limit.
+                                            {t('Employees will be automatically clocked out once they exceed their daily working limit.')}
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -564,7 +566,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                             max: 24
                                         }}
                                     />
-                                    Hours
+                                    {t('Hours')}
                                 </Box>
                             </Box>
 
@@ -577,7 +579,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                 />
                                 <Box display="flex" alignItems="center" gap={0.5}>
                                     <Typography variant="body2">
-                                        Show the difference between scheduled and actual work time
+                                        {t('Show the difference between scheduled and actual work time')}
                                     </Typography>
                                     <IconHelp size={16} color="#9e9e9e" />
                                 </Box>
@@ -593,7 +595,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                             size="small"
                                         />
                                         <Box display="flex" alignItems="center" gap={0.5}>
-                                            <Typography variant="body2">Highlight if employee worked</Typography>
+                                            <Typography variant="body2">{t('Highlight if employee worked')}</Typography>
                                             <TextField
                                                 variant="outlined"
                                                 size="small"
@@ -606,7 +608,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                                     min: 0
                                                 }}
                                             />
-                                            <Typography variant="body2">minutes more than scheduled</Typography>
+                                            <Typography variant="body2">{t('minutes more than scheduled')}</Typography>
                                         </Box>
                                     </Box>
                                     <Box display="flex" alignItems="center" mb={2}>
@@ -617,7 +619,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                             size="small"
                                         />
                                         <Box display="flex" alignItems="center" gap={0.5}>
-                                            <Typography variant="body2">Highlight if employee worked</Typography>
+                                            <Typography variant="body2">{t('Highlight if employee worked')}</Typography>
                                             <TextField
                                                 variant="outlined"
                                                 size="small"
@@ -630,7 +632,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                                     min: 0
                                                 }}
                                             />
-                                            <Typography variant="body2">minutes less than scheduled</Typography>
+                                            <Typography variant="body2">{t('minutes less than scheduled')}</Typography>
                                         </Box>
                                     </Box>
                                 </Box>
@@ -649,9 +651,9 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                     size="small"
                                 />
                                 <Box>
-                                    <Typography variant="body2">Timesheets rounding</Typography>
+                                    <Typography variant="body2">{t('Timesheets rounding')}</Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        We recommend you consult a labor or employment attorney in your country to ensure that you comply with rounding regulations.
+                                        {t('We recommend you consult a labor or employment attorney in your country to ensure that you comply with rounding regulations.')}
                                     </Typography>
                                 </Box>
                             </Box>
@@ -659,7 +661,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                             {settings.showTimesheetRound && (
                                 <Box width="max-content">
                                     <Box display="flex" alignItems="center" mb={1}>
-                                        <Typography variant="body2">Automatically round start & end times to the nearest</Typography>
+                                        <Typography variant="body2">{t('Automatically round start & end times to the nearest')}</Typography>
                                         <FormControl sx={{ m: 1, minWidth: 80 }} size="small">
                                             <Select
                                                 value={settings.roundingIncrement}
@@ -671,12 +673,12 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                                 ))}
                                             </Select>
                                         </FormControl>
-                                        <Typography variant="body2">increment</Typography>
+                                        <Typography variant="body2">{t('increment')}</Typography>
                                     </Box>
                                     <Box display="flex" alignItems="center" sx={{ backgroundColor: '#fff1b8', padding: 1 }}>
                                         <IconHelp size={18} />
                                         <Typography ml={1} variant="body2">
-                                            Changes will apply to all new timesheets
+                                            {t('Changes will apply to all new timesheets')}
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -688,7 +690,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                         {/* Show Pay Rates & Export Format */}
                         <Box mb={4}>
                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                                <Typography variant="body2" color="text.primary">Timesheet & payroll export format</Typography>
+                                <Typography variant="body2" color="text.primary">{t('Timesheet & payroll export format')}</Typography>
                                 <Select
                                     value={settings.exportFormat}
                                     onChange={createSelectHandler('exportFormat')}
@@ -704,13 +706,13 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                         },
                                     }}
                                 >
-                                    <MenuItem value="time">Time 04:30</MenuItem>
-                                    <MenuItem value="decimal">Decimal 4.5</MenuItem>
+                                    <MenuItem value="time">{t('Time 04:30')}</MenuItem>
+                                    <MenuItem value="decimal">{t('Decimal 4.5')}</MenuItem>
                                 </Select>
                             </Box>
 
                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                                <Typography variant="body2" color="text.primary">Time zone</Typography>
+                                <Typography variant="body2" color="text.primary">{t('Time zone')}</Typography>
                                 <Select
                                     value={settings.timeZone}
                                     onChange={createSelectHandler('timeZone')}
@@ -747,7 +749,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                     >
                                         <TextField
                                             size="small"
-                                            placeholder="Search timezone..."
+                                            placeholder={t('Search timezone...')}
                                             fullWidth
                                             value={timezoneDropdown.searchText}
                                             onChange={timezoneDropdown.handleSearchChange}
@@ -867,10 +869,10 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                         {settings.isSaving ? (
                             <>
                                 <CircularProgress size={16} sx={{ mr: 1, color: 'inherit' }} />
-                                Saving...
+                                {t('Saving...')}
                             </>
                         ) : (
-                            'Save changes'
+                            t('Save changes')
                         )}
                     </Button>
                 </Box>

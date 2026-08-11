@@ -32,6 +32,7 @@ import {
   BorderOuter,
 } from "@mui/icons-material";
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 const SidebarWidth = "320px";
 interface colors {
@@ -40,6 +41,7 @@ interface colors {
   disp?: string;
 }
 const Customizer: FC = () => {
+  const { t } = useTranslation();
   const [showDrawer, setShowDrawer] = useState(false);
   const {
     activeDir,
@@ -148,7 +150,7 @@ const Customizer: FC = () => {
             justifyContent={"space-between"}
             alignItems="center"
           >
-            <Typography variant="h4">Settings</Typography>
+            <Typography variant="h4">{t("Settings")}</Typography>
 
             <IconButton color="inherit" onClick={() => setShowDrawer(false)}>
               <IconX size="1rem" />
@@ -160,7 +162,7 @@ const Customizer: FC = () => {
             {/* ------------ Dark light theme setting ------------- */}
             {/* ------------------------------------------- */}
             <Typography variant="h5" fontWeight={500} gutterBottom>
-              Theme Option
+              {t("Theme Option")}
             </Typography>
             <Stack direction={"row"} gap={2} my={2}>
               <StyledBox
@@ -171,7 +173,7 @@ const Customizer: FC = () => {
                 <WbSunnyTwoToneIcon
                   color={activeMode === "light" ? "primary" : "inherit"}
                 />
-                Light
+                {t("Light")}
               </StyledBox>
               <StyledBox
                 onClick={() => setActiveMode("dark")}
@@ -181,7 +183,7 @@ const Customizer: FC = () => {
                 <DarkModeTwoToneIcon
                   color={activeMode === "dark" ? "primary" : "inherit"}
                 />
-                Dark
+                {t("Dark")}
               </StyledBox>
             </Stack>
 
@@ -190,7 +192,7 @@ const Customizer: FC = () => {
             {/* ------------ RTL theme setting -------------*/}
             {/* ------------------------------------------- */}
             <Typography variant="h5" fontWeight={500} gutterBottom>
-              Theme Direction
+              {t("Theme Direction")}
             </Typography>
             <Stack direction={"row"} gap={2} my={2}>
               <StyledBox
@@ -220,7 +222,7 @@ const Customizer: FC = () => {
             {/* ------------ Theme Color setting ------------- */}
             {/* ------------------------------------------- */}
             <Typography variant="h5" fontWeight={500} gutterBottom>
-              Theme Colors
+              {t("Theme Colors")}
             </Typography>
             <Grid container spacing={2}>
               {thColors.map((thcolor) => (
@@ -257,7 +259,7 @@ const Customizer: FC = () => {
             {/* ------------ Layout Horizontal / Vertical ------------- */}
             {/* ------------------------------------------- */}
             <Typography variant="h5" fontWeight={500} gutterBottom>
-              Layout Type
+              {t("Layout Type")}
             </Typography>
             <Stack direction={"row"} gap={2} my={2}>
               <StyledBox
@@ -268,7 +270,7 @@ const Customizer: FC = () => {
                 <ViewComfyTwoTone
                   color={activeLayout === "vertical" ? "primary" : "inherit"}
                 />
-                Vertical
+                {t("Vertical")}
               </StyledBox>
               <StyledBox
                 onClick={() => setActiveLayout("horizontal")}
@@ -278,7 +280,7 @@ const Customizer: FC = () => {
                 <PaddingTwoTone
                   color={activeLayout === "horizontal" ? "primary" : "inherit"}
                 />
-                Horizontal
+                {t("Horizontal")}
               </StyledBox>
             </Stack>
             <Box pt={4} />
@@ -286,7 +288,7 @@ const Customizer: FC = () => {
             {/* ------------ Layout Boxed / Full ------------- */}
             {/* ------------------------------------------- */}
             <Typography variant="h5" fontWeight={500} gutterBottom>
-              Container Option
+              {t("Container Option")}
             </Typography>
             <Stack direction={"row"} gap={2} my={2}>
               <StyledBox
@@ -297,7 +299,7 @@ const Customizer: FC = () => {
                 <CallToActionTwoToneIcon
                   color={isLayout === "boxed" ? "primary" : "inherit"}
                 />
-                Boxed
+                {t("Boxed")}
               </StyledBox>
               <StyledBox
                 onClick={() => setIsLayout("full")}
@@ -307,7 +309,7 @@ const Customizer: FC = () => {
                 <AspectRatioTwoToneIcon
                   color={isLayout === "full" ? "primary" : "inherit"}
                 />
-                Full
+                {t("Full")}
               </StyledBox>
             </Stack>
             <Box pt={4} />
@@ -323,7 +325,7 @@ const Customizer: FC = () => {
             ) : (
               <>
                 <Typography variant="h5" fontWeight={500} gutterBottom>
-                  Sidebar Type
+                  {t("Sidebar Type")}
                 </Typography>
                 <Stack direction={"row"} gap={2} my={2}>
                   <StyledBox
@@ -338,7 +340,7 @@ const Customizer: FC = () => {
                         isCollapse === "full-sidebar" ? "primary" : "inherit"
                       }
                     />
-                    Full
+                    {t("Full")}
                   </StyledBox>
                   <StyledBox
                     onClick={() => setIsCollapse("mini-sidebar")}
@@ -357,7 +359,7 @@ const Customizer: FC = () => {
             )}
             <Box pt={4} />
             <Typography variant="h5" fontWeight={500} gutterBottom>
-              Card With
+              {t("Card With")}
             </Typography>
             <Stack direction={"row"} gap={2} my={2}>
               <StyledBox
@@ -366,7 +368,7 @@ const Customizer: FC = () => {
                 gap={1}
               >
                 <BorderOuter color={!isCardShadow ? "primary" : "inherit"} />
-                Border
+                {t("Border")}
               </StyledBox>
               <StyledBox
                 onClick={() => setIsCardShadow(true)}
@@ -376,7 +378,7 @@ const Customizer: FC = () => {
                 <CallToActionTwoToneIcon
                   color={isCardShadow ? "primary" : "inherit"}
                 />
-                Shadow
+                {t("Shadow")}
               </StyledBox>
             </Stack>
             <Box pt={4} />
@@ -384,7 +386,7 @@ const Customizer: FC = () => {
             {/* ------------ Theme Color setting ------------- */}
             {/* ------------------------------------------- */}
             <Typography variant="h5" fontWeight={500} gutterBottom>
-              Theme Border Radius
+              {t("Theme Border Radius")}
             </Typography>
 
             <Slider

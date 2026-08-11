@@ -12,6 +12,7 @@ import {
 import Profile from "./Profile";
 import Search from "./Search";
 import Company from "./Company";
+import Language from "./Language";
 import { useContext } from "react";
 import config from "@/app/context/config";
 import {
@@ -115,6 +116,7 @@ const Header = () => {
 
         <Box flexGrow={1} />
         <Stack direction="row" alignItems="center">
+          <Language />
           <Company />
 
           {/* <IconButton color="inherit">

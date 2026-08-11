@@ -23,6 +23,7 @@ import CustomTextField from '@/app/components/forms/theme-elements/CustomTextFie
 import Settings from '../setting/settings';
 import { useServerTable } from '@/hooks/useServerTable';
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
+import { useTranslation } from 'react-i18next';
 
 export type NearMissRow = {
     id: number;
@@ -455,6 +456,7 @@ const downloadAttachment = async (af: AttachmentFile, onError: (msg: string) => 
 };
 
 const NearMissReporting = ({ companyId }: Props) => {
+    const { t } = useTranslation();
     const [data, setData]               = useState<NearMissRow[]>([]);
     const [searchTerm, setSearchTerm]   = useState('');
     const [fetchLoading, setFetchLoading] = useState(false);
@@ -803,7 +805,7 @@ const NearMissReporting = ({ companyId }: Props) => {
                 );
             },
         },
-    ], [filteredData, selectedRowIds, hoveredRow, handleViewAttachments, handleEdit, handleDeleteClick]);
+    ], [filteredData, selectedRowIds, hoveredRow, handleViewAttachments, handleEdit, handleDeleteClick, t]);
 
     
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
@@ -851,7 +853,7 @@ const NearMissReporting = ({ companyId }: Props) => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', px: 2, py: 1.5 }}>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                     <TextField
-                        placeholder="Search..."
+                        placeholder={t('Search...')}
                         size="small"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
@@ -859,7 +861,7 @@ const NearMissReporting = ({ companyId }: Props) => {
                         InputProps={{ endAdornment: <InputAdornment position="end"><IconSearch size={16} /></InputAdornment> }}
                     />
                 </Box>
-                <Tooltip title="Settings">
+                <Tooltip title={t('Settings')}>
                     <IconButton onClick={() => setSettingOpen(true)} color="primary" size="small">
                         <IconSettings size={20} />
                     </IconButton>
@@ -868,7 +870,7 @@ const NearMissReporting = ({ companyId }: Props) => {
                 <Button size="small" variant="contained" color="primary"
                         startIcon={<IconPlus size={16} />} onClick={openCreateDrawer}
                         sx={{ textTransform: 'none', fontWeight: 600 }}>
-                    Near Miss Report
+                    {t('Near Miss Report')}
                 </Button>
             </Box>
 
@@ -902,7 +904,9 @@ const NearMissReporting = ({ companyId }: Props) => {
                                                  py: 1.5, px: 1.5,
                                                  fontWeight: header.column.getIsSorted() ? 600 : 500,
                                              }}>
-                                            {flexRender(header.column.columnDef.header, header.getContext())}
+                                            {typeof header.column.columnDef.header === 'string'
+                                                ? t(header.column.columnDef.header)
+                                                : flexRender(header.column.columnDef.header, header.getContext())}
                                         </Box>
                                     </TableCell>
                                 ))}
@@ -916,8 +920,8 @@ const NearMissReporting = ({ companyId }: Props) => {
                             <TableRow>
                                 <TableCell colSpan={columns.length} align="center">
                                     <Box sx={{ py: 8 }}>
-                                        <Image src="/images/no-data.png" alt="No data" width={180} height={180} />
-                                        <Typography mt={2} color="text.secondary">No near miss reports found</Typography>
+                                        <Image src="/images/no-data.png" alt={t('No data')} width={180} height={180} />
+                                        <Typography mt={2} color="text.secondary">{t('No near miss reports found')}</Typography>
                                     </Box>
                                 </TableCell>
                             </TableRow>

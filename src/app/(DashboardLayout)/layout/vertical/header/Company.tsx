@@ -42,10 +42,30 @@ import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 import { format, parse } from "date-fns";
 import { AxiosResponse } from "axios";
 import CompanyRegistration from "@/app/components/apps/modals/register-company";
+import { useTranslation } from "react-i18next";
 
 const STORAGE_KEY = "feed-date-range";
 const LEAVE_STORAGE_KEY = "leave-range";
 const REQUEST_KEY = "request-date-range";
+const FEED_MESSAGE_TRANSLATION_KEYS = [
+  "Requested to add leave on",
+  "Requested to change timesheet hours from",
+  "hours to",
+  "hours on",
+  "Rate change has been requested",
+  "User requested to create billing info",
+  "Requested to update billing information",
+  "Profile information changed by",
+  "Expense",
+  "added by",
+  "Store",
+  "has total amount",
+  "exceeding the max limit of",
+  "Order",
+  "is being prepared by",
+  "change order",
+  "status",
+];
 
 const loadDateRangeFromStorage = () => {
   try {
@@ -99,6 +119,7 @@ const loadRequestDateRange = () => {
 };
 
 const Company = () => {
+  const { t } = useTranslation();
   const [companies, setCompanies] = useState<any[]>([]);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -116,6 +137,14 @@ const Company = () => {
   const [page, setPage] = useState<number>(1);
   const limit = 20;
   const [loadingFeeds, setLoadingFeeds] = useState(false);
+  const translateFeedMessage = (value?: string | null) => {
+    if (!value) return "";
+
+    return FEED_MESSAGE_TRANSLATION_KEYS.reduce(
+      (message, key) => message.replaceAll(key, t(key)),
+      value,
+    );
+  };
   const [openCompanyDrawer, setOpenCompanyDrawer] = useState(false);
   const [teams, setTeams] = useState<any[]>([]);
   const [trade, setTrade] = useState<any[]>([]);
@@ -503,7 +532,7 @@ const Company = () => {
           }}
           startIcon={<IconPlus size={18} />}
         >
-          Register New
+          {t("Register New")}
         </Button>
         {companies.map((company) => (
           <MenuItem
@@ -605,30 +634,30 @@ const Company = () => {
                     </IconButton>
 
                     <Typography variant="h6" fontWeight={700}>
-                      Feeds ({filteredFeeds ? filteredFeeds.length : 0})
+                      {t("Feeds")} ({filteredFeeds ? filteredFeeds.length : 0})
                     </Typography>
 
                     <TextField
                       select
-                      label="Status"
+                      label={t("Status")}
                       value={filterRequest}
                       onChange={(e: any) => setFilterRequest(e.target.value)}
                       sx={{ minWidth: 200, ml: 3 }}
                     >
-                      <MenuItem value="all">All</MenuItem>
-                      <MenuItem value="Timesheet">Timesheet</MenuItem>
-                      <MenuItem value="Shift">Worklog</MenuItem>
-                      <MenuItem value="Billing Info">Billing Info</MenuItem>
-                      <MenuItem value="User">User</MenuItem>
-                      <MenuItem value="Comapny">Company</MenuItem>
-                      <MenuItem value="Project">Project</MenuItem>
-                      <MenuItem value="Address">Address</MenuItem>
-                      <MenuItem value="Company">Company Rate</MenuItem>
-                      <MenuItem value="Team">Team</MenuItem>
-                      <MenuItem value="Leave">Leave</MenuItem>
-                      <MenuItem value="Expense">Expense</MenuItem>
-                      <MenuItem value="Zone">Zone</MenuItem>
-                      <MenuItem value="Order">Order</MenuItem>
+                      <MenuItem value="all">{t("All")}</MenuItem>
+                      <MenuItem value="Timesheet">{t("Timesheet")}</MenuItem>
+                      <MenuItem value="Shift">{t("Worklog")}</MenuItem>
+                      <MenuItem value="Billing Info">{t("Billing Info")}</MenuItem>
+                      <MenuItem value="User">{t("User")}</MenuItem>
+                      <MenuItem value="Comapny">{t("Company")}</MenuItem>
+                      <MenuItem value="Project">{t("Project")}</MenuItem>
+                      <MenuItem value="Address">{t("Address")}</MenuItem>
+                      <MenuItem value="Company">{t("Company Rate")}</MenuItem>
+                      <MenuItem value="Team">{t("Team")}</MenuItem>
+                      <MenuItem value="Leave">{t("Leave")}</MenuItem>
+                      <MenuItem value="Expense">{t("Expense")}</MenuItem>
+                      <MenuItem value="Zone">{t("Zone")}</MenuItem>
+                      <MenuItem value="Order">{t("Order")}</MenuItem>
                     </TextField>
 
                     <Button
@@ -654,7 +683,7 @@ const Company = () => {
                     <DialogTitle
                       sx={{ m: 0, position: "relative", overflow: "visible" }}
                     >
-                      Filters
+                      {t("Filters")}
                       <IconButton
                         aria-label="close"
                         onClick={() => setOpen(false)}
@@ -678,7 +707,7 @@ const Company = () => {
                       <Stack spacing={2} mt={1}>
                         <TextField
                           select
-                          label="Team"
+                          label={t("Team")}
                           value={tempFilters.team}
                           onChange={(e) =>
                             setTempFilters({
@@ -687,7 +716,7 @@ const Company = () => {
                             })
                           }
                         >
-                          <MenuItem value="All">All</MenuItem>
+                          <MenuItem value="All">{t("All")}</MenuItem>
                           {uniqueTeams.map((team) => (
                             <MenuItem key={team} value={team}>
                               {team}
@@ -696,7 +725,7 @@ const Company = () => {
                         </TextField>
                         <TextField
                           select
-                          label="Trade"
+                          label={t("Trade")}
                           value={tempFilters.trade}
                           onChange={(e) =>
                             setTempFilters({
@@ -705,7 +734,7 @@ const Company = () => {
                             })
                           }
                         >
-                          <MenuItem value="All">All</MenuItem>
+                          <MenuItem value="All">{t("All")}</MenuItem>
                           {uniqueTrades.map((team) => (
                             <MenuItem key={team} value={team}>
                               {team}
@@ -727,7 +756,7 @@ const Company = () => {
                         }}
                         color="inherit"
                       >
-                        Clear
+                        {t("Clear")}
                       </Button>
                       <Button
                         variant="contained"
@@ -736,7 +765,7 @@ const Company = () => {
                           setOpen(false);
                         }}
                       >
-                        Apply
+                        {t("Apply")}
                       </Button>
                     </DialogActions>
                   </Dialog>
@@ -904,7 +933,7 @@ const Company = () => {
                                 // fontWeight={400}
                                 className="multi-ellipsis"
                               >
-                                <b>{item.user_name}</b>: {item.message}
+                                <b>{item.user_name}</b>: {translateFeedMessage(item.message)}
                               </Typography>
                               <Box
                                 display={"flex"}
@@ -919,7 +948,7 @@ const Company = () => {
                                   fontWeight={600}
                                   gap={0.5}
                                 >
-                                  {item?.note ? "Note:" : ""}
+                                  {item?.note ? t("Note:") : ""}
                                   <Typography className="f-14" color="textSecondary" fontWeight={500}>
                                     {item?.note}
                                   </Typography>
@@ -954,7 +983,7 @@ const Company = () => {
                           }
                           onClick={() => setPage((prev) => prev + 1)}
                         >
-                          See More
+                          {t("See More")}
                         </Button>
                       </Box>
                     )}
@@ -962,7 +991,7 @@ const Company = () => {
                 ) : (
                   <Box sx={{ p: 6, pt: 3, textAlign: "center" }}>
                     <Typography variant="h4" color="text.secondary">
-                      No records found for feeds.
+                      {t("No records found for feeds.")}
                     </Typography>
                   </Box>
                 )}
@@ -1015,7 +1044,7 @@ const Company = () => {
                     </IconButton>
 
                     <Typography variant="h6" fontWeight={700}>
-                      Announcement
+                      {t("Announcement")}
                     </Typography>
                   </Box>
                   <Box

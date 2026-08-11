@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Stack, Typography, IconButton, Popover, TextField, FormGroup, FormControlLabel, Checkbox } from '@mui/material';
 import { IconEye } from '@tabler/icons-react';
 import {TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
+import { useTranslation } from 'react-i18next';
 
 interface TimeClockStatsProps {
     headerDetail: TimeClockDetailResponse | null;
@@ -28,8 +29,9 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                                            handlePopoverOpen,
                                                            handlePopoverClose,
                                                            userHasRatePermission,
-                                                           amountColumns,
-                                                       }) => {
+                                                       amountColumns,
+                                                   }) => {
+    const { t } = useTranslation();
     const headerDetails = [
         { value: formatHour(headerDetail?.payable_hours), label: 'Payable Hours' },
         { value: `${currency}${headerDetail?.total_payable_amount || 0}`, label: 'Total Payable Amount' },
@@ -65,7 +67,7 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                 {stat.value}
                             </Typography>
                             <Typography variant="caption" color="#000000">
-                                {stat.label}
+                                {t(stat.label)}
                             </Typography>
                         </Box>
                     ))}
@@ -97,7 +99,7 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                     >
                         <TextField
                             size="small"
-                            placeholder="Search columns..."
+                            placeholder={t('Search columns...')}
                             fullWidth
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -136,7 +138,7 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                             }}
                                         />
                                     }
-                                    label="Select All"
+                                    label={t('Select All')}
                                     sx={{
                                         m: 0,
                                         px: 0.75,
@@ -174,7 +176,7 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                                     }}
                                                 />
                                             }
-                                            label={
+                                            label={t(
                                                 col.columnDef.meta?.label ||
                                                 (typeof col.columnDef.header === 'string' && col.columnDef.header.trim() !== ''
                                                     ? col.columnDef.header
@@ -182,7 +184,7 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                                         .replace(/([A-Z])/g, ' $1')
                                                         .replace(/^./, (str: string) => str.toUpperCase())
                                                         .trim())
-                                            }
+                                            )}
                                             sx={{
                                                 m: 0,
                                                 px: 0.75,

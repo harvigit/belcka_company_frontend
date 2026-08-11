@@ -10,8 +10,10 @@ import { User } from "next-auth";
 import Cookies from "js-cookie";
 import Link from "next/link";
 import { getUserDetailsHref } from "@/utils/userDetailsRoute";
+import { useTranslation } from "react-i18next";
 
 const Profile = () => {
+  const { t } = useTranslation();
   const [anchorEl2, setAnchorEl2] = useState<HTMLElement | null>(null);
   const handleClick2 = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl2(event.currentTarget);
@@ -28,7 +30,7 @@ const Profile = () => {
   const [loading] = useState(false);
 
   const userLogout = async () => {
-    toast.success("Logged out successfully!!");
+    toast.success(t("Logged out successfully!!"));
     Cookies.remove(`user_store_${user.id}_${user.company_id}`);
     await signOut({ callbackUrl: "/auth" });
     return loading;
@@ -72,7 +74,7 @@ const Profile = () => {
             fontWeight="400"
             sx={{ ml: 1 }}
           >
-            Hi,
+            {t("Hi")},
           </Typography>
           <Typography
             variant="h5"
@@ -116,7 +118,7 @@ const Profile = () => {
         }}
       >
         <Typography variant="h4" mb={1}>
-          User Profile
+          {t("User Profile")}
         </Typography>
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -200,7 +202,7 @@ const Profile = () => {
             color="secondary"
             fullWidth
           >
-            Logout
+            {t("Logout")}
           </Button>
         </Box>
       </Menu>

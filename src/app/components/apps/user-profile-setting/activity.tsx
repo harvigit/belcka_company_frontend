@@ -25,6 +25,7 @@ import {
 import api from '@/utils/axios';
 import toast from 'react-hot-toast';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
+import { useTranslation } from 'react-i18next';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -318,6 +319,7 @@ const getDiffs = (oldData: any, newData: any, moduleName: string) => {
 };
 
 const ActivityCard: React.FC<{ item: ActivityItem; isLast: boolean }> = ({ item, isLast }) => {
+    const { t } = useTranslation();
     const mc = MODULE_CONFIG[item.module] ?? FALLBACK_MODULE;
     const ModuleIcon = mc.icon;
     const { actor, role: actorRole } = getActivityActor(item);
@@ -385,7 +387,7 @@ const ActivityCard: React.FC<{ item: ActivityItem; isLast: boolean }> = ({ item,
                         {/* Chips */}
                         <Box display="flex" alignItems="center" gap={0.75} mb={0.75} flexWrap="wrap">
                             <Chip
-                                label={mc.label}
+                                label={t(mc.label)}
                                 size="small"
                                 sx={{
                                     height: 18,
@@ -507,7 +509,10 @@ const DayHeader: React.FC<{ label: string; count: number }> = ({ label, count })
 const EmptyState: React.FC<{ dateRange?: { start: string; end: string }; onReset: () => void }> = ({
                                                                                                        dateRange,
                                                                                                        onReset,
-                                                                                                   }) => (
+                                                                                                   }) => {
+    const { t } = useTranslation();
+
+    return (
     <Box
         display="flex"
         flexDirection="column"
@@ -531,21 +536,22 @@ const EmptyState: React.FC<{ dateRange?: { start: string; end: string }; onReset
             <IconAlertCircle size={24} color="#94a3b8" />
         </Box>
         <Typography fontWeight={600} fontSize={14} color="text.secondary">
-            No activity found
+            {t('No activity found')}
         </Typography>
         <Typography fontSize={12} color="text.disabled" textAlign="center" maxWidth={240}>
-            No events recorded
-            {dateRange ? ` from ${dateRange.start} to ${dateRange.end}` : ' for this period'}
+            {t('No events recorded')}
+            {dateRange ? ` ${t('from')} ${dateRange.start} ${t('to')} ${dateRange.end}` : ` ${t('for this period')}`}
         </Typography>
         <Button
             size="small"
             onClick={onReset}
             sx={{ textTransform: 'none', fontSize: 12, color: 'primary.main', mt: 0.5 }}
         >
-            Reset to current week
+            {t('Reset to current week')}
         </Button>
     </Box>
-);
+    );
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const UserActivity: React.FC<UserActivityProps> = ({

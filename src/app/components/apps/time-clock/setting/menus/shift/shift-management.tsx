@@ -29,6 +29,7 @@ import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import toast from 'react-hot-toast';
+import {useTranslation} from 'react-i18next';
 
 interface Shift {
     id: number;
@@ -67,6 +68,7 @@ interface ShiftManagementProps {
 }
 
 const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = null}) => {
+    const {t} = useTranslation();
     const {data: session} = useSession();
     const user = session?.user as User & { company_id?: number | null };
 
@@ -499,7 +501,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = nul
                         renderInput={(params) => (
                             <TextField
                                 {...params}
-                                placeholder={selectedProject ? '' : 'Search by project'}
+                                placeholder={selectedProject ? '' : t('Search by project')}
                                 size="small"
                                 InputProps={{
                                     ...params.InputProps,
@@ -541,7 +543,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = nul
                         minWidth: 100,
                     }}
                 >
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    {saving ? t('Saving...') : t('Save Changes')}
                 </Button>
             </Box>
 
@@ -631,7 +633,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = nul
                                                 size="small"
                                                 value={teamUserSearch}
                                                 onChange={(event) => setTeamUserSearch(event.target.value)}
-                                                placeholder="Search"
+                                                placeholder={t('Search')}
                                                 disabled={!hasSelectedProject || loadingTeams}
                                                 InputProps={{
                                                     startAdornment: (
@@ -709,7 +711,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = nul
                                                             {shift.name}
                                                         </Typography>
                                                         <Typography sx={{px: 0.25, py: 0.5, fontSize: 10, lineHeight: 1.4, color: '#7D92A9'}}>
-                                                            {shift.time || 'any time'}
+                                                            {shift.time || t('any time')}
                                                         </Typography>
                                                     </Box>
                                                     <IconButton
@@ -718,13 +720,13 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = nul
                                                         disableFocusRipple
                                                         title={
                                                             primaryShiftId === shift.id
-                                                                ? 'Primary shift'
-                                                                : 'Set as primary shift'
+                                                                ? t('Primary shift')
+                                                                : t('Set as primary shift')
                                                         }
                                                         aria-label={
                                                             primaryShiftId === shift.id
-                                                                ? `${shift.name} is primary shift`
-                                                                : `Set ${shift.name} as primary shift`
+                                                                ? t('shift.isPrimary', {name: shift.name})
+                                                                : t('shift.setAsPrimary', {name: shift.name})
                                                         }
                                                         onClick={() =>
                                                             setPrimaryShiftId(shift.id)
@@ -769,7 +771,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = nul
                                                 zIndex: 4,
                                             }}
                                         >
-                                            No active shifts
+                                            {t('No active shifts')}
                                         </TableCell>
                                     )}
                                 </TableRow>
@@ -789,7 +791,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = nul
                                         }}
                                     >
                                         <Typography sx={{fontSize: 12, fontWeight: 700, color: '#203040'}}>
-                                            Select All
+                                            {t('Select All')}
                                         </Typography>
                                     </TableCell>
                                     {visibleShifts.length > 0 ? (
@@ -851,7 +853,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = nul
                                             sx={{py: 5}}
                                         >
                                             <Typography color="text.secondary">
-                                                Select a project to manage teams and users.
+                                                {t('Select a project to manage teams and users.')}
                                             </Typography>
                                         </TableCell>
                                     </TableRow>
@@ -863,7 +865,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = nul
                                             sx={{py: 5}}
                                         >
                                             <Typography color="text.secondary">
-                                                No teams assigned to this project.
+                                                {t('No teams assigned to this project.')}
                                             </Typography>
                                         </TableCell>
                                     </TableRow>
@@ -875,7 +877,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = nul
                                             sx={{py: 5}}
                                         >
                                             <Typography color="text.secondary">
-                                                No teams or users match your search.
+                                                {t('No teams or users match your search.')}
                                             </Typography>
                                         </TableCell>
                                     </TableRow>

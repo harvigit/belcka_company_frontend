@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
     Autocomplete,
     Avatar,
@@ -50,8 +50,10 @@ import {
 } from '@tanstack/react-table';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
+import Cookies from 'js-cookie';
 import api from '@/utils/axios';
 import {useServerTable} from '@/hooks/useServerTable';
+import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
@@ -90,9 +92,75 @@ const COLUMN_LABELS: Record<string, string> = {
 const defaultFilters = {
     user_id: '' as string | number,
     project_id: '' as string | number,
+    address_id: '' as string | number,
     category_id: '' as string | number,
     trade_id: '' as string | number,
     team_id: '' as string | number,
+};
+
+const EXPENSE_FILTERS_COOKIE_PREFIX = 'expense-list-filters';
+const EXPENSE_FILTER_COOKIE_OPTIONS = {
+    expires: 365,
+    path: '/',
+};
+const EXPENSE_PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
+
+type ExpenseStoredPreferences = {
+    filters?: Partial<typeof defaultFilters>;
+    search?: string;
+    activeTab?: ExpenseTabKey;
+    startDate?: string | null;
+    endDate?: string | null;
+    sorting?: SortingState;
+    pagination?: {
+        pageIndex?: number;
+        pageSize?: number;
+    };
+};
+
+const isExpenseTabKey = (value: unknown): value is ExpenseTabKey =>
+    ['all', 'pending', 'approved', 'sent', 'rejected'].includes(String(value));
+
+const parseStoredDate = (value?: string | null) => {
+    if (!value) return null;
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const normalizeStoredFilters = (
+    value?: Partial<typeof defaultFilters>,
+): typeof defaultFilters => ({
+    user_id: value?.user_id ?? '',
+    project_id: value?.project_id ?? '',
+    address_id: value?.address_id ?? '',
+    category_id: value?.category_id ?? '',
+    trade_id: value?.trade_id ?? '',
+    team_id: value?.team_id ?? '',
+});
+
+const normalizeStoredPagination = (
+    value?: ExpenseStoredPreferences['pagination'],
+) => ({
+    pageIndex: Number.isInteger(value?.pageIndex) && Number(value?.pageIndex) >= 0
+        ? Number(value?.pageIndex)
+        : 0,
+    pageSize: EXPENSE_PAGE_SIZE_OPTIONS.includes(Number(value?.pageSize))
+        ? Number(value?.pageSize)
+        : 50,
+});
+
+const normalizeStoredSorting = (value?: SortingState): SortingState => {
+    if (!Array.isArray(value) || value.length === 0) {
+        return [{id: 'date_added', desc: true}];
+    }
+
+    const first = value[0];
+    if (!first?.id) {
+        return [{id: 'date_added', desc: true}];
+    }
+
+    return [{id: String(first.id), desc: Boolean(first.desc)}];
 };
 
 const BULK_BUTTON_SX = {
@@ -126,6 +194,7 @@ const mapApiRowToListItem = (row: ExpenseRow): ExpenseListItem => {
         amount: Number(row.total_amount || 0),
         currency: row.currency || '£',
         status: apiStatus ?? 'pending',
+        canEdit: row.can_edit ?? (apiStatus !== 'sent'),
         canReject: Boolean(row.can_reject),
         attachmentCount: Number(row.attachment_count || 0),
         statusUpdatedBy: row.status_updated_by ?? null,
@@ -139,7 +208,12 @@ const mapApiRowToListItem = (row: ExpenseRow): ExpenseListItem => {
 
 const ExpenseList = () => {
     const session = useSession();
-    const user = session.data?.user as User & { company_id?: number | null };
+    const user = session.data?.user as User & { company_id?: number | null; id?: string | number | null };
+    const expensePreferencesCookieKey = useMemo(() => {
+        if (!user?.company_id) return null;
+
+        return `${EXPENSE_FILTERS_COOKIE_PREFIX}_${user.id ?? 'user'}_${user.company_id}`;
+    }, [user?.id, user?.company_id]);
 
     const [data, setData] = useState<ExpenseRow[]>([]);
     const [loading, setLoading] = useState(false);
@@ -148,9 +222,16 @@ const ExpenseList = () => {
     const [tempFilters, setTempFilters] = useState(defaultFilters);
     const [filterOpen, setFilterOpen] = useState(false);
     const [sorting, setSorting] = useState<SortingState>([
-        {id: 'receipt_date', desc: true},
+        {id: 'date_added', desc: true},
     ]);
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+    const {
+        columnVisibility,
+        onColumnVisibilityChange: setColumnVisibility,
+    } = usePersistentColumnVisibility({
+        storageKey: `cv_${user?.company_id}_${user?.id ?? 'user'}_expenses`,
+        enabled: Boolean(user?.company_id),
+        alwaysVisibleColumns: ['select', 'actions'],
+    });
     const [columnMenuAnchor, setColumnMenuAnchor] =
         useState<null | HTMLElement>(null);
     const [columnSearch, setColumnSearch] = useState('');
@@ -188,6 +269,7 @@ const ExpenseList = () => {
     const [sendDate, setSendDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [preferencesHydrated, setPreferencesHydrated] = useState(false);
     const loadedFilterCompanyIdRef = useRef<number | null>(null);
     const openExpenseDetail = (expenseId: number) => {
         setSelectedExpenseId(expenseId);
@@ -505,6 +587,7 @@ const ExpenseList = () => {
 
     const fetchExpenses = async () => {
         if (!user?.company_id) return;
+        if (!preferencesHydrated) return;
         setLoading(true);
         try {
             let url = `expense/list-web?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -518,6 +601,7 @@ const ExpenseList = () => {
             }
             if (filters.user_id) url += `&user_id=${filters.user_id}`;
             if (filters.project_id) url += `&project_id=${filters.project_id}`;
+            if (filters.address_id) url += `&address_id=${filters.address_id}`;
             if (filters.category_id) url += `&category_id=${filters.category_id}`;
             if (filters.trade_id) url += `&trade_id=${filters.trade_id}`;
             if (filters.team_id) url += `&team_id=${filters.team_id}`;
@@ -575,6 +659,7 @@ const ExpenseList = () => {
         fetchData: fetchExpenses,
         debounceDependencies: [
             user?.company_id,
+            preferencesHydrated,
             search,
             startDate ? format(startDate, 'yyyy-MM-dd') : '',
             endDate ? format(endDate, 'yyyy-MM-dd') : '',
@@ -586,6 +671,77 @@ const ExpenseList = () => {
         onColumnVisibilityChange: setColumnVisibility,
         manualSorting: true,
     });
+
+    useEffect(() => {
+        if (!expensePreferencesCookieKey) {
+            setPreferencesHydrated(false);
+            return;
+        }
+
+        try {
+            const stored = Cookies.get(expensePreferencesCookieKey);
+            if (stored) {
+                const parsed = JSON.parse(stored) as ExpenseStoredPreferences;
+                const nextFilters = normalizeStoredFilters(parsed.filters);
+                const nextPagination = normalizeStoredPagination(parsed.pagination);
+
+                setFilters(nextFilters);
+                setTempFilters(nextFilters);
+                setSearch(typeof parsed.search === 'string' ? parsed.search : '');
+                setActiveTab(isExpenseTabKey(parsed.activeTab) ? parsed.activeTab : 'all');
+                setStartDate(parseStoredDate(parsed.startDate) ?? subDays(new Date(), 6));
+                setEndDate(parseStoredDate(parsed.endDate) ?? new Date());
+                setSorting(normalizeStoredSorting(parsed.sorting));
+                setPagination({
+                    pageIndex: 0,
+                    pageSize: nextPagination.pageSize,
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load expense list preferences cookie:', error);
+            Cookies.remove(expensePreferencesCookieKey, {path: '/'});
+        } finally {
+            setPreferencesHydrated(true);
+        }
+    }, [expensePreferencesCookieKey, setPagination]);
+
+    const saveExpensePreferencesCookie = useCallback(() => {
+        if (!expensePreferencesCookieKey || !preferencesHydrated) return;
+
+        const payload: ExpenseStoredPreferences = {
+            filters,
+            search,
+            activeTab,
+            startDate: startDate ? startDate.toISOString() : null,
+            endDate: endDate ? endDate.toISOString() : null,
+            sorting,
+            pagination: {
+                pageIndex: pagination.pageIndex,
+                pageSize: pagination.pageSize,
+            },
+        };
+
+        Cookies.set(
+            expensePreferencesCookieKey,
+            JSON.stringify(payload),
+            EXPENSE_FILTER_COOKIE_OPTIONS,
+        );
+    }, [
+        activeTab,
+        endDate,
+        expensePreferencesCookieKey,
+        filters,
+        pagination.pageIndex,
+        pagination.pageSize,
+        preferencesHydrated,
+        search,
+        sorting,
+        startDate,
+    ]);
+
+    useEffect(() => {
+        saveExpensePreferencesCookie();
+    }, [saveExpensePreferencesCookie]);
 
     const listItems = useMemo(() => {
         return data.map(mapApiRowToListItem);
@@ -821,6 +977,7 @@ const ExpenseList = () => {
                 if (endDate) payload.end_date = format(endDate, 'dd/MM/yyyy');
                 if (filters.user_id) payload.user_id = filters.user_id;
                 if (filters.project_id) payload.project_id = filters.project_id;
+                if (filters.address_id) payload.address_id = filters.address_id;
                 if (filters.category_id) payload.category_id = filters.category_id;
                 if (filters.trade_id) payload.trade_id = filters.trade_id;
                 if (filters.team_id) payload.team_id = filters.team_id;
@@ -1598,6 +1755,28 @@ const ExpenseList = () => {
                             }
                             renderInput={(params) => (
                                 <TextField {...params} label="Category" fullWidth/>
+                            )}
+                        />
+                        <Autocomplete
+                            options={addresses}
+                            getOptionLabel={(option) => option.name || ''}
+                            getOptionKey={(option) => String(option.id)}
+                            isOptionEqualToValue={(option, value) =>
+                                String(option.id) === String(value?.id)
+                            }
+                            value={
+                                addresses.find(
+                                    (a) => String(a.id) === String(tempFilters.address_id),
+                                ) || null
+                            }
+                            onChange={(_, value) =>
+                                setTempFilters({
+                                    ...tempFilters,
+                                    address_id: value ? value.id : '',
+                                })
+                            }
+                            renderInput={(params) => (
+                                <TextField {...params} label="Address" fullWidth/>
                             )}
                         />
                         <Autocomplete

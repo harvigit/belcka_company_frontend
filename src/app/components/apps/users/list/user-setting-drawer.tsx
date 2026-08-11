@@ -37,6 +37,7 @@ import {User} from 'next-auth';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
+import {useTranslation} from 'react-i18next';
 
 interface UserSettingDrawerProps {
     open: boolean;
@@ -62,6 +63,7 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                                                                  open,
                                                                  onClose
 }) => {
+    const {t} = useTranslation();
     const {data: session} = useSession();
     const authUser = session?.user as User & { company_id?: string | null };
     const companyId = authUser?.company_id;
@@ -89,7 +91,7 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
             setCompanyUsers(response.data?.info || []);
         } catch (error) {
             console.error('Failed to fetch company users', error);
-            toast.error('Failed to load company users');
+            toast.error(t('Failed to load company users'));
         }
     };
 
@@ -110,11 +112,11 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                 setDeleteArchivedEnabled(!!archiveSettings?.auto_delete_archived_users);
                 setDeleteAfterDays(Number(archiveSettings?.archive_delete_after_days) || 60);
             } else {
-                toast.error(response.data?.message || 'Failed to load permissions');
+                toast.error(response.data?.message || t('Failed to load permissions'));
             }
         } catch (error) {
             console.error('Failed to fetch permission users', error);
-            toast.error('Failed to load permissions');
+            toast.error(t('Failed to load permissions'));
         } finally {
             setLoading(false);
         }
@@ -144,11 +146,11 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                 setEnabled(!!response.data.enabled);
                 toast.success(response.data.message);
             } else {
-                toast.error(response.data?.message || 'Failed to update setting');
+                toast.error(response.data?.message || t('Failed to update setting'));
             }
         } catch (error) {
             console.error('Failed to toggle user permissions', error);
-            toast.error('Failed to update user permission setting');
+            toast.error(t('Failed to update user permission setting'));
         } finally {
             setLoading(false);
         }
@@ -157,7 +159,7 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
     const saveArchiveSettings = async () => {
         if ((archiveInactiveEnabled && archiveAfterDays < 1) ||
             (deleteArchivedEnabled && deleteAfterDays < 1)) {
-            toast.error('Archive periods must be at least one day');
+            toast.error(t('Archive periods must be at least one day'));
             return;
         }
         setLoading(true);
@@ -171,11 +173,11 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
             if (response.data?.IsSuccess) {
                 toast.success(response.data.message);
             } else {
-                toast.error(response.data?.message || 'Failed to save archive settings');
+                toast.error(response.data?.message || t('Failed to save archive settings'));
             }
         } catch (error) {
             console.error('Failed to save archive settings', error);
-            toast.error('Failed to save archive settings');
+            toast.error(t('Failed to save archive settings'));
         } finally {
             setLoading(false);
         }
@@ -198,11 +200,11 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                 setDialogOpen(false);
                 await fetchPermissionUsers();
             } else {
-                toast.error(response.data?.message || 'Failed to save permission');
+                toast.error(response.data?.message || t('Failed to save permission'));
             }
         } catch (error) {
             console.error('Failed to save user permission', error);
-            toast.error('Failed to save permission');
+            toast.error(t('Failed to save permission'));
         } finally {
             setLoading(false);
         }
@@ -235,12 +237,12 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                 toast.success(response.data.message);
             } else {
                 setPermissionUsers(previousUsers);
-                toast.error(response.data?.message || 'Failed to update permission');
+                toast.error(response.data?.message || t('Failed to update permission'));
             }
         } catch (error) {
             setPermissionUsers(previousUsers);
             console.error('Failed to update user permission', error);
-            toast.error('Failed to update permission');
+            toast.error(t('Failed to update permission'));
         }
     };
 
@@ -256,11 +258,11 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                 toast.success(response.data.message);
                 await fetchPermissionUsers();
             } else {
-                toast.error(response.data?.message || 'Failed to remove permission');
+                toast.error(response.data?.message || t('Failed to remove permission'));
             }
         } catch (error) {
             console.error('Failed to delete user permission', error);
-            toast.error('Failed to remove permission');
+            toast.error(t('Failed to remove permission'));
         } finally {
             setLoading(false);
         }
@@ -302,7 +304,7 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                     }}
                 >
                     <IconSettings size={24}/>
-                    <Typography>Settings</Typography>
+                    <Typography>{t('Settings')}</Typography>
                 </Box>
 
                 <Box display="flex" flex="1" sx={{overflow: 'hidden'}}>
@@ -330,7 +332,7 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                             onClick={() => setActiveTab('permissions')}
                         >
                             <IconUserCog size={18}/>
-                            User Permissions
+                            {t('User Permissions')}
                         </Box>
                         <Box
                             sx={{
@@ -348,7 +350,7 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                             onClick={() => setActiveTab('archive')}
                         >
                             <IconArchive size={18}/>
-                            Archive Settings
+                            {t('Archive Settings')}
                         </Box>
                     </Box>
 
@@ -358,9 +360,9 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                                 <>
                                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                                         <Box>
-                                            <Typography fontWeight={600}>Enable user management</Typography>
+                                            <Typography fontWeight={600}>{t('Enable user management')}</Typography>
                                             <Typography variant="body2" color="text.secondary">
-                                                Assigned users can access user details only while this is enabled.
+                                                {t('Assigned users can access user details only while this is enabled.')}
                                             </Typography>
                                         </Box>
                                         <IOSSwitch
@@ -378,7 +380,7 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                                         mt={3}
                                     >
                                         <Typography variant="h1" fontSize="20px !important">
-                                            Access List
+                                            {t('Access List')}
                                         </Typography>
                                         <Button
                                             variant="contained"
@@ -387,13 +389,12 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                                             onClick={openAddDialog}
                                             disabled={!enabled || loading || availableUsers.length === 0}
                                         >
-                                            Add
+                                            {t('Add')}
                                         </Button>
                                     </Box>
 
                                     <Typography variant="body2" color="text.secondary" mt={1} mb={3}>
-                                        Choose who can access user details and whether they have
-                                        view-only or view and edit access.
+                                        {t('Choose who can access user details and whether they have view-only or view and edit access.')}
                                     </Typography>
 
                                     <List sx={{mb: 4}}>
@@ -418,13 +419,13 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                                                                 )
                                                             }
                                                         >
-                                                            <MenuItem value="view">View only</MenuItem>
-                                                            <MenuItem value="view_edit">View &amp; Edit</MenuItem>
+                                                            <MenuItem value="view">{t('View only')}</MenuItem>
+                                                            <MenuItem value="view_edit">{t('View & Edit')}</MenuItem>
                                                         </Select>
                                                         <IconButton
                                                             edge="end"
                                                             disabled={!enabled || loading}
-                                                            aria-label={`Remove ${item.name}'s permission`}
+                                                            aria-label={t('Remove user permission', {name: item.name})}
                                                             onClick={() => deletePermission(item.id)}
                                                         >
                                                             <IconTrash/>
@@ -441,17 +442,16 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                             {activeTab === 'archive' && (
                                 <>
                                     <Typography variant="h1" fontSize="20px !important" mb={1}>
-                                        Archive Settings
+                                        {t('Archive Settings')}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary" mb={3}>
-                                        Automate archive cleanup while permanently retaining payroll, payslip,
-                                        salary, timesheet and worklog data.
+                                        {t('Automate archive cleanup while permanently retaining payroll, payslip, salary, timesheet and worklog data.')}
                                     </Typography>
                                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                                         <Box>
-                                            <Typography fontWeight={600}>Archive inactive users</Typography>
+                                            <Typography fontWeight={600}>{t('Archive inactive users')}</Typography>
                                             <Typography variant="body2" color="text.secondary">
-                                                Move eligible inactive users to the archive automatically.
+                                                {t('Move eligible inactive users to the archive automatically.')}
                                             </Typography>
                                         </Box>
                                         <IOSSwitch
@@ -463,7 +463,7 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                                     
                                     <TextField
                                         type="number"
-                                        label="Archive after days of inactivity"
+                                        label={t('Archive after days of inactivity')}
                                         fullWidth disabled={!archiveInactiveEnabled || loading}
                                         value={archiveAfterDays} inputProps={{min: 1}}
                                         onChange={(event) => setArchiveAfterDays(Number(event.target.value))}
@@ -472,9 +472,9 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                                     
                                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                                         <Box>
-                                            <Typography fontWeight={600}>Delete users from archive</Typography>
+                                            <Typography fontWeight={600}>{t('Delete users from archive')}</Typography>
                                             <Typography variant="body2" color="text.secondary">
-                                                Remove archived company access after the selected period.
+                                                {t('Remove archived company access after the selected period.')}
                                             </Typography>
                                         </Box>
                                         <IOSSwitch 
@@ -485,14 +485,14 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                                     </Box>
                                     <TextField 
                                         type="number" 
-                                        label="Delete from archive after days"
+                                        label={t('Delete from archive after days')}
                                         fullWidth disabled={!deleteArchivedEnabled || loading}
                                         value={deleteAfterDays} inputProps={{min: 1}}
                                         onChange={(event) => setDeleteAfterDays(Number(event.target.value))}
                                         sx={{mb: 3}}
                                     />
                                     <Button variant="contained" disabled={loading} onClick={saveArchiveSettings}>
-                                        {loading ? 'Saving...' : 'Save Archive Settings'}
+                                        {loading ? t('Saving...') : t('Save Archive Settings')}
                                     </Button>
                                 </>
                             )}
@@ -509,9 +509,9 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                 maxWidth="sm"
             >
                 <DialogTitle sx={{display: 'flex', justifyContent: 'space-between'}}>
-                    <Typography>Select User and Permission</Typography>
+                    <Typography>{t('Select User and Permission')}</Typography>
                     <IconButton
-                        aria-label="close"
+                        aria-label={t('Close')}
                         disabled={loading}
                         onClick={() => setDialogOpen(false)}
                     >
@@ -520,10 +520,10 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                 </DialogTitle>
                 <DialogContent>
                     <FormControl fullWidth margin="normal">
-                        <InputLabel>Select User</InputLabel>
+                        <InputLabel>{t('Select User')}</InputLabel>
                         <Select
                             value={selectedUserId}
-                            label="Select User"
+                            label={t('Select User')}
                             onChange={(event) => setSelectedUserId(event.target.value)}
                         >
                             {availableUsers.map((item) => (
@@ -535,29 +535,29 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                     </FormControl>
 
                     <FormControl fullWidth margin="normal">
-                        <InputLabel>Permission</InputLabel>
+                        <InputLabel>{t('Permission')}</InputLabel>
                         <Select
                             value={permission}
-                            label="Permission"
+                            label={t('Permission')}
                             onChange={(event) =>
                                 setPermission(event.target.value as UserPermission)
                             }
                         >
-                            <MenuItem value="view">View only</MenuItem>
-                            <MenuItem value="view_edit">View &amp; Edit</MenuItem>
+                            <MenuItem value="view">{t('View only')}</MenuItem>
+                            <MenuItem value="view_edit">{t('View & Edit')}</MenuItem>
                         </Select>
                     </FormControl>
                 </DialogContent>
                 <DialogActions>
                     <Button disabled={loading} onClick={() => setDialogOpen(false)}>
-                        Cancel
+                        {t('Cancel')}
                     </Button>
                     <Button
                         variant="contained"
                         disabled={loading || !selectedUserId}
                         onClick={savePermission}
                     >
-                        {loading ? 'Saving...' : 'Save'}
+                        {loading ? t('Saving...') : t('Save')}
                     </Button>
                 </DialogActions>
             </Dialog>

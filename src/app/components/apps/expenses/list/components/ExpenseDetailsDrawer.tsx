@@ -198,6 +198,7 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
     const currency = detail?.currency || expense?.currency || '£';
     const amount = Number(detail?.total_amount ?? expense?.amount ?? 0);
     const hasReceipt = Number(detail?.attachments?.length || expense?.attachmentCount || 0) > 0;
+    const canEdit = Boolean(detail?.can_edit ?? expense?.canEdit ?? status !== 'sent');
     const canReject = Boolean(detail?.can_reject ?? expense?.canReject);
     const showApproveButton = status === 'pending' || status === 'rejected';
     const showRejectButton = status === 'pending' || (status === 'sent' && canReject);
@@ -333,19 +334,21 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
                             Expense Details
                         </Typography>
                         <Stack direction="row" spacing={1}>
-                            <IconButton
-                                size="small"
-                                onClick={() => {
-                                    if (editing) {
-                                        handleCancelEdit();
-                                        return;
-                                    }
-                                    setEditing(true);
-                                }}
-                                aria-label="Edit expense"
-                            >
-                                <IconPencil size={20}/>
-                            </IconButton>
+                            {canEdit && (
+                                <IconButton
+                                    size="small"
+                                    onClick={() => {
+                                        if (editing) {
+                                            handleCancelEdit();
+                                            return;
+                                        }
+                                        setEditing(true);
+                                    }}
+                                    aria-label="Edit expense"
+                                >
+                                    <IconPencil size={20}/>
+                                </IconButton>
+                            )}
                             <IconButton size="small" onClick={handleClose} aria-label={editing ? 'Cancel editing' : 'Close'}>
                                 <IconX size={20}/>
                             </IconButton>

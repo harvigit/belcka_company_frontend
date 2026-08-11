@@ -19,6 +19,7 @@ import toast from "react-hot-toast";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import { useTranslation } from "react-i18next";
 
 interface ProjectListingProps {
   companyId: number | null;
@@ -45,6 +46,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
   active,
   userId,
 }) => {
+  const { t } = useTranslation();
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [fetchCategory, setFetchCategory] = useState<boolean>(true);
   const fetchNotifications = async () => {
@@ -113,7 +115,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
       if (response.data.IsSuccess) {
         toast.success(response.data.message);
       } else {
-        toast.error("Update failed");
+        toast.error(t("Update failed"));
         fetchNotifications();
       }
     } catch (err) {
@@ -141,7 +143,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
         {categories.length > 0 && (
           <>
             <Button onClick={saveNotifications} disabled={fetchCategory}>
-              {fetchCategory ? "Updating..." : "Update"}
+              {fetchCategory ? t("Updating...") : t("Update")}
             </Button>
           </>
         )}
@@ -165,7 +167,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
                   fontWeight="bold"
                   color="#487bb3ff"
                 >
-                  Titles
+                  {t("Titles")}
                 </Typography>
               </TableCell>
               <TableCell align="center">
@@ -174,7 +176,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
                   fontWeight="bold"
                   color="#487bb3ff"
                 >
-                  Push
+                  {t("Push")}
                 </Typography>
               </TableCell>
               <TableCell align="center">
@@ -183,7 +185,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
                   fontWeight="bold"
                   color="#487bb3ff"
                 >
-                  Feed
+                  {t("Feed")}
                 </Typography>
               </TableCell>
             </TableRow>
@@ -208,7 +210,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
                     >
                       <Image
                         src="/images/no-data.png"
-                        alt="No data"
+                        alt={t("No data")}
                         style={{
                           maxWidth: "100%",
                           maxHeight: "100%",
@@ -227,7 +229,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
                     <TableRow sx={{ background: "#f8f9fa" }}>
                       <TableCell colSpan={1} sx={{ padding: "10px" }}>
                         <Typography fontWeight="bold" color="#7D92A9">
-                          {category.name}
+                          {t(category.name)}
                         </Typography>
                       </TableCell>
                       <TableCell align="center" sx={{ padding: "10px" }}>
@@ -266,7 +268,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
                       <TableRow key={notification.id}>
                         <TableCell sx={{ padding: "10px" }}>
                           <Typography color="textSecondary">
-                            {notification.name}
+                            {t(notification.name)}
                           </Typography>
                         </TableCell>
                         <TableCell align="center" sx={{ padding: "10px" }}>

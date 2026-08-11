@@ -28,6 +28,7 @@ import Image from "next/image";
 import { Grid } from "@mui/system";
 import { User } from "next-auth";
 import { useSession } from "next-auth/react";
+import { useTranslation } from "react-i18next";
 
 const emojiList = [
   { emoji: "😊", code: "1f60a" },
@@ -53,6 +54,7 @@ export default function AnnouncementsList({
   onDrawerClose: any;
   isDrawerOpen: boolean;
 }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [openDrawer, setOpenDrawer] = useState(false);
   const [page, setPage] = useState<number>(1);
@@ -105,7 +107,7 @@ export default function AnnouncementsList({
       toast.success(response.data.message);
       onUpdate?.();
     } catch (err) {
-      toast.error("Failed to add emoji reaction.");
+      toast.error(t("Failed to add emoji reaction."));
     }
   };
 
@@ -194,7 +196,7 @@ export default function AnnouncementsList({
             onClick={() => setOpenDrawer(true)}
             startIcon={<IconPlus />}
           >
-            Announcement
+            {t("Announcement")}
           </Button>
         )}
       </Box>
@@ -202,7 +204,7 @@ export default function AnnouncementsList({
       <List sx={{ p: 2 }}>
         {loading ? (
           <Box sx={{ p: 4, textAlign: "center" }}>
-            <Typography variant="h6">Loading...</Typography>
+            <Typography variant="h6">{t("Loading...")}</Typography>
           </Box>
         ) : paginatedAnnouncement?.length > 0 ? (
           <>
@@ -231,7 +233,7 @@ export default function AnnouncementsList({
                         }}
                       >
                         <Typography variant="h6" color="inherit">
-                          Announcement from {it.sender_name} • {it.announcement_type == 2 ? it.sender_name : it.type}
+                          {t("Announcement from")} {it.sender_name} • {it.announcement_type == 2 ? it.sender_name : t(it.type)}
                         </Typography>
                         <Typography
                           color="textSecondary"
@@ -466,7 +468,7 @@ export default function AnnouncementsList({
                   }
                   onClick={() => setPage((prev) => prev + 1)}
                 >
-                  See More
+                  {t("See More")}
                 </Button>
               </Box>
             )}
@@ -474,7 +476,7 @@ export default function AnnouncementsList({
         ) : (
           <Box sx={{ p: 6, pt: 3, textAlign: "center" }}>
             <Typography variant="h4" color="text.secondary">
-              No records found for announcement.
+              {t("No records found for announcement.")}
             </Typography>
           </Box>
         )}
@@ -527,12 +529,12 @@ export default function AnnouncementsList({
                 <IconArrowLeft />
               </IconButton>
               <Typography variant="h6" color="inherit" fontWeight={700}>
-                Feed Emoji Details
+                {t("Feed Emoji Details")}
               </Typography>
             </Box>
 
             {emojiDetails.length === 0 ? (
-              <Typography color="textSecondary">No reactions yet.</Typography>
+              <Typography color="textSecondary">{t("No reactions yet.")}</Typography>
             ) : (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {emojiDetails.map((feed: any) => (
@@ -593,12 +595,12 @@ export default function AnnouncementsList({
                 <IconArrowLeft />
               </IconButton>
               <Typography variant="h6" color="inherit" fontWeight={700}>
-                Read by
+                {t("Read by")}
               </Typography>
             </Box>
 
             {readDetails.length === 0 ? (
-              <Typography color="textSecondary">No user read yet.</Typography>
+              <Typography color="textSecondary">{t("No user read yet.")}</Typography>
             ) : (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {readDetails.map((feed: any) => (
@@ -659,12 +661,12 @@ export default function AnnouncementsList({
                 <IconArrowLeft />
               </IconButton>
               <Typography variant="h6" color="inherit" fontWeight={700}>
-                Announcement Details
+                {t("Announcement Details")}
               </Typography>
             </Box>
 
             {announcementDetails.length === 0 ? (
-              <Typography color="textSecondary">No reactions yet.</Typography>
+              <Typography color="textSecondary">{t("No reactions yet.")}</Typography>
             ) : (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 <Box
@@ -684,8 +686,8 @@ export default function AnnouncementsList({
                   />
                   <Box>
                     <Typography variant="h6" color="inherit">
-                      Announcement from {announcementDetails.sender_name} •{" "}
-                      {announcementDetails.type}
+                      {t("Announcement from")} {announcementDetails.sender_name} •{" "}
+                      {t(announcementDetails.type)}
                     </Typography>
                     <Typography
                       color="textSecondary"
@@ -714,7 +716,7 @@ export default function AnnouncementsList({
                 <Divider />
                 <Box my={1}>
                   <Typography variant="body1" color="textSecondary">
-                    Send notification as:
+                    {t("Send notification as:")}
                   </Typography>
                   {announcementDetails.type}
                 </Box>
@@ -723,7 +725,7 @@ export default function AnnouncementsList({
                   {announcementDetails.documents &&
                     announcementDetails.documents.length > 0 && (
                       <Box my={1}>
-                        Attachements
+                        {t("Attachments")}
                         <Box
                           sx={{
                             display: "flex",
@@ -823,7 +825,7 @@ export default function AnnouncementsList({
                           flexWrap: "wrap",
                         }}
                       >
-                        Feeds
+                        {t("Feeds")}
                         {Object.entries(
                           announcementDetails.feeds.reduce(
                             (acc: any, feed: any) => {

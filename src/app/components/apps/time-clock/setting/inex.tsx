@@ -29,6 +29,7 @@ import BookkeeperSetting from "./menus/bookkeeper-setting";
 import LeaveList from './menus/leaves/list';
 import HolidayList from './menus/holidays/list';
 import CategoryList from './menus/expense-categories/list';
+import { useTranslation } from "react-i18next";
 
 const menuItems = [
     { icon: <IconSettings size={18} />, label: "General" },
@@ -56,6 +57,7 @@ const Inex: React.FC<SettingsProps> = ({
     initialActiveMenuItem = null,
     initialProjectId = null,
 }) => {
+    const { t } = useTranslation();
     const [activeMenuItem, setActiveMenuItem] = useState<string>("General");
     const [openSnackbar, setOpenSnackbar] = useState(false);
 
@@ -106,7 +108,7 @@ const Inex: React.FC<SettingsProps> = ({
                     }}
                 >
                     <IconSettings size={24} />
-                    <Typography>Settings</Typography>
+                    <Typography>{t('Settings')}</Typography>
                 </Box>
 
                 {/* Main Content */}
@@ -155,7 +157,7 @@ const Inex: React.FC<SettingsProps> = ({
                                 onClick={() => handleMenuItemClick(item.label)}
                             >
                                 {item.icon}
-                                {item.label}
+                                {t(item.label)}
                             </Box>
                         ))}
                     </Box>
@@ -210,7 +212,7 @@ const Inex: React.FC<SettingsProps> = ({
                 open={openSnackbar}
                 autoHideDuration={3000}
                 onClose={() => setOpenSnackbar(false)}
-                message="Settings saved!"
+                message={t('Settings saved!')}
             />
         </>
     );

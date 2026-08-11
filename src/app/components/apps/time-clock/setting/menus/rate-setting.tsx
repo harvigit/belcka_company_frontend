@@ -27,8 +27,10 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
+import { useTranslation } from "react-i18next";
 
 const RateSetting = () => {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<any[]>([]);
   const [data, setData] = useState<any>([]);
   const [currency, setCurrency] = useState<number>();
@@ -259,7 +261,7 @@ const RateSetting = () => {
             mb={3}
           >
             <Typography variant="h1" fontSize={"20px !important"}>
-              Enable pay rates
+              {t('Enable pay rates')}
             </Typography>
             {enabled !== null && (
               <IOSSwitch
@@ -279,7 +281,7 @@ const RateSetting = () => {
           >
             <Box display="flex" alignItems="center" gap={1} sx={{ height: 32 }}>
               <Typography variant="h1" fontSize={"20px !important"}>
-                Pay rate currency
+                {t('Pay rate currency')}
               </Typography>
             </Box>
             <Box>
@@ -298,8 +300,8 @@ const RateSetting = () => {
                 value={currency ?? ""}
                 onChange={(e: any) => handleCurrencyChange(e)}
               >
-                <MenuItem value={1}>£ - British Pound Sterling</MenuItem>
-                <MenuItem value={2}>$ - USD Dollar</MenuItem>
+                <MenuItem value={1}>{t('£ - British Pound Sterling')}</MenuItem>
+                <MenuItem value={2}>{t('$ - USD Dollar')}</MenuItem>
               </Select>
             </Box>
           </Box>
@@ -310,7 +312,7 @@ const RateSetting = () => {
             mb={3}
             className={enabled ? "" : "disabled_location"}
           >
-            Select the currency in which you pay your employees
+            {t('Select the currency in which you pay your employees')}
           </Typography>
           <Divider sx={{ borderWidth: 1 }} />
           <Box
@@ -321,7 +323,7 @@ const RateSetting = () => {
           >
             <Box display="flex" alignItems="center" gap={1} sx={{ height: 32 }}>
               <Typography variant="h1" fontSize={"20px !important"}>
-                Admin Permissions
+                {t('Admin Permissions')}
               </Typography>
             </Box>
             <Box>
@@ -332,7 +334,7 @@ const RateSetting = () => {
                 color="primary"
                 onClick={() => setOpenModal(true)}
               >
-                Add
+                {t('Add')}
               </Button>
             </Box>
           </Box>
@@ -343,8 +345,7 @@ const RateSetting = () => {
             mb={3}
             className={enabled ? "" : "disabled_location"}
           >
-            Select which admin or users will have permissions to the pay rate,
-            and what level of permission
+            {t('Select which admin or users will have permissions to the pay rate, and what level of permission')}
           </Typography>
         </Box>
 
@@ -376,8 +377,8 @@ const RateSetting = () => {
                       handlePermissionChange(user.user_id, e.target.value)
                     }
                   >
-                    <MenuItem value="view">View only</MenuItem>
-                    <MenuItem value="view_edit">View & Edit</MenuItem>
+                    <MenuItem value="view">{t('View only')}</MenuItem>
+                    <MenuItem value="view_edit">{t('View & Edit')}</MenuItem>
                   </Select>
                   {!loading && (
                     <IconButton
@@ -410,18 +411,18 @@ const RateSetting = () => {
             alignItems: "center",
           }}
         >
-          <Typography>Select User and Permission</Typography>
+          <Typography>{t('Select User and Permission')}</Typography>
           <IconButton aria-label="close" onClick={() => setOpenModal(false)}>
             <IconX />
           </IconButton>
         </DialogTitle>
         <DialogContent>
           <FormControl fullWidth margin="normal">
-            <InputLabel>Select User</InputLabel>
+            <InputLabel>{t('Select User')}</InputLabel>
             <Select
               value={selectedUser || ""}
               onChange={(e) => setSelectedUser(e.target.value)}
-              label="Select User"
+              label={t('Select User')}
             >
               {users.map((user) => (
                 <MenuItem key={user.id} value={user.id}>
@@ -432,27 +433,27 @@ const RateSetting = () => {
           </FormControl>
 
           <FormControl fullWidth margin="normal">
-            <InputLabel>Permission</InputLabel>
+            <InputLabel>{t('Permission')}</InputLabel>
             <Select
               value={permission}
               onChange={(e) => setPermission(e.target.value)}
-              label="Permission"
+              label={t('Permission')}
             >
-              <MenuItem value="view">Only view</MenuItem>
-              <MenuItem value="view_edit">View & Edit</MenuItem>
+              <MenuItem value="view">{t('Only view')}</MenuItem>
+              <MenuItem value="view_edit">{t('View & Edit')}</MenuItem>
             </Select>
           </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenModal(false)} color="primary">
-            Cancel
+            {t('Cancel')}
           </Button>
           <Button
             onClick={handleSave}
             color="primary"
             disabled={loading || !selectedUser}
           >
-            {loading ? "Saving..." : "Save"}
+            {loading ? t('Saving...') : t('Save')}
           </Button>
         </DialogActions>
       </Dialog>

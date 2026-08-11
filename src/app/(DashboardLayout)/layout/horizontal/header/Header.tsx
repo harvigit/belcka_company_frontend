@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import Profile from "../../vertical/header/Profile";
 import Search from "../../vertical/header/Search";
+import Language from "../../vertical/header/Language";
 import Logo from "../../shared/logo/Logo";
 import { CustomizerContext } from "@/app/context/customizerContext";
 import config from "@/app/context/config";
@@ -91,6 +92,7 @@ const Header = () => {
 
           <Box flexGrow={1} />
           <Stack direction="row" alignItems="center">
+            <Language />
 
             <IconButton color="inherit">
               {activeMode === 'light' ? (

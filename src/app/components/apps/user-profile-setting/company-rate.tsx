@@ -21,6 +21,7 @@ import { Grid } from "@mui/system";
 import { IconCheck, IconHistory, IconX } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import { useTranslation } from "react-i18next";
 interface ProjectListingProps {
   active: boolean;
   name: string | null;
@@ -51,6 +52,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
   name,
   userId,
 }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState<boolean>(true);
   const params = useParams();
   const [comapny, setCompany] = useState<any>();
@@ -469,7 +471,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                   fontSize="16px !important"
                   sx={{ mb: 1 }}
                 >
-                  Edit rate
+                  {t("Edit rate")}
                 </Typography>
               </Box>
               {comapny.is_pending_request && (
@@ -569,7 +571,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                       });
                     }}
                     renderInput={(params) => (
-                      <TextField {...params} label="Trade" fullWidth />
+                      <TextField {...params} label={t("Trade")} fullWidth />
                     )}
                     fullWidth
                   />
@@ -579,7 +581,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                   <TextField
                     fullWidth
                     className="custom_color"
-                    label="Join Company Date"
+                    label={t("Join Company Date")}
                     value={comapny?.joining_date}
                     disabled
                   />
@@ -590,7 +592,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                     type="number"
                     inputMode="numeric"
                     className="custom_color"
-                    label={`(${comapny?.currency}) Net Per Day`}
+                    label={`(${comapny?.currency}) ${t("Net Per Day")}`}
                     value={formData.rate ?? ""}
                     disabled={comapny?.is_pending_request}
                     onChange={(e) => {
@@ -617,7 +619,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
               {/* Gross & CIS Summary */}
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography color="textSecondary">Gross Per Day</Typography>
+                  <Typography color="textSecondary">{t("Gross Per Day")}</Typography>
                   <Typography color="textSecondary">
                     {comapny?.currency}
                     {gross}
@@ -641,7 +643,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                   onClick={handleUpdate}
                   disabled={comapny.is_pending_request}
                 >
-                  Update
+                  {t("Update")}
                 </Button>
               </Box>
             </>
@@ -660,7 +662,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                         fontSize="16px !important"
                         sx={{ mb: 1 }}
                       >
-                        Edit rate
+                        {t("Edit rate")}
                       </Typography>
                     </Box>
                   )}
@@ -697,7 +699,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                           });
                         }}
                         renderInput={(params) => (
-                          <TextField {...params} label="Trade" fullWidth />
+                          <TextField {...params} label={t("Trade")} fullWidth />
                         )}
                         fullWidth
                       />
@@ -707,7 +709,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                       <TextField
                         fullWidth
                         className="custom_color"
-                        label="Join Company Date"
+                        label={t("Join Company Date")}
                         value={comapny?.joining_date}
                         disabled
                       />
@@ -719,7 +721,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                         type="number"
                         inputMode="decimal"
                         className="custom_color"
-                        label={`(${comapny?.currency}) Net Per Day`}
+                        label={`(${comapny?.currency}) ${t("Net Per Day")}`}
                         value={formData.rate ?? ""}
                         disabled={
                           ((payRate === "view" || !payRate) &&
@@ -751,7 +753,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Box display="flex" justifyContent="space-between" mb={1}>
                         <Typography color="textSecondary">
-                          Gross Per Day
+                          {t("Gross Per Day")}
                         </Typography>
                         <Typography color="textSecondary">
                           {comapny?.currency}

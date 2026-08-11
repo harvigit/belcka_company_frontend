@@ -2,6 +2,7 @@
 import { createContext, useState, ReactNode, useEffect } from 'react';
 import config from './config'
 import React from "react";
+import i18n from "@/utils/i18n";
 
 // Define the shape of the context state
 interface CustomizerContextState {
@@ -58,6 +59,28 @@ export const CustomizerContextProvider: React.FC<CustomizerContextProps> = ({ ch
     document.documentElement.setAttribute("data-sidebar-type", isCollapse);
 
   }, [activeMode, activeDir, activeTheme, activeLayout, isLayout, isCollapse]);
+
+  useEffect(() => {
+    const storedLanguage = window.localStorage.getItem("belcka_language");
+    const nextLanguage = storedLanguage || isLanguage;
+
+    if (storedLanguage && storedLanguage !== isLanguage) {
+      setIsLanguage(storedLanguage);
+    }
+
+    if (i18n.language !== nextLanguage) {
+      void i18n.changeLanguage(nextLanguage);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("belcka_language", isLanguage);
+    document.documentElement.setAttribute("lang", isLanguage);
+
+    if (i18n.language !== isLanguage) {
+      void i18n.changeLanguage(isLanguage);
+    }
+  }, [isLanguage]);
 
   return (
     <CustomizerContext.Provider

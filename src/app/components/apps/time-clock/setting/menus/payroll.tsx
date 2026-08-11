@@ -13,6 +13,7 @@ import {
 import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 interface PayrollSettings {
     payrollCycle: string;
@@ -73,6 +74,7 @@ const dropdownMenuProps = {
 };
 
 export default function Payroll({ onSaveSuccess }: PayrollProps) {
+    const { t } = useTranslation();
     const [state, setState] = useState<PayrollState>({
         payrollCycle: "",
         isSaving: false,
@@ -106,7 +108,7 @@ export default function Payroll({ onSaveSuccess }: PayrollProps) {
             } catch (error) {
                 console.error("Error fetching payroll settings:", error);
                 if (mounted) {
-                    toast.error("Could not load payroll settings");
+                    toast.error(t("Could not load payroll settings"));
                     setState((prev) => ({ ...prev, isLoading: false }));
                 }
             }
@@ -121,7 +123,7 @@ export default function Payroll({ onSaveSuccess }: PayrollProps) {
 
     const handleSave = useCallback(async () => {
         if (!state.payrollCycle) {
-            toast.error("Please select a payroll cycle");
+            toast.error(t("Please select a payroll cycle"));
             return;
         }
 
@@ -135,14 +137,14 @@ export default function Payroll({ onSaveSuccess }: PayrollProps) {
             const response = await api.post("/setting/save-payroll-settings", payload);
 
             if (response.data?.IsSuccess) {
-                toast.success(response.data.message || "Payroll settings saved successfully");
+                toast.success(response.data.message || t("Payroll settings saved successfully"));
                 onSaveSuccess?.();
             } else {
-                toast.error(response.data?.message || "Failed to save settings");
+                toast.error(response.data?.message || t("Failed to save settings"));
             }
         } catch (error) {
             console.error("Error saving payroll settings:", error);
-            toast.error("Failed to save payroll settings");
+            toast.error(t("Failed to save payroll settings"));
         } finally {
             setState((prev) => ({ ...prev, isSaving: false }));
         }
@@ -185,7 +187,7 @@ export default function Payroll({ onSaveSuccess }: PayrollProps) {
                             <Typography
                                 sx={{ fontSize: 15, fontWeight: 500, color: "#111827" }}
                             >
-                                Payroll cycle
+                                {t('Payroll cycle')}
                             </Typography>
                         </Box>
 
@@ -204,12 +206,12 @@ export default function Payroll({ onSaveSuccess }: PayrollProps) {
                             >
                                 {payrollOptions.map((opt) => (
                                     <MenuItem key={opt.value} value={opt.value}>
-                                        {opt.label}
+                                        {t(opt.label)}
                                     </MenuItem>
                                 ))}
                                 {payrollOptions.length === 0 && (
                                     <MenuItem disabled value="">
-                                        No options available
+                                        {t('No options available')}
                                     </MenuItem>
                                 )}
                             </Select>
@@ -237,7 +239,7 @@ export default function Payroll({ onSaveSuccess }: PayrollProps) {
                             style={{ marginTop: 1, flexShrink: 0 }}
                         />
                         <Typography sx={{ fontSize: 13.5, color: "#92400e", lineHeight: 1.5 }}>
-                            Changing the payroll period may impact the calculations of timesheet.
+                            {t('Changing the payroll period may impact the calculations of timesheet.')}
                         </Typography>
                     </Box>
 
@@ -274,10 +276,10 @@ export default function Payroll({ onSaveSuccess }: PayrollProps) {
                                 size={16}
                                 sx={{ mr: 1, color: "inherit" }}
                             />
-                            Saving...
+                            {t('Saving...')}
                         </>
                     ) : (
-                        "Save changes"
+                        t('Save changes')
                     )}
                 </Button>
             </Box>

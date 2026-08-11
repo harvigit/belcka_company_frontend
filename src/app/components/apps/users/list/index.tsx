@@ -94,6 +94,7 @@ export interface Permission {
 
 import {useServerTable} from '@/hooks/useServerTable';
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
+import {useTranslation} from 'react-i18next';
 
 export interface UserList {
     is_working: boolean;
@@ -207,7 +208,37 @@ const readUsersTableStateCookie = (key: string): UsersTableCookieState => {
     }
 };
 
+const USER_COLUMN_TRANSLATION_KEYS: Record<string, string> = {
+    name: 'Name',
+    teamName: 'Team Name',
+    email: 'Email',
+    companyCode: 'Company Code',
+    accountId: 'Account Id',
+    phone: 'Phone',
+    nameOnUtr: 'Name on UTR',
+    nameOnAccount: 'Name on Account',
+    permissions: 'Permissions',
+    isInvited: 'Login',
+    joiningDate: 'Joining on',
+    cis: 'CIS',
+    bankName: 'Bank Name',
+    accountNo: 'Account No',
+    shortCode: 'Short Code',
+    address: 'Address',
+    ninNumber: 'Nin Number',
+    utrNumber: 'Utr Number',
+    status: 'Status',
+};
+
+const getUserColumnTranslationKey = (columnId: string) =>
+    USER_COLUMN_TRANSLATION_KEYS[columnId] ||
+    columnId
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, (str) => str.toUpperCase())
+        .trim();
+
 const TablePagination = () => {
+    const {t} = useTranslation();
     const [data, setData] = useState<UserList[]>([]);
     const [isAdmin, setIsAdmin] = useState<boolean>(false);
     const [totalUsersListCount, setTotalUsersListCount] = useState<number | undefined>(undefined);
@@ -668,7 +699,7 @@ const TablePagination = () => {
 
     const handleSavePermissions = async () => {
         if (!canEditPermissions()) {
-            toast.error('You have view-only access and cannot edit user permissions.');
+            toast.error(t('You have view-only access and cannot edit user permissions.'));
             return;
         }
 
@@ -701,7 +732,7 @@ const TablePagination = () => {
 
             if (response.data.IsSuccess === true) {
                 toast.success(
-                    response.data.message || 'Permissions updated successfully',
+                    response.data.message || t('Permissions updated successfully'),
                 );
 
                 const newPermissionCount = selectedUserPermissions.permissions.filter(
@@ -855,7 +886,7 @@ const TablePagination = () => {
             id: 'name',
             header: () => (
                 <Stack direction="row" alignItems="center" spacing={4}>
-                    <Typography variant="subtitle2">Name</Typography>
+                    <Typography variant="subtitle2">{t('Name')}</Typography>
                 </Stack>
             ),
             enableSorting: true,
@@ -910,7 +941,7 @@ const TablePagination = () => {
                                     >
                                         {user.name ?? '-'}
                                     </Typography>
-                                    <Tooltip title={user.trade_name ?? '-'} placement="top" arrow>
+                                    <Tooltip title={user.trade_name ? t(user.trade_name) : '-'} placement="top" arrow>
                                         <Typography sx={{
                                             display: '-webkit-box',
                                             WebkitBoxOrient: 'vertical',
@@ -919,7 +950,7 @@ const TablePagination = () => {
                                             textOverflow: 'ellipsis',
                                             wordBreak: 'break-word',
                                         }} color="textSecondary" variant="subtitle1" width={190}>
-                                            {user.trade_name}
+                                            {user.trade_name ? t(user.trade_name) : '-'}
                                         </Typography>
                                     </Tooltip>
                                 </Box>
@@ -934,7 +965,7 @@ const TablePagination = () => {
             id: 'teamName',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Team Name
+                    {t('Team Name')}
                 </Typography>
             ),
             cell: (info) => (
@@ -952,7 +983,7 @@ const TablePagination = () => {
             id: 'email',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Email
+                    {t('Email')}
                 </Typography>
             ),
             cell: (info) => (
@@ -977,7 +1008,7 @@ const TablePagination = () => {
             id: 'companyCode',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Company Code
+                    {t('Company Code')}
                 </Typography>
             ),
             cell: (info) => (
@@ -1002,7 +1033,7 @@ const TablePagination = () => {
             id: 'accountId',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Account Id
+                    {t('Account Id')}
                 </Typography>
             ),
             cell: (info) => (
@@ -1027,7 +1058,7 @@ const TablePagination = () => {
             id: 'phone',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Phone
+                    {t('Phone')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1046,7 +1077,7 @@ const TablePagination = () => {
             id: 'nameOnUtr',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Name on UTR
+                    {t('Name on UTR')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1062,7 +1093,7 @@ const TablePagination = () => {
             id: 'nameOnAccount',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Name on Account
+                    {t('Name on Account')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1079,7 +1110,7 @@ const TablePagination = () => {
             id: 'permissions',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Permissions
+                    {t('Permissions')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1095,8 +1126,8 @@ const TablePagination = () => {
                         }
                         label={
                             user.permission_count === 0
-                                ? 'Select'
-                                : `${user.permission_count} Permissions`
+                                ? t('Select')
+                                : t('permissions.count', {count: user.permission_count})
                         }
                         sx={{
                             backgroundColor: (theme) => theme.palette.primary.light,
@@ -1125,7 +1156,7 @@ const TablePagination = () => {
             id: 'isInvited',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Login
+                    {t('Login')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1138,7 +1169,7 @@ const TablePagination = () => {
                         width={90}
                     >
                         {row.is_invited
-                            ? 'Not logged in'
+                            ? t('Not logged in')
                             : (formatDate(row.logged_in_at) ?? '-')}
                     </Typography>
                 );
@@ -1149,7 +1180,7 @@ const TablePagination = () => {
             id: 'joiningDate',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Joining on
+                    {t('Joining on')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1166,7 +1197,7 @@ const TablePagination = () => {
             id: 'cis',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    CIS
+                    {t('CIS')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1183,7 +1214,7 @@ const TablePagination = () => {
             id: 'bankName',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Bank Name
+                    {t('Bank Name')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1200,7 +1231,7 @@ const TablePagination = () => {
             id: 'accountNo',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Account No
+                    {t('Account No')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1226,7 +1257,7 @@ const TablePagination = () => {
             id: 'shortCode',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Short Code
+                    {t('Short Code')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1243,7 +1274,7 @@ const TablePagination = () => {
             id: 'address',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Address
+                    {t('Address')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1271,7 +1302,7 @@ const TablePagination = () => {
             id: 'ninNumber',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Nin Number
+                    {t('Nin Number')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1288,7 +1319,7 @@ const TablePagination = () => {
             id: 'utrNumber',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    Utr Number
+                    {t('Utr Number')}
                 </Typography>
             ),
             cell: (info) => {
@@ -1303,7 +1334,7 @@ const TablePagination = () => {
 
         columnHelper.accessor((row) => row?.is_working, {
             id: 'status',
-            header: () => 'Status',
+            header: () => t('Status'),
             cell: (info) => {
                 const item = info.row.original;
                 const lastWorkedDate = item.last_worked_date;
@@ -1312,7 +1343,7 @@ const TablePagination = () => {
                     return (
                         <Chip
                             size="small"
-                            label="On Break"
+                            label={t('On Break')}
                             sx={{
                                 backgroundColor: (theme) => theme.palette.warning.light,
                                 color: (theme) => theme.palette.warning.dark,
@@ -1328,7 +1359,7 @@ const TablePagination = () => {
                     return (
                         <Chip
                             size="small"
-                            label="Working"
+                            label={t('Working')}
                             sx={{
                                 backgroundColor: (theme) => theme.palette.success.light,
                                 color: (theme) => theme.palette.success.main,
@@ -1666,7 +1697,7 @@ const TablePagination = () => {
                             </Box>
                         );
                     }}
-                    noOptionsText={`No ${label.toLowerCase()} found`}
+                    noOptionsText={t('filter.noOptionsFound', {label: label.toLowerCase()})}
                     slotProps={{
                         paper: {
                             sx: {
@@ -1745,7 +1776,7 @@ const TablePagination = () => {
                         }}
                     />
                     <Typography component="span" variant="body1">
-                        All
+                        {t('All')}
                     </Typography>
                 </Box>
             </Stack>
@@ -1775,7 +1806,7 @@ const TablePagination = () => {
                             type="text"
                             size="small"
                             variant="outlined"
-                            placeholder="Search..."
+                            placeholder={t('Search...')}
                             value={searchTerm}
                             onChange={(e) => {
                                 // User-driven search must never skip the page reset
@@ -1826,7 +1857,7 @@ const TablePagination = () => {
                         <DialogTitle
                             sx={{m: 0, position: 'relative', overflow: 'visible'}}
                         >
-                            Filters
+                            {t('Filters')}
                             <IconButton
                                 aria-label="close"
                                 onClick={() => setOpen(false)}
@@ -1848,10 +1879,10 @@ const TablePagination = () => {
 
                         <DialogContent sx={{overflowX: 'hidden'}}>
                             <Stack spacing={2} mt={1} sx={{width: '100%', minWidth: 0}}>
-                                {renderFilterSelect('Teams', 'team', teams)}
-                                {renderFilterSelect('Trades', 'trade', trade)}
+                                {renderFilterSelect(t('Teams'), 'team', teams)}
+                                {renderFilterSelect(t('Trades'), 'trade', trade)}
                                 {renderFilterSelect(
-                                    'Supervisors',
+                                    t('Supervisors'),
                                     'supervisor',
                                     companyUsers,
                                     true,
@@ -1874,7 +1905,7 @@ const TablePagination = () => {
                                 }}
                                 color="inherit"
                             >
-                                Clear
+                                {t('Clear')}
                             </Button>
                             <Button
                                 variant="contained"
@@ -1889,7 +1920,7 @@ const TablePagination = () => {
                                     setOpen(false);
                                 }}
                             >
-                                Apply
+                                {t('Apply')}
                             </Button>
                         </DialogActions>
                     </Dialog>
@@ -1918,7 +1949,7 @@ const TablePagination = () => {
                             <IconButton
                                 onClick={() => setUserSettingDrawerOpen(true)}
                                 color="primary"
-                                aria-label="Open user permission settings"
+                                aria-label={t('Open user permission settings')}
                             >
                                 <IconSettings/>
                             </IconButton>
@@ -1933,7 +1964,7 @@ const TablePagination = () => {
                         >
                             <TextField
                                 size="small"
-                                placeholder="Search"
+                                placeholder={t('Search')}
                                 fullWidth
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
@@ -1949,7 +1980,7 @@ const TablePagination = () => {
                                             sx={{textTransform: 'none'}}
                                         />
                                     }
-                                    label="Select All"
+                                    label={t('Select All')}
                                 />
                                 {table
                                     .getAllLeafColumns()
@@ -1972,11 +2003,8 @@ const TablePagination = () => {
                                             label={
                                                 typeof col.columnDef.header === 'string' &&
                                                 col.columnDef.header.trim() !== ''
-                                                    ? col.columnDef.header
-                                                    : col.id
-                                                        .replace(/([A-Z])/g, ' $1')
-                                                        .replace(/^./, (str) => str.toUpperCase())
-                                                        .trim()
+                                                    ? t(col.columnDef.header)
+                                                    : t(getUserColumnTranslationKey(col.id))
                                             }
                                         />
                                     ))}
@@ -1994,7 +2022,7 @@ const TablePagination = () => {
                                     setConfirmOpen(true);
                                 }}
                             >
-                                Remove
+                                {t('Remove')}
                             </Button>
                         )}
 
@@ -2023,7 +2051,7 @@ const TablePagination = () => {
                                         )
                                     }
                                 >
-                                    <Typography sx={{fontWeight: 600}}>Export</Typography>
+                                    <Typography sx={{fontWeight: 600}}>{t('Export')}</Typography>
                                 </Button>
                                 <Menu
                                     anchorEl={anchorEl3}
@@ -2039,10 +2067,10 @@ const TablePagination = () => {
                                     }}
                                 >
                                     <MenuItem onClick={() => handleExportClose('excel')}>
-                                        Excel
+                                        {t('Excel')}
                                     </MenuItem>
                                     <MenuItem onClick={() => handleExportClose('pdf')}>
-                                        PDF
+                                        {t('PDF')}
                                     </MenuItem>
                                 </Menu>
                             </>
@@ -2054,7 +2082,7 @@ const TablePagination = () => {
                             onClick={() => setInviteUser(true)}
                             startIcon={<IconUserCheck size={18}/>}
                         >
-                            Invite User
+                            {t('Invite User')}
                         </Button>
 
                         <Menu
@@ -2084,7 +2112,7 @@ const TablePagination = () => {
                                     <ListItemIcon>
                                         <IconUsersMinus width={18}/>
                                     </ListItemIcon>
-                                    Archived Users
+                                    {t('Archived Users')}
                                 </Link>
                             </MenuItem>
                         </Menu>
@@ -2135,7 +2163,7 @@ const TablePagination = () => {
                                 <IconArrowLeft size={24}/>
                             </IconButton>
                             <Typography variant="h5" fontWeight={700}>
-                                Manage Permissions - {selectedUserPermissions?.name}
+                                {t('Manage Permissions')} - {selectedUserPermissions?.name}
                             </Typography>
                             <IconButton
                                 aria-label="close"
@@ -2172,7 +2200,7 @@ const TablePagination = () => {
                             >
                                 <IconLock size={18} style={{color: '#ff6b6b'}}/>
                                 <Typography variant="caption" color="textSecondary">
-                                    View only - You cannot edit permissions
+                                    {t('View only - You cannot edit permissions')}
                                 </Typography>
                             </Box>
                         )}
@@ -2181,7 +2209,7 @@ const TablePagination = () => {
                         <Box sx={{mb: 2, flexShrink: 0}}>
                             <TextField
                                 size="small"
-                                placeholder="Search permissions..."
+                                placeholder={t('Search permissions...')}
                                 value={permissionSearch}
                                 onChange={(e) => setPermissionSearch(e.target.value)}
                                 InputProps={{
@@ -2245,12 +2273,12 @@ const TablePagination = () => {
                                     <th style={{padding: '6px 8px', textAlign: 'left'}}/>
                                     <th style={{padding: '6px 8px', textAlign: 'center'}}>
                                         <Typography variant="subtitle2" fontWeight={600}>
-                                            Web
+                                            {t('Web')}
                                         </Typography>
                                     </th>
                                     <th style={{padding: '6px 8px', textAlign: 'center'}}>
                                         <Typography variant="subtitle2" fontWeight={600}>
-                                            App
+                                            {t('App')}
                                         </Typography>
                                     </th>
                                 </tr>
@@ -2266,7 +2294,7 @@ const TablePagination = () => {
                                     }
                                 >
                                     <td style={{padding: '8px 8px'}}>
-                                        <Typography fontWeight={500}>Select All</Typography>
+                                        <Typography fontWeight={500}>{t('Select All')}</Typography>
                                     </td>
                                     <td style={{padding: '8px 8px', textAlign: 'center'}}>
                                         <IOSSwitch
@@ -2300,7 +2328,7 @@ const TablePagination = () => {
                                     >
                                         {/* Name cell */}
                                         <td style={{padding: '8px 8px'}}>
-                                            <Typography>{permission.name}</Typography>
+                                            <Typography>{t(permission.name)}</Typography>
                                         </td>
 
                                         <td style={{padding: '8px 8px', textAlign: 'center'}}>
@@ -2352,7 +2380,7 @@ const TablePagination = () => {
                                     className="drawer_buttons"
                                     sx={{borderRadius: 3}}
                                 >
-                                    Save
+                                    {t('Save')}
                                 </Button>
                                 <Button
                                     color="inherit"
@@ -2365,7 +2393,7 @@ const TablePagination = () => {
                                         color: 'GrayText',
                                     }}
                                 >
-                                    Cancel
+                                    {t('Cancel')}
                                 </Button>
                             </Box>
                         )}
@@ -2375,7 +2403,7 @@ const TablePagination = () => {
                 {/* Remove user dialog */}
                 <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
                     <DialogTitle>
-                        Confirm Deletion
+                        {t('Confirm Deletion')}
                         <IconButton
                             aria-label="close"
                             onClick={() => setConfirmOpen(false)}
@@ -2392,13 +2420,10 @@ const TablePagination = () => {
 
                     <DialogContent>
                         <Typography color="textSecondary" fontWeight={500}>
-                            This will permanently erase all actions, history, and activity
-                            associated with the user. Once deleted, the data cannot be
-                            recovered.
+                            {t('deleteUser.warning')}
                             <br/>
                             <br/>
-                            To remove the user without losing their information, please select
-                            the Archive option instead.
+                            {t('deleteUser.archiveInstead')}
                         </Typography>
                     </DialogContent>
 
@@ -2439,7 +2464,7 @@ const TablePagination = () => {
                             variant="outlined"
                             color="primary"
                         >
-                            Archive
+                            {t('Archive')}
                         </Button>
                     </DialogActions>
                 </Dialog>
@@ -2452,7 +2477,7 @@ const TablePagination = () => {
                     fullWidth
                 >
                     <DialogTitle sx={{m: 0, position: 'relative', overflow: 'visible'}}>
-                        Assign New Supervisor
+                        {t('Assign New Supervisor')}
                         <IconButton
                             aria-label="close"
                             onClick={() => setSupervisorReplacementOpen(false)}
@@ -2468,9 +2493,9 @@ const TablePagination = () => {
                     </DialogTitle>
                     <DialogContent>
                         <Typography color="textSecondary" fontWeight={500} mb={2}>
-                            The user you are archiving is currently the supervisor of{' '}
-                            <strong>{supervisorDetails?.team_name || 'a team'}</strong>.
-                            Please assign a new supervisor for this team before archiving.
+                            {t('supervisorReplacement.messagePrefix')}{' '}
+                            <strong>{supervisorDetails?.team_name || t('a team')}</strong>.
+                            {' '}{t('supervisorReplacement.messageSuffix')}
                         </Typography>
                         <CustomSelect
                             labelId="new-supervisor-label"
@@ -2481,7 +2506,7 @@ const TablePagination = () => {
                             displayEmpty
                         >
                             <MenuItem value="" disabled>
-                                Select new supervisor
+                                {t('Select new supervisor')}
                             </MenuItem>
                             {data
                                 .filter(
@@ -2503,12 +2528,12 @@ const TablePagination = () => {
                             }}
                             color="inherit"
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button
                             onClick={async () => {
                                 if (!newSupervisorId) {
-                                    toast.error('Please select a new supervisor');
+                                    toast.error(t('Please select a new supervisor'));
                                     return;
                                 }
                                 try {
@@ -2534,7 +2559,7 @@ const TablePagination = () => {
                             variant="contained"
                             color="primary"
                         >
-                            Confirm & Archive
+                            {t('Confirm & Archive')}
                         </Button>
                     </DialogActions>
                 </Dialog>
@@ -2633,7 +2658,7 @@ const TablePagination = () => {
                                         >
                                             <Image
                                                 src="/images/no-data.png"
-                                                alt="No data"
+                                                alt={t('No data')}
                                                 style={{
                                                     maxWidth: '100%',
                                                     maxHeight: '100%',
@@ -2714,7 +2739,7 @@ const TablePagination = () => {
                                 <IconArrowLeft/>
                             </IconButton>
                             <Typography variant="h6" fontWeight={700}>
-                                Invite User
+                                {t('Invite User')}
                             </Typography>
                             <IconButton
                                 aria-label="close"
@@ -2739,7 +2764,7 @@ const TablePagination = () => {
                                 <Grid container spacing={2} mt={1}>
                                     <Grid size={{lg: 12, xs: 12}}>
                                         <Typography variant="body2" mt={2}>
-                                            First Name
+                                            {t('First Name')}
                                         </Typography>
                                         <CustomTextField
                                             id="first_name"
@@ -2752,7 +2777,7 @@ const TablePagination = () => {
                                             }) => setfirstName(e.target.value)}
                                         />
                                         <Typography variant="body2" mt={2}>
-                                            Last Name
+                                            {t('Last Name')}
                                         </Typography>
                                         <CustomTextField
                                             id="last_name"
@@ -2765,7 +2790,7 @@ const TablePagination = () => {
                                             }) => setlastName(e.target.value)}
                                         />
                                         <Typography variant="body2" mt={2}>
-                                            Email Address
+                                            {t('Email Address')}
                                         </Typography>
                                         <CustomTextField
                                             id="email"
@@ -2798,7 +2823,7 @@ const TablePagination = () => {
                                             inputProps={{required: true}}
                                         />
                                         <Typography variant="body2" mt={2}>
-                                            Select Teams
+                                            {t('Select Teams')}
                                         </Typography>
                                         <Autocomplete
                                             fullWidth
@@ -2817,13 +2842,13 @@ const TablePagination = () => {
                                             renderInput={(params) => (
                                                 <CustomTextField
                                                     {...params}
-                                                    placeholder="Select Team"
+                                                    placeholder={t('Select Team')}
                                                     onClick={() => setDialogOpen(true)}
                                                 />
                                             )}
                                         />
                                         <Typography variant="body2" mt={2}>
-                                            Select Trades
+                                            {t('Select Trades')}
                                         </Typography>
                                         <Autocomplete
                                             fullWidth
@@ -2843,7 +2868,7 @@ const TablePagination = () => {
                                             renderInput={(params) => (
                                                 <CustomTextField
                                                     {...params}
-                                                    placeholder="Select Trade"
+                                                    placeholder={t('Select Trade')}
                                                     onClick={() => setDialogOpen(true)}
                                                 />
                                             )}
@@ -2861,7 +2886,7 @@ const TablePagination = () => {
                                             className="drawer_buttons"
                                             disabled={loading}
                                         >
-                                            Save
+                                            {t('Save')}
                                         </Button>
                                         <Button
                                             color="inherit"
@@ -2874,7 +2899,7 @@ const TablePagination = () => {
                                                 color: 'GrayText',
                                             }}
                                         >
-                                            Close
+                                            {t('Close')}
                                         </Button>
                                     </Box>
                                 </Box>

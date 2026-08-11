@@ -6,6 +6,7 @@ import PayslipsList from "./components/payslips/index";
 import InvoicesList from "./components/invoices/index";
 import PaymentsList from "./components/payments/index";
 import PermissionGuard from "@/app/auth/PermissionGuard";
+import { useTranslation } from "react-i18next";
 
 interface PayslipListingProps {
   companyId: number | null;
@@ -17,6 +18,7 @@ interface PayslipListingProps {
 }
 
 const Payments: React.FC<PayslipListingProps> = ({companyId, active, userId, isShow, disableDateFilter = false, readOnly = false}) => {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState(0);
 
     return (
@@ -37,9 +39,9 @@ const Payments: React.FC<PayslipListingProps> = ({companyId, active, userId, isS
                         transition: "all 0.3s ease",
                     }}
                 >
-                    <Tab label="Payslips" sx={{ fontWeight: 600 }} />
-                    <Tab label="Payments" sx={{ fontWeight: 600 }} />
-                    <Tab label="Invoices" sx={{ fontWeight: 600 }} />
+                    <Tab label={t("Payslips")} sx={{ fontWeight: 600 }} />
+                    <Tab label={t("Payments")} sx={{ fontWeight: 600 }} />
+                    <Tab label={t("Invoices")} sx={{ fontWeight: 600 }} />
                 </Tabs>
 
                 <Divider />

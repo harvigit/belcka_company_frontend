@@ -95,6 +95,7 @@ import TablePaginationFooter from '../../common/TablePaginationFooter';
 import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
 import PenaltyHistory from './penalty';
 import UserRequests from '../requests/list';
+import {useTranslation} from 'react-i18next';
 
 const columnHelper = createColumnHelper<Index>();
 
@@ -402,6 +403,7 @@ const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
 };
 
 const TimeClock = ({queryParams}: Props) => {
+    const {t} = useTranslation();
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
@@ -1591,9 +1593,9 @@ const TimeClock = ({queryParams}: Props) => {
                                 >
                                     {row.user_name}
                                 </Typography>
-                                <Tooltip title={row.trade_name ?? '-'} placement="top" arrow>
+                                <Tooltip title={row.trade_name ? t(row.trade_name) : '-'} placement="top" arrow>
                                     <Typography color="textSecondary" variant="subtitle1" width={150} noWrap>
-                                        {row.trade_name}
+                                        {row.trade_name ? t(row.trade_name) : '-'}
                                     </Typography>
                                 </Tooltip>
                             </Box>
@@ -1985,7 +1987,7 @@ const TimeClock = ({queryParams}: Props) => {
                 if (muiColors.includes(statusColorFromApi as any)) {
                     return (
                         <Chip
-                            label={statusText}
+                            label={t(statusText)}
                             color={statusColorFromApi as any}
                             size="small"
                             sx={{
@@ -2001,7 +2003,7 @@ const TimeClock = ({queryParams}: Props) => {
 
                 return (
                     <Chip
-                        label={statusColorFromApi}
+                        label={t(statusColorFromApi)}
                         size="small"
                         sx={{
                             width: 80,
@@ -2427,7 +2429,7 @@ const TimeClock = ({queryParams}: Props) => {
                                 />
                             )}
                             <TextField
-                                placeholder="Search..."
+                                placeholder={t('Search...')}
                                 size="small"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -2451,7 +2453,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     minWidth: 64,
                                     px: 1.5,
                                 }}
-                                aria-label="Open filters"
+                                aria-label={t('Open filters')}
                             >
                                 <IconFilter size={18}/>
                             </Button>
@@ -2467,7 +2469,7 @@ const TimeClock = ({queryParams}: Props) => {
                                         minWidth: 64,
                                         px: 1.5,
                                     }}
-                                    aria-label="Clear filters"
+                                    aria-label={t('Clear filters')}
                                 >
                                     <IconX size={18}/>
                                 </Button>
@@ -2480,7 +2482,7 @@ const TimeClock = ({queryParams}: Props) => {
                                 onClick={handleTypeFilterOpen}
                                 sx={toolbarButtonSx}
                             >
-                                Types
+                                {t('Types')}
                             </Button>
 
                             {isFilteredView && (
@@ -2500,7 +2502,7 @@ const TimeClock = ({queryParams}: Props) => {
                                 onClick={() => setOpenDrawer(true)}
                                 sx={toolbarButtonSx}
                             >
-                                Activity
+                                {t('Activity')}
                             </Button>
                         </Box>
 
@@ -2516,7 +2518,7 @@ const TimeClock = ({queryParams}: Props) => {
                                         endIcon={openAddleave ? <IconChevronUp size={18}/> :
                                             <IconChevronDown size={18}/>}
                                     >
-                                        Add
+                                        {t('Add')}
                                     </Button>
                                     <Menu
                                         anchorEl={addDropDown}
@@ -2525,10 +2527,10 @@ const TimeClock = ({queryParams}: Props) => {
                                         anchorOrigin={{vertical: 'bottom', horizontal: 'left'}}
                                         transformOrigin={{vertical: 'top', horizontal: 'left'}}
                                     >
-                                        <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
-                                        <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
-                                        <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
-                                        <MenuItem onClick={handlePriceworkClick}>Add Pricework</MenuItem>
+                                        <MenuItem onClick={handleWorklogClick}>{t('Add Worklog')}</MenuItem>
+                                        <MenuItem onClick={handlePriceworkClick}>{t('Add Pricework')}</MenuItem>
+                                        <MenuItem onClick={handleExpenseClick}>{t('Add Expense')}</MenuItem>
+                                        <MenuItem onClick={handleAddLeaveClick}>{t('Add Leave')}</MenuItem>
                                     </Menu>
                                 </>
                             )}
@@ -2569,19 +2571,19 @@ const TimeClock = ({queryParams}: Props) => {
                                         {totalConflictsCount}
                                     </Box>
                                     <Typography sx={{fontWeight: 600, color: '#e53935', fontSize: '13px'}}>
-                                        Conflicts
+                                        {t('Conflicts')}
                                     </Typography>
                                 </Button>
                             )}
 
-                            <Tooltip title="Column visibility">
+                            <Tooltip title={t('Column visibility')}>
                                 <IconButton onClick={(e) => setAnchorEl2(e.currentTarget)} color="primary" size="small">
                                     <IconEye size={20}/>
                                 </IconButton>
                             </Tooltip>
 
                             {user.user_role_id === 1 && (
-                            <Tooltip title="Settings">
+                            <Tooltip title={t('Settings')}>
                                 <IconButton onClick={handleSettingOpen} color="primary" size="small">
                                     <IconSettings size={20}/>
                                 </IconButton>
@@ -2726,9 +2728,9 @@ const TimeClock = ({queryParams}: Props) => {
                     <DialogTitle
                         sx={{m: 0, position: 'relative', overflow: 'visible'}}
                     >
-                        Filters
+                        {t('Filters')}
                         <IconButton
-                            aria-label="close"
+                            aria-label={t('Close')}
                             onClick={handleFilterClose}
                             size="large"
                             sx={{
@@ -2757,13 +2759,13 @@ const TimeClock = ({queryParams}: Props) => {
                             onClick={handleClearFilters}
                             color="inherit"
                         >
-                            Clear
+                            {t('Clear')}
                         </Button>
                         <Button
                             variant="contained"
                             onClick={handleApplyFilters}
                         >
-                            Apply
+                            {t('Apply')}
                         </Button>
                     </DialogActions>
                 </Dialog>
@@ -2782,9 +2784,9 @@ const TimeClock = ({queryParams}: Props) => {
                     }}
                 >
                     <DialogTitle sx={{m: 0, position: 'relative'}}>
-                        Types
+                                {t('Types')}
                         <IconButton
-                            aria-label="close"
+                            aria-label={t('Close')}
                             onClick={handleTypeFilterClose}
                             size="large"
                             sx={{
@@ -2828,7 +2830,7 @@ const TimeClock = ({queryParams}: Props) => {
                                 >
                                     {TIME_CLOCK_TYPE_OPTIONS.map((option) => (
                                         <MenuItem key={option.value} value={option.value}>
-                                            {option.label}
+                                            {t(option.label)}
                                         </MenuItem>
                                     ))}
                                 </Select>
@@ -2840,13 +2842,13 @@ const TimeClock = ({queryParams}: Props) => {
                             onClick={handleClearTypeFilter}
                             color="inherit"
                         >
-                            Clear
+                            {t('Clear')}
                         </Button>
                         <Button
                             variant="contained"
                             onClick={handleApplyTypeFilter}
                         >
-                            Apply
+                            {t('Apply')}
                         </Button>
                     </DialogActions>
                 </Dialog>
@@ -2880,7 +2882,7 @@ const TimeClock = ({queryParams}: Props) => {
                             </IconButton>
 
                             <Typography variant="body2" fontWeight={600} color="text.primary">
-                                {selectedRowIds.size} Selected
+                                {t('selected.count', {count: selectedRowIds.size})}
                             </Typography>
 
                             <Box sx={{flexGrow: 1}}/>
@@ -2894,7 +2896,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     onClick={handleLock}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
-                                    Lock
+                                    {t('Lock')}
                                 </Button>
 
                                 <Button
@@ -2905,7 +2907,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     onClick={handleUnlock}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
-                                    Unlock
+                                    {t('Unlock')}
                                 </Button>
 
                                 <Button
@@ -2922,7 +2924,7 @@ const TimeClock = ({queryParams}: Props) => {
                                         '&:hover': {boxShadow: 'none'}
                                     }}
                                 >
-                                    Paid
+                                    {t('Paid')}
                                 </Button>
 
                                 <Button
@@ -2933,7 +2935,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     onClick={handleDeleteSelectedUsers}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
-                                    Delete
+                                    {t('Delete')}
                                 </Button>
 
                                 <Button
@@ -2944,7 +2946,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     onClick={handleExportClick}
                                     endIcon={open ? <IconChevronUp size={18}/> : <IconChevronDown size={18}/>}
                                 >
-                                    Export
+                                    {t('Export')}
                                 </Button>
                                 <Menu
                                     anchorEl={anchorEl}
@@ -2953,14 +2955,14 @@ const TimeClock = ({queryParams}: Props) => {
                                     anchorOrigin={{vertical: 'top', horizontal: 'center'}}
                                     transformOrigin={{vertical: 'bottom', horizontal: 'center'}}
                                 >
-                                    <MenuItem onClick={() => handleExportClose('summary')}>Export Summary
+                                    <MenuItem onClick={() => handleExportClose('summary')}>{t('Export Summary')}
                                         (Excel)</MenuItem>
-                                    <MenuItem onClick={() => handleExportClose('details')}>Export Timeclock Details
+                                    <MenuItem onClick={() => handleExportClose('details')}>{t('Export Timeclock Details')}
                                         (Excel)</MenuItem>
                                     <Divider/>
-                                    <MenuItem onClick={() => handleExportClose('summary_pdf')}>Export Summary
+                                    <MenuItem onClick={() => handleExportClose('summary_pdf')}>{t('Export Summary')}
                                         (PDF)</MenuItem>
-                                    <MenuItem onClick={() => handleExportClose('details_pdf')}>Export Timeclock Details
+                                    <MenuItem onClick={() => handleExportClose('details_pdf')}>{t('Export Timeclock Details')}
                                         (PDF)</MenuItem>
                                 </Menu>
                             </Stack>
@@ -2992,7 +2994,7 @@ const TimeClock = ({queryParams}: Props) => {
                 >
                     <TextField
                         size="small"
-                        placeholder="Search columns..."
+                        placeholder={t('Search columns...')}
                         fullWidth
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -3067,7 +3069,7 @@ const TimeClock = ({queryParams}: Props) => {
                                                 },
                                             }}
                                             onClick={(e) => e.stopPropagation()}
-                                            label="Select All"
+                                            label={t('Select All')}
                                         />
                                         {columnOptions.map((col: any) => (
                                             <FormControlLabel
@@ -3106,14 +3108,16 @@ const TimeClock = ({queryParams}: Props) => {
                                                 }}
                                                 onClick={(e) => e.stopPropagation()}
                                                 label={
-                                                    col.columnDef.meta?.label ||
-                                                    (typeof col.columnDef.header === 'string' &&
-                                                    col.columnDef.header.trim() !== ''
-                                                        ? col.columnDef.header
-                                                        : col.id
-                                                            .replace(/([A-Z])/g, ' $1')
-                                                            .replace(/^./, (str: string) => str.toUpperCase())
-                                                            .trim())
+                                                    t(
+                                                        col.columnDef.meta?.label ||
+                                                        (typeof col.columnDef.header === 'string' &&
+                                                        col.columnDef.header.trim() !== ''
+                                                            ? col.columnDef.header
+                                                            : col.id
+                                                                .replace(/([A-Z])/g, ' $1')
+                                                                .replace(/^./, (str: string) => str.toUpperCase())
+                                                                .trim())
+                                                    )
                                                 }
                                             />
                                         ))}
@@ -3177,7 +3181,9 @@ const TimeClock = ({queryParams}: Props) => {
                                                     }}
                                                 >
                                                     <Typography variant="body2" component="span">
-                                                        {flexRender(header.column.columnDef.header, header.getContext())}
+                                                        {typeof header.column.columnDef.header === 'string'
+                                                            ? t(header.column.columnDef.header)
+                                                            : flexRender(header.column.columnDef.header, header.getContext())}
                                                     </Typography>
                                                     {isSortable && (
                                                         <Box

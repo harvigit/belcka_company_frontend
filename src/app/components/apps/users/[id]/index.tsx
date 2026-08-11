@@ -46,6 +46,7 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
 import UserActivity from '../../user-profile-setting/activity';
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import { getUserDetailsHref, resolveUserDetailsId } from '@/utils/userDetailsRoute';
+import { useTranslation } from 'react-i18next';
 
 dayjs.extend(customParseFormat);
 
@@ -80,6 +81,7 @@ export interface TradeList {
 }
 
 const TablePagination = () => {
+    const { t } = useTranslation();
     const [data, setData] = useState<TeamList>();
     const [loading, setLoading] = useState<boolean>(true);
     const [adminLoading, setAdminLoading] = useState<boolean>(false);
@@ -681,7 +683,7 @@ const TablePagination = () => {
                     >
                         <DialogTitle>
                             <Typography color="GrayText" fontWeight={700}>
-                                Verify OTP
+                                {t('Verify OTP')}
                             </Typography>
                             <IconButton
                                 onClick={() => {
@@ -701,13 +703,13 @@ const TablePagination = () => {
                         </DialogTitle>
                         <DialogContent>
                             <Typography color="textSecondary" mb={2}>
-                                {otpMessage}
+                                {t(otpMessage)}
                             </Typography>
                             <CustomTextField
                                 fullWidth
                                 value={otpValue}
                                 onChange={(e: any) => setOtpValue(e.target.value)}
-                                placeholder="Enter OTP"
+                                placeholder={t('Enter OTP')}
                             />
                         </DialogContent>
                         <DialogActions>
@@ -718,7 +720,7 @@ const TablePagination = () => {
                                     setOtpResolve(undefined);
                                 }}
                             >
-                                Cancel
+                                {t('Cancel')}
                             </Button>
                             <Button
                                 onClick={() => {
@@ -729,7 +731,7 @@ const TablePagination = () => {
                                 variant="contained"
                                 color="primary"
                             >
-                                Submit
+                                {t('Submit')}
                             </Button>
                         </DialogActions>
                     </Dialog>
@@ -809,7 +811,7 @@ const TablePagination = () => {
                                         color="success"
                                         onClick={handleUserStopWork}
                                     >
-                                        Stop Work
+                                        {t('Stop Work')}
                                     </Button>
                                 )}
 
@@ -820,7 +822,7 @@ const TablePagination = () => {
                                         onClick={handleConfirmAdmin}
                                         disabled={adminLoading}
                                     >
-                                        {adminLoading ? 'Updating...' : 'Make an admin'}
+                                        {adminLoading ? t('Updating...') : t('Make an admin')}
                                     </Button>
                                 )}
 
@@ -832,12 +834,12 @@ const TablePagination = () => {
                                             setOpenRemoveAdminModel(true);
                                         }}
                                     >
-                                        Remove as admin
+                                        {t('Remove as admin')}
                                     </Button>
                                 )}
 
                                 {isReadOnlyUserView && user.user_role_id == 1 && (
-                                    <Tooltip title="Bookkeeper" arrow>
+                                    <Tooltip title={t('Bookkeeper')} arrow>
                                         <Button
                                             variant="outlined"
                                             color="primary"
@@ -891,18 +893,18 @@ const TablePagination = () => {
                                     alignItems={'baseline'}
                                 >
                                     <Typography fontSize="16px !important" color="#487bb3ff">
-                                        Personal Details
+                                        {t('Personal Details')}
                                     </Typography>
                                 </Box>
                                 <form>
                                     <Typography color="textSecondary" variant="h5" mt={1}>
-                                        First Name
+                                        {t('First Name')}
                                     </Typography>
                                     <CustomTextField
                                         id="first_name"
                                         className="custom_color"
                                         name="first_name"
-                                        placeholder="Enter first name.."
+                                        placeholder={t('Enter first name..')}
                                         value={formData.first_name}
                                         onChange={(e: any) =>
                                             handleFieldChange('first_name', e.target.value)
@@ -913,13 +915,13 @@ const TablePagination = () => {
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
-                                        Last Name
+                                        {t('Last Name')}
                                     </Typography>
                                     <CustomTextField
                                         id="last_name"
                                         name="last_name"
                                         className="custom_color"
-                                        placeholder="Enter last name.."
+                                        placeholder={t('Enter last name..')}
                                         value={formData.last_name}
                                         onChange={(e: any) =>
                                             handleFieldChange('last_name', e.target.value)
@@ -930,7 +932,7 @@ const TablePagination = () => {
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2} mb={1}>
-                                        Mobile phone
+                                        {t('Mobile phone')}
                                     </Typography>
                                     <PhoneInput
                                         country={'gb'}
@@ -947,7 +949,7 @@ const TablePagination = () => {
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
-                                        Date of Birth
+                                        {t('Date of Birth')}
                                     </Typography>
                                     <TextField
                                         fullWidth
@@ -967,13 +969,13 @@ const TablePagination = () => {
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
-                                        Email
+                                        {t('Email')}
                                     </Typography>
                                     <CustomTextField
                                         id="email"
                                         name="email"
                                         className="custom_color"
-                                        placeholder="Enter email.."
+                                        placeholder={t('Enter email..')}
                                         value={formData.email}
                                         onChange={(e: any) =>
                                             handleFieldChange('email', e.target.value)
@@ -983,13 +985,13 @@ const TablePagination = () => {
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
-                                        Company Code
+                                        {t('Company Code')}
                                     </Typography>
                                     <CustomTextField
                                         id="user_code"
                                         name="user_code"
                                         className="custom_color"
-                                        placeholder="Enter company code.."
+                                        placeholder={t('Enter company code..')}
                                         value={formData.user_code}
                                         onChange={(e: any) =>
                                             handleFieldChange('user_code', e.target.value)
@@ -1000,13 +1002,13 @@ const TablePagination = () => {
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
-                                        Account Id
+                                        {t('Account Id')}
                                     </Typography>
                                     <CustomTextField
                                         id="account_id"
                                         name="account_id"
                                         className="custom_color"
-                                        placeholder="Enter account id.."
+                                        placeholder={t('Enter account id..')}
                                         value={formData.account_id}
                                         onChange={(e: any) => {
                                             let value = e.target.value;
@@ -1019,25 +1021,25 @@ const TablePagination = () => {
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
-                                        Register On
+                                        {t('Register On')}
                                     </Typography>
                                     <CustomTextField
                                         className="custom_color"
                                         id="registered_on"
-                                        placeholder="Registered on"
+                                        placeholder={t('Registered on')}
                                         fullWidth
                                         value={registeredOn}
                                         disabled
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
-                                        Expired At
+                                        {t('Expired At')}
                                     </Typography>
                                     <CustomTextField
                                         type="date"
                                         className="custom_color"
                                         id="expired_at"
-                                        placeholder="Choose Expiry date"
+                                        placeholder={t('Choose Expiry date')}
                                         fullWidth
                                         value={formData.expired_at}
                                         disabled={!canModifyUserDetails}
@@ -1058,7 +1060,7 @@ const TablePagination = () => {
                                             disabled={isPhoneUpdate}
                                             onClick={handleUpdatePersonalDetails}
                                         >
-                                            {isPhoneUpdate ? 'Sending otp in your phone..' : 'Update'}
+                                            {isPhoneUpdate ? t('Sending otp in your phone..') : t('Update')}
                                         </Button>
                                     </Box>
                                 )}
@@ -1074,7 +1076,7 @@ const TablePagination = () => {
                                     sx={{ p: 3 }}
                                 >
                                     <Typography fontSize="16px !important" color="#487bb3ff">
-                                        Check-In
+                                        {t('Check-In')}
                                     </Typography>
 
                                     <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
@@ -1094,7 +1096,7 @@ const TablePagination = () => {
                                         }}
                                         fullWidth
                                     >
-                                        Remove Account
+                                        {t('Remove Account')}
                                     </Button>
                                 </Box>
                             </Card>
@@ -1128,7 +1130,7 @@ const TablePagination = () => {
                                     {visibleTabs.map((label, index) => (
                                         <Tab
                                             key={label}
-                                            label={label}
+                                            label={t(label)}
                                             sx={{
                                                 textTransform: 'none',
                                                 borderRadius: '10px',
@@ -1577,7 +1579,7 @@ const TablePagination = () => {
                             variant="contained"
                             disabled={loading}
                         >
-                            {loading ? 'Updating...' : 'Yes, Confirm'}
+                            {loading ? t('Updating...') : t('Yes, Confirm')}
                         </Button>
                     </DialogActions>
                 </Dialog>

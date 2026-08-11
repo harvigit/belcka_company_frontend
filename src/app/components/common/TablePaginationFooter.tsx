@@ -7,6 +7,7 @@ import {
   IconChevronsRight,
 } from "@tabler/icons-react";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
+import { useTranslation } from "react-i18next";
 
 interface TablePaginationFooterProps {
   table: any;
@@ -23,6 +24,7 @@ export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({
   totalUsers,
   workingMemberCount,
 }) => {
+  const { t } = useTranslation();
   const tableSelectedCount = table.getState().rowSelection
     ? Object.keys(table.getState().rowSelection).filter(
         (key) => table.getState().rowSelection[key],
@@ -46,10 +48,17 @@ export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({
       <Box display="flex" alignItems="center" gap={1}>
         <Typography color="textSecondary" className="f-14">
           {finalSelectedCount > 0
-            ? `${finalSelectedCount} selected from ${table.getRowModel().rows.length} out of ${totalRows}`
+            ? t("table.selectedFrom", {
+                selected: finalSelectedCount,
+                visible: table.getRowModel().rows.length,
+                total: totalRows,
+              })
             : table.options.manualPagination
-            ? `${table.getRowModel().rows.length} out of ${totalRows} Rows`
-            : `${totalRows} Rows`}
+            ? t("table.outOfRows", {
+                visible: table.getRowModel().rows.length,
+                total: totalRows,
+              })
+            : t("table.rows", { total: totalRows })}
         </Typography>
         {(totalUsers !== undefined || workingMemberCount !== undefined) && (
           <Box sx={{ ml: 2, display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -65,7 +74,7 @@ export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({
                 fontWeight={600}
                 color="text.secondary"
               >
-                / {totalUsers} Working
+                / {totalUsers} {t("Working")}
               </Typography>
             )}
           </Box>
@@ -82,7 +91,7 @@ export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({
       >
         <Stack direction="row" alignItems="center">
           <Typography color="textSecondary" className="f-14">
-            Page
+            {t("Page")}
           </Typography>
           <Typography
             color="textSecondary"
@@ -90,12 +99,12 @@ export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({
             fontWeight={600}
             ml={1}
           >
-            {table.getState().pagination.pageIndex + 1} of{" "}
+            {table.getState().pagination.pageIndex + 1} {t("of")}{" "}
             {Math.max(1, table.getPageCount())}
           </Typography>
           <Typography color="textSecondary" ml="3px" className="f-14">
             {" "}
-            | Entries :{" "}
+            | {t("Entries")} :{" "}
           </Typography>
         </Stack>
         <Stack

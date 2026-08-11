@@ -5,6 +5,7 @@ import { Box, List, ListItemButton, ListItemIcon, ListItemText } from '@mui/mate
 import { IconTool, IconAlertTriangle, IconBook } from '@tabler/icons-react';
 import { useSession } from 'next-auth/react';
 import { User } from 'next-auth';
+import { useTranslation } from 'react-i18next';
 
 import NearMissReporting from '../near-miss-reporting';
 import ReportIncident from '../report-incident';
@@ -18,6 +19,7 @@ const menuItems = [
 ];
 
 const HealthSafety = () => {
+    const { t } = useTranslation();
     const [activeKey, setActiveKey] = useState('near-miss');
 
     const session = useSession();
@@ -45,7 +47,7 @@ const HealthSafety = () => {
                             >
                                 <ListItemIcon>{item.icon}</ListItemIcon>
                                 <ListItemText
-                                    primary={item.label}
+                                    primary={t(item.label)}
                                     primaryTypographyProps={{ fontSize: '0.82rem', fontWeight: isActive ? 600 : 400 }}
                                 />
                             </ListItemButton>

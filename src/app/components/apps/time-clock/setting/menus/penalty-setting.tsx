@@ -15,8 +15,10 @@ import dayjs, { Dayjs } from "dayjs";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 export default function PenaltySettings() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState<boolean>(true);
   const [value, setValue] = React.useState<Dayjs | null>(dayjs());
   const [temp, setTemp] = useState<string>(value?.format("HH:mm") ?? "");
@@ -426,7 +428,7 @@ export default function PenaltySettings() {
               fontSize="20px !important"
               fontWeight={500}
             >
-              Enable Outside Working Penalty
+              {t('Enable Outside Working Penalty')}
             </Typography>
 
             <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
@@ -453,7 +455,7 @@ export default function PenaltySettings() {
                   fontWeight: 500,
                 }}
               >
-                Stop work outside of working area penalty
+                {t('Stop work outside of working area penalty')}
               </Typography>
 
               {/* TIME + BUTTONS */}
@@ -493,7 +495,7 @@ export default function PenaltySettings() {
                       showTeamsList ? <IconChevronUp /> : <IconChevronDown />
                     }
                   >
-                    Teams
+                    {t('Teams')}
                   </Button>
 
                   <Button
@@ -506,7 +508,7 @@ export default function PenaltySettings() {
                       showUsersList ? <IconChevronUp /> : <IconChevronDown />
                     }
                   >
-                    Users
+                    {t('Users')}
                   </Button>
                 </Box>
               </Grid>
@@ -528,7 +530,7 @@ export default function PenaltySettings() {
                     mx={2}
                   >
                     <TextField
-                      placeholder="Search"
+                      placeholder={t('Search')}
                       value={searchTeam}
                       onChange={(e) => setSerachTeam(e.target.value)}
                       sx={{ width: "40%" }}
@@ -539,7 +541,7 @@ export default function PenaltySettings() {
                         variant="contained"
                         onClick={handleUpdateSelectedTeams}
                       >
-                        Update
+                        {t('Update')}
                       </Button>
                     )}
                   </Box>
@@ -576,7 +578,7 @@ export default function PenaltySettings() {
                           }}
                         />
                         <Typography fontWeight={600}>
-                          Select All Teams
+                          {t('Select All Teams')}
                         </Typography>
                       </Box>
 
@@ -673,7 +675,7 @@ export default function PenaltySettings() {
                     mx={2}
                   >
                     <TextField
-                      placeholder="Search"
+                      placeholder={t('Search')}
                       value={searchUser}
                       onChange={(e) => setSerachUser(e.target.value)}
                       sx={{ width: "40%" }}
@@ -685,7 +687,7 @@ export default function PenaltySettings() {
                         variant="contained"
                         onClick={handleUpdateSelectedUsers}
                       >
-                        Update
+                        {t('Update')}
                       </Button>
                     )}
                   </Box>
@@ -722,7 +724,7 @@ export default function PenaltySettings() {
                           }}
                         />
                         <Typography fontWeight={600}>
-                          Select All Users
+                          {t('Select All Users')}
                         </Typography>
                       </Box>
 
@@ -822,7 +824,7 @@ export default function PenaltySettings() {
               fontSize="20px !important"
               fontWeight={500}
             >
-              Enable Stop Work Penalty
+              {t('Enable Stop Work Penalty')}
             </Typography>
 
             <IOSSwitch
@@ -853,7 +855,7 @@ export default function PenaltySettings() {
                   fontWeight: 500,
                 }}
               >
-                Automatic stop work
+                {t('Automatic stop work')}
               </Typography>
 
               {/* TIME + BUTTON ROW */}
@@ -896,7 +898,7 @@ export default function PenaltySettings() {
                       showSwTeamsList ? <IconChevronUp /> : <IconChevronDown />
                     }
                   >
-                    Teams
+                    {t('Teams')}
                   </Button>
 
                   <Button
@@ -909,7 +911,7 @@ export default function PenaltySettings() {
                       showSwUsersList ? <IconChevronUp /> : <IconChevronDown />
                     }
                   >
-                    Users
+                    {t('Users')}
                   </Button>
                 </Box>
               </Grid>
@@ -931,7 +933,7 @@ export default function PenaltySettings() {
                     mx={2}
                   >
                     <TextField
-                      placeholder="Search"
+                      placeholder={t('Search')}
                       value={searchSwTeam}
                       onChange={(e) => setSearchSwTeam(e.target.value)}
                       sx={{ width: "40%" }}
@@ -943,7 +945,7 @@ export default function PenaltySettings() {
                         variant="contained"
                         onClick={handleUpdateStopWorkTeams}
                       >
-                        Update
+                        {t('Update')}
                       </Button>
                     )}
                   </Box>
@@ -980,7 +982,7 @@ export default function PenaltySettings() {
                           }}
                         />
                         <Typography fontWeight={600}>
-                          Select All Teams
+                          {t('Select All Teams')}
                         </Typography>
                       </Box>
 
@@ -1077,7 +1079,7 @@ export default function PenaltySettings() {
                     mx={2}
                   >
                     <TextField
-                      placeholder="Search"
+                      placeholder={t('Search')}
                       value={searchSwUser}
                       onChange={(e) => setSearchSwUser(e.target.value)}
                       sx={{ width: "40%" }}
@@ -1089,7 +1091,7 @@ export default function PenaltySettings() {
                         variant="contained"
                         onClick={handleUpdateStopWorkUsers}
                       >
-                        Update
+                        {t('Update')}
                       </Button>
                     )}
                   </Box>
@@ -1126,7 +1128,7 @@ export default function PenaltySettings() {
                           }}
                         />
                         <Typography fontWeight={600}>
-                          Select All Users
+                          {t('Select All Users')}
                         </Typography>
                       </Box>
 

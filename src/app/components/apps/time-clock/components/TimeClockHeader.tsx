@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { IconChevronLeft, IconChevronRight, IconHandStop, IconX, IconChevronUp, IconChevronDown } from '@tabler/icons-react';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
+import { useTranslation } from 'react-i18next';
 
 interface TimeClock {
     user_name: string;
@@ -75,8 +76,9 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                                              onAddPricework,
                                                              onActivity,
                                                              payrollCycle,
-                                                             isRemovedUser
-                                                         }) => {
+                                                         isRemovedUser
+                                                     }) => {
+    const { t } = useTranslation();
     const canGoToPrevious = currentUserIndex > 0;
     const canGoToNext = currentUserIndex >= 0 && currentUserIndex < allUsers.length - 1;
 
@@ -150,7 +152,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
     };
 
     if (!allUsers.length || currentUserIndex < 0 || currentUserIndex >= allUsers.length) {
-        return <Typography>No users available</Typography>;
+        return <Typography>{t('No users available')}</Typography>;
     }
 
     return (
@@ -161,7 +163,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                     {canGoToPrevious ? (
                         <Box
                             role="button"
-                            aria-label={`Go to previous user: ${allUsers[currentUserIndex - 1]?.user_name}`}
+                            aria-label={t('Go to previous user: {{name}}', {name: allUsers[currentUserIndex - 1]?.user_name})}
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -192,7 +194,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                     {canGoToNext ? (
                         <Box
                             role="button"
-                            aria-label={`Go to next user: ${allUsers[currentUserIndex + 1]?.user_name}`}
+                            aria-label={t('Go to next user: {{name}}', {name: allUsers[currentUserIndex + 1]?.user_name})}
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -256,7 +258,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                             {timeClock.user_name}
                         </Typography>
                         <Typography color="textSecondary" variant="body2">
-                            {timeClock.trade_name}
+                            {timeClock.trade_name ? t(timeClock.trade_name) : '-'}
                         </Typography>
                     </Box>
 
@@ -285,11 +287,11 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                 },
                             }}
                         >
-                            <MenuItem value="all">All Days</MenuItem>
-                            <MenuItem value="lock">Lock</MenuItem>
-                            <MenuItem value="unlock">Unlock</MenuItem>
-                            <MenuItem value="paid">Paid</MenuItem>
-                            <MenuItem value="leave">Leave</MenuItem>
+                            <MenuItem value="all">{t('All Days')}</MenuItem>
+                            <MenuItem value="lock">{t('Lock')}</MenuItem>
+                            <MenuItem value="unlock">{t('Unlock')}</MenuItem>
+                            <MenuItem value="paid">{t('Paid')}</MenuItem>
+                            <MenuItem value="leave">{t('Leave')}</MenuItem>
                         </Select>
                     </Stack>
                 </Stack>
@@ -311,7 +313,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                             }}
                             onClick={onActivity}
                         >
-                            <Typography sx={{fontWeight: 600}}>Activity</Typography>
+                            <Typography sx={{fontWeight: 600}}>{t('Activity')}</Typography>
                         </Button>
                     )}
                     {!isRemovedUser && (
@@ -332,7 +334,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                 onClick={handleAddClick}
                                 endIcon={openAddleave ? <IconChevronUp size={20}/> : <IconChevronDown size={20}/>}
                             >
-                                <Typography sx={{fontWeight: 600}}>Add</Typography>
+                                <Typography sx={{fontWeight: 600}}>{t('Add')}</Typography>
                             </Button>
                             <Menu
                                 anchorEl={addDropDown}
@@ -341,10 +343,10 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                 anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
                                 transformOrigin={{vertical: 'top', horizontal: 'right'}}
                             >
-                                <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
-                                <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
-                                <MenuItem onClick={handleAdjustmentClick}>Add Adjustment</MenuItem>
-                                <MenuItem onClick={handlePriceworkClick}>Add Pricework</MenuItem>
+                                <MenuItem onClick={handlePriceworkClick}>{t('Add Pricework')}</MenuItem>
+                                <MenuItem onClick={handleExpenseClick}>{t('Add Expense')}</MenuItem>
+                                <MenuItem onClick={handleAdjustmentClick}>{t('Add Adjustment')}</MenuItem>
+                                <MenuItem onClick={handleAddLeaveClick}>{t('Add Leave')}</MenuItem>
                             </Menu>
                         </>
                     )}
@@ -367,7 +369,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                 onClick={handleExportClick}
                                 endIcon={open ? <IconChevronUp size={20} /> : <IconChevronDown size={20} />}
                             >
-                                <Typography sx={{ fontWeight: 600 }}>Export</Typography>
+                                <Typography sx={{ fontWeight: 600 }}>{t('Export')}</Typography>
                             </Button>
                             <Menu
                                 anchorEl={anchorEl}
@@ -415,7 +417,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                 {totalConflicts}
                             </Box>
                             <Typography sx={{ fontWeight: 600, color: '#e53935', fontSize: '14px' }}>
-                                Conflicts
+                                {t('Conflicts')}
                             </Typography>
                         </Button>
                     )}
@@ -437,7 +439,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                             onClick={onPendingRequest}
                         >
                             <Typography sx={{ fontWeight: 600 }}>
-                                Pending Requests ({pendingRequestCount})
+                                {t('Pending Requests')} ({pendingRequestCount})
                             </Typography>
                         </Button>
                     )}
@@ -456,7 +458,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                     }}
                 >
                     <IconButton
-                        aria-label="Close dialog"
+                        aria-label={t('Close dialog')}
                         onClick={handleDialogClose}
                         sx={{ position: 'absolute', right: 8, top: 8, color: '#999' }}
                     >
@@ -484,11 +486,11 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                             variant="h6"
                             sx={{ fontWeight: 600, fontSize: '20px', color: '#1a1a1a', marginBottom: '12px' }}
                         >
-                            {totalConflicts + pendingRequestCount} unresolved issues
+                            {t('unresolvedIssues.count', {count: totalConflicts + pendingRequestCount})}
                         </Typography>
 
                         <DialogContentText sx={{ color: '#666', fontSize: '14px', lineHeight: '1.5' }}>
-                            Resolve conflicts and pending requests before exporting, or choose to ignore and proceed with exporting.
+                            {t('Resolve conflicts and pending requests before exporting, or choose to ignore and proceed with exporting.')}
                         </DialogContentText>
                     </DialogContent>
 
@@ -505,7 +507,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                 '&:hover': { backgroundColor: '#E7ECF7', color: '#666' },
                             }}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button
                             onClick={handleExportAnyway}
@@ -521,7 +523,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                 '&:hover': { backgroundColor: '#0081d5', boxShadow: 'none' },
                             }}
                         >
-                            Export anyway
+                            {t('Export anyway')}
                         </Button>
                     </DialogActions>
                 </Dialog>

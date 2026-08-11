@@ -26,6 +26,7 @@ import {
   IconAlertCircle,
   IconArrowLeft,
 } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 interface ProjectListingProps {
   companyId: number | null;
@@ -114,6 +115,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
   onUpdate,
   userId,
 }) => {
+  const { t } = useTranslation();
   const [billingInfo, setBillingInfo] = useState<BillingFormData | null>(null);
   const [hasBillingInfo, setHasBillingInfo] = useState(false);
   const [actionUsers, setActionUsers] = useState<number[]>([]);
@@ -739,9 +741,9 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 maxLength: key === "address" ? 250 : 50,
                 inputMode: "text",
               }}
-              label={key
+              label={t(key
                 .replace(/_/g, " ")
-                .replace(/\b\w/g, (c) => c.toUpperCase())}
+                .replace(/\b\w/g, (c) => c.toUpperCase()))}
               value={(formData as any)[key] ?? ""}
               onChange={(e) => {
                 let value = e.target.value;
@@ -761,7 +763,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
             fullWidth
             className="custom_color"
             disabled={isDisabledField("post_code")}
-            label="Post Code"
+            label={t("Post Code")}
             value={(formData as any)["post_code"] ?? ""}
             onChange={(e) => {
               let value = e.target.value;
@@ -819,9 +821,9 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Address"
+                label={t("Address")}
                 className="custom_color"
-                placeholder="Select or type address"
+                placeholder={t("Select or type address")}
                 onChange={(e) => {
                   handleFieldChange("address", e.target.value);
                 }}
@@ -863,7 +865,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
         fontSize="16px !important"
         sx={{ mt: 3, mb: 1 }}
       >
-        Tax Information
+        {t("Tax Information")}
       </Typography>
       <Grid container spacing={2} mb={4}>
         {["utr_number", "name_on_utr", "nin_number"].map((key) => (
@@ -878,12 +880,12 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
               }}
               label={
                 key == "nin_number"
-                  ? "NIN Number"
+                  ? t("NIN Number")
                   : key == "utr_number"
-                    ? "UTR Number"
-                    : key
+                    ? t("UTR Number")
+                    : t(key
                         .replace(/_/g, " ")
-                        .replace(/\b\w/g, (c) => c.toUpperCase())
+                        .replace(/\b\w/g, (c) => c.toUpperCase()))
               }
               value={(formData as any)[key] ?? ""}
               onChange={(e) => {
@@ -911,7 +913,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             select
-            label="CIS"
+            label={t("CIS")}
             fullWidth
             disabled={isDisabledField("cis")}
             value={(formData as any)["cis"] ?? ""}

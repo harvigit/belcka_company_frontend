@@ -16,6 +16,7 @@ import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { useTranslation } from "react-i18next";
 
 interface SettingsState {
   phone: string;
@@ -34,6 +35,7 @@ interface BookkeeperSettingProps {
 const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
   onSaveSuccess,
 }) => {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<SettingsState>({
     phone: "",
     extension: "",
@@ -145,7 +147,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
                     />
                     <Box>
                       <Typography variant="body2">
-                        Allow bookkeeper to start work without fill billing info
+                        {t('Allow bookkeeper to start work without fill billing info')}
                       </Typography>
                     </Box>
                   </Box>
@@ -169,7 +171,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
                         max: 365,
                       }}
                     />
-                    Days
+                    {t('Days')}
                   </Box>
                 </Box>
               </Box>
@@ -184,7 +186,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
               >
                 <Box display="flex" alignItems="center">
                   <Typography variant="body2">
-                    HR Contact Information
+                    {t('HR Contact Information')}
                   </Typography>
                 </Box>
 
@@ -244,10 +246,10 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
             {settings.isSaving ? (
               <>
                 <CircularProgress size={16} sx={{ mr: 1, color: "inherit" }} />
-                Saving...
+                {t('Saving...')}
               </>
             ) : (
-              "Save changes"
+              t('Save changes')
             )}
           </Button>
         </Box>

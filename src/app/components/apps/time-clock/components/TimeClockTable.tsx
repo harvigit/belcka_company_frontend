@@ -49,6 +49,7 @@ import {
     RecordType
 } from '@/app/components/apps/time-clock/types/timeClock';
 import LocationMapDrawer from './LocationMapDrawer';
+import { useTranslation } from 'react-i18next';
 
 interface LocationDrawerState {
     open: boolean;
@@ -155,9 +156,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            openPriceworkSidebar,
                                                            leaveRequestCount,
                                                            openLeaveRequestsSideBar,
-                                                           onAdjustmentSave,
-                                                           onOpenAdjustmentActivities,
-                                                       }) => {
+                                                       onAdjustmentSave,
+                                                       onOpenAdjustmentActivities,
+                                                   }) => {
+    const { t } = useTranslation();
     const resolveAnchorDate = (rowData: DailyBreakdown): string => {
         const firstRowDate = rowData.rowsData?.find((log: any) => log?.date_added)?.date_added;
         if (firstRowDate) {
@@ -341,7 +343,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         const timeText = isStartTime
             ? (log.actual_work_start_time ?? log.work_start_time ?? log.start_time ?? log.start)
             : (log.actual_work_end_time ?? log.work_end_time ?? log.end_time ?? log.end);
-        const label = isStartTime ? 'Clock-in' : 'Clock-out';
+        const label = isStartTime ? t('Clock-in') : t('Clock-out');
         const deviceInfo = deviceType != null ? getDeviceInfo(deviceType) : null;
 
         return (
@@ -409,7 +411,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         if (deviceType == null) {
             return (
                 <Tooltip
-                    title={`View clock-${isStartTime ? 'in' : 'out'} location`}
+                    title={t(isStartTime ? 'View clock-in location' : 'View clock-out location')}
                     arrow
                     placement="top"
                 >
@@ -583,7 +585,9 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                             ) : null
                                         ) : (
                                             <Typography component="div" sx={{ color: '#203040' }}>
-                                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                                {typeof header.column.columnDef.header === 'string'
+                                                    ? t(header.column.columnDef.header)
+                                                    : flexRender(header.column.columnDef.header, header.getContext())}
                                             </Typography>
                                         )}
                                     </TableCell>

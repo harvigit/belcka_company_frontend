@@ -21,6 +21,7 @@ import { IconHelp, IconX } from '@tabler/icons-react';
 import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 interface ShiftBreak {
     id?: number;
@@ -160,6 +161,7 @@ const WorkDaySelector = React.memo<WorkDaySelectorProps>(
 WorkDaySelector.displayName = 'WorkDaySelector';
 
 const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onClose }) => {
+    const { t } = useTranslation();
     const isNewShift = !shiftId;
 
     const [shiftDetail, setShiftDetail] = useState<ShiftDetails>({
@@ -485,7 +487,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         flexShrink: 0,
                     }}
                 >
-                    <Typography variant="h6">{isNewShift ? 'Add Shift' : 'Edit Shift'}</Typography>
+                    <Typography variant="h6">{t(isNewShift ? 'Add Shift' : 'Edit Shift')}</Typography>
                     <IconButton color="inherit" onClick={onClose}>
                         <IconX size="21" />
                     </IconButton>
@@ -516,7 +518,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         }}
                     >
                         <TextField
-                            label="Shift Name"
+                            label={t('Shift Name')}
                             value={shiftDetail.shift_name}
                             onChange={(e) => handleInputChange('shift_name')(e.target.value)}
                             fullWidth
@@ -542,7 +544,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         }}
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                            <Typography variant="body2">Done it have price work?</Typography>
+                            <Typography variant="body2">{t('Done it have price work?')}</Typography>
                             <IOSSwitch
                                 checked={priceworkEnabled}
                                 onChange={(e) => handlePriceworkToggle(e.target.checked)}
@@ -561,7 +563,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         }}
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
-                            <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">Start Shift</Typography>
+                            <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">{t('Start Shift')}</Typography>
                             <TimePicker
                                 value={dayjs(shiftDetail.start_time, 'HH:mm')}
                                 onChange={handleTimeChange('start_time')}
@@ -590,7 +592,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                             />
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">End Shift</Typography>
+                            <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">{t('End Shift')}</Typography>
                             <TimePicker
                                 value={dayjs(shiftDetail.end_time, 'HH:mm')}
                                 onChange={handleTimeChange('end_time')}
@@ -631,7 +633,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         }}
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                            <Typography variant="body2">Breaks</Typography>
+                            <Typography variant="body2">{t('Breaks')}</Typography>
                             <IOSSwitch
                                 checked={breaksEnabled}
                                 onChange={handleBreaksToggle}
@@ -662,7 +664,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                                                     mb: 2,
                                                 }}
                                             >
-                                                <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">Start Break</Typography>
+                                                <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">{t('Start Break')}</Typography>
                                                 <TimePicker
                                                     value={dayjs(breakItem.start, 'HH:mm')}
                                                     onChange={(value) => handleBreakChange(index, 'start', value)}
@@ -697,7 +699,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                                                     gap: 1,
                                                 }}
                                             >
-                                                <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">End Break</Typography>
+                                                <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">{t('End Break')}</Typography>
                                                 <TimePicker
                                                     value={dayjs(breakItem.end, 'HH:mm')}
                                                     onChange={(value) => handleBreakChange(index, 'end', value)}
@@ -733,7 +735,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                                                 mt: 2
                                             }}
                                             >
-                                                <Typography sx={{ width: ' Kennedy', flexShrink: 0 }} variant="body2">Is Paid</Typography>
+                                                <Typography sx={{ width: ' Kennedy', flexShrink: 0 }} variant="body2">{t('Is Paid')}</Typography>
                                                 <IOSSwitch
                                                     checked={breakItem.is_paid}
                                                     onChange={(e) => handleBreakIsPaidChange(index, e.target.checked)}
@@ -752,7 +754,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                                     </Box>
                                 ))}
                                 <Button variant="text" onClick={addBreak} sx={{ color: '#1976d2' }}>
-                                    + Add another break
+                                    {t('+ Add another break')}
                                 </Button>
                             </>
                         )}
@@ -768,7 +770,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         }}
                     >
                         <Typography variant="body2" sx={{ mb: 1 }}>
-                            Select Days
+                            {t('Select Days')}
                         </Typography>
                         <WorkDaySelector
                             workDays={shiftDetail.workDays}
@@ -795,7 +797,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                     onClick={handleSave}
                     sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
                 >
-                    Save
+                    {t('Save')}
                 </Button>
             </Box>
 

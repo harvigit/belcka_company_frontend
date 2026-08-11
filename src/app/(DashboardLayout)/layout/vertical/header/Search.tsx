@@ -15,6 +15,7 @@ import {
 import { IconSearch, IconX } from "@tabler/icons-react";
 import Menuitems from "../sidebar/MenuItems";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 
 interface menuType {
   title: string;
@@ -25,6 +26,7 @@ interface menuType {
 }
 
 const Search = () => {
+  const { t } = useTranslation();
   // drawer top
   const [showDrawer2, setShowDrawer2] = useState(false);
   const [search, setSerach] = useState("");
@@ -69,11 +71,11 @@ const Search = () => {
           <Stack direction="row" spacing={2} alignItems="center">
             <TextField
               id="tb-search"
-              placeholder="Search here"
+              placeholder={t("Search here")}
               fullWidth
               onChange={(e) => setSerach(e.target.value)}
               slotProps={{
-                htmlInput: { "aria-label": "Search here" }
+                htmlInput: { "aria-label": t("Search here") }
               }}
             />
             <IconButton size="small" onClick={handleDrawerClose2}>
@@ -84,7 +86,7 @@ const Search = () => {
         <Divider />
         <Box p={2} sx={{ maxHeight: "60vh", overflow: "auto" }}>
           <Typography variant="h5" p={1}>
-            Quick Page Links
+            {t("Quick Page Links")}
           </Typography>
           <Box>
             <List component="nav">
@@ -98,7 +100,7 @@ const Search = () => {
                         component={Link}
                       >
                         <ListItemText
-                          primary={menu.title}
+                          primary={t(menu.title)}
                           secondary={menu?.href}
                           sx={{ my: 0, py: 0.5 }}
                         />
@@ -117,7 +119,7 @@ const Search = () => {
                               key={child.title ? child.id : menu.subheader}
                             >
                               <ListItemText
-                                primary={child.title}
+                                primary={t(child.title)}
                                 secondary={child.href}
                                 sx={{ my: 0, py: 0.5 }}
                               />
