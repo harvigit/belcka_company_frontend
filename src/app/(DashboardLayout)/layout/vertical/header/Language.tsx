@@ -14,11 +14,61 @@ import {useTranslation} from 'react-i18next';
 import {CustomizerContext} from '@/app/context/customizerContext';
 
 const languages = [
-    {code: 'en', shortLabel: 'EN', label: 'English'},
-    {code: 'pl', shortLabel: 'PL', label: 'Polish'},
-    {code: 'ru', shortLabel: 'RU', label: 'Russian'},
-    {code: 'uk', shortLabel: 'UA', label: 'Ukrainian'},
+    {
+        code: 'en',
+        shortLabel: 'EN',
+        label: 'English',
+        flag: '/images/flags/en.svg',
+    },
+    {
+        code: 'pl',
+        shortLabel: 'PL',
+        label: 'Polish',
+        flag: '/images/flags/pl.svg',
+    },
+    {
+        code: 'ru',
+        shortLabel: 'RU',
+        label: 'Russian',
+        flag: '/images/flags/ru.svg',
+    },
+    {
+        code: 'uk',
+        shortLabel: 'UA',
+        label: 'Ukrainian',
+        flag: '/images/flags/uk.svg',
+    },
 ];
+
+const FlagAvatar = ({
+    flag,
+    label,
+    size = 26,
+}: {
+    flag: string;
+    label: string;
+    size?: number;
+}) => (
+    <Avatar
+        src={flag}
+        alt={label}
+        variant="circular"
+        imgProps={{
+            loading: 'eager',
+            draggable: false,
+        }}
+        sx={{
+            width: size,
+            height: size,
+            bgcolor: 'transparent',
+            border: '1px solid',
+            borderColor: 'divider',
+            '& img': {
+                objectFit: 'cover',
+            },
+        }}
+    />
+);
 
 const Language = () => {
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -43,17 +93,11 @@ const Language = () => {
                     onClick={(event) => setAnchorEl(event.currentTarget)}
                     sx={{gap: 0.5}}
                 >
-                    <Avatar
-                        sx={{
-                            width: 30,
-                            height: 30,
-                            fontSize: 12,
-                            fontWeight: 700,
-                            bgcolor: 'grey.600',
-                        }}
-                    >
-                        {selectedLanguage.shortLabel}
-                    </Avatar>
+                    <FlagAvatar
+                        flag={selectedLanguage.flag}
+                        label={selectedLanguage.label}
+                        size={30}
+                    />
                     <IconChevronDown size="16"/>
                 </IconButton>
             </Tooltip>
@@ -71,18 +115,9 @@ const Language = () => {
                         selected={selectedLanguage.code === language.code}
                         onClick={() => handleChangeLanguage(language.code)}
                     >
-                        <Avatar
-                            sx={{
-                                width: 26,
-                                height: 26,
-                                mr: 1,
-                                fontSize: 11,
-                                fontWeight: 700,
-                                bgcolor: 'grey.600',
-                            }}
-                        >
-                            {language.shortLabel}
-                        </Avatar>
+                        <Box sx={{mr: 1, display: 'flex'}}>
+                            <FlagAvatar flag={language.flag} label={language.label} />
+                        </Box>
                         <ListItemText
                             primary={
                                 <Typography variant="body2">
