@@ -1845,6 +1845,8 @@ const AddressesList = ({
                   companyId={sidebarData.companyId}
                   addressId={sidebarData.addressId}
                   currency={sidebarData.currency}
+                  checkinStartDate={checkinStartDate}
+                  checkinEndDate={checkinEndDate}
                 />
               )}
               {value === 1 && (

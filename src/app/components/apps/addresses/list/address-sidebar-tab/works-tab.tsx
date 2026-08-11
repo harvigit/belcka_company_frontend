@@ -16,6 +16,7 @@ import {
   Autocomplete,
   Badge,
   Drawer,
+  Skeleton,
 } from "@mui/material";
 import { Stack } from "@mui/system";
 import {
@@ -30,9 +31,9 @@ import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import WorkDetailPage from "@/app/components/works";
 import Image from "next/image";
-import SkeletonLoader from "@/app/components/SkeletonLoader";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import { format } from "date-fns";
 import ChecklogDetailPage from "../../../time-clock/time-clock-details/checklogs/checklog-details";
 import AddPricework from "../../../time-clock/time-clock-details/pricework/add-pricework";
 import PriceworkDetails from "../../../time-clock/time-clock-details/pricework/pricework-details";
@@ -41,13 +42,21 @@ interface WorksTabProps {
   addressId: number;
   companyId: number;
   currency?: string | null;
+  checkinStartDate?: Date | null;
+  checkinEndDate?: Date | null;
 }
 
 type FilterState = {
   type: string;
 };
 
-export const WorksTab = ({ addressId, companyId, currency }: WorksTabProps) => {
+export const WorksTab = ({
+  addressId,
+  companyId,
+  currency,
+  checkinStartDate = null,
+  checkinEndDate = null,
+}: WorksTabProps) => {
   const [tabData, setTabData] = useState<any[]>([]);
   const [searchWork, setSearchWork] = useState<string>("");
   const [openDialog, setOpenDialog] = useState(false);
@@ -92,16 +101,25 @@ export const WorksTab = ({ addressId, companyId, currency }: WorksTabProps) => {
   const fetchWorkTabData = useCallback(async () => {
     const requestId = ++requestSequenceRef.current;
     const trimmedSearch = searchWork.trim();
+    const hasCheckinRange = !!(checkinStartDate && checkinEndDate);
+    const checkinDateParams = hasCheckinRange
+      ? {
+          checkin_start_date: format(checkinStartDate as Date, "dd/MM/yyyy"),
+          checkin_end_date: format(checkinEndDate as Date, "dd/MM/yyyy"),
+        }
+      : {};
     const workParams = {
       address_id: addressId,
       company_id: companyId,
       ...(trimmedSearch ? { search: trimmedSearch } : {}),
       ...(filters.type ? { trade_id: filters.type } : {}),
+      ...checkinDateParams,
     };
     const priceworkParams = {
       address_id: addressId,
       ...(trimmedSearch ? { search: trimmedSearch } : {}),
       ...(filters.type ? { trade_id: filters.type } : {}),
+      ...checkinDateParams,
     };
 
     setFetchWork(true);
@@ -148,7 +166,14 @@ export const WorksTab = ({ addressId, companyId, currency }: WorksTabProps) => {
         setFetchWork(false);
       }
     }
-  }, [addressId, companyId, filters.type, searchWork]);
+  }, [
+    addressId,
+    companyId,
+    filters.type,
+    searchWork,
+    checkinStartDate,
+    checkinEndDate,
+  ]);
 
   useEffect(() => {
     if (!trade || trade.length === 0) {
@@ -442,7 +467,11 @@ export const WorksTab = ({ addressId, companyId, currency }: WorksTabProps) => {
 
       {/* List of works */}
       {fetchWork ? (
-        <SkeletonLoader columns={[{ name: "Id" }]} rowCount={1} />
+        <Box mb={2} sx={{ border: "1px solid #ccc", borderRadius: 2, p: 2 }}>
+          <Skeleton variant="text" width="40%" height={28} />
+          <Skeleton variant="text" width="70%" height={20} sx={{ mt: 1 }} />
+          <Skeleton variant="text" width="55%" height={18} sx={{ mt: 0.5 }} />
+        </Box>
       ) : tabData.length > 0 ? (
         tabData.map((work, idx) =>
           work.is_pricework_record ? (

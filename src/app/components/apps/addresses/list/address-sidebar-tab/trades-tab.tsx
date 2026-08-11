@@ -3,13 +3,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
     Avatar, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
-    IconButton, InputAdornment, TextField, Typography, useMediaQuery, Autocomplete
+    IconButton, InputAdornment, TextField, Typography, useMediaQuery, Autocomplete, Skeleton
 } from '@mui/material';
 import { Stack } from '@mui/system';
 import { IconChevronRight, IconFilter, IconSearch, IconX } from '@tabler/icons-react';
 import api from '@/utils/axios';
 import Image from 'next/image';
-import SkeletonLoader from '@/app/components/SkeletonLoader';
 
 interface TradesTabProps {
     companyId: number;
@@ -207,7 +206,18 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
 
             {/* Data List */}
             {fetchWork ? (
-                <SkeletonLoader columns={[{ name: "Id" }]} rowCount={1} />
+                <Box
+                    mb={2}
+                    sx={{
+                        border: '1px solid #e0e0e0',
+                        borderRadius: 2,
+                        p: 2,
+                        boxShadow: '0px 2px 6px rgba(0,0,0,0.05)',
+                    }}
+                >
+                    <Skeleton variant="text" width="45%" height={28} />
+                    <Skeleton variant="text" width="65%" height={20} sx={{ mt: 1 }} />
+                </Box>
             ) : filteredData.length > 0 ? (
                 filteredData.map((trade, idx) => (
                     <Box key={idx} mb={1}>
