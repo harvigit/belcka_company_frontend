@@ -288,6 +288,9 @@ const CreateInvoice = ({
         try {
           const fd = new FormData();
           fd.append("file_name", list[0]);
+          if (companyId) {
+            fd.append("company_id", String(companyId));
+          }
           const res = await api.post("po-invoices/ocr-scan", fd, {
             headers: { "Content-Type": "multipart/form-data" },
           });
@@ -295,8 +298,16 @@ const CreateInvoice = ({
           if (res.data) {
             toast.success("Document scanned", { id: toastId });
 
-            const { amount, total_excl_vat, invoice_number, supplier } =
-              res.data;
+            const {
+              amount,
+              total_excl_vat,
+              invoice_number,
+              supplier,
+              supplier_id,
+              date,
+              description,
+              ordered_by,
+            } = res.data;
 
             setFormData((prev) => {
               const next = { ...prev };
@@ -305,10 +316,18 @@ const CreateInvoice = ({
                 next.total_excl_vat = total_excl_vat;
               if (invoice_number && !prev.invoice_id)
                 next.invoice_id = invoice_number;
+              if (date && !prev.expected_delivery_date)
+                next.expected_delivery_date = date;
+              if (description && !prev.description)
+                next.description = description;
+              if (ordered_by && !prev.ordered_by)
+                next.ordered_by = ordered_by;
+              if (supplier_id && !prev.supplier_id)
+                next.supplier_id = supplier_id;
               return next;
             });
 
-            if (supplier) {
+            if (supplier && !supplier_id) {
               const lowerSupplier = supplier.toLowerCase();
               // Find matching supplier
               const match = suppliers.find((s) => {
