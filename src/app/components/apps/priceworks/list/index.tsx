@@ -40,6 +40,8 @@ import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import PriceworkStatusBadge from './components/PriceworkStatusBadge';
+import PriceworkDetailsDrawer from './components/PriceworkDetailsDrawer';
+import PriceworkAttachmentsDrawer from './components/PriceworkAttachmentsDrawer';
 import {
     PriceworkApiRow,
     PriceworkTabItem,
@@ -98,6 +100,10 @@ const PriceworkList = () => {
         sent: 0,
         rejected: 0,
     });
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    const [detailsPricework, setDetailsPricework] = useState<PriceworkRow | null>(null);
+    const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+    const [attachmentsPriceworkId, setAttachmentsPriceworkId] = useState<number | null>(null);
 
     const clearSelection = () => {
         setIsSelectAll(false);
@@ -107,6 +113,26 @@ const PriceworkList = () => {
     const handleTabChange = (tab: PriceworkTabKey) => {
         setActiveTab(tab);
         clearSelection();
+    };
+
+    const openPriceworkDetails = (row: PriceworkRow) => {
+        setDetailsPricework(row);
+        setDetailsOpen(true);
+    };
+
+    const closePriceworkDetails = () => {
+        setDetailsOpen(false);
+        setDetailsPricework(null);
+    };
+
+    const openPriceworkAttachments = (priceworkId: number) => {
+        setAttachmentsPriceworkId(priceworkId);
+        setAttachmentsOpen(true);
+    };
+
+    const closePriceworkAttachments = () => {
+        setAttachmentsOpen(false);
+        setAttachmentsPriceworkId(null);
     };
 
     const handleToggleSelect = (id: number) => {
@@ -333,8 +359,18 @@ const PriceworkList = () => {
                 header: () => 'Attachments',
                 cell: (info) => {
                     const count = Number(info.getValue() || 0);
+                    const row = info.row.original;
                     return count > 0 ? (
-                        <Typography className="f-14" sx={{color: 'primary.main', fontWeight: 500}}>
+                        <Typography
+                            className="f-14"
+                            sx={{
+                                color: 'primary.main',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                '&:hover': {textDecoration: 'underline'},
+                            }}
+                            onClick={() => openPriceworkAttachments(row.id)}
+                        >
                             View ({count})
                         </Typography>
                     ) : (
@@ -356,9 +392,13 @@ const PriceworkList = () => {
             columnHelper.display({
                 id: 'actions',
                 header: () => 'Actions',
-                cell: () => (
+                cell: (info) => (
                     <Tooltip title="View details">
-                        <IconButton size="small" color="primary" disabled>
+                        <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => openPriceworkDetails(info.row.original)}
+                        >
                             <IconEye size={18} />
                         </IconButton>
                     </Tooltip>
@@ -834,6 +874,21 @@ const PriceworkList = () => {
                 table={table}
                 totalRows={totalRows}
                 selectedCount={selectedCount}
+            />
+
+            <PriceworkDetailsDrawer
+                open={detailsOpen}
+                onClose={closePriceworkDetails}
+                pricework={detailsPricework}
+                onViewAttachments={(id) => {
+                    openPriceworkAttachments(id);
+                }}
+            />
+
+            <PriceworkAttachmentsDrawer
+                open={attachmentsOpen}
+                priceworkId={attachmentsPriceworkId}
+                onClose={closePriceworkAttachments}
             />
         </Box>
     );

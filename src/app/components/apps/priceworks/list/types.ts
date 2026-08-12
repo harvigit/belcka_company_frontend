@@ -8,6 +8,28 @@ export type PriceworkTabItem = {
     count: number;
 };
 
+export type PriceworkAttachment = {
+    id: number;
+    pricework_id?: number;
+    image_url?: string | null;
+    thumb_url?: string | null;
+};
+
+export type PriceworkActivityLog = {
+    id: number;
+    title?: string | null;
+    action?: string | null;
+    date_time?: string | null;
+    pricework_user_id?: number | null;
+    pricework_user_name?: string | null;
+    pricework_user_image?: string | null;
+    pricework_user_thumb_image?: string | null;
+    action_user_id?: number | null;
+    action_user_name?: string | null;
+    action_user_image?: string | null;
+    action_user_thumb_image?: string | null;
+};
+
 export type PriceworkApiRow = {
     id: number;
     user_id?: number | null;
@@ -36,6 +58,17 @@ export type PriceworkApiRow = {
     status?: PriceworkStatus | string | number | null;
     status_value?: string | number | null;
     created_at?: string | null;
+};
+
+export type PriceworkDetail = PriceworkApiRow & {
+    company_id?: number;
+    status_text?: PriceworkStatus | string | null;
+    timesheet_status?: string | null;
+    status_updated_by?: number | null;
+    status_updated_by_name?: string | null;
+    status_updated_at?: string | null;
+    attachments?: PriceworkAttachment[];
+    activity_logs?: PriceworkActivityLog[];
 };
 
 export const getInitials = (name?: string | null) => {
