@@ -1,0 +1,64 @@
+export type PriceworkStatus = 'pending' | 'approved' | 'sent' | 'rejected';
+
+export type PriceworkTabKey = 'all' | PriceworkStatus;
+
+export type PriceworkTabItem = {
+    key: PriceworkTabKey;
+    label: string;
+    count: number;
+};
+
+export type PriceworkApiRow = {
+    id: number;
+    user_id?: number | null;
+    user_name?: string | null;
+    user_image?: string | null;
+    user_thumb_image?: string | null;
+    trade_id?: number | null;
+    trade_name?: string | null;
+    project_id?: number | null;
+    project_name?: string | null;
+    address_id?: number | null;
+    address_name?: string | null;
+    team_id?: number | null;
+    team_name?: string | null;
+    unit_id?: number | null;
+    unit_name?: string | null;
+    work_type?: string | null;
+    amount_per_unit?: number | string | null;
+    work_complete?: number | string | null;
+    pricework_amount?: number | string | null;
+    pricework_date?: string | null;
+    note?: string | null;
+    attachment_count?: number | null;
+    currency?: string | null;
+    timesheet_id?: number | null;
+    status?: PriceworkStatus | string | number | null;
+    status_value?: string | number | null;
+    created_at?: string | null;
+};
+
+export const getInitials = (name?: string | null) => {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+};
+
+export const normalizePriceworkStatus = (
+    value: PriceworkApiRow['status'],
+): PriceworkStatus => {
+    if (value === null || value === undefined || value === '') return 'pending';
+    if (typeof value === 'number') {
+        if (value === 2) return 'approved';
+        if (value === 3) return 'rejected';
+        if (value === 4) return 'sent';
+        return 'pending';
+    }
+    const key = String(value).toLowerCase();
+    if (key === 'approved' || key === '2') return 'approved';
+    if (key === 'rejected' || key === '3') return 'rejected';
+    if (key === 'sent' || key === '4') return 'sent';
+    return 'pending';
+};

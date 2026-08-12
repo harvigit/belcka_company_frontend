@@ -35,7 +35,6 @@ import {
     ExpenseDetail,
     ExpenseListItem,
     capitalizeExpenseValue,
-    getInitials,
     normalizeExpenseStatus,
 } from '../types';
 import ExpenseStatusBadge from './ExpenseStatusBadge';
@@ -111,12 +110,10 @@ const userAvatar = (
     size = 32,
 ) => (
     <Avatar
-        src={image || undefined}
+        src={image || '/images/users/user.png'}
         alt={name || 'User'}
-        sx={{width: size, height: size, fontSize: 12, fontWeight: 600}}
-    >
-        {getInitials(name)}
-    </Avatar>
+        sx={{width: size, height: size}}
+    />
 );
 
 const EditFieldRow = ({label, children, alignItems = 'center'}: { label: string; children: React.ReactNode; alignItems?: 'center' | 'flex-start'; }) => (
@@ -376,7 +373,7 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
                                     <Stack direction="row" alignItems="center" spacing={1.25}>
                                         {userAvatar(
                                             detail?.user_name || expense.submittedBy.name,
-                                            detail?.user_thumb_image || detail?.user_image || expense.submittedBy.avatarUrl,
+                                            detail?.user_thumb_image || expense.submittedBy.avatarUrl,
                                             36,
                                         )}
                                         <Box>

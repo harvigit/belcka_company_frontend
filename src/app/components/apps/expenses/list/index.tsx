@@ -184,7 +184,7 @@ const mapApiRowToListItem = (row: ExpenseRow): ExpenseListItem => {
             name,
             role: row.trade_name?.trim() || '—',
             initials: getInitials(name),
-            avatarUrl: row.user_thumb_image || row.user_image || null,
+            avatarUrl: row.user_thumb_image || null,
         },
         project: row.project_name?.trim() || '-',
         address: row.address_name?.trim() || '-',
@@ -373,19 +373,21 @@ const ExpenseList = () => {
                 const name = row.user_name?.trim() || 'Unknown';
 
                 return (
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{px: 1.5}}>
+                    <Stack direction="row" alignItems="center" spacing={4} sx={{px: 1.5}}>
                         <Avatar
-                            src={row.user_thumb_image || row.user_image || undefined}
+                            src={row.user_thumb_image || '/images/users/user.png'}
                             alt={name}
-                            sx={{width: 32, height: 32, fontSize: 12, fontWeight: 600}}
-                        >
-                            {getInitials(name)}
-                        </Avatar>
+                            sx={{width: 36, height: 36}}
+                        />
                         <Box>
-                            <Typography className="f-14" fontWeight={600} lineHeight={1.3}>
+                            <Typography
+                                className="f-14"
+                                color="textPrimary"
+                                sx={{width: 150}}
+                            >
                                 {name}
                             </Typography>
-                            <Typography sx={{fontSize: 12, color: 'text.secondary', lineHeight: 1.3}}>
+                            <Typography color="textSecondary" variant="subtitle1" width={150} noWrap>
                                 {row.trade_name?.trim() || '—'}
                             </Typography>
                         </Box>
@@ -1031,12 +1033,10 @@ const ExpenseList = () => {
         <Box component="li" {...props} key={option.id}>
             <Stack direction="row" alignItems="center" spacing={1.5} minWidth={0}>
                 <Avatar
-                    src={option.user_thumb_image || option.user_image || undefined}
+                    src={option.user_thumb_image || '/images/users/user.png'}
                     alt={getUserLabel(option)}
-                    sx={{width: 32, height: 32, fontSize: 14}}
-                >
-                    {getInitials(getUserLabel(option))}
-                </Avatar>
+                    sx={{width: 36, height: 36}}
+                />
                 <Typography
                     component="span"
                     className="f-14"

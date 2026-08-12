@@ -124,6 +124,13 @@ const MenuItems: NavGroup[] = [
   },
   {
     id: uniqueId(),
+    title: "Pricework",
+    slug: "priceworks",
+    icon: IconTools,
+    href: "/apps/priceworks/list",
+  },
+  {
+    id: uniqueId(),
     title: "Knowledge Base",
     slug: "tasks",
     icon: IconFiles,
