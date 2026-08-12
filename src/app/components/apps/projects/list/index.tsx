@@ -212,6 +212,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
     code: 0,
     // shift_ids: "",
     team_ids: "",
+    user_ids: "",
     company_id: user?.company_id || 0,
     workzone_ids: "",
   };
