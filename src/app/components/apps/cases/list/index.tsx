@@ -39,6 +39,9 @@ import {
   IconNote,
   IconEdit,
   IconPointFilled,
+  IconDotsVertical,
+  IconNotes,
+  IconPlus,
 } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import dayjs from "dayjs";
@@ -51,11 +54,10 @@ import { flexRender } from "@tanstack/react-table";
 import { useServerTable } from "@/hooks/useServerTable";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
-import { IconDotsVertical } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import ArchiveAddress from "../../addresses/list/archive-address-list";
 import CaseEditDrawer from "./case-edit-drawer";
-import { IconNotes } from "@tabler/icons-react";
+import CaseAddDrawer from "./case-add-drawer";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
 interface CaseSummary {
@@ -111,6 +113,7 @@ const CasesList = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<any>(null);
   const [editData, setEditData] = useState({ name: "", case_id: "", ref: "" });
+  const [addCaseDrawerOpen, setAddCaseDrawerOpen] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -876,6 +879,17 @@ const CasesList = () => {
                 <MenuItem
                   onClick={() => {
                     handleClose();
+                    setAddCaseDrawerOpen(true);
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconPlus width={18} />
+                  </ListItemIcon>
+                  Add Case
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    handleClose();
                     setArchiveList(true);
                   }}
                 >
@@ -1213,6 +1227,16 @@ const CasesList = () => {
           totalRows={totalRows}
         />
       </Box>
+      {/* Add Case Drawer */}
+      <CaseAddDrawer
+        open={addCaseDrawerOpen}
+        onClose={() => setAddCaseDrawerOpen(false)}
+        projects={projectList}
+        parentAddresses={parentAddressList}
+        companyId={user?.company_id}
+        cases={data}
+        onSave={fetchCases}
+      />
       {/* Edit Case Drawer */}
       <CaseEditDrawer
         open={editDialogOpen}

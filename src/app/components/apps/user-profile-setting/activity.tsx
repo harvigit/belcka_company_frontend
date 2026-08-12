@@ -63,8 +63,8 @@ const getActivityActor = (
     item: ActivityItem,
 ): { actor: Actor | null; role: ActorRole } => {
     const title = (item.title || '').toLowerCase();
-    const isApproved = /approved by|has been approved/.test(title);
-    const isRejected = /rejected by|has been rejected/.test(title);
+    const isApproved = /approved by|has been approved|\bis approved\b/.test(title);
+    const isRejected = /rejected by|has been rejected|\bis rejected\b/.test(title);
     const isRequested = /^requested\b|requested to\b/.test(title);
 
     if (isRejected) {
