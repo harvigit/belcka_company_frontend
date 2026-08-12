@@ -987,7 +987,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     borderRadius: '4px',
                                                                     px: '8px',
                                                                 }}>
-                                                                    {getTruncatedName(log.is_pricework_record ? log.work_type : log.shift_name)}
+                                                                    {getTruncatedName(log.is_pricework_record ? 'Price Work' : log.shift_name)}
                                                                 </Box>
                                                             </Tooltip>
                                                         ) : isLogLocked ? (
