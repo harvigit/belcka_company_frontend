@@ -30,7 +30,7 @@ import {
   Checkbox,
 } from "@mui/material";
 import { flexRender, createColumnHelper } from "@tanstack/react-table";
-import { IconEye, IconNotes, IconSearch, IconTrash } from "@tabler/icons-react";
+import { IconEye, IconNotes, IconSearch, IconTrash, IconX } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -56,6 +56,8 @@ export type ExpenseCategoryList = {
   name: string;
   company_name?: string;
   is_transport_category?: boolean;
+  image_url?: string;
+  thumb_url?: string;
 };
 
 import { useServerTable } from "@/hooks/useServerTable";
@@ -105,11 +107,15 @@ const TablePagination = () => {
 
   const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
 
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
   const [formData, setFormData] = useState<any>({
     id: 0,
     name: "",
     company_id: company?.company_id,
     is_transport_category: false,
+    image: null,
   });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -153,11 +159,18 @@ const TablePagination = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const payload = {
-        ...formData,
-      };
+      const payload = new FormData();
+      payload.append("name", formData.name);
+      payload.append("company_id", String(formData.company_id));
+      payload.append("is_transport_category", String(formData.is_transport_category));
+      
+      if (formData.image) {
+        payload.append("image", formData.image);
+      }
 
-      const result = await api.post("expense-categories/create", payload);
+      const result = await api.post("expense-categories/create", payload, {
+          headers: { "Content-Type": "multipart/form-data" },
+      });
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
         setFormData({
@@ -165,7 +178,9 @@ const TablePagination = () => {
           name: "",
           company_id: company?.company_id,
           is_transport_category: false,
+          image: null,
         });
+        setEditDrawerOpen(false);
         fetchExpenseCategories();
         setDrawerOpen(false);
       }
@@ -180,11 +195,19 @@ const TablePagination = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const payload = {
-        ...formData,
-      };
+      const payload = new FormData();
+      payload.append("id", String(formData.id));
+      payload.append("name", formData.name);
+      payload.append("company_id", String(formData.company_id));
+      payload.append("is_transport_category", String(formData.is_transport_category));
+      
+      if (formData.image) {
+        payload.append("image", formData.image);
+      }
 
-      const result = await api.put("expense-categories/update", payload);
+      const result = await api.put("expense-categories/update", payload, {
+          headers: { "Content-Type": "multipart/form-data" },
+      });
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
         setFormData({
@@ -192,9 +215,11 @@ const TablePagination = () => {
           name: "",
           company_id: company?.company_id,
           is_transport_category: false,
+          image: null,
         });
         fetchExpenseCategories();
         setEditDrawerOpen(false);
+        setDrawerOpen(false);
       } else {
         toast.error(result.data.message);
       }
@@ -247,6 +272,7 @@ const TablePagination = () => {
         name: "",
         company_id: company?.company_id || 0,
         is_transport_category: false,
+        image: null,
       });
       setSelectedCategoryId(id);
       setEditDrawerOpen(true);
@@ -345,6 +371,40 @@ const TablePagination = () => {
         );
       },
     },
+    
+    columnHelper.accessor("thumb_url", {
+      id: "image",
+      header: () => (
+        <Stack direction="row" alignItems="center">
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Image
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+        const image = "/images/products/product.svg";
+
+        return (
+          <Stack direction="row" alignItems="center">
+            <Image
+              src={item.thumb_url || image}
+              style={{ cursor: "pointer" }}
+              alt="Category"
+              width={50}
+              height={50}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewImage(item.image_url || image);
+                setOpenPreview(true);
+              }}
+            />
+          </Stack>
+        );
+      },
+    }),
+
     columnHelper.accessor("name", {
       id: "name",
       header: "Name",
@@ -779,6 +839,58 @@ const TablePagination = () => {
       </Stack>
 
       <Divider />
+
+        <Dialog
+          open={openPreview}
+          onClose={() => setOpenPreview(false)}
+          fullScreen
+          PaperProps={{
+            sx: {
+              backgroundColor: "transparent",
+              boxShadow: "none",
+            },
+          }}
+        >
+          <IconButton
+            onClick={() => setOpenPreview(false)}
+            color="primary"
+            sx={{
+              position: "fixed",
+              top: 16,
+              right: 16,
+              zIndex: 1301,
+              backgroundColor: "#fff",
+              "&:hover": {
+                backgroundColor: "#eee",
+                color: "#1e4db7",
+              },
+            }}
+          >
+            <IconX />
+          </IconButton>
+
+          <Box
+            sx={{
+              width: "100vw",
+              height: "100vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onClick={() => setOpenPreview(false)}
+          >
+            <img
+              src={previewImage || ""}
+              alt="Preview"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "90% !important",
+                height: "50%",
+                objectFit: "contain",
+              }}
+            />
+          </Box>
+        </Dialog>
 
       <CreateExpenseCategory
         open={drawerOpen}
