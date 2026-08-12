@@ -16,6 +16,7 @@ import {
   RadioGroup,
   FormControlLabel,
   Tooltip,
+  Skeleton,
 } from "@mui/material";
 import {
   IconArrowLeft,
@@ -31,7 +32,6 @@ import {
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { Grid } from "@mui/system";
-import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 
@@ -396,7 +396,10 @@ export const DocumentsTab = ({
         </Button>
       </Stack>
       {fetchWork ? (
-        <SkeletonLoader columns={[{ name: "Id" }]} rowCount={1} />
+        <Box mb={2} mt={1} sx={{ border: "1px solid #e0e0e0", borderRadius: 2, p: 2 }}>
+          <Skeleton variant="text" width="50%" height={28} />
+          <Skeleton variant="rectangular" width="100%" height={120} sx={{ mt: 1, borderRadius: 1 }} />
+        </Box>
       ) : filteredData.length > 0 ? (
         filteredData.map((doc) => (
           <Box key={doc.id} mb={3} mt={1}>
