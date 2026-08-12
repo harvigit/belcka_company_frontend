@@ -14,6 +14,7 @@ import {
   Autocomplete,
   Drawer,
   IconButton,
+  Chip,
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
@@ -62,6 +63,7 @@ interface BillingFormData {
   request_log_id?: number;
   cis: string;
   account_id: string;
+  supervisor_name?: string;
 }
 
 const emptyBillingInfo: BillingFormData = {
@@ -352,6 +354,15 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
       >
         <Typography color="#487bb3ff" fontSize="16px !important">
           General Information
+          {billingInfo?.supervisor_name && (
+            <Chip
+              label={`Supervisor: ${billingInfo?.supervisor_name}`}
+              size="medium"
+              sx={{ ml: 1 }}
+              color="primary"
+              variant="outlined"
+            />
+          )}
         </Typography>
         {billingInfo.is_pending_request && (
           <Button
@@ -741,9 +752,9 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 maxLength: key === "address" ? 250 : 50,
                 inputMode: "text",
               }}
-              label={t(key
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (c) => c.toUpperCase()))}
+              label={t(
+                key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+              )}
               value={(formData as any)[key] ?? ""}
               onChange={(e) => {
                 let value = e.target.value;
@@ -883,9 +894,11 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                   ? t("NIN Number")
                   : key == "utr_number"
                     ? t("UTR Number")
-                    : t(key
-                        .replace(/_/g, " ")
-                        .replace(/\b\w/g, (c) => c.toUpperCase()))
+                    : t(
+                        key
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (c) => c.toUpperCase()),
+                      )
               }
               value={(formData as any)[key] ?? ""}
               onChange={(e) => {

@@ -13,6 +13,7 @@ import {
   Divider,
   Drawer,
   Autocomplete,
+  Chip,
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
@@ -427,8 +428,22 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       className="company_rate_wrapper"
       height="450px !important"
     >
-      <Box display={"flex"} justifyContent={"space-between"} mb={2}>
-        {user.user_role_id !== 1 && !actionUsers.includes(user.id) &&
+      <Box
+        display={"flex"}
+        justifyContent={"space-between"}
+        mb={2}
+        alignItems={"center"}
+      >
+        {comapny.supervisor_name && (
+          <Chip
+            label={`Supervisor: ${comapny.supervisor_name}`}
+            size="medium"
+            color="primary"
+            variant="outlined"
+          />
+        )}
+        {user.user_role_id !== 1 &&
+        !actionUsers.includes(user.id) &&
         comapny.is_pending_request &&
         (payRate
           ? payRate === "view" || payRate === "view_edit"
@@ -619,7 +634,9 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
               {/* Gross & CIS Summary */}
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography color="textSecondary">{t("Gross Per Day")}</Typography>
+                  <Typography color="textSecondary">
+                    {t("Gross Per Day")}
+                  </Typography>
                   <Typography color="textSecondary">
                     {comapny?.currency}
                     {gross}
