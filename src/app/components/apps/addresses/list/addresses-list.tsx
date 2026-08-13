@@ -640,15 +640,7 @@ const AddressesList = ({
         ...formData,
         type: "circle",
       };
-
-      if (payload.lat !== undefined) {
-        payload.latitude = payload.lat;
-        delete payload.lat;
-      }
-      if (payload.lng !== undefined) {
-        payload.longitude = payload.lng;
-        delete payload.lng;
-      }
+      
       if (!payload.boundary && selectedLocation) {
         payload.boundary = JSON.stringify({
           lat: selectedLocation.lat,
