@@ -250,11 +250,22 @@ const ProductList = () => {
     id: number | null;
     field: "price" | "market_price" | "max_stock" | "cutoff" | null;
   }>({ id: null, field: null });
+  const [savingCell, setSavingCell] = useState<{
+    id: number | null;
+    field:
+      | "price"
+      | "market_price"
+      | "max_stock"
+      | "cutoff"
+      | "is_sub_qty"
+      | null;
+  }>({ id: null, field: null });
   const [inputValue, setInputValue] = useState("");
   const [rowCategories, setRowCategories] = useState<Record<string, any[]>>({});
   const [draftCategories, setDraftCategories] = useState<any[]>([]);
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [openCategoryModal, setOpenCategoryModal] = useState(false);
+  const [isCategorySaving, setIsCategorySaving] = useState(false);
 
   const [rowProjects, setRowProjects] = useState<Record<string, any[]>>({});
   const [draftProjects, setDraftProjects] = useState<any[]>([]);
@@ -262,6 +273,14 @@ const ProductList = () => {
     null,
   );
   const [openProjectModal, setOpenProjectModal] = useState(false);
+  const [isProjectSaving, setIsProjectSaving] = useState(false);
+  const [isBulkAssignSaving, setIsBulkAssignSaving] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+
+  const isCellSaving = (
+    id: number | string,
+    field: NonNullable<(typeof savingCell)["field"]>,
+  ) => Number(savingCell.id) === Number(id) && savingCell.field === field;
 
   const [conflictOpen, setConflictOpen] = useState(false);
   const [conflictProducts, setConflictProducts] = useState<any[]>([]);
@@ -872,6 +891,7 @@ const ProductList = () => {
   };
 
   const updateCategories = async (id: string, selected: any[]) => {
+    setIsCategorySaving(true);
     try {
       const payload = {
         id: Number(id),
@@ -894,9 +914,14 @@ const ProductList = () => {
         );
         setOpenCategoryModal(false);
         toast.success(res.data.message);
+      } else {
+        toast.error(res.data?.message || "Failed to update categories");
       }
     } catch (err) {
       console.error(err);
+      toast.error("Failed to update categories");
+    } finally {
+      setIsCategorySaving(false);
     }
   };
 
@@ -925,6 +950,7 @@ const ProductList = () => {
   };
 
   const updateProjects = async (id: string, selected: any[]) => {
+    setIsProjectSaving(true);
     try {
       const payload = {
         product_ids: [Number(id)],
@@ -956,10 +982,13 @@ const ProductList = () => {
     } catch (err) {
       console.error(err);
       toast.error("Failed to update projects");
+    } finally {
+      setIsProjectSaving(false);
     }
   };
 
   const updateStockLimit = async (id: string, limit: any) => {
+    setSavingCell({ id: Number(id), field: "max_stock" });
     try {
       const payload = {
         id: Number(id),
@@ -969,33 +998,58 @@ const ProductList = () => {
       const res = await api.post("products/update", payload);
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        fetchProducts();
-        setOpenCategoryModal(false);
+        setData((prev: any[]) =>
+          prev.map((p) =>
+            Number(p.id) === Number(id) ? { ...p, max_stock: limit } : p,
+          ),
+        );
+      } else {
+        toast.error(res.data?.message || "Failed to update stock limit");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      toast.error(
+        err?.response?.data?.message || "Failed to update stock limit",
+      );
+    } finally {
+      setSavingCell({ id: null, field: null });
     }
   };
 
-  const updateLowStock = async (id: string, limit: any) => {
+  // Low Stock uses dedicated update-cutoff API (same as Adjust Stock),
+  // not full products/update — mirrors products/update-price for Price edits.
+  const updateLowStock = async (id: string | number, limit: any) => {
+    setSavingCell({ id: Number(id), field: "cutoff" });
     try {
       const payload = {
         id: Number(id),
-        company_id: Number(user.company_id),
-        cutoff: limit,
+        cutoff: Number(limit),
       };
-      const res = await api.post("products/update", payload);
-      if (res.data.IsSuccess) {
+      const res = await api.post("products/update-cutoff", payload);
+      if (res.data?.IsSuccess) {
         toast.success(res.data.message);
-        fetchProducts();
-        setOpenCategoryModal(false);
+        setData((prev: any[]) =>
+          prev.map((p) =>
+            Number(p.id) === Number(id)
+              ? { ...p, cutoff: Number(limit) }
+              : p,
+          ),
+        );
+      } else {
+        toast.error(res.data?.message || "Failed to update low stock");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      toast.error(
+        err?.response?.data?.message || "Failed to update low stock",
+      );
+    } finally {
+      setSavingCell({ id: null, field: null });
     }
   };
 
   const updateSubQty = async (id: string, is_sub_qty: boolean) => {
+    setSavingCell({ id: Number(id), field: "is_sub_qty" });
     try {
       const payload = {
         id: Number(id),
@@ -1017,9 +1071,14 @@ const ProductList = () => {
               : p,
           ),
         );
+      } else {
+        toast.error(res.data?.message || "Failed to update pack off");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      toast.error(err?.response?.data?.message || "Failed to update pack off");
+    } finally {
+      setSavingCell({ id: null, field: null });
     }
   };
 
@@ -1028,6 +1087,8 @@ const ProductList = () => {
     price?: number,
     market_price?: number,
   ) => {
+    const field = price !== undefined ? "price" : "market_price";
+    setSavingCell({ id: Number(id), field });
     try {
       const payload: any = { id };
 
@@ -1050,9 +1111,14 @@ const ProductList = () => {
               : p,
           ),
         );
+      } else {
+        toast.error(res.data?.message || "Failed to update price");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Update failed", error);
+      toast.error(error?.response?.data?.message || "Failed to update price");
+    } finally {
+      setSavingCell({ id: null, field: null });
     }
   };
 
@@ -1529,6 +1595,7 @@ const ProductList = () => {
         const item = row.original;
         const isEditing =
           editing.id === item.id && editing.field === "max_stock";
+        const isSaving = isCellSaving(item.id, "max_stock");
 
         return (
           <Stack
@@ -1538,7 +1605,9 @@ const ProductList = () => {
               e.stopPropagation();
             }}
           >
-            {isEditing ? (
+            {isSaving ? (
+              <CircularProgress size={16} />
+            ) : isEditing ? (
               <TextField
                 className="f-14"
                 size="small"
@@ -1565,9 +1634,8 @@ const ProductList = () => {
                   if (number > 9999) {
                     return;
                   }
-                  updateStockLimit(item.id, number);
-
                   setEditing({ id: null, field: null });
+                  await updateStockLimit(item.id, number);
                 }}
                 onKeyDown={async (e) => {
                   if (e.key === "Enter") {
@@ -1576,8 +1644,8 @@ const ProductList = () => {
                     if (number > 9999) {
                       return;
                     }
-                    updateStockLimit(item.id, number);
                     setEditing({ id: null, field: null });
+                    await updateStockLimit(item.id, number);
                   }
                 }}
               />
@@ -1597,7 +1665,7 @@ const ProductList = () => {
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!canEdit) return;
+                  if (!canEdit || isSaving) return;
                   setEditing({ id: item.id, field: "max_stock" });
                   const initVal =
                     item.max_stock !== null && item.max_stock !== undefined
@@ -1626,6 +1694,7 @@ const ProductList = () => {
       cell: ({ row }) => {
         const item = row.original;
         const isEditing = editing.id === item.id && editing.field === "cutoff";
+        const isSaving = isCellSaving(item.id, "cutoff");
 
         return (
           <Stack
@@ -1635,7 +1704,9 @@ const ProductList = () => {
               e.stopPropagation();
             }}
           >
-            {isEditing ? (
+            {isSaving ? (
+              <CircularProgress size={16} />
+            ) : isEditing ? (
               <TextField
                 className="f-14"
                 size="small"
@@ -1662,9 +1733,8 @@ const ProductList = () => {
                   if (number > 9999) {
                     return;
                   }
-                  updateLowStock(item.id, number);
-
                   setEditing({ id: null, field: null });
+                  await updateLowStock(item.id, number);
                 }}
                 onKeyDown={async (e) => {
                   if (e.key === "Enter") {
@@ -1673,8 +1743,8 @@ const ProductList = () => {
                     if (number > 9999) {
                       return;
                     }
-                    updateLowStock(item.id, number);
                     setEditing({ id: null, field: null });
+                    await updateLowStock(item.id, number);
                   }
                 }}
               />
@@ -1694,7 +1764,7 @@ const ProductList = () => {
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!canEdit) return;
+                  if (!canEdit || isSaving) return;
                   setEditing({ id: item.id, field: "cutoff" });
                   const initVal =
                     item.cutoff !== null && item.cutoff !== undefined
@@ -1738,6 +1808,7 @@ const ProductList = () => {
       cell: ({ row }) => {
         const item = row.original;
         const isEditing = editing.id === item.id && editing.field === "price";
+        const isSaving = isCellSaving(item.id, "price");
 
         return (
           <Stack
@@ -1747,7 +1818,9 @@ const ProductList = () => {
               e.stopPropagation();
             }}
           >
-            {isEditing ? (
+            {isSaving ? (
+              <CircularProgress size={16} />
+            ) : isEditing ? (
               <TextField
                 className="f-14"
                 size="small"
@@ -1801,9 +1874,8 @@ const ProductList = () => {
 
                   const formatted = number.toFixed(2);
 
-                  await updatePrice(item.id, Number(formatted), undefined);
-
                   setEditing({ id: null, field: null });
+                  await updatePrice(item.id, Number(formatted), undefined);
                 }}
                 onKeyDown={async (e) => {
                   if (e.key === "Enter") {
@@ -1815,8 +1887,8 @@ const ProductList = () => {
                     }
                     const formatted = number.toFixed(2);
 
-                    await updatePrice(item.id, Number(formatted), undefined);
                     setEditing({ id: null, field: null });
+                    await updatePrice(item.id, Number(formatted), undefined);
                   }
                 }}
               />
@@ -1836,7 +1908,7 @@ const ProductList = () => {
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!canEdit) return;
+                  if (!canEdit || isSaving) return;
                   setEditing({ id: item.id, field: "price" });
                   const initVal =
                     item.price !== null && item.price !== undefined
@@ -1867,6 +1939,7 @@ const ProductList = () => {
         const item = row.original;
         const isEditing =
           editing.id === item.id && editing.field === "market_price";
+        const isSaving = isCellSaving(item.id, "market_price");
 
         return (
           <Stack
@@ -1878,7 +1951,9 @@ const ProductList = () => {
             }}
           >
             {/* Amount */}
-            {isEditing ? (
+            {isSaving ? (
+              <CircularProgress size={16} />
+            ) : isEditing ? (
               <TextField
                 className="f-14"
                 size="small"
@@ -1932,9 +2007,8 @@ const ProductList = () => {
 
                   const formatted = number.toFixed(2);
 
-                  await updatePrice(item.id, undefined, Number(formatted));
-
                   setEditing({ id: null, field: null });
+                  await updatePrice(item.id, undefined, Number(formatted));
                 }}
                 onKeyDown={async (e) => {
                   if (e.key === "Enter") {
@@ -1946,8 +2020,8 @@ const ProductList = () => {
                     }
                     const formatted = number.toFixed(2);
 
-                    await updatePrice(item.id, undefined, Number(formatted));
                     setEditing({ id: null, field: null });
+                    await updatePrice(item.id, undefined, Number(formatted));
                   }
                 }}
               />
@@ -1967,7 +2041,7 @@ const ProductList = () => {
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!canEdit) return;
+                  if (!canEdit || isSaving) return;
                   setEditing({ id: item.id, field: "market_price" });
                   const initVal =
                     item.market_price !== null &&
@@ -2011,6 +2085,7 @@ const ProductList = () => {
       header: () => "Pack Off",
       cell: ({ row }) => {
         const item = row.original;
+        const isSaving = isCellSaving(item.id, "is_sub_qty");
 
         return (
           <Stack
@@ -2018,14 +2093,18 @@ const ProductList = () => {
             alignItems="center"
             onClick={(e) => e.stopPropagation()}
           >
-            <IOSSwitch
-              checked={Boolean(item.is_sub_qty)}
-              disabled={!canEdit}
-              onChange={async (e) => {
-                const checked = e.target.checked;
-                await updateSubQty(item.id, checked);
-              }}
-            />
+            {isSaving ? (
+              <CircularProgress size={16} />
+            ) : (
+              <IOSSwitch
+                checked={Boolean(item.is_sub_qty)}
+                disabled={!canEdit}
+                onChange={async (e) => {
+                  const checked = e.target.checked;
+                  await updateSubQty(item.id, checked);
+                }}
+              />
+            )}
           </Stack>
         );
       },
@@ -2103,7 +2182,9 @@ const ProductList = () => {
         {/* for handling categories update */}
         <Dialog
           open={openCategoryModal}
-          onClose={() => setOpenCategoryModal(false)}
+          onClose={() => {
+            if (!isCategorySaving) setOpenCategoryModal(false);
+          }}
         >
           <DialogTitle>Select Categories</DialogTitle>
           <DialogContent>
@@ -2131,30 +2212,32 @@ const ProductList = () => {
           <DialogActions>
             <Button
               onClick={() => {
+                if (isCategorySaving) return;
                 setOpenCategoryModal(false);
                 setDraftCategories([]);
               }}
               color="error"
+              disabled={isCategorySaving}
             >
               Cancel
             </Button>
             <Button
-              onClick={() => {
-                if (editingRowId) {
-                  setRowCategories((prev) => ({
-                    ...prev,
-                    [editingRowId]: draftCategories,
-                  }));
-
-                  updateCategories(editingRowId, draftCategories);
-                }
-
-                setOpenCategoryModal(false);
+              onClick={async () => {
+                if (!editingRowId || isCategorySaving) return;
+                setRowCategories((prev) => ({
+                  ...prev,
+                  [editingRowId]: draftCategories,
+                }));
+                await updateCategories(editingRowId, draftCategories);
               }}
               variant="contained"
               color="primary"
+              disabled={isCategorySaving}
+              startIcon={
+                isCategorySaving ? <CircularProgress size={14} color="inherit" /> : null
+              }
             >
-              Submit
+              {isCategorySaving ? "Saving..." : "Submit"}
             </Button>
           </DialogActions>
         </Dialog>
@@ -2162,7 +2245,9 @@ const ProductList = () => {
         {/* for handling projects update */}
         <Dialog
           open={openProjectModal}
-          onClose={() => setOpenProjectModal(false)}
+          onClose={() => {
+            if (!isProjectSaving) setOpenProjectModal(false);
+          }}
         >
           <DialogTitle>Select Projects</DialogTitle>
           <DialogContent>
@@ -2190,30 +2275,32 @@ const ProductList = () => {
           <DialogActions>
             <Button
               onClick={() => {
+                if (isProjectSaving) return;
                 setOpenProjectModal(false);
                 setDraftProjects([]);
               }}
               color="error"
+              disabled={isProjectSaving}
             >
               Cancel
             </Button>
             <Button
-              onClick={() => {
-                if (editingProjectRowId) {
-                  setRowProjects((prev) => ({
-                    ...prev,
-                    [editingProjectRowId]: draftProjects,
-                  }));
-
-                  updateProjects(editingProjectRowId, draftProjects);
-                }
-
-                setOpenProjectModal(false);
+              onClick={async () => {
+                if (!editingProjectRowId || isProjectSaving) return;
+                setRowProjects((prev) => ({
+                  ...prev,
+                  [editingProjectRowId]: draftProjects,
+                }));
+                await updateProjects(editingProjectRowId, draftProjects);
               }}
               variant="contained"
               color="primary"
+              disabled={isProjectSaving}
+              startIcon={
+                isProjectSaving ? <CircularProgress size={14} color="inherit" /> : null
+              }
             >
-              Submit
+              {isProjectSaving ? "Saving..." : "Submit"}
             </Button>
           </DialogActions>
         </Dialog>
@@ -2822,7 +2909,9 @@ const ProductList = () => {
             </Popover>
             <Dialog
               open={assignCategoryOpen}
-              onClose={() => setAssignCategoryOpen(false)}
+              onClose={() => {
+                if (!isBulkAssignSaving) setAssignCategoryOpen(false);
+              }}
               maxWidth="sm"
               fullWidth
             >
@@ -2851,6 +2940,7 @@ const ProductList = () => {
                   onClick={() => setAssignCategoryOpen(false)}
                   variant="outlined"
                   color="error"
+                  disabled={isBulkAssignSaving}
                 >
                   Cancel
                 </Button>
@@ -2860,6 +2950,7 @@ const ProductList = () => {
                       toast.error("Please select a category");
                       return;
                     }
+                    setIsBulkAssignSaving(true);
                     try {
                       const payload = {
                         product_ids: Array.from(selectedRowIds),
@@ -2883,19 +2974,29 @@ const ProductList = () => {
                       }
                     } catch (error) {
                       toast.error("Failed to assign category");
+                    } finally {
+                      setIsBulkAssignSaving(false);
                     }
                   }}
                   variant="contained"
                   color="primary"
+                  disabled={isBulkAssignSaving}
+                  startIcon={
+                    isBulkAssignSaving ? (
+                      <CircularProgress size={14} color="inherit" />
+                    ) : null
+                  }
                 >
-                  Assign
+                  {isBulkAssignSaving ? "Assigning..." : "Assign"}
                 </Button>
               </DialogActions>
             </Dialog>
 
             <Dialog
               open={assignProjectOpen}
-              onClose={() => setAssignProjectOpen(false)}
+              onClose={() => {
+                if (!isBulkAssignSaving) setAssignProjectOpen(false);
+              }}
               maxWidth="sm"
               fullWidth
             >
@@ -2925,6 +3026,7 @@ const ProductList = () => {
                   onClick={() => setAssignProjectOpen(false)}
                   variant="outlined"
                   color="error"
+                  disabled={isBulkAssignSaving}
                 >
                   Cancel
                 </Button>
@@ -2937,6 +3039,7 @@ const ProductList = () => {
                       toast.error("Please select at least one project");
                       return;
                     }
+                    setIsBulkAssignSaving(true);
                     try {
                       const payload = {
                         product_ids: Array.from(selectedRowIds),
@@ -2963,16 +3066,29 @@ const ProductList = () => {
                       }
                     } catch (error) {
                       toast.error("Failed to assign project");
+                    } finally {
+                      setIsBulkAssignSaving(false);
                     }
                   }}
                   variant="contained"
                   color="primary"
+                  disabled={isBulkAssignSaving}
+                  startIcon={
+                    isBulkAssignSaving ? (
+                      <CircularProgress size={14} color="inherit" />
+                    ) : null
+                  }
                 >
-                  Assign
+                  {isBulkAssignSaving ? "Assigning..." : "Assign"}
                 </Button>
               </DialogActions>
             </Dialog>
-            <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+            <Dialog
+              open={confirmOpen}
+              onClose={() => {
+                if (!isArchiving) setConfirmOpen(false);
+              }}
+            >
               <DialogTitle>Confirm Archive</DialogTitle>
               <DialogContent>
                 <Typography color="textSecondary">
@@ -2986,11 +3102,13 @@ const ProductList = () => {
                   onClick={() => setConfirmOpen(false)}
                   variant="outlined"
                   color="primary"
+                  disabled={isArchiving}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={async () => {
+                    setIsArchiving(true);
                     try {
                       const payload = {
                         product_ids: usersToDelete.join(","),
@@ -3002,16 +3120,23 @@ const ProductList = () => {
                       toast.success(response.data.message);
                       setSelectedRowIds(new Set());
                       await fetchProducts();
+                      setConfirmOpen(false);
                     } catch (error) {
                       toast.error("Failed to archive products");
                     } finally {
-                      setConfirmOpen(false);
+                      setIsArchiving(false);
                     }
                   }}
                   variant="outlined"
                   color="error"
+                  disabled={isArchiving}
+                  startIcon={
+                    isArchiving ? (
+                      <CircularProgress size={14} color="inherit" />
+                    ) : null
+                  }
                 >
-                  Archive
+                  {isArchiving ? "Archiving..." : "Archive"}
                 </Button>
               </DialogActions>
             </Dialog>
