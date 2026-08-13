@@ -623,7 +623,6 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
                 user_id: user_id?.toString() || '',
                 start_date: format(startDateToUse, 'dd/MM/yyyy'),
                 end_date: format(endDateToUse, 'dd/MM/yyyy'),
-                _t: Date.now().toString()
             };
 
             const response: AxiosResponse<RequestListResponse> = await api.get(
