@@ -114,6 +114,7 @@ const CasesList = () => {
   const [editingCase, setEditingCase] = useState<any>(null);
   const [editData, setEditData] = useState({ name: "", case_id: "", ref: "" });
   const [addCaseDrawerOpen, setAddCaseDrawerOpen] = useState(false);
+  const [isViewOnly, setIsViewOnly] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -692,30 +693,58 @@ const CasesList = () => {
         cell: ({ row }: any) => {
           const item = row.original;
           return (
-            <IconButton
-              color="primary"
-              onClick={async (e) => {
-                e.stopPropagation();
+            <Box display="flex" gap={1}>
+              <IconButton
+                color="primary"
+                onClick={async (e) => {
+                  e.stopPropagation();
 
-                try {
-                  const res = await api.get(
-                    `address/address-detail?address_id=${item.id}`,
-                  );
-                  const fullAddress = res.data?.info;
-                  if (fullAddress) {
-                    setEditingCase(fullAddress);
-                  } else {
+                  try {
+                    const res = await api.get(
+                      `address/address-detail?address_id=${item.id}`,
+                    );
+                    const fullAddress = res.data?.info;
+                    if (fullAddress) {
+                      setEditingCase(fullAddress);
+                    } else {
+                      setEditingCase(item);
+                    }
+                  } catch (err) {
                     setEditingCase(item);
                   }
-                } catch (err) {
-                  setEditingCase(item);
-                }
 
-                setEditDialogOpen(true);
-              }}
-            >
-              <IconEye size={18} />
-            </IconButton>
+                  setIsViewOnly(true);
+                  setEditDialogOpen(true);
+                }}
+              >
+                <IconEye size={18} />
+              </IconButton>
+              <IconButton
+                color="primary"
+                onClick={async (e) => {
+                  e.stopPropagation();
+
+                  try {
+                    const res = await api.get(
+                      `address/address-detail?address_id=${item.id}`,
+                    );
+                    const fullAddress = res.data?.info;
+                    if (fullAddress) {
+                      setEditingCase(fullAddress);
+                    } else {
+                      setEditingCase(item);
+                    }
+                  } catch (err) {
+                    setEditingCase(item);
+                  }
+
+                  setIsViewOnly(false);
+                  setEditDialogOpen(true);
+                }}
+              >
+                <IconEdit size={18} />
+              </IconButton>
+            </Box>
           );
         },
       },
@@ -1243,6 +1272,7 @@ const CasesList = () => {
         onClose={() => setEditDialogOpen(false)}
         selectedCase={editingCase}
         projects={projectList}
+        isViewOnly={isViewOnly}
         onSave={() => {
           fetchCases();
         }}

@@ -172,6 +172,7 @@ const AddressesList = ({
   const [defaultRadius, setDefaultRadius] = useState<number>(200);
   const fetched = useRef(false);
   const [progress, setProgress] = useState(false);
+  const [isViewOnly, setIsViewOnly] = useState(false);
   const status = ["Completed", "To Do", "In Progress"];
   const [open, setOpen] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
@@ -547,7 +548,8 @@ const AddressesList = ({
     setAddressEdit(false);
     setTypedAddress(false);
   };
-  const handleEdit = async (task: any) => {
+  const handleEdit = async (task: any, viewOnly: boolean = false) => {
+    setIsViewOnly(viewOnly);
     setSelectedTask(task);
 
     let taskProjectId = task.project_id;
@@ -634,10 +636,19 @@ const AddressesList = ({
     e.preventDefault();
     setIsSaving(true);
     try {
-      let payload = {
+      let payload: any = {
         ...formData,
         type: "circle",
       };
+
+      if (payload.lat !== undefined) {
+        payload.latitude = payload.lat;
+        delete payload.lat;
+      }
+      if (payload.lng !== undefined) {
+        payload.longitude = payload.lng;
+        delete payload.lng;
+      }
       if (!payload.boundary && selectedLocation) {
         payload.boundary = JSON.stringify({
           lat: selectedLocation.lat,
@@ -681,11 +692,20 @@ const AddressesList = ({
     e.preventDefault();
     setIsSaving(true);
     try {
-      let payload = {
+      let payload: any = {
         id: selectedTask.id,
         ...formData,
         type: "circle",
       };
+
+      if (payload.lat !== undefined) {
+        payload.latitude = payload.lat;
+        delete payload.lat;
+      }
+      if (payload.lng !== undefined) {
+        payload.longitude = payload.lng;
+        delete payload.lng;
+      }
 
       if (!payload.boundary && selectedLocation) {
         payload.boundary = JSON.stringify({
@@ -1257,10 +1277,16 @@ const AddressesList = ({
             >
               <Box display={"flex"} gap={2}>
                 <IconButton
-                  onClick={() => handleEdit(info.row.original)}
+                  onClick={() => handleEdit(info.row.original, true)}
                   color="primary"
                 >
                   <IconEye size={18} />
+                </IconButton>
+                <IconButton
+                  onClick={() => handleEdit(info.row.original, false)}
+                  color="primary"
+                >
+                  <IconEdit size={18} />
                 </IconButton>
                 <Badge
                   badgeContent={info.row.original.image_count}
@@ -2103,7 +2129,7 @@ const AddressesList = ({
                       <IconArrowLeft />
                     </IconButton>
                     <Typography variant="h6" color="inherit" fontWeight={700}>
-                      Case Detail
+                     {isViewOnly? "Case Detail" : "Edit Case"} 
                     </Typography>
                   </Box>
 
@@ -2140,7 +2166,7 @@ const AddressesList = ({
                     <CustomTextField
                       fullWidth
                       label="Reference"
-                      disabled
+                      disabled={isViewOnly}
                       value={formData.ref || ""}
                       onChange={(e: any) =>
                         setFormData((prev: any) => ({
@@ -2289,39 +2315,41 @@ const AddressesList = ({
                 </Grid>
               </Grid>
 
-              {/* <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "start",
-                  gap: 2,
-                  marginTop: 3,
-                }}
-              >
-                <Button
-                  color="primary"
-                  variant="contained"
-                  size="large"
-                  type="submit"
-                  sx={{ borderRadius: 3 }}
-                  className="drawer_buttons"
-                  disabled={isSaving}
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-                <Button
-                  color="inherit"
-                  onClick={() => handleAddressClose()}
-                  variant="contained"
-                  size="large"
+              {!isViewOnly && (
+                <Box
                   sx={{
-                    backgroundColor: "transparent",
-                    borderRadius: 3,
-                    color: "GrayText",
+                    display: "flex",
+                    justifyContent: "start",
+                    gap: 2,
+                    marginTop: 3,
                   }}
                 >
-                  Close
-                </Button>
-              </Box> */}
+                  <Button
+                    color="primary"
+                    variant="contained"
+                    size="large"
+                    type="submit"
+                    sx={{ borderRadius: 3 }}
+                    className="drawer_buttons"
+                    disabled={isSaving}
+                  >
+                    {isSaving ? "Saving..." : "Save"}
+                  </Button>
+                  <Button
+                    color="inherit"
+                    onClick={() => handleAddressClose()}
+                    variant="contained"
+                    size="large"
+                    sx={{
+                      backgroundColor: "transparent",
+                      borderRadius: 3,
+                      color: "GrayText",
+                    }}
+                  >
+                    Close
+                  </Button>
+                </Box>
+              )}
             </form>
           </Box>
         </Box>
