@@ -264,13 +264,11 @@ export default function CaseEditDrawer({
         type: "circle",
       };
 
-      if (payload.lat !== undefined) {
-        payload.latitude = payload.lat;
-        delete payload.lat;
+      if (payload.latitude !== undefined) {
+        payload.lat = payload.latitude;
       }
-      if (payload.lng !== undefined) {
-        payload.longitude = payload.lng;
-        delete payload.lng;
+      if (payload.longitude !== undefined) {
+        payload.lng = payload.longitude;
       }
 
       if (!payload.boundary && selectedLocation) {
