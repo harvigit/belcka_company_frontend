@@ -500,7 +500,7 @@ const PriceworkList = () => {
     const simpleColumns = table
         .getAllLeafColumns()
         .filter((col) => col.getIsVisible())
-        .map((col) => ({id: col.id}));
+        .map((col) => ({name: col.id}));
 
     const filteredColumnToggles = Object.keys(COLUMN_LABELS).filter(
         (id) =>
@@ -774,9 +774,9 @@ const PriceworkList = () => {
                                                             : 'flex-start'
                                                     }
                                                     sx={{
-                                                        '&:hover': isSortable
-                                                            ? {color: '#888'}
-                                                            : undefined,
+                                                        ...(isSortable && {
+                                                            '&:hover': {color: '#888'},
+                                                        }),
                                                         '&:hover .hoverIcon': {opacity: 1},
                                                     }}
                                                 >
