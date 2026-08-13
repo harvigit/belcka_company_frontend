@@ -54,6 +54,7 @@ interface CaseEditDrawerProps {
   selectedCase: any | null;
   projects: any[];
   onSave: () => void;
+  isViewOnly?: boolean;
 }
 
 export default function CaseEditDrawer({
@@ -62,6 +63,7 @@ export default function CaseEditDrawer({
   selectedCase,
   projects,
   onSave,
+  isViewOnly = false,
 }: CaseEditDrawerProps) {
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -256,13 +258,20 @@ export default function CaseEditDrawer({
     e.preventDefault();
     setIsSaving(true);
     try {
-      let payload = {
+      let payload: any = {
         id: selectedCase.id,
-        lat: formData.lat,
-        lng: formData.lng,
         ...formData,
         type: "circle",
       };
+
+      if (payload.lat !== undefined) {
+        payload.latitude = payload.lat;
+        delete payload.lat;
+      }
+      if (payload.lng !== undefined) {
+        payload.longitude = payload.lng;
+        delete payload.lng;
+      }
 
       if (!payload.boundary && selectedLocation) {
         payload.boundary = JSON.stringify({
@@ -316,7 +325,7 @@ export default function CaseEditDrawer({
                     <IconArrowLeft />
                   </IconButton>
                   <Typography variant="h6" color="inherit" fontWeight={700}>
-                    Case Detail
+                    {isViewOnly ? "Case Detail" : "Edit Case"}
                   </Typography>
                 </Box>
 
@@ -374,8 +383,8 @@ export default function CaseEditDrawer({
                 <Box mt={2}>
                   <CustomTextField
                     fullWidth
-                    disabled
                     label="Reference"
+                    disabled={isViewOnly}
                     value={formData.ref || ""}
                     onChange={(e: any) =>
                       setFormData((prev: any) => ({
@@ -433,7 +442,9 @@ export default function CaseEditDrawer({
                     <GoogleMap
                       zoom={17}
                       center={selectedLocation}
-                      onLoad={(map) => { mapRef.current = map; }}
+                      onLoad={(map) => {
+                        mapRef.current = map;
+                      }}
                       mapContainerStyle={{
                         width: "100%",
                         height: "400px",
@@ -497,39 +508,41 @@ export default function CaseEditDrawer({
               </Grid>
             </Grid>
 
-            {/* <Box
-              sx={{
-                display: "flex",
-                justifyContent: "start",
-                gap: 2,
-                marginTop: 3,
-              }}
-            >
-              <Button
-                color="primary"
-                variant="contained"
-                size="large"
-                type="submit"
-                sx={{ borderRadius: 3 }}
-                className="drawer_buttons"
-                disabled={isSaving}
-              >
-                {isSaving ? "Saving..." : "Save"}
-              </Button>
-              <Button
-                color="inherit"
-                onClick={() => onClose()}
-                variant="contained"
-                size="large"
+            {!isViewOnly && (
+              <Box
                 sx={{
-                  backgroundColor: "transparent",
-                  borderRadius: 3,
-                  color: "GrayText",
+                  display: "flex",
+                  justifyContent: "start",
+                  gap: 2,
+                  marginTop: 3,
                 }}
               >
-                Close
-              </Button>
-            </Box> */}
+                <Button
+                  color="primary"
+                  variant="contained"
+                  size="large"
+                  type="submit"
+                  sx={{ borderRadius: 3 }}
+                  className="drawer_buttons"
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  color="inherit"
+                  onClick={() => onClose()}
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    backgroundColor: "transparent",
+                    borderRadius: 3,
+                    color: "GrayText",
+                  }}
+                >
+                  Close
+                </Button>
+              </Box>
+            )}
           </form>
         </Box>
       </Box>
