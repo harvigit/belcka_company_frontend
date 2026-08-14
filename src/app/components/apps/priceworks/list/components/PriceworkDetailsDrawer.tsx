@@ -4,6 +4,7 @@ import React, {useEffect, useState} from 'react';
 import {
     Avatar,
     Box,
+    Button,
     CircularProgress,
     Divider,
     Drawer,
@@ -27,6 +28,8 @@ type Props = {
     onClose: () => void;
     pricework: PriceworkApiRow | null;
     onViewAttachments?: (id: number) => void;
+    onApprove?: (id: number) => void;
+    onReject?: (id: number) => void;
 };
 
 const formatAmount = (currency: string, amount: number) =>
@@ -72,7 +75,7 @@ const FieldBlock = ({label, value}: {label: string; value?: string | number | nu
     </Box>
 );
 
-const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments}: Props) => {
+const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, onApprove, onReject}: Props) => {
     const [detail, setDetail] = useState<PriceworkDetail | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -106,6 +109,8 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments}: P
     const hasAttachments =
         Number(detail?.attachments?.length || pricework?.attachment_count || 0) > 0;
     const activityLogs = detail?.activity_logs || [];
+    const showApproveButton = status === 'pending' || status === 'rejected';
+    const showRejectButton = status === 'pending' || status === 'approved' || status === 'sent';
 
     return (
         <Drawer
@@ -296,6 +301,40 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments}: P
                                     <Typography sx={{fontSize: 14, color: 'text.secondary'}}>
                                         No activity found
                                     </Typography>
+                                )}
+                            </Stack>
+                        </Box>
+                    )}
+
+                    {(showApproveButton || showRejectButton) && (
+                        <Box
+                            sx={{
+                                p: 2,
+                                borderTop: '1px solid',
+                                borderColor: 'divider',
+                                bgcolor: '#fff',
+                            }}
+                        >
+                            <Stack direction="row" spacing={1.5} justifyContent="flex-end">
+                                {showApproveButton && (
+                                    <Button
+                                        variant="contained"
+                                        color="success"
+                                        size="small"
+                                        onClick={() => onApprove?.(pricework.id)}
+                                    >
+                                        Approve
+                                    </Button>
+                                )}
+                                {showRejectButton && (
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
+                                        size="small"
+                                        onClick={() => onReject?.(pricework.id)}
+                                    >
+                                        Reject
+                                    </Button>
                                 )}
                             </Stack>
                         </Box>

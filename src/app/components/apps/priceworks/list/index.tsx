@@ -1,9 +1,15 @@
 'use client';
 
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
+    Autocomplete,
     Avatar,
     Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
     FormControlLabel,
     FormGroup,
     IconButton,
@@ -22,7 +28,15 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import {IconEye, IconSearch} from '@tabler/icons-react';
+import {
+    IconCheck,
+    IconEye,
+    IconFilter,
+    IconSearch,
+    IconSend,
+    IconTrash,
+    IconX,
+} from '@tabler/icons-react';
 import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import {format, subDays} from 'date-fns';
@@ -33,6 +47,7 @@ import {
     VisibilityState,
 } from '@tanstack/react-table';
 import Image from 'next/image';
+import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import {useServerTable} from '@/hooks/useServerTable';
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
@@ -70,8 +85,23 @@ const COLUMN_LABELS: Record<string, string> = {
     actions: 'Actions',
 };
 
+const defaultFilters = {
+    user_id: '' as string | number,
+    project_id: '' as string | number,
+    address_id: '' as string | number,
+    trade_id: '' as string | number,
+    team_id: '' as string | number,
+};
+
 const formatAmount = (currency: string | null | undefined, amount: number | string | null | undefined) =>
     `${currency || '£'}${Number(amount || 0).toFixed(2)}`;
+
+const BULK_BUTTON_SX = {
+    px: 2.5,
+    textTransform: 'none' as const,
+    fontWeight: 600,
+    borderRadius: '8px',
+};
 
 const PriceworkList = () => {
     const {data: session} = useSession();
@@ -80,6 +110,9 @@ const PriceworkList = () => {
     const [data, setData] = useState<PriceworkRow[]>([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
+    const [filters, setFilters] = useState(defaultFilters);
+    const [tempFilters, setTempFilters] = useState(defaultFilters);
+    const [filterOpen, setFilterOpen] = useState(false);
     const [startDate, setStartDate] = useState<Date | null>(subDays(new Date(), 6));
     const [endDate, setEndDate] = useState<Date | null>(new Date());
     const [sorting, setSorting] = useState<SortingState>([
@@ -104,6 +137,16 @@ const PriceworkList = () => {
     const [detailsPricework, setDetailsPricework] = useState<PriceworkRow | null>(null);
     const [attachmentsOpen, setAttachmentsOpen] = useState(false);
     const [attachmentsPriceworkId, setAttachmentsPriceworkId] = useState<number | null>(null);
+    const [sendDateDialogOpen, setSendDateDialogOpen] = useState(false);
+    const [sendDate, setSendDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [users, setUsers] = useState<any[]>([]);
+    const [projects, setProjects] = useState<any[]>([]);
+    const [addresses, setAddresses] = useState<any[]>([]);
+    const [teams, setTeams] = useState<any[]>([]);
+    const [trades, setTrades] = useState<any[]>([]);
+    const loadedFilterCompanyIdRef = useRef<number | null>(null);
 
     const clearSelection = () => {
         setIsSelectAll(false);
@@ -113,6 +156,7 @@ const PriceworkList = () => {
     const handleTabChange = (tab: PriceworkTabKey) => {
         setActiveTab(tab);
         clearSelection();
+        setPagination((prev: any) => ({...prev, pageIndex: 0}));
     };
 
     const openPriceworkDetails = (row: PriceworkRow) => {
@@ -134,6 +178,29 @@ const PriceworkList = () => {
         setAttachmentsOpen(false);
         setAttachmentsPriceworkId(null);
     };
+
+    useEffect(() => {
+        const fetchFilterOptions = async () => {
+            if (!user?.company_id) return;
+            if (loadedFilterCompanyIdRef.current === Number(user.company_id)) return;
+
+            loadedFilterCompanyIdRef.current = Number(user.company_id);
+            try {
+                const res = await api.get('pricework/list-filters');
+                const info = res.data?.info || {};
+                setProjects(info.projects || []);
+                setAddresses(info.addresses || []);
+                setUsers(info.users || []);
+                setTeams(info.teams || []);
+                setTrades(info.trades || []);
+            } catch (error) {
+                loadedFilterCompanyIdRef.current = null;
+                console.error('Failed to load pricework filter options', error);
+            }
+        };
+
+        fetchFilterOptions();
+    }, [user?.company_id]);
 
     const handleToggleSelect = (id: number) => {
         if (isSelectAll) {
@@ -157,6 +224,134 @@ const PriceworkList = () => {
     };
 
     const selectedCount = isSelectAll ? data.length : selectedRowIds.size;
+
+    const selectedTotal = useMemo(() => {
+        if (isSelectAll) {
+            return data.reduce((sum, item) => sum + Number(item.pricework_amount || 0), 0);
+        }
+        return data
+            .filter((item) => selectedRowIds.has(item.id))
+            .reduce((sum, item) => sum + Number(item.pricework_amount || 0), 0);
+    }, [data, isSelectAll, selectedRowIds]);
+
+    const selectedCurrency =
+        data.find((item) => selectedRowIds.has(item.id))?.currency ||
+        data[0]?.currency ||
+        '£';
+
+    const getActionPriceworkIds = () => {
+        if (isSelectAll) return data.map((item) => item.id);
+        return Array.from(selectedRowIds);
+    };
+
+    const getApprovedActionPriceworkIds = () => {
+        const selectedIds = getActionPriceworkIds();
+        const selectedIdSet = new Set(selectedIds);
+        return data
+            .filter((item) => selectedIdSet.has(item.id) && normalizePriceworkStatus(item.status) === 'approved')
+            .map((item) => item.id);
+    };
+
+    const refreshAfterAction = async () => {
+        clearSelection();
+        closePriceworkDetails();
+        await fetchPriceworks();
+    };
+
+    const handleApprovePriceworks = async (ids: number[]) => {
+        if (ids.length === 0) {
+            toast.error('Please select at least one pricework');
+            return;
+        }
+
+        try {
+            const res = await api.post('pricework/approve', {ids});
+            toast.success(res.data?.message || 'Pricework approved successfully');
+            await refreshAfterAction();
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to approve pricework');
+        }
+    };
+
+    const handleRejectPriceworks = async (ids: number[]) => {
+        if (ids.length === 0) {
+            toast.error('Please select at least one pricework');
+            return;
+        }
+
+        try {
+            const res = await api.post('pricework/reject', {ids});
+            toast.success(res.data?.message || 'Pricework rejected successfully');
+            await refreshAfterAction();
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to reject pricework');
+        }
+    };
+
+    const openSendDateDialog = () => {
+        const ids = getActionPriceworkIds();
+        if (ids.length === 0) {
+            toast.error('Please select at least one pricework');
+            return;
+        }
+        setSendDate(format(new Date(), 'yyyy-MM-dd'));
+        setSendDateDialogOpen(true);
+    };
+
+    const handleSendToBookkeeper = async () => {
+        const ids = getApprovedActionPriceworkIds();
+        if (ids.length === 0) {
+            toast.error('Please select at least one approved pricework');
+            return;
+        }
+
+        try {
+            const res = await api.post('pricework/send-to-bookkeeper', {
+                ids,
+                send_date: sendDate,
+            });
+            toast.success(res.data?.message || 'Pricework sent to bookkeeper successfully');
+            setSendDateDialogOpen(false);
+            await refreshAfterAction();
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to send priceworks to bookkeeper');
+        }
+    };
+
+    const openDeleteDialog = () => {
+        const ids = getActionPriceworkIds();
+        if (ids.length === 0) {
+            toast.error('Please select at least one pricework');
+            return;
+        }
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeletePriceworks = async () => {
+        const ids = getActionPriceworkIds();
+        if (ids.length === 0) {
+            toast.error('Please select at least one pricework');
+            setDeleteDialogOpen(false);
+            return;
+        }
+
+        setIsDeleting(true);
+        try {
+            const res = await api.post('pricework/bulk-delete', {ids});
+            if (res.data?.IsSuccess === false) {
+                toast.error(res.data?.message || 'Failed to delete priceworks');
+                return;
+            }
+
+            toast.success(res.data?.message || 'Pricework deleted successfully');
+            setDeleteDialogOpen(false);
+            await refreshAfterAction();
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'An error occurred while deleting priceworks');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const columns = useMemo(
         () => [
@@ -419,6 +614,11 @@ const PriceworkList = () => {
             if (search) url += `&search=${encodeURIComponent(search)}`;
             if (startDate) url += `&start_date=${format(startDate, 'dd/MM/yyyy')}`;
             if (endDate) url += `&end_date=${format(endDate, 'dd/MM/yyyy')}`;
+            if (filters.user_id) url += `&user_id=${filters.user_id}`;
+            if (filters.project_id) url += `&project_id=${filters.project_id}`;
+            if (filters.address_id) url += `&address_id=${filters.address_id}`;
+            if (filters.trade_id) url += `&trade_id=${filters.trade_id}`;
+            if (filters.team_id) url += `&team_id=${filters.team_id}`;
             if (activeTab !== 'all') url += `&status=${activeTab}`;
 
             if (sorting.length > 0) {
@@ -465,6 +665,7 @@ const PriceworkList = () => {
     const {
         table,
         pagination,
+        setPagination,
         setPageCount,
         totalRows,
         setTotalRows,
@@ -477,6 +678,7 @@ const PriceworkList = () => {
             search,
             startDate ? format(startDate, 'yyyy-MM-dd') : '',
             endDate ? format(endDate, 'yyyy-MM-dd') : '',
+            JSON.stringify(filters),
             activeTab,
         ],
         state: {sorting, columnVisibility},
@@ -494,6 +696,58 @@ const PriceworkList = () => {
             {key: 'rejected', label: 'Rejected', count: tabCounts.rejected},
         ],
         [tabCounts],
+    );
+
+    const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
+    const handleDateRangeChange = (range: {from: Date | null; to: Date | null}) => {
+        setStartDate(range.from);
+        setEndDate(range.to);
+        clearSelection();
+        setPagination((prev: any) => ({...prev, pageIndex: 0}));
+    };
+
+    const handleSearchChange = (value: string) => {
+        setSearch(value);
+        clearSelection();
+        setPagination((prev: any) => ({...prev, pageIndex: 0}));
+    };
+
+    const handleClearAppliedFilters = (event: React.MouseEvent) => {
+        event.stopPropagation();
+        setTempFilters(defaultFilters);
+        setFilters(defaultFilters);
+        clearSelection();
+        setPagination((prev: any) => ({...prev, pageIndex: 0}));
+    };
+
+    const getUserLabel = (option: any) => {
+        if (!option) return '';
+        if (option.name) return option.name;
+        return `${option.first_name || ''} ${option.last_name || ''}`.trim();
+    };
+
+    const renderUserOption = (props: React.HTMLAttributes<HTMLLIElement>, option: any) => (
+        <Box component="li" {...props} key={option.id}>
+            <Stack direction="row" alignItems="center" spacing={1.5} minWidth={0}>
+                <Avatar
+                    src={option.user_thumb_image || '/images/users/user.png'}
+                    alt={getUserLabel(option)}
+                    sx={{width: 36, height: 36}}
+                />
+                <Typography
+                    component="span"
+                    className="f-14"
+                    sx={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    {getUserLabel(option)}
+                </Typography>
+            </Stack>
+        </Box>
     );
 
     const visibleColCount = table.getVisibleLeafColumns().length;
@@ -546,20 +800,13 @@ const PriceworkList = () => {
                         <DateRangePickerBox
                             from={startDate}
                             to={endDate}
-                            onChange={(range) => {
-                                setStartDate(range.from ?? null);
-                                setEndDate(range.to ?? null);
-                                clearSelection();
-                            }}
+                            onChange={handleDateRangeChange}
                         />
                         <TextField
                             size="small"
                             placeholder="Search..."
                             value={search}
-                            onChange={(e) => {
-                                setSearch(e.target.value);
-                                clearSelection();
-                            }}
+                            onChange={(e) => handleSearchChange(e.target.value)}
                             InputProps={{
                                 endAdornment: (
                                     <InputAdornment position="end">
@@ -569,6 +816,48 @@ const PriceworkList = () => {
                             }}
                             sx={{width: {xs: '100%', sm: 180}}}
                         />
+                        <Button
+                            color="primary"
+                            variant="contained"
+                            size="small"
+                            onClick={() => {
+                                setTempFilters(filters);
+                                setFilterOpen(true);
+                            }}
+                            sx={{
+                                minHeight: 34,
+                                height: 34,
+                                whiteSpace: 'nowrap',
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                minWidth: 64,
+                                px: 1.5,
+                            }}
+                            aria-label="Open filters"
+                        >
+                            <IconFilter size={18}/>
+                        </Button>
+
+                        {activeFilterCount > 0 && (
+                            <Button
+                                color="error"
+                                variant="outlined"
+                                size="small"
+                                onClick={handleClearAppliedFilters}
+                                sx={{
+                                    minHeight: 34,
+                                    height: 34,
+                                    whiteSpace: 'nowrap',
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                    minWidth: 64,
+                                    px: 1.5,
+                                }}
+                                aria-label="Clear filters"
+                            >
+                                <IconX size={18}/>
+                            </Button>
+                        )}
                     </Box>
 
                     <Box display="flex" justifyContent="flex-end" alignItems="center">
@@ -876,6 +1165,292 @@ const PriceworkList = () => {
                 selectedCount={selectedCount}
             />
 
+            {selectedCount > 0 && (
+                <Box
+                    sx={{
+                        position: 'fixed',
+                        bottom: 20,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                        px: 3,
+                        py: 1.5,
+                        zIndex: 1000,
+                        minWidth: 'fit-content',
+                        width: 'max-content',
+                        maxWidth: 'calc(100vw - 32px)',
+                        border: '1px solid #e0e0e0',
+                    }}
+                >
+                    <Stack
+                        direction="row"
+                        alignItems="center"
+                        spacing={2}
+                        sx={{flexWrap: 'nowrap', whiteSpace: 'nowrap'}}
+                    >
+                        <IconButton
+                            size="small"
+                            onClick={clearSelection}
+                            sx={{
+                                color: '#666',
+                                '&:hover': {bgcolor: 'grey.100'},
+                                flexShrink: 0,
+                            }}
+                        >
+                            <IconX size={16}/>
+                        </IconButton>
+
+                        <Box sx={{flexShrink: 0}}>
+                            <Typography variant="body2" fontWeight={600} color="text.primary">
+                                {selectedCount} Selected
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                {isSelectAll
+                                    ? `${selectedCurrency}${selectedTotal.toFixed(2)} (this page)`
+                                    : `${selectedCurrency}${selectedTotal.toFixed(2)}`}
+                            </Typography>
+                        </Box>
+
+                        <Box sx={{flexGrow: 1, minWidth: 16}}/>
+
+                        <Stack
+                            direction="row"
+                            spacing={1.5}
+                            alignItems="center"
+                            sx={{flexWrap: 'nowrap', flexShrink: 0}}
+                        >
+                            <Button
+                                startIcon={<IconCheck size={15}/>}
+                                variant="outlined"
+                                color="success"
+                                size="small"
+                                onClick={() => handleApprovePriceworks(getActionPriceworkIds())}
+                                sx={BULK_BUTTON_SX}
+                            >
+                                Approve Selected
+                            </Button>
+
+                            <Button
+                                startIcon={<IconX size={15}/>}
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                onClick={() => handleRejectPriceworks(getActionPriceworkIds())}
+                                sx={BULK_BUTTON_SX}
+                            >
+                                Reject Selected
+                            </Button>
+
+                            <Button
+                                startIcon={<IconSend size={15}/>}
+                                variant="contained"
+                                color="primary"
+                                size="small"
+                                onClick={openSendDateDialog}
+                                sx={{
+                                    ...BULK_BUTTON_SX,
+                                    boxShadow: 'none',
+                                    '&:hover': {boxShadow: 'none'},
+                                }}
+                            >
+                                Send to Bookkeeper
+                            </Button>
+
+                            <Button
+                                startIcon={<IconTrash size={15}/>}
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                onClick={openDeleteDialog}
+                                disabled={isDeleting}
+                                sx={BULK_BUTTON_SX}
+                            >
+                                {isDeleting ? 'Deleting…' : 'Delete Selected'}
+                            </Button>
+                        </Stack>
+                    </Stack>
+                </Box>
+            )}
+
+            <Dialog
+                open={sendDateDialogOpen}
+                onClose={() => setSendDateDialogOpen(false)}
+                fullWidth
+                maxWidth="xs"
+            >
+                <DialogTitle sx={{m: 0, position: 'relative'}}>
+                    Send to Bookkeeper
+                    <IconButton
+                        aria-label="close"
+                        onClick={() => setSendDateDialogOpen(false)}
+                        sx={{position: 'absolute', right: 12, top: 8}}
+                    >
+                        <IconX size={24}/>
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} mt={1}>
+                        <TextField
+                            label="Timesheet Date"
+                            type="date"
+                            fullWidth
+                            value={sendDate}
+                            onChange={(event) => setSendDate(event.target.value)}
+                            InputLabelProps={{shrink: true}}
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button color="inherit" onClick={() => setSendDateDialogOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSendToBookkeeper}
+                        disabled={!sendDate}
+                    >
+                        Send
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={() => !isDeleting && setDeleteDialogOpen(false)}
+                fullWidth
+                maxWidth="xs"
+            >
+                <DialogTitle sx={{m: 0, position: 'relative'}}>
+                    Confirm Deletion
+                    <IconButton
+                        aria-label="close"
+                        onClick={() => setDeleteDialogOpen(false)}
+                        disabled={isDeleting}
+                        sx={{position: 'absolute', right: 12, top: 8}}
+                    >
+                        <IconX size={24}/>
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        Are you sure you want to delete {selectedCount} selected
+                        pricework{selectedCount === 1 ? '' : 's'}? This action cannot be undone.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        color="inherit"
+                        onClick={() => setDeleteDialogOpen(false)}
+                        disabled={isDeleting}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={handleDeletePriceworks}
+                        disabled={isDeleting}
+                    >
+                        {isDeleting ? 'Deleting…' : 'Delete'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={filterOpen}
+                onClose={() => setFilterOpen(false)}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle sx={{m: 0, position: 'relative'}}>
+                    Filters
+                    <IconButton
+                        aria-label="close"
+                        onClick={() => setFilterOpen(false)}
+                        sx={{position: 'absolute', right: 12, top: 8}}
+                    >
+                        <IconX size={24}/>
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} mt={1}>
+                        <Autocomplete
+                            options={users}
+                            getOptionLabel={getUserLabel}
+                            getOptionKey={(option) => String(option.id)}
+                            renderOption={renderUserOption}
+                            isOptionEqualToValue={(option, value) => String(option.id) === String(value?.id)}
+                            value={users.find((u) => String(u.id) === String(tempFilters.user_id)) || null}
+                            onChange={(_, value) => setTempFilters({...tempFilters, user_id: value ? value.id : ''})}
+                            renderInput={(params) => <TextField {...params} label="User" fullWidth/>}
+                        />
+                        <Autocomplete
+                            options={projects}
+                            getOptionLabel={(option) => option.name || ''}
+                            getOptionKey={(option) => String(option.id)}
+                            isOptionEqualToValue={(option, value) => String(option.id) === String(value?.id)}
+                            value={projects.find((p) => String(p.id) === String(tempFilters.project_id)) || null}
+                            onChange={(_, value) => setTempFilters({...tempFilters, project_id: value ? value.id : ''})}
+                            renderInput={(params) => <TextField {...params} label="Project" fullWidth/>}
+                        />
+                        <Autocomplete
+                            options={addresses}
+                            getOptionLabel={(option) => option.name || ''}
+                            getOptionKey={(option) => String(option.id)}
+                            isOptionEqualToValue={(option, value) => String(option.id) === String(value?.id)}
+                            value={addresses.find((a) => String(a.id) === String(tempFilters.address_id)) || null}
+                            onChange={(_, value) => setTempFilters({...tempFilters, address_id: value ? value.id : ''})}
+                            renderInput={(params) => <TextField {...params} label="Address" fullWidth/>}
+                        />
+                        <Autocomplete
+                            options={trades}
+                            getOptionLabel={(option) => option.name || ''}
+                            getOptionKey={(option) => String(option.id)}
+                            isOptionEqualToValue={(option, value) => String(option.id) === String(value?.id)}
+                            value={trades.find((t) => String(t.id) === String(tempFilters.trade_id)) || null}
+                            onChange={(_, value) => setTempFilters({...tempFilters, trade_id: value ? value.id : ''})}
+                            renderInput={(params) => <TextField {...params} label="Trade" fullWidth/>}
+                        />
+                        <Autocomplete
+                            options={teams}
+                            getOptionLabel={(option) => option.title || option.name || ''}
+                            getOptionKey={(option) => String(option.id)}
+                            isOptionEqualToValue={(option, value) => String(option.id) === String(value?.id)}
+                            value={teams.find((t) => String(t.id) === String(tempFilters.team_id)) || null}
+                            onChange={(_, value) => setTempFilters({...tempFilters, team_id: value ? value.id : ''})}
+                            renderInput={(params) => <TextField {...params} label="Team" fullWidth/>}
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        color="inherit"
+                        onClick={() => {
+                            setTempFilters(defaultFilters);
+                            setFilters(defaultFilters);
+                            setFilterOpen(false);
+                            clearSelection();
+                            setPagination((prev: any) => ({...prev, pageIndex: 0}));
+                        }}
+                    >
+                        Clear
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            setFilters(tempFilters);
+                            setFilterOpen(false);
+                            clearSelection();
+                            setPagination((prev: any) => ({...prev, pageIndex: 0}));
+                        }}
+                    >
+                        Apply
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             <PriceworkDetailsDrawer
                 open={detailsOpen}
                 onClose={closePriceworkDetails}
@@ -883,6 +1458,8 @@ const PriceworkList = () => {
                 onViewAttachments={(id) => {
                     openPriceworkAttachments(id);
                 }}
+                onApprove={(id) => handleApprovePriceworks([id])}
+                onReject={(id) => handleRejectPriceworks([id])}
             />
 
             <PriceworkAttachmentsDrawer
