@@ -122,7 +122,7 @@ const getDiffs = (oldData: any, newData: any) => {
 const BillingDiffView = ({ diffs }: { diffs: any[] }) => {
   const [open, setOpen] = useState(false);
   return (
-    <Box>
+    <Box width={"80%"}>
       <Box
         display="flex"
         alignItems="center"
@@ -538,19 +538,18 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
                           </Tooltip>
                         </Typography>
 
+                        {addr.request_type === 103 &&
+                          getDiffs(addr.old_data, addr.new_data).length >
+                            0 ? (
+                            <BillingDiffView
+                              diffs={getDiffs(addr.old_data, addr.new_data)}
+                            />
+                          ): <Typography></Typography>}
                         <Box
                           display={"flex"}
                           alignItems={"center"}
-                          justifyContent={"space-between"}
-                          mt={0.5}
+                          justifyContent={"end"}
                         >
-                          {addr.request_type === 103 &&
-                            getDiffs(addr.old_data, addr.new_data).length >
-                              0 ? (
-                              <BillingDiffView
-                                diffs={getDiffs(addr.old_data, addr.new_data)}
-                              />
-                            ): <Typography></Typography>}
 
                           <Typography
                             fontSize="12px"
