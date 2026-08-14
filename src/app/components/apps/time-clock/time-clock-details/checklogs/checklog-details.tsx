@@ -56,6 +56,7 @@ interface Attachment {
 
 interface ChecklogTask {
     id?: number;
+    task_id?: number | null;
     address_id?: number | null;
     address_name?: string | null;
     address?: string | null;
@@ -69,6 +70,7 @@ interface ChecklogTask {
     work_done?: string | number | null;
     work_complete?: string | number | null;
     work_type?: string | null;
+    task_name?: string | null;
     company_task_name?: string | null;
     trade_name?: string | null;
     date_added?: string | null;
@@ -83,6 +85,18 @@ interface ChecklogTask {
     pricework_amount?: string | number | null;
     before_attachments?: Attachment[];
     after_attachments?: Attachment[];
+    tasks?: KnowledgeTask[];
+}
+
+interface KnowledgeTask {
+    id?: number;
+    task_id?: number;
+    uuid?: string | null;
+    category_id?: number | null;
+    category_name?: string | null;
+    sub_category_id?: number | null;
+    sub_category_name?: string | null;
+    task_name?: string | null;
 }
 
 const formatDate = (value?: string | null) => {
@@ -316,6 +330,34 @@ export default function ChecklogDetailPage({checklogId, open, onClose, onUpdated
         const currency = checklog.currency ?? data?.currency ?? '';
 
         return formatCurrencyValue(currency, amount);
+    };
+
+    const getSelectedKnowledgeTask = (checklog: ChecklogTask): KnowledgeTask | null => {
+        const tasks = checklog.tasks ?? data?.tasks ?? [];
+        if (!Array.isArray(tasks) || tasks.length === 0) return null;
+
+        const selectedTaskId = Number(checklog.task_id ?? data?.task_id);
+        if (Number.isFinite(selectedTaskId) && selectedTaskId > 0) {
+            const matchedTask = tasks.find((task: KnowledgeTask) =>
+                Number(task.task_id ?? task.id) === selectedTaskId,
+            );
+            if (matchedTask) return matchedTask;
+        }
+
+        return tasks[0] ?? null;
+    };
+
+    const getKnowledgeTaskDisplayName = (checklog: ChecklogTask) => {
+        const task = getSelectedKnowledgeTask(checklog);
+        if (!task) {
+            return checklog.task_name || data?.task_name || checklog.company_task_name || data?.company_task_name || '-';
+        }
+
+        const categoryName = task.category_name?.trim();
+        const subCategoryName = task.sub_category_name?.trim();
+
+        if (categoryName && subCategoryName) return `${categoryName} - ${subCategoryName}`;
+        return subCategoryName || categoryName || task.task_name || task.uuid || '-';
     };
 
     const getAttachmentUrl = (attachment: Attachment, isPreview = false) => {
@@ -564,7 +606,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose, onUpdated
                                             {renderInfoBlock(
                                                 <IconTag size={18} color="#666"/>,
                                                 'Work Type',
-                                                checklog.work_type || data?.work_type || checklog.company_task_name || data?.company_task_name,
+                                                checklog.task_name || data?.task_name || checklog.work_type || data?.work_type || checklog.company_task_name || data?.company_task_name,
                                             )}
                                             {renderInfoBlock(
                                                 <IconBuilding size={18} color="#666"/>,
@@ -591,7 +633,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose, onUpdated
                                             {renderInfoBlock(
                                                 <IconFileText size={18} color="#666"/>,
                                                 'Task',
-                                                checklog.company_task_name || data?.company_task_name,
+                                                getKnowledgeTaskDisplayName(checklog),
                                             )}
                                             {renderInfoBlock(
                                                 <IconUser size={18} color="#666"/>,
