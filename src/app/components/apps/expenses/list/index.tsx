@@ -30,6 +30,7 @@ import {
     Typography,
 } from '@mui/material';
 import {
+    IconArrowBackUp,
     IconCheck,
     IconExternalLink,
     IconEye,
@@ -269,6 +270,8 @@ const ExpenseList = () => {
     const [sendDate, setSendDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [revertDialogOpen, setRevertDialogOpen] = useState(false);
+    const [isReverting, setIsReverting] = useState(false);
     const [preferencesHydrated, setPreferencesHydrated] = useState(false);
     const loadedFilterCompanyIdRef = useRef<number | null>(null);
     const openExpenseDetail = (expenseId: number) => {
@@ -843,6 +846,25 @@ const ExpenseList = () => {
             .map((item) => item.id);
     };
 
+    const getSentActionExpenseIds = () => {
+        const selectedIds = getActionExpenseIds();
+        const selectedIdSet = new Set(selectedIds);
+        return listItems
+            .filter((item) => selectedIdSet.has(item.id) && item.status === 'sent')
+            .map((item) => item.id);
+    };
+
+    const canRevertSelected = useMemo(() => {
+        const selectedIds = getActionExpenseIds();
+        if (selectedIds.length === 0) return false;
+        const selectedIdSet = new Set(selectedIds);
+        const selectedItems = listItems.filter((item) => selectedIdSet.has(item.id));
+        return (
+            selectedItems.length === selectedIds.length &&
+            selectedItems.every((item) => item.status === 'sent')
+        );
+    }, [isSelectAll, listItems, selectedRowIds]);
+
     const refreshAfterAction = async () => {
         setIsSelectAll(false);
         setSelectedRowIds(new Set());
@@ -925,6 +947,41 @@ const ExpenseList = () => {
         }
         setSendDate(format(new Date(), 'yyyy-MM-dd'));
         setSendDateDialogOpen(true);
+    };
+
+    const openRevertDialog = () => {
+        if (!canRevertSelected) {
+            toast.error('Please select only Sent expenses to revert');
+            return;
+        }
+        setRevertDialogOpen(true);
+    };
+
+    const handleRevertToApproved = async () => {
+        const ids = getSentActionExpenseIds();
+        if (ids.length === 0 || !canRevertSelected) {
+            toast.error('Please select only Sent expenses to revert');
+            setRevertDialogOpen(false);
+            return;
+        }
+
+        setIsReverting(true);
+        try {
+            const res = await api.post('expense/revert-to-approved', {ids});
+            if (res.data?.IsSuccess === false) {
+                toast.error(res.data?.message || 'Failed to revert expenses');
+                return;
+            }
+            toast.success(res.data?.message || 'Expense reverted to Approved successfully');
+            setRevertDialogOpen(false);
+            await refreshAfterAction();
+        } catch (error: any) {
+            toast.error(
+                error?.response?.data?.message || 'Failed to revert expenses',
+            );
+        } finally {
+            setIsReverting(false);
+        }
     };
 
     const handleSendToBookkeeper = async () => {
@@ -1548,6 +1605,18 @@ const ExpenseList = () => {
                             </Button>
 
                             <Button
+                                startIcon={<IconArrowBackUp size={15}/>}
+                                variant="outlined"
+                                color="warning"
+                                size="small"
+                                onClick={openRevertDialog}
+                                disabled={!canRevertSelected || isReverting}
+                                sx={BULK_BUTTON_SX}
+                            >
+                                Revert to Approved
+                            </Button>
+
+                            <Button
                                 startIcon={<IconSend size={15}/>}
                                 variant="contained"
                                 color="primary"
@@ -1627,6 +1696,51 @@ const ExpenseList = () => {
                         disabled={!sendDate}
                     >
                         Send
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={revertDialogOpen}
+                onClose={() => !isReverting && setRevertDialogOpen(false)}
+                fullWidth
+                maxWidth="xs"
+            >
+                <DialogTitle sx={{m: 0, position: 'relative'}}>
+                    Revert to Approved
+                    <IconButton
+                        aria-label="close"
+                        onClick={() => setRevertDialogOpen(false)}
+                        disabled={isReverting}
+                        sx={{position: 'absolute', right: 12, top: 8}}
+                    >
+                        <IconX size={24}/>
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        You are about to revert {selectedCount} expense
+                        {selectedCount === 1 ? '' : 's'} from Sent to Approved.
+                        {selectedCount === 1
+                            ? ' The expense will no longer be marked as sent to the bookkeeper.'
+                            : ' The expenses will no longer be marked as sent to the bookkeeper.'}
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        color="inherit"
+                        onClick={() => setRevertDialogOpen(false)}
+                        disabled={isReverting}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="warning"
+                        onClick={handleRevertToApproved}
+                        disabled={isReverting}
+                    >
+                        {isReverting ? 'Reverting…' : 'Revert to Approved'}
                     </Button>
                 </DialogActions>
             </Dialog>
