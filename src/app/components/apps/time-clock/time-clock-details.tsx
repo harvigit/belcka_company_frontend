@@ -1,5 +1,18 @@
 import React, {useState, useEffect, useMemo, useCallback, useRef} from 'react';
-import {Box, Drawer, IconButton, TableCell, Typography} from '@mui/material';
+import {
+    Box,
+    Button,
+    CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Drawer,
+    IconButton,
+    TableCell,
+    TextField,
+    Typography
+} from '@mui/material';
 import {
     useReactTable,
     getCoreRowModel,
@@ -89,6 +102,13 @@ interface ExportResponse {
         contentType: string;
     };
 }
+
+type PendingWorklogEdit = {
+    worklogId: string;
+    originalLog: any;
+    startTime: string;
+    endTime: string;
+};
 
 const DELETE_ENDPOINTS: Record<RecordType, string> = {
     worklog: '/time-clock/worklogs-bulk-delete',
@@ -221,6 +241,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const [penaltyAppealByDate, setPenaltyAppealByDate] = useState<{ [key: string]: number }>({});
     const [penaltiesSidebar, setPenaltiesSidebar] = useState<boolean>(false);
+    const [pendingWorklogEdit, setPendingWorklogEdit] = useState<PendingWorklogEdit | null>(null);
+    const [worklogEditNote, setWorklogEditNote] = useState('');
+    const [worklogEditNoteError, setWorklogEditNoteError] = useState(false);
 
     const initialParamsRef = useRef(queryParams);
     const handledRef = useRef(false);
@@ -827,17 +850,49 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             return;
         }
 
+        setPendingWorklogEdit({
+            worklogId,
+            originalLog,
+            startTime: newStart,
+            endTime: newEnd,
+        });
+        setWorklogEditNote('');
+        setWorklogEditNoteError(false);
+    };
+
+    const closeWorklogEditNoteDialog = useCallback(() => {
+        if (pendingWorklogEdit) {
+            cancelEditingField(pendingWorklogEdit.worklogId);
+        }
+        setPendingWorklogEdit(null);
+        setWorklogEditNote('');
+        setWorklogEditNoteError(false);
+    }, [pendingWorklogEdit, cancelEditingField]);
+
+    const submitWorklogEditRequest = useCallback(async () => {
+        if (!pendingWorklogEdit) return;
+
+        const note = worklogEditNote.trim();
+
+        if (!note) {
+            setWorklogEditNoteError(true);
+            return;
+        }
+
+        const {worklogId, originalLog, startTime, endTime} = pendingWorklogEdit;
+
         setSavingWorklogs((prev) => new Set(prev).add(worklogId));
         try {
             const response = await api.post('/time-clock/edit-worklog', {
                 user_worklog_id: originalLog.worklog_id,
                 date: originalLog.date_added,
-                start_time: newStart,
-                end_time: newEnd,
+                start_time: startTime,
+                end_time: endTime,
+                note,
             });
 
             if (response.data.IsSuccess) {
-                toast.success(response.data.message)
+                toast.success(response.data.message);
             }
 
             const defaultStartDate = startDate || defaultStart;
@@ -847,16 +902,31 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             onDataChange?.();
         } catch (error) {
             console.error('Error saving worklog:', error);
+            toast.error((error as any)?.response?.data?.message || 'Failed to save worklog changes');
         } finally {
             setSavingWorklogs((prev) => {
                 const newSet = new Set(prev);
                 newSet.delete(worklogId);
                 return newSet;
             });
+            cancelEditingField(worklogId);
         }
 
-        cancelEditingField(worklogId);
-    };
+        setPendingWorklogEdit(null);
+        setWorklogEditNote('');
+        setWorklogEditNoteError(false);
+    }, [
+        pendingWorklogEdit,
+        worklogEditNote,
+        setSavingWorklogs,
+        startDate,
+        defaultStart,
+        endDate,
+        defaultEnd,
+        fetchTimeClockData,
+        onDataChange,
+        cancelEditingField,
+    ]);
 
     const saveShiftChanges = async (worklogId: string, originalLog: any) => {
         const editedData = editingShifts[worklogId];
@@ -2076,6 +2146,54 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 onAdjustmentSave={handleAdjustmentSave}
                 onOpenAdjustmentActivities={handleOpenAdjustmentActivities}
             />
+
+            <Dialog
+                open={Boolean(pendingWorklogEdit)}
+                onClose={closeWorklogEditNoteDialog}
+                fullWidth
+                maxWidth="xs"
+            >
+                <DialogTitle>Request time change</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
+                        Add a note before creating this request.
+                    </Typography>
+                    <TextField
+                        label="Note"
+                        value={worklogEditNote}
+                        onChange={(event) => {
+                            setWorklogEditNote(event.target.value);
+                            if (event.target.value.trim()) setWorklogEditNoteError(false);
+                        }}
+                        required
+                        multiline
+                        minRows={3}
+                        fullWidth
+                        autoFocus
+                        error={worklogEditNoteError}
+                        helperText={worklogEditNoteError ? 'Note is required to create request.' : ''}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeWorklogEditNoteDialog}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={submitWorklogEditRequest}
+                        disabled={
+                            !worklogEditNote.trim() ||
+                            (pendingWorklogEdit ? savingWorklogs.has(pendingWorklogEdit.worklogId) : false)
+                        }
+                    >
+                        {pendingWorklogEdit && savingWorklogs.has(pendingWorklogEdit.worklogId) ? (
+                            <CircularProgress size={20} sx={{color: 'white'}} />
+                        ) : (
+                            'Submit'
+                        )}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <ActionBar
                 selectedRows={selectedRows}
