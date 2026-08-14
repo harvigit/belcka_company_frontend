@@ -270,8 +270,8 @@ const ExpenseList = () => {
     const [sendDate, setSendDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [revertDialogOpen, setRevertDialogOpen] = useState(false);
-    const [isReverting, setIsReverting] = useState(false);
+    const [unapproveDialogOpen, setUnapproveDialogOpen] = useState(false);
+    const [isUnapproving, setIsUnapproving] = useState(false);
     const [preferencesHydrated, setPreferencesHydrated] = useState(false);
     const loadedFilterCompanyIdRef = useRef<number | null>(null);
     const openExpenseDetail = (expenseId: number) => {
@@ -846,22 +846,28 @@ const ExpenseList = () => {
             .map((item) => item.id);
     };
 
-    const getSentActionExpenseIds = () => {
+    const getUnapproveActionExpenseIds = () => {
         const selectedIds = getActionExpenseIds();
         const selectedIdSet = new Set(selectedIds);
         return listItems
-            .filter((item) => selectedIdSet.has(item.id) && item.status === 'sent')
+            .filter(
+                (item) =>
+                    selectedIdSet.has(item.id) &&
+                    (item.status === 'approved' || item.status === 'sent'),
+            )
             .map((item) => item.id);
     };
 
-    const canRevertSelected = useMemo(() => {
+    const canUnapproveSelected = useMemo(() => {
         const selectedIds = getActionExpenseIds();
         if (selectedIds.length === 0) return false;
         const selectedIdSet = new Set(selectedIds);
         const selectedItems = listItems.filter((item) => selectedIdSet.has(item.id));
         return (
             selectedItems.length === selectedIds.length &&
-            selectedItems.every((item) => item.status === 'sent')
+            selectedItems.every(
+                (item) => item.status === 'approved' || item.status === 'sent',
+            )
         );
     }, [isSelectAll, listItems, selectedRowIds]);
 
@@ -949,38 +955,38 @@ const ExpenseList = () => {
         setSendDateDialogOpen(true);
     };
 
-    const openRevertDialog = () => {
-        if (!canRevertSelected) {
-            toast.error('Please select only Sent expenses to revert');
+    const openUnapproveDialog = () => {
+        if (!canUnapproveSelected) {
+            toast.error('Please select only Approved or Sent expenses to unapprove');
             return;
         }
-        setRevertDialogOpen(true);
+        setUnapproveDialogOpen(true);
     };
 
-    const handleRevertToApproved = async () => {
-        const ids = getSentActionExpenseIds();
-        if (ids.length === 0 || !canRevertSelected) {
-            toast.error('Please select only Sent expenses to revert');
-            setRevertDialogOpen(false);
+    const handleUnapproveSelected = async () => {
+        const ids = getUnapproveActionExpenseIds();
+        if (ids.length === 0 || !canUnapproveSelected) {
+            toast.error('Please select only Approved or Sent expenses to unapprove');
+            setUnapproveDialogOpen(false);
             return;
         }
 
-        setIsReverting(true);
+        setIsUnapproving(true);
         try {
-            const res = await api.post('expense/revert-to-approved', {ids});
+            const res = await api.post('expense/unapprove', {ids});
             if (res.data?.IsSuccess === false) {
-                toast.error(res.data?.message || 'Failed to revert expenses');
+                toast.error(res.data?.message || 'Failed to unapprove expenses');
                 return;
             }
-            toast.success(res.data?.message || 'Expense reverted to Approved successfully');
-            setRevertDialogOpen(false);
+            toast.success(res.data?.message || 'Expense unapproved successfully');
+            setUnapproveDialogOpen(false);
             await refreshAfterAction();
         } catch (error: any) {
             toast.error(
-                error?.response?.data?.message || 'Failed to revert expenses',
+                error?.response?.data?.message || 'Failed to unapprove expenses',
             );
         } finally {
-            setIsReverting(false);
+            setIsUnapproving(false);
         }
     };
 
@@ -1609,11 +1615,11 @@ const ExpenseList = () => {
                                 variant="outlined"
                                 color="warning"
                                 size="small"
-                                onClick={openRevertDialog}
-                                disabled={!canRevertSelected || isReverting}
+                                onClick={openUnapproveDialog}
+                                disabled={!canUnapproveSelected || isUnapproving}
                                 sx={BULK_BUTTON_SX}
                             >
-                                Revert to Approved
+                                Unapprove Selected
                             </Button>
 
                             <Button
@@ -1701,17 +1707,17 @@ const ExpenseList = () => {
             </Dialog>
 
             <Dialog
-                open={revertDialogOpen}
-                onClose={() => !isReverting && setRevertDialogOpen(false)}
+                open={unapproveDialogOpen}
+                onClose={() => !isUnapproving && setUnapproveDialogOpen(false)}
                 fullWidth
                 maxWidth="xs"
             >
                 <DialogTitle sx={{m: 0, position: 'relative'}}>
-                    Revert to Approved
+                    Unapprove Selected
                     <IconButton
                         aria-label="close"
-                        onClick={() => setRevertDialogOpen(false)}
-                        disabled={isReverting}
+                        onClick={() => setUnapproveDialogOpen(false)}
+                        disabled={isUnapproving}
                         sx={{position: 'absolute', right: 12, top: 8}}
                     >
                         <IconX size={24}/>
@@ -1719,28 +1725,29 @@ const ExpenseList = () => {
                 </DialogTitle>
                 <DialogContent>
                     <Typography>
-                        You are about to revert {selectedCount} expense
-                        {selectedCount === 1 ? '' : 's'} from Sent to Approved.
-                        {selectedCount === 1
-                            ? ' The expense will no longer be marked as sent to the bookkeeper.'
-                            : ' The expenses will no longer be marked as sent to the bookkeeper.'}
+                        You are about to unapprove {selectedCount} expense
+                        {selectedCount === 1 ? '' : 's'} and return
+                        {selectedCount === 1 ? ' it' : ' them'} to Pending.
+                        This removes approval and bookkeeper processing so
+                        {selectedCount === 1 ? ' it' : ' they'} can be approved
+                        and sent again.
                     </Typography>
                 </DialogContent>
                 <DialogActions>
                     <Button
                         color="inherit"
-                        onClick={() => setRevertDialogOpen(false)}
-                        disabled={isReverting}
+                        onClick={() => setUnapproveDialogOpen(false)}
+                        disabled={isUnapproving}
                     >
                         Cancel
                     </Button>
                     <Button
                         variant="contained"
                         color="warning"
-                        onClick={handleRevertToApproved}
-                        disabled={isReverting}
+                        onClick={handleUnapproveSelected}
+                        disabled={isUnapproving}
                     >
-                        {isReverting ? 'Reverting…' : 'Revert to Approved'}
+                        {isUnapproving ? 'Unapproving…' : 'Unapprove Selected'}
                     </Button>
                 </DialogActions>
             </Dialog>
