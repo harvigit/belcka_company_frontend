@@ -1372,7 +1372,12 @@ const ProductList = () => {
                 }}
               >
                 {item.short_name ? item.short_name : "-"}
-                <Typography color="textSecondary" className="f-14" component="span" display="block">
+                <Typography
+                  color="textSecondary"
+                  className="f-14"
+                  component="span"
+                  display="block"
+                >
                   {item.name}
                 </Typography>
               </Typography>
@@ -1776,6 +1781,21 @@ const ProductList = () => {
                 {item.cutoff || "0"}
               </Typography>
             )}
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.qty, {
+      id: "qty",
+      header: () => "Qty",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.qty ? item.qty : "-"}
+            </Typography>
           </Stack>
         );
       },
@@ -3697,7 +3717,7 @@ const ProductList = () => {
                                     : header.column.id === "supplierCode"
                                       ? 140
                                       : header.column.id === "select"
-                                        ? 30
+                                        ? 5
                                         : "auto",
 
                               ...(header.column.id === "actions" && {

@@ -1,7 +1,7 @@
 'use client';
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
     Box,
     Typography,
@@ -9,6 +9,14 @@ import {
     CircularProgress,
     Chip,
     Button,
+    Dialog,
+    DialogTitle,
+    IconButton,
+    DialogContent,
+    DialogActions,
+    Autocomplete,
+    TextField,
+    Checkbox,
 } from '@mui/material';
 import {
     IconUsers,
@@ -26,6 +34,9 @@ import api from '@/utils/axios';
 import toast from 'react-hot-toast';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import { useTranslation } from 'react-i18next';
+import { IconFilter } from '@tabler/icons-react';
+import { IconX } from '@tabler/icons-react';
+import { Stack } from '@mui/system';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +69,11 @@ type ActorRole =
     | 'requested by'
     | 'approved by'
     | 'rejected by';
+
+type UserFilters = {
+    status: string[];
+    type: string[];
+};
 
 const getActivityActor = (
     item: ActivityItem,
@@ -553,6 +569,11 @@ const EmptyState: React.FC<{ dateRange?: { start: string; end: string }; onReset
     );
 };
 
+const DEFAULT_USER_FILTERS: UserFilters = {
+    type: [],
+    status: [],
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 const UserActivity: React.FC<UserActivityProps> = ({
     companyId,
@@ -568,6 +589,24 @@ const UserActivity: React.FC<UserActivityProps> = ({
     const [startDate, setStartDate] = useState<Date>(defaultWeek.start);
     const [endDate, setEndDate] = useState<Date>(defaultWeek.end);
 
+    const [filters, setFilters] = useState<UserFilters>(DEFAULT_USER_FILTERS);
+    const [tempFilters, setTempFilters] = useState(filters);
+    const [open, setOpen] = useState(false);
+    const {t} = useTranslation();
+    const skipNextDependencyPageResetRef = useRef(false);
+    const status = [
+        { id: "Pending Approval", name: "Pending Approval" },
+        { id: "Approved", name: "Approved" },
+        { id: "Rejected", name: "Rejected" }
+    ];
+    const types = [
+        { id: "Work log", name: "Work log" },
+        { id: "Billing info", name: "Billing info" },
+        { id: "Company Rate", name: "Company Rate" },
+        { id: "Leave", name: "Leave" },
+        { id: "Penalty", name: "Penalty" }
+    ];
+    
     const fetchActivity = useCallback(
         async (start: Date, end: Date) => {
             if (!userId || !companyId) return;
@@ -579,6 +618,8 @@ const UserActivity: React.FC<UserActivityProps> = ({
                         company_id: Number(companyId),
                         start_date: toApiDate(start),
                         end_date: toApiDate(end),
+                        ...(filters.type.length > 0 ? { types: filters.type.join(',') } : {}),
+                        ...(filters.status.length > 0 ? { statuses: filters.status.join(',') } : {}),
                         ...(isRemoveUser ? { is_remove_user: 1 } : {}),
                         ...(isArchivedUser ? { is_archived_user: 1 } : {}),
                     },
@@ -594,16 +635,13 @@ const UserActivity: React.FC<UserActivityProps> = ({
                 setLoading(false);
             }
         },
-        [userId, companyId, isRemoveUser, isArchivedUser]
+        [userId, companyId, isRemoveUser, isArchivedUser, filters]
     );
 
     useEffect(() => {
         if (!userId || !active) return;
-        const w = getDefaultWeekDates();
-        setStartDate(w.start);
-        setEndDate(w.end);
-        fetchActivity(w.start, w.end);
-    }, [active, userId, fetchActivity]); // ← FIX: Added fetchActivity to dependency array
+        fetchActivity(startDate, endDate);
+    }, [active, userId, fetchActivity, startDate, endDate]);
 
     const handleDateRangeChange = (range: { from: Date | null; to: Date | null }) => {
         if (range.from && range.to) {
@@ -623,6 +661,247 @@ const UserActivity: React.FC<UserActivityProps> = ({
     const groups = info?.activities ?? [];
     const total = info?.total ?? 0;
 
+    const handleFilterValueChange = (
+        key: keyof UserFilters,
+        value: string[],
+    ) => {
+        setTempFilters((prev) => ({
+            ...prev,
+            [key]: value.map(String).filter(Boolean),
+        }));
+    };
+
+    const normalizeUserFilters = (
+        filters?: Partial<Record<keyof UserFilters, string | string[]>>,
+    ): UserFilters => {
+        const normalizeValue = (value?: string | string[]) => {
+            const values = Array.isArray(value) ? value : value ? [value] : [];
+            return values.filter((item) => item && item !== 'All');
+        };
+
+        return {
+            type: normalizeValue(filters?.type),
+            status: normalizeValue(filters?.status),
+        };
+    };
+
+    const renderFilterSelect = (
+        label: string,
+        key: keyof UserFilters,
+        options: any[],
+        showAvatar = false,
+    ) => {
+        const value = tempFilters[key];
+        const selectedOptions = options.filter((option) =>
+            value.includes(String(option.id)),
+        );
+        const allSelected =
+            options.length > 0 &&
+            options.every((option) => value.includes(String(option.id)));
+
+        return (
+            <Stack
+                direction="row"
+                spacing={0}
+                alignItems="stretch"
+                sx={{width: '100%', minWidth: 0}}
+            >
+                <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    options={options}
+                    value={selectedOptions}
+                    getOptionLabel={(option) =>
+                        option.user_code ? `${option.name} (${option.user_code})` : option.name
+                    }
+                    isOptionEqualToValue={(option, selectedOption) =>
+                        String(option.id) === String(selectedOption.id)
+                    }
+                    filterOptions={(list, state) => {
+                        const query = state.inputValue.trim().toLowerCase();
+                        if (!query) return list;
+
+                        return list.filter((option) =>
+                            `${option.name} ${option.user_code ?? ''}`
+                                .toLowerCase()
+                                .includes(query),
+                        );
+                    }}
+                    onChange={(_, selected) => {
+                        handleFilterValueChange(
+                            key,
+                            selected.map((option) => String(option.id)),
+                        );
+                    }}
+                    renderTags={(tagValue, getTagProps) =>
+                        tagValue.map((option, index) => {
+                            const {key: chipKey, ...tagProps} = getTagProps({index});
+
+                            return (
+                                <Chip
+                                    key={chipKey}
+                                    label={option.name}
+                                    color="primary"
+                                    size="small"
+                                    {...tagProps}
+                                    sx={{
+                                        borderRadius: '4px',
+                                        fontSize: '0.9rem',
+                                        height: 32,
+                                        '& .MuiChip-deleteIcon': {
+                                            color: 'rgba(255,255,255,0.85)',
+                                            '&:hover': {color: '#fff'},
+                                        },
+                                    }}
+                                />
+                            );
+                        })
+                    }
+                    renderOption={(props, option, {selected}) => {
+                        const {key: optionKey, ...optionProps} = props;
+
+                        return (
+                            <Box
+                                component="li"
+                                key={optionKey}
+                                {...optionProps}
+                                sx={{
+                                    color: selected ? '#fff' : 'inherit',
+                                    bgcolor: selected ? '#0b57d0 !important' : 'transparent',
+                                    '&.Mui-focused': {
+                                        bgcolor: selected ? '#0b57d0 !important' : '#f5f5f5',
+                                    },
+                                }}
+                            >
+                                <Box
+                                    display="flex"
+                                    alignItems="center"
+                                    gap={1.5}
+                                    minWidth={0}
+                                    width="100%"
+                                >
+                                    {showAvatar && (
+                                        <Avatar
+                                            src={
+                                                option.user_thumb_image ||
+                                                option.user_image ||
+                                                undefined
+                                            }
+                                            alt={option.name}
+                                            sx={{width: 32, height: 32, fontSize: '14px'}}
+                                        >
+                                            {option.name?.[0]?.toUpperCase()}
+                                        </Avatar>
+                                    )}
+                                    <Typography
+                                        component="span"
+                                        variant="body1"
+                                        className="f-14"
+                                        sx={{
+                                            flex: 1,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }}
+                                    >
+                                        {option.name}
+                                        {option.user_code ? ` (${option.user_code})` : ''}
+                                    </Typography>
+                                    {selected && (
+                                        <Typography component="span" sx={{fontSize: 22, lineHeight: 1}}>
+                                            ✓
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Box>
+                        );
+                    }}
+                    noOptionsText={t('filter.noOptionsFound', {label: label.toLowerCase()})}
+                    slotProps={{
+                        paper: {
+                            sx: {
+                                mt: 1,
+                                boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+                            },
+                        },
+                        listbox: {
+                            sx: {
+                                maxHeight: 360,
+                                py: 0,
+                                '& .MuiAutocomplete-option': {
+                                    minHeight: 54,
+                                    fontSize: '1rem',
+                                },
+                            },
+                        },
+                    }}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            placeholder={selectedOptions.length ? '' : label}
+                            size="small"
+                        />
+                    )}
+                    sx={{
+                        flex: 1,
+                        minWidth: 0,
+                        '& .MuiOutlinedInput-root': {
+                            minHeight: 56,
+                            alignItems: 'center',
+                            borderTopRightRadius: 0,
+                            borderBottomRightRadius: 0,
+                            '& fieldset': {borderColor: '#e0e0e0'},
+                            '&:hover fieldset': {borderColor: '#0d5ef4'},
+                            '&.Mui-focused fieldset': {borderColor: '#0d5ef4'},
+                        },
+                    }}
+                />
+                <Box
+                    onClick={() => {
+                        const allOptionValues = options.map((option) => String(option.id));
+                        handleFilterValueChange(key, allSelected ? [] : allOptionValues);
+                    }}
+                    sx={{
+                        width: {xs: 100, sm: 110},
+                        minHeight: 56,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                        px: 2,
+                        border: '1px solid',
+                        borderColor:
+                            allSelected || value.length > 0 ? '#0d5ef4' : '#e0e0e0',
+                        borderLeft: 0,
+                        borderTopLeftRadius: 0,
+                        borderBottomLeftRadius: 0,
+                        borderTopRightRadius: '6px',
+                        borderBottomRightRadius: '6px',
+                        cursor: 'pointer',
+                        color: '#6b687d',
+                        userSelect: 'none',
+                        transition: 'border-color 150ms ease',
+                        '&:hover': {
+                            borderColor: '#0d5ef4',
+                        },
+                    }}
+                >
+                    <Checkbox
+                        checked={allSelected}
+                        indeterminate={!allSelected && value.length > 0}
+                        size="small"
+                        sx={{
+                            p: 0,
+                            pointerEvents: 'none',
+                        }}
+                    />
+                    <Typography component="span" variant="body1">
+                        {t('All')}
+                    </Typography>
+                </Box>
+            </Stack>
+        );
+    };
+
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: 750, overflow: 'hidden' }}>
 
@@ -637,8 +916,7 @@ const UserActivity: React.FC<UserActivityProps> = ({
                     flexShrink: 0,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 1.5,
+                    gap: 1,
                     flexWrap: 'wrap',
                 }}
             >
@@ -649,7 +927,87 @@ const UserActivity: React.FC<UserActivityProps> = ({
                         onChange={handleDateRangeChange}
                     />
                 </Box>
+                <Button
+                    variant="contained"
+                    onClick={() => {
+                        setTempFilters(filters);
+                        setOpen(true);
+                    }}
+                    sx={{mt: {xs: 1, sm: 0}, ml: 1, minWidth: '40px', px: 1}}
+                >
+                    <IconFilter width={18}/>
+                </Button>
             </Box>
+            
+            {/* filters */}
+            <Dialog
+                open={open}
+                onClose={() => setOpen(false)}
+                fullWidth
+                maxWidth="sm"
+                PaperProps={{
+                    sx: {
+                        width: {xs: 'calc(100vw - 24px)', sm: '100%'},
+                        maxWidth: 600,
+                        m: {xs: 1.5, sm: 4},
+                        overflow: 'visible',
+                    },
+                }}
+            >
+                <DialogTitle
+                    sx={{m: 0, position: 'relative', overflow: 'visible'}}
+                >
+                    {t('Filters')}
+                    <IconButton
+                        aria-label="close"
+                        onClick={() => setOpen(false)}
+                        size="large"
+                        sx={{
+                            position: 'absolute',
+                            right: 12,
+                            top: 8,
+                            color: (theme) => theme.palette.grey[900],
+                            backgroundColor: 'transparent',
+                            zIndex: 10,
+                            width: 50,
+                            height: 50,
+                        }}
+                    >
+                        <IconX size={40} style={{width: 40, height: 40}}/>
+                    </IconButton>
+                </DialogTitle>
+
+                <DialogContent sx={{overflowX: 'hidden'}}>
+                    <Stack spacing={2} mt={1} sx={{width: '100%', minWidth: 0}}>
+                        {renderFilterSelect(t('Statuses'), 'status', status)}
+                        {renderFilterSelect(t('Types'), 'type', types)}
+                    </Stack>
+                </DialogContent>
+
+                <DialogActions>
+                    <Button
+                        onClick={() => {
+                            skipNextDependencyPageResetRef.current = false;
+                            setTempFilters(DEFAULT_USER_FILTERS);
+                            setFilters(DEFAULT_USER_FILTERS);
+                            setOpen(false);
+                        }}
+                        color="inherit"
+                    >
+                        {t('Clear')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            skipNextDependencyPageResetRef.current = false;
+                            setFilters(normalizeUserFilters(tempFilters));
+                            setOpen(false);
+                        }}
+                    >
+                        {t('Apply')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* ── Body ── */}
             <Box sx={{ flex: 1, overflowY: 'auto', px: { xs: 2, sm: 3 }, py: 2.5, minHeight: 0 }}>
