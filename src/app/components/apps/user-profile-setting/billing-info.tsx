@@ -887,7 +887,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
               disabled={isDisabledField(key)}
               inputProps={{
                 maxLength:
-                  key === "utr_number" ? 11 : key === "nin_number" ? 9 : 50,
+                  key === "utr_number" ? 10 : key === "nin_number" ? 9 : 50,
               }}
               label={
                 key == "nin_number"
@@ -908,7 +908,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 }
 
                 if (key === "utr_number") {
-                  value = value.replace(/\D/g, "").slice(0, 11);
+                  value = value.replace(/\D/g, "").slice(0, 10);
                 }
 
                 if (key === "nin_number") {
