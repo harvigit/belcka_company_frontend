@@ -433,13 +433,38 @@ const TimeClock = ({queryParams}: Props) => {
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+    // Keep timesheet IDs for selected users across pages (export/lock use this, not only current page data).
+    const [selectedTimesheetIdsByUser, setSelectedTimesheetIdsByUser] = useState<Map<number, string>>(new Map());
+
+    const clearSelectedRows = () => {
+        setSelectedRowIds(new Set());
+        setSelectedTimesheetIdsByUser(new Map());
+    };
+
+    const getSelectedTimesheetIds = (): (number | string)[] => {
+        return Array.from(selectedTimesheetIdsByUser.values()).filter(
+            (ids) => ids != null && String(ids).trim() !== '',
+        );
+    };
+
     const handleSelectAllRows = (checked: boolean) => {
-        if (checked) {
-            const allIds = data.map((item: any) => item.user_id);
-            setSelectedRowIds(new Set(allIds));
-        } else {
-            setSelectedRowIds(new Set());
-        }
+        const nextIds = new Set(selectedRowIds);
+        const nextMap = new Map(selectedTimesheetIdsByUser);
+
+        data.forEach((item: Index) => {
+            if (checked) {
+                nextIds.add(item.user_id);
+                if (item.timesheet_light_ids) {
+                    nextMap.set(item.user_id, String(item.timesheet_light_ids));
+                }
+            } else {
+                nextIds.delete(item.user_id);
+                nextMap.delete(item.user_id);
+            }
+        });
+
+        setSelectedRowIds(nextIds);
+        setSelectedTimesheetIdsByUser(nextMap);
     };
 
     const [selectedTimeClock, setSelectedTimeClock] = useState<Index | null>(null);
@@ -1133,7 +1158,7 @@ const TimeClock = ({queryParams}: Props) => {
         setTempFilters(EMPTY_TIME_CLOCK_FILTERS);
         setFilters(EMPTY_TIME_CLOCK_FILTERS);
         saveTimeClockFiltersCookie(EMPTY_TIME_CLOCK_FILTERS, typeFilter);
-        setSelectedRowIds(new Set());
+        clearSelectedRows();
         setFilterAnchorEl(null);
     };
 
@@ -1142,13 +1167,13 @@ const TimeClock = ({queryParams}: Props) => {
         setTempFilters(EMPTY_TIME_CLOCK_FILTERS);
         setFilters(EMPTY_TIME_CLOCK_FILTERS);
         saveTimeClockFiltersCookie(EMPTY_TIME_CLOCK_FILTERS, typeFilter);
-        setSelectedRowIds(new Set());
+        clearSelectedRows();
     };
 
     const handleApplyFilters = () => {
         setFilters(tempFilters);
         saveTimeClockFiltersCookie(tempFilters, typeFilter);
-        setSelectedRowIds(new Set());
+        clearSelectedRows();
         setFilterAnchorEl(null);
     };
 
@@ -1166,14 +1191,14 @@ const TimeClock = ({queryParams}: Props) => {
         setTempTypeFilter('all_data');
         setTypeFilter('all_data');
         saveTimeClockFiltersCookie(filters, 'all_data');
-        setSelectedRowIds(new Set());
+        clearSelectedRows();
         setTypeFilterOpen(false);
     };
 
     const handleApplyTypeFilter = () => {
         setTypeFilter(tempTypeFilter);
         saveTimeClockFiltersCookie(filters, tempTypeFilter);
-        setSelectedRowIds(new Set());
+        clearSelectedRows();
         setTypeFilterOpen(false);
     };
 
@@ -1417,6 +1442,27 @@ const TimeClock = ({queryParams}: Props) => {
         return data;
     }, [data]);
 
+    // Refresh stored timesheet IDs for selected users when the current page data updates.
+    useEffect(() => {
+        if (!data.length || selectedRowIds.size === 0) return;
+
+        setSelectedTimesheetIdsByUser((prev) => {
+            const next = new Map(prev);
+            let changed = false;
+
+            data.forEach((item) => {
+                if (!selectedRowIds.has(item.user_id) || !item.timesheet_light_ids) return;
+                const value = String(item.timesheet_light_ids);
+                if (next.get(item.user_id) !== value) {
+                    next.set(item.user_id, value);
+                    changed = true;
+                }
+            });
+
+            return changed ? next : prev;
+        });
+    }, [data, selectedRowIds]);
+
     const formatHour = (val: string | number | null | undefined): string => {
         if (val === null || val === undefined) return '-';
         const num = parseFloat(val.toString());
@@ -1440,12 +1486,12 @@ const TimeClock = ({queryParams}: Props) => {
                     <CustomCheckbox
                         className="header-checkbox"
                         checked={
-                            selectedRowIds.size === filteredData.length &&
-                            filteredData.length > 0
+                            filteredData.length > 0 &&
+                            filteredData.every((item) => selectedRowIds.has(item.user_id))
                         }
                         indeterminate={
-                            selectedRowIds.size > 0 &&
-                            selectedRowIds.size < filteredData.length
+                            filteredData.some((item) => selectedRowIds.has(item.user_id)) &&
+                            !filteredData.every((item) => selectedRowIds.has(item.user_id))
                         }
                         onChange={(e) => {
                             e.stopPropagation();
@@ -1471,10 +1517,18 @@ const TimeClock = ({queryParams}: Props) => {
                             onClick={(e) => e.stopPropagation()}
                             onChange={() => {
                                 const newSet = new Set(selectedRowIds);
-                                isChecked
-                                    ? newSet.delete(item.user_id)
-                                    : newSet.add(item.user_id);
+                                const newMap = new Map(selectedTimesheetIdsByUser);
+                                if (isChecked) {
+                                    newSet.delete(item.user_id);
+                                    newMap.delete(item.user_id);
+                                } else {
+                                    newSet.add(item.user_id);
+                                    if (item.timesheet_light_ids) {
+                                        newMap.set(item.user_id, String(item.timesheet_light_ids));
+                                    }
+                                }
                                 setSelectedRowIds(newSet);
+                                setSelectedTimesheetIdsByUser(newMap);
                             }}
                             sx={{
                                 opacity: 1,
@@ -2117,13 +2171,7 @@ const TimeClock = ({queryParams}: Props) => {
 
     const handleExport = async (option: string) => {
         try {
-            const timesheetIds: (number | string)[] = [];
-
-            filteredData.forEach((item) => {
-                if (selectedRowIds.has(item.user_id)) {
-                    timesheetIds.push(item.timesheet_light_ids);
-                }
-            });
+            const timesheetIds = getSelectedTimesheetIds();
 
             if (timesheetIds.length === 0) {
                 setErrorMessage('No valid timesheets selected for exporting.');
@@ -2172,7 +2220,7 @@ const TimeClock = ({queryParams}: Props) => {
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
 
-                setSelectedRowIds(new Set());
+                clearSelectedRows();
 
                 if (startDate && endDate) {
                     await fetchData(startDate, endDate);
@@ -2189,12 +2237,7 @@ const TimeClock = ({queryParams}: Props) => {
     const handleConfirmAction = async () => {
         if (!confirmDialog) return;
 
-        const timesheetIds: (number | string)[] = [];
-        filteredData.forEach((item) => {
-            if (selectedRowIds.has(item.user_id)) {
-                timesheetIds.push(item.timesheet_light_ids);
-            }
-        });
+        const timesheetIds = getSelectedTimesheetIds();
 
         setConfirmDialog(null);
 
@@ -2215,26 +2258,13 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const getConflictsInSelectedRows = () => {
-        let conflictCount = 0;
-        filteredData.forEach((item) => {
-            if (selectedRowIds.has(item.user_id)) {
-                const userConflicts = (conflictDetails || []).filter(
-                    (conflict) => conflict.user_id === item.user_id
-                );
-                conflictCount += userConflicts.length;
-            }
-        });
-        return conflictCount;
+        return (conflictDetails || []).filter(
+            (conflict) => selectedRowIds.has(conflict.user_id)
+        ).length;
     };
 
     const handleLock = async () => {
-        const timesheetIds: (number | string)[] = [];
-
-        filteredData.forEach((item) => {
-            if (selectedRowIds.has(item.user_id)) {
-                timesheetIds.push(item.timesheet_light_ids);
-            }
-        });
+        const timesheetIds = getSelectedTimesheetIds();
 
         if (timesheetIds.length === 0) {
             setErrorMessage('No valid timesheets selected for locking.');
@@ -2255,13 +2285,7 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleUnlock = async () => {
-        const timesheetIds: (number | string)[] = [];
-
-        filteredData.forEach((item) => {
-            if (selectedRowIds.has(item.user_id)) {
-                timesheetIds.push(item.timesheet_light_ids);
-            }
-        });
+        const timesheetIds = getSelectedTimesheetIds();
 
         if (timesheetIds.length === 0) {
             setErrorMessage('No valid timesheets selected for unlocking.');
@@ -2282,13 +2306,7 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleMarkAsPaid = async () => {
-        const timesheetIds: (number | string)[] = [];
-
-        filteredData.forEach((item) => {
-            if (selectedRowIds.has(item.user_id)) {
-                timesheetIds.push(item.timesheet_light_ids);
-            }
-        });
+        const timesheetIds = getSelectedTimesheetIds();
 
         if (timesheetIds.length === 0) {
             setErrorMessage('No valid timesheets selected for marking as paid.');
@@ -2331,7 +2349,7 @@ const TimeClock = ({queryParams}: Props) => {
             });
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
-                setSelectedRowIds(new Set());
+                clearSelectedRows();
                 await fetchData(from, to);
             }
         } catch (error: any) {
@@ -2345,7 +2363,7 @@ const TimeClock = ({queryParams}: Props) => {
             const response = await api.post('/timesheet/paid', {ids});
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
-                setSelectedRowIds(new Set());
+                clearSelectedRows();
                 setHasDataChanged(true);
 
                 const s = startDate || defaultStart;
@@ -2367,7 +2385,7 @@ const TimeClock = ({queryParams}: Props) => {
             const response = await api.post(endpoint, {ids});
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
-                setSelectedRowIds(new Set());
+                clearSelectedRows();
                 setHasDataChanged(true);
 
                 const s = startDate || defaultStart;
@@ -2887,7 +2905,7 @@ const TimeClock = ({queryParams}: Props) => {
                         <Stack direction="row" alignItems="center" spacing={2}>
                             <IconButton
                                 size="small"
-                                onClick={() => setSelectedRowIds(new Set())}
+                                onClick={clearSelectedRows}
                                 sx={{color: '#666', '&:hover': {bgcolor: 'grey.100'}}}
                             >
                                 <IconX size={16}/>
