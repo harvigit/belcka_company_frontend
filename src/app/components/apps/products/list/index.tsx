@@ -1034,9 +1034,7 @@ const ProductList = () => {
         toast.success(res.data.message);
         setData((prev: any[]) =>
           prev.map((p) =>
-            Number(p.id) === Number(id)
-              ? { ...p, cutoff: Number(limit) }
-              : p,
+            Number(p.id) === Number(id) ? { ...p, cutoff: Number(limit) } : p,
           ),
         );
       } else {
@@ -1044,9 +1042,7 @@ const ProductList = () => {
       }
     } catch (err: any) {
       console.error(err);
-      toast.error(
-        err?.response?.data?.message || "Failed to update low stock",
-      );
+      toast.error(err?.response?.data?.message || "Failed to update low stock");
     } finally {
       setSavingCell({ id: null, field: null });
     }
@@ -1805,6 +1801,32 @@ const ProductList = () => {
       },
     }),
 
+    columnHelper.accessor((row) => row?.sub_qty, {
+      id: "subQty",
+      header: () => "Sub Qty",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center">
+            {item.is_sub_qty}
+            <Typography
+              className="f-14"
+              sx={{
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: item.is_sub_qty ? "pointer" : "default",
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+              }}
+            >
+              {item?.is_sub_qty && item.sub_qty > 0 ? item.sub_qty : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
     columnHelper.accessor((row) => row?.barcode_text, {
       id: "barcode",
       header: () => "Barcode",
@@ -2258,7 +2280,9 @@ const ProductList = () => {
               color="primary"
               disabled={isCategorySaving}
               startIcon={
-                isCategorySaving ? <CircularProgress size={14} color="inherit" /> : null
+                isCategorySaving ? (
+                  <CircularProgress size={14} color="inherit" />
+                ) : null
               }
             >
               {isCategorySaving ? "Saving..." : "Submit"}
@@ -2321,7 +2345,9 @@ const ProductList = () => {
               color="primary"
               disabled={isProjectSaving}
               startIcon={
-                isProjectSaving ? <CircularProgress size={14} color="inherit" /> : null
+                isProjectSaving ? (
+                  <CircularProgress size={14} color="inherit" />
+                ) : null
               }
             >
               {isProjectSaving ? "Saving..." : "Submit"}
