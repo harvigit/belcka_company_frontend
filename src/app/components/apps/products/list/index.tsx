@@ -3739,10 +3739,14 @@ const ProductList = () => {
             sx={{
               flex: 1,
               minHeight: 0,
-              overflow: "auto",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            <TableContainer ref={tableContainerRef}>
+            <TableContainer
+              ref={tableContainerRef}
+              sx={{ flex: 1, minHeight: 0, overflow: "auto" }}
+            >
               <Table stickyHeader aria-label="sticky table">
                 <TableHead>
                   {table.getHeaderGroups().map((headerGroup) => (
