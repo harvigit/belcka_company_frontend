@@ -54,6 +54,8 @@ import {Stack} from '@mui/system';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import {useRouter} from 'next/navigation';
+import {useSession} from 'next-auth/react';
+import {User} from 'next-auth';
 import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
@@ -244,6 +246,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [pendingWorklogEdit, setPendingWorklogEdit] = useState<PendingWorklogEdit | null>(null);
     const [worklogEditNote, setWorklogEditNote] = useState('');
     const [worklogEditNoteError, setWorklogEditNoteError] = useState(false);
+    const [canDirectEditWorklog, setCanDirectEditWorklog] = useState(false);
+
+    const {data: session} = useSession();
+    const sessionUser = session?.user as User & {id?: number; user_role_id?: number | null} | undefined;
 
     const initialParamsRef = useRef(queryParams);
     const handledRef = useRef(false);
@@ -300,6 +306,54 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             ),
         }));
     }, [userHasRatePermission, ratePermissionLoaded]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const resolveDirectEditPermission = async () => {
+            const userId = Number(sessionUser?.id);
+            if (!userId) {
+                if (!cancelled) setCanDirectEditWorklog(false);
+                return;
+            }
+
+            if (Number(sessionUser?.user_role_id) === 1) {
+                if (!cancelled) setCanDirectEditWorklog(true);
+                return;
+            }
+
+            try {
+                const res = await api.get('request-action/list');
+                const actions = res.data?.info || res.data || [];
+                const timesheetApprove = Array.isArray(actions)
+                    ? actions.find((item: any) =>
+                        String(item.slug ?? item.request_slug ?? '').trim() === 'timesheet_approve'
+                    )
+                    : null;
+
+                const selectedUsers = timesheetApprove?.selected_users ?? timesheetApprove?.user_ids ?? '';
+                const userIds = Array.isArray(selectedUsers)
+                    ? selectedUsers.map(Number)
+                    : String(selectedUsers)
+                        .split(',')
+                        .map((id: string) => Number(id.trim()))
+                        .filter((id: number) => !isNaN(id));
+
+                if (!cancelled) {
+                    setCanDirectEditWorklog(userIds.includes(userId));
+                }
+            } catch (error) {
+                console.error('Failed to resolve worklog edit permission:', error);
+                if (!cancelled) setCanDirectEditWorklog(false);
+            }
+        };
+
+        resolveDirectEditPermission();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [sessionUser?.id, sessionUser?.user_role_id]);
 
     // Save columnVisibility to localStorage whenever it changes
     useEffect(() => {
@@ -850,12 +904,19 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             return;
         }
 
-        setPendingWorklogEdit({
+        const pendingEdit: PendingWorklogEdit = {
             worklogId,
             originalLog,
             startTime: newStart,
             endTime: newEnd,
-        });
+        };
+
+        if (canDirectEditWorklog) {
+            await submitWorklogEditRequest(pendingEdit, '');
+            return;
+        }
+
+        setPendingWorklogEdit(pendingEdit);
         setWorklogEditNote('');
         setWorklogEditNoteError(false);
     };
@@ -869,17 +930,22 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setWorklogEditNoteError(false);
     }, [pendingWorklogEdit, cancelEditingField]);
 
-    const submitWorklogEditRequest = useCallback(async () => {
-        if (!pendingWorklogEdit) return;
+    const submitWorklogEditRequest = useCallback(async (
+        pendingEditOverride?: PendingWorklogEdit | null,
+        noteOverride?: string,
+    ) => {
+        const pendingEdit = pendingEditOverride ?? pendingWorklogEdit;
+        if (!pendingEdit) return;
 
-        const note = worklogEditNote.trim();
+        const note = typeof noteOverride === 'string' ? noteOverride.trim() : worklogEditNote.trim();
+        const isDirectEdit = Boolean(pendingEditOverride) || canDirectEditWorklog;
 
-        if (!note) {
+        if (!isDirectEdit && !note) {
             setWorklogEditNoteError(true);
             return;
         }
 
-        const {worklogId, originalLog, startTime, endTime} = pendingWorklogEdit;
+        const {worklogId, originalLog, startTime, endTime} = pendingEdit;
 
         setSavingWorklogs((prev) => new Set(prev).add(worklogId));
         try {
@@ -888,7 +954,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 date: originalLog.date_added,
                 start_time: startTime,
                 end_time: endTime,
-                note,
+                ...(note ? {note} : {}),
             });
 
             if (response.data.IsSuccess) {
@@ -918,6 +984,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     }, [
         pendingWorklogEdit,
         worklogEditNote,
+        canDirectEditWorklog,
         setSavingWorklogs,
         startDate,
         defaultStart,
@@ -2180,7 +2247,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     </Button>
                     <Button
                         variant="contained"
-                        onClick={submitWorklogEditRequest}
+                        onClick={() => submitWorklogEditRequest()}
                         disabled={
                             !worklogEditNote.trim() ||
                             (pendingWorklogEdit ? savingWorklogs.has(pendingWorklogEdit.worklogId) : false)
