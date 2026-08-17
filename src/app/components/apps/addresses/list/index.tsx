@@ -143,6 +143,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [showConflicts, setShowConflicts] = useState(false);
   const [filters, setFilters] = useState({
     status: "",
+    has_cases: "",
   });
   const [tempFilters, setTempFilters] = useState(filters);
   const [sorting, setSorting] = useState<any[]>([]);
@@ -648,6 +649,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
       if (showConflicts) {
         url += `&is_conflict=true`;
+      }
+
+      if (filters.has_cases === "with_cases") {
+        url += `&has_cases=true`;
+      } else if (filters.has_cases === "without_cases") {
+        url += `&has_cases=false`;
       }
 
       const res = await api.get(url);
@@ -1247,7 +1254,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
   useEffect(() => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [searchTerm]);
+  }, [searchTerm, filters.status, filters.has_cases, showConflicts]);
 
   const simpleColumns = columns.map((column: any) => ({
     name: column.id ?? "Unnamed Column",
@@ -1679,6 +1686,23 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       </MenuItem>
                     ))}
                   </TextField>
+
+                  <TextField
+                    select
+                    label="Case"
+                    value={tempFilters.has_cases}
+                    onChange={(e) =>
+                      setTempFilters({
+                        ...tempFilters,
+                        has_cases: e.target.value,
+                      })
+                    }
+                    fullWidth
+                  >
+                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="with_cases">With Cases</MenuItem>
+                    <MenuItem value="without_cases">Without Cases</MenuItem>
+                  </TextField>
                 </Stack>
               </DialogContent>
 
@@ -1687,9 +1711,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   onClick={() => {
                     setTempFilters({
                       status: "",
+                      has_cases: "",
                     });
                     setFilters({
                       status: "",
+                      has_cases: "",
                     });
                     setOpen(false);
                   }}
