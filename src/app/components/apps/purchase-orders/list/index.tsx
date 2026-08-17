@@ -2248,7 +2248,7 @@ Team Belcka
                   Terms and Conditions
                 </Link>
               </MenuItem>
-              <MenuItem onClick={handleClose}>
+              {/* <MenuItem onClick={handleClose}>
                 <Link
                   color="body1"
                   href="/apps/invoices/list"
@@ -2266,7 +2266,7 @@ Team Belcka
                   </ListItemIcon>
                   Invoices
                 </Link>
-              </MenuItem>
+              </MenuItem> */}
             </Menu>
           </Stack>
         </Stack>

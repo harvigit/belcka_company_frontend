@@ -318,12 +318,14 @@ type TimeClockFilterState = {
     teams: number[];
     statuses: string[];
     users: number[];
+    projects: number[];
 };
 
 const EMPTY_TIME_CLOCK_FILTERS: TimeClockFilterState = {
     teams: [],
     statuses: [],
     users: [],
+    projects: [],
 };
 
 const TIME_CLOCK_TYPE_OPTIONS = [
@@ -459,10 +461,12 @@ const TimeClock = ({queryParams}: Props) => {
         teams: FilterOption[];
         statuses: FilterOption[];
         users: FilterOption[];
+        projects: FilterOption[];
     }>({
         teams: [],
         statuses: [],
         users: [],
+        projects: []
     });
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [anchorEl3, setAnchorEl3] = useState<null | HTMLElement>(null);
@@ -633,6 +637,7 @@ const TimeClock = ({queryParams}: Props) => {
                     teams: normalizeStoredNumberFilter(parsed.filters?.teams),
                     statuses: normalizeStoredStringFilter(parsed.filters?.statuses),
                     users: normalizeStoredNumberFilter(parsed.filters?.users),
+                    projects: normalizeStoredNumberFilter(parsed.filters?.projects),
                 };
                 const nextTypeFilter = isValidTimeClockTypeFilter(parsed.typeFilter)
                     ? parsed.typeFilter
@@ -663,6 +668,7 @@ const TimeClock = ({queryParams}: Props) => {
                     teams: response.data.teams || [],
                     statuses: response.data.statuses || [],
                     users: response.data.users || [],
+                    projects: response.data.projects || [],
                 });
             } catch (error) {
                 console.error('Failed to fetch time-clock filter options:', error);
@@ -726,6 +732,10 @@ const TimeClock = ({queryParams}: Props) => {
 
         if (filters.users.length > 0) {
             params.users = filters.users.join(',');
+        }
+
+        if (filters.projects.length > 0) {
+            params.projects = filters.projects.join(',');
         }
 
         if (activeTypeFilter) {
@@ -2450,8 +2460,9 @@ const TimeClock = ({queryParams}: Props) => {
                                 onClick={handleFilterClick}
                                 sx={{
                                     ...toolbarButtonSx,
-                                    minWidth: 64,
+                                    minWidth: 40,
                                     px: 1.5,
+                                    mt: { xs: 1, sm: 0 }
                                 }}
                                 aria-label={t('Open filters')}
                             >
@@ -2749,6 +2760,7 @@ const TimeClock = ({queryParams}: Props) => {
                     </DialogTitle>
                     <DialogContent sx={{overflowX: 'hidden'}}>
                         <Stack spacing={2} mt={1} sx={{width: '100%', minWidth: 0}}>
+                            {renderFilterSelect('Projects', 'projects', filterOptions.projects)}
                             {renderFilterSelect('Teams', 'teams', filterOptions.teams)}
                             {renderFilterSelect('Status', 'statuses', filterOptions.statuses, false)}
                             {renderFilterSelect('Users', 'users', filterOptions.users)}

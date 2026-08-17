@@ -200,7 +200,8 @@ const ProductList = () => {
     supplier: string;
     category: string;
     projects: any[];
-  }>({ supplier: "", category: "", projects: [] });
+    status: string;
+  }>({ supplier: "", category: "", projects: [], status: "" });
   const [tempFilters, setTempFilters] = useState(filters);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -578,6 +579,9 @@ const ProductList = () => {
       if (filters.projects && filters.projects.length > 0) {
         const projectIds = filters.projects.map((p: any) => p.id).join(",");
         url += `&project_ids=${projectIds}`;
+      }
+      if (filters.status && filters.status !== "All") {
+        url += `&stock_status=${filters.status}`;
       }
 
       const res = await api.get(url);
@@ -3579,6 +3583,25 @@ const ProductList = () => {
                       <TextField {...params} label="Projects" />
                     )}
                   />
+
+                  <TextField
+                    select
+                    label="Status"
+                    value={tempFilters.status}
+                    onChange={(e) =>
+                      setTempFilters({
+                        ...tempFilters,
+                        status: e.target.value,
+                      })
+                    }
+                    fullWidth
+                  >
+                    <MenuItem value="All">All</MenuItem>
+                    <MenuItem value="5">In Stock</MenuItem>
+                    <MenuItem value="4">Out of Stock</MenuItem>
+                    <MenuItem value="2">Minus Stock</MenuItem>
+                    <MenuItem value="1">Low Stock</MenuItem>
+                  </TextField>
                 </Stack>
               </DialogContent>
 
@@ -3589,11 +3612,13 @@ const ProductList = () => {
                       supplier: "",
                       category: "",
                       projects: [],
+                      status: "",
                     });
                     setFilters({
                       supplier: "",
                       category: "",
                       projects: [],
+                      status: "",
                     });
                     setOpen(false);
                   }}

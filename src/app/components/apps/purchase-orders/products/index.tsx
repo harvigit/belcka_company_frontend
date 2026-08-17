@@ -125,6 +125,7 @@ const PurchaseProductList: React.FC<Props> = ({
     project: "",
     supplier: "",
     address: "",
+    lowStock: false,
   });
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -270,7 +271,7 @@ const PurchaseProductList: React.FC<Props> = ({
         company_id: user.company_id,
         page: String(pagination.pageIndex + 1),
         limit: String(pagination.pageSize),
-        is_all_product: true,
+        // is_all_product: true,
       };
 
       if (searchTerm) {
@@ -293,6 +294,9 @@ const PurchaseProductList: React.FC<Props> = ({
         if (projectObj) {
           params.project = projectObj.id;
         }
+      }
+      if (filters.lowStock) {
+        params.low_stock = true;
       }
       const response = await api.get("purchase-orders/orders", { params });
 
@@ -1115,6 +1119,15 @@ const PurchaseProductList: React.FC<Props> = ({
             >
               <IconFilter width={18} />
             </Button>
+            <Link
+            href="#"
+              onClick={() => {
+                setFilters((prev) => ({ ...prev, lowStock: !prev.lowStock }));
+              }}
+              style={{ marginTop: 1, padding: 2,color: filters.lowStock ? "#1e4db7" : "red" ,fontWeight: 500}}
+            >
+              Low Stock
+            </Link>
             <Box display={"flex"} gap={2}>
               {filters.project && (
                 <Typography display={"flex"} alignItems={"flex-start"} gap={2}>
@@ -1260,11 +1273,13 @@ const PurchaseProductList: React.FC<Props> = ({
                       supplier: "",
                       project: "",
                       address: "",
+                      lowStock: false,
                     });
                     setFilters({
                       supplier: "",
                       project: "",
                       address: "",
+                      lowStock: false,
                     });
                     closeFilterModel();
                   }}
