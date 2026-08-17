@@ -622,20 +622,20 @@ const BuyerDashboard = () => {
                 </Typography>
               </Box>
               <IconChevronRight color="#9E9E9E" size={20} />
-
-              <PurchaseProductList
-                open={productDrawerOpen}
-                onClose={() => setProductDrawerOpen(false)}
-                ids={selectedProductsWithQty}
-                formData={formData}
-                setFormData={setFormData}
-                handleSubmit={handleSubmit}
-                isSaving={isSaving}
-                companyId={user.company_id ?? null}
-                mode="create"
-                onDraftSaved={fetchOrders}
-              />
             </Card>
+
+            <PurchaseProductList
+              open={productDrawerOpen}
+              onClose={() => setProductDrawerOpen(false)}
+              ids={selectedProductsWithQty}
+              formData={formData}
+              setFormData={setFormData}
+              handleSubmit={handleSubmit}
+              isSaving={isSaving}
+              companyId={user.company_id ?? null}
+              mode="create"
+              onDraftSaved={fetchOrders}
+            />
           </Grid>
 
           {/* <Grid size={{ xs: 12, sm: 6, md: 3 }}>

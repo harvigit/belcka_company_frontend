@@ -156,7 +156,7 @@ const saveDateRangeToStorage = (
             startDate: startDate ? startDate.toISOString() : null,
             endDate: endDate ? endDate.toISOString() : null,
             columnVisibility: columnVisibility ?? existingPageState?.columnVisibility ?? {},
-            pagination: pagination ?? existingPageState?.pagination ?? {pageIndex: 0, pageSize: 50},
+            pagination: pagination ?? existingPageState?.pagination ?? {pageIndex: 0, pageSize: 500},
         };
         const detailsRange: StoredTimeClockState = {
             startDate: dateRange.startDate,
@@ -2055,7 +2055,7 @@ const TimeClock = ({queryParams}: Props) => {
         data: filteredData,
         columns,
         fetchData: handleFetchData,
-        initialPagination: initialStoredState?.pagination,
+        initialPagination: initialStoredState?.pagination ?? {pageIndex: 0, pageSize: 500},
         debounceDependencies: [
             searchTerm,
             filters,
