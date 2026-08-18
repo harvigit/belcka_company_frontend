@@ -2518,6 +2518,21 @@ const TimeClock = ({queryParams}: Props) => {
                         </Box>
 
                         <Box sx={{display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0}}>
+                            <Button
+                                color="primary"
+                                variant="outlined"
+                                size="small"
+                                onClick={() => setRequestList(true)}
+                                sx={{
+                                    ...toolbarButtonSx,
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {t('Requests')}
+                            </Button>
+
                             {!isReadOnlyUser && (
                                 <>
                                     <Button
@@ -2692,28 +2707,6 @@ const TimeClock = ({queryParams}: Props) => {
                                             <IconClock width={18}/>
                                         </ListItemIcon>
                                         Penalty History
-                                    </Link>
-                                </MenuItem>
-                                <MenuItem onClick={handleClose}>
-                                    <Link
-                                        color="body1"
-                                        href="#"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            setRequestList(true);
-                                        }}
-                                        style={{
-                                            width: '100%',
-                                            color: '#11142D',
-                                            textTransform: 'none',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                        }}
-                                    >
-                                        <ListItemIcon>
-                                            <IconNotes width={18}/>
-                                        </ListItemIcon>
-                                        Request List
                                     </Link>
                                 </MenuItem>
                             </Menu>
