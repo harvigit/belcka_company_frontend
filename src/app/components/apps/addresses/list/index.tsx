@@ -87,6 +87,52 @@ import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRange
 dayjs.extend(customParseFormat);
 const columnHelper = createColumnHelper<any>();
 
+const ADDRESS_LIST_PREFERENCES_COOKIE_PREFIX = "address-list-preferences";
+const ADDRESS_LIST_COOKIE_OPTIONS = {
+  expires: 365,
+  path: "/",
+};
+const ADDRESS_PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
+
+type AddressListFilters = {
+  status: string;
+  has_cases: string;
+};
+
+type AddressListStoredPreferences = {
+  searchTerm?: string;
+  filters?: Partial<AddressListFilters>;
+  showConflicts?: boolean;
+  pagination?: {
+    pageIndex?: number;
+    pageSize?: number;
+  };
+};
+
+const DEFAULT_ADDRESS_FILTERS: AddressListFilters = {
+  status: "",
+  has_cases: "",
+};
+
+const normalizeStoredAddressFilters = (
+  value?: Partial<AddressListFilters>,
+): AddressListFilters => ({
+  status: typeof value?.status === "string" ? value.status : "",
+  has_cases: typeof value?.has_cases === "string" ? value.has_cases : "",
+});
+
+const normalizeStoredAddressPagination = (
+  value?: AddressListStoredPreferences["pagination"],
+) => ({
+  pageIndex:
+    Number.isInteger(value?.pageIndex) && Number(value?.pageIndex) >= 0
+      ? Number(value?.pageIndex)
+      : 0,
+  pageSize: ADDRESS_PAGE_SIZE_OPTIONS.includes(Number(value?.pageSize))
+    ? Number(value?.pageSize)
+    : 50,
+});
+
 export type ProjectList = {
   id: number;
   company_id: number;
@@ -141,11 +187,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [openDialog, setOpenDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showConflicts, setShowConflicts] = useState(false);
-  const [filters, setFilters] = useState({
-    status: "",
-    has_cases: "",
-  });
-  const [tempFilters, setTempFilters] = useState(filters);
+  const [filters, setFilters] = useState<AddressListFilters>(DEFAULT_ADDRESS_FILTERS);
+  const [tempFilters, setTempFilters] = useState<AddressListFilters>(DEFAULT_ADDRESS_FILTERS);
   const [sorting, setSorting] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -161,7 +204,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [project, setProject] = useState<ProjectList[]>([]);
   const [allProjects, SetAllProjects] = useState<any[]>([]);
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null } & {
+  const user = session.data?.user as User & {
+    company_id?: number | null;
+    id?: string | number | null;
+  } & {
     user_role_id: number;
   };
   const [projectId, setProjectId] = useState<number | null>(null);
@@ -176,6 +222,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     Record<string, boolean>
   >({});
   const [update, setUpdate] = useState(0);
+  const [preferencesHydrated, setPreferencesHydrated] = useState(false);
+  const skipNextPageResetCountRef = useRef(0);
+
+  const addressListPreferencesCookieKey = useMemo(() => {
+    if (!user?.company_id) return null;
+    return `${ADDRESS_LIST_PREFERENCES_COOKIE_PREFIX}_${user.id ?? "user"}_${user.company_id}`;
+  }, [user?.id, user?.company_id]);
 
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
@@ -636,6 +689,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   }, [projectId, user?.id, user.company_id]);
 
   const fetchAddresses = async () => {
+    if (!preferencesHydrated || !user?.company_id) {
+      return;
+    }
+
     setLoading(true);
     try {
       let url = `address/get-parent?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -1246,15 +1303,95 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       user?.company_id,
       JSON.stringify(filters),
       showConflicts,
+      preferencesHydrated,
     ],
     state: { sorting },
     onSortingChange: setSorting,
     manualSorting: true,
+    shouldResetPageOnDebounce: () => {
+      if (skipNextPageResetCountRef.current > 0) {
+        skipNextPageResetCountRef.current -= 1;
+        return false;
+      }
+      return true;
+    },
   });
 
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [searchTerm, filters.status, filters.has_cases, showConflicts]);
+    if (!addressListPreferencesCookieKey) {
+      setPreferencesHydrated(false);
+      return;
+    }
+
+    try {
+      const stored = Cookies.get(addressListPreferencesCookieKey);
+      if (stored) {
+        const parsed = JSON.parse(stored) as AddressListStoredPreferences;
+        const nextFilters = normalizeStoredAddressFilters(parsed.filters);
+        const nextPagination = normalizeStoredAddressPagination(parsed.pagination);
+        const nextSearch =
+          typeof parsed.searchTerm === "string" ? parsed.searchTerm : "";
+        const nextShowConflicts = Boolean(parsed.showConflicts);
+        const hasSavedState =
+          parsed.searchTerm !== undefined ||
+          parsed.filters !== undefined ||
+          parsed.showConflicts !== undefined ||
+          parsed.pagination !== undefined;
+
+        if (hasSavedState) {
+          // Skip both the local page-reset effect and useServerTable debounce reset once.
+          skipNextPageResetCountRef.current = 2;
+        }
+        setSearchTerm(nextSearch);
+        setFilters(nextFilters);
+        setTempFilters(nextFilters);
+        setShowConflicts(nextShowConflicts);
+        setPagination(nextPagination);
+      }
+    } catch (error) {
+      console.error("Failed to load address list preferences cookie:", error);
+      Cookies.remove(addressListPreferencesCookieKey, { path: "/" });
+    } finally {
+      setPreferencesHydrated(true);
+    }
+  }, [addressListPreferencesCookieKey, setPagination]);
+
+  useEffect(() => {
+    if (!addressListPreferencesCookieKey || !preferencesHydrated) return;
+
+    Cookies.set(
+      addressListPreferencesCookieKey,
+      JSON.stringify({
+        searchTerm,
+        filters,
+        showConflicts,
+        pagination: {
+          pageIndex: pagination.pageIndex,
+          pageSize: pagination.pageSize,
+        },
+      }),
+      ADDRESS_LIST_COOKIE_OPTIONS,
+    );
+  }, [
+    addressListPreferencesCookieKey,
+    preferencesHydrated,
+    searchTerm,
+    filters,
+    showConflicts,
+    pagination.pageIndex,
+    pagination.pageSize,
+  ]);
+
+  useEffect(() => {
+    if (!preferencesHydrated) return;
+    if (skipNextPageResetCountRef.current > 0) {
+      skipNextPageResetCountRef.current -= 1;
+      return;
+    }
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  }, [searchTerm, filters.status, filters.has_cases, showConflicts, preferencesHydrated, setPagination]);
 
   const simpleColumns = columns.map((column: any) => ({
     name: column.id ?? "Unnamed Column",
