@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Avatar, Badge,
     Box,
@@ -61,8 +61,6 @@ import {
     createColumnHelper,
     flexRender,
     getCoreRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
     useReactTable,
     VisibilityState,
 } from '@tanstack/react-table';
@@ -79,8 +77,34 @@ import Link from 'next/link';
 import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import Image from 'next/image';
+import Cookies from 'js-cookie';
 
 const LEAVE_STORAGE_KEY = 'leave-module-range';
+const LEAVE_LIST_PREFERENCES_COOKIE_PREFIX = 'leave-list-preferences';
+const LEAVE_LIST_COOKIE_OPTIONS = {
+    expires: 365,
+    path: '/',
+};
+const LEAVE_PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
+
+type LeaveListStoredPreferences = {
+    search?: string;
+    pagination?: {
+        pageIndex?: number;
+        pageSize?: number;
+    };
+};
+
+const normalizeStoredLeavePagination = (
+    value?: LeaveListStoredPreferences['pagination'],
+) => ({
+    pageIndex: Number.isInteger(value?.pageIndex) && Number(value?.pageIndex) >= 0
+        ? Number(value?.pageIndex)
+        : 0,
+    pageSize: LEAVE_PAGE_SIZE_OPTIONS.includes(Number(value?.pageSize))
+        ? Number(value?.pageSize)
+        : 50,
+});
 
 type LeaveOverviewRow = {
     user_id: number;
@@ -138,6 +162,25 @@ const parseLeaveDate = (value?: string | null) => {
 };
 
 const toApiDate = (date: Date) => format(date, 'dd/MM/yyyy');
+
+type LeavesListCacheEntry = {
+    data: any[];
+    leaveTypes: any[];
+};
+
+const leavesListCache = new Map<string, LeavesListCacheEntry>();
+
+const getLeavesRangeCacheKey = (start: Date, end: Date) =>
+    `${toApiDate(start)}|${toApiDate(end)}`;
+
+const isRequestAbortError = (error: unknown) => {
+    const err = error as { name?: string; code?: string };
+    return (
+        err?.name === 'CanceledError' ||
+        err?.name === 'AbortError' ||
+        err?.code === 'ERR_CANCELED'
+    );
+};
 
 const getLeaveType = (leave: any) =>
     String(
@@ -642,17 +685,28 @@ function LeaveDetailsDrawer({
 const Leaves = () => {
     const router = useRouter();
     const session = useSession();
-    const user = session.data?.user as User & { company_id?: number | null } & { user_role_id: number; };
+    const user = session.data?.user as User & { company_id?: number | null; id?: string | number | null } & { user_role_id: number; };
     const today = new Date();
     const storedRange = typeof window !== 'undefined' ? loadDateRangeFromStorage() : null;
     const defaultStart = startOfMonth(today);
     const defaultEnd = endOfMonth(today);
 
+    const leaveListPreferencesCookieKey = useMemo(() => {
+        if (!user?.company_id) return null;
+        return `${LEAVE_LIST_PREFERENCES_COOKIE_PREFIX}_${user.id ?? 'user'}_${user.company_id}`;
+    }, [user?.id, user?.company_id]);
+
     const [data, setData] = useState<any[]>([]);
     const [leaveTypes, setLeaveTypes] = useState<any[]>([]);
     const [summaryRows, setSummaryRows] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [overviewLoading, setOverviewLoading] = useState(true);
+    const [listLoading, setListLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
+    const [totalRows, setTotalRows] = useState(0);
+    const [pageCount, setPageCount] = useState(0);
+    const [preferencesHydrated, setPreferencesHydrated] = useState(false);
     const [startDate, setStartDate] = useState<Date | null>(storedRange?.startDate || defaultStart);
     const [endDate, setEndDate] = useState<Date | null>(storedRange?.endDate || defaultEnd);
     const [calendarOpen, setCalendarOpen] = useState(false);
@@ -668,35 +722,201 @@ const Leaves = () => {
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
     const [detailDrawer, setDetailDrawer] = useState<{ title: string; leaves: any[]; loading?: boolean } | null>(null);
-
-    const fetchLeaves = async (start: Date, end: Date) => {
-        setLoading(true);
-        try {
-            const payload = {
-                start_date: toApiDate(start),
-                end_date: toApiDate(end),
-            };
-            const [leavesResponse, overviewResponse] = await Promise.all([
-                api.get('user-leaves/get-list', { params: payload }),
-                api.get('user-leaves/overview', { params: payload }),
-            ]);
-
-            setData(leavesResponse.data?.data || []);
-            setLeaveTypes(leavesResponse.data?.leave_types || []);
-            setSummaryRows(overviewResponse.data?.data || []);
-        } catch (err) {
-            console.error('Failed to fetch leaves', err);
-            setData([]);
-            setLeaveTypes([]);
-            setSummaryRows([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const overviewAbortRef = useRef<AbortController | null>(null);
+    const listAbortRef = useRef<AbortController | null>(null);
+    const skipNextPageResetRef = useRef(false);
 
     useEffect(() => {
-        if (startDate && endDate) fetchLeaves(startDate, endDate);
-    }, [startDate, endDate]);
+        if (!leaveListPreferencesCookieKey) {
+            setPreferencesHydrated(false);
+            return;
+        }
+
+        try {
+            const stored = Cookies.get(leaveListPreferencesCookieKey);
+            if (stored) {
+                const parsed = JSON.parse(stored) as LeaveListStoredPreferences;
+                const nextPagination = normalizeStoredLeavePagination(parsed.pagination);
+                const nextSearch = typeof parsed.search === 'string' ? parsed.search : '';
+
+                skipNextPageResetRef.current = true;
+                setSearchTerm(nextSearch);
+                setDebouncedSearch(nextSearch.trim());
+                setPagination(nextPagination);
+            }
+        } catch (error) {
+            console.error('Failed to load leave list preferences cookie:', error);
+            Cookies.remove(leaveListPreferencesCookieKey, { path: '/' });
+        } finally {
+            setPreferencesHydrated(true);
+        }
+    }, [leaveListPreferencesCookieKey]);
+
+    useEffect(() => {
+        if (!leaveListPreferencesCookieKey || !preferencesHydrated) return;
+
+        Cookies.set(
+            leaveListPreferencesCookieKey,
+            JSON.stringify({
+                search: searchTerm,
+                pagination: {
+                    pageIndex: pagination.pageIndex,
+                    pageSize: pagination.pageSize,
+                },
+            }),
+            LEAVE_LIST_COOKIE_OPTIONS,
+        );
+    }, [
+        leaveListPreferencesCookieKey,
+        preferencesHydrated,
+        searchTerm,
+        pagination.pageIndex,
+        pagination.pageSize,
+    ]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        if (!preferencesHydrated) return;
+        if (skipNextPageResetRef.current) {
+            skipNextPageResetRef.current = false;
+            return;
+        }
+        setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
+    }, [debouncedSearch, startDate, endDate, preferencesHydrated]);
+
+    const fetchOverview = useCallback(async (
+        start: Date,
+        end: Date,
+        search: string,
+        pageIndex: number,
+        pageSize: number,
+    ) => {
+        overviewAbortRef.current?.abort();
+        const overviewController = new AbortController();
+        overviewAbortRef.current = overviewController;
+
+        setOverviewLoading(true);
+
+        try {
+            const overviewResponse = await api.get('user-leaves/overview', {
+                params: {
+                    start_date: toApiDate(start),
+                    end_date: toApiDate(end),
+                    ...(search ? { search } : {}),
+                    page: pageIndex + 1,
+                    limit: pageSize,
+                },
+                signal: overviewController.signal,
+            });
+
+            if (overviewController.signal.aborted) return;
+
+            const rows = overviewResponse.data?.data || [];
+            const pag = overviewResponse.data?.pagination;
+            setSummaryRows(rows);
+            setTotalRows(Number(pag?.totalItems ?? rows.length) || 0);
+            setPageCount(Number(pag?.totalPages ?? 1) || 1);
+        } catch (err) {
+            if (isRequestAbortError(err) || overviewController.signal.aborted) return;
+            console.error('Failed to fetch leave overview', err);
+            setSummaryRows([]);
+            setTotalRows(0);
+            setPageCount(0);
+        } finally {
+            if (!overviewController.signal.aborted) {
+                setOverviewLoading(false);
+            }
+        }
+    }, []);
+
+    const fetchList = useCallback(async (start: Date, end: Date, options?: { force?: boolean }) => {
+        const cacheKey = getLeavesRangeCacheKey(start, end);
+
+        if (!options?.force) {
+            const cached = leavesListCache.get(cacheKey);
+            if (cached) {
+                setData(cached.data);
+                setLeaveTypes(cached.leaveTypes);
+                setListLoading(false);
+                return;
+            }
+        }
+
+        listAbortRef.current?.abort();
+        const listController = new AbortController();
+        listAbortRef.current = listController;
+
+        setListLoading(true);
+
+        try {
+            const leavesResponse = await api.get('user-leaves/get-list', {
+                params: {
+                    start_date: toApiDate(start),
+                    end_date: toApiDate(end),
+                },
+                signal: listController.signal,
+            });
+
+            if (listController.signal.aborted) return;
+
+            const listResult = leavesResponse.data?.data || [];
+            const leaveTypesResult = leavesResponse.data?.leave_types || [];
+            setData(listResult);
+            setLeaveTypes(leaveTypesResult);
+            leavesListCache.set(cacheKey, {
+                data: listResult,
+                leaveTypes: leaveTypesResult,
+            });
+        } catch (err) {
+            if (isRequestAbortError(err) || listController.signal.aborted) return;
+            console.error('Failed to fetch leave list', err);
+            setData([]);
+            setLeaveTypes([]);
+        } finally {
+            if (!listController.signal.aborted) {
+                setListLoading(false);
+            }
+        }
+    }, []);
+
+    const refreshLeaves = useCallback(() => {
+        if (!startDate || !endDate) return;
+        leavesListCache.delete(getLeavesRangeCacheKey(startDate, endDate));
+        fetchOverview(startDate, endDate, debouncedSearch, pagination.pageIndex, pagination.pageSize);
+        fetchList(startDate, endDate, { force: true });
+    }, [startDate, endDate, debouncedSearch, pagination.pageIndex, pagination.pageSize, fetchOverview, fetchList]);
+
+    useEffect(() => {
+        if (!preferencesHydrated || !startDate || !endDate) return;
+
+        fetchOverview(startDate, endDate, debouncedSearch, pagination.pageIndex, pagination.pageSize);
+
+        return () => {
+            overviewAbortRef.current?.abort();
+        };
+    }, [
+        preferencesHydrated,
+        startDate,
+        endDate,
+        debouncedSearch,
+        pagination.pageIndex,
+        pagination.pageSize,
+        fetchOverview,
+    ]);
+
+    useEffect(() => {
+        if (!startDate || !endDate) return;
+
+        fetchList(startDate, endDate);
+
+        return () => {
+            listAbortRef.current?.abort();
+        };
+    }, [startDate, endDate, fetchList]);
 
     useEffect(() => {
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
@@ -704,7 +924,7 @@ const Leaves = () => {
 
     useEffect(() => {
         setSelectedRowIds(new Set());
-    }, [summaryRows, startDate, endDate, searchTerm]);
+    }, [summaryRows, startDate, endDate, debouncedSearch, pagination.pageIndex]);
 
     const handleDateRangeChange = (range: { from: Date | null; to: Date | null }) => {
         if (!range.from || !range.to) return;
@@ -792,17 +1012,6 @@ const Leaves = () => {
 
     const tableRows = summaryRows.length ? summaryRows : fallbackSummaryRows;
 
-    const filteredSummaryRows = useMemo(() => {
-        const search = searchTerm.toLowerCase();
-        if (!search) return tableRows;
-
-        return tableRows.filter((item) =>
-            [item.user_name, item.trade_name, item.role_name]
-                .filter(Boolean)
-                .some((field) => String(field).toLowerCase().includes(search)),
-        );
-    }, [tableRows, searchTerm]);
-
     const openUserLeaveDetails = (userId: number, leave?: any) => {
         if (startDate && endDate) saveDateRangeToStorage(startDate, endDate, columnVisibility);
 
@@ -882,7 +1091,18 @@ const Leaves = () => {
         const title = column ? `${row.user_name || 'User'} - ${column.label}` : `${row.user_name || 'User'} - Absence`;
 
         const hasExpectedRecords = column && column.key !== 'holiday' && getSummaryColumnCount(row, column) > 0;
-        if (hasExpectedRecords && leaves.length === 0 && startDate && endDate) {
+        if (hasExpectedRecords && leaves.length === 0) {
+            const localLeaves = getRowLeaves(row.user_id, column);
+            if (localLeaves.length > 0) {
+                setDetailDrawer({ title, leaves: localLeaves });
+                return;
+            }
+
+            if (!startDate || !endDate) {
+                setDetailDrawer({ title, leaves: [] });
+                return;
+            }
+
             setDetailDrawer({ title, leaves: [], loading: true });
 
             try {
@@ -1091,20 +1311,19 @@ const Leaves = () => {
     ];
 
     const table = useReactTable({
-        data: filteredSummaryRows,
+        data: tableRows,
         columns,
-        state: { columnVisibility },
+        state: { columnVisibility, pagination },
         onColumnVisibilityChange: setColumnVisibility,
-        initialState: { pagination: { pageIndex: 0, pageSize: 50 } },
+        onPaginationChange: setPagination,
+        pageCount,
+        rowCount: totalRows,
+        manualPagination: true,
+        enableSorting: false,
+        autoResetPageIndex: false,
         getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
         getRowId: (row) => String(row.user_id),
     });
-
-    useEffect(() => {
-        table.setPageIndex(0);
-    }, [searchTerm, startDate, endDate]);
 
     const calendarDays = getMonthDays(calendarMonth);
     const selectedDateLeaves = leavesForDate(selectedCalendarDate);
@@ -1265,7 +1484,7 @@ const Leaves = () => {
                                                     '&:hover .hoverIcon': { opacity: 1 },
                                                 }}
                                             >
-                                                <Typography variant="body2">
+                                                <Typography variant="body2" component="span">
                                                     {flexRender(header.column.columnDef.header, header.getContext())}
                                                 </Typography>
                                                 {isSortable && (
@@ -1291,12 +1510,12 @@ const Leaves = () => {
                         ))}
                     </TableHead>
                     <TableBody>
-                        {loading ? (
+                        {overviewLoading ? (
                             <SkeletonLoader
                                 columns={simpleColumns}
                                 rowCount={simpleColumns.length}
                             />
-                        ) : data.length === 0 ? (
+                        ) : tableRows.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={columns.length}>
                                     <Box
@@ -1345,9 +1564,9 @@ const Leaves = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
-            {filteredSummaryRows.length ? <Divider /> : <></>}
+            {tableRows.length ? <Divider /> : <></>}
 
-            <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={filteredSummaryRows.length} />
+            <TablePaginationFooter selectedCount={typeof selectedRowIds !== "undefined" ? selectedRowIds.size : undefined} table={table} totalRows={totalRows} />
 
             <Drawer
                 anchor="bottom"
@@ -1402,6 +1621,7 @@ const Leaves = () => {
                                 }} />
                                 <Typography variant="caption" color="text.secondary">Pending</Typography>
                             </Stack>
+                            {listLoading && <CircularProgress size={16} />}
                         </Stack>
 
                         <Stack direction="row" alignItems="center" spacing={1}>
@@ -1567,10 +1787,18 @@ const Leaves = () => {
                             color="text.secondary"
                             noWrap mb={1.25}
                         >
-                            {selectedDateLeaves.length ? `${selectedDateLeaves.length} leave${selectedDateLeaves.length > 1 ? 's' : ''}` : 'No leave on this date'}
+                            {listLoading
+                                ? 'Loading leaves...'
+                                : selectedDateLeaves.length
+                                    ? `${selectedDateLeaves.length} leave${selectedDateLeaves.length > 1 ? 's' : ''}`
+                                    : 'No leave on this date'}
                         </Typography>
 
-                        {selectedDateLeaves.length ? (
+                        {listLoading ? (
+                            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <CircularProgress size={28} />
+                            </Box>
+                        ) : selectedDateLeaves.length ? (
                             <Stack spacing={1.25} sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.5 }}>
                                 {selectedDateLeaves.map((leave) => (
                                     <Box
@@ -1660,7 +1888,7 @@ const Leaves = () => {
                     onClose={() => setAddLeaveOpen(false)}
                     userId={0}
                     companyId={Number(user?.company_id || 0)}
-                    onDataRefresh={() => startDate && endDate && fetchLeaves(startDate, endDate)}
+                    onDataRefresh={refreshLeaves}
                 />
             </Drawer>
 
