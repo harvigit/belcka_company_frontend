@@ -56,6 +56,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     email: "",
     nationalPhone: "",
     otp: "",
+    date_of_birth: "",
     user_image: null as File | null,
   });
 
@@ -179,6 +180,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       otp,
       user_image,
       email,
+      date_of_birth,
     } = registerData;
 
     if (!user_image)
@@ -229,6 +231,10 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       formData.append("first_name", first_name);
       formData.append("last_name", last_name);
       formData.append("is_web", "true");
+      if (date_of_birth) {
+        const [year, month, day] = date_of_birth.split("-");
+        formData.append("date_of_birth", `${day}/${month}/${year}`);
+      }
       if (user_image) formData.append("user_image", user_image);
 
       const res = await api.post("app-registration", formData, {
@@ -507,6 +513,19 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
                 setRegisterData({ ...registerData, email: e.target.value })
               }
               label="Email"
+            />
+          </Box>
+
+          <Box mb={2}>
+            <TextField
+              fullWidth
+              type="date"
+              value={registerData.date_of_birth}
+              onChange={(e: any) =>
+                setRegisterData({ ...registerData, date_of_birth: e.target.value })
+              }
+              label="Date of Birth"
+              InputLabelProps={{ shrink: true }}
             />
           </Box>
         </Box>
