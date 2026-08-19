@@ -34,6 +34,7 @@ import { format, parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { useRouter } from "next/navigation";
 import { getUserDetailsHref } from "@/utils/userDetailsRoute";
+import Link from "next/link";
 import { useTranslation } from "react-i18next";
 
 dayjs.extend(customParseFormat);
@@ -483,62 +484,60 @@ export default function UserRequests({
             </Box>
           ) : data.length > 0 ? (
             <Grid container spacing={2}>
-              {data.map((work, idx) => (
-                <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
-                  <Box
-                    onClick={() => {
-                      const routeFn = REQUEST_ROUTE_MAP[work.type_name];
-                      if (routeFn) {
-                        if (
-                          ["Shift", "Penalty", "Work log", "Worklog"].includes(
-                            work.type_name,
+                {data.map((work, idx) => {
+                  const href = (() => {
+                    const routeFn = REQUEST_ROUTE_MAP[work.type_name];
+                    if (!routeFn) return "";
+                    if (
+                      ["Shift", "Penalty", "Work log", "Worklog"].includes(
+                        work.type_name,
+                      )
+                    ) {
+                      const dateAdded = work.date_added
+                        ? parse(
+                            work.date_added,
+                            "d MMMM yyyy HH:mm",
+                            new Date(),
                           )
-                        ) {
-                          const dateAdded = work.date_added
-                            ? parse(
-                                work.date_added,
-                                "d MMMM yyyy HH:mm",
-                                new Date(),
-                              )
-                            : undefined;
-                          const formattedDate = dateAdded
-                            ? format(dateAdded, "yyyy-MM-dd")
-                            : undefined;
-                          router.push(
-                            routeFn(work.user_id, formattedDate, formattedDate),
-                          );
-                        } else if (work.type_name === "Leave") {
-                          // Use the actual leave date, not the request creation date
-                          const leaveDate = getLeaveDate(work);
-                          router.push(
-                            routeFn(work.user_id, leaveDate, leaveDate),
-                          );
-                        } else if (work.type_name === "Team") {
-                          router.push(routeFn(work.team_id));
-                        } else if (work.type_name === "Project") {
-                          router.push(
-                            routeFn(work?.project_id ?? work?.record_id),
-                          );
-                        } else {
-                          router.push(routeFn(work.user_id));
-                        }
-                        onClose();
-                      }
-                    }}
-                    sx={{
-                      border: "1px solid #ddd",
-                      borderRadius: 2,
-                      position: "relative",
-                      p: 2,
-                      bgcolor: "white",
-                      transition: "0.2s",
-                      cursor: "pointer",
-                      "&:hover": {
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                        transform: "translateY(-1px)",
-                      },
-                    }}
-                  >
+                        : undefined;
+                      const formattedDate = dateAdded
+                        ? format(dateAdded, "yyyy-MM-dd")
+                        : undefined;
+                      return routeFn(work.user_id, formattedDate, formattedDate);
+                    } else if (work.type_name === "Leave") {
+                      const leaveDate = getLeaveDate(work);
+                      return routeFn(work.user_id, leaveDate, leaveDate);
+                    } else if (work.type_name === "Team") {
+                      return routeFn(work.team_id);
+                    } else if (work.type_name === "Project") {
+                      return routeFn(work?.project_id ?? work?.record_id);
+                    } else {
+                      return routeFn(work.user_id);
+                    }
+                  })();
+
+                  return (
+                    <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
+                      <Link
+                        href={href}
+                        style={{ textDecoration: "none", color: "inherit", display: "block" }}
+                        onClick={() => onClose()}
+                      >
+                        <Box
+                          sx={{
+                            border: "1px solid #ddd",
+                            borderRadius: 2,
+                            position: "relative",
+                            p: 2,
+                            bgcolor: "white",
+                            transition: "0.2s",
+                            cursor: "pointer",
+                            "&:hover": {
+                              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                              transform: "translateY(-1px)",
+                            },
+                          }}
+                        >
                     <Box
                       justifyContent="space-between"
                       alignItems="center"
@@ -647,9 +646,11 @@ export default function UserRequests({
                         {work.date}
                       </Typography>
                     </Box>
-                  </Box>
-                </Grid>
-              ))}
+                        </Box>
+                      </Link>
+                    </Grid>
+                  );
+                })}
             </Grid>
           ) : (
             <Typography

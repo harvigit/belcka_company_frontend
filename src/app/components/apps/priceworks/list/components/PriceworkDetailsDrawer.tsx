@@ -47,6 +47,9 @@ const userAvatar = (name?: string | null, image?: string | null, size = 32) => (
 const ActivityLogItem = ({item}: {item: PriceworkActivityLog}) => {
     const priceworkUserName = item.pricework_user_name || 'User';
     const actionUserName = item.action_user_name || 'System';
+    const rejectNote = typeof item.new_data?.reject_note === 'string'
+        ? item.new_data.reject_note.trim()
+        : '';
 
     return (
         <Stack direction="row" spacing={1.5} alignItems="flex-start">
@@ -64,6 +67,11 @@ const ActivityLogItem = ({item}: {item: PriceworkActivityLog}) => {
                 <Typography sx={{fontSize: 12, color: 'text.secondary', mt: 0.25}}>
                     Action by: {actionUserName}
                 </Typography>
+                {rejectNote && (
+                    <Typography sx={{fontSize: 12, color: 'text.secondary', mt: 0.5}}>
+                        Note: {rejectNote}
+                    </Typography>
+                )}
             </Box>
         </Stack>
     );
@@ -82,13 +90,12 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, on
 
     const loadDetail = async () => {
         if (!pricework?.id) return;
-        if (pricework.record_type === 'timesheet_light') {
-            setDetail(pricework as PriceworkDetail);
-            return;
-        }
         setLoading(true);
         try {
-            const res = await api.get(`pricework/detail?pricework_id=${pricework.id}`);
+            const url = pricework.record_type === 'timesheet_light'
+                ? `pricework/detail?pricework_id=${pricework.id}&record_type=timesheet_light`
+                : `pricework/detail?pricework_id=${pricework.id}`;
+            const res = await api.get(url);
             setDetail(res.data?.info || null);
         } catch (error: any) {
             toast.error(error?.response?.data?.message || 'Failed to load pricework details');

@@ -1,23 +1,3 @@
-const USER_DETAILS_STORAGE_KEY = 'belcka_user_details_refs';
-
-type StoredUserRefs = Record<string, number>;
-
-const readRefs = (): StoredUserRefs => {
-    if (typeof window === 'undefined') return {};
-
-    try {
-        const stored = window.sessionStorage.getItem(USER_DETAILS_STORAGE_KEY);
-        return stored ? JSON.parse(stored) : {};
-    } catch {
-        return {};
-    }
-};
-
-const writeRefs = (refs: StoredUserRefs) => {
-    if (typeof window === 'undefined') return;
-    window.sessionStorage.setItem(USER_DETAILS_STORAGE_KEY, JSON.stringify(refs));
-};
-
 export const getUserDetailsHref = (
     userId: number | string | null | undefined,
     query: Record<string, string | number | boolean | null | undefined> = {},
@@ -35,23 +15,9 @@ export const getUserDetailsHref = (
         const suffix = params.toString();
         return `/apps/users/details${suffix ? `?${suffix}` : ''}`;
     }
-
-    const existingRefs = readRefs();
-    const existingRef = Object.entries(existingRefs).find(([, storedUserId]) => storedUserId === numericUserId)?.[0];
-    if (existingRef) {
-        params.set('user_ref', existingRef);
-        return `/apps/users/details?${params.toString()}`;
-    }
-
-    let ref = '';
-    if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
-        ref = window.crypto.randomUUID();
-    } else {
-        ref = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    }
-
-    existingRefs[ref] = numericUserId;
-    writeRefs(existingRefs);
+    
+    const XOR_KEY = 987654321;
+    const ref = (numericUserId ^ XOR_KEY).toString(36);
 
     params.set('user_ref', ref);
 
@@ -65,8 +31,13 @@ export const resolveUserDetailsId = (routeId: string | string[] | undefined) => 
         if (typeof window === 'undefined') return null;
         const ref = new URLSearchParams(window.location.search).get('user_ref');
         if (!ref) return null;
-        const userId = readRefs()[ref];
-        return userId ? String(userId) : null;
+        if (!/^[0-9a-z]+$/i.test(ref)) return null; // reject non-base36 refs
+        const parsed = parseInt(ref, 36);
+        if (!Number.isFinite(parsed)) return null;
+
+        const XOR_KEY = 987654321;
+        const userId = parsed ^ XOR_KEY;
+        return userId > 0 ? String(userId) : null;
     }
 
     return null;

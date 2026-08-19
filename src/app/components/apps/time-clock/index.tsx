@@ -1647,16 +1647,30 @@ const TimeClock = ({queryParams}: Props) => {
                                 </Badge>
                             </Link>
                             <Box>
-                                <Typography
-                                    className="f-14"
-                                    color="textPrimary"
-                                    sx={{
-                                        cursor: 'pointer',
-                                        width: 150,
-                                    }}
+                                <Link
+                                    href={getUserDetailsHref(row?.user_id, {
+                                        tab: 'billing',
+                                        ...(isReadOnlyUser
+                                            ? (isRemovedUser
+                                                ? {is_removed_user: 'true'}
+                                                : {is_archived_user: 'true'})
+                                            : {}),
+                                    })}
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{textDecoration: 'none', color: 'inherit'}}
                                 >
-                                    {row.user_name}
-                                </Typography>
+                                    <Typography
+                                        className="f-14"
+                                        color="textPrimary"
+                                        sx={{
+                                            cursor: 'pointer',
+                                            '&:hover': { color: '#173f98' },
+                                            width: 150,
+                                        }}
+                                    >
+                                        {row.user_name}
+                                    </Typography>
+                                </Link>
                                 <Tooltip title={row.trade_name ? t(row.trade_name) : '-'} placement="top" arrow>
                                     <Typography color="textSecondary" variant="subtitle1" width={150} noWrap>
                                         {row.trade_name ? t(row.trade_name) : '-'}

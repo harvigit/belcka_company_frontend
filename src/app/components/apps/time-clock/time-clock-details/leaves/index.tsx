@@ -27,6 +27,7 @@ import {useRouter} from 'next/navigation';
 import {capitalize} from 'lodash';
 import {useSearchParams} from 'next/navigation';
 import { getUserDetailsHref } from '@/utils/userDetailsRoute';
+import Link from 'next/link';
 
 dayjs.extend(customParseFormat);
 
@@ -404,27 +405,37 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
                                     '&:hover': {backgroundColor: '#fafafa'},
                                 }}
                             >
-                                <Stack
-                                    direction="row"
-                                    spacing={1.25}
-                                    alignItems="center"
-                                    onClick={() => openUserLeaveDetails(row.user_id)}
-                                    sx={{px: 2, py: 1.25, minWidth: 0, cursor: 'pointer'}}
+                                <Link
+                                    href={getUserDetailsHref(row.user_id, { tab: 'leave' })}
+                                    style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}
+                                    onClick={() => {
+                                        if (startDate && endDate) {
+                                            saveDateRangeToStorage(startDate, endDate);
+                                        }
+                                        onClose();
+                                    }}
                                 >
-                                    <Avatar
-                                        src={row.user_thumb_image || row.user_image || '/images/users/user.png'}
-                                        alt={row.user_name || 'User'}
-                                        sx={{width: 36, height: 36, flexShrink: 0}}
-                                    />
-                                    <Box sx={{minWidth: 0}}>
-                                        <Typography fontWeight={800} noWrap>
-                                            {row.user_name || 'User'}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary" noWrap display="block">
-                                            {row.role_name || '-'}
-                                        </Typography>
-                                    </Box>
-                                </Stack>
+                                    <Stack
+                                        direction="row"
+                                        spacing={1.25}
+                                        alignItems="center"
+                                        sx={{px: 2, py: 1.25, minWidth: 0, cursor: 'pointer'}}
+                                    >
+                                        <Avatar
+                                            src={row.user_thumb_image || row.user_image || '/images/users/user.png'}
+                                            alt={row.user_name || 'User'}
+                                            sx={{width: 36, height: 36, flexShrink: 0}}
+                                        />
+                                        <Box sx={{minWidth: 0}}>
+                                            <Typography fontWeight={800} noWrap>
+                                                {row.user_name || 'User'}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" noWrap display="block">
+                                                {row.role_name || '-'}
+                                            </Typography>
+                                        </Box>
+                                    </Stack>
+                                </Link>
 
                                 {leaveTypes.map((leaveType) => {
                                     const count = Number(row.leave_counts?.[String(leaveType.id)] ?? 0);
@@ -494,147 +505,165 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
                     <Grid container spacing={2}>
                         {filteredData.map((work, idx) => (
                             <Grid size={{xs: 12, md: 6, xl: 4}} mt={1} key={idx}>
-                                <Box
+                                <Link
+                                    href={(() => {
+                                        const formattedDate = work.start_date
+                                            ? format(parse(work.start_date, 'dd/MM/yyyy', new Date()), 'yyyy-MM-dd')
+                                            : undefined;
+
+                                        const formattedEndDate = work.end_date
+                                            ? format(parse(work.end_date, 'dd/MM/yyyy', new Date()), 'yyyy-MM-dd')
+                                            : undefined;
+
+                                        return getUserDetailsHref(work.user_id, {
+                                            tab: 'leave',
+                                            leave_start: formattedDate,
+                                            leave_end: formattedEndDate,
+                                        });
+                                    })()}
+                                    style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
                                     onClick={() => {
-                                        const routeFn = REQUEST_ROUTE_MAP['Leave'];
-                                        if (routeFn) {
-                                            const formattedDate = work.start_date
-                                                ? format(parse(work.start_date, 'dd/MM/yyyy', new Date()), 'yyyy-MM-dd')
-                                                : undefined;
+                                        const formattedDate = work.start_date
+                                            ? format(parse(work.start_date, 'dd/MM/yyyy', new Date()), 'yyyy-MM-dd')
+                                            : undefined;
 
-                                            const formattedEndDate = work.end_date
-                                                ? format(parse(work.end_date, 'dd/MM/yyyy', new Date()), 'yyyy-MM-dd')
-                                                : undefined;
+                                        const formattedEndDate = work.end_date
+                                            ? format(parse(work.end_date, 'dd/MM/yyyy', new Date()), 'yyyy-MM-dd')
+                                            : undefined;
 
-                                            router.push(routeFn(work.user_id, formattedDate, formattedEndDate));
-                                            onClose();
+                                        if (formattedDate && formattedEndDate) {
+                                            saveDateRangeToStorage(new Date(formattedDate), new Date(formattedEndDate));
                                         }
-                                    }}
-                                    sx={{
-                                        border: '1px solid #ddd',
-                                        borderRadius: 2,
-                                        position: 'relative',
-                                        p: 2,
-                                        backgroundColor: 'white',
-                                        transition: '0.2s',
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                                        },
+                                        onClose();
                                     }}
                                 >
                                     <Box
-                                        display={'flex'}
-                                        gap={2}
-                                        justifyContent="space-between"
-                                        alignItems="center"
-                                        mb={1}
-                                        sx={{top: -8, position: 'absolute'}}
-                                        flexWrap="wrap"
+                                        sx={{
+                                            border: '1px solid #ddd',
+                                            borderRadius: 2,
+                                            position: 'relative',
+                                            p: 2,
+                                            backgroundColor: 'white',
+                                            transition: '0.2s',
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                            },
+                                        }}
                                     >
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                px: 1.2,
-                                                py: 0.2,
-                                                borderRadius: '12px',
-                                                backgroundColor: 'gray',
-                                                color: '#fff',
-                                                fontSize: '0.75rem',
-                                                fontWeight: 500,
-                                                textTransform: 'capitalize',
-                                            }}
-                                        >
-                                            {work.leave_name}
-                                        </Typography>
-                                        
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                px: 1.2,
-                                                py: 0.2,
-                                                borderRadius: '12px',
-                                                borderColor: work.leave_type == 'paid' ? '#39af43ff' : 'orange',
-                                                backgroundColor: work.leave_type == 'paid' ? '#39af43ff' : 'orange',
-                                                color: '#fff',
-                                                fontSize: '0.75rem',
-                                                fontWeight: 500,
-                                                textTransform: 'capitalize',
-                                            }}
-                                        >
-                                            {work.leave_type}
-                                        </Typography>
-                                    </Box>
-                                    
-                                    <Box display={'flex'} gap={1} mt={1}>
-                                        <Avatar
-                                            src={work.user_image}
-                                            alt={work.user_name}
-                                            sx={{width: 36, height: 36}}
-                                        />
-                                        
-                                        <Box display={'flex'} justifyContent={'space-between'} width={'100%'}>
-                                            <Box>
-                                                <Typography variant="h1" fontSize={'16px !important'}>
-                                                    {work.user_name}
-                                                </Typography>
-                                                
-                                                <Typography>
-                                                    {work.start_date
-                                                        ? `Date: ${capitalize(work.start_date)} ${
-                                                            work.is_allday_leave ? `- ${work.end_date}` : ''
-                                                        }` : ''}
-                                                </Typography>
-                                                
-                                                <Typography>
-                                                    {work.start_time
-                                                        ? `Time: ${capitalize(work.start_time)} ${
-                                                            !work.is_allday_leave ? `- ${work.end_time}` : ''
-                                                        }` : ''}
-                                                </Typography>
-                                            </Box>
-                                            
-                                            {work.request_status !== 0 && (
-                                                <Box justifyContent={'flex-end'}>
-                                                    <Typography
-                                                        variant="body2"
-                                                        sx={{
-                                                            px: 1.6,
-                                                            py: 0.7,
-                                                            borderRadius: '18px',
-                                                            border: 2,
-                                                            borderColor: work?.color || '#757575',
-                                                            color: work?.color || '#757575',
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: 500,
-                                                            textTransform: 'capitalize',
-                                                        }}
-                                                    >
-                                                        {work?.status_text}
-                                                    </Typography>
-                                                </Box>
-                                            )}
-                                        </Box>
-                                    </Box>
-                                    
-                                    {work.manager_note && (
                                         <Box
                                             display={'flex'}
-                                            justifyContent={'start'}
-                                            mt={0}
-                                            ml={5.5}
+                                            gap={2}
+                                            justifyContent="space-between"
+                                            alignItems="center"
+                                            mb={1}
+                                            sx={{top: -8, position: 'absolute'}}
+                                            flexWrap="wrap"
                                         >
                                             <Typography
-                                                variant="caption"
-                                                color="text.secondary"
-                                                fontSize={'14px !important'}
-                                                noWrap
+                                                variant="body2"
+                                                sx={{
+                                                    px: 1.2,
+                                                    py: 0.2,
+                                                    borderRadius: '12px',
+                                                    backgroundColor: 'gray',
+                                                    color: '#fff',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 500,
+                                                    textTransform: 'capitalize',
+                                                }}
                                             >
-                                                Note: {work.manager_note}
+                                                {work.leave_name}
+                                            </Typography>
+                                            
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    px: 1.2,
+                                                    py: 0.2,
+                                                    borderRadius: '12px',
+                                                    borderColor: work.leave_type == 'paid' ? '#39af43ff' : 'orange',
+                                                    backgroundColor: work.leave_type == 'paid' ? '#39af43ff' : 'orange',
+                                                    color: '#fff',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 500,
+                                                    textTransform: 'capitalize',
+                                                }}
+                                            >
+                                                {work.leave_type}
                                             </Typography>
                                         </Box>
-                                    )}
-                                </Box>
+                                        
+                                        <Box display={'flex'} gap={1} mt={1}>
+                                            <Avatar
+                                                src={work.user_image}
+                                                alt={work.user_name}
+                                                sx={{width: 36, height: 36}}
+                                            />
+                                            
+                                            <Box display={'flex'} justifyContent={'space-between'} width={'100%'}>
+                                                <Box>
+                                                    <Typography variant="h1" fontSize={'16px !important'}>
+                                                        {work.user_name}
+                                                    </Typography>
+                                                    
+                                                    <Typography>
+                                                        {work.start_date
+                                                            ? `Date: ${capitalize(work.start_date)} ${
+                                                                work.is_allday_leave ? `- ${work.end_date}` : ''
+                                                            }` : ''}
+                                                    </Typography>
+                                                    
+                                                    <Typography>
+                                                        {work.start_time
+                                                            ? `Time: ${capitalize(work.start_time)} ${
+                                                                !work.is_allday_leave ? `- ${work.end_time}` : ''
+                                                            }` : ''}
+                                                    </Typography>
+                                                </Box>
+                                                
+                                                {work.request_status !== 0 && (
+                                                    <Box justifyContent={'flex-end'}>
+                                                        <Typography
+                                                            variant="body2"
+                                                            sx={{
+                                                                px: 1.6,
+                                                                py: 0.7,
+                                                                borderRadius: '18px',
+                                                                border: 2,
+                                                                borderColor: work?.color || '#757575',
+                                                                color: work?.color || '#757575',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 500,
+                                                                textTransform: 'capitalize',
+                                                            }}
+                                                        >
+                                                            {work?.status_text}
+                                                        </Typography>
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                        </Box>
+                                        
+                                        {work.manager_note && (
+                                            <Box
+                                                display={'flex'}
+                                                justifyContent={'start'}
+                                                mt={0}
+                                                ml={5.5}
+                                            >
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                    fontSize={'14px !important'}
+                                                    noWrap
+                                                >
+                                                    Note: {work.manager_note}
+                                                </Typography>
+                                            </Box>
+                                        )}
+                                    </Box>
+                                </Link>
                             </Grid>
                         ))}
                     </Grid>

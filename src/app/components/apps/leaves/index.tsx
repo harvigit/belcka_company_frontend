@@ -575,103 +575,132 @@ function LeaveDetailsDrawer({
                 <Box display="flex" justifyContent="center" py={5}><CircularProgress size={28} /></Box>
             ) : sortedLeaves.length ? (
                 <Stack spacing={1.25}>
-                    {sortedLeaves.map((leave, index) => (
-                        <Box
-                            key={`${leave.id || leave.user_leave_id || index}`}
-                            onClick={() => !leave.is_holiday && !leave.is_absence && onOpenUser(leave)}
-                            sx={{
-                                border: '1px solid #e5e7eb',
-                                borderRadius: 2,
-                                p: 1.5,
-                                cursor: leave.is_holiday || leave.is_absence ? 'default' : 'pointer',
-                                '&:hover': leave.is_holiday || leave.is_absence ? {} : { bgcolor: '#f8fafc' },
-                            }}
-                        >
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                                {leave.is_holiday ? (
-                                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                                        <Typography fontWeight={800} noWrap>{leave.title || 'Holiday'}</Typography>
-                                        <Typography variant="caption" color="text.secondary" noWrap display="block">
-                                            Added by: {leave.added_by_name || '-'}
-                                        </Typography>
-                                    </Box>
-                                ) : (
-                                    <>
-                                        <Avatar
-                                            src={leave.user_thumb_image || leave.user_image || '/images/users/user.png'}
-                                            alt={leave.user_name || 'User'} sx={{ width: 36, height: 36 }} />
+                    {sortedLeaves.map((leave, index) => {
+                        const isClickable = !leave.is_holiday && !leave.is_absence;
+                        const leaveDate = parseLeaveDate(leave.start_date ?? leave.date ?? leave.date_formatted);
+                        const href = isClickable
+                            ? getUserDetailsHref(leave.user_id, {
+                                  tab: 'leave',
+                                  leave_start: leaveDate ? format(startOfWeek(leaveDate), 'yyyy-MM-dd') : undefined,
+                                  leave_end: leaveDate ? format(endOfWeek(leaveDate), 'yyyy-MM-dd') : undefined,
+                              })
+                            : undefined;
+
+                        const content = (
+                            <Box
+                                sx={{
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: 2,
+                                    p: 1.5,
+                                    cursor: isClickable ? 'pointer' : 'default',
+                                    '&:hover': isClickable ? { bgcolor: '#f8fafc' } : {},
+                                }}
+                            >
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    {leave.is_holiday ? (
                                         <Box sx={{ minWidth: 0, flex: 1 }}>
-                                            <Typography fontWeight={800} noWrap>{leave.user_name || 'User'}</Typography>
+                                            <Typography fontWeight={800} noWrap>{leave.title || 'Holiday'}</Typography>
                                             <Typography variant="caption" color="text.secondary" noWrap display="block">
-                                                {leave.is_absence ? leave.shift_name || 'Scheduled shift' : leave.leave_name || 'Leave'}
+                                                Added by: {leave.added_by_name || '-'}
                                             </Typography>
                                         </Box>
+                                    ) : (
+                                        <>
+                                            <Avatar
+                                                src={leave.user_thumb_image || leave.user_image || '/images/users/user.png'}
+                                                alt={leave.user_name || 'User'} sx={{ width: 36, height: 36 }} />
+                                            <Box sx={{ minWidth: 0, flex: 1 }}>
+                                                <Typography fontWeight={800} noWrap>{leave.user_name || 'User'}</Typography>
+                                                <Typography variant="caption" color="text.secondary" noWrap display="block">
+                                                    {leave.is_absence ? leave.shift_name || 'Scheduled shift' : leave.leave_name || 'Leave'}
+                                                </Typography>
+                                            </Box>
+                                        </>
+                                    )}
+                                    {leave.is_holiday ? (
+                                        <Chip size="small" label="Holiday" color="primary" variant="outlined" />
+                                    ) : leave.is_absence ? (
+                                        <Chip size="small" label="Absent" color="error" variant="outlined" />
+                                    ) : leave.status_text && (
+                                        <Chip
+                                            size="small"
+                                            label={leave.status_text}
+                                            variant="outlined"
+                                            sx={{
+                                                borderColor: getStatusColor(leave),
+                                                color: getStatusColor(leave),
+                                                textTransform: 'capitalize',
+                                                fontWeight: 700
+                                            }}
+                                        />
+                                    )}
+                                </Stack>
+
+                                <Typography color="text.secondary" fontSize={13} mt={1}>
+                                    {leave.is_holiday ? 'Start date' : 'Date'}: {leave.start_date || leave.leave_date}
+                                    {!leave.is_holiday && leave.end_date && leave.end_date !== leave.start_date ? ` - ${leave.end_date}` : ''}
+                                </Typography>
+                                {leave.is_holiday && (
+                                    <>
+                                        <Typography color="text.secondary" fontSize={13}>
+                                            End date: {leave.end_date || leave.start_date || '-'}
+                                        </Typography>
+                                        <Typography color="text.secondary" fontSize={13}>
+                                            Total days: {leave.total_day || 0}
+                                        </Typography>
                                     </>
                                 )}
-                                {leave.is_holiday ? (
-                                    <Chip size="small" label="Holiday" color="primary" variant="outlined" />
-                                ) : leave.is_absence ? (
-                                    <Chip size="small" label="Absent" color="error" variant="outlined" />
-                                ) : leave.status_text && (
-                                    <Chip
-                                        size="small"
-                                        label={leave.status_text}
-                                        variant="outlined"
-                                        sx={{
-                                            borderColor: getStatusColor(leave),
-                                            color: getStatusColor(leave),
-                                            textTransform: 'capitalize',
-                                            fontWeight: 700
-                                        }}
-                                    />
+                                {(leave.is_absence || !isAllDayLeave(leave)) && (leave.start_time || leave.end_time) && (
+                                    <Typography color="text.secondary" fontSize={13}>
+                                        {leave.is_absence ? 'Shift time' : 'Time'}: {leave.start_time || '-'} - {leave.end_time || '-'}
+                                    </Typography>
                                 )}
-                            </Stack>
+                                {!leave.is_absence && !leave.is_holiday && (
+                                    <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid #eef2f7' }}>
+                                        <Typography color="text.secondary" fontSize={12}>
+                                            Requested: {leave.requested_at || '-'}
+                                            {leave.requested_by_name ? ` by ${leave.requested_by_name}` : ''}
+                                        </Typography>
+                                        {leave.request_note && (
+                                            <Typography color="text.secondary" fontSize={12}>
+                                                Request note: {leave.request_note}
+                                            </Typography>
+                                        )}
+                                        {leave.approved_at && (
+                                            <Typography color="text.secondary" fontSize={12} mt={0.5}>
+                                                Approved: {leave.approved_at}
+                                                {leave.approved_by_name ? ` by ${leave.approved_by_name}` : ''}
+                                            </Typography>
+                                        )}
+                                        {leave.approval_note && (
+                                            <Typography color="text.secondary" fontSize={12}>
+                                                Approval note: {leave.approval_note}
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                )}
+                            </Box>
+                        );
 
-                            <Typography color="text.secondary" fontSize={13} mt={1}>
-                                {leave.is_holiday ? 'Start date' : 'Date'}: {leave.start_date || leave.leave_date}
-                                {!leave.is_holiday && leave.end_date && leave.end_date !== leave.start_date ? ` - ${leave.end_date}` : ''}
-                            </Typography>
-                            {leave.is_holiday && (
-                                <>
-                                    <Typography color="text.secondary" fontSize={13}>
-                                        End date: {leave.end_date || leave.start_date || '-'}
-                                    </Typography>
-                                    <Typography color="text.secondary" fontSize={13}>
-                                        Total days: {leave.total_day || 0}
-                                    </Typography>
-                                </>
-                            )}
-                            {(leave.is_absence || !isAllDayLeave(leave)) && (leave.start_time || leave.end_time) && (
-                                <Typography color="text.secondary" fontSize={13}>
-                                    {leave.is_absence ? 'Shift time' : 'Time'}: {leave.start_time || '-'} - {leave.end_time || '-'}
-                                </Typography>
-                            )}
-                            {!leave.is_absence && !leave.is_holiday && (
-                                <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid #eef2f7' }}>
-                                    <Typography color="text.secondary" fontSize={12}>
-                                        Requested: {leave.requested_at || '-'}
-                                        {leave.requested_by_name ? ` by ${leave.requested_by_name}` : ''}
-                                    </Typography>
-                                    {leave.request_note && (
-                                        <Typography color="text.secondary" fontSize={12}>
-                                            Request note: {leave.request_note}
-                                        </Typography>
-                                    )}
-                                    {leave.approved_at && (
-                                        <Typography color="text.secondary" fontSize={12} mt={0.5}>
-                                            Approved: {leave.approved_at}
-                                            {leave.approved_by_name ? ` by ${leave.approved_by_name}` : ''}
-                                        </Typography>
-                                    )}
-                                    {leave.approval_note && (
-                                        <Typography color="text.secondary" fontSize={12}>
-                                            Approval note: {leave.approval_note}
-                                        </Typography>
-                                    )}
-                                </Box>
-                            )}
-                        </Box>
-                    ))}
+                        if (isClickable && href) {
+                            return (
+                                <Link
+                                    key={`${leave.id || leave.user_leave_id || index}`}
+                                    href={href}
+                                    style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+                                    onClick={() => onClose()}
+                                >
+                                    {content}
+                                </Link>
+                            );
+                        }
+
+                        return (
+                            <Box key={`${leave.id || leave.user_leave_id || index}`}>
+                                {content}
+                            </Box>
+                        );
+                    })}
                 </Stack>
             ) : (
                 <Box sx={{ border: '1px dashed #cbd5e1', borderRadius: 2, p: 3, textAlign: 'center' }}>
@@ -1197,9 +1226,12 @@ const Leaves = () => {
                             sx={{ cursor: 'pointer' }}
                         >
                             <Link
-                                href={getUserDetailsHref(row?.user_id)}
+                                href={getUserDetailsHref(row?.user_id, { tab: 'leave' })}
                                 passHref
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (startDate && endDate) saveDateRangeToStorage(startDate, endDate, columnVisibility);
+                                }}
                             >
                                 <Badge
                                     overlap="circular"
@@ -1233,17 +1265,26 @@ const Leaves = () => {
                                 </Badge>
                             </Link>
                             <Box>
-                                <Typography
-                                    className="f-14"
-                                    color="textPrimary"
-                                    sx={{
-                                        cursor: 'pointer',
-                                        '&:hover': { color: '#173f98' },
-                                        width: 150,
+                                <Link
+                                    href={getUserDetailsHref(row?.user_id, { tab: 'leave' })}
+                                    style={{ textDecoration: 'none', color: 'inherit' }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (startDate && endDate) saveDateRangeToStorage(startDate, endDate, columnVisibility);
                                     }}
                                 >
-                                    {row.user_name}
-                                </Typography>
+                                    <Typography
+                                        className="f-14"
+                                        color="textPrimary"
+                                        sx={{
+                                            cursor: 'pointer',
+                                            '&:hover': { color: '#173f98' },
+                                            width: 150,
+                                        }}
+                                    >
+                                        {row.user_name}
+                                    </Typography>
+                                </Link>
                                 <Tooltip title={row.trade_name ?? '-'} placement="top" arrow>
                                     <Typography sx={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word", }} color="textSecondary" variant="subtitle1" width={150} >
                                         {row.trade_name}
@@ -1546,8 +1587,7 @@ const Leaves = () => {
                                     key={row.id}
                                     onMouseEnter={() => setHoveredRow(row.original.user_id)}
                                     onMouseLeave={() => setHoveredRow(null)}
-                                    onClick={() => openUserLeaveDetails(row.original.user_id)}
-                                    sx={{ cursor: 'pointer', transition: 'background-color 0.2s ease' }}
+                                    sx={{ transition: 'background-color 0.2s ease' }}
                                 >
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell
@@ -1801,16 +1841,29 @@ const Leaves = () => {
                         ) : selectedDateLeaves.length ? (
                             <Stack spacing={1.25} sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.5 }}>
                                 {selectedDateLeaves.map((leave) => (
-                                    <Box
+                                    <Link
                                         key={leave.id}
-                                        onClick={() => openUserLeaveDetails(leave.user_id, leave)}
-                                        sx={{
-                                            p: 1.5,
-                                            borderRadius: 2,
-                                            border: '1px solid #e5e7eb',
-                                            cursor: 'pointer'
+                                        href={getUserDetailsHref(leave.user_id, {
+                                            tab: 'leave',
+                                            leave_start: parseLeaveDate(leave.start_date ?? leave.leave_date) ? format(startOfWeek(parseLeaveDate(leave.start_date ?? leave.leave_date)!), 'yyyy-MM-dd') : undefined,
+                                            leave_end: parseLeaveDate(leave.start_date ?? leave.leave_date) ? format(endOfWeek(parseLeaveDate(leave.start_date ?? leave.leave_date)!), 'yyyy-MM-dd') : undefined,
+                                        })}
+                                        style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+                                        onClick={() => {
+                                            if (startDate && endDate) saveDateRangeToStorage(startDate, endDate, columnVisibility);
                                         }}
                                     >
+                                        <Box
+                                            sx={{
+                                                p: 1.5,
+                                                borderRadius: 2,
+                                                border: '1px solid #e5e7eb',
+                                                cursor: 'pointer',
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(0, 0, 0, 0.02)'
+                                                }
+                                            }}
+                                        >
 
                                         <Stack direction="row" alignItems="center" spacing={1}>
                                             <Avatar
@@ -1853,7 +1906,8 @@ const Leaves = () => {
                                             </Typography>
                                         )}
                                     </Box>
-                                ))}
+                                </Link>
+                            ))}
                             </Stack>
                         ) : (
                             <Box sx={{

@@ -130,11 +130,11 @@ const TablePagination = () => {
 
   const visibleTabs = isReadOnlyUserView
     ? allTabs.filter(
-        (label) =>
-          label === "Activity" ||
-          label === "Payments" ||
-          label === "Billing Info",
-      )
+      (label) =>
+        label === "Activity" ||
+        label === "Payments" ||
+        label === "Billing Info",
+    )
     : allTabs;
 
   const { data: session, update } = useSession();
@@ -314,15 +314,11 @@ const TablePagination = () => {
         account_id: userInfo.account_id || 0,
         date_of_birth: userInfo.date_of_birth
           ? dayjs(userInfo.date_of_birth, ["YYYY-MM-DD", "DD/MM/YYYY"]).format(
-              "YYYY-MM-DD",
-            )
+            "YYYY-MM-DD",
+          )
           : "",
       });
 
-      console.log(
-        userInfo.registered_on,
-        "userInfo.registered_onuserInfo.registered_onuserInfo.registered_onuserInfo.registered_on",
-      );
       setRegisteredOn(userInfo.registered_on ?? "");
       if (ext && number) {
         const combined = ext.replace("+", "") + number;
@@ -524,7 +520,7 @@ const TablePagination = () => {
         setAdminLoading(false);
         const otp = await askOtp(
           res.data.message ||
-            `Please verify OTP from ${res.data.company_created_by_name || "Company Owner"}.`,
+          `Please verify OTP from ${res.data.company_created_by_name || "Company Owner"}.`,
         );
 
         if (otp === null) {
@@ -1172,7 +1168,7 @@ const TablePagination = () => {
               xs: 9,
               lg: 9,
             }}
-            // sx={{ boxShadow: (theme) => theme.shadows[8] }}
+          // sx={{ boxShadow: (theme) => theme.shadows[8] }}
           >
             <BlankCard>
               <Box>
@@ -1213,26 +1209,26 @@ const TablePagination = () => {
                 sx={
                   !canModifyUserDetails
                     ? {
-                        "& fieldset button.MuiButton-root": {
-                          display: "none",
-                        },
-                        "& fieldset .MuiInputBase-root, & fieldset .react-tel-input":
-                          {
-                            cursor: "default",
-                            pointerEvents: "none",
-                          },
-                        "& fieldset .MuiInputBase-input": {
-                          WebkitTextFillColor: "rgba(0, 0, 0, 0.38)",
-                        },
-                        "& fieldset .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(0, 0, 0, 0.23) !important",
-                        },
-                        '& [role="combobox"], & [role="switch"], & .MuiSelect-select':
-                          {
-                            cursor: "default",
-                            pointerEvents: "none",
-                          },
-                      }
+                      "& fieldset button.MuiButton-root": {
+                        display: "none",
+                      },
+                      "& fieldset .MuiInputBase-root, & fieldset .react-tel-input":
+                      {
+                        cursor: "default",
+                        pointerEvents: "none",
+                      },
+                      "& fieldset .MuiInputBase-input": {
+                        WebkitTextFillColor: "rgba(0, 0, 0, 0.38)",
+                      },
+                      "& fieldset .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "rgba(0, 0, 0, 0.23) !important",
+                      },
+                      '& [role="combobox"], & [role="switch"], & .MuiSelect-select':
+                      {
+                        cursor: "default",
+                        pointerEvents: "none",
+                      },
+                    }
                     : undefined
                 }
               >
