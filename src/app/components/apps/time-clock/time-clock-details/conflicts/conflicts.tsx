@@ -51,7 +51,8 @@ export type ConflictType =
     | 'cut-delete'
     | 'split-delete'
     | 'delete-only'
-    | 'billing_info';
+    | 'billing_info'
+    | 'duplicate_account_id';
 
 const formatFieldLabel = (key: string): string => {
     return key
@@ -91,6 +92,10 @@ export const calcDiffHM = (start: DateTime, end: DateTime): string => {
 };
 
 export const getConflictType = (items: ConflictItem[]): ConflictType => {
+    if (items.some((item) => item.conflict_type === 'duplicate_account_id')) {
+        return 'duplicate_account_id';
+    }
+
     if (items.some((item) => item.conflict_type === 'billing_info')) {
         return 'billing_info';
     }
@@ -155,6 +160,13 @@ const ConflictCaseRenderer = React.memo(({conflict, index, startDate, endDate, o
         const commonProps = {conflict, index, onClose, startDate, endDate};
 
         switch (conflictType) {
+            case 'duplicate_account_id':
+                return (
+                    <AccountIdConflictCase
+                        conflict={conflict}
+                        onClose={onClose}
+                    />
+                );
             case 'billing_info':
                 return (
                     <BillingConflictCase
@@ -181,11 +193,11 @@ const ConflictItemDisplay = React.memo(
     ({items}: { items: ConflictItem[] }) => (
         <Box sx={{mb: 2}}>
             {items.map((item, i) => {
-                const isBillingConflict = items.some(
-                    (i) => i.conflict_type === 'billing_info',
+                const isDataConflict = items.some(
+                    (i) => i.conflict_type === 'billing_info' || i.conflict_type === 'duplicate_account_id',
                 );
 
-                const displayName = isBillingConflict ? (
+                const displayName = isDataConflict ? (
                     <Box width="100%" mt={1} p={1}>
                         {/* MESSAGE */}
                         {item.message && (
@@ -243,7 +255,7 @@ const ConflictItemDisplay = React.memo(
                                             textTransform: 'none',
                                         }}
                                     >
-                                      {oldValue ? "Old: " :""}  {String(oldValue ?? '')}
+                                      {oldValue ? (item.conflict_type === 'duplicate_account_id' ? "" : "Old: ") : ""}  {String(oldValue ?? '')}
                                     </Typography>
                                     )}
                                     
@@ -395,6 +407,56 @@ const BillingConflictCase = ({
                     Discard
                 </Button>
             )}
+        </Box>
+    );
+};
+
+const AccountIdConflictCase = ({ conflict, onClose }: { conflict: Conflict; onClose: () => void; }) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const item = conflict.items[0] as any;
+
+    const handleAction = async (action: 'approve' | 'resolve') => {
+        setIsLoading(true);
+        try {
+            const userIds = item.all_users.map((u: any) => u.user_id);
+            const res = await api.post("/user/resolve-account-id-conflict", {
+                user_ids: userIds,
+                account_id: item.account_id,
+                action: action
+            });
+
+            if (res.data.IsSuccess) {
+                toast.success(res.data.message || "Conflict resolved successfully");
+                onClose();
+            } else {
+                toast.error(res.data.message || "Failed to resolve conflict");
+            }
+        } catch (error: any) {
+            toast.error("Something went wrong while resolving conflict");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Box sx={{mt: 1, display: 'flex', gap: 1}}>
+            <Button
+                variant="contained"
+                color="primary"
+                disabled={isLoading}
+                onClick={() => handleAction('approve')}
+            >
+                {isLoading ? "Approving..." : "Approve"}
+            </Button>
+
+            <Button
+                variant="outlined"
+                color="error"
+                disabled={isLoading}
+                onClick={() => handleAction('resolve')}
+            >
+                Resolve Conflict
+            </Button>
         </Box>
     );
 };

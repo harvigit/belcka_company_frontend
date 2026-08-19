@@ -14,6 +14,7 @@ export type InvoiceRow = {
   project: string;
   projectManual?: string | null;
   address_id?: number;
+  addressManual?: string | null;
   deliveryAddress: string;
   ordered_by?: number;
   orderedBy: string;
@@ -63,6 +64,7 @@ export const mapInvoiceApiRow = (row: any): InvoiceRow => {
     project: row.project || row.project_manual || "-",
     projectManual: row.project_manual || null,
     address_id: row.address_id,
+    addressManual: row.address_manual || null,
     deliveryAddress: row.delivery_address || "-",
     ordered_by: row.ordered_by,
     orderedBy: row.ordered_by_name || "-",

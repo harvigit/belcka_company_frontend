@@ -3507,14 +3507,14 @@ const TimeClock = ({queryParams}: Props) => {
                     conflictDetails={
                         selectedConflictUserId
                             ? conflictDetails.filter(
-                                (conflict) => conflict.user_id === selectedConflictUserId
+                                (conflict: any) => conflict.user_id === selectedConflictUserId
                             )
                             : conflictDetails
                     }
                     totalConflicts={
                         selectedConflictUserId
                             ? conflictDetails.filter(
-                                (conflict) => conflict.user_id === selectedConflictUserId
+                                (conflict: any) => conflict.user_id === selectedConflictUserId
                             ).length
                             : totalConflictsCount
                     }

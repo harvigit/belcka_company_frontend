@@ -35,6 +35,7 @@ const emptyForm = {
   project_id: null as number | null,
   project_manual: "",
   address_id: null as number | null,
+  address_manual: "",
   ordered_by: null as number | null,
   supplier_id: null as number | null,
   invoice_id: "",
@@ -195,13 +196,8 @@ const CreateInvoice = ({
   const isEdit = mode === "edit";
 
   const filteredAddresses = useMemo(() => {
-    if (formData.project_id) {
-      return addresses.filter((a) => a.project_id === formData.project_id);
-    }
-    // Custom project: allow any company address
-    if (formData.project_manual.trim()) return addresses;
     return addresses;
-  }, [addresses, formData.project_id, formData.project_manual]);
+  }, [addresses]);
 
   const loadResources = useCallback(async () => {
     if (!companyId) return;
@@ -211,7 +207,7 @@ const CreateInvoice = ({
       );
       if (res.data?.IsSuccess) {
         setProjects(res.data.info?.projects || []);
-        setAddresses(res.data.info?.addresses || []);
+        setAddresses(res.data.info?.parentAddresses || []);
         setOrderedByOptions(res.data.info?.ordered_by || []);
         setSuppliers(res.data.info?.suppliers || []);
       }
@@ -234,6 +230,9 @@ const CreateInvoice = ({
             (invoice.project !== "-" ? invoice.project : "") ||
             "",
         address_id: invoice.address_id ?? null,
+        address_manual: invoice.address_id
+          ? ""
+          : invoice.addressManual || (invoice.deliveryAddress !== "-" ? invoice.deliveryAddress : "") || "",
         ordered_by: invoice.ordered_by ?? null,
         supplier_id: invoice.supplier_id ?? null,
         invoice_id: invoice.invoiceId || "",
@@ -375,7 +374,9 @@ const CreateInvoice = ({
     if (!formData.project_id && !formData.project_manual.trim()) {
       return "Project is required!";
     }
-    if (!formData.address_id) return "Address is required!";
+    if (!formData.address_id && !formData.address_manual.trim()) {
+      return "Address is required!";
+    }
     if (!formData.ordered_by) return "Ordered by is required!";
     if (!formData.supplier_id) return "Supplier is required!";
 
@@ -430,7 +431,11 @@ const CreateInvoice = ({
       } else {
         fd.append("project_manual", formData.project_manual.trim());
       }
-      fd.append("address_id", String(formData.address_id));
+      if (formData.address_id) {
+        fd.append("address_id", String(formData.address_id));
+      } else {
+        fd.append("address_manual", formData.address_manual.trim());
+      }
       fd.append("ordered_by", String(formData.ordered_by));
       fd.append("supplier_id", String(formData.supplier_id));
       fd.append("invoice_id", formData.invoice_id.trim());
@@ -528,6 +533,19 @@ const CreateInvoice = ({
           className="task-form"
           onKeyDown={(e) => {
             if (e.key === "Enter") e.preventDefault();
+          }}
+          onPaste={(e) => {
+            const items = e.clipboardData?.files;
+            if (items && items.length > 0) {
+              const validFiles = Array.from(items).filter(
+                (f) =>
+                  f.type.startsWith("image/") || f.type === "application/pdf"
+              );
+              if (validFiles.length > 0) {
+                e.preventDefault();
+                addFiles(validFiles);
+              }
+            }
           }}
         >
           <Box sx={CARD_SX}>
@@ -642,23 +660,67 @@ const CreateInvoice = ({
                 <FieldLabel required>Address</FieldLabel>
                 <Autocomplete
                   fullWidth
+                  freeSolo
                   options={filteredAddresses}
                   value={
-                    filteredAddresses.find(
-                      (a) => a.id === formData.address_id,
-                    ) || null
+                    formData.address_id
+                      ? filteredAddresses.find((a) => a.id === formData.address_id) || null
+                      : formData.address_manual || null
                   }
-                  getOptionLabel={(o) => o.name}
-                  getOptionKey={(o) => String(o.id)}
-                  isOptionEqualToValue={(a, b) => a.id === b.id}
-                  onChange={(_, value) =>
+                  getOptionLabel={(o) =>
+                    typeof o === "string" ? o : o.name || ""
+                  }
+                  getOptionKey={(o) =>
+                    typeof o === "string" ? o : String(o.id)
+                  }
+                  isOptionEqualToValue={(a, b) => {
+                    if (typeof a === "string" || typeof b === "string") {
+                      return (
+                        (typeof a === "string" ? a : a.name) ===
+                        (typeof b === "string" ? b : b.name)
+                      );
+                    }
+                    return a.id === b.id;
+                  }}
+                  onChange={(_, value) => {
+                    if (typeof value === "string") {
+                      const match = filteredAddresses.find(
+                        (a) => a.name.toLowerCase() === value.trim().toLowerCase(),
+                      );
+                      setFormData((prev) => ({
+                        ...prev,
+                        address_id: match?.id ?? null,
+                        address_manual: match ? "" : value,
+                      }));
+                      return;
+                    }
+                    if (value && typeof value === "object") {
+                      setFormData((prev) => ({
+                        ...prev,
+                        address_id: value.id,
+                        address_manual: "",
+                      }));
+                      return;
+                    }
                     setFormData((prev) => ({
                       ...prev,
-                      address_id: value?.id ?? null,
-                    }))
-                  }
+                      address_id: null,
+                      address_manual: "",
+                    }));
+                  }}
+                  onInputChange={(_, value, reason) => {
+                    if (reason !== "input") return;
+                    const match = filteredAddresses.find(
+                      (a) => a.name.toLowerCase() === value.trim().toLowerCase(),
+                    );
+                    setFormData((prev) => ({
+                      ...prev,
+                      address_id: match?.id ?? null,
+                      address_manual: match ? "" : value,
+                    }));
+                  }}
                   renderInput={(params) => (
-                    <CustomTextField {...params} placeholder="Select address" />
+                    <CustomTextField {...params} placeholder="Select or type address" />
                   )}
                 />
               </Box>
@@ -918,7 +980,7 @@ const CreateInvoice = ({
                     }}
                   />
                   <Typography color="text.secondary">
-                    Drag & drop or paste images
+                    Drag & drop or paste images & PDFs
                   </Typography>
                 </Box>
               </Box>

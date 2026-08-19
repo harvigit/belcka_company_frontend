@@ -22,8 +22,8 @@ export interface TaskFormData {
   id: number;
   company_id: any;
   trade_id?: number | null;
-  category_id?: number | null;
-  sub_category_id?: number | null;
+  category_id?: number | string | null;
+  sub_category_id?: number | string | null;
   shift_id?: number | null;
   duration?: string;
   project?: string;
@@ -192,7 +192,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
 
   useEffect(() => {
     fetchResources();
-  }, [api]);
+  }, [open]);
 
   const galleryDropzone = useDropzone({
     accept: { "image/*": [], "application/pdf": [".pdf"] },
@@ -333,19 +333,31 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                     </Typography>
 
                     <Autocomplete
+                      freeSolo
                       options={categories}
-                      getOptionLabel={(option) => option.name}
+                      getOptionLabel={(option) => typeof option === "string" ? option : option.name}
                       value={
                         categories.find(
                           (item) => item.id === formData.category_id,
-                        ) ?? null
+                        ) ?? (formData.category_id || null)
                       }
-                      onChange={(_, value) =>
+                      onChange={(_, value) => {
+                        const val = typeof value === "string" ? value : (value?.id ?? null);
                         setFormData((prev) => ({
                           ...prev,
-                          category_id: value?.id ?? null,
-                        }))
-                      }
+                          category_id: val,
+                          sub_category_id: null, // Reset sub category when category changes
+                        }));
+                      }}
+                      onInputChange={(_, newInputValue, reason) => {
+                        if (reason === "input" || reason === "clear") {
+                          setFormData((prev) => ({
+                            ...prev,
+                            category_id: newInputValue || null,
+                            sub_category_id: null,
+                          }));
+                        }
+                      }}
                       renderInput={(params) => (
                         <TextField {...params} placeholder="Select Category" />
                       )}
@@ -365,20 +377,29 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                       </Typography>
 
                       <Autocomplete
-                        options={subCategories}
-                        getOptionLabel={(option) => option.name}
-                        getOptionKey={(option) => option.id}
+                        freeSolo
+                        options={subCategories.filter((sc) => sc.category_id === formData.category_id)}
+                        getOptionLabel={(option) => typeof option === "string" ? option : option.name}
                         value={
                           subCategories.find(
                             (item) => item.id === formData.sub_category_id,
-                          ) ?? null
+                          ) ?? (formData.sub_category_id || null)
                         }
-                        onChange={(_, value) =>
+                        onChange={(_, value) => {
+                          const val = typeof value === "string" ? value : (value?.id ?? null);
                           setFormData((prev) => ({
                             ...prev,
-                            sub_category_id: value?.id ?? null,
-                          }))
-                        }
+                            sub_category_id: val,
+                          }));
+                        }}
+                        onInputChange={(_, newInputValue, reason) => {
+                          if (reason === "input" || reason === "clear") {
+                            setFormData((prev) => ({
+                              ...prev,
+                              sub_category_id: newInputValue || null,
+                            }));
+                          }
+                        }}
                         renderInput={(params) => (
                           <TextField
                             {...params}
