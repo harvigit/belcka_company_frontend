@@ -133,6 +133,9 @@ const EditFieldRow = ({label, children, alignItems = 'center'}: { label: string;
 const ActivityLogItem = ({item}: { item: ExpenseActivityLog }) => {
     const expenseUserName = item.expense_user_name || 'Expense user';
     const actionUserName = item.action_user_name || 'System';
+    const rejectNote = typeof item.new_data?.reject_note === 'string'
+        ? item.new_data.reject_note.trim()
+        : '';
 
     return (
         <Stack direction="row" spacing={1.5} alignItems="flex-start">
@@ -150,6 +153,11 @@ const ActivityLogItem = ({item}: { item: ExpenseActivityLog }) => {
                 <Typography sx={{fontSize: 12, color: 'text.secondary', mt: 0.25}}>
                     Action by: {actionUserName}
                 </Typography>
+                {rejectNote && (
+                    <Typography sx={{fontSize: 12, color: 'text.secondary', mt: 0.5}}>
+                        Note: {rejectNote}
+                    </Typography>
+                )}
             </Box>
         </Stack>
     );

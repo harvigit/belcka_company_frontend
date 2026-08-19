@@ -21,6 +21,12 @@ import toast from 'react-hot-toast';
 type Resource = { id: number; name: string };
 type ProjectResource = Resource & { team_ids?: number[] };
 type Address = Resource & { project_id: number };
+type SubCategoryResource = Resource & { category_id: number; task_id: number };
+type CategoryResource = Resource & {
+    task_id?: number;
+    is_sub_category?: boolean;
+    sub_categories?: SubCategoryResource[];
+};
 type ExistingAttachment = { id: number; image?: string; image_url?: string; url?: string };
 type NewAttachment = { file: File; previewUrl: string };
 
@@ -105,12 +111,14 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [teams, setTeams] = useState<Resource[]>([]);
     const [units, setUnits] = useState<Resource[]>([]);
+    const [categories, setCategories] = useState<CategoryResource[]>([]);
     const [selectedUser, setSelectedUser] = useState(userId ? String(userId) : '');
     const [projectId, setProjectId] = useState(pricework?.project_id ? String(pricework.project_id) : '');
     const [addressId, setAddressId] = useState(pricework?.address_id ? String(pricework.address_id) : '');
     const [teamId, setTeamId] = useState(pricework?.team_id ? String(pricework.team_id) : '');
     const [unitId, setUnitId] = useState(pricework?.unit_id ? String(pricework.unit_id) : '');
-    const [workType, setWorkType] = useState(pricework?.work_type || '');
+    const [categoryId, setCategoryId] = useState(pricework?.category_id ? String(pricework.category_id) : '');
+    const [subCategoryId, setSubCategoryId] = useState(pricework?.sub_category_id ? String(pricework.sub_category_id) : '');
     const [priceworkDate, setPriceworkDate] = useState(
         normalizeDateDisplayValue(pricework?.pricework_date || pricework?.date_added) || formatDisplayDate(new Date()),
     );
@@ -224,6 +232,7 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
                 setAddresses(resourceResponse.data?.addresses || []);
                 setTeams(resourceResponse.data?.teams || []);
                 setUnits(resourceResponse.data?.units || []);
+                setCategories(resourceResponse.data?.categories || []);
                 if (selectUser) setUsers(userResponse?.data?.info || []);
             } catch (resourceError: any) {
                 setError(resourceError?.response?.data?.message || 'Failed to load pricework resources.');
@@ -240,6 +249,11 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             normalizeDateDisplayValue(pricework?.pricework_date || pricework?.date_added) || formatDisplayDate(new Date()),
         );
     }, [pricework?.pricework_id, pricework?.pricework_date, pricework?.date_added]);
+
+    useEffect(() => {
+        setCategoryId(pricework?.category_id ? String(pricework.category_id) : '');
+        setSubCategoryId(pricework?.sub_category_id ? String(pricework.sub_category_id) : '');
+    }, [pricework?.pricework_id, pricework?.category_id, pricework?.sub_category_id]);
 
     const totalAmount = useMemo(() => {
         const amount = Number(amountPerUnit);
@@ -258,13 +272,31 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
         return teams.filter((team) => projectTeamIds.includes(team.id));
     }, [projectId, projects, teams]);
 
+    const selectedCategory = useMemo(
+        () => categories.find((category) => category.id === Number(categoryId)) ?? null,
+        [categories, categoryId],
+    );
+
+    const selectedSubCategory = useMemo(
+        () => selectedCategory?.sub_categories?.find((subCategory) => subCategory.id === Number(subCategoryId)) ?? null,
+        [selectedCategory, subCategoryId],
+    );
+
+    const selectedTaskId = selectedSubCategory?.task_id ?? selectedCategory?.task_id ?? null;
+
+    const selectedWorkTypeLabel = useMemo(() => {
+        if (!selectedCategory) return '';
+        return selectedSubCategory ? `${selectedCategory.name} - ${selectedSubCategory.name}` : selectedCategory.name;
+    }, [selectedCategory, selectedSubCategory]);
+
     const handleSubmit = async () => {
         const targetUserId = selectUser ? Number(selectedUser) : Number(userId);
         if (!targetUserId) return setError('User is required.');
         if (!projectId) return setError('Project is required.');
         if (!addressId) return setError('Address is required.');
         if (!teamId) return setError('Team is required.');
-        if (!workType.trim()) return setError('Work type is required.');
+        if (!categoryId) return setError('Category is required.');
+        if (!selectedTaskId) return setError('Please select a valid category/subcategory.');
         if (!priceworkDate) return setError('Pricework date is required.');
         if (!isValidDisplayDate(priceworkDate)) return setError('Pricework date must be in dd/MM/yyyy format.');
         if (!unitId) return setError('Unit is required.');
@@ -285,7 +317,10 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             payload.append('address_id', addressId);
             payload.append('team_id', teamId);
             payload.append('note', note.trim());
-            payload.append('work_type', workType.trim());
+            payload.append('task_id', String(selectedTaskId));
+            payload.append('category_id', categoryId);
+            if (subCategoryId) payload.append('sub_category_id', subCategoryId);
+            payload.append('work_type', selectedWorkTypeLabel);
             payload.append('pricework_date', priceworkDate);
             payload.append('unit_id', unitId);
             payload.append('amount_per_unit', amountPerUnit);
@@ -459,28 +494,46 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
                             />
                         </Box>
 
-                        <Box>
-                            {fieldLabel('Work Type')}
-                            <TextField
-                                fullWidth
+                        <FormControl fullWidth>
+                            {fieldLabel('Category')}
+                            <Select
                                 size="small"
-                                value={workType}
-                                onChange={(event) => setWorkType(event.target.value)}
-                                placeholder="e.g. Door Installation"
-                                inputProps={{
-                                    inputMode: 'decimal',
-                                    style: {textAlign: 'left'},
+                                value={categoryId}
+                                onChange={(event) => {
+                                    setCategoryId(event.target.value);
+                                    setSubCategoryId('');
                                 }}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        '& fieldset': {borderColor: '#e0e0e0'},
-                                        '&:hover fieldset': {borderColor: '#bbb'},
-                                        '&.Mui-focused fieldset': {borderColor: '#50ABFF'},
-                                    },
-                                    '& .MuiInputBase-input': {textAlign: 'left'},
-                                }}
-                            />
-                        </Box>
+                                displayEmpty
+                                sx={selectSx}
+                                MenuProps={selectMenuProps}
+                            >
+                                <MenuItem value="" disabled>Select category</MenuItem>
+                                {categories.map((category) =>
+                                    <MenuItem key={category.id} value={String(category.id)}>{category.name}</MenuItem>
+                                )}
+                            </Select>
+                        </FormControl>
+
+                        <FormControl fullWidth disabled={!selectedCategory || !selectedCategory.sub_categories?.length}>
+                            {fieldLabel('Sub Category')}
+                            <Select
+                                size="small"
+                                value={subCategoryId}
+                                onChange={(event) => setSubCategoryId(event.target.value)}
+                                displayEmpty
+                                sx={selectSx}
+                                MenuProps={selectMenuProps}
+                            >
+                                <MenuItem value="">
+                                    {selectedCategory?.sub_categories?.length ? 'Select sub category' : 'Select category first'}
+                                </MenuItem>
+                                {(selectedCategory?.sub_categories ?? []).map((subCategory) =>
+                                    <MenuItem key={`${subCategory.id}-${subCategory.task_id}`} value={String(subCategory.id)}>
+                                        {subCategory.name}
+                                    </MenuItem>
+                                )}
+                            </Select>
+                        </FormControl>
 
                         <FormControl fullWidth>
                             {fieldLabel('Unit')}

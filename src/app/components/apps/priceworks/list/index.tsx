@@ -10,6 +10,7 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    Drawer,
     FormControlLabel,
     FormGroup,
     IconButton,
@@ -57,6 +58,7 @@ import SkeletonLoader from '@/app/components/SkeletonLoader';
 import PriceworkStatusBadge from './components/PriceworkStatusBadge';
 import PriceworkDetailsDrawer from './components/PriceworkDetailsDrawer';
 import PriceworkAttachmentsDrawer from './components/PriceworkAttachmentsDrawer';
+import AddPricework from '@/app/components/apps/time-clock/time-clock-details/pricework/add-pricework';
 import {
     PriceworkApiRow,
     PriceworkTabItem,
@@ -74,7 +76,8 @@ const COLUMN_LABELS: Record<string, string> = {
     address_name: 'Address',
     team_name: 'Team',
     pricework_date: 'Pricework Date',
-    work_type: 'Work Type',
+    category_name: 'Category',
+    sub_category_name: 'Sub Category',
     unit_name: 'Unit',
     amount_per_unit: 'Amount Per Unit',
     work_complete: 'Work Complete',
@@ -135,6 +138,8 @@ const PriceworkList = () => {
     });
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [detailsPricework, setDetailsPricework] = useState<PriceworkRow | null>(null);
+    const [editOpen, setEditOpen] = useState(false);
+    const [editPricework, setEditPricework] = useState<any>(null);
     const [attachmentsOpen, setAttachmentsOpen] = useState(false);
     const [attachmentsPriceworkId, setAttachmentsPriceworkId] = useState<number | null>(null);
     const [sendDateDialogOpen, setSendDateDialogOpen] = useState(false);
@@ -164,9 +169,30 @@ const PriceworkList = () => {
         setDetailsOpen(true);
     };
 
+    const isStandalonePriceworkRow = (row: PriceworkRow) => row.record_type !== 'timesheet_light';
+
     const closePriceworkDetails = () => {
         setDetailsOpen(false);
         setDetailsPricework(null);
+    };
+
+    const openEditPricework = (pricework: any) => {
+        if (!pricework?.id) return;
+        setEditPricework({
+            ...pricework,
+            pricework_id: pricework.pricework_id ?? pricework.id,
+        });
+        setDetailsOpen(false);
+        setEditOpen(true);
+    };
+
+    const closeEditPricework = async () => {
+        setEditOpen(false);
+        setEditPricework(null);
+    };
+
+    const refreshAfterEditPricework = async () => {
+        await fetchPriceworks();
     };
 
     const openPriceworkAttachments = (priceworkId: number) => {
@@ -240,16 +266,40 @@ const PriceworkList = () => {
         '£';
 
     const getActionPriceworkIds = () => {
-        if (isSelectAll) return data.map((item) => item.id);
-        return Array.from(selectedRowIds);
+        if (isSelectAll) return data.filter(isStandalonePriceworkRow).map((item) => item.id);
+        return data
+            .filter((item) => selectedRowIds.has(item.id) && isStandalonePriceworkRow(item))
+            .map((item) => item.id);
+    };
+
+    const getActionTimesheetLightIds = () => {
+        if (isSelectAll) {
+            return data
+                .filter((item) => item.record_type === 'timesheet_light' && item.timesheet_light_id)
+                .map((item) => Number(item.timesheet_light_id));
+        }
+        return data
+            .filter((item) => selectedRowIds.has(item.id) && item.record_type === 'timesheet_light' && item.timesheet_light_id)
+            .map((item) => Number(item.timesheet_light_id));
     };
 
     const getApprovedActionPriceworkIds = () => {
         const selectedIds = getActionPriceworkIds();
         const selectedIdSet = new Set(selectedIds);
         return data
-            .filter((item) => selectedIdSet.has(item.id) && normalizePriceworkStatus(item.status) === 'approved')
+            .filter((item) => selectedIdSet.has(item.id) && isStandalonePriceworkRow(item) && normalizePriceworkStatus(item.status) === 'approved')
             .map((item) => item.id);
+    };
+
+    const getApprovedActionTimesheetLightIds = () => {
+        const selectedRowIdSet = isSelectAll ? null : selectedRowIds;
+        return data
+            .filter((item) => {
+                if (item.record_type !== 'timesheet_light' || !item.timesheet_light_id) return false;
+                if (!isSelectAll && !selectedRowIdSet?.has(item.id)) return false;
+                return normalizePriceworkStatus(item.status) === 'approved';
+            })
+            .map((item) => Number(item.timesheet_light_id));
     };
 
     const refreshAfterAction = async () => {
@@ -258,14 +308,14 @@ const PriceworkList = () => {
         await fetchPriceworks();
     };
 
-    const handleApprovePriceworks = async (ids: number[]) => {
-        if (ids.length === 0) {
+    const handleApprovePriceworks = async (ids: number[], timesheetLightIds: number[] = []) => {
+        if (ids.length === 0 && timesheetLightIds.length === 0) {
             toast.error('Please select at least one pricework');
             return;
         }
 
         try {
-            const res = await api.post('pricework/approve', {ids});
+            const res = await api.post('pricework/approve', {ids, timesheet_light_ids: timesheetLightIds});
             toast.success(res.data?.message || 'Pricework approved successfully');
             await refreshAfterAction();
         } catch (error: any) {
@@ -273,14 +323,14 @@ const PriceworkList = () => {
         }
     };
 
-    const handleRejectPriceworks = async (ids: number[]) => {
-        if (ids.length === 0) {
+    const handleRejectPriceworks = async (ids: number[], timesheetLightIds: number[] = []) => {
+        if (ids.length === 0 && timesheetLightIds.length === 0) {
             toast.error('Please select at least one pricework');
             return;
         }
 
         try {
-            const res = await api.post('pricework/reject', {ids});
+            const res = await api.post('pricework/reject', {ids, timesheet_light_ids: timesheetLightIds});
             toast.success(res.data?.message || 'Pricework rejected successfully');
             await refreshAfterAction();
         } catch (error: any) {
@@ -289,9 +339,10 @@ const PriceworkList = () => {
     };
 
     const openSendDateDialog = () => {
-        const ids = getActionPriceworkIds();
-        if (ids.length === 0) {
-            toast.error('Please select at least one pricework');
+        const ids = getApprovedActionPriceworkIds();
+        const timesheetLightIds = getApprovedActionTimesheetLightIds();
+        if (ids.length === 0 && timesheetLightIds.length === 0) {
+            toast.error('Please select at least one approved pricework');
             return;
         }
         setSendDate(format(new Date(), 'yyyy-MM-dd'));
@@ -300,7 +351,8 @@ const PriceworkList = () => {
 
     const handleSendToBookkeeper = async () => {
         const ids = getApprovedActionPriceworkIds();
-        if (ids.length === 0) {
+        const timesheetLightIds = getApprovedActionTimesheetLightIds();
+        if (ids.length === 0 && timesheetLightIds.length === 0) {
             toast.error('Please select at least one approved pricework');
             return;
         }
@@ -308,6 +360,7 @@ const PriceworkList = () => {
         try {
             const res = await api.post('pricework/send-to-bookkeeper', {
                 ids,
+                timesheet_light_ids: timesheetLightIds,
                 send_date: sendDate,
             });
             toast.success(res.data?.message || 'Pricework sent to bookkeeper successfully');
@@ -486,11 +539,43 @@ const PriceworkList = () => {
                 ),
                 enableSorting: true,
             }),
-            columnHelper.accessor('work_type', {
-                id: 'work_type',
-                header: () => 'Work Type',
+            columnHelper.accessor('category_name', {
+                id: 'category_name',
+                header: () => 'Category',
                 cell: (info) => (
-                    <Typography className="f-14">{info.getValue() || '—'}</Typography>
+                    <Tooltip title={info.getValue() || ''}>
+                        <Typography
+                            className="f-14"
+                            sx={{
+                                maxWidth: 150,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            {info.getValue() || '—'}
+                        </Typography>
+                    </Tooltip>
+                ),
+                enableSorting: false,
+            }),
+            columnHelper.accessor('sub_category_name', {
+                id: 'sub_category_name',
+                header: () => 'Sub Category',
+                cell: (info) => (
+                    <Tooltip title={info.getValue() || ''}>
+                        <Typography
+                            className="f-14"
+                            sx={{
+                                maxWidth: 150,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            {info.getValue() || '—'}
+                        </Typography>
+                    </Tooltip>
                 ),
                 enableSorting: false,
             }),
@@ -1226,7 +1311,7 @@ const PriceworkList = () => {
                                 variant="outlined"
                                 color="success"
                                 size="small"
-                                onClick={() => handleApprovePriceworks(getActionPriceworkIds())}
+                                onClick={() => handleApprovePriceworks(getActionPriceworkIds(), getActionTimesheetLightIds())}
                                 sx={BULK_BUTTON_SX}
                             >
                                 Approve Selected
@@ -1237,7 +1322,7 @@ const PriceworkList = () => {
                                 variant="outlined"
                                 color="error"
                                 size="small"
-                                onClick={() => handleRejectPriceworks(getActionPriceworkIds())}
+                                onClick={() => handleRejectPriceworks(getActionPriceworkIds(), getActionTimesheetLightIds())}
                                 sx={BULK_BUTTON_SX}
                             >
                                 Reject Selected
@@ -1458,8 +1543,23 @@ const PriceworkList = () => {
                 onViewAttachments={(id) => {
                     openPriceworkAttachments(id);
                 }}
-                onApprove={(id) => handleApprovePriceworks([id])}
-                onReject={(id) => handleRejectPriceworks([id])}
+                onEdit={openEditPricework}
+                onApprove={(id) => {
+                    const row = detailsPricework;
+                    if (row?.record_type === 'timesheet_light' && row.timesheet_light_id) {
+                        void handleApprovePriceworks([], [Number(row.timesheet_light_id)]);
+                        return;
+                    }
+                    void handleApprovePriceworks([id]);
+                }}
+                onReject={(id) => {
+                    const row = detailsPricework;
+                    if (row?.record_type === 'timesheet_light' && row.timesheet_light_id) {
+                        void handleRejectPriceworks([], [Number(row.timesheet_light_id)]);
+                        return;
+                    }
+                    void handleRejectPriceworks([id]);
+                }}
             />
 
             <PriceworkAttachmentsDrawer
@@ -1467,6 +1567,29 @@ const PriceworkList = () => {
                 priceworkId={attachmentsPriceworkId}
                 onClose={closePriceworkAttachments}
             />
+
+            <Drawer
+                anchor="right"
+                open={editOpen}
+                onClose={closeEditPricework}
+                PaperProps={{
+                    sx: {
+                        width: {xs: '100%', sm: 520},
+                        maxWidth: '100%',
+                    },
+                }}
+            >
+                {editPricework && (
+                    <AddPricework
+                        onClose={closeEditPricework}
+                        userId={editPricework.user_id ?? undefined}
+                        companyId={Number(user?.company_id || 0)}
+                        selectUser
+                        onDataRefresh={refreshAfterEditPricework}
+                        pricework={editPricework}
+                    />
+                )}
+            </Drawer>
         </Box>
     );
 };

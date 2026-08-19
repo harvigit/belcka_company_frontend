@@ -32,6 +32,8 @@ export type PriceworkActivityLog = {
 
 export type PriceworkApiRow = {
     id: number;
+    record_type?: 'pricework' | 'timesheet_light' | string | null;
+    timesheet_light_id?: number | null;
     user_id?: number | null;
     user_name?: string | null;
     user_image?: string | null;
@@ -44,6 +46,11 @@ export type PriceworkApiRow = {
     address_name?: string | null;
     team_id?: number | null;
     team_name?: string | null;
+    task_id?: number | null;
+    category_id?: number | null;
+    category_name?: string | null;
+    sub_category_id?: number | null;
+    sub_category_name?: string | null;
     unit_id?: number | null;
     unit_name?: string | null;
     work_type?: string | null;

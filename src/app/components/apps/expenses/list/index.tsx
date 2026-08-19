@@ -59,7 +59,7 @@ import TablePaginationFooter from '@/app/components/common/TablePaginationFooter
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
-import Expenses from '@/app/components/apps/time-clock/time-clock-details/expenses';
+import ExpenseAttachmentsDrawer from './components/ExpenseAttachmentsDrawer';
 import {
     ExpenseApiRow,
     ExpenseListItem,
@@ -272,6 +272,10 @@ const ExpenseList = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [unapproveDialogOpen, setUnapproveDialogOpen] = useState(false);
     const [isUnapproving, setIsUnapproving] = useState(false);
+    const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+    const [rejectExpenseIds, setRejectExpenseIds] = useState<number[]>([]);
+    const [rejectNote, setRejectNote] = useState('');
+    const [isRejecting, setIsRejecting] = useState(false);
     const [preferencesHydrated, setPreferencesHydrated] = useState(false);
     const loadedFilterCompanyIdRef = useRef<number | null>(null);
     const openExpenseDetail = (expenseId: number) => {
@@ -893,19 +897,51 @@ const ExpenseList = () => {
         }
     };
 
-    const handleRejectExpenses = async (ids: number[]) => {
+    const openRejectDialog = (ids: number[]) => {
         if (ids.length === 0) {
             toast.error('Please select at least one expense');
             return;
         }
 
+        setRejectExpenseIds(ids);
+        setRejectNote('');
+        setRejectDialogOpen(true);
+    };
+
+    const closeRejectDialog = () => {
+        if (isRejecting) return;
+        setRejectDialogOpen(false);
+        setRejectExpenseIds([]);
+        setRejectNote('');
+    };
+
+    const handleRejectExpenses = async (ids: number[], note?: string) => {
+        if (ids.length === 0) {
+            toast.error('Please select at least one expense');
+            return;
+        }
+
+        setIsRejecting(true);
         try {
-            const res = await api.post('expense/reject', {ids});
+            const trimmedNote = note?.trim() || '';
+            const res = await api.post('expense/reject', {
+                ids,
+                note: trimmedNote || undefined,
+            });
             toast.success(res.data?.message || 'Expense rejected successfully');
+            setRejectDialogOpen(false);
+            setRejectExpenseIds([]);
+            setRejectNote('');
             await refreshAfterAction();
         } catch (error: any) {
             toast.error(error?.response?.data?.message || 'Failed to reject expense');
+        } finally {
+            setIsRejecting(false);
         }
+    };
+
+    const confirmRejectExpenses = () => {
+        handleRejectExpenses(rejectExpenseIds, rejectNote);
     };
 
     const openDeleteDialog = () => {
@@ -1604,7 +1640,7 @@ const ExpenseList = () => {
                                 variant="outlined"
                                 color="error"
                                 size="small"
-                                onClick={() => handleRejectExpenses(getActionExpenseIds())}
+                                onClick={() => openRejectDialog(getActionExpenseIds())}
                                 sx={BULK_BUTTON_SX}
                             >
                                 Reject Selected
@@ -1702,6 +1738,60 @@ const ExpenseList = () => {
                         disabled={!sendDate}
                     >
                         Send
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={rejectDialogOpen}
+                onClose={closeRejectDialog}
+                fullWidth
+                maxWidth="xs"
+            >
+                <DialogTitle sx={{m: 0, position: 'relative'}}>
+                    Reject Expense{rejectExpenseIds.length === 1 ? '' : 's'}
+                    <IconButton
+                        aria-label="close"
+                        onClick={closeRejectDialog}
+                        disabled={isRejecting}
+                        sx={{position: 'absolute', right: 12, top: 8}}
+                    >
+                        <IconX size={24}/>
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} mt={1}>
+                        <Typography>
+                            Add a note for rejecting {rejectExpenseIds.length} expense
+                            {rejectExpenseIds.length === 1 ? '' : 's'}.
+                        </Typography>
+                        <TextField
+                            label="Note"
+                            placeholder="Write a reject note..."
+                            value={rejectNote}
+                            onChange={(event) => setRejectNote(event.target.value)}
+                            fullWidth
+                            multiline
+                            minRows={3}
+                            disabled={isRejecting}
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        color="inherit"
+                        onClick={closeRejectDialog}
+                        disabled={isRejecting}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={confirmRejectExpenses}
+                        disabled={isRejecting}
+                    >
+                        {isRejecting ? 'Rejecting…' : 'Reject'}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -1976,40 +2066,21 @@ const ExpenseList = () => {
                 expense={detailsExpense}
                 onViewReceipt={openExpenseDetail}
                 onApprove={(id) => handleApproveExpenses([id])}
-                onReject={(id) => handleRejectExpenses([id])}
+                onReject={(id) => openRejectDialog([id])}
                 projects={projects}
                 addresses={addresses}
                 categories={categories}
                 onSaved={refreshAfterAction}
             />
 
-            <Drawer
-                anchor="right"
+            <ExpenseAttachmentsDrawer
                 open={detailOpen}
-                onClose={closeExpenseDetail}
-                sx={{
-                    width: 520,
-                    flexShrink: 0,
-                    '& .MuiDrawer-paper': {
-                        width: {xs: '100%', sm: 520},
-                        maxWidth: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        bgcolor: '#fff',
-                    },
+                expenseId={selectedExpenseId}
+                onClose={() => {
+                    closeExpenseDetail();
+                    fetchExpenses();
                 }}
-            >
-                {selectedExpenseId ? (
-                    <Expenses
-                        expenseId={selectedExpenseId}
-                        attachmentsOnly
-                        onClose={() => {
-                            closeExpenseDetail();
-                            fetchExpenses();
-                        }}
-                    />
-                ) : null}
-            </Drawer>
+            />
         </Box>
     );
 };

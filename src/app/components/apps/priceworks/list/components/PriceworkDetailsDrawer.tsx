@@ -12,7 +12,7 @@ import {
     Stack,
     Typography,
 } from '@mui/material';
-import {IconExternalLink, IconX} from '@tabler/icons-react';
+import {IconExternalLink, IconPencil, IconX} from '@tabler/icons-react';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import {
@@ -28,6 +28,7 @@ type Props = {
     onClose: () => void;
     pricework: PriceworkApiRow | null;
     onViewAttachments?: (id: number) => void;
+    onEdit?: (pricework: PriceworkApiRow | PriceworkDetail) => void;
     onApprove?: (id: number) => void;
     onReject?: (id: number) => void;
 };
@@ -75,12 +76,16 @@ const FieldBlock = ({label, value}: {label: string; value?: string | number | nu
     </Box>
 );
 
-const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, onApprove, onReject}: Props) => {
+const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, onEdit, onApprove, onReject}: Props) => {
     const [detail, setDetail] = useState<PriceworkDetail | null>(null);
     const [loading, setLoading] = useState(false);
 
     const loadDetail = async () => {
         if (!pricework?.id) return;
+        if (pricework.record_type === 'timesheet_light') {
+            setDetail(pricework as PriceworkDetail);
+            return;
+        }
         setLoading(true);
         try {
             const res = await api.get(`pricework/detail?pricework_id=${pricework.id}`);
@@ -106,9 +111,12 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, on
     );
     const currency = detail?.currency || pricework?.currency || '£';
     const amount = Number(detail?.pricework_amount ?? pricework?.pricework_amount ?? 0);
+    const isTimesheetLightRow = pricework?.record_type === 'timesheet_light';
     const hasAttachments =
+        !isTimesheetLightRow &&
         Number(detail?.attachments?.length || pricework?.attachment_count || 0) > 0;
     const activityLogs = detail?.activity_logs || [];
+    const showEditButton = Boolean(pricework?.id) && !isTimesheetLightRow;
     const showApproveButton = status === 'pending' || status === 'rejected';
     const showRejectButton = status === 'pending' || status === 'approved' || status === 'sent';
 
@@ -145,9 +153,24 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, on
                         <Typography sx={{fontSize: 18, fontWeight: 700}}>
                             Pricework Details
                         </Typography>
-                        <IconButton size="small" onClick={onClose} aria-label="Close">
-                            <IconX size={20} />
-                        </IconButton>
+                        
+                        <Stack direction="row" spacing={1}>
+                            {showEditButton && (
+                                <IconButton
+                                    size="small"
+                                    onClick={() => onEdit?.({
+                                        ...pricework,
+                                        ...detail,
+                                    })}
+                                    aria-label="Edit pricework"
+                                >
+                                    <IconPencil size={20}/>
+                                </IconButton>
+                            )}
+                            <IconButton size="small" onClick={onClose} aria-label="Close">
+                                <IconX size={20} />
+                            </IconButton>
+                        </Stack>
                     </Box>
 
                     {loading ? (
@@ -220,8 +243,12 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, on
                                     value={detail?.pricework_date || pricework.pricework_date}
                                 />
                                 <FieldBlock
-                                    label="Work Type"
-                                    value={detail?.work_type || pricework.work_type}
+                                    label="Category"
+                                    value={detail?.category_name || pricework.category_name}
+                                />
+                                <FieldBlock
+                                    label="Sub Category"
+                                    value={detail?.sub_category_name || pricework.sub_category_name}
                                 />
                                 <FieldBlock
                                     label="Unit"
