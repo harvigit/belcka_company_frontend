@@ -8,9 +8,10 @@ import {
     IconButton,
     Avatar,
     Button,
+    TextField,
 } from '@mui/material';
 import React, {useState} from 'react';
-import {IconX, IconInfoCircle} from '@tabler/icons-react';
+import {IconX, IconInfoCircle, IconEdit, IconCheck} from '@tabler/icons-react';
 import {DateTime} from 'luxon';
 import CutDeleteCase from './cut-delete-conflicts';
 import SplitDeleteCase from './split-delete-conflicts';
@@ -38,6 +39,7 @@ export interface ConflictItem {
     message?: string;
     old_data?: any;
     new_data?: any;
+    account_id?: any;
 }
 
 export interface Conflict {
@@ -413,12 +415,15 @@ const BillingConflictCase = ({
 
 const AccountIdConflictCase = ({ conflict, onClose }: { conflict: Conflict; onClose: () => void; }) => {
     const [isLoading, setIsLoading] = useState(false);
+    const [editingUserId, setEditingUserId] = useState<number | null>(null);
+    const [accountIdValue, setAccountIdValue] = useState("");
     const item = conflict.items[0] as any;
+    const users = item.all_users || [];
 
     const handleAction = async (action: 'approve' | 'resolve') => {
         setIsLoading(true);
         try {
-            const userIds = item.all_users.map((u: any) => u.user_id);
+            const userIds = users.map((u: any) => u.user_id);
             const res = await api.post("/user/resolve-account-id-conflict", {
                 user_ids: userIds,
                 account_id: item.account_id,
@@ -438,25 +443,86 @@ const AccountIdConflictCase = ({ conflict, onClose }: { conflict: Conflict; onCl
         }
     };
 
-    return (
-        <Box sx={{mt: 1, display: 'flex', gap: 1}}>
-            <Button
-                variant="contained"
-                color="primary"
-                disabled={isLoading}
-                onClick={() => handleAction('approve')}
-            >
-                {isLoading ? "Approving..." : "Approve"}
-            </Button>
+    const handleUpdate = async (userId: number) => {
+        setIsLoading(true);
+        try {
+            const res = await api.post("/user/update-account-id", {
+                user_id: userId,
+                account_id: accountIdValue,
+            });
 
-            <Button
-                variant="outlined"
-                color="error"
-                disabled={isLoading}
-                onClick={() => handleAction('resolve')}
-            >
-                Resolve Conflict
-            </Button>
+            if (res.data.IsSuccess) {
+                toast.success(res.data.message || "Account ID updated");
+                setEditingUserId(null);
+                const user = users.find((u: any) => u.user_id === userId);
+                if(user) user.account_id = accountIdValue;
+                onClose();
+            } else {
+                toast.error(res.data.message || "Failed to update Account ID");
+            }
+        } catch (error: any) {
+            toast.error("Something went wrong");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {users.map((u: any) => (
+                    <Box key={u.user_id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Avatar src={u.image || ''} alt={u.first_name} sx={{ width: 32, height: 32 }} />
+                            <Box>
+                                <Typography variant="body2" fontWeight={600}>{u.first_name} {u.last_name}</Typography>
+                                {editingUserId === u.user_id ? (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                        <TextField
+                                            size="small"
+                                            value={accountIdValue}
+                                            onChange={(e) => setAccountIdValue(e.target.value)}
+                                            sx={{ width: 150 }}
+                                        />
+                                        <IconButton onClick={() => handleUpdate(u.user_id)} disabled={isLoading} size="small" color="primary">
+                                            <IconCheck size={18} />
+                                        </IconButton>
+                                        <IconButton onClick={() => { setEditingUserId(null); setAccountIdValue(""); }} disabled={isLoading} size="small" color="error">
+                                            <IconX size={18} />
+                                        </IconButton>
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                        <Typography variant="caption" color="text.secondary">Account ID: {u.account_id || "N/A"}</Typography>
+                                        <IconButton onClick={() => { setEditingUserId(u.user_id); setAccountIdValue(u.account_id || ""); }} size="small" sx={{ p: 0.2 }}>
+                                            <IconEdit size={14} color="#6B7280" />
+                                        </IconButton>
+                                    </Box>
+                                )}
+                            </Box>
+                        </Box>
+                    </Box>
+                ))}
+            </Box>
+            <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    disabled={isLoading}
+                    onClick={() => handleAction('approve')}
+                >
+                    {isLoading ? "Approving..." : "Approve"}
+                </Button>
+
+                <Button
+                    variant="outlined"
+                    color="error"
+                    disabled={isLoading}
+                    onClick={() => handleAction('resolve')}
+                >
+                    Resolve Conflict
+                </Button>
+            </Box>
         </Box>
     );
 };
@@ -473,12 +539,24 @@ export default function Conflicts({
     const session = useSession();
     const user = session?.data?.user as User & { company_id: number };
 
-    const filteredConflicts = selectedUserId
+    const initialFilteredConflicts = selectedUserId
         ? conflictDetails.filter((conflict) => {
             const conflictUserId = conflict.items?.[0]?.user_id;
             return conflictUserId === Number(selectedUserId);
         })
         : conflictDetails;
+
+    const filteredConflicts = initialFilteredConflicts.filter((conflict, index, self) => {
+        const isDuplicateAccount = conflict.items.some((i: any) => i.conflict_type === 'duplicate_account_id');
+        if (!isDuplicateAccount) return true;
+        
+        const accountId = conflict.items[0]?.account_id;
+        return index === self.findIndex((c) => {
+            const cIsDuplicate = c.items.some((i: any) => i.conflict_type === 'duplicate_account_id');
+            if (!cIsDuplicate) return false;
+            return c.items[0]?.account_id === accountId;
+        });
+    });
 
     const displayConflictCount = selectedUserId ? filteredConflicts.length : totalConflicts;
 
@@ -573,9 +651,10 @@ export default function Conflicts({
 
             <Box sx={{flex: 1, overflow: 'hidden'}}>
                 <Box sx={{p: 2, overflowY: 'auto', height: '100%'}}>
-                    {filteredConflicts.map((conflict, idx) => {  {/* CHANGED: Use filteredConflicts */}
+                    {filteredConflicts.map((conflict, idx) => {
                         const userName = conflict.user_name ?? '';
                         const userThumbImage = conflict.user_thumb_image ?? '';
+                        const isDuplicateAccount = conflict.items.some(i => i.conflict_type === 'duplicate_account_id');
 
                         return (
                             <Card
@@ -592,40 +671,50 @@ export default function Conflicts({
                                 variant="outlined"
                             >
                                 <CardContent>
-                                    <Box sx={{mb: 2}}>
-                                        {userName && (
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 1,
-                                                    mb: 0.5,
-                                                }}
-                                            >
-                                                <Avatar
-                                                    src={userThumbImage || ''}
-                                                    alt={userName}
-                                                    sx={{width: 36, height: 36}}
-                                                />
-
-                                                <Typography
-                                                    variant="subtitle2"
-                                                    sx={{fontSize: '0.9rem', fontWeight: 500}}
-                                                >
-                                                    {userName}
-                                                </Typography>
-                                            </Box>
-                                        )}
-
+                                    {isDuplicateAccount ? (
                                         <Typography
                                             variant="subtitle1"
-                                            sx={{fontWeight: 600, fontSize: '0.9rem'}}
+                                            sx={{fontWeight: 600, fontSize: '0.9rem', mb: 1}}
                                         >
-                                            {conflict.formatted_date}
+                                            Duplicate Account ID Found
                                         </Typography>
-                                    </Box>
+                                    ) : (
+                                        <>
+                                            <Box sx={{mb: 2}}>
+                                                {userName && (
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: 1,
+                                                            mb: 0.5,
+                                                        }}
+                                                    >
+                                                        <Avatar
+                                                            src={userThumbImage || ''}
+                                                            alt={userName}
+                                                            sx={{width: 36, height: 36}}
+                                                        />
 
-                                    <ConflictItemDisplay items={conflict.items}/>
+                                                        <Typography
+                                                            variant="subtitle2"
+                                                            sx={{fontSize: '0.9rem', fontWeight: 500}}
+                                                        >
+                                                            {userName}
+                                                        </Typography>
+                                                    </Box>
+                                                )}
+
+                                                <Typography
+                                                    variant="subtitle1"
+                                                    sx={{fontWeight: 600, fontSize: '0.9rem'}}
+                                                >
+                                                    {conflict.formatted_date}
+                                                </Typography>
+                                            </Box>
+                                            <ConflictItemDisplay items={conflict.items}/>
+                                        </>
+                                    )}
 
                                     <ConflictCaseRenderer
                                         conflict={conflict}

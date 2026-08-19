@@ -8,6 +8,8 @@ import {
   Stack,
   Tooltip,
   Typography,
+  TextField,
+  IconButton
 } from "@mui/material";
 import React, { useCallback, useState } from "react";
 import {
@@ -16,6 +18,8 @@ import {
   IconMail,
   IconBuilding,
   IconCreditCard,
+  IconEdit,
+  IconCheck
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 
@@ -252,6 +256,138 @@ export const AccountIdConflictRow = React.memo(
 );
 AccountIdConflictRow.displayName = "AccountIdConflictRow";
 
+const ConflictingUserCard = React.memo(({ user, isSaving, setIsSaving, onResolved }: any) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [accountIdValue, setAccountIdValue] = useState(user.account_id || "");
+
+  const handleUpdate = async () => {
+    if (accountIdValue === user.account_id) {
+      setIsEditing(false);
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const res = await api.post("/user/update-account-id", {
+        user_id: user.user_id,
+        account_id: accountIdValue,
+      });
+
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message || "Account ID updated");
+        setIsEditing(false);
+        user.account_id = accountIdValue;
+        onResolved();
+      } else {
+        toast.error(res.data.message || "Failed to update Account ID");
+      }
+    } catch (error: any) {
+      toast.error("Something went wrong");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        p: 2.5,
+        borderRadius: "12px",
+        bgcolor: "#FFFFFF",
+        border: "1px solid #E5E7EB",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+      }}
+    >
+      <Stack
+        direction="row"
+        spacing={2}
+        alignItems="flex-start"
+        sx={{ mb: 2 }}
+      >
+        <UserAvatar
+          name={`${user.first_name} ${user.last_name}`}
+          image={user.image}
+          size={48}
+        />
+        <Box sx={{ flex: 1 }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <Typography
+              sx={{
+                fontSize: "1rem",
+                fontWeight: 700,
+                color: "#111827",
+              }}
+            >
+              {user.first_name} {user.last_name}
+            </Typography>
+          </Stack>
+          <Divider sx={{ my: 1.5 }} />
+          <Stack spacing={1.5}>
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <IconCreditCard size={16} color="#9CA3AF" />
+              {isEditing ? (
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <TextField
+                    size="small"
+                    value={accountIdValue}
+                    onChange={(e) => setAccountIdValue(e.target.value)}
+                    sx={{ width: 150 }}
+                  />
+                  <IconButton onClick={handleUpdate} disabled={isSaving} size="small" color="primary">
+                    <IconCheck size={18} />
+                  </IconButton>
+                  <IconButton onClick={() => { setIsEditing(false); setAccountIdValue(user.account_id || ""); }} disabled={isSaving} size="small" color="error">
+                    <IconX size={18} />
+                  </IconButton>
+                </Stack>
+              ) : (
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography
+                    sx={{ fontSize: "0.8rem", color: "#4B5563" }}
+                  >
+                    Account ID: {user.account_id || "N/A"}
+                  </Typography>
+                  <IconButton onClick={() => setIsEditing(true)} size="small" sx={{ ml: 1, p: 0.5 }}>
+                    <IconEdit size={14} color="#6B7280" />
+                  </IconButton>
+                </Stack>
+              )}
+            </Stack>
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <IconMail size={16} color="#9CA3AF" />
+              <Typography
+                sx={{ fontSize: "0.8rem", color: "#4B5563" }}
+              >
+                {user.email || "No email provided"}
+              </Typography>
+            </Stack>
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <IconPhone size={16} color="#9CA3AF" />
+              <Typography
+                sx={{ fontSize: "0.8rem", color: "#4B5563" }}
+              >
+                {user.phone || "No phone provided"}
+              </Typography>
+            </Stack>
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <IconBuilding size={16} color="#9CA3AF" />
+              <Typography
+                sx={{ fontSize: "0.8rem", color: "#4B5563" }}
+              >
+                Company Code: {user.user_code || ""}
+              </Typography>
+            </Stack>
+          </Stack>
+        </Box>
+      </Stack>
+    </Box>
+  );
+});
+ConflictingUserCard.displayName = "ConflictingUserCard";
+
 const AccountIdDetailPanel = React.memo(
   ({
     conflict,
@@ -326,81 +462,13 @@ const AccountIdDetailPanel = React.memo(
 
           <Stack spacing={3}>
             {conflict.users.map((user) => (
-              <Box
-                key={user.user_id}
-                sx={{
-                  p: 2.5,
-                  borderRadius: "12px",
-                  bgcolor: "#FFFFFF",
-                  border: "1px solid #E5E7EB",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                }}
-              >
-                <Stack
-                  direction="row"
-                  spacing={2}
-                  alignItems="flex-start"
-                  sx={{ mb: 2 }}
-                >
-                  <UserAvatar
-                    name={`${user.first_name} ${user.last_name}`}
-                    image={user.image}
-                    size={48}
-                  />
-                  <Box sx={{ flex: 1 }}>
-                      <Stack
-                        direction="row"
-                        alignItems="center"
-                        justifyContent="space-between"
-                      >
-                        <Typography
-                          sx={{
-                            fontSize: "1rem",
-                            fontWeight: 700,
-                            color: "#111827",
-                          }}
-                        >
-                          {user.first_name} {user.last_name}
-                        </Typography>
-                      </Stack>
-                    <Divider sx={{ my: 1.5 }} />
-                    <Stack spacing={1.5}>
-                      <Stack direction="row" alignItems="center" spacing={1.5}>
-                        <IconCreditCard size={16} color="#9CA3AF" />
-                        <Typography
-                          sx={{ fontSize: "0.8rem", color: "#4B5563" }}
-                        >
-                          Account ID: {user.account_id || "N/A"}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" alignItems="center" spacing={1.5}>
-                        <IconMail size={16} color="#9CA3AF" />
-                        <Typography
-                          sx={{ fontSize: "0.8rem", color: "#4B5563" }}
-                        >
-                          {user.email || "No email provided"}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" alignItems="center" spacing={1.5}>
-                        <IconPhone size={16} color="#9CA3AF" />
-                        <Typography
-                          sx={{ fontSize: "0.8rem", color: "#4B5563" }}
-                        >
-                          {user.phone || "No phone provided"}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" alignItems="center" spacing={1.5}>
-                        <IconBuilding size={16} color="#9CA3AF" />
-                        <Typography
-                          sx={{ fontSize: "0.8rem", color: "#4B5563" }}
-                        >
-                          Company Code: {user.user_code || ""}
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                  </Box>
-                </Stack>
-              </Box>
+              <ConflictingUserCard 
+                key={user.user_id} 
+                user={user} 
+                isSaving={isSaving} 
+                setIsSaving={setIsSaving} 
+                onResolved={onResolved}
+              />
             ))}
           </Stack>
 
