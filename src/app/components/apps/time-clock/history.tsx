@@ -33,6 +33,7 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
 import { format } from "date-fns";
+import DateRangePickerBox from "../../common/DateRangePickerBox";
 
 interface BookkeeperProps {
   open: boolean;
@@ -228,7 +229,8 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
   const [activitySearch, setActivitySearch] = useState("");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [draftSelectedTypes, setDraftSelectedTypes] = useState<string[]>([]);
-
+  const [filterStartDate, setFilterStartDate] = useState<Date | null>(null);
+  const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
   const limit = 20;
   const session = useSession();
   const user = session.data?.user as User & {
@@ -261,6 +263,8 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
     userId,
     startDate,
     endDate,
+    filterStartDate,
+    filterEndDate,
   ]);
 
   const fetchHistories = async (
@@ -279,10 +283,10 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
           ...(typeFilters.length > 0 ? { types: typeFilters.join(",") } : {}),
           ...(searchValue.trim() ? { search: searchValue.trim() } : {}),
           ...(userId ? { user_id: userId } : {}),
-          ...(startDate && endDate
+          ...(filterStartDate && filterEndDate
             ? {
-                start_date: format(startDate, "dd/MM/yyyy"),
-                end_date: format(endDate, "dd/MM/yyyy"),
+                start_date: format(filterStartDate, "dd/MM/yyyy"),
+                end_date: format(filterEndDate, "dd/MM/yyyy"),
               }
             : {}),
         },
@@ -414,6 +418,18 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
                   ),
                 }}
               />
+            </Stack>
+
+            <Stack direction="row" alignItems="center" spacing={2} mt={2}>
+              <DateRangePickerBox
+                from={filterStartDate}
+                to={filterEndDate}
+                onChange={({ from, to }) => {
+                  setFilterStartDate(from);
+                  setFilterEndDate(to);
+                }}
+                buttonMinWidth={400}
+              />
 
               <Tooltip title="Filter activities" arrow>
                 <IconButton
@@ -539,18 +555,18 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
                         </Typography>
 
                         {addr.request_type === 103 &&
-                          getDiffs(addr.old_data, addr.new_data).length >
-                            0 ? (
-                            <BillingDiffView
-                              diffs={getDiffs(addr.old_data, addr.new_data)}
-                            />
-                          ): <Typography></Typography>}
+                        getDiffs(addr.old_data, addr.new_data).length > 0 ? (
+                          <BillingDiffView
+                            diffs={getDiffs(addr.old_data, addr.new_data)}
+                          />
+                        ) : (
+                          <Typography></Typography>
+                        )}
                         <Box
                           display={"flex"}
                           alignItems={"center"}
                           justifyContent={"end"}
                         >
-
                           <Typography
                             fontSize="12px"
                             textAlign="end"
