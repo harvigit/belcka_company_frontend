@@ -75,6 +75,7 @@ const COLUMN_LABELS: Record<string, string> = {
     project_name: 'Project',
     address_name: 'Address',
     team_name: 'Team',
+    work_type: 'Work Type',
     pricework_date: 'Pricework Date',
     category_name: 'Category',
     sub_category_name: 'Sub Category',
@@ -585,6 +586,14 @@ const PriceworkList = () => {
             columnHelper.accessor('team_name', {
                 id: 'team_name',
                 header: () => 'Team',
+                cell: (info) => (
+                    <Typography className="f-14">{info.getValue() || '—'}</Typography>
+                ),
+                enableSorting: false,
+            }),
+            columnHelper.accessor('work_type', {
+                id: 'work_type',
+                header: () => 'Work Type',
                 cell: (info) => (
                     <Typography className="f-14">{info.getValue() || '—'}</Typography>
                 ),
