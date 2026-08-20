@@ -897,7 +897,7 @@ const StockList = () => {
                   setInputValue(item.sub_qty?.toString() || "0");
                 }}
               >
-                {item?.is_sub_qty  && item.sub_qty > 0 ? item.sub_qty : "-"}
+                {item?.is_sub_qty && item.sub_qty > 0 ? item.sub_qty : "-"}
               </Typography>
             )}
           </Stack>
@@ -1518,158 +1518,158 @@ const StockList = () => {
             overflow: "auto",
           }}
         > */}
-          <TableContainer
-            ref={tableContainerRef}
-            sx={{ flex: 1, minHeight: 0, overflowX: "auto", overflowY: "auto" }}
-          >
-            <Table stickyHeader aria-label="sticky table">
-              <TableHead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      const isActive = header.column.getIsSorted();
-                      const isAsc = header.column.getIsSorted() === "asc";
-                      const isSortable = header.column.getCanSort();
+        <TableContainer
+          ref={tableContainerRef}
+          sx={{ flex: 1, minHeight: 0, overflowX: "auto", overflowY: "auto" }}
+        >
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const isActive = header.column.getIsSorted();
+                    const isAsc = header.column.getIsSorted() === "asc";
+                    const isSortable = header.column.getCanSort();
 
-                      return (
-                        <TableCell
-                          key={header.id}
-                          sx={{
-                            paddingTop: "10px",
-                            paddingBottom: "10px",
-                            width:
-                              header.column.id === "actions" ||
-                              header.column.id === "barcode"
-                                ? 80
-                                : header.column.id === "Qty"
-                                  ? 120
-                                  : header.column.id === "subQty"
-                                    ? 100
-                                    : header.column.id === "QrCode"
-                                      ? 120
-                                      : header.column.id === "supplierCode" ||
-                                          header.column.id === "stockStatus"
-                                        ? 140
-                                        : header.column.id === "QrCode"
-                                          ? 120
-                                          : "auto",
-
-                            ...(header.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 3,
-                              boxShadow: isScrollable
-                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                                : "none",
-                            }),
-                          }}
-                        >
-                          <Box
-                            onClick={header.column.getToggleSortingHandler()}
-                            p={0}
-                            sx={{
-                              cursor: isSortable ? "pointer" : "default",
-                              border: "2px solid transparent",
-                              borderRadius: "6px",
-                              display: "flex",
-                              justifyContent: "flex-start",
-                              "&:hover": { color: "#888" },
-                              "&:hover .hoverIcon": { opacity: 1 },
-                            }}
-                          >
-                            <Typography variant="subtitle2">
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext(),
-                              )}
-                            </Typography>
-                            {isSortable && (
-                              <Box
-                                component="span"
-                                className="hoverIcon"
-                                ml={0.5}
-                                sx={{
-                                  transition: "opacity 0.2s",
-                                  opacity: isActive ? 1 : 0,
-                                  fontSize: "0.9rem",
-                                  color: isActive ? "#000" : "#888",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                              </Box>
-                            )}
-                          </Box>
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-              </TableHead>
-              <TableBody>
-                {fetchProduct ? (
-                  <SkeletonLoader
-                    columns={simpleColumns}
-                    rowCount={simpleColumns.length}
-                  />
-                ) : filteredData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length}>
-                      <Box
+                    return (
+                      <TableCell
+                        key={header.id}
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          height: "calc(50vh - 100px)",
+                          paddingTop: "10px",
+                          paddingBottom: "10px",
+                          width:
+                            header.column.id === "actions" ||
+                            header.column.id === "barcode"
+                              ? 80
+                              : header.column.id === "Qty"
+                                ? 120
+                                : header.column.id === "subQty"
+                                  ? 100
+                                  : header.column.id === "QrCode"
+                                    ? 120
+                                    : header.column.id === "supplierCode" ||
+                                        header.column.id === "stockStatus"
+                                      ? 140
+                                      : header.column.id === "QrCode"
+                                        ? 120
+                                        : "auto",
+
+                          ...(header.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 3,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
                         }}
                       >
-                        <Image
-                          src="/images/no-data.png"
-                          alt="No data"
-                          style={{
-                            maxWidth: "100%",
-                            maxHeight: "100%",
-                          }}
-                          width={200}
-                          height={200}
-                        />
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
+                        <Box
+                          onClick={header.column.getToggleSortingHandler()}
+                          p={0}
                           sx={{
-                            ...(cell.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 1,
-                              boxShadow: isScrollable
-                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                                : "none",
-                            }),
+                            cursor: isSortable ? "pointer" : "default",
+                            border: "2px solid transparent",
+                            borderRadius: "6px",
+                            display: "flex",
+                            justifyContent: "flex-start",
+                            "&:hover": { color: "#888" },
+                            "&:hover .hoverIcon": { opacity: 1 },
                           }}
                         >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
+                          <Typography variant="subtitle2">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                          </Typography>
+                          {isSortable && (
+                            <Box
+                              component="span"
+                              className="hoverIcon"
+                              ml={0.5}
+                              sx={{
+                                transition: "opacity 0.2s",
+                                opacity: isActive ? 1 : 0,
+                                fontSize: "0.9rem",
+                                color: isActive ? "#000" : "#888",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                            </Box>
                           )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                        </Box>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHead>
+            <TableBody>
+              {fetchProduct ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={simpleColumns.length}
+                />
+              ) : filteredData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/no-data.png"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        sx={{
+                          ...(cell.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 1,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
           {data.length ? <Divider /> : <></>}
-          </TableContainer>
+        </TableContainer>
         {/* </Box> */}
         <Divider />
         <TablePaginationFooter
@@ -1858,7 +1858,13 @@ const StockList = () => {
                           </Tooltip>
                         </TableCell>
 
-                        <TableCell>{h.price ?? "-"}</TableCell>
+                        <TableCell>
+                          {h.price == null ||
+                          h.price == undefined ||
+                          Number.isNaN(h.price)
+                            ? 0
+                            : (h.price ?? "-")}
+                        </TableCell>
 
                         <TableCell sx={{ fontWeight: "bold" }}>
                           {isSubQty && h.new_qty_in_pack ? (

@@ -20,6 +20,7 @@ import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import {User} from 'next-auth';
 import {useSession} from 'next-auth/react';
+import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 
 export interface ConflictItem {
     user_id: number;
@@ -478,10 +479,20 @@ const AccountIdConflictCase = ({ conflict, onClose }: { conflict: Conflict; onCl
                                 <Typography variant="body2" fontWeight={600}>{u.first_name} {u.last_name}</Typography>
                                 {editingUserId === u.user_id ? (
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                        <TextField
+                                        <CustomTextField
                                             size="small"
+                                            type="text"
+                                            inputProps={{
+                                                maxLength: 5,
+                                                inputMode: "numeric",
+                                                pattern: "[0-9]*",
+                                            }}
                                             value={accountIdValue}
-                                            onChange={(e) => setAccountIdValue(e.target.value)}
+                                            onChange={(e: any) => {
+                                                if (/^\d{0,5}$/.test(e.target.value)) {
+                                                    setAccountIdValue(e.target.value);
+                                                }
+                                            }}
                                             sx={{ width: 150 }}
                                         />
                                         <IconButton onClick={() => handleUpdate(u.user_id)} disabled={isLoading} size="small" color="primary">
