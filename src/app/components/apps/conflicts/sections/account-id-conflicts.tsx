@@ -195,6 +195,7 @@ const DrawerHeader = React.memo(
 DrawerHeader.displayName = "DrawerHeader";
 
 import { IconChevronRight } from "@tabler/icons-react";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 
 export const AccountIdConflictRow = React.memo(
   ({ item, onClick }: { item: AccountIdConflict; onClick: () => void }) => {
@@ -330,10 +331,20 @@ const ConflictingUserCard = React.memo(({ user, isSaving, setIsSaving, onResolve
               <IconCreditCard size={16} color="#9CA3AF" />
               {isEditing ? (
                 <Stack direction="row" alignItems="center" spacing={1}>
-                  <TextField
+                  <CustomTextField
                     size="small"
+                    type="text"
+                    inputProps={{
+                      maxLength: 5,
+                      inputMode: "numeric",
+                      pattern: "[0-9]*",
+                    }}
                     value={accountIdValue}
-                    onChange={(e) => setAccountIdValue(e.target.value)}
+                    onChange={(e: any) => {
+                      if (/^\d{0,5}$/.test(e.target.value)) {
+                        setAccountIdValue(e.target.value);
+                      }
+                    }}
                     sx={{ width: 150 }}
                   />
                   <IconButton onClick={handleUpdate} disabled={isSaving} size="small" color="primary">

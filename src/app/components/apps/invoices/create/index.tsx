@@ -232,7 +232,9 @@ const CreateInvoice = ({
         address_id: invoice.address_id ?? null,
         address_manual: invoice.address_id
           ? ""
-          : invoice.addressManual || (invoice.deliveryAddress !== "-" ? invoice.deliveryAddress : "") || "",
+          : invoice.addressManual ||
+            (invoice.deliveryAddress !== "-" ? invoice.deliveryAddress : "") ||
+            "",
         ordered_by: invoice.ordered_by ?? null,
         supplier_id: invoice.supplier_id ?? null,
         invoice_id: invoice.invoiceId || "",
@@ -319,8 +321,7 @@ const CreateInvoice = ({
                 next.expected_delivery_date = date;
               if (description && !prev.description)
                 next.description = description;
-              if (ordered_by && !prev.ordered_by)
-                next.ordered_by = ordered_by;
+              if (ordered_by && !prev.ordered_by) next.ordered_by = ordered_by;
               if (supplier_id && !prev.supplier_id)
                 next.supplier_id = supplier_id;
               return next;
@@ -368,16 +369,12 @@ const CreateInvoice = ({
     }
     setExistingDocuments((prev) => prev.filter((d) => d.id !== doc.id));
   };
-
   const validate = () => {
     if (!formData.invoice_id.trim()) return "Invoice Id is required!";
     if (!formData.project_id && !formData.project_manual.trim()) {
       return "Project is required!";
     }
-    if (!formData.address_id && !formData.address_manual.trim()) {
-      return "Address is required!";
-    }
-    if (!formData.ordered_by) return "Ordered by is required!";
+
     if (!formData.supplier_id) return "Supplier is required!";
 
     if (!formData.expected_delivery_date) {
@@ -421,23 +418,28 @@ const CreateInvoice = ({
       toast.error(error);
       return;
     }
-
     setSaving(true);
     try {
       const fd = new FormData();
       fd.append("company_id", String(companyId));
       if (formData.project_id) {
         fd.append("project_id", String(formData.project_id));
-      } else {
+      } else if (formData.project_manual) {
         fd.append("project_manual", formData.project_manual.trim());
       }
       if (formData.address_id) {
         fd.append("address_id", String(formData.address_id));
-      } else {
+      } else if (formData.address_manual) {
         fd.append("address_manual", formData.address_manual.trim());
       }
-      fd.append("ordered_by", String(formData.ordered_by));
-      fd.append("supplier_id", String(formData.supplier_id));
+      fd.append(
+        "ordered_by",
+        formData.ordered_by ? String(formData.ordered_by) : "",
+      );
+      fd.append(
+        "supplier_id",
+        formData.supplier_id ? String(formData.supplier_id) : "",
+      );
       fd.append("invoice_id", formData.invoice_id.trim());
       fd.append("expected_delivery_date", formData.expected_delivery_date);
       fd.append("description", formData.description);
@@ -469,15 +471,12 @@ const CreateInvoice = ({
         toast.success(res.data.message || "Saved successfully");
         onSaved?.();
         handleClose();
-      } else {
-        toast.error(res.data?.message || "Failed to save invoice");
       }
+      // else {
+      // toast.error(res.data?.message || "Failed to save invoice");
+      // }
     } catch (err: any) {
-      toast.error(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to save invoice",
-      );
+      console.log(err);
     } finally {
       setSaving(false);
     }
@@ -539,7 +538,7 @@ const CreateInvoice = ({
             if (items && items.length > 0) {
               const validFiles = Array.from(items).filter(
                 (f) =>
-                  f.type.startsWith("image/") || f.type === "application/pdf"
+                  f.type.startsWith("image/") || f.type === "application/pdf",
               );
               if (validFiles.length > 0) {
                 e.preventDefault();
@@ -656,15 +655,17 @@ const CreateInvoice = ({
                 />
               </Box>
 
-              <Box className="form_inputs">
-                <FieldLabel required>Address</FieldLabel>
+              <Box className="address">
+                <FieldLabel>Address</FieldLabel>
                 <Autocomplete
                   fullWidth
                   freeSolo
                   options={filteredAddresses}
                   value={
                     formData.address_id
-                      ? filteredAddresses.find((a) => a.id === formData.address_id) || null
+                      ? filteredAddresses.find(
+                          (a) => a.id === formData.address_id,
+                        ) || null
                       : formData.address_manual || null
                   }
                   getOptionLabel={(o) =>
@@ -685,7 +686,8 @@ const CreateInvoice = ({
                   onChange={(_, value) => {
                     if (typeof value === "string") {
                       const match = filteredAddresses.find(
-                        (a) => a.name.toLowerCase() === value.trim().toLowerCase(),
+                        (a) =>
+                          a.name.toLowerCase() === value.trim().toLowerCase(),
                       );
                       setFormData((prev) => ({
                         ...prev,
@@ -711,7 +713,8 @@ const CreateInvoice = ({
                   onInputChange={(_, value, reason) => {
                     if (reason !== "input") return;
                     const match = filteredAddresses.find(
-                      (a) => a.name.toLowerCase() === value.trim().toLowerCase(),
+                      (a) =>
+                        a.name.toLowerCase() === value.trim().toLowerCase(),
                     );
                     setFormData((prev) => ({
                       ...prev,
@@ -720,13 +723,16 @@ const CreateInvoice = ({
                     }));
                   }}
                   renderInput={(params) => (
-                    <CustomTextField {...params} placeholder="Select or type address" />
+                    <CustomTextField
+                      {...params}
+                      placeholder="Select or type address"
+                    />
                   )}
                 />
               </Box>
 
               <Box className="form_inputs">
-                <FieldLabel required>Ordered By</FieldLabel>
+                <FieldLabel>Ordered By</FieldLabel>
                 <Autocomplete
                   fullWidth
                   options={orderedByOptions}

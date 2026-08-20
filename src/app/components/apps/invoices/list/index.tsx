@@ -476,7 +476,11 @@ Team Belcka
         header: "Ordered By",
         enableSorting: false,
         cell: ({ row }) => {
-          const name = row.original.orderedBy || "-";
+          const name = row.original.orderedBy;
+          if (!name) {
+            return <>-</>;
+          }
+
           return (
             <Stack
               direction="row"
@@ -484,13 +488,15 @@ Team Belcka
               spacing={1}
               sx={{ px: 1.5, maxWidth: 180 }}
             >
-              <Avatar
-                src={row.original.orderedByImage || "/images/users/user.png"}
-                alt={name}
-                sx={{ width: 28, height: 28, fontSize: "12px" }}
-              >
-                {name?.[0]?.toUpperCase()}
-              </Avatar>
+              {name !== "-" && (
+                <Avatar
+                  src={row.original.orderedByImage || "/images/users/user.png"}
+                  alt={name}
+                  sx={{ width: 28, height: 28, fontSize: "12px" }}
+                >
+                  {name?.[0]?.toUpperCase()}
+                </Avatar>
+              )}
               <Tooltip title={name !== "-" ? name : ""} placement="top" arrow>
                 <Typography
                   className="f-14"
