@@ -949,7 +949,9 @@ const PurchaseProductList: React.FC<Props> = ({
           <Stack direction="row" alignItems="center" spacing={1} ml={1}>
             <Typography textTransform="capitalize" className="f-14">
               {item.qty ? item.qty : "0"}{" "}
-              {item.is_sub_qty ? `${item.pack_off_unit}` : ""}
+              {item.is_sub_qty && item.pack_off_unit != null
+                ? `?${item.pack_off_unit}`
+                : ""}
             </Typography>
           </Stack>
         );
@@ -1120,11 +1122,16 @@ const PurchaseProductList: React.FC<Props> = ({
               <IconFilter width={18} />
             </Button>
             <Link
-            href="#"
+              href="#"
               onClick={() => {
                 setFilters((prev) => ({ ...prev, lowStock: !prev.lowStock }));
               }}
-              style={{ marginTop: 1, padding: 2,color: filters.lowStock ? "#1e4db7" : "red" ,fontWeight: 500}}
+              style={{
+                marginTop: 1,
+                padding: 2,
+                color: filters.lowStock ? "#1e4db7" : "red",
+                fontWeight: 500,
+              }}
             >
               Low Stock
             </Link>
