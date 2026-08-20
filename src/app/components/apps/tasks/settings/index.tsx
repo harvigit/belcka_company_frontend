@@ -2,14 +2,13 @@
 
 import React, { useState } from "react";
 import { Box, Drawer, Snackbar, Typography } from "@mui/material";
-import { IconSettings, IconNotebook, IconMap } from "@tabler/icons-react";
+import { IconSettings, IconCurrencyDollar } from "@tabler/icons-react";
 import TaskCategory from "./task-categories";
 import TaskCategoryList from "./task-sub-categories";
-// import CreateWork from './menus/tasks/list';
-// import LocationList from './menus/locations/list';
-// import GeneralSettings from './menus/general';
+import TaskPricingMatrix from "./task-pricing";
 
 const menuItems = [
+  // { icon: <IconCurrencyDollar size={18} />, label: "Price Work" },
   { icon: <IconSettings size={18} />, label: "Task Categories" },
   { icon: <IconSettings size={18} />, label: "Sub Categories" },
 ];
@@ -124,6 +123,7 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
               overflow: "hidden",
             }}
           >
+            {/*{activeMenuItem === "Price Work" && <TaskPricingMatrix onSaveSuccess={handleSaveSuccess} />}*/}
             {activeMenuItem === "Task Categories" && <TaskCategory />}
             {activeMenuItem === "Sub Categories" && <TaskCategoryList />}
           </Box>

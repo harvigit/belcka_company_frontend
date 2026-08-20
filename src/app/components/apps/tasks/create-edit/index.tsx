@@ -452,8 +452,8 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                       value={
                         formData.project_ids && formData.project_ids.length > 0
                           ? projects.filter((p) =>
-                              formData.project_ids?.includes(p.id),
-                            )
+                            formData.project_ids?.includes(p.id),
+                          )
                           : [{ id: "ALL", name: "All Projects" }]
                       }
                       onChange={(_, value, reason, details) => {
@@ -589,7 +589,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                                 }}
                               >
                                 {item.type === "application/pdf" ||
-                                item.src?.toLowerCase().endsWith(".pdf") ? (
+                                  item.src?.toLowerCase().endsWith(".pdf") ? (
                                   <Box
                                     display="flex"
                                     alignItems="center"

@@ -5,6 +5,7 @@ import {
     Alert,
     Box,
     Button,
+    Chip,
     CircularProgress,
     FormControl,
     IconButton,
@@ -254,6 +255,38 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
         setCategoryId(pricework?.category_id ? String(pricework.category_id) : '');
         setSubCategoryId(pricework?.sub_category_id ? String(pricework.sub_category_id) : '');
     }, [pricework?.pricework_id, pricework?.category_id, pricework?.sub_category_id]);
+
+    const [priceSource, setPriceSource] = useState<'project' | 'base' | 'default'>('default');
+    const [resolvingPrice, setResolvingPrice] = useState<boolean>(false);
+
+    useEffect(() => {
+        if (!projectId || (!categoryId && !subCategoryId)) {
+            setPriceSource('default');
+            return;
+        }
+
+        const resolvePrice = async () => {
+            setResolvingPrice(true);
+            try {
+                const params: any = { project_id: projectId };
+                if (categoryId) params.category_id = categoryId;
+                if (subCategoryId) params.sub_category_id = subCategoryId;
+
+                const res = await api.get('/pricework/resolve-price', { params });
+                if (res.data?.IsSuccess && res.data?.info) {
+                    const { price, source, is_project_price } = res.data.info;
+                    setAmountPerUnit(price || '0.00');
+                    setPriceSource(source || (is_project_price ? 'project' : 'base'));
+                }
+            } catch (err) {
+                console.error('Failed to resolve price:', err);
+            } finally {
+                setResolvingPrice(false);
+            }
+        };
+
+        resolvePrice();
+    }, [projectId, categoryId, subCategoryId]);
 
     const totalAmount = useMemo(() => {
         const amount = Number(amountPerUnit);
@@ -554,12 +587,20 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
 
                         <Box sx={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2}}>
                             <Box>
-                                {fieldLabel('Amount Per Unit')}
+                                <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.75}>
+                                    {fieldLabel('Amount Per Unit')}
+                                    {priceSource === 'project' && (
+                                        <Chip label="Project Price" color="primary" size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+                                    )}
+                                    {priceSource === 'base' && (
+                                        <Chip label="Base Cost Fallback" color="warning" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+                                    )}
+                                </Box>
                                 <TextField
                                     fullWidth
                                     size="small"
-                                    value={amountPerUnit}
-                                    onChange={(event) => updateDecimalValue(event.target.value, setAmountPerUnit)}
+                                    value={resolvingPrice ? 'Resolving...' : amountPerUnit}
+                                    disabled={true}
                                     placeholder="0.00"
                                     inputProps={{
                                         inputMode: 'decimal',
