@@ -8,6 +8,13 @@ import {
   Button,
   Autocomplete,
   TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from "@mui/material";
 import { Grid } from "@mui/system";
 import { IconTrash, IconX } from "@tabler/icons-react";
@@ -65,6 +72,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
 
   const [isSaving, setIsSaving] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [scannedData, setScannedData] = useState<any>(null);
 
   useEffect(() => {
     if (open) {
@@ -143,14 +151,55 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
   const { getRootProps, getInputProps } = useDropzone({
     accept: { "image/*": [], "application/pdf": [".pdf"] },
     maxFiles: 1,
-    onDrop: (files) => {
+    onDrop: async (files) => {
       if (files && files.length > 0) {
-        setFile(files[0]);
+        const selectedFile = files[0];
+        setFile(selectedFile);
         setFilePreview({
-          src: URL.createObjectURL(files[0]),
+          src: URL.createObjectURL(selectedFile),
           isExisting: false,
-          type: files[0].type,
+          type: selectedFile.type,
         });
+
+        const toastId = toast.loading("Scanning document...");
+        try {
+          const fd = new FormData();
+          fd.append("file_name", selectedFile);
+          if (companyId) {
+            fd.append("company_id", String(companyId));
+          }
+          const res = await api.post("po-collect/ocr-scan", fd, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+
+          if (res.data) {
+            toast.success("Document scanned successfully", { id: toastId });
+            setScannedData(res.data);
+
+            const { supplier, supplier_id } = res.data;
+            if (supplier_id) {
+              setFormData((prev) => ({ ...prev, supplier_id }));
+            } else if (supplier) {
+              const lowerSupplier = supplier.toLowerCase();
+              const match = suppliers.find((s) => {
+                const sName = s.name.toLowerCase();
+                return (
+                  sName.includes(lowerSupplier) || lowerSupplier.includes(sName)
+                );
+              });
+              if (match) {
+                setFormData((prev) =>
+                  prev.supplier_id ? prev : { ...prev, supplier_id: match.id },
+                );
+              }
+            }
+          } else {
+            toast.dismiss(toastId);
+          }
+        } catch (e) {
+          toast.dismiss(toastId);
+          console.error("OCR Scan failed", e);
+        }
       }
     },
   });
@@ -408,6 +457,63 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                   </Box>
                 </Grid>
               </Grid>
+              {scannedData && (
+                <Box
+                  mt={2}
+                  p={2}
+                  bgcolor="#f8f9fa"
+                  borderRadius={2}
+                  border="1px solid #eef0f4"
+                >
+                  <Typography variant="subtitle2" gutterBottom>
+                    Scanned Data Preview
+                  </Typography>
+                  {scannedData.supplier && (
+                    <Typography variant="body2">
+                      <strong>Supplier:</strong> {scannedData.supplier}
+                    </Typography>
+                  )}
+                  {scannedData.amount && (
+                    <Typography variant="body2">
+                      <strong>Amount:</strong> {scannedData.amount}
+                    </Typography>
+                  )}
+                  {scannedData.date && (
+                    <Typography variant="body2">
+                      <strong>Date:</strong> {scannedData.date}
+                    </Typography>
+                  )}
+                  {scannedData.items && scannedData.items.length > 0 && (
+                    <Box mt={1}>
+                      <Typography variant="body2">
+                        <strong>Items ({scannedData.items.length}):</strong>
+                      </Typography>
+                      <TableContainer component={Paper} variant="outlined" sx={{ mt: 1 }}>
+                        <Table size="small">
+                          <TableHead sx={{ bgcolor: "background.default" }}>
+                            <TableRow>
+                              <TableCell sx={{ fontWeight: 600 }}>Qty</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>Unit Price</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {scannedData.items.map((it: any, idx: number) => (
+                              <TableRow key={idx}>
+                                <TableCell>{it.qty || "-"}</TableCell>
+                                <TableCell>{it.description || it.item_name || "-"}</TableCell>
+                                <TableCell align="right">{it.unit_price || it.price || "-"}</TableCell>
+                                <TableCell align="right">{it.total || it.line_total || "-"}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
+                  )}
+                </Box>
+              )}
             </Box>
 
             {/* Sticky Footer */}
