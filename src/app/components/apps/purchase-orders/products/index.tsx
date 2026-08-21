@@ -326,11 +326,11 @@ const PurchaseProductList: React.FC<Props> = ({
           });
         }
         const pagMeta = (response.data as any).data || response.data.info;
-        if (pagMeta && pagMeta.totalItems !== undefined) {
-          setTotalRows(pagMeta.totalItems);
+        if (pagMeta && pagMeta.totalProducts !== undefined) {
+          setTotalRows(pagMeta.totalProducts);
           setPageCount(pagMeta.totalPages);
-        } else if ((response.data as any).totalItems !== undefined) {
-          setTotalRows((response.data as any).totalItems);
+        } else if ((response.data as any).totalProducts !== undefined) {
+          setTotalRows((response.data as any).totalProducts);
           setPageCount((response.data as any).totalPages);
         } else {
           setTotalRows(response.data.info.length);
