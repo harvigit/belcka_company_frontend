@@ -223,8 +223,8 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
                       textOverflow: "ellipsis",
                       wordBreak: "break-word",
                       minWidth: "120px",
-                      width: "150px",
-                      maxWidth: "150px",
+                      // width: "100px",
+                      // maxWidth: "100px",
                     }}
                   >
                     Address
@@ -378,6 +378,16 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="caption" color="textSecondary">
+                          Inc Tax
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="caption" color="textSecondary">
+                          Excl Tax
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="caption" color="textSecondary">
                           Total
                         </Typography>
                       </TableCell>
@@ -401,13 +411,23 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body2">
+                            {item.inc_tax !== null && item.inc_tax !== undefined ? `£${Number(item.inc_tax).toFixed(2)}` : "-"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2">
+                            {item.excl_tax !== null && item.excl_tax !== undefined ? `£${Number(item.excl_tax).toFixed(2)}` : "-"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2">
                             £{Number(item.total || 0).toFixed(2)}
                           </Typography>
                         </TableCell>
                       </TableRow>
                     ))}
                     <TableRow>
-                      <TableCell colSpan={3}>
+                      <TableCell colSpan={5}>
                         <Typography variant="subtitle2" fontWeight={700} mt={1}>
                           Total
                         </Typography>

@@ -73,6 +73,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [scannedData, setScannedData] = useState<any>(null);
+  const [items, setItems] = useState<any[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -94,6 +95,8 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
       });
       setFile(null);
       setFilePreview(null);
+      setScannedData(null);
+      setItems([]);
     }
   }, [open, isEdit, collectId]);
 
@@ -128,6 +131,11 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
           address_id: item.address_id || null,
           supplier_id: item.supplier_id || null,
         });
+        if (item.poItems && item.poItems.length > 0) {
+          setItems(item.poItems);
+        } else {
+          setItems([]);
+        }
         if (item.image) {
           setFilePreview({
             src: item.image,
@@ -175,6 +183,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
           if (res.data) {
             toast.success("Document scanned successfully", { id: toastId });
             setScannedData(res.data);
+            if (res.data.items) setItems(res.data.items);
 
             const { supplier, supplier_id } = res.data;
             if (supplier_id) {
@@ -219,6 +228,19 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
       if (file) {
         payload.append("file", file);
       }
+      if (items.length > 0) {
+        const payloadItems = items.map((it: any) => {
+          if (it.id) {
+            return {
+              id: it.id,
+              inc_tax: it.inc_tax !== undefined ? it.inc_tax : null,
+              excl_tax: it.excl_tax !== undefined ? it.excl_tax : null,
+            };
+          }
+          return it;
+        });
+        payload.append("items", JSON.stringify(payloadItems));
+      }
 
       const endpoint = isEdit ? "po-collect/update" : "po-collect/create";
       const result = await api.post(endpoint, payload, {
@@ -244,7 +266,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
       onClose={onClose}
       PaperProps={{
         sx: {
-          width: { xs: "100%", sm: 400, md: 500 },
+          width: { xs: "100%", sm: 500, md: 600 },
           borderRadius: 0,
           boxShadow: "none",
         },
@@ -364,7 +386,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                   />
                 </Grid>
 
-                <Grid size={{ xs: 5 }}>
+                <Grid size={{ xs: 4 }}>
                   <Typography variant="body2" gutterBottom mb={1}>
                     File (Image / PDF)
                   </Typography>
@@ -457,7 +479,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                   </Box>
                 </Grid>
               </Grid>
-              {scannedData && (
+              {(scannedData || (items && items.length > 0)) && (
                 <Box
                   mt={2}
                   p={2}
@@ -468,25 +490,25 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                   <Typography variant="subtitle2" gutterBottom>
                     Scanned Data Preview
                   </Typography>
-                  {scannedData.supplier && (
+                  {scannedData?.supplier && (
                     <Typography variant="body2">
                       <strong>Supplier:</strong> {scannedData.supplier}
                     </Typography>
                   )}
-                  {scannedData.amount && (
+                  {scannedData?.amount && (
                     <Typography variant="body2">
                       <strong>Amount:</strong> {scannedData.amount}
                     </Typography>
                   )}
-                  {scannedData.date && (
+                  {scannedData?.date && (
                     <Typography variant="body2">
                       <strong>Date:</strong> {scannedData.date}
                     </Typography>
                   )}
-                  {scannedData.items && scannedData.items.length > 0 && (
+                  {items && items.length > 0 && (
                     <Box mt={1}>
                       <Typography variant="body2">
-                        <strong>Items ({scannedData.items.length}):</strong>
+                        <strong>Items ({items.length}):</strong>
                       </Typography>
                       <TableContainer component={Paper} variant="outlined" sx={{ mt: 1 }}>
                         <Table size="small">
@@ -495,15 +517,23 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                               <TableCell sx={{ fontWeight: 600 }}>Qty</TableCell>
                               <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
                               <TableCell align="right" sx={{ fontWeight: 600 }}>Unit Price</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>Inc Tax</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>Excl Tax</TableCell>
                               <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {scannedData.items.map((it: any, idx: number) => (
+                            {items.map((it: any, idx: number) => (
                               <TableRow key={idx}>
                                 <TableCell>{it.qty || "-"}</TableCell>
                                 <TableCell>{it.description || it.item_name || "-"}</TableCell>
                                 <TableCell align="right">{it.unit_price || it.price || "-"}</TableCell>
+                                <TableCell align="right" sx={{ p: 0.5 }}>
+                                  <TextField size="small" value={it.inc_tax !== null && it.inc_tax !== undefined ? it.inc_tax : ""} onChange={e => { const newIt = [...items]; newIt[idx].inc_tax = Number(e.target.value); setItems(newIt); }} sx={{ width: 80 }} />
+                                </TableCell>
+                                <TableCell align="right" sx={{ p: 0.5 }}>
+                                  <TextField size="small" value={it.excl_tax !== null && it.excl_tax !== undefined ? it.excl_tax : ""} onChange={e => { const newIt = [...items]; newIt[idx].excl_tax = Number(e.target.value); setItems(newIt); }} sx={{ width: 80 }} />
+                                </TableCell>
                                 <TableCell align="right">{it.total || it.line_total || "-"}</TableCell>
                               </TableRow>
                             ))}

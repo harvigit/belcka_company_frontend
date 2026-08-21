@@ -26,6 +26,8 @@ import {
   Popover,
   FormGroup,
   FormControlLabel,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import {
@@ -360,22 +362,24 @@ const CollectList = () => {
 
           return (
             <Stack direction="row" alignItems="center" px={1.5}>
-              <Typography
-                className="f-14"
-                sx={{
-                  display: "-webkit-box",
-                  WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 1,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  wordBreak: "break-word",
-                  minWidth: "120px",
-                  width: "150px",
-                  maxWidth: "150px",
-                }}
-              >
-                {item.address_name ?? "-"}
-              </Typography>
+              <Tooltip title={item.address_name ?? ""}>
+                <Typography
+                  className="f-14"
+                  sx={{
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    wordBreak: "break-word",
+                    minWidth: "120px",
+                    width: "150px",
+                    maxWidth: "150px",
+                  }}
+                >
+                  {item.address_name ?? "-"}
+                </Typography>
+              </Tooltip>
             </Stack>
           );
         },
@@ -507,39 +511,50 @@ const CollectList = () => {
           spacing={{ xs: 1, sm: 2, md: 4 }}
         >
           <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
-            <Box display="flex" gap={1} mr={2}>
-              {["All", "New", "Reviewed"].map((status) => {
-                const isActive = activeTab === status;
-                const count = tabCounts[status as keyof typeof tabCounts];
-                return (
-                  <Button
-                    key={status}
-                    onClick={() => {
-                      setActiveTab(status);
-                      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-                    }}
-                    sx={{
-                      borderRadius: "8px",
-                      px: 2,
-                      py: 0.5,
-                      minWidth: "auto",
-                      textTransform: "none",
-                      fontWeight: 500,
-                      color: isActive ? "primary.main" : "text.secondary",
-                      bgcolor: isActive ? "rgba(30, 77, 183, 0.08)" : "transparent",
-                      border: "1px solid",
-                      borderColor: isActive ? "primary.main" : "divider",
-                      boxShadow: "none",
-                      "&:hover": {
-                        bgcolor: isActive ? "rgba(30, 77, 183, 0.12)" : "rgba(0, 0, 0, 0.04)",
-                        color: isActive ? "#1e4db7" :" #3a3939ff",
-                      }
-                    }}
-                  >
-                    {status} {count > 0 ? count : ""}
-                  </Button>
-                );
-              })}
+            <Box sx={{ mr: 2 }}>
+              <Tabs
+                value={activeTab}
+                onChange={(_, value) => {
+                  setActiveTab(value);
+                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                }}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{
+                  minHeight: 42,
+                  "& .MuiTabs-indicator": {
+                    height: 2,
+                    bgcolor: "primary.main",
+                  },
+                  "& .MuiTab-root": {
+                    minHeight: 42,
+                    textTransform: "none",
+                    fontWeight: 500,
+                    fontSize: 14,
+                    color: "text.secondary",
+                    px: 1.5,
+                    mr: 0.5,
+
+                    "&.Mui-selected": {
+                      color: "primary.main",
+                      fontWeight: 600,
+                    },
+                  },
+                }}
+              >
+                {["All", "New", "Reviewed"].map((status) => {
+                  const count = tabCounts[status as keyof typeof tabCounts];
+
+                  return (
+                    <Tab
+                      key={status}
+                      value={status}
+                      disableRipple
+                      label={`${status}${count > 0 ? ` (${count})` : ""}`}
+                    />
+                  );
+                })}
+              </Tabs>
             </Box>
             <TextField
               size="small"
@@ -729,8 +744,8 @@ const CollectList = () => {
               <DialogTitle>Confirm Deletion</DialogTitle>
               <DialogContent>
                 <Typography color="textSecondary">
-                  Are you sure you want to delete {collectsToDelete.length}{" "}
-                  PO collect{collectsToDelete.length > 1 ? "s" : ""} from the list?
+                  Are you sure you want to delete {collectsToDelete.length} PO
+                  collect{collectsToDelete.length > 1 ? "s" : ""} from the list?
                 </Typography>
               </DialogContent>
               <DialogActions>
