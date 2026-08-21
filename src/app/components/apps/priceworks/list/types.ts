@@ -65,6 +65,9 @@ export type PriceworkApiRow = {
     pricework_date?: string | null;
     note?: string | null;
     attachment_count?: number | null;
+    attachments?: PriceworkAttachment[];
+    before_attachments?: PriceworkAttachment[];
+    after_attachments?: PriceworkAttachment[];
     currency?: string | null;
     timesheet_id?: number | null;
     status?: PriceworkStatus | string | number | null;
