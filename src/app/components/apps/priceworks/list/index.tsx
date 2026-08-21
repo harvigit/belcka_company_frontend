@@ -115,6 +115,14 @@ const isActionableTimesheetLightRow = (row: PriceworkRow) =>
 const isOrphanedTimesheetLightRow = (row: PriceworkRow) =>
     row.record_type === 'timesheet_light' && !row.timesheet_light_id;
 
+const getPriceworkRowKey = (row: PriceworkRow) => {
+    if (row.record_type === 'timesheet_light') {
+        return `timesheet_light:${row.timesheet_light_id ?? row.id}:checklog:${row.user_checklog_id ?? row.user_worklog_id ?? 'summary'}`;
+    }
+
+    return `pricework:${row.pricework_id ?? row.id}`;
+};
+
 const PriceworkList = () => {
     const {data: session} = useSession();
     const user = session?.user as User | undefined;
@@ -135,7 +143,7 @@ const PriceworkList = () => {
     );
     const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(null);
     const [columnSearch, setColumnSearch] = useState('');
-    const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+    const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
     const [isSelectAll, setIsSelectAll] = useState(false);
     const [activeTab, setActiveTab] = useState<PriceworkTabKey>('all');
     const [tabCounts, setTabCounts] = useState({
@@ -240,18 +248,20 @@ const PriceworkList = () => {
         fetchFilterOptions();
     }, [user?.company_id]);
 
-    const handleToggleSelect = (id: number) => {
+    const handleToggleSelect = (row: PriceworkRow) => {
+        const rowKey = getPriceworkRowKey(row);
+
         if (isSelectAll) {
             setIsSelectAll(false);
-            const next = new Set(data.map((row) => row.id));
-            next.delete(id);
+            const next = new Set(data.map(getPriceworkRowKey));
+            next.delete(rowKey);
             setSelectedRowIds(next);
             return;
         }
         setSelectedRowIds((prev) => {
             const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
+            if (next.has(rowKey)) next.delete(rowKey);
+            else next.add(rowKey);
             return next;
         });
     };
@@ -268,15 +278,15 @@ const PriceworkList = () => {
             return data.reduce((sum, item) => sum + Number(item.pricework_amount || 0), 0);
         }
         return data
-            .filter((item) => selectedRowIds.has(item.id))
+            .filter((item) => selectedRowIds.has(getPriceworkRowKey(item)))
             .reduce((sum, item) => sum + Number(item.pricework_amount || 0), 0);
     }, [data, isSelectAll, selectedRowIds]);
 
-    const selectedCurrency = data.find((item) => selectedRowIds.has(item.id))?.currency || data[0]?.currency || '£';
+    const selectedCurrency = data.find((item) => selectedRowIds.has(getPriceworkRowKey(item)))?.currency || data[0]?.currency || '£';
     
     const getSelectedRows = (): PriceworkRow[] => {
         if (isSelectAll) return data;
-        return data.filter((item) => selectedRowIds.has(item.id));
+        return data.filter((item) => selectedRowIds.has(getPriceworkRowKey(item)));
     };
 
     const getActionPriceworkIds = () => getSelectedRows().filter(isStandalonePriceworkRow).map((item) => item.id);
@@ -292,9 +302,9 @@ const PriceworkList = () => {
             );
         }
 
-        return selectedRows
+        return [...new Set(selectedRows
             .filter(isActionableTimesheetLightRow)
-            .map((item) => Number(item.timesheet_light_id));
+            .map((item) => Number(item.timesheet_light_id)))];
     };
     
     const hasOnlyUnactionableSelection = () => {
@@ -476,7 +486,7 @@ const PriceworkList = () => {
                             className="header-checkbox"
                             checked={
                                 isSelectAll ||
-                                (data.length > 0 && data.every((row) => selectedRowIds.has(row.id)))
+                                (data.length > 0 && data.every((row) => selectedRowIds.has(getPriceworkRowKey(row))))
                             }
                             indeterminate={
                                 !isSelectAll &&
@@ -494,7 +504,7 @@ const PriceworkList = () => {
                 ),
                 cell: ({row}: {row: {original: PriceworkRow}}) => {
                     const item = row.original;
-                    const isChecked = isSelectAll || selectedRowIds.has(item.id);
+                    const isChecked = isSelectAll || selectedRowIds.has(getPriceworkRowKey(item));
                     return (
                         <Stack direction="row" alignItems="center">
                             <CustomCheckbox
@@ -503,7 +513,7 @@ const PriceworkList = () => {
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                     e.stopPropagation();
                                     e.preventDefault();
-                                    handleToggleSelect(item.id);
+                                    handleToggleSelect(item);
                                 }}
                             />
                         </Stack>
@@ -1296,9 +1306,9 @@ const PriceworkList = () => {
                                 table.getRowModel().rows.map((row) => (
                                     <TableRow
                                         hover
-                                        key={row.id}
+                                        key={getPriceworkRowKey(row.original)}
                                         selected={
-                                            isSelectAll || selectedRowIds.has(row.original.id)
+                                            isSelectAll || selectedRowIds.has(getPriceworkRowKey(row.original))
                                         }
                                     >
                                         {row.getVisibleCells().map((cell) => (

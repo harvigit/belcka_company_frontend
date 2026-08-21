@@ -1,14 +1,16 @@
 'use client';
 
-import React, {useState, useEffect, useMemo} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
     Box,
     Button,
     CircularProgress,
     FormControl,
+    IconButton,
     InputAdornment,
     ListSubheader,
     MenuItem,
+    Paper,
     Select,
     Table,
     TableBody,
@@ -19,11 +21,9 @@ import {
     TextField,
     Tooltip,
     Typography,
-    Paper,
 } from '@mui/material';
-import {IconSearch} from '@tabler/icons-react';
+import {IconDeviceFloppy, IconPlus, IconSearch, IconTrash} from '@tabler/icons-react';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
-import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
 import api from '@/utils/axios';
 import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
@@ -33,68 +33,81 @@ interface TaskPricingMatrixProps {
     onSaveSuccess?: () => void;
 }
 
+type CellState = {
+    is_active: boolean;
+    price: string;
+};
+
+type PricingRow = {
+    id: string;
+    user_id: string;
+    trade_id: string;
+    category_id: string;
+    sub_category_id: string;
+    task_id: string;
+    base_active: boolean;
+    base_price: string;
+    project_prices: Record<string, CellState>;
+};
+
 const TASKS_PAGE_SIZE = 500;
-const DEFAULT_ROWS_PER_PAGE = 50;
 const DEFAULT_PROJECT_COLUMNS_PER_PAGE = 8;
 const PROJECT_COLUMNS_PER_PAGE_OPTIONS = [8, 12, 20];
 
-const getTaskUserName = (task: any) =>
-    task.completed_by_name ||
-    task.user_name ||
-    task.created_by_name ||
-    task.user?.name ||
-    [task.user?.first_name, task.user?.last_name].filter(Boolean).join(' ') ||
-    '-';
-
 const getTaskBasePrice = (task: any) =>
-    task.base_cost != null && task.base_cost !== '' ? String(task.base_cost) : '0.00';
-
-const isAllProjectsTask = (task: any) =>
-    String(task.project || '').toLowerCase() === 'all' ||
-    !Array.isArray(task.project_ids) ||
-    task.project_ids.length === 0;
-
-const isTaskAvailableForProject = (task: any, projectId: number) =>
-    isAllProjectsTask(task) ||
-    task.project_ids.some((id: any) => String(id) === String(projectId));
+    task?.base_cost != null && task.base_cost !== '' ? String(task.base_cost) : '0.00';
 
 const getTaskTradeId = (task: any) =>
-    task.trade_id != null && task.trade_id !== '' ? String(task.trade_id) : '';
-
-const getUserTradeId = (user: any) =>
-    user.trade_id != null && user.trade_id !== '' ? String(user.trade_id) : '';
+    task?.trade_id != null && task.trade_id !== '' ? String(task.trade_id) : '';
 
 const getUserDisplayName = (user: any) =>
-    user.name ||
-    [user.first_name, user.last_name].filter(Boolean).join(' ') ||
+    user?.name ||
+    [user?.first_name, user?.last_name].filter(Boolean).join(' ') ||
+    user?.email ||
     '-';
 
-const getRowUserId = (row: any) =>
-    row.row_user_id != null && row.row_user_id !== '' ? String(row.row_user_id) : '0';
+const getProjectName = (project: any) =>
+    project?.name || project?.project_name || project?.address || '-';
 
-const getMatrixKey = (taskId: number | string, projectId: number | string, userId?: number | string | null) =>
-    `${taskId}_${projectId}_${userId ?? '0'}`;
+const isPriceworkTask = (task: any) =>
+    task?.shift_is_pricework === true ||
+    String(task?.shift_name || '').trim().toLowerCase() === 'pricework' ||
+    String(task?.shift_name || '').trim().toLowerCase() === 'price work';
+
+const getCategoryId = (task: any) =>
+    task?.category_id != null && task.category_id !== '' ? String(task.category_id) : '';
+
+const getSubCategoryId = (task: any) =>
+    task?.sub_category_id != null && task.sub_category_id !== '' ? String(task.sub_category_id) : '';
+
+const createRow = (): PricingRow => ({
+    id: `row-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    user_id: '',
+    trade_id: '',
+    category_id: '',
+    sub_category_id: '',
+    task_id: '',
+    base_active: false,
+    base_price: '0.00',
+    project_prices: {},
+});
 
 const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) => {
     const session = useSession();
-    const user = session.data?.user as User & { company_id?: number | null };
+    const user = session.data?.user as User & {company_id?: number | null};
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [tasks, setTasks] = useState<any[]>([]);
     const [projects, setProjects] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
-    const [matrix, setMatrix] = useState<Record<string, { is_active: boolean; price: string }>>({});
-    const [basePrices, setBasePrices] = useState<Record<string, string>>({});
-    const [basePriceActive, setBasePriceActive] = useState<Record<string, boolean>>({});
+    const [rows, setRows] = useState<PricingRow[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProjectFilter, setSelectedProjectFilter] = useState('');
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
     const [projectPage, setProjectPage] = useState(0);
     const [projectColumnsPerPage, setProjectColumnsPerPage] = useState(DEFAULT_PROJECT_COLUMNS_PER_PAGE);
 
-    const fetchAllTasks = async (companyId: number) => {
+    const fetchAllTasks = useCallback(async (companyId: number) => {
         const firstResponse = await api.get(
             `/tasks/get?company_id=${companyId}&page=1&limit=${TASKS_PAGE_SIZE}`,
         );
@@ -105,9 +118,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
         const remainingResponses = await Promise.all(
             Array.from({length: totalPages - 1}, (_, index) =>
-                api.get(
-                    `/tasks/get?company_id=${companyId}&page=${index + 2}&limit=${TASKS_PAGE_SIZE}`,
-                ),
+                api.get(`/tasks/get?company_id=${companyId}&page=${index + 2}&limit=${TASKS_PAGE_SIZE}`),
             ),
         );
 
@@ -115,16 +126,17 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             (allTasks: any[], response) => allTasks.concat(response.data?.info || []),
             firstTasks,
         );
-    };
+    }, []);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         if (!user?.company_id) {
             setLoading(false);
             return;
         }
+
         setLoading(true);
         try {
-            const [resResources, resTasks, resPrices, resUsers] = await Promise.all([
+            const [resResources, resTasks, resUsers] = await Promise.all([
                 api.get('/pricework/get-resources').catch((err) => {
                     console.error('Error fetching pricework resources', err);
                     return {data: {projects: []}};
@@ -133,184 +145,275 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     console.error('Error fetching tasks', err);
                     return [];
                 }),
-                api.get('/pricework/settings/prices?limit=2000').catch((err) => {
-                    console.error('Error fetching project task prices', err);
-                    return {data: {info: []}};
-                }),
                 api.get('/user/list').catch((err) => {
                     console.error('Error fetching users', err);
                     return {data: {info: []}};
                 }),
             ]);
 
-            const projectList = resResources.data?.projects || [];
-            setProjects(projectList);
-
             const taskList = Array.isArray(resTasks) ? resTasks : resTasks.data?.info || [];
-            setTasks(taskList);
+
+            setProjects(resResources.data?.projects || []);
+            setTasks(taskList.filter(isPriceworkTask));
             setUsers(resUsers.data?.info || []);
-            setBasePrices(
-                (taskList as any[]).reduce((prices: Record<string, string>, task: any) => {
-                    prices[String(task.id)] = getTaskBasePrice(task);
-                    return prices;
-                }, {}),
-            );
-            setBasePriceActive(
-                (taskList as any[]).reduce((active: Record<string, boolean>, task: any) => {
-                    active[String(task.id)] = Number(getTaskBasePrice(task)) > 0;
-                    return active;
-                }, {}),
-            );
-
-            const priceList = resPrices.data?.info || [];
-            const newMatrix: Record<string, { is_active: boolean; price: string }> = {};
-
-            priceList.forEach((item: any) => {
-                if (item.task_id && item.project_id) {
-                    const key = getMatrixKey(item.task_id, item.project_id, item.user_id ?? 0);
-                    newMatrix[key] = {
-                        is_active: true,
-                        price: item.price != null ? String(item.price) : '0.00',
-                    };
-                }
-            });
-
-            setMatrix(newMatrix);
+            setRows([]);
         } catch (err) {
-            console.error('Failed to load task pricing matrix:', err);
+            console.error('Failed to load price work settings:', err);
+            toast.error('Failed to load price work settings');
         } finally {
             setLoading(false);
         }
-    };
+    }, [fetchAllTasks, user?.company_id]);
 
     useEffect(() => {
         fetchData();
-    }, [user?.company_id]);
+    }, [fetchData]);
 
     useEffect(() => {
-        setPage(0);
         setProjectPage(0);
-    }, [searchTerm, selectedProjectFilter]);
+    }, [selectedProjectFilter]);
 
-    const handleToggle = (taskId: number, projectId: number, userId: number | string | null, basePrice: string) => {
-        const key = getMatrixKey(taskId, projectId, userId);
-        setMatrix((prev) => {
-            const current = prev[key];
-            const nextIsActive = !current?.is_active;
-            return {
-                ...prev,
-                [key]: {
-                    is_active: nextIsActive,
-                    price: current?.price || basePrice || '0.00',
+    const taskMap = useMemo(() => {
+        return tasks.reduce<Record<string, any>>((map, task) => {
+            map[String(task.id)] = task;
+            return map;
+        }, {});
+    }, [tasks]);
+
+    const tradeOptions = useMemo(() => {
+        const tradeMap = new Map<string, {id: string; name: string}>();
+
+        tasks.forEach((task) => {
+            const tradeId = getTaskTradeId(task);
+            if (!tradeId || tradeMap.has(tradeId)) return;
+            tradeMap.set(tradeId, {id: tradeId, name: task.trade_name || 'Trade'});
+        });
+
+        return Array.from(tradeMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    }, [tasks]);
+
+    const displayedProjects = useMemo(() => {
+        const availableProjects = selectedProjectFilter
+            ? projects.filter((project) => String(project.id) === selectedProjectFilter)
+            : projects;
+
+        if (selectedProjectFilter) return availableProjects;
+
+        const start = projectPage * projectColumnsPerPage;
+        return availableProjects.slice(start, start + projectColumnsPerPage);
+    }, [projectColumnsPerPage, projectPage, projects, selectedProjectFilter]);
+
+    const projectColumnCount = selectedProjectFilter ? displayedProjects.length : projects.length;
+    const projectPageCount = Math.max(1, Math.ceil(projectColumnCount / projectColumnsPerPage));
+    const projectColumnStart = projectColumnCount === 0 ? 0 : projectPage * projectColumnsPerPage + 1;
+    const projectColumnEnd = Math.min(projectColumnCount, (projectPage + 1) * projectColumnsPerPage);
+
+    const filteredRows = useMemo(() => {
+        const term = searchTerm.trim().toLowerCase();
+        if (!term) return rows;
+
+        return rows.filter((row) => {
+            const selectedTask = taskMap[row.task_id];
+            const selectedUser = users.find((item) => String(item.id) === row.user_id);
+            const searchable = [
+                getUserDisplayName(selectedUser || {}),
+                selectedTask?.trade_name,
+                selectedTask?.category_name,
+                selectedTask?.sub_category_name,
+            ].join(' ').toLowerCase();
+
+            return searchable.includes(term);
+        });
+    }, [rows, searchTerm, taskMap, users]);
+
+    const selectMenuProps = {
+        disablePortal: true,
+        PaperProps: {
+            sx: {
+                mt: 0.5,
+                maxHeight: 320,
+                border: '1px solid #d9e2ef',
+                borderRadius: '8px',
+                boxShadow: '0 10px 28px rgba(15, 23, 42, 0.16)',
+                '& .MuiMenuItem-root': {
+                    minHeight: 36,
+                    px: 1.5,
+                    fontSize: '0.8rem',
+                    whiteSpace: 'normal',
                 },
-            };
-        });
+            },
+        },
+        MenuListProps: {dense: true, sx: {py: 0.5}},
     };
 
-    const handlePriceChange = (taskId: number, projectId: number, userId: number | string | null, val: string) => {
-        if (/^\d*(?:\.\d{0,2})?$/.test(val)) {
-            const key = getMatrixKey(taskId, projectId, userId);
-            setMatrix((prev) => {
-                const current = prev[key];
-                return {
-                    ...prev,
-                    [key]: {
-                        is_active: current?.is_active ?? true,
-                        price: val,
-                    },
-                };
+    const updateRow = (rowId: string, changes: Partial<PricingRow>) => {
+        setRows((prev) => prev.map((row) => (row.id === rowId ? {...row, ...changes} : row)));
+    };
+
+    const getCategoryOptions = (tradeId: string) => {
+        const categoryMap = new Map<string, {id: string; name: string}>();
+
+        tasks
+            .filter((task) => getTaskTradeId(task) === tradeId)
+            .forEach((task) => {
+                const categoryId = getCategoryId(task);
+                if (!categoryId || categoryMap.has(categoryId)) return;
+                categoryMap.set(categoryId, {id: categoryId, name: task.category_name || 'Category'});
             });
-        }
+
+        return Array.from(categoryMap.values()).sort((a, b) => a.name.localeCompare(b.name));
     };
 
-    const handleBasePriceChange = (taskId: number, val: string) => {
-        if (/^\d*(?:\.\d{0,2})?$/.test(val)) {
-            setBasePrices((prev) => ({
-                ...prev,
-                [String(taskId)]: val,
-            }));
-        }
+    const getSubCategoryOptions = (tradeId: string, categoryId: string) => {
+        const subCategoryMap = new Map<string, {id: string; name: string; task_id: string}>();
+
+        tasks
+            .filter((task) => getTaskTradeId(task) === tradeId && getCategoryId(task) === categoryId)
+            .forEach((task) => {
+                const subCategoryId = getSubCategoryId(task);
+                if (!subCategoryId) {
+                    subCategoryMap.set(`task-${task.id}`, {
+                        id: '',
+                        name: '-',
+                        task_id: String(task.id),
+                    });
+                    return;
+                }
+
+                if (subCategoryMap.has(subCategoryId)) return;
+                subCategoryMap.set(subCategoryId, {
+                    id: subCategoryId,
+                    name: task.sub_category_name || 'Subcategory',
+                    task_id: String(task.id),
+                });
+            });
+
+        return Array.from(subCategoryMap.values()).sort((a, b) => a.name.localeCompare(b.name));
     };
 
-    const handleBaseToggle = (taskId: number) => {
-        setBasePriceActive((prev) => {
-            const taskKey = String(taskId);
-            const nextIsActive = !(prev[taskKey] ?? false);
+    const findTaskForSelection = (tradeId: string, categoryId: string, subCategoryId: string) => {
+        return tasks.find((task) =>
+            getTaskTradeId(task) === tradeId &&
+            getCategoryId(task) === categoryId &&
+            getSubCategoryId(task) === subCategoryId,
+        );
+    };
 
-            if (nextIsActive) {
-                setBasePrices((currentPrices) => ({
-                    ...currentPrices,
-                    [taskKey]: currentPrices[taskKey] || '0.00',
-                }));
-            }
-
-            return {
-                ...prev,
-                [taskKey]: nextIsActive,
-            };
+    const handleTradeChange = (row: PricingRow, tradeId: string) => {
+        updateRow(row.id, {
+            trade_id: tradeId,
+            category_id: '',
+            sub_category_id: '',
+            task_id: '',
+            base_active: false,
+            base_price: '0.00',
+            project_prices: {},
         });
+    };
+
+    const handleCategoryChange = (row: PricingRow, categoryId: string) => {
+        const matchedTask = findTaskForSelection(row.trade_id, categoryId, '');
+        updateRow(row.id, {
+            category_id: categoryId,
+            sub_category_id: '',
+            task_id: matchedTask ? String(matchedTask.id) : '',
+            base_active: matchedTask ? Number(getTaskBasePrice(matchedTask)) > 0 : false,
+            base_price: matchedTask ? getTaskBasePrice(matchedTask) : '0.00',
+            project_prices: {},
+        });
+    };
+
+    const handleSubCategoryChange = (row: PricingRow, subCategoryId: string, taskId: string) => {
+        const matchedTask = taskMap[taskId] || findTaskForSelection(row.trade_id, row.category_id, subCategoryId);
+        updateRow(row.id, {
+            sub_category_id: subCategoryId,
+            task_id: matchedTask ? String(matchedTask.id) : '',
+            base_active: matchedTask ? Number(getTaskBasePrice(matchedTask)) > 0 : false,
+            base_price: matchedTask ? getTaskBasePrice(matchedTask) : '0.00',
+            project_prices: {},
+        });
+    };
+
+    const updateProjectPrice = (row: PricingRow, projectId: number, changes: Partial<CellState>) => {
+        const projectKey = String(projectId);
+        updateRow(row.id, {
+            project_prices: {
+                ...row.project_prices,
+                [projectKey]: {
+                    is_active: row.project_prices[projectKey]?.is_active ?? false,
+                    price: row.project_prices[projectKey]?.price ?? row.base_price ?? '0.00',
+                    ...changes,
+                },
+            },
+        });
+    };
+
+    const addRow = () => {
+        setRows((prev) => [...prev, createRow()]);
+    };
+
+    const removeRow = (rowId: string) => {
+        setRows((prev) => prev.filter((row) => row.id !== rowId));
     };
 
     const handleSave = async () => {
+        const incompleteRows = rows.filter((row) => row.user_id || row.trade_id || row.category_id || row.sub_category_id || row.task_id)
+            .filter((row) => !row.user_id || !row.trade_id || !row.category_id || !row.task_id);
+
+        if (incompleteRows.length > 0) {
+            toast.error('Select user, trade, category, and subcategory before saving.');
+            return;
+        }
+
+        const items: Array<{
+            project_id: number;
+            task_id: number;
+            user_id: number | null;
+            price: number;
+            is_active: boolean;
+        }> = [];
+
+        rows.forEach((row) => {
+            if (!row.task_id || !row.user_id) return;
+
+            Object.entries(row.project_prices).forEach(([projectId, value]) => {
+                items.push({
+                    task_id: Number(row.task_id),
+                    project_id: Number(projectId),
+                    user_id: Number(row.user_id),
+                    price: Number(value.price) || 0,
+                    is_active: value.is_active,
+                });
+            });
+        });
+
         setSaving(true);
         try {
-            const items: Array<{
-                project_id: number;
-                task_id: number;
-                user_id: number | null;
-                price: number;
-                is_active: boolean;
-            }> = [];
-            Object.entries(matrix).forEach(([key, val]) => {
-                const [taskIdStr, projectIdStr, userIdStr] = key.split('_');
-                const taskId = Number(taskIdStr);
-                const projectId = Number(projectIdStr);
-                const userId = Number(userIdStr);
-                if (taskId && projectId) {
-                    items.push({
-                        task_id: taskId,
-                        project_id: projectId,
-                        user_id: userId > 0 ? userId : null,
-                        price: Number(val.price) || 0,
-                        is_active: val.is_active,
-                    });
-                }
-            });
+            const basePriceUpdates = rows
+                .filter((row) => row.task_id)
+                .map((row) => {
+                    const selectedTask = taskMap[row.task_id];
+                    const originalPrice = getTaskBasePrice(selectedTask);
+                    const currentPrice = row.base_active ? row.base_price : '0.00';
 
-            const changedBasePrices = tasks.filter((task) => {
-                const taskId = String(task.id);
-                const originalPrice = getTaskBasePrice(task);
-                const currentPrice = basePriceActive[taskId]
-                    ? basePrices[taskId] ?? originalPrice
-                    : '0.00';
-                return Number(currentPrice || 0) !== Number(originalPrice || 0);
-            });
+                    if (Number(currentPrice || 0) === Number(originalPrice || 0)) return null;
 
-            const [res] = await Promise.all([
-                api.post('/pricework/settings/prices/batch', {items}),
-                ...changedBasePrices.map((task) => {
-                    const taskId = String(task.id);
-                    const currentPrice = basePriceActive[taskId]
-                        ? basePrices[taskId] ?? getTaskBasePrice(task)
-                        : '0.00';
                     return api.post('/tasks/update', {
-                        id: task.id,
+                        id: Number(row.task_id),
                         company_id: user?.company_id,
                         base_cost: Number(currentPrice) || 0,
                     });
-                }),
+                })
+                .filter(Boolean);
+
+            const [res] = await Promise.all([
+                api.post('/pricework/settings/prices/batch', {items}),
+                ...basePriceUpdates,
             ]);
 
             if (res.data?.IsSuccess) {
                 toast.success(res.data?.message || 'Settings saved!');
-                setTasks((prev) =>
-                    prev.map((task) => ({
-                        ...task,
-                        base_cost: basePriceActive[String(task.id)]
-                            ? basePrices[String(task.id)] ?? getTaskBasePrice(task)
-                            : '0.00',
-                    })),
-                );
+                await fetchData();
                 onSaveSuccess?.();
             } else {
                 toast.error(res.data?.message || 'Failed to save settings');
@@ -322,179 +425,6 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         }
     };
 
-    const tradeUsersMap = useMemo(() => {
-        return users.reduce<Record<string, any[]>>((map, companyUser) => {
-            const tradeId = getUserTradeId(companyUser);
-            if (!tradeId) return map;
-
-            if (!map[tradeId]) map[tradeId] = [];
-            if (!map[tradeId].some((item) => String(item.id) === String(companyUser.id))) {
-                map[tradeId].push(companyUser);
-            }
-            return map;
-        }, {});
-    }, [users]);
-
-    const getTaskTradeUsers = (task: any) => {
-        const tradeId = getTaskTradeId(task);
-        return tradeId ? tradeUsersMap[tradeId] || [] : [];
-    };
-
-    const taskUserRows = useMemo(() => {
-        return tasks.flatMap((task) => {
-            const tradeUsers = getTaskTradeUsers(task);
-            if (tradeUsers.length === 0) {
-                return [{...task, row_user_id: null, row_user_name: getTaskUserName(task)}];
-            }
-
-            return tradeUsers.map((tradeUser) => ({
-                ...task,
-                row_user_id: tradeUser.id,
-                row_user_name: getUserDisplayName(tradeUser),
-            }));
-        });
-    }, [tasks, tradeUsersMap]);
-
-    const filteredTasks = useMemo(() => {
-        if (!searchTerm.trim()) return taskUserRows;
-        const term = searchTerm.toLowerCase();
-        return taskUserRows.filter((t) => {
-            const userStr = String(t.row_user_name || getTaskUserName(t)).toLowerCase();
-            const tradeStr = String(t.trade_name || '').toLowerCase();
-            const catStr = String(t.category_name || '').toLowerCase();
-            const subCatStr = String(t.sub_category_name || '').toLowerCase();
-            const projectStr = String(t.project || '').toLowerCase();
-            const taskProjectStr = Array.isArray(t.projects)
-                ? t.projects.map((project: any) => project.name).join(' ').toLowerCase()
-                : '';
-            return (
-                userStr.includes(term) ||
-                tradeStr.includes(term) ||
-                catStr.includes(term) ||
-                subCatStr.includes(term) ||
-                projectStr.includes(term) ||
-                taskProjectStr.includes(term)
-            );
-        });
-    }, [taskUserRows, searchTerm]);
-
-    const visibleTasks = useMemo(() => {
-        if (!selectedProjectFilter) return filteredTasks;
-        return filteredTasks.filter((task) =>
-            isTaskAvailableForProject(task, Number(selectedProjectFilter)),
-        );
-    }, [filteredTasks, selectedProjectFilter]);
-
-    const availableProjects = useMemo(() => {
-        if (!selectedProjectFilter) return projects;
-        return projects.filter((p) => String(p.id) === String(selectedProjectFilter));
-    }, [projects, selectedProjectFilter]);
-
-    const displayedProjects = useMemo(() => {
-        if (selectedProjectFilter) return availableProjects;
-
-        const start = projectPage * projectColumnsPerPage;
-        return availableProjects.slice(start, start + projectColumnsPerPage);
-    }, [availableProjects, projectColumnsPerPage, projectPage, selectedProjectFilter]);
-
-    const projectColumnCount = availableProjects.length;
-    const projectPageCount = Math.max(1, Math.ceil(projectColumnCount / projectColumnsPerPage));
-    const projectColumnStart = projectColumnCount === 0 ? 0 : projectPage * projectColumnsPerPage + 1;
-    const projectColumnEnd = Math.min(projectColumnCount, (projectPage + 1) * projectColumnsPerPage);
-
-    const paginatedTasks = useMemo(() => {
-        const start = page * rowsPerPage;
-        return visibleTasks.slice(start, start + rowsPerPage);
-    }, [visibleTasks, page, rowsPerPage]);
-
-    const rowPageCount = Math.max(1, Math.ceil(visibleTasks.length / rowsPerPage));
-
-    const handleCopyBasePriceToProject = (projectId: number) => {
-        let copiedCount = 0;
-
-        setMatrix((prev) => {
-            const next = {...prev};
-
-            visibleTasks.forEach((task) => {
-                if (!isTaskAvailableForProject(task, projectId)) return;
-
-                const taskId = String(task.id);
-                const rowUserId = getRowUserId(task);
-                const basePrice = basePriceActive[taskId]
-                    ? basePrices[taskId] ?? getTaskBasePrice(task)
-                    : '0.00';
-
-                next[getMatrixKey(task.id, projectId, rowUserId)] = {
-                    is_active: true,
-                    price: basePrice || '0.00',
-                };
-                copiedCount += 1;
-            });
-
-            return next;
-        });
-
-        toast.success(`Copied base price to ${copiedCount} row${copiedCount === 1 ? '' : 's'}. Click Save Changes to store.`);
-    };
-
-    const paginationTable = useMemo(
-        () => ({
-            options: {manualPagination: false},
-            getState: () => ({
-                pagination: {
-                    pageIndex: page,
-                    pageSize: rowsPerPage,
-                },
-                rowSelection: {},
-            }),
-            getRowModel: () => ({rows: paginatedTasks}),
-            getPageCount: () => rowPageCount,
-            getCanPreviousPage: () => page > 0,
-            getCanNextPage: () => page < rowPageCount - 1,
-            setPageIndex: (nextPage: number) =>
-                setPage(Math.max(0, Math.min(nextPage, rowPageCount - 1))),
-            previousPage: () => setPage((prev) => Math.max(0, prev - 1)),
-            nextPage: () => setPage((prev) => Math.min(rowPageCount - 1, prev + 1)),
-            setPageSize: (nextPageSize: number) => {
-                setRowsPerPage(nextPageSize);
-                setPage(0);
-            },
-        }),
-        [page, paginatedTasks, rowPageCount, rowsPerPage],
-    );
-
-    const handleProjectColumnsPerPageChange = (event: any) => {
-        setProjectColumnsPerPage(Number(event.target.value));
-        setProjectPage(0);
-    };
-
-    const projectSelectMenuProps = {
-        disablePortal: true,
-        anchorOrigin: {vertical: 'bottom', horizontal: 'left'} as const,
-        transformOrigin: {vertical: 'top', horizontal: 'left'} as const,
-        PaperProps: {
-            sx: {
-                mt: 0.5,
-                maxHeight: 320,
-                width: 260,
-                maxWidth: 'calc(100vw - 48px)',
-                border: '1px solid #d9e2ef',
-                borderRadius: '8px',
-                boxShadow: '0 10px 28px rgba(15, 23, 42, 0.16)',
-                '& .MuiMenuItem-root': {
-                    minHeight: 38,
-                    px: 1.5,
-                    fontSize: '0.875rem',
-                    whiteSpace: 'normal',
-                },
-            },
-        },
-        MenuListProps: {
-            dense: true,
-            sx: {py: 0.5},
-        },
-    };
-
     if (loading) {
         return (
             <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8}}>
@@ -504,15 +434,14 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     }
 
     return (
-        <Box sx={{p: 2, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden'}}>
-            {/* Top Filter and Save Bar */}
-            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, gap: 2}}>
+        <Box sx={{p: 2, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', gap: 2}}>
+            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap'}}>
                 <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap'}}>
                     <TextField
                         size="small"
                         placeholder="Search user, trade..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(event) => setSearchTerm(event.target.value)}
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
@@ -520,28 +449,16 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                 </InputAdornment>
                             ),
                         }}
-                        sx={{
-                            width: 200,
-                            bgcolor: '#fff',
-                            '& .MuiOutlinedInput-root': {
-                                borderRadius: '8px',
-                            },
-                        }}
+                        sx={{width: 220, bgcolor: '#fff', '& .MuiOutlinedInput-root': {borderRadius: '8px'}}}
                     />
 
                     <FormControl size="small" sx={{minWidth: 240, bgcolor: '#fff'}}>
                         <Select
                             value={selectedProjectFilter}
-                            onChange={(e) => setSelectedProjectFilter(String(e.target.value))}
+                            onChange={(event) => setSelectedProjectFilter(String(event.target.value))}
                             displayEmpty
-                            MenuProps={projectSelectMenuProps}
-                            sx={{
-                                borderRadius: '8px',
-                                fontSize: '0.875rem',
-                                '& .MuiSelect-select': {
-                                    py: 1,
-                                },
-                            }}
+                            MenuProps={selectMenuProps}
+                            sx={{borderRadius: '8px', fontSize: '0.875rem', '& .MuiSelect-select': {py: 1}}}
                         >
                             <MenuItem value="">All projects</MenuItem>
                             {projects.length > 0 && (
@@ -551,7 +468,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                             )}
                             {projects.map((project) => (
                                 <MenuItem key={project.id} value={String(project.id)}>
-                                    {project.name}
+                                    {getProjectName(project)}
                                 </MenuItem>
                             ))}
                         </Select>
@@ -586,12 +503,11 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                             <FormControl size="small" sx={{minWidth: 88, bgcolor: '#fff'}}>
                                 <Select
                                     value={String(projectColumnsPerPage)}
-                                    onChange={handleProjectColumnsPerPageChange}
-                                    sx={{
-                                        borderRadius: '8px',
-                                        fontSize: '0.8rem',
-                                        '& .MuiSelect-select': {py: 0.75},
+                                    onChange={(event) => {
+                                        setProjectColumnsPerPage(Number(event.target.value));
+                                        setProjectPage(0);
                                     }}
+                                    sx={{borderRadius: '8px', fontSize: '0.8rem', '& .MuiSelect-select': {py: 0.75}}}
                                 >
                                     {PROJECT_COLUMNS_PER_PAGE_OPTIONS.map((option) => (
                                         <MenuItem key={option} value={String(option)}>
@@ -608,6 +524,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     variant="contained"
                     onClick={handleSave}
                     disabled={saving}
+                    startIcon={saving ? null : <IconDeviceFloppy size={18}/>}
                     sx={{
                         bgcolor: '#1976d2',
                         color: '#fff',
@@ -615,8 +532,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                         borderRadius: '8px',
                         px: 3,
                         py: 0.8,
-                        fontWeight: 600,
-                        fontSize: '0.9rem',
+                        fontWeight: 700,
                         boxShadow: '0 2px 6px rgba(25, 118, 210, 0.3)',
                         '&:hover': {bgcolor: '#1565c0'},
                     }}
@@ -625,7 +541,6 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 </Button>
             </Box>
 
-            {/* Matrix Table Container */}
             <TableContainer
                 component={Paper}
                 elevation={0}
@@ -640,78 +555,27 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 <Table stickyHeader size="small" sx={{borderCollapse: 'separate', borderSpacing: 0}}>
                     <TableHead>
                         <TableRow>
-                            <TableCell
-                                sx={{
-                                    position: 'sticky',
-                                    left: 0,
-                                    zIndex: 3,
-                                    bgcolor: '#f8fafc',
-                                    fontWeight: 700,
-                                    borderRight: '1px solid #e2e8f0',
-                                    minWidth: 110,
-                                    color: '#1e293b',
-                                }}
-                            >
-                                User
-                            </TableCell>
-                            <TableCell
-                                sx={{
-                                    position: 'sticky',
-                                    left: 110,
-                                    zIndex: 3,
-                                    bgcolor: '#f8fafc',
-                                    fontWeight: 700,
-                                    borderRight: '1px solid #e2e8f0',
-                                    minWidth: 110,
-                                    color: '#1e293b',
-                                }}
-                            >
-                                Trade
-                            </TableCell>
-                            <TableCell
-                                sx={{
-                                    position: 'sticky',
-                                    left: 220,
-                                    zIndex: 3,
-                                    bgcolor: '#f8fafc',
-                                    fontWeight: 700,
-                                    borderRight: '1px solid #e2e8f0',
-                                    minWidth: 130,
-                                    color: '#1e293b',
-                                }}
-                            >
-                                Category
-                            </TableCell>
-                            <TableCell
-                                sx={{
-                                    position: 'sticky',
-                                    left: 350,
-                                    zIndex: 3,
-                                    bgcolor: '#f8fafc',
-                                    fontWeight: 700,
-                                    borderRight: '1px solid #e2e8f0',
-                                    minWidth: 140,
-                                    color: '#1e293b',
-                                }}
-                            >
-                                Subcatego
-                            </TableCell>
-                            <TableCell
-                                sx={{
-                                    position: 'sticky',
-                                    left: 490,
-                                    zIndex: 3,
-                                    bgcolor: '#f8fafc',
-                                    fontWeight: 700,
-                                    borderRight: '2px solid #cbd5e1',
-                                    minWidth: 100,
-                                    color: '#1e293b',
-                                }}
-                            >
-                                Base price
-                            </TableCell>
+                            {[
+                                ['User', 230],
+                                ['Trade', 210],
+                                ['Category', 230],
+                                ['Subcategory', 230],
+                                ['Base price', 150],
+                            ].map(([label, width]) => (
+                                <TableCell
+                                    key={label}
+                                    sx={{
+                                        bgcolor: '#f8fafc',
+                                        fontWeight: 700,
+                                        borderRight: '1px solid #e2e8f0',
+                                        minWidth: width,
+                                        color: '#1e293b',
+                                    }}
+                                >
+                                    {label}
+                                </TableCell>
+                            ))}
 
-                            {/* Dynamic Project Column Headers */}
                             {displayedProjects.map((project) => (
                                 <TableCell
                                     key={project.id}
@@ -719,228 +583,202 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                     sx={{
                                         bgcolor: '#f8fafc',
                                         fontWeight: 700,
-                                        minWidth: 160,
+                                        minWidth: 165,
                                         color: '#1e293b',
                                         borderRight: '1px solid #e2e8f0',
                                         px: 1,
                                         py: 0.75,
                                     }}
                                 >
-                                    <Box
-                                        sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5}}>
-                                        <Tooltip title={project.name}>
-                                            <Typography
-                                                component="span"
-                                                sx={{
-                                                    display: '-webkit-box',
-                                                    WebkitBoxOrient: 'vertical',
-                                                    WebkitLineClamp: 2,
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    fontSize: '0.82rem',
-                                                    fontWeight: 700,
-                                                    lineHeight: 1.2,
-                                                    maxWidth: 140,
-                                                }}
-                                            >
-                                                {project.name}
-                                            </Typography>
-                                        </Tooltip>
-
-                                        <Button
-                                            size="small"
-                                            variant="outlined"
-                                            onClick={() => handleCopyBasePriceToProject(Number(project.id))}
+                                    <Tooltip title={getProjectName(project)}>
+                                        <Typography
+                                            component="span"
                                             sx={{
-                                                minWidth: 0,
-                                                px: 0.75,
-                                                py: 0.2,
-                                                fontSize: '0.68rem',
+                                                display: '-webkit-box',
+                                                WebkitBoxOrient: 'vertical',
+                                                WebkitLineClamp: 2,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                fontSize: '0.82rem',
+                                                fontWeight: 700,
                                                 lineHeight: 1.2,
-                                                textTransform: 'none',
-                                                borderRadius: '6px',
+                                                maxWidth: 145,
+                                                mx: 'auto',
                                             }}
                                         >
-                                            Copy base price
-                                        </Button>
-                                    </Box>
+                                            {getProjectName(project)}
+                                        </Typography>
+                                    </Tooltip>
                                 </TableCell>
                             ))}
+
+                            <TableCell
+                                align="center"
+                                sx={{
+                                    bgcolor: '#f8fafc',
+                                    fontWeight: 700,
+                                    minWidth: 80,
+                                    color: '#1e293b',
+                                }}
+                            >
+                                Action
+                            </TableCell>
                         </TableRow>
                     </TableHead>
 
                     <TableBody>
-                        {visibleTasks.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5 + displayedProjects.length} align="center"
-                                           sx={{py: 4, color: '#64748b'}}>
-                                    No tasks found.
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            paginatedTasks.map((task) => {
-                                const taskId = String(task.id);
-                                const isBaseActive = basePriceActive[taskId] ?? false;
-                                const basePriceFormatted = basePrices[taskId] ?? getTaskBasePrice(task);
-                                const baseDisplayPrice = isBaseActive ? basePriceFormatted : '0.00';
-                                const rowUserId = getRowUserId(task);
-                                const displayUserName = task.row_user_name || getTaskUserName(task);
+                        {filteredRows.length > 0 && (
+                            filteredRows.map((row) => {
+                                const categoryOptions = getCategoryOptions(row.trade_id);
+                                const subCategoryOptions = getSubCategoryOptions(row.trade_id, row.category_id);
+                                const selectedTask = taskMap[row.task_id];
 
                                 return (
-                                    <TableRow
-                                        key={`${task.id}_${rowUserId}`}
-                                        hover
-                                        sx={{'&:hover td': {bgcolor: '#f1f5f9'}}}
-                                    >
-                                        {/* Fixed Columns */}
-                                        <TableCell
-                                            sx={{
-                                                position: 'sticky',
-                                                left: 0,
-                                                zIndex: 1,
-                                                bgcolor: '#fff',
-                                                borderRight: '1px solid #e2e8f0',
-                                                fontWeight: 600,
-                                                fontSize: '0.85rem',
-                                                maxWidth: 180,
-                                            }}
-                                        >
-                                            <Tooltip title={displayUserName}>
-                                                <Typography
-                                                    component="span"
-                                                    sx={{
-                                                        display: '-webkit-box',
-                                                        WebkitBoxOrient: 'vertical',
-                                                        WebkitLineClamp: 2,
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        fontSize: '0.85rem',
-                                                        fontWeight: 600,
-                                                    }}
+                                    <TableRow key={row.id} hover>
+                                        <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 230, py: 1}}>
+                                            <FormControl size="small" fullWidth>
+                                                <Select
+                                                    value={row.user_id}
+                                                    displayEmpty
+                                                    onChange={(event) => updateRow(row.id, {user_id: String(event.target.value)})}
+                                                    MenuProps={selectMenuProps}
+                                                    sx={{height: 36, fontSize: '0.8rem', bgcolor: '#fff'}}
                                                 >
-                                                    {displayUserName}
-                                                </Typography>
-                                            </Tooltip>
+                                                    <MenuItem value="">Select user</MenuItem>
+                                                    {users.map((item) => (
+                                                        <MenuItem key={item.id} value={String(item.id)}>
+                                                            {getUserDisplayName(item)}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
                                         </TableCell>
 
-                                        <TableCell
-                                            sx={{
-                                                position: 'sticky',
-                                                left: 110,
-                                                zIndex: 1,
-                                                bgcolor: '#fff',
-                                                borderRight: '1px solid #e2e8f0',
-                                                fontSize: '0.85rem',
-                                            }}
-                                        >
-                                            {task.trade_name || '-'}
+                                        <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 210, py: 1}}>
+                                            <FormControl size="small" fullWidth>
+                                                <Select
+                                                    value={row.trade_id}
+                                                    displayEmpty
+                                                    onChange={(event) => handleTradeChange(row, String(event.target.value))}
+                                                    MenuProps={selectMenuProps}
+                                                    sx={{height: 36, fontSize: '0.8rem', bgcolor: '#fff'}}
+                                                >
+                                                    <MenuItem value="">Select trade</MenuItem>
+                                                    {tradeOptions.map((trade) => (
+                                                        <MenuItem key={trade.id} value={trade.id}>
+                                                            {trade.name}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
                                         </TableCell>
 
-                                        <TableCell
-                                            sx={{
-                                                position: 'sticky',
-                                                left: 220,
-                                                zIndex: 1,
-                                                bgcolor: '#fff',
-                                                borderRight: '1px solid #e2e8f0',
-                                                fontSize: '0.85rem',
-                                            }}
-                                        >
-                                            {task.category_name || '-'}
+                                        <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 230, py: 1}}>
+                                            <FormControl size="small" fullWidth>
+                                                <Select
+                                                    value={row.category_id}
+                                                    displayEmpty
+                                                    disabled={!row.trade_id}
+                                                    onChange={(event) => handleCategoryChange(row, String(event.target.value))}
+                                                    MenuProps={selectMenuProps}
+                                                    sx={{height: 36, fontSize: '0.8rem', bgcolor: '#fff'}}
+                                                >
+                                                    <MenuItem value="">Select category</MenuItem>
+                                                    {categoryOptions.map((category) => (
+                                                        <MenuItem key={category.id} value={category.id}>
+                                                            {category.name}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
                                         </TableCell>
 
-                                        <TableCell
-                                            sx={{
-                                                position: 'sticky',
-                                                left: 350,
-                                                zIndex: 1,
-                                                bgcolor: '#fff',
-                                                borderRight: '1px solid #e2e8f0',
-                                                fontSize: '0.85rem',
-                                            }}
-                                        >
-                                            {task.sub_category_name || '-'}
+                                        <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 230, py: 1}}>
+                                            <FormControl size="small" fullWidth>
+                                                <Select
+                                                    value={row.sub_category_id}
+                                                    displayEmpty
+                                                    disabled={!row.category_id}
+                                                    onChange={(event) => {
+                                                        const selected = subCategoryOptions.find((item) => item.id === String(event.target.value));
+                                                        handleSubCategoryChange(row, String(event.target.value), selected?.task_id || '');
+                                                    }}
+                                                    MenuProps={selectMenuProps}
+                                                    sx={{height: 36, fontSize: '0.8rem', bgcolor: '#fff'}}
+                                                >
+                                                    <MenuItem value="">Select subcategory</MenuItem>
+                                                    {subCategoryOptions.map((subCategory) => (
+                                                        <MenuItem key={`${subCategory.id}-${subCategory.task_id}`} value={subCategory.id}>
+                                                            {subCategory.name}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
                                         </TableCell>
 
-                                        <TableCell
-                                            sx={{
-                                                position: 'sticky',
-                                                left: 490,
-                                                zIndex: 1,
-                                                bgcolor: '#fff',
-                                                borderRight: '2px solid #cbd5e1',
-                                                px: 1,
-                                                py: 1,
-                                            }}
-                                        >
-                                            <Box sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: 1
-                                            }}>
+                                        <TableCell sx={{borderRight: '1px solid #e2e8f0', px: 1, py: 1, minWidth: 150}}>
+                                            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1}}>
                                                 <IOSSwitch
-                                                    checked={isBaseActive}
-                                                    onChange={() => handleBaseToggle(task.id)}
+                                                    checked={row.base_active}
+                                                    disabled={!row.task_id}
+                                                    onChange={() => updateRow(row.id, {base_active: !row.base_active})}
                                                 />
 
                                                 <TextField
                                                     size="small"
-                                                    value={baseDisplayPrice}
-                                                    onChange={(e) => handleBasePriceChange(task.id, e.target.value)}
-                                                    disabled={!isBaseActive}
+                                                    value={row.base_active ? row.base_price : '0.00'}
+                                                    disabled={!row.task_id || !row.base_active}
+                                                    onChange={(event) => {
+                                                        if (/^\d*(?:\.\d{0,2})?$/.test(event.target.value)) {
+                                                            updateRow(row.id, {base_price: event.target.value});
+                                                        }
+                                                    }}
                                                     placeholder="0.00"
-
                                                     sx={{
                                                         width: 90,
                                                         '& .MuiInputBase-input': {
                                                             fontSize: '0.825rem',
                                                             py: 0.5,
                                                             px: 0.5,
-                                                            fontWeight: 700,
-                                                            color: isBaseActive ? '#0f172a' : '#94a3b8',
-                                                        },
-                                                        '& .MuiOutlinedInput-root': {
-                                                            borderRadius: '6px',
-                                                            bgcolor: isBaseActive ? '#fff' : '#f8fafc',
+                                                            fontWeight: row.base_active ? 700 : 400,
+                                                            color: row.base_active ? '#0f172a' : '#94a3b8',
+                                                            textAlign: 'center',
                                                         },
                                                     }}
                                                 />
                                             </Box>
                                         </TableCell>
 
-                                        {/* Dynamic Project Cells */}
                                         {displayedProjects.map((project) => {
-                                            const userKey = getMatrixKey(task.id, project.id, rowUserId);
-                                            const fallbackKey = getMatrixKey(task.id, project.id, 0);
-                                            const cellState = matrix[userKey] ?? matrix[fallbackKey];
-                                            const isProjectAvailable = isTaskAvailableForProject(task, project.id);
-                                            const isActive = isProjectAvailable && (cellState?.is_active ?? false);
-                                            const priceVal = cellState?.price ?? baseDisplayPrice;
+                                            const projectKey = String(project.id);
+                                            const projectPrice = row.project_prices[projectKey];
+                                            const isProjectActive = projectPrice?.is_active ?? false;
 
                                             return (
                                                 <TableCell
                                                     key={project.id}
                                                     align="center"
-                                                    sx={{borderRight: '1px solid #e2e8f0', px: 1.5, py: 1}}
+                                                    sx={{borderRight: '1px solid #e2e8f0', px: 1, py: 1, minWidth: 165}}
                                                 >
-                                                    <Box sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        gap: 1
-                                                    }}>
+                                                    <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1}}>
                                                         <IOSSwitch
-                                                            checked={isActive}
-                                                            disabled={!isProjectAvailable}
-                                                            onChange={() => handleToggle(task.id, project.id, rowUserId, basePriceFormatted)}
+                                                            checked={isProjectActive}
+                                                            disabled={!row.task_id || !row.user_id}
+                                                            onChange={() => updateProjectPrice(row, Number(project.id), {
+                                                                is_active: !isProjectActive,
+                                                                price: projectPrice?.price ?? row.base_price ?? getTaskBasePrice(selectedTask),
+                                                            })}
                                                         />
 
                                                         <TextField
                                                             size="small"
-                                                            value={isActive ? priceVal : baseDisplayPrice}
-                                                            onChange={(e) => handlePriceChange(task.id, project.id, rowUserId, e.target.value)}
-                                                            disabled={!isActive || !isProjectAvailable}
+                                                            value={projectPrice?.price ?? row.base_price ?? '0.00'}
+                                                            disabled={!row.task_id || !row.user_id || !isProjectActive}
+                                                            onChange={(event) => {
+                                                                if (/^\d*(?:\.\d{0,2})?$/.test(event.target.value)) {
+                                                                    updateProjectPrice(row, Number(project.id), {price: event.target.value});
+                                                                }
+                                                            }}
                                                             placeholder="0.00"
                                                             sx={{
                                                                 width: 90,
@@ -948,12 +786,9 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                                                     fontSize: '0.825rem',
                                                                     py: 0.5,
                                                                     px: 0.5,
-                                                                    fontWeight: isActive ? 600 : 400,
-                                                                    color: isActive ? '#0f172a' : '#94a3b8',
-                                                                },
-                                                                '& .MuiOutlinedInput-root': {
-                                                                    borderRadius: '6px',
-                                                                    bgcolor: isActive ? '#fff' : '#f8fafc',
+                                                                    fontWeight: isProjectActive ? 700 : 400,
+                                                                    color: isProjectActive ? '#0f172a' : '#94a3b8',
+                                                                    textAlign: 'center',
                                                                 },
                                                             }}
                                                         />
@@ -961,15 +796,45 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                                 </TableCell>
                                             );
                                         })}
+
+                                        <TableCell align="center" sx={{py: 1, minWidth: 80}}>
+                                            <Tooltip title="Remove row">
+                                                <IconButton
+                                                    color="error"
+                                                    size="small"
+                                                    onClick={() => removeRow(row.id)}
+                                                    aria-label="Remove price work row"
+                                                >
+                                                    <IconTrash size={18}/>
+                                                </IconButton>
+                                            </Tooltip>
+                                        </TableCell>
                                     </TableRow>
                                 );
                             })
                         )}
+
+                        <TableRow hover>
+                            <TableCell sx={{borderRight: '1px solid #e2e8f0', py: 1}}>
+                                <Tooltip title="Add price work row">
+                                    <IconButton
+                                        size="small"
+                                        onClick={addRow}
+                                        sx={{width: 28, height: 28, '&:hover': {backgroundColor: 'transparent'}}}
+                                    >
+                                        <IconPlus size={18} color="#1976d2"/>
+                                    </IconButton>
+                                </Tooltip>
+                            </TableCell>
+                            <TableCell colSpan={5 + displayedProjects.length} sx={{py: 1}}/>
+                        </TableRow>
                     </TableBody>
                 </Table>
             </TableContainer>
 
-            <TablePaginationFooter table={paginationTable} totalRows={visibleTasks.length}/>
+            <Typography sx={{fontSize: '0.8rem', color: '#64748b', pl: 1}}>
+                {filteredRows.length} row{filteredRows.length === 1 ? '' : 's'}
+            </Typography>
         </Box>
     );
 };

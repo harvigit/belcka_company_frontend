@@ -93,7 +93,7 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, on
         setLoading(true);
         try {
             const url = pricework.record_type === 'timesheet_light'
-                ? `pricework/detail?pricework_id=${pricework.id}&record_type=timesheet_light`
+                ? `pricework/detail?pricework_id=${pricework.timesheet_light_id ?? pricework.id}&record_type=timesheet_light`
                 : `pricework/detail?pricework_id=${pricework.id}`;
             const res = await api.get(url);
             setDetail(res.data?.info || null);
