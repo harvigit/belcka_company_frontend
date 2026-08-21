@@ -328,10 +328,10 @@ const PurchaseProductList: React.FC<Props> = ({
         const pagMeta = (response.data as any).data || response.data.info;
         if (pagMeta && pagMeta.totalProducts !== undefined) {
           setTotalRows(pagMeta.totalProducts);
-          setPageCount(pagMeta.totalPages);
+          setPageCount(pagMeta.webTotalPages);
         } else if ((response.data as any).totalProducts !== undefined) {
           setTotalRows((response.data as any).totalProducts);
-          setPageCount((response.data as any).totalPages);
+          setPageCount((response.data as any).webTotalPages);
         } else {
           setTotalRows(response.data.info.length);
           setPageCount(1);

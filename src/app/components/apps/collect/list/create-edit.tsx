@@ -1,0 +1,465 @@
+"use client";
+import React, { useEffect, useState } from "react";
+import {
+  Drawer,
+  Box,
+  IconButton,
+  Typography,
+  Button,
+  Autocomplete,
+  TextField,
+} from "@mui/material";
+import { Grid } from "@mui/system";
+import { IconTrash, IconX } from "@tabler/icons-react";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { useDropzone } from "react-dropzone";
+import api from "@/utils/axios";
+import Image from "next/image";
+import toast from "react-hot-toast";
+
+export interface CollectFormData {
+  id: number;
+  company_id: any;
+  project_id: number | null;
+  address_id: number | null;
+  supplier_id: number | null;
+}
+
+interface CollectAddEditProps {
+  open: boolean;
+  companyId: number | null;
+  onClose: () => void;
+  isEdit?: boolean;
+  collectId?: number | null;
+  onSuccess: () => void;
+}
+
+type GalleryImage = {
+  src: string;
+  isExisting?: boolean;
+  type?: string;
+};
+
+const CollectAddEdit: React.FC<CollectAddEditProps> = ({
+  open,
+  companyId,
+  onClose,
+  isEdit,
+  collectId,
+  onSuccess,
+}) => {
+  const [formData, setFormData] = useState<CollectFormData>({
+    id: 0,
+    company_id: companyId,
+    project_id: null,
+    address_id: null,
+    supplier_id: null,
+  });
+
+  const [projects, setProjects] = useState<any[]>([]);
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+
+  const [file, setFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<GalleryImage | null>(null);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [fetching, setFetching] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      fetchResources();
+    }
+  }, [open, companyId]);
+
+  useEffect(() => {
+    if (open && isEdit && collectId) {
+      fetchCollect();
+    } else if (open && !isEdit) {
+      // Reset form for add
+      setFormData({
+        id: 0,
+        company_id: companyId,
+        project_id: null,
+        address_id: null,
+        supplier_id: null,
+      });
+      setFile(null);
+      setFilePreview(null);
+    }
+  }, [open, isEdit, collectId]);
+
+  const fetchResources = async () => {
+    try {
+      const res = await api.get(
+        `po-invoices/get-resources?company_id=${companyId}`,
+      );
+      if (res.data && res.data.info) {
+        setProjects(res.data.info.projects || []);
+        setAddresses(res.data.info.parentAddresses || []);
+        setSuppliers(res.data.info.suppliers || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch resources", err);
+    }
+  };
+
+  const fetchCollect = async () => {
+    if (!collectId || fetching) return;
+    setFetching(true);
+    try {
+      const res = await api.get(
+        `po-collect/detail?company_id=${companyId}&id=${collectId}`,
+      );
+      if (res.data && res.data.info) {
+        const item = res.data.info;
+        setFormData({
+          id: item.id,
+          company_id: companyId,
+          project_id: item.project_id || null,
+          address_id: item.address_id || null,
+          supplier_id: item.supplier_id || null,
+        });
+        if (item.image) {
+          setFilePreview({
+            src: item.image,
+            isExisting: true,
+            type: item.image.toLowerCase().endsWith(".pdf")
+              ? "application/pdf"
+              : "image/jpeg",
+          });
+        } else {
+          setFilePreview(null);
+        }
+        setFile(null);
+      }
+    } catch (err) {
+      console.error("Failed to fetch collect detail", err);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const { getRootProps, getInputProps } = useDropzone({
+    accept: { "image/*": [], "application/pdf": [".pdf"] },
+    maxFiles: 1,
+    onDrop: (files) => {
+      if (files && files.length > 0) {
+        setFile(files[0]);
+        setFilePreview({
+          src: URL.createObjectURL(files[0]),
+          isExisting: false,
+          type: files[0].type,
+        });
+      }
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setIsSaving(true);
+    try {
+      const payload = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          payload.append(key, String(value));
+        }
+      });
+
+      if (file) {
+        payload.append("file", file);
+      }
+
+      const endpoint = isEdit ? "po-collect/update" : "po-collect/create";
+      const result = await api.post(endpoint, payload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (result.data?.IsSuccess) {
+        toast.success(result.data.message);
+        onSuccess();
+        onClose();
+      }
+    } catch (error) {
+      console.error("Submit failed:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      PaperProps={{
+        sx: {
+          width: { xs: "100%", sm: 400, md: 500 },
+          borderRadius: 0,
+          boxShadow: "none",
+        },
+      }}
+      ModalProps={{
+        disableEscapeKeyDown: isSaving,
+      }}
+    >
+      <Box
+        p={3}
+        pt={2}
+        height="100%"
+        overflow="auto"
+        display="flex"
+        flexDirection="column"
+      >
+        {/* Header */}
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          ml={-2}
+          mb={1}
+        >
+          <Box display="flex" alignItems="center">
+            <IconButton onClick={onClose} disabled={isSaving}>
+              <ArrowBackIcon />
+            </IconButton>
+            <Typography variant="h6" fontWeight={700}>
+              {isEdit ? "Edit Collect" : "Add Collect"}
+            </Typography>
+          </Box>
+          <IconButton onClick={onClose} disabled={isSaving}>
+            <IconX />
+          </IconButton>
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          <form
+            style={{ display: "flex", flexDirection: "column", height: "100%" }}
+            onSubmit={handleSubmit}
+          >
+            <Box sx={{ flex: 1, overflowY: "auto", paddingRight: 1, pb: 2 }}>
+              <Grid container spacing={3}>
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Project
+                  </Typography>
+                  <Autocomplete
+                    options={projects}
+                    getOptionLabel={(option) => option.name || ""}
+                    value={
+                      projects.find((p) => p.id === formData.project_id) || null
+                    }
+                    onChange={(_, value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        project_id: value?.id ?? null,
+                      }))
+                    }
+                    renderInput={(params) => (
+                      <TextField {...params} placeholder="Select Project" />
+                    )}
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Address
+                  </Typography>
+                  <Autocomplete
+                    options={addresses}
+                    getOptionLabel={(option) => option.name || ""}
+                    value={
+                      addresses.find((a) => a.id === formData.address_id) ||
+                      null
+                    }
+                    onChange={(_, value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        address_id: value?.id ?? null,
+                      }))
+                    }
+                    renderInput={(params) => (
+                      <TextField {...params} placeholder="Select Address" />
+                    )}
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Supplier
+                  </Typography>
+                  <Autocomplete
+                    options={suppliers}
+                    getOptionLabel={(option) => option.name || ""}
+                    value={
+                      suppliers.find((s) => s.id === formData.supplier_id) ||
+                      null
+                    }
+                    onChange={(_, value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        supplier_id: value?.id ?? null,
+                      }))
+                    }
+                    renderInput={(params) => (
+                      <TextField {...params} placeholder="Select Supplier" />
+                    )}
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 5 }}>
+                  <Typography variant="body2" gutterBottom mb={1}>
+                    File (Image / PDF)
+                  </Typography>
+                  <Box
+                    {...getRootProps()}
+                    sx={{
+                      width: "100%",
+                      minHeight: 140,
+                      border: "2px dashed",
+                      borderColor: "primary.main",
+                      borderRadius: 2,
+                      cursor: "pointer",
+                      p: 2,
+                      mb: 2,
+                    }}
+                  >
+                    <input {...getInputProps()} />
+
+                    {filePreview ? (
+                      <Box
+                        sx={{
+                          position: "relative",
+                          width: 120,
+                          height: 120,
+                          overflow: "hidden",
+                          borderRadius: 1,
+                        }}
+                      >
+                        {filePreview.type === "application/pdf" ||
+                        filePreview.src?.toLowerCase().endsWith(".pdf") ? (
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            height="100%"
+                            bgcolor="#f5f5f5"
+                          >
+                            <Typography
+                              variant="body2"
+                              fontWeight={600}
+                              color="textSecondary"
+                            >
+                              PDF
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Image
+                            src={filePreview.src}
+                            alt="Preview"
+                            fill
+                            style={{ objectFit: "cover" }}
+                          />
+                        )}
+                        <IconButton
+                          color="error"
+                          size="small"
+                          sx={{
+                            position: "absolute",
+                            top: 4,
+                            right: 4,
+                            backgroundColor: "#fff",
+                            "&:hover": {
+                              backgroundColor: "#fff",
+                              color: "red",
+                            },
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFile(null);
+                            setFilePreview(null);
+                          }}
+                        >
+                          <IconTrash size={16} />
+                        </IconButton>
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          height: 140,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Typography variant="body2" color="textSecondary">
+                          Click or Drag to upload image/pdf
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
+
+            {/* Sticky Footer */}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "start",
+                gap: 2,
+                // borderTop: "1px solid",
+                // borderColor: "divider",
+                position: "sticky",
+                bottom: 0,
+                bgcolor: "background.paper",
+                zIndex: 10,
+              }}
+            >
+              <Button
+                color="primary"
+                variant="contained"
+                size="large"
+                type="submit"
+                disabled={isSaving}
+                sx={{ borderRadius: 3, minWidth: 120 }}
+              >
+                {isSaving
+                  ? isEdit
+                    ? "Updating..."
+                    : "Saving..."
+                  : isEdit
+                    ? "Update"
+                    : "Save"}
+              </Button>
+              <Button
+                color="inherit"
+                onClick={onClose}
+                variant="contained"
+                size="large"
+                disabled={isSaving}
+                sx={{
+                  backgroundColor: "transparent",
+                  borderRadius: 3,
+                  color: "GrayText",
+                }}
+              >
+                Close
+              </Button>
+            </Box>
+          </form>
+        </Box>
+      </Box>
+    </Drawer>
+  );
+};
+
+export default CollectAddEdit;

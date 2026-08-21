@@ -270,6 +270,14 @@ const MenuItems: NavGroup[] = [
 
   {
     id: uniqueId(),
+    title: "Collect",
+    slug: "collect",
+    icon: IconShoppingBag,
+    href: "/apps/collect/list",
+  },
+
+  {
+    id: uniqueId(),
     title: "Settings",
     slug: "settings",
     icon: IconSettings,
