@@ -109,8 +109,11 @@ const BULK_BUTTON_SX = {
 
 const isStandalonePriceworkRow = (row: PriceworkRow) => row.record_type !== 'timesheet_light';
 
+const isChecklogPriceworkRow = (row: PriceworkRow) =>
+    row.record_type === 'timesheet_light' && Boolean(row.user_checklog_id);
+
 const isActionableTimesheetLightRow = (row: PriceworkRow) =>
-    row.record_type === 'timesheet_light' && Boolean(row.timesheet_light_id);
+    row.record_type === 'timesheet_light' && Boolean(row.timesheet_light_id) && !row.user_checklog_id;
 
 const isOrphanedTimesheetLightRow = (row: PriceworkRow) =>
     row.record_type === 'timesheet_light' && !row.timesheet_light_id;
@@ -166,6 +169,7 @@ const PriceworkList = () => {
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
     const [rejectPriceworkIds, setRejectPriceworkIds] = useState<number[]>([]);
     const [rejectTimesheetLightIds, setRejectTimesheetLightIds] = useState<number[]>([]);
+    const [rejectUserChecklogIds, setRejectUserChecklogIds] = useState<number[]>([]);
     const [rejectNote, setRejectNote] = useState('');
     const [isRejecting, setIsRejecting] = useState(false);
     const [users, setUsers] = useState<any[]>([]);
@@ -306,20 +310,25 @@ const PriceworkList = () => {
             .filter(isActionableTimesheetLightRow)
             .map((item) => Number(item.timesheet_light_id)))];
     };
+
+    const getActionUserChecklogIds = () =>
+        [...new Set(getSelectedRows()
+            .filter(isChecklogPriceworkRow)
+            .map((item) => Number(item.user_checklog_id)))];
     
     const hasOnlyUnactionableSelection = () => {
         const selectedRows = getSelectedRows();
 
         if (selectedRows.length === 0) return false;
         const actionableCount = selectedRows.filter(
-            (item) => isStandalonePriceworkRow(item) || isActionableTimesheetLightRow(item),
+            (item) => isStandalonePriceworkRow(item) || isActionableTimesheetLightRow(item) || isChecklogPriceworkRow(item),
         ).length;
 
         return actionableCount === 0;
     };
 
-    const guardEmptySelection = (ids: number[], timesheetLightIds: number[]) => {
-        if (ids.length > 0 || timesheetLightIds.length > 0) return true;
+    const guardEmptySelection = (ids: number[], timesheetLightIds: number[], userChecklogIds: number[] = []) => {
+        if (ids.length > 0 || timesheetLightIds.length > 0 || userChecklogIds.length > 0) return true;
 
         if (hasOnlyUnactionableSelection()) {
             toast.error('Selected record is missing data required to perform this action. Please refresh and try again.');
@@ -342,17 +351,26 @@ const PriceworkList = () => {
             .filter((item) => isActionableTimesheetLightRow(item) && normalizePriceworkStatus(item.status) === 'approved')
             .map((item) => Number(item.timesheet_light_id));
 
+    const getApprovedActionUserChecklogIds = () =>
+        getSelectedRows()
+            .filter((item) => isChecklogPriceworkRow(item) && normalizePriceworkStatus(item.status) === 'approved')
+            .map((item) => Number(item.user_checklog_id));
+
     const refreshAfterAction = async () => {
         clearSelection();
         closePriceworkDetails();
         await fetchPriceworks();
     };
 
-    const handleApprovePriceworks = async (ids: number[], timesheetLightIds: number[] = []) => {
-        if (!guardEmptySelection(ids, timesheetLightIds)) return;
+    const handleApprovePriceworks = async (ids: number[], timesheetLightIds: number[] = [], userChecklogIds: number[] = []) => {
+        if (!guardEmptySelection(ids, timesheetLightIds, userChecklogIds)) return;
 
         try {
-            const res = await api.post('pricework/approve', {ids, timesheet_light_ids: timesheetLightIds});
+            const res = await api.post('pricework/approve', {
+                ids,
+                timesheet_light_ids: timesheetLightIds,
+                user_checklog_ids: userChecklogIds,
+            });
             toast.success(res.data?.message || 'Pricework approved successfully');
             await refreshAfterAction();
         } catch (error: any) {
@@ -360,20 +378,22 @@ const PriceworkList = () => {
         }
     };
 
-    const handleRejectPriceworks = async (ids: number[], timesheetLightIds: number[] = [], note?: string) => {
-        if (!guardEmptySelection(ids, timesheetLightIds)) return;
+    const handleRejectPriceworks = async (ids: number[], timesheetLightIds: number[] = [], userChecklogIds: number[] = [], note?: string) => {
+        if (!guardEmptySelection(ids, timesheetLightIds, userChecklogIds)) return;
 
         setIsRejecting(true);
         try {
             const res = await api.post('pricework/reject', {
                 ids,
                 timesheet_light_ids: timesheetLightIds,
+                user_checklog_ids: userChecklogIds,
                 reject_note: note,
             });
             toast.success(res.data?.message || 'Pricework rejected successfully');
             setRejectDialogOpen(false);
             setRejectPriceworkIds([]);
             setRejectTimesheetLightIds([]);
+            setRejectUserChecklogIds([]);
             setRejectNote('');
             await refreshAfterAction();
         } catch (error: any) {
@@ -383,13 +403,14 @@ const PriceworkList = () => {
         }
     };
 
-    const openRejectDialog = (ids: number[], timesheetLightIds: number[] = []) => {
-        if (ids.length === 0 && timesheetLightIds.length === 0) {
+    const openRejectDialog = (ids: number[], timesheetLightIds: number[] = [], userChecklogIds: number[] = []) => {
+        if (ids.length === 0 && timesheetLightIds.length === 0 && userChecklogIds.length === 0) {
             toast.error('Please select at least one pricework');
             return;
         }
         setRejectPriceworkIds(ids);
         setRejectTimesheetLightIds(timesheetLightIds);
+        setRejectUserChecklogIds(userChecklogIds);
         setRejectNote('');
         setRejectDialogOpen(true);
     };
@@ -399,17 +420,19 @@ const PriceworkList = () => {
         setRejectDialogOpen(false);
         setRejectPriceworkIds([]);
         setRejectTimesheetLightIds([]);
+        setRejectUserChecklogIds([]);
         setRejectNote('');
     };
 
     const confirmRejectPriceworks = () => {
-        void handleRejectPriceworks(rejectPriceworkIds, rejectTimesheetLightIds, rejectNote);
+        void handleRejectPriceworks(rejectPriceworkIds, rejectTimesheetLightIds, rejectUserChecklogIds, rejectNote);
     };
 
     const openSendDateDialog = () => {
         const ids = getApprovedActionPriceworkIds();
         const timesheetLightIds = getApprovedActionTimesheetLightIds();
-        if (ids.length === 0 && timesheetLightIds.length === 0) {
+        const userChecklogIds = getApprovedActionUserChecklogIds();
+        if (ids.length === 0 && timesheetLightIds.length === 0 && userChecklogIds.length === 0) {
             toast.error('Please select at least one approved pricework');
             return;
         }
@@ -420,7 +443,8 @@ const PriceworkList = () => {
     const handleSendToBookkeeper = async () => {
         const ids = getApprovedActionPriceworkIds();
         const timesheetLightIds = getApprovedActionTimesheetLightIds();
-        if (ids.length === 0 && timesheetLightIds.length === 0) {
+        const userChecklogIds = getApprovedActionUserChecklogIds();
+        if (ids.length === 0 && timesheetLightIds.length === 0 && userChecklogIds.length === 0) {
             toast.error('Please select at least one approved pricework');
             return;
         }
@@ -429,6 +453,7 @@ const PriceworkList = () => {
             const res = await api.post('pricework/send-to-bookkeeper', {
                 ids,
                 timesheet_light_ids: timesheetLightIds,
+                user_checklog_ids: userChecklogIds,
                 send_date: sendDate,
             });
             toast.success(res.data?.message || 'Pricework sent to bookkeeper successfully');
@@ -1404,7 +1429,7 @@ const PriceworkList = () => {
                                 variant="outlined"
                                 color="success"
                                 size="small"
-                                onClick={() => handleApprovePriceworks(getActionPriceworkIds(), getActionTimesheetLightIds())}
+                                onClick={() => handleApprovePriceworks(getActionPriceworkIds(), getActionTimesheetLightIds(), getActionUserChecklogIds())}
                                 sx={BULK_BUTTON_SX}
                             >
                                 Approve Selected
@@ -1415,7 +1440,7 @@ const PriceworkList = () => {
                                 variant="outlined"
                                 color="error"
                                 size="small"
-                                onClick={() => openRejectDialog(getActionPriceworkIds(), getActionTimesheetLightIds())}
+                                onClick={() => openRejectDialog(getActionPriceworkIds(), getActionTimesheetLightIds(), getActionUserChecklogIds())}
                                 sx={BULK_BUTTON_SX}
                             >
                                 Reject Selected
@@ -1693,6 +1718,10 @@ const PriceworkList = () => {
                 onEdit={openEditPricework}
                 onApprove={(id) => {
                     const row = detailsPricework;
+                    if (row?.record_type === 'timesheet_light' && row.user_checklog_id) {
+                        void handleApprovePriceworks([], [], [Number(row.user_checklog_id)]);
+                        return;
+                    }
                     if (row?.record_type === 'timesheet_light' && row.timesheet_light_id) {
                         void handleApprovePriceworks([], [Number(row.timesheet_light_id)]);
                         return;
@@ -1701,6 +1730,10 @@ const PriceworkList = () => {
                 }}
                 onReject={(id) => {
                     const row = detailsPricework;
+                    if (row?.record_type === 'timesheet_light' && row.user_checklog_id) {
+                        openRejectDialog([], [], [Number(row.user_checklog_id)]);
+                        return;
+                    }
                     if (row?.record_type === 'timesheet_light' && row.timesheet_light_id) {
                         openRejectDialog([], [Number(row.timesheet_light_id)]);
                         return;
