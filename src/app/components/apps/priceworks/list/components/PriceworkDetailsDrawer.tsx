@@ -27,7 +27,7 @@ type Props = {
     open: boolean;
     onClose: () => void;
     pricework: PriceworkApiRow | null;
-    onViewAttachments?: (id: number) => void;
+    onViewAttachments?: () => void;
     onEdit?: (pricework: PriceworkApiRow | PriceworkDetail) => void;
     onApprove?: (id: number) => void;
     onReject?: (id: number) => void;
@@ -290,7 +290,7 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, on
                                         <Box
                                             component="button"
                                             type="button"
-                                            onClick={() => onViewAttachments?.(pricework.id)}
+                                            onClick={() => onViewAttachments?.()}
                                             sx={{
                                                 display: 'inline-flex',
                                                 alignItems: 'center',

@@ -18,11 +18,11 @@ import {PriceworkAttachment, PriceworkDetail} from '../types';
 
 type Props = {
     open: boolean;
-    priceworkId: number | null;
+    pricework: PriceworkDetail | null;
     onClose: () => void;
 };
 
-const PriceworkAttachmentsDrawer = ({open, priceworkId, onClose}: Props) => {
+const PriceworkAttachmentsDrawer = ({open, pricework, onClose}: Props) => {
     const [loading, setLoading] = useState(false);
     const [detail, setDetail] = useState<PriceworkDetail | null>(null);
     const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -45,10 +45,18 @@ const PriceworkAttachmentsDrawer = ({open, priceworkId, onClose}: Props) => {
     );
 
     const loadDetail = async () => {
-        if (!priceworkId) return;
+        if (!pricework?.id) return;
         setLoading(true);
         try {
-            const res = await api.get(`pricework/detail?pricework_id=${priceworkId}`);
+            const params =
+                pricework.record_type === 'timesheet_light'
+                    ? {
+                        pricework_id: pricework.timesheet_light_id ?? pricework.id,
+                        record_type: 'timesheet_light',
+                        checklog_id: pricework.user_checklog_id ?? pricework.id,
+                    }
+                    : {pricework_id: pricework.pricework_id ?? pricework.id};
+            const res = await api.get('pricework/detail', {params});
             setDetail(res.data?.info || null);
         } catch (error: any) {
             toast.error(error?.response?.data?.message || 'Failed to load attachments');
@@ -67,7 +75,7 @@ const PriceworkAttachmentsDrawer = ({open, priceworkId, onClose}: Props) => {
         }
         void loadDetail();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, priceworkId]);
+    }, [open, pricework?.id, pricework?.timesheet_light_id, pricework?.user_checklog_id, pricework?.record_type]);
 
     const openAttachment = (attachment: PriceworkAttachment) => {
         const index = attachments.findIndex((item) => item.id === attachment.id);

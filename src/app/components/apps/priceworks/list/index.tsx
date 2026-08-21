@@ -158,7 +158,7 @@ const PriceworkList = () => {
     const [editOpen, setEditOpen] = useState(false);
     const [editPricework, setEditPricework] = useState<any>(null);
     const [attachmentsOpen, setAttachmentsOpen] = useState(false);
-    const [attachmentsPriceworkId, setAttachmentsPriceworkId] = useState<number | null>(null);
+    const [attachmentsPricework, setAttachmentsPricework] = useState<PriceworkRow | null>(null);
     const [sendDateDialogOpen, setSendDateDialogOpen] = useState(false);
     const [sendDate, setSendDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -215,14 +215,14 @@ const PriceworkList = () => {
         await fetchPriceworks();
     };
 
-    const openPriceworkAttachments = (priceworkId: number) => {
-        setAttachmentsPriceworkId(priceworkId);
+    const openPriceworkAttachments = (pricework: PriceworkRow) => {
+        setAttachmentsPricework(pricework);
         setAttachmentsOpen(true);
     };
 
     const closePriceworkAttachments = () => {
         setAttachmentsOpen(false);
-        setAttachmentsPriceworkId(null);
+        setAttachmentsPricework(null);
     };
 
     useEffect(() => {
@@ -727,7 +727,7 @@ const PriceworkList = () => {
                                 cursor: 'pointer',
                                 '&:hover': {textDecoration: 'underline'},
                             }}
-                            onClick={() => openPriceworkAttachments(row.id)}
+                            onClick={() => openPriceworkAttachments(row)}
                         >
                             View ({count})
                         </Typography>
@@ -1687,8 +1687,8 @@ const PriceworkList = () => {
                 open={detailsOpen}
                 onClose={closePriceworkDetails}
                 pricework={detailsPricework}
-                onViewAttachments={(id) => {
-                    openPriceworkAttachments(id);
+                onViewAttachments={() => {
+                    if (detailsPricework) openPriceworkAttachments(detailsPricework);
                 }}
                 onEdit={openEditPricework}
                 onApprove={(id) => {
@@ -1711,7 +1711,7 @@ const PriceworkList = () => {
 
             <PriceworkAttachmentsDrawer
                 open={attachmentsOpen}
-                priceworkId={attachmentsPriceworkId}
+                pricework={attachmentsPricework}
                 onClose={closePriceworkAttachments}
             />
 
