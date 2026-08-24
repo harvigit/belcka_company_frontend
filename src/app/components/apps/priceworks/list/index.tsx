@@ -28,6 +28,7 @@ import {
     TextField,
     Tooltip,
     Typography,
+    CircularProgress,
 } from '@mui/material';
 import {
     IconArrowBackUp,
@@ -119,6 +120,14 @@ const isActionableTimesheetLightRow = (row: PriceworkRow) =>
 const isOrphanedTimesheetLightRow = (row: PriceworkRow) =>
     row.record_type === 'timesheet_light' && !row.timesheet_light_id;
 
+const canInlineEditPriceworkAmounts = (row: PriceworkRow) => {
+    if (normalizePriceworkStatus(row.status) === 'sent') return false;
+    if (row.record_type === 'timesheet_light') {
+        return Boolean(row.user_checklog_id);
+    }
+    return true;
+};
+
 const getPriceworkRowKey = (row: PriceworkRow) => {
     if (row.record_type === 'timesheet_light') {
         return `timesheet_light:${row.timesheet_light_id ?? row.id}:checklog:${row.user_checklog_id ?? row.user_worklog_id ?? 'summary'}`;
@@ -181,6 +190,12 @@ const PriceworkList = () => {
     const [teams, setTeams] = useState<any[]>([]);
     const [trades, setTrades] = useState<any[]>([]);
     const loadedFilterCompanyIdRef = useRef<number | null>(null);
+    const [editingCell, setEditingCell] = useState<{
+        rowKey: string | null;
+        field: 'amount_per_unit' | 'work_complete' | null;
+    }>({rowKey: null, field: null});
+    const [cellInputValue, setCellInputValue] = useState('');
+    const [savingCellKeys, setSavingCellKeys] = useState<Set<string>>(new Set());
 
     const clearSelection = () => {
         setIsSelectAll(false);
@@ -220,6 +235,118 @@ const PriceworkList = () => {
 
     const refreshAfterEditPricework = async () => {
         await fetchPriceworks();
+    };
+
+    const getSavingCellKey = (
+        row: PriceworkRow,
+        field: 'amount_per_unit' | 'work_complete',
+    ) => `${getPriceworkRowKey(row)}:${field}`;
+
+    const startEditPriceworkAmountCell = (
+        row: PriceworkRow,
+        field: 'amount_per_unit' | 'work_complete',
+    ) => {
+        if (!canInlineEditPriceworkAmounts(row)) return;
+        const savingKey = getSavingCellKey(row, field);
+        if (savingCellKeys.has(savingKey)) return;
+
+        const currentValue =
+            field === 'amount_per_unit'
+                ? Number(row.amount_per_unit || 0)
+                : Number(row.work_complete || 0);
+
+        setEditingCell({rowKey: getPriceworkRowKey(row), field});
+        setCellInputValue(String(currentValue));
+    };
+
+    const cancelEditPriceworkAmountCell = () => {
+        setEditingCell({rowKey: null, field: null});
+        setCellInputValue('');
+    };
+
+    const savePriceworkAmountCell = async (
+        row: PriceworkRow,
+        field: 'amount_per_unit' | 'work_complete',
+        rawValue: string,
+    ) => {
+        if (!canInlineEditPriceworkAmounts(row)) {
+            cancelEditPriceworkAmountCell();
+            return;
+        }
+
+        const nextValue = Number(rawValue);
+        if (!Number.isFinite(nextValue) || nextValue < 0) {
+            toast.error(
+                field === 'amount_per_unit'
+                    ? 'Please enter a valid amount per unit.'
+                    : 'Please enter a valid work complete value.',
+            );
+            return;
+        }
+
+        const currentAmountPerUnit = Number(row.amount_per_unit || 0);
+        const currentWorkComplete = Number(row.work_complete || 0);
+        const nextAmountPerUnit =
+            field === 'amount_per_unit' ? nextValue : currentAmountPerUnit;
+        const nextWorkComplete =
+            field === 'work_complete' ? nextValue : currentWorkComplete;
+
+        if (
+            Math.abs(nextAmountPerUnit - currentAmountPerUnit) < 0.00001 &&
+            Math.abs(nextWorkComplete - currentWorkComplete) < 0.00001
+        ) {
+            cancelEditPriceworkAmountCell();
+            return;
+        }
+
+        const savingKey = getSavingCellKey(row, field);
+        setSavingCellKeys((prev) => new Set(prev).add(savingKey));
+        setEditingCell({rowKey: null, field: null});
+
+        const isChecklogRow = isChecklogPriceworkRow(row);
+        const payload = isChecklogRow
+            ? {
+                record_type: 'timesheet_light',
+                user_checklog_id: row.user_checklog_id,
+                amount_per_unit: nextAmountPerUnit,
+                work_complete: nextWorkComplete,
+            }
+            : {
+                record_type: 'pricework',
+                pricework_id: row.pricework_id ?? row.id,
+                amount_per_unit: nextAmountPerUnit,
+                work_complete: nextWorkComplete,
+            };
+
+        try {
+            const res = await api.post('/pricework/update-amounts', payload);
+            const info = res.data?.info || {};
+            toast.success(res.data?.message || 'Pricework amount updated successfully');
+            const rowKey = getPriceworkRowKey(row);
+            setData((prev) =>
+                prev.map((item) => {
+                    if (getPriceworkRowKey(item) !== rowKey) return item;
+                    return {
+                        ...item,
+                        amount_per_unit: Number(info.amount_per_unit ?? nextAmountPerUnit),
+                        work_complete: Number(info.work_complete ?? nextWorkComplete),
+                        pricework_amount: Number(
+                            info.pricework_amount ??
+                                nextAmountPerUnit * nextWorkComplete,
+                        ),
+                    };
+                }),
+            );
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to update pricework amount');
+        } finally {
+            setSavingCellKeys((prev) => {
+                const next = new Set(prev);
+                next.delete(savingKey);
+                return next;
+            });
+            setCellInputValue('');
+        }
     };
 
     const openPriceworkAttachments = (pricework: PriceworkRow) => {
@@ -769,19 +896,201 @@ const PriceworkList = () => {
             columnHelper.accessor('amount_per_unit', {
                 id: 'amount_per_unit',
                 header: () => 'Amount Per Unit',
-                cell: (info) => (
-                    <Typography className="f-14">
-                        {formatAmount(info.row.original.currency, info.getValue())}
-                    </Typography>
-                ),
+                cell: (info) => {
+                    const row = info.row.original;
+                    const currency = row.currency || '£';
+                    const canEdit = canInlineEditPriceworkAmounts(row);
+                    const rowKey = getPriceworkRowKey(row);
+                    const isEditing =
+                        editingCell.rowKey === rowKey &&
+                        editingCell.field === 'amount_per_unit';
+                    const isSaving = savingCellKeys.has(
+                        getSavingCellKey(row, 'amount_per_unit'),
+                    );
+
+                    return (
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {isSaving ? (
+                                <CircularProgress size={16}/>
+                            ) : isEditing ? (
+                                <TextField
+                                    className="f-14"
+                                    size="small"
+                                    value={cellInputValue}
+                                    autoFocus
+                                    type="text"
+                                    inputMode="decimal"
+                                    variant="standard"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+                                            setCellInputValue(value);
+                                        }
+                                    }}
+                                    onBlur={() => {
+                                        if (cellInputValue === '') {
+                                            cancelEditPriceworkAmountCell();
+                                            return;
+                                        }
+                                        void savePriceworkAmountCell(
+                                            row,
+                                            'amount_per_unit',
+                                            cellInputValue,
+                                        );
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            if (cellInputValue === '') return;
+                                            void savePriceworkAmountCell(
+                                                row,
+                                                'amount_per_unit',
+                                                cellInputValue,
+                                            );
+                                        }
+                                        if (e.key === 'Escape') {
+                                            e.preventDefault();
+                                            cancelEditPriceworkAmountCell();
+                                        }
+                                    }}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <Typography className="f-14">
+                                                    {currency}
+                                                </Typography>
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                />
+                            ) : (
+                                <Typography
+                                    className="f-14"
+                                    onClick={() =>
+                                        startEditPriceworkAmountCell(row, 'amount_per_unit')
+                                    }
+                                    sx={{
+                                        px: 1,
+                                        py: 0.5,
+                                        borderRadius: 1,
+                                        cursor: canEdit ? 'pointer' : 'default',
+                                        border: '1px solid transparent',
+                                        transition: 'all 0.2s ease',
+                                        ...(canEdit
+                                            ? {
+                                                '&:hover': {
+                                                    border: '1px solid #1976d2',
+                                                },
+                                            }
+                                            : {}),
+                                    }}
+                                >
+                                    {formatAmount(currency, info.getValue())}
+                                </Typography>
+                            )}
+                        </Stack>
+                    );
+                },
                 enableSorting: false,
             }),
             columnHelper.accessor('work_complete', {
                 id: 'work_complete',
                 header: () => 'Work Complete',
-                cell: (info) => (
-                    <Typography className="f-14">{Number(info.getValue() || 0)}</Typography>
-                ),
+                cell: (info) => {
+                    const row = info.row.original;
+                    const canEdit = canInlineEditPriceworkAmounts(row);
+                    const rowKey = getPriceworkRowKey(row);
+                    const isEditing =
+                        editingCell.rowKey === rowKey &&
+                        editingCell.field === 'work_complete';
+                    const isSaving = savingCellKeys.has(
+                        getSavingCellKey(row, 'work_complete'),
+                    );
+
+                    return (
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {isSaving ? (
+                                <CircularProgress size={16}/>
+                            ) : isEditing ? (
+                                <TextField
+                                    className="f-14"
+                                    size="small"
+                                    value={cellInputValue}
+                                    autoFocus
+                                    type="text"
+                                    inputMode="decimal"
+                                    variant="standard"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+                                            setCellInputValue(value);
+                                        }
+                                    }}
+                                    onBlur={() => {
+                                        if (cellInputValue === '') {
+                                            cancelEditPriceworkAmountCell();
+                                            return;
+                                        }
+                                        void savePriceworkAmountCell(
+                                            row,
+                                            'work_complete',
+                                            cellInputValue,
+                                        );
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            if (cellInputValue === '') return;
+                                            void savePriceworkAmountCell(
+                                                row,
+                                                'work_complete',
+                                                cellInputValue,
+                                            );
+                                        }
+                                        if (e.key === 'Escape') {
+                                            e.preventDefault();
+                                            cancelEditPriceworkAmountCell();
+                                        }
+                                    }}
+                                />
+                            ) : (
+                                <Typography
+                                    className="f-14"
+                                    onClick={() =>
+                                        startEditPriceworkAmountCell(row, 'work_complete')
+                                    }
+                                    sx={{
+                                        px: 1,
+                                        py: 0.5,
+                                        borderRadius: 1,
+                                        cursor: canEdit ? 'pointer' : 'default',
+                                        border: '1px solid transparent',
+                                        transition: 'all 0.2s ease',
+                                        ...(canEdit
+                                            ? {
+                                                '&:hover': {
+                                                    border: '1px solid #1976d2',
+                                                },
+                                            }
+                                            : {}),
+                                    }}
+                                >
+                                    {Number(info.getValue() || 0)}
+                                </Typography>
+                            )}
+                        </Stack>
+                    );
+                },
                 enableSorting: false,
             }),
             columnHelper.accessor('pricework_amount', {
@@ -866,7 +1175,14 @@ const PriceworkList = () => {
                 enableHiding: false,
             }),
         ],
-        [data, isSelectAll, selectedRowIds],
+        [
+            data,
+            isSelectAll,
+            selectedRowIds,
+            editingCell,
+            cellInputValue,
+            savingCellKeys,
+        ],
     );
 
     const fetchPriceworks = async () => {
@@ -1860,6 +2176,7 @@ const PriceworkList = () => {
                     if (detailsPricework) openPriceworkAttachments(detailsPricework);
                 }}
                 onEdit={openEditPricework}
+                onSaved={refreshAfterEditPricework}
                 onApprove={(id) => {
                     const row = detailsPricework;
                     if (row?.record_type === 'timesheet_light' && row.user_checklog_id) {

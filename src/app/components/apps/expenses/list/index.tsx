@@ -28,6 +28,7 @@ import {
     TextField,
     Tooltip,
     Typography,
+    CircularProgress,
 } from '@mui/material';
 import {
     IconArrowBackUp,
@@ -278,6 +279,10 @@ const ExpenseList = () => {
     const [isRejecting, setIsRejecting] = useState(false);
     const [preferencesHydrated, setPreferencesHydrated] = useState(false);
     const loadedFilterCompanyIdRef = useRef<number | null>(null);
+    const [editingAmount, setEditingAmount] = useState<{id: number | null}>({id: null});
+    const [amountInputValue, setAmountInputValue] = useState('');
+    const [savingAmountIds, setSavingAmountIds] = useState<Set<number>>(new Set());
+
     const openExpenseDetail = (expenseId: number) => {
         setSelectedExpenseId(expenseId);
         setDetailOpen(true);
@@ -296,6 +301,68 @@ const ExpenseList = () => {
     const closeExpenseDetailsDrawer = () => {
         setDetailsOpen(false);
         setDetailsExpense(null);
+    };
+
+    const canInlineEditAmount = (row: ExpenseRow) => {
+        if (row.can_edit === false) return false;
+        const status = normalizeExpenseStatus(row.status);
+        return status !== 'sent';
+    };
+
+    const startEditAmount = (row: ExpenseRow) => {
+        if (!canInlineEditAmount(row) || savingAmountIds.has(row.id)) return;
+        setEditingAmount({id: row.id});
+        setAmountInputValue(String(Number(row.total_amount || 0)));
+    };
+
+    const cancelEditAmount = () => {
+        setEditingAmount({id: null});
+        setAmountInputValue('');
+    };
+
+    const saveExpenseAmount = async (row: ExpenseRow, rawValue: string) => {
+        if (!canInlineEditAmount(row)) {
+            cancelEditAmount();
+            return;
+        }
+
+        const nextAmount = Number(rawValue);
+        if (!Number.isFinite(nextAmount) || nextAmount < 0) {
+            toast.error('Please enter a valid amount.');
+            return;
+        }
+
+        const currentAmount = Number(row.total_amount || 0);
+        if (Math.abs(nextAmount - currentAmount) < 0.00001) {
+            cancelEditAmount();
+            return;
+        }
+
+        setSavingAmountIds((prev) => new Set(prev).add(row.id));
+        setEditingAmount({id: null});
+        try {
+            const res = await api.post('/expense/update-amount', {
+                expense_id: row.id,
+                total_amount: nextAmount,
+            });
+            toast.success(res.data?.message || 'Expense amount updated successfully');
+            setData((prev) =>
+                prev.map((item) =>
+                    item.id === row.id
+                        ? {...item, total_amount: Number(res.data?.info?.total_amount ?? nextAmount)}
+                        : item,
+                ),
+            );
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to update expense amount');
+        } finally {
+            setSavingAmountIds((prev) => {
+                const next = new Set(prev);
+                next.delete(row.id);
+                return next;
+            });
+            setAmountInputValue('');
+        }
     };
 
     useEffect(() => {
@@ -500,11 +567,89 @@ const ExpenseList = () => {
             header: 'Amount',
             cell: (info: any) => {
                 const row = info.row.original as ExpenseRow;
+                const currency = row.currency || '£';
+                const canEdit = canInlineEditAmount(row);
+                const isEditing = editingAmount.id === row.id;
+                const isSaving = savingAmountIds.has(row.id);
 
                 return (
-                    <Typography className="f-14" fontWeight={600} sx={{px: 1.5}}>
-                        {formatAmount(row.currency || '£', Number(info.getValue() || 0))}
-                    </Typography>
+                    <Stack
+                        direction="row"
+                        alignItems="center"
+                        sx={{px: 1.5, minWidth: 96}}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {isSaving ? (
+                            <CircularProgress size={16}/>
+                        ) : isEditing ? (
+                            <TextField
+                                className="f-14"
+                                size="small"
+                                value={amountInputValue}
+                                autoFocus
+                                type="text"
+                                inputMode="decimal"
+                                variant="standard"
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+                                        setAmountInputValue(value);
+                                    }
+                                }}
+                                onBlur={() => {
+                                    if (amountInputValue === '') {
+                                        cancelEditAmount();
+                                        return;
+                                    }
+                                    void saveExpenseAmount(row, amountInputValue);
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        if (amountInputValue === '') return;
+                                        void saveExpenseAmount(row, amountInputValue);
+                                    }
+                                    if (e.key === 'Escape') {
+                                        e.preventDefault();
+                                        cancelEditAmount();
+                                    }
+                                }}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <Typography className="f-14" fontWeight={600}>
+                                                {currency}
+                                            </Typography>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                        ) : (
+                            <Typography
+                                className="f-14"
+                                fontWeight={600}
+                                onClick={() => startEditAmount(row)}
+                                sx={{
+                                    px: 1,
+                                    py: 0.5,
+                                    borderRadius: 1,
+                                    cursor: canEdit ? 'pointer' : 'default',
+                                    border: '1px solid transparent',
+                                    transition: 'all 0.2s ease',
+                                    ...(canEdit
+                                        ? {
+                                            '&:hover': {
+                                                border: '1px solid #1976d2',
+                                            },
+                                        }
+                                        : {}),
+                                }}
+                            >
+                                {formatAmount(currency, Number(info.getValue() || 0))}
+                            </Typography>
+                        )}
+                    </Stack>
                 );
             },
         }),

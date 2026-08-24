@@ -180,6 +180,9 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
         note: '',
         car_register_number: '',
     });
+    const [editingHeroAmount, setEditingHeroAmount] = useState(false);
+    const [heroAmountValue, setHeroAmountValue] = useState('');
+    const [savingHeroAmount, setSavingHeroAmount] = useState(false);
 
     const selectedCategory = useMemo(
         () => categories.find((item) => String(item.id) === String(form.expense_category_id)) || null,
@@ -258,11 +261,59 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
             setEditing(false);
             setAddressSearch('');
             setReceiptDateAnchorEl(null);
+            setEditingHeroAmount(false);
+            setHeroAmountValue('');
             return;
         }
         loadDetail();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, expense?.id]);
+
+    const startHeroAmountEdit = () => {
+        if (!canEdit || editing || savingHeroAmount) return;
+        setEditingHeroAmount(true);
+        setHeroAmountValue(String(amount));
+    };
+
+    const cancelHeroAmountEdit = () => {
+        setEditingHeroAmount(false);
+        setHeroAmountValue('');
+    };
+
+    const saveHeroAmount = async () => {
+        if (!expense?.id || !canEdit) {
+            cancelHeroAmountEdit();
+            return;
+        }
+
+        const nextAmount = Number(heroAmountValue);
+        if (!Number.isFinite(nextAmount) || nextAmount < 0) {
+            toast.error('Please enter a valid amount.');
+            return;
+        }
+
+        if (Math.abs(nextAmount - amount) < 0.00001) {
+            cancelHeroAmountEdit();
+            return;
+        }
+
+        setSavingHeroAmount(true);
+        try {
+            const res = await api.post('/expense/update-amount', {
+                expense_id: expense.id,
+                total_amount: nextAmount,
+            });
+            toast.success(res.data?.message || 'Expense amount updated successfully');
+            setEditingHeroAmount(false);
+            setHeroAmountValue('');
+            await loadDetail();
+            await onSaved?.();
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to update expense amount');
+        } finally {
+            setSavingHeroAmount(false);
+        }
+    };
 
     const handleSave = async () => {
         if (!detail && !expense) return;
@@ -367,9 +418,83 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
                     ) : (
                         <Box sx={{flex: 1, overflow: 'auto', px: 2.5, py: 2.5}}>
                             <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
-                                <Typography sx={{fontSize: 28, fontWeight: 700, lineHeight: 1.2}}>
-                                    {formatAmount(currency, amount)}
-                                </Typography>
+                                {editingHeroAmount && !editing ? (
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                        {savingHeroAmount ? (
+                                            <CircularProgress size={22}/>
+                                        ) : (
+                                            <TextField
+                                                value={heroAmountValue}
+                                                autoFocus
+                                                size="small"
+                                                variant="standard"
+                                                inputMode="decimal"
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+                                                        setHeroAmountValue(value);
+                                                    }
+                                                }}
+                                                onBlur={() => {
+                                                    if (heroAmountValue === '') {
+                                                        cancelHeroAmountEdit();
+                                                        return;
+                                                    }
+                                                    void saveHeroAmount();
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        if (heroAmountValue === '') return;
+                                                        void saveHeroAmount();
+                                                    }
+                                                    if (e.key === 'Escape') {
+                                                        e.preventDefault();
+                                                        cancelHeroAmountEdit();
+                                                    }
+                                                }}
+                                                InputProps={{
+                                                    startAdornment: (
+                                                        <InputAdornment position="start">
+                                                            <Typography sx={{fontSize: 28, fontWeight: 700}}>
+                                                                {currency}
+                                                            </Typography>
+                                                        </InputAdornment>
+                                                    ),
+                                                    sx: {
+                                                        fontSize: 28,
+                                                        fontWeight: 700,
+                                                        '& input': {fontSize: 28, fontWeight: 700, py: 0},
+                                                    },
+                                                }}
+                                            />
+                                        )}
+                                    </Stack>
+                                ) : (
+                                    <Typography
+                                        sx={{
+                                            fontSize: 28,
+                                            fontWeight: 700,
+                                            lineHeight: 1.2,
+                                            px: 0.75,
+                                            py: 0.25,
+                                            borderRadius: 1,
+                                            border: '1px solid transparent',
+                                            cursor: canEdit && !editing ? 'pointer' : 'default',
+                                            transition: 'all 0.2s ease',
+                                            ...(canEdit && !editing
+                                                ? {
+                                                    '&:hover': {
+                                                        border: '1px solid #1976d2',
+                                                    },
+                                                }
+                                                : {}),
+                                        }}
+                                        onClick={startHeroAmountEdit}
+                                    >
+                                        {formatAmount(currency, amount)}
+                                    </Typography>
+                                )}
                                 <ExpenseStatusBadge status={status}/>
                             </Stack>
 

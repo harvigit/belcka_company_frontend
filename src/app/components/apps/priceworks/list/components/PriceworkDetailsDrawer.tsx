@@ -9,7 +9,9 @@ import {
     Divider,
     Drawer,
     IconButton,
+    InputAdornment,
     Stack,
+    TextField,
     Typography,
 } from '@mui/material';
 import {IconExternalLink, IconPencil, IconX} from '@tabler/icons-react';
@@ -31,6 +33,7 @@ type Props = {
     onEdit?: (pricework: PriceworkApiRow | PriceworkDetail) => void;
     onApprove?: (id: number) => void;
     onReject?: (id: number) => void;
+    onSaved?: () => void | Promise<void>;
 };
 
 const formatAmount = (currency: string, amount: number) =>
@@ -84,9 +87,40 @@ const FieldBlock = ({label, value}: {label: string; value?: string | number | nu
     </Box>
 );
 
-const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, onEdit, onApprove, onReject}: Props) => {
+const editableValueSx = (canEdit: boolean) => ({
+    fontSize: 14,
+    fontWeight: 700,
+    px: 0.75,
+    py: 0.25,
+    borderRadius: 1,
+    border: '1px solid transparent',
+    display: 'inline-block',
+    cursor: canEdit ? 'pointer' : 'default',
+    transition: 'all 0.2s ease',
+    ...(canEdit
+        ? {
+            '&:hover': {
+                border: '1px solid #1976d2',
+            },
+        }
+        : {}),
+});
+
+const PriceworkDetailsDrawer = ({
+    open,
+    onClose,
+    pricework,
+    onViewAttachments,
+    onEdit,
+    onApprove,
+    onReject,
+    onSaved,
+}: Props) => {
     const [detail, setDetail] = useState<PriceworkDetail | null>(null);
     const [loading, setLoading] = useState(false);
+    const [editingField, setEditingField] = useState<'amount_per_unit' | 'work_complete' | null>(null);
+    const [fieldValue, setFieldValue] = useState('');
+    const [savingField, setSavingField] = useState(false);
 
     const loadDetail = async () => {
         if (!pricework?.id) return;
@@ -107,18 +141,31 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, on
     useEffect(() => {
         if (!open) {
             setDetail(null);
+            setEditingField(null);
+            setFieldValue('');
             return;
         }
         void loadDetail();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, pricework?.id]);
+    }, [open, pricework?.id, pricework?.user_checklog_id]);
 
     const status = normalizePriceworkStatus(
         detail?.status_text || detail?.status || pricework?.status,
     );
     const currency = detail?.currency || pricework?.currency || '£';
-    const amount = Number(detail?.pricework_amount ?? pricework?.pricework_amount ?? 0);
+    const amountPerUnit = Number(
+        detail?.amount_per_unit ?? pricework?.amount_per_unit ?? 0,
+    );
+    const workComplete = Number(
+        detail?.work_complete ?? pricework?.work_complete ?? 0,
+    );
+    const amount = Number(
+        detail?.pricework_amount ?? pricework?.pricework_amount ?? amountPerUnit * workComplete,
+    );
     const isTimesheetLightRow = pricework?.record_type === 'timesheet_light';
+    const canEditAmounts =
+        status !== 'sent' &&
+        (isTimesheetLightRow ? Boolean(pricework?.user_checklog_id) : Boolean(pricework?.id));
     const hasAttachments =
         !isTimesheetLightRow &&
         Number(detail?.attachments?.length || pricework?.attachment_count || 0) > 0;
@@ -126,6 +173,158 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, on
     const showEditButton = Boolean(pricework?.id) && !isTimesheetLightRow;
     const showApproveButton = status === 'pending' || status === 'rejected';
     const showRejectButton = status === 'pending' || status === 'approved' || status === 'sent';
+
+    const startEditField = (field: 'amount_per_unit' | 'work_complete') => {
+        if (!canEditAmounts || savingField) return;
+        setEditingField(field);
+        setFieldValue(
+            String(field === 'amount_per_unit' ? amountPerUnit : workComplete),
+        );
+    };
+
+    const cancelEditField = () => {
+        setEditingField(null);
+        setFieldValue('');
+    };
+
+    const saveAmountField = async (field: 'amount_per_unit' | 'work_complete') => {
+        if (!pricework || !canEditAmounts) {
+            cancelEditField();
+            return;
+        }
+
+        const nextValue = Number(fieldValue);
+        if (!Number.isFinite(nextValue) || nextValue < 0) {
+            toast.error(
+                field === 'amount_per_unit'
+                    ? 'Please enter a valid amount per unit.'
+                    : 'Please enter a valid work complete value.',
+            );
+            return;
+        }
+
+        const nextAmountPerUnit =
+            field === 'amount_per_unit' ? nextValue : amountPerUnit;
+        const nextWorkComplete =
+            field === 'work_complete' ? nextValue : workComplete;
+
+        if (
+            Math.abs(nextAmountPerUnit - amountPerUnit) < 0.00001 &&
+            Math.abs(nextWorkComplete - workComplete) < 0.00001
+        ) {
+            cancelEditField();
+            return;
+        }
+
+        const isChecklogRow =
+            pricework.record_type === 'timesheet_light' && Boolean(pricework.user_checklog_id);
+        const payload = isChecklogRow
+            ? {
+                record_type: 'timesheet_light',
+                user_checklog_id: pricework.user_checklog_id,
+                amount_per_unit: nextAmountPerUnit,
+                work_complete: nextWorkComplete,
+            }
+            : {
+                record_type: 'pricework',
+                pricework_id: pricework.pricework_id ?? pricework.id,
+                amount_per_unit: nextAmountPerUnit,
+                work_complete: nextWorkComplete,
+            };
+
+        setSavingField(true);
+        try {
+            const res = await api.post('/pricework/update-amounts', payload);
+            toast.success(res.data?.message || 'Pricework amount updated successfully');
+            setEditingField(null);
+            setFieldValue('');
+            const info = res.data?.info || {};
+            setDetail((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        amount_per_unit: Number(info.amount_per_unit ?? nextAmountPerUnit),
+                        work_complete: Number(info.work_complete ?? nextWorkComplete),
+                        pricework_amount: Number(
+                            info.pricework_amount ?? nextAmountPerUnit * nextWorkComplete,
+                        ),
+                    }
+                    : prev,
+            );
+            await onSaved?.();
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to update pricework amount');
+        } finally {
+            setSavingField(false);
+        }
+    };
+
+    const renderEditableNumberField = (
+        label: string,
+        field: 'amount_per_unit' | 'work_complete',
+        displayValue: string | number,
+        withCurrency = false,
+    ) => (
+        <Box>
+            <Typography sx={{fontSize: 12, color: 'text.secondary'}}>{label}</Typography>
+            {savingField && editingField === field ? (
+                <CircularProgress size={16} sx={{mt: 0.5}}/>
+            ) : editingField === field ? (
+                <TextField
+                    value={fieldValue}
+                    autoFocus
+                    size="small"
+                    variant="standard"
+                    inputMode="decimal"
+                    onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+                            setFieldValue(value);
+                        }
+                    }}
+                    onBlur={() => {
+                        if (fieldValue === '') {
+                            cancelEditField();
+                            return;
+                        }
+                        void saveAmountField(field);
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (fieldValue === '') return;
+                            void saveAmountField(field);
+                        }
+                        if (e.key === 'Escape') {
+                            e.preventDefault();
+                            cancelEditField();
+                        }
+                    }}
+                    InputProps={
+                        withCurrency
+                            ? {
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Typography sx={{fontSize: 14, fontWeight: 700}}>
+                                            {currency}
+                                        </Typography>
+                                    </InputAdornment>
+                                ),
+                            }
+                            : undefined
+                    }
+                    sx={{mt: 0.25, maxWidth: 160}}
+                />
+            ) : (
+                <Typography
+                    sx={editableValueSx(canEditAmounts)}
+                    onClick={() => startEditField(field)}
+                >
+                    {displayValue}
+                </Typography>
+            )}
+        </Box>
+    );
 
     return (
         <Drawer
@@ -160,15 +359,17 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, on
                         <Typography sx={{fontSize: 18, fontWeight: 700}}>
                             Pricework Details
                         </Typography>
-                        
+
                         <Stack direction="row" spacing={1}>
                             {showEditButton && (
                                 <IconButton
                                     size="small"
-                                    onClick={() => onEdit?.({
-                                        ...pricework,
-                                        ...detail,
-                                    })}
+                                    onClick={() =>
+                                        onEdit?.({
+                                            ...pricework,
+                                            ...detail,
+                                        })
+                                    }
                                     aria-label="Edit pricework"
                                 >
                                     <IconPencil size={20}/>
@@ -207,9 +408,7 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, on
 
                             <Stack spacing={2.25}>
                                 <Box>
-                                    <Typography
-                                        sx={{fontSize: 12, color: 'text.secondary', mb: 0.75}}
-                                    >
+                                    <Typography sx={{fontSize: 12, color: 'text.secondary', mb: 0.75}}>
                                         Submitted by
                                     </Typography>
                                     <Stack direction="row" alignItems="center" spacing={1.25}>
@@ -222,12 +421,8 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, on
                                             <Typography sx={{fontSize: 14, fontWeight: 700}}>
                                                 {detail?.user_name || pricework.user_name || '—'}
                                             </Typography>
-                                            <Typography
-                                                sx={{fontSize: 12, color: 'text.secondary'}}
-                                            >
-                                                {detail?.trade_name ||
-                                                    pricework.trade_name ||
-                                                    '—'}
+                                            <Typography sx={{fontSize: 12, color: 'text.secondary'}}>
+                                                {detail?.trade_name || pricework.trade_name || '—'}
                                             </Typography>
                                         </Box>
                                     </Stack>
@@ -261,22 +456,20 @@ const PriceworkDetailsDrawer = ({open, onClose, pricework, onViewAttachments, on
                                     label="Unit"
                                     value={detail?.unit_name || pricework.unit_name}
                                 />
+                                {renderEditableNumberField(
+                                    'Amount Per Unit',
+                                    'amount_per_unit',
+                                    formatAmount(currency, amountPerUnit),
+                                    true,
+                                )}
+                                {renderEditableNumberField(
+                                    'Work Complete',
+                                    'work_complete',
+                                    workComplete,
+                                )}
                                 <FieldBlock
-                                    label="Amount Per Unit"
-                                    value={formatAmount(
-                                        currency,
-                                        Number(
-                                            detail?.amount_per_unit ??
-                                                pricework.amount_per_unit ??
-                                                0,
-                                        ),
-                                    )}
-                                />
-                                <FieldBlock
-                                    label="Work Complete"
-                                    value={Number(
-                                        detail?.work_complete ?? pricework.work_complete ?? 0,
-                                    )}
+                                    label="Pricework Amount"
+                                    value={formatAmount(currency, amount)}
                                 />
                                 <FieldBlock
                                     label="Note"
