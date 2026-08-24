@@ -22,6 +22,7 @@ import toast from 'react-hot-toast';
 type Resource = { id: number; name: string };
 type ProjectResource = Resource & { team_ids?: number[] };
 type Address = Resource & { project_id: number };
+type UserResource = Resource & { first_name?: string; last_name?: string; trade_id?: number | null };
 type SubCategoryResource = Resource & { category_id: number; task_id: number };
 type CategoryResource = Resource & {
     task_id?: number;
@@ -107,13 +108,15 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     const [loading, setLoading] = useState(false);
     const [resourcesLoading, setResourcesLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [users, setUsers] = useState<any[]>([]);
+    const [users, setUsers] = useState<UserResource[]>([]);
     const [projects, setProjects] = useState<ProjectResource[]>([]);
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [teams, setTeams] = useState<Resource[]>([]);
+    const [trades, setTrades] = useState<Resource[]>([]);
     const [units, setUnits] = useState<Resource[]>([]);
     const [categories, setCategories] = useState<CategoryResource[]>([]);
     const [selectedUser, setSelectedUser] = useState(userId ? String(userId) : '');
+    const [tradeId, setTradeId] = useState(pricework?.trade_id ? String(pricework.trade_id) : '');
     const [projectId, setProjectId] = useState(pricework?.project_id ? String(pricework.project_id) : '');
     const [addressId, setAddressId] = useState(pricework?.address_id ? String(pricework.address_id) : '');
     const [teamId, setTeamId] = useState(pricework?.team_id ? String(pricework.team_id) : '');
@@ -223,18 +226,14 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             setResourcesLoading(true);
             setError(null);
             try {
-                const requests: Promise<any>[] = [
-                    api.get('/pricework/get-resources'),
-                ];
-                if (selectUser) requests.push(api.get('/user/list'));
-
-                const [resourceResponse, userResponse] = await Promise.all(requests);
+                const resourceResponse = await api.get('/pricework/get-resources');
                 setProjects(resourceResponse.data?.projects || []);
                 setAddresses(resourceResponse.data?.addresses || []);
                 setTeams(resourceResponse.data?.teams || []);
+                setTrades(resourceResponse.data?.trades || []);
                 setUnits(resourceResponse.data?.units || []);
                 setCategories(resourceResponse.data?.categories || []);
-                if (selectUser) setUsers(userResponse?.data?.info || []);
+                setUsers(resourceResponse.data?.users || []);
             } catch (resourceError: any) {
                 setError(resourceError?.response?.data?.message || 'Failed to load pricework resources.');
             } finally {
@@ -255,6 +254,17 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
         setCategoryId(pricework?.category_id ? String(pricework.category_id) : '');
         setSubCategoryId(pricework?.sub_category_id ? String(pricework.sub_category_id) : '');
     }, [pricework?.pricework_id, pricework?.category_id, pricework?.sub_category_id]);
+
+    useEffect(() => {
+        if (pricework?.trade_id) {
+            setTradeId(String(pricework.trade_id));
+            return;
+        }
+
+        const activeUserId = selectedUser || (userId ? String(userId) : '');
+        const selectedUserTradeId = users.find((item) => String(item.id) === activeUserId)?.trade_id;
+        setTradeId(selectedUserTradeId ? String(selectedUserTradeId) : '');
+    }, [pricework?.pricework_id, pricework?.trade_id, selectedUser, userId, users]);
 
     const [priceSource, setPriceSource] = useState<'project' | 'base' | 'default'>('default');
     const [resolvingPrice, setResolvingPrice] = useState<boolean>(false);
@@ -349,6 +359,7 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             payload.append('project_id', projectId);
             payload.append('address_id', addressId);
             payload.append('team_id', teamId);
+            if (tradeId) payload.append('trade_id', tradeId);
             payload.append('note', note.trim());
             payload.append('task_id', String(selectedTaskId));
             payload.append('category_id', categoryId);
@@ -421,6 +432,25 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
                                 </Select>
                             </FormControl>
                         )}
+
+                        <FormControl fullWidth>
+                            {fieldLabel('Trade')}
+                            <Select
+                                size="small"
+                                value={tradeId}
+                                onChange={(event) => setTradeId(event.target.value)}
+                                displayEmpty
+                                sx={selectSx}
+                                MenuProps={selectMenuProps}
+                            >
+                                <MenuItem value="" disabled>Select trade</MenuItem>
+                                {trades.map((trade) => (
+                                    <MenuItem key={trade.id} value={String(trade.id)}>
+                                        {trade.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
 
                         <FormControl fullWidth>
                             {fieldLabel('Project')}

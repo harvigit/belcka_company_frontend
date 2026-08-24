@@ -101,6 +101,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     const [tasks, setTasks] = useState<any[]>([]);
     const [projects, setProjects] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
+    const [trades, setTrades] = useState<any[]>([]);
     const [rows, setRows] = useState<PricingRow[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProjectFilter, setSelectedProjectFilter] = useState('');
@@ -136,26 +137,23 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
         setLoading(true);
         try {
-            const [resResources, resTasks, resUsers] = await Promise.all([
+            const [resResources, resTasks] = await Promise.all([
                 api.get('/pricework/get-resources').catch((err) => {
                     console.error('Error fetching pricework resources', err);
-                    return {data: {projects: []}};
+                    return {data: {projects: [], trades: [], users: []}};
                 }),
                 fetchAllTasks(user.company_id).catch((err) => {
                     console.error('Error fetching tasks', err);
                     return [];
-                }),
-                api.get('/user/list').catch((err) => {
-                    console.error('Error fetching users', err);
-                    return {data: {info: []}};
                 }),
             ]);
 
             const taskList = Array.isArray(resTasks) ? resTasks : resTasks.data?.info || [];
 
             setProjects(resResources.data?.projects || []);
+            setTrades(resResources.data?.trades || []);
             setTasks(taskList.filter(isPriceworkTask));
-            setUsers(resUsers.data?.info || []);
+            setUsers(resResources.data?.users || []);
             setRows([]);
         } catch (err) {
             console.error('Failed to load price work settings:', err);
@@ -181,16 +179,13 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     }, [tasks]);
 
     const tradeOptions = useMemo(() => {
-        const tradeMap = new Map<string, {id: string; name: string}>();
-
-        tasks.forEach((task) => {
-            const tradeId = getTaskTradeId(task);
-            if (!tradeId || tradeMap.has(tradeId)) return;
-            tradeMap.set(tradeId, {id: tradeId, name: task.trade_name || 'Trade'});
-        });
-
-        return Array.from(tradeMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    }, [tasks]);
+        return trades
+            .map((trade) => ({
+                id: String(trade.id),
+                name: trade.name || 'Trade',
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [trades]);
 
     const displayedProjects = useMemo(() => {
         const availableProjects = selectedProjectFilter
@@ -311,6 +306,15 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         });
     };
 
+    const handleUserChange = (row: PricingRow, userId: string) => {
+        const selectedUserTradeId = users.find((item) => String(item.id) === userId)?.trade_id;
+        handleTradeChange(row, selectedUserTradeId ? String(selectedUserTradeId) : '');
+        updateRow(row.id, {
+            user_id: userId,
+            trade_id: selectedUserTradeId ? String(selectedUserTradeId) : '',
+        });
+    };
+
     const handleCategoryChange = (row: PricingRow, categoryId: string) => {
         const matchedTask = findTaskForSelection(row.trade_id, categoryId, '');
         updateRow(row.id, {
@@ -357,11 +361,18 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     };
 
     const handleSave = async () => {
-        const incompleteRows = rows.filter((row) => row.user_id || row.trade_id || row.category_id || row.sub_category_id || row.task_id)
+        const incompleteRows = rows
+            .filter((row) =>
+                row.category_id ||
+                row.sub_category_id ||
+                row.task_id ||
+                row.base_active ||
+                Object.keys(row.project_prices).length > 0
+            )
             .filter((row) => !row.user_id || !row.trade_id || !row.category_id || !row.task_id);
 
         if (incompleteRows.length > 0) {
-            toast.error('Select user, trade, category, and subcategory before saving.');
+            toast.error('Select user, trade, category, and subcategory before saving price settings.');
             return;
         }
 
@@ -372,6 +383,19 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             price: number;
             is_active: boolean;
         }> = [];
+
+        const userTradeItems = Array.from(
+            rows.reduce<Map<string, {user_id: number; trade_id: number}>>((map, row) => {
+                if (!row.user_id || !row.trade_id) return map;
+
+                map.set(row.user_id, {
+                    user_id: Number(row.user_id),
+                    trade_id: Number(row.trade_id),
+                });
+
+                return map;
+            }, new Map()).values(),
+        );
 
         rows.forEach((row) => {
             if (!row.task_id || !row.user_id) return;
@@ -407,7 +431,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 .filter(Boolean);
 
             const [res] = await Promise.all([
-                api.post('/pricework/settings/prices/batch', {items}),
+                api.post('/pricework/settings/prices/batch', {items, user_trade_items: userTradeItems}),
                 ...basePriceUpdates,
             ]);
 
@@ -640,7 +664,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                                 <Select
                                                     value={row.user_id}
                                                     displayEmpty
-                                                    onChange={(event) => updateRow(row.id, {user_id: String(event.target.value)})}
+                                                    onChange={(event) => handleUserChange(row, String(event.target.value))}
                                                     MenuProps={selectMenuProps}
                                                     sx={{height: 36, fontSize: '0.8rem', bgcolor: '#fff'}}
                                                 >
