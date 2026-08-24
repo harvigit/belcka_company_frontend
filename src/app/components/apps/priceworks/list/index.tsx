@@ -1054,6 +1054,7 @@ const PriceworkList = () => {
                 height: 'calc(100vh - 100px)',
                 display: 'flex',
                 flexDirection: 'column',
+                position: 'relative',
             }}
         >
             <Box
@@ -1447,22 +1448,29 @@ const PriceworkList = () => {
             {selectedCount > 0 && (
                 <Box
                     sx={{
-                        position: 'fixed',
-                        bottom: 20,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        backgroundColor: 'white',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                        px: 3,
-                        py: 1.5,
-                        zIndex: 1000,
-                        minWidth: 'fit-content',
-                        width: 'max-content',
-                        maxWidth: 'calc(100vw - 32px)',
-                        border: '1px solid #e0e0e0',
+                        position: 'absolute',
+                        left: 16,
+                        right: 16,
+                        bottom: 72,
+                        zIndex: 20,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        pointerEvents: 'none',
                     }}
                 >
+                    <Box
+                        sx={{
+                            pointerEvents: 'auto',
+                            backgroundColor: 'white',
+                            borderRadius: '12px',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                            px: 3,
+                            py: 1.5,
+                            maxWidth: '100%',
+                            border: '1px solid #e0e0e0',
+                            overflowX: 'auto',
+                        }}
+                    >
                     <Stack
                         direction="row"
                         alignItems="center"
@@ -1549,7 +1557,8 @@ const PriceworkList = () => {
                                 Send to Bookkeeper
                             </Button>
 
-                            <Button
+                            {/* Ticket 819: hide Delete Selected on Pricework web list */}
+                            {/* <Button
                                 startIcon={<IconTrash size={15}/>}
                                 variant="outlined"
                                 color="error"
@@ -1559,9 +1568,10 @@ const PriceworkList = () => {
                                 sx={BULK_BUTTON_SX}
                             >
                                 {isDeleting ? 'Deleting…' : 'Delete Selected'}
-                            </Button>
+                            </Button> */}
                         </Stack>
                     </Stack>
+                    </Box>
                 </Box>
             )}
 
