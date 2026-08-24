@@ -28,6 +28,7 @@ import api from '@/utils/axios';
 import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import toast from 'react-hot-toast';
+import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 
 interface TaskPricingMatrixProps {
     onSaveSuccess?: () => void;
@@ -98,11 +99,13 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [tasks, setTasks] = useState<any[]>([]);
     const [projects, setProjects] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [trades, setTrades] = useState<any[]>([]);
     const [rows, setRows] = useState<PricingRow[]>([]);
+    const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProjectFilter, setSelectedProjectFilter] = useState('');
     const [projectPage, setProjectPage] = useState(0);
@@ -155,6 +158,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             setTasks(taskList.filter(isPriceworkTask));
             setUsers(resResources.data?.users || []);
             setRows([]);
+            setSelectedRowIds(new Set());
         } catch (err) {
             console.error('Failed to load price work settings:', err);
             toast.error('Failed to load price work settings');
@@ -220,6 +224,14 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             return searchable.includes(term);
         });
     }, [rows, searchTerm, taskMap, users]);
+
+    const selectedVisibleRowIds = useMemo(
+        () => filteredRows.filter((row) => selectedRowIds.has(row.id)).map((row) => row.id),
+        [filteredRows, selectedRowIds],
+    );
+
+    const isAllVisibleSelected = filteredRows.length > 0 && selectedVisibleRowIds.length === filteredRows.length;
+    const isSomeVisibleSelected = selectedVisibleRowIds.length > 0 && selectedVisibleRowIds.length < filteredRows.length;
 
     const selectMenuProps = {
         disablePortal: true,
@@ -358,6 +370,62 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
     const removeRow = (rowId: string) => {
         setRows((prev) => prev.filter((row) => row.id !== rowId));
+        setSelectedRowIds((prev) => {
+            const next = new Set(prev);
+            next.delete(rowId);
+            return next;
+        });
+    };
+
+    const toggleRowSelection = (rowId: string) => {
+        setSelectedRowIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(rowId)) next.delete(rowId);
+            else next.add(rowId);
+            return next;
+        });
+    };
+
+    const toggleVisibleRowsSelection = (checked: boolean) => {
+        setSelectedRowIds((prev) => {
+            const next = new Set(prev);
+            filteredRows.forEach((row) => {
+                if (checked) next.add(row.id);
+                else next.delete(row.id);
+            });
+            return next;
+        });
+    };
+
+    const deleteSelectedRows = async () => {
+        if (selectedRowIds.size === 0) return;
+
+        const selectedRows = rows.filter((row) => selectedRowIds.has(row.id));
+        const rowsForBackend = selectedRows
+            .filter((row) => row.task_id)
+            .map((row) => ({
+                user_id: row.user_id ? Number(row.user_id) : null,
+                task_id: Number(row.task_id),
+            }));
+
+        setDeleting(true);
+        try {
+            if (rowsForBackend.length > 0) {
+                const res = await api.post('/pricework/settings/prices/bulk-delete', {rows: rowsForBackend});
+                if (res.data?.IsSuccess === false) {
+                    toast.error(res.data?.message || 'Failed to delete selected settings');
+                    return;
+                }
+                toast.success(res.data?.message || 'Selected settings deleted successfully');
+            }
+
+            setRows((prev) => prev.filter((row) => !selectedRowIds.has(row.id)));
+            setSelectedRowIds(new Set());
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Failed to delete selected settings');
+        } finally {
+            setDeleting(false);
+        }
     };
 
     const handleSave = async () => {
@@ -544,25 +612,40 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     )}
                 </Box>
 
-                <Button
-                    variant="contained"
-                    onClick={handleSave}
-                    disabled={saving}
-                    startIcon={saving ? null : <IconDeviceFloppy size={18}/>}
-                    sx={{
-                        bgcolor: '#1976d2',
-                        color: '#fff',
-                        textTransform: 'none',
-                        borderRadius: '8px',
-                        px: 3,
-                        py: 0.8,
-                        fontWeight: 700,
-                        boxShadow: '0 2px 6px rgba(25, 118, 210, 0.3)',
-                        '&:hover': {bgcolor: '#1565c0'},
-                    }}
-                >
-                    {saving ? <CircularProgress size={20} color="inherit"/> : 'Save Changes'}
-                </Button>
+                <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
+                    {selectedRowIds.size > 0 && (
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={deleteSelectedRows}
+                            disabled={deleting}
+                            startIcon={<IconTrash size={18}/>}
+                            sx={{textTransform: 'none', borderRadius: '8px', px: 2.25, py: 0.8, fontWeight: 700}}
+                        >
+                            {deleting ? 'Deleting...' : `Delete selected (${selectedRowIds.size})`}
+                        </Button>
+                    )}
+
+                    <Button
+                        variant="contained"
+                        onClick={handleSave}
+                        disabled={saving}
+                        startIcon={saving ? null : <IconDeviceFloppy size={18}/>}
+                        sx={{
+                            bgcolor: '#1976d2',
+                            color: '#fff',
+                            textTransform: 'none',
+                            borderRadius: '8px',
+                            px: 3,
+                            py: 0.8,
+                            fontWeight: 700,
+                            boxShadow: '0 2px 6px rgba(25, 118, 210, 0.3)',
+                            '&:hover': {bgcolor: '#1565c0'},
+                        }}
+                    >
+                        {saving ? <CircularProgress size={20} color="inherit"/> : 'Save Changes'}
+                    </Button>
+                </Box>
             </Box>
 
             <TableContainer
@@ -580,6 +663,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     <TableHead>
                         <TableRow>
                             {[
+                                ['', 52],
                                 ['User', 230],
                                 ['Trade', 210],
                                 ['Category', 230],
@@ -588,6 +672,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                             ].map(([label, width]) => (
                                 <TableCell
                                     key={label}
+                                    align={label ? 'left' : 'center'}
                                     sx={{
                                         bgcolor: '#f8fafc',
                                         fontWeight: 700,
@@ -596,7 +681,17 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                         color: '#1e293b',
                                     }}
                                 >
-                                    {label}
+                                    {label || (
+                                        <CustomCheckbox
+                                            className="header-checkbox"
+                                            checked={isAllVisibleSelected}
+                                            indeterminate={isSomeVisibleSelected}
+                                            disabled={filteredRows.length === 0}
+                                            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                                                toggleVisibleRowsSelection(event.target.checked);
+                                            }}
+                                        />
+                                    )}
                                 </TableCell>
                             ))}
 
@@ -659,6 +754,13 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
                                 return (
                                     <TableRow key={row.id} hover>
+                                        <TableCell align="center" sx={{borderRight: '1px solid #e2e8f0', minWidth: 52, py: 1}}>
+                                            <CustomCheckbox
+                                                checked={selectedRowIds.has(row.id)}
+                                                onChange={() => toggleRowSelection(row.id)}
+                                            />
+                                        </TableCell>
+
                                         <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 230, py: 1}}>
                                             <FormControl size="small" fullWidth>
                                                 <Select
@@ -839,6 +941,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                         )}
 
                         <TableRow hover>
+                            <TableCell sx={{borderRight: '1px solid #e2e8f0', py: 1}}/>
                             <TableCell sx={{borderRight: '1px solid #e2e8f0', py: 1}}>
                                 <Tooltip title="Add price work row">
                                     <IconButton
