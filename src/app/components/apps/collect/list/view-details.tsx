@@ -246,6 +246,42 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
                   </Typography>
                 </Box>
                 <Box display="flex" alignItems="center">
+                  <IconFileInvoice
+                    size={20}
+                    style={{ color: "#888", marginRight: 16 }}
+                  />
+                  <Typography variant="body2" color="textSecondary" width={120}>
+                    Incl. Tax
+                  </Typography>
+                  <Typography variant="body2" fontWeight={500}>
+                    {data.inc_tax !== null && data.inc_tax !== undefined ? `£${Number(data.inc_tax).toFixed(2)}` : "-"}
+                  </Typography>
+                </Box>
+                <Box display="flex" alignItems="center">
+                  <IconFileInvoice
+                    size={20}
+                    style={{ color: "#888", marginRight: 16 }}
+                  />
+                  <Typography variant="body2" color="textSecondary" width={120}>
+                    Excl. Tax
+                  </Typography>
+                  <Typography variant="body2" fontWeight={500}>
+                    {data.excl_tax !== null && data.excl_tax !== undefined ? `£${Number(data.excl_tax).toFixed(2)}` : "-"}
+                  </Typography>
+                </Box>
+                <Box display="flex" alignItems="center">
+                  <IconFileInvoice
+                    size={20}
+                    style={{ color: "#888", marginRight: 16 }}
+                  />
+                  <Typography variant="body2" color="textSecondary" width={120}>
+                    Total
+                  </Typography>
+                  <Typography variant="body2" fontWeight={500}>
+                    {data.total !== null && data.total !== undefined ? `£${Number(data.total).toFixed(2)}` : "-"}
+                  </Typography>
+                </Box>
+                <Box display="flex" alignItems="center">
                   <IconUser
                     size={20}
                     style={{ color: "#888", marginRight: 16 }}
@@ -378,16 +414,6 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="caption" color="textSecondary">
-                          Inc Tax
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="caption" color="textSecondary">
-                          Excl Tax
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="caption" color="textSecondary">
                           Total
                         </Typography>
                       </TableCell>
@@ -411,23 +437,13 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body2">
-                            {item.inc_tax !== null && item.inc_tax !== undefined ? `£${Number(item.inc_tax).toFixed(2)}` : "-"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2">
-                            {item.excl_tax !== null && item.excl_tax !== undefined ? `£${Number(item.excl_tax).toFixed(2)}` : "-"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2">
                             £{Number(item.total || 0).toFixed(2)}
                           </Typography>
                         </TableCell>
                       </TableRow>
                     ))}
                     <TableRow>
-                      <TableCell colSpan={5}>
+                      <TableCell colSpan={3}>
                         <Typography variant="subtitle2" fontWeight={700} mt={1}>
                           Total
                         </Typography>

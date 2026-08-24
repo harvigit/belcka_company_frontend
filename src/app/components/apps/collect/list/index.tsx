@@ -294,7 +294,7 @@ const CollectList = () => {
           const item = row.original;
 
           return (
-            <Stack direction="row" alignItems="center" px={1.5}>
+            <Stack direction="row" alignItems="center" px={0.5}>
               <Typography className="f-14">{item.created_at ?? "-"}</Typography>
             </Stack>
           );
@@ -315,7 +315,7 @@ const CollectList = () => {
           const item = row.original;
 
           return (
-            <Stack direction="row" alignItems="center" px={1.5}>
+            <Stack direction="row" alignItems="center" px={0.5}>
               <Typography className="f-14">
                 {item.project_name ?? "-"}
               </Typography>
@@ -338,7 +338,7 @@ const CollectList = () => {
           const item = row.original;
 
           return (
-            <Stack direction="row" alignItems="center" px={1.5}>
+            <Stack direction="row" alignItems="center" px={0.5}>
               <Typography className="f-14">
                 {item.supplier_name ?? "-"}
               </Typography>
@@ -361,7 +361,7 @@ const CollectList = () => {
           const item = row.original;
 
           return (
-            <Stack direction="row" alignItems="center" px={1.5}>
+            <Stack direction="row" alignItems="center" px={0.5}>
               <Tooltip title={item.address_name ?? ""}>
                 <Typography
                   className="f-14"
@@ -399,7 +399,7 @@ const CollectList = () => {
           const item = row.original;
 
           return (
-            <Stack direction="row" alignItems="center" px={1.5}>
+            <Stack direction="row" alignItems="center" px={0.5}>
               <Typography className="f-14">
                 {item.order_by_name ?? "-"}
               </Typography>
@@ -407,6 +407,7 @@ const CollectList = () => {
           );
         },
       }),
+
       columnHelper.accessor("status", {
         header: "Status",
         cell: ({ row }) => (
@@ -429,6 +430,7 @@ const CollectList = () => {
           </Typography>
         ),
       }),
+
       columnHelper.display({
         id: "actions",
         header: "Actions",
@@ -511,7 +513,7 @@ const CollectList = () => {
           spacing={{ xs: 1, sm: 2, md: 4 }}
         >
           <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
-            <Box sx={{ mr: 2 }}>
+            <Box>
               <Tabs
                 value={activeTab}
                 onChange={(_, value) => {

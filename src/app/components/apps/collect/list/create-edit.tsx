@@ -23,6 +23,7 @@ import { useDropzone } from "react-dropzone";
 import api from "@/utils/axios";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 
 export interface CollectFormData {
   id: number;
@@ -30,6 +31,9 @@ export interface CollectFormData {
   project_id: number | null;
   address_id: number | null;
   supplier_id: number | null;
+  inc_tax?: number | null;
+  excl_tax?: number | null;
+  total?: number | null;
 }
 
 interface CollectAddEditProps {
@@ -61,6 +65,9 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
     project_id: null,
     address_id: null,
     supplier_id: null,
+    inc_tax: null,
+    excl_tax: null,
+    total: null,
   });
 
   const [projects, setProjects] = useState<any[]>([]);
@@ -92,6 +99,9 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
         project_id: null,
         address_id: null,
         supplier_id: null,
+        inc_tax: null,
+        excl_tax: null,
+        total: null,
       });
       setFile(null);
       setFilePreview(null);
@@ -130,6 +140,9 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
           project_id: item.project_id || null,
           address_id: item.address_id || null,
           supplier_id: item.supplier_id || null,
+          inc_tax: item.inc_tax !== undefined ? item.inc_tax : null,
+          excl_tax: item.excl_tax !== undefined ? item.excl_tax : null,
+          total: item.total !== undefined ? item.total : null,
         });
         if (item.poItems && item.poItems.length > 0) {
           setItems(item.poItems);
@@ -185,6 +198,17 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
             setScannedData(res.data);
             if (res.data.items) setItems(res.data.items);
 
+            if (
+              res.data.inc_tax !== undefined ||
+              res.data.excl_tax !== undefined
+            ) {
+              setFormData((prev) => ({
+                ...prev,
+                inc_tax: res.data.inc_tax ?? prev.inc_tax,
+                excl_tax: res.data.excl_tax ?? prev.excl_tax,
+              }));
+            }
+
             const { supplier, supplier_id } = res.data;
             if (supplier_id) {
               setFormData((prev) => ({ ...prev, supplier_id }));
@@ -233,8 +257,6 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
           if (it.id) {
             return {
               id: it.id,
-              inc_tax: it.inc_tax !== undefined ? it.inc_tax : null,
-              excl_tax: it.excl_tax !== undefined ? it.excl_tax : null,
             };
           }
           return it;
@@ -387,6 +409,72 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                 </Grid>
 
                 <Grid size={{ xs: 4 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Incl. Tax
+                  </Typography>
+
+                  <CustomTextField
+                    fullWidth
+                    value={formData.inc_tax !== null ? formData.inc_tax : ""}
+                    onChange={(e: any) => {
+                      let value = e.target.value;
+
+                      // Allow only numbers with max 2 decimal places
+                      if (!/^\d*\.?\d{0,2}$/.test(value)) {
+                        return;
+                      }
+
+                      if (value !== "" && Number(value) > 10000.1) {
+                        return;
+                      }
+
+                      setFormData((prev) => ({
+                        ...prev,
+                        inc_tax: value === "" ? null : Number(value),
+                      }));
+                    }}
+                    placeholder="0.00"
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 4 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Excl. Tax
+                  </Typography>
+
+                  <CustomTextField
+                    fullWidth
+                    value={formData.excl_tax !== null ? formData.excl_tax : ""}
+                    onChange={(e: any) => {
+                      let value = e.target.value;
+                      if (!/^\d*\.?\d{0,2}$/.test(value)) return;
+                      if (value !== "" && Number(value) > 10000.1) {
+                        return;
+                      }
+
+                      setFormData((prev) => ({
+                        ...prev,
+                        excl_tax: value === "" ? null : Number(value),
+                      }));
+                    }}
+                    placeholder="0.00"
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 4 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Total
+                  </Typography>
+
+                  <CustomTextField
+                    fullWidth
+                    disabled
+                    value={((formData.inc_tax || 0) + (formData.excl_tax || 0)).toFixed(2)}
+                    placeholder="0.00"
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 4 }}>
                   <Typography variant="body2" gutterBottom mb={1}>
                     File (Image / PDF)
                   </Typography>
@@ -510,31 +598,41 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                       <Typography variant="body2">
                         <strong>Items ({items.length}):</strong>
                       </Typography>
-                      <TableContainer component={Paper} variant="outlined" sx={{ mt: 1 }}>
+                      <TableContainer
+                        component={Paper}
+                        variant="outlined"
+                        sx={{ mt: 1 }}
+                      >
                         <Table size="small">
                           <TableHead sx={{ bgcolor: "background.default" }}>
                             <TableRow>
-                              <TableCell sx={{ fontWeight: 600 }}>Qty</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600 }}>Unit Price</TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600 }}>Inc Tax</TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600 }}>Excl Tax</TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>
+                                Qty
+                              </TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>
+                                Description
+                              </TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>
+                                Unit Price
+                              </TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>
+                                Total
+                              </TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
                             {items.map((it: any, idx: number) => (
                               <TableRow key={idx}>
                                 <TableCell>{it.qty || "-"}</TableCell>
-                                <TableCell>{it.description || it.item_name || "-"}</TableCell>
-                                <TableCell align="right">{it.unit_price || it.price || "-"}</TableCell>
-                                <TableCell align="right" sx={{ p: 0.5 }}>
-                                  <TextField size="small" value={it.inc_tax !== null && it.inc_tax !== undefined ? it.inc_tax : ""} onChange={e => { const newIt = [...items]; newIt[idx].inc_tax = Number(e.target.value); setItems(newIt); }} sx={{ width: 80 }} />
+                                <TableCell>
+                                  {it.description || it.item_name || "-"}
                                 </TableCell>
-                                <TableCell align="right" sx={{ p: 0.5 }}>
-                                  <TextField size="small" value={it.excl_tax !== null && it.excl_tax !== undefined ? it.excl_tax : ""} onChange={e => { const newIt = [...items]; newIt[idx].excl_tax = Number(e.target.value); setItems(newIt); }} sx={{ width: 80 }} />
+                                <TableCell align="right">
+                                  {it.unit_price || it.price || "-"}
                                 </TableCell>
-                                <TableCell align="right">{it.total || it.line_total || "-"}</TableCell>
+                                <TableCell align="right">
+                                  {it.total || it.line_total || "-"}
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
