@@ -30,6 +30,7 @@ export interface CollectFormData {
   company_id: any;
   project_id: number | null;
   address_id: number | null;
+  address_manual?: string | null;
   supplier_id: number | null;
   inc_tax?: number | null;
   excl_tax?: number | null;
@@ -64,6 +65,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
     company_id: companyId,
     project_id: null,
     address_id: null,
+    address_manual: null,
     supplier_id: null,
     inc_tax: null,
     excl_tax: null,
@@ -98,6 +100,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
         company_id: companyId,
         project_id: null,
         address_id: null,
+        address_manual: null,
         supplier_id: null,
         inc_tax: null,
         excl_tax: null,
@@ -139,6 +142,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
           company_id: companyId,
           project_id: item.project_id || null,
           address_id: item.address_id || null,
+          address_manual: item.address_manual || null,
           supplier_id: item.supplier_id || null,
           inc_tax: item.inc_tax !== undefined ? item.inc_tax : null,
           excl_tax: item.excl_tax !== undefined ? item.excl_tax : null,
@@ -367,18 +371,68 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                     Address
                   </Typography>
                   <Autocomplete
+                    freeSolo
                     options={addresses}
-                    getOptionLabel={(option) => option.name || ""}
-                    value={
-                      addresses.find((a) => a.id === formData.address_id) ||
-                      null
+                    getOptionLabel={(option) =>
+                      typeof option === "string" ? option : option.name || ""
                     }
-                    onChange={(_, value) =>
+                    getOptionKey={(option) =>
+                      typeof option === "string" ? option : String(option.id)
+                    }
+                    isOptionEqualToValue={(a, b) => {
+                      if (typeof a === "string" || typeof b === "string") {
+                        return (
+                          (typeof a === "string" ? a : a.name) ===
+                          (typeof b === "string" ? b : b.name)
+                        );
+                      }
+                      return a.id === b.id;
+                    }}
+                    value={
+                      formData.address_id
+                        ? addresses.find((a) => a.id === formData.address_id) ||
+                          null
+                        : formData.address_manual || null
+                    }
+                    onChange={(_, value) => {
+                      if (typeof value === "string") {
+                        const match = addresses.find(
+                          (a) =>
+                            a.name.toLowerCase() === value.trim().toLowerCase(),
+                        );
+                        setFormData((prev) => ({
+                          ...prev,
+                          address_id: match?.id ?? null,
+                          address_manual: match ? "" : value,
+                        }));
+                        return;
+                      }
+                      if (value && typeof value === "object") {
+                        setFormData((prev) => ({
+                          ...prev,
+                          address_id: value.id,
+                          address_manual: "",
+                        }));
+                        return;
+                      }
                       setFormData((prev) => ({
                         ...prev,
-                        address_id: value?.id ?? null,
-                      }))
-                    }
+                        address_id: null,
+                        address_manual: "",
+                      }));
+                    }}
+                    onInputChange={(_, value, reason) => {
+                      if (reason !== "input") return;
+                      const match = addresses.find(
+                        (a) =>
+                          a.name.toLowerCase() === value.trim().toLowerCase(),
+                      );
+                      setFormData((prev) => ({
+                        ...prev,
+                        address_id: match?.id ?? null,
+                        address_manual: match ? "" : value,
+                      }));
+                    }}
                     renderInput={(params) => (
                       <TextField {...params} placeholder="Select Address" />
                     )}
@@ -407,69 +461,62 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                     )}
                   />
                 </Grid>
-
-                <Grid size={{ xs: 4 }}>
+                <Grid size={{ xs: 6 }}>
                   <Typography variant="body2" gutterBottom>
                     Incl. Tax
                   </Typography>
 
                   <CustomTextField
                     fullWidth
-                    value={formData.inc_tax !== null ? formData.inc_tax : ""}
+                    value={formData.inc_tax ?? ""}
                     onChange={(e: any) => {
-                      let value = e.target.value;
+                      const value = e.target.value;
 
-                      // Allow only numbers with max 2 decimal places
+                      // Numbers only, maximum 2 decimal places
                       if (!/^\d*\.?\d{0,2}$/.test(value)) {
                         return;
                       }
 
+                      // Maximum allowed: 10000.10
                       if (value !== "" && Number(value) > 10000.1) {
                         return;
                       }
 
                       setFormData((prev) => ({
                         ...prev,
-                        inc_tax: value === "" ? null : Number(value),
+                        inc_tax: value,
                       }));
                     }}
                     placeholder="0.00"
                   />
                 </Grid>
 
-                <Grid size={{ xs: 4 }}>
+                <Grid size={{ xs: 6 }}>
                   <Typography variant="body2" gutterBottom>
                     Excl. Tax
                   </Typography>
 
                   <CustomTextField
                     fullWidth
-                    value={formData.excl_tax !== null ? formData.excl_tax : ""}
+                    value={formData.excl_tax ?? ""}
                     onChange={(e: any) => {
-                      let value = e.target.value;
-                      if (!/^\d*\.?\d{0,2}$/.test(value)) return;
+                      const value = e.target.value;
+
+                      // Numbers only, maximum 2 decimal places
+                      if (!/^\d*\.?\d{0,2}$/.test(value)) {
+                        return;
+                      }
+
+                      // Maximum allowed: 10000.10
                       if (value !== "" && Number(value) > 10000.1) {
                         return;
                       }
 
                       setFormData((prev) => ({
                         ...prev,
-                        excl_tax: value === "" ? null : Number(value),
+                        excl_tax: value,
                       }));
                     }}
-                    placeholder="0.00"
-                  />
-                </Grid>
-
-                <Grid size={{ xs: 4 }}>
-                  <Typography variant="body2" gutterBottom>
-                    Total
-                  </Typography>
-
-                  <CustomTextField
-                    fullWidth
-                    disabled
-                    value={((formData.inc_tax || 0) + (formData.excl_tax || 0)).toFixed(2)}
                     placeholder="0.00"
                   />
                 </Grid>
