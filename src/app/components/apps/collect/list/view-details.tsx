@@ -270,18 +270,6 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
                   </Typography>
                 </Box>
                 <Box display="flex" alignItems="center">
-                  <IconFileInvoice
-                    size={20}
-                    style={{ color: "#888", marginRight: 16 }}
-                  />
-                  <Typography variant="body2" color="textSecondary" width={120}>
-                    Total
-                  </Typography>
-                  <Typography variant="body2" fontWeight={500}>
-                    {data.total !== null && data.total !== undefined ? `£${Number(data.total).toFixed(2)}` : "-"}
-                  </Typography>
-                </Box>
-                <Box display="flex" alignItems="center">
                   <IconUser
                     size={20}
                     style={{ color: "#888", marginRight: 16 }}
