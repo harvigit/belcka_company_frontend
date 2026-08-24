@@ -30,6 +30,7 @@ import {
     Typography,
 } from '@mui/material';
 import {
+    IconArrowBackUp,
     IconCheck,
     IconEye,
     IconFilter,
@@ -164,6 +165,8 @@ const PriceworkList = () => {
     const [attachmentsPricework, setAttachmentsPricework] = useState<PriceworkRow | null>(null);
     const [sendDateDialogOpen, setSendDateDialogOpen] = useState(false);
     const [sendDate, setSendDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [unapproveDialogOpen, setUnapproveDialogOpen] = useState(false);
+    const [isUnapproving, setIsUnapproving] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -356,6 +359,37 @@ const PriceworkList = () => {
             .filter((item) => isChecklogPriceworkRow(item) && normalizePriceworkStatus(item.status) === 'approved')
             .map((item) => Number(item.user_checklog_id));
 
+    const isUnapprovablePriceworkRow = (row: PriceworkRow) => {
+        const status = normalizePriceworkStatus(row.status);
+        return status === 'approved' || status === 'sent';
+    };
+
+    const getUnapproveActionPriceworkIds = () =>
+        getSelectedRows()
+            .filter((item) => isStandalonePriceworkRow(item) && isUnapprovablePriceworkRow(item))
+            .map((item) => item.id);
+
+    const getUnapproveActionTimesheetLightIds = () =>
+        getSelectedRows()
+            .filter((item) => isActionableTimesheetLightRow(item) && isUnapprovablePriceworkRow(item))
+            .map((item) => Number(item.timesheet_light_id));
+
+    const getUnapproveActionUserChecklogIds = () =>
+        getSelectedRows()
+            .filter((item) => isChecklogPriceworkRow(item) && isUnapprovablePriceworkRow(item))
+            .map((item) => Number(item.user_checklog_id));
+
+    const canUnapproveSelected = useMemo(() => {
+        const selectedRows = getSelectedRows();
+        if (selectedRows.length === 0) return false;
+
+        return selectedRows.every(
+            (item) =>
+                (isStandalonePriceworkRow(item) || isActionableTimesheetLightRow(item) || isChecklogPriceworkRow(item)) &&
+                isUnapprovablePriceworkRow(item),
+        );
+    }, [data, isSelectAll, selectedRowIds]);
+
     const refreshAfterAction = async () => {
         clearSelection();
         closePriceworkDetails();
@@ -461,6 +495,48 @@ const PriceworkList = () => {
             await refreshAfterAction();
         } catch (error: any) {
             toast.error(error?.response?.data?.message || 'Failed to send priceworks to bookkeeper');
+        }
+    };
+
+    const openUnapproveDialog = () => {
+        if (!canUnapproveSelected) {
+            toast.error('Please select only Approved or Sent priceworks to unapprove');
+            return;
+        }
+        setUnapproveDialogOpen(true);
+    };
+
+    const handleUnapproveSelected = async () => {
+        const ids = getUnapproveActionPriceworkIds();
+        const timesheetLightIds = getUnapproveActionTimesheetLightIds();
+        const userChecklogIds = getUnapproveActionUserChecklogIds();
+        if (
+            (ids.length === 0 && timesheetLightIds.length === 0 && userChecklogIds.length === 0) ||
+            !canUnapproveSelected
+        ) {
+            toast.error('Please select only Approved or Sent priceworks to unapprove');
+            setUnapproveDialogOpen(false);
+            return;
+        }
+
+        setIsUnapproving(true);
+        try {
+            const res = await api.post('pricework/unapprove', {
+                ids,
+                timesheet_light_ids: timesheetLightIds,
+                user_checklog_ids: userChecklogIds,
+            });
+            if (res.data?.IsSuccess === false) {
+                toast.error(res.data?.message || 'Failed to unapprove priceworks');
+                return;
+            }
+            toast.success(res.data?.message || 'Pricework unapproved successfully');
+            setUnapproveDialogOpen(false);
+            await refreshAfterAction();
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to unapprove priceworks');
+        } finally {
+            setIsUnapproving(false);
         }
     };
 
@@ -1447,6 +1523,18 @@ const PriceworkList = () => {
                             </Button>
 
                             <Button
+                                startIcon={<IconArrowBackUp size={15}/>}
+                                variant="outlined"
+                                color="warning"
+                                size="small"
+                                onClick={openUnapproveDialog}
+                                disabled={!canUnapproveSelected || isUnapproving}
+                                sx={BULK_BUTTON_SX}
+                            >
+                                Unapprove Selected
+                            </Button>
+
+                            <Button
                                 startIcon={<IconSend size={15}/>}
                                 variant="contained"
                                 color="primary"
@@ -1515,6 +1603,52 @@ const PriceworkList = () => {
                         disabled={!sendDate}
                     >
                         Send
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={unapproveDialogOpen}
+                onClose={() => !isUnapproving && setUnapproveDialogOpen(false)}
+                fullWidth
+                maxWidth="xs"
+            >
+                <DialogTitle sx={{m: 0, position: 'relative'}}>
+                    Unapprove Selected
+                    <IconButton
+                        aria-label="close"
+                        onClick={() => setUnapproveDialogOpen(false)}
+                        disabled={isUnapproving}
+                        sx={{position: 'absolute', right: 12, top: 8}}
+                    >
+                        <IconX size={24}/>
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        You are about to unapprove {selectedCount} pricework
+                        {selectedCount === 1 ? '' : 's'} and return
+                        {selectedCount === 1 ? ' it' : ' them'} to Pending.
+                        This removes approval and bookkeeper processing so
+                        {selectedCount === 1 ? ' it' : ' they'} can be approved
+                        and sent again.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        color="inherit"
+                        onClick={() => setUnapproveDialogOpen(false)}
+                        disabled={isUnapproving}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="warning"
+                        onClick={handleUnapproveSelected}
+                        disabled={isUnapproving}
+                    >
+                        {isUnapproving ? 'Unapproving…' : 'Unapprove Selected'}
                     </Button>
                 </DialogActions>
             </Dialog>
