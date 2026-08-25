@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     Box,
     Card,
@@ -8,6 +8,7 @@ import {
     CircularProgress,
     Drawer,
     IconButton,
+    Stack,
     Typography,
 } from '@mui/material';
 import {IconX} from '@tabler/icons-react';
@@ -22,27 +23,34 @@ type Props = {
     onClose: () => void;
 };
 
+const getAttachmentUrl = (attachment: PriceworkAttachment, preferThumb = false) => {
+    if (preferThumb) return attachment.image_url || attachment.thumb_url || '';
+    return attachment.thumb_url || attachment.image_url || '';
+};
+
+const toLightboxSlides = (attachments: PriceworkAttachment[]) =>
+    attachments
+        .filter((item) => Boolean(item.image_url))
+        .map((attachment, index) => ({
+            src: attachment.image_url as string,
+            alt: `Attachment ${attachment.id}`,
+            downloadFilename:
+                attachment.image_url?.split('?')[0].split('/').pop() ||
+                `pricework-${index + 1}.jpg`,
+        }));
+
 const PriceworkAttachmentsDrawer = ({open, pricework, onClose}: Props) => {
     const [loading, setLoading] = useState(false);
     const [detail, setDetail] = useState<PriceworkDetail | null>(null);
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [lightboxIndex, setLightboxIndex] = useState(0);
+    const [lightboxSlides, setLightboxSlides] = useState<ReturnType<typeof toLightboxSlides>>([]);
 
     const attachments = detail?.attachments || [];
-
-    const lightboxSlides = useMemo(
-        () =>
-            attachments
-                .filter((item) => Boolean(item.image_url))
-                .map((attachment, index) => ({
-                    src: attachment.image_url as string,
-                    alt: `Attachment ${attachment.id}`,
-                    downloadFilename:
-                        attachment.image_url?.split('?')[0].split('/').pop() ||
-                        `pricework-${index + 1}.jpg`,
-                })),
-        [attachments],
-    );
+    const beforeAttachments = detail?.before_attachments || [];
+    const afterAttachments = detail?.after_attachments || [];
+    const hasSplitGroups = beforeAttachments.length > 0 || afterAttachments.length > 0;
+    const hasAnyAttachment = hasSplitGroups || attachments.length > 0;
 
     const loadDetail = async () => {
         if (!pricework?.id) return;
@@ -71,17 +79,68 @@ const PriceworkAttachmentsDrawer = ({open, pricework, onClose}: Props) => {
             setDetail(null);
             setLightboxOpen(false);
             setLightboxIndex(0);
+            setLightboxSlides([]);
             return;
         }
         void loadDetail();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, pricework?.id, pricework?.timesheet_light_id, pricework?.user_checklog_id, pricework?.record_type]);
 
-    const openAttachment = (attachment: PriceworkAttachment) => {
-        const index = attachments.findIndex((item) => item.id === attachment.id);
-        if (index < 0 || !attachment.image_url) return;
+    const openAttachment = (items: PriceworkAttachment[], attachment: PriceworkAttachment) => {
+        const slides = toLightboxSlides(items);
+        const index = slides.findIndex((slide) => slide.src === attachment.image_url);
+        if (index < 0) return;
+        setLightboxSlides(slides);
         setLightboxIndex(index);
         setLightboxOpen(true);
+    };
+
+    const renderAttachmentGrid = (items: PriceworkAttachment[], label?: string) => {
+        const visibleAttachments = items.filter((attachment) => getAttachmentUrl(attachment, true));
+        if (visibleAttachments.length === 0) return null;
+
+        return (
+            <Box>
+                {label && (
+                    <Typography variant="caption" color="text.secondary" mb={1} display="block">
+                        {label} ({visibleAttachments.length})
+                    </Typography>
+                )}
+                <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
+                    {visibleAttachments.map((attachment, index) => {
+                        const imageUrl = getAttachmentUrl(attachment);
+
+                        return (
+                            <Box
+                                key={`${label || 'attachment'}-${attachment.id}-${index}`}
+                                sx={{
+                                    width: {
+                                        xs: 'calc(50% - 8px)',
+                                        sm: 'calc(33.33% - 11px)',
+                                    },
+                                }}
+                            >
+                                <Card
+                                    sx={{
+                                        cursor: 'pointer',
+                                        '&:hover': {boxShadow: 3},
+                                    }}
+                                    onClick={() => openAttachment(visibleAttachments, attachment)}
+                                >
+                                    <CardMedia
+                                        component="img"
+                                        height="140"
+                                        image={imageUrl || '/images/users/user.png'}
+                                        alt={`${label || 'Attachment'} ${index + 1}`}
+                                        sx={{objectFit: 'cover'}}
+                                    />
+                                </Card>
+                            </Box>
+                        );
+                    })}
+                </Box>
+            </Box>
+        );
     };
 
     return (
@@ -132,40 +191,15 @@ const PriceworkAttachmentsDrawer = ({open, pricework, onClose}: Props) => {
                     </Box>
                 ) : (
                     <Box sx={{flex: 1, overflow: 'auto', px: 2.5, py: 2.5}}>
-                        {attachments.length > 0 ? (
-                            <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
-                                {attachments.map((attachment) => (
-                                    <Box
-                                        key={attachment.id}
-                                        sx={{
-                                            width: {
-                                                xs: 'calc(50% - 8px)',
-                                                sm: 'calc(33.33% - 11px)',
-                                            },
-                                        }}
-                                    >
-                                        <Card
-                                            sx={{
-                                                cursor: 'pointer',
-                                                '&:hover': {boxShadow: 3},
-                                            }}
-                                            onClick={() => openAttachment(attachment)}
-                                        >
-                                            <CardMedia
-                                                component="img"
-                                                height="140"
-                                                image={
-                                                    attachment.thumb_url ||
-                                                    attachment.image_url ||
-                                                    '/images/users/user.png'
-                                                }
-                                                alt={`Attachment ${attachment.id}`}
-                                                sx={{objectFit: 'cover'}}
-                                            />
-                                        </Card>
-                                    </Box>
-                                ))}
-                            </Box>
+                        {hasAnyAttachment ? (
+                            hasSplitGroups ? (
+                                <Stack spacing={3}>
+                                    {renderAttachmentGrid(beforeAttachments, 'Before Attachments')}
+                                    {renderAttachmentGrid(afterAttachments, 'After Attachments')}
+                                </Stack>
+                            ) : (
+                                renderAttachmentGrid(attachments)
+                            )
                         ) : (
                             <Typography variant="body2" color="text.secondary" py={2}>
                                 No attachments found
