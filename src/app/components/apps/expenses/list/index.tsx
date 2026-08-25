@@ -708,7 +708,7 @@ const ExpenseList = () => {
                 const row = info.row.original as ExpenseRow;
 
                 return (
-                    <Box sx={{px: 1.5}}>
+                    <Box sx={{display: 'flex', justifyContent: 'center'}}>
                         <ExpenseStatusBadge
                             status={normalizeExpenseStatus(row.status) ?? 'pending'}
                             date={row.timesheet_date}
@@ -1611,7 +1611,13 @@ const ExpenseList = () => {
                                         return (
                                             <TableCell
                                                 key={header.id}
-                                                align={header.column.id === 'actions' ? 'right' : 'left'}
+                                                align={
+                                                    header.column.id === 'actions'
+                                                        ? 'right'
+                                                        : header.column.id === 'status'
+                                                            ? 'center'
+                                                            : 'left'
+                                                }
                                                 padding={header.column.id === 'select' ? 'checkbox' : 'normal'}
                                                 sx={{
                                                     paddingTop: '10px',
@@ -1629,7 +1635,11 @@ const ExpenseList = () => {
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
                                                         justifyContent:
-                                                            header.column.id === 'actions' ? 'flex-end' : 'flex-start',
+                                                            header.column.id === 'actions'
+                                                                ? 'flex-end'
+                                                                : header.column.id === 'status'
+                                                                    ? 'center'
+                                                                    : 'flex-start',
                                                         '&:hover': isSortable ? {color: '#888'} : undefined,
                                                         '&:hover .hoverIcon': {opacity: 1},
                                                     }}
@@ -1694,7 +1704,13 @@ const ExpenseList = () => {
                                         {row.getVisibleCells().map((cell) => (
                                             <TableCell
                                                 key={cell.id}
-                                                align={cell.column.id === 'actions' ? 'right' : 'left'}
+                                                align={
+                                                    cell.column.id === 'actions'
+                                                        ? 'right'
+                                                        : cell.column.id === 'status'
+                                                            ? 'center'
+                                                            : 'left'
+                                                }
                                                 padding={cell.column.id === 'select' ? 'checkbox' : 'normal'}
                                             >
                                                 {flexRender(

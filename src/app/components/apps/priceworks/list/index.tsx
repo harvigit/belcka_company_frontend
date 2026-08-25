@@ -1188,10 +1188,12 @@ const PriceworkList = () => {
                     const row = info.row.original;
 
                     return (
-                        <PriceworkStatusBadge
-                            status={normalizePriceworkStatus(row.status)}
-                            date={row.bookkeeper_date || row.timesheet_date}
-                        />
+                        <Box sx={{display: 'flex', justifyContent: 'center'}}>
+                            <PriceworkStatusBadge
+                                status={normalizePriceworkStatus(row.status)}
+                                date={row.bookkeeper_date || row.timesheet_date}
+                            />
+                        </Box>
                     );
                 },
                 enableSorting: true,
@@ -1677,6 +1679,13 @@ const PriceworkList = () => {
                                                         ? 'checkbox'
                                                         : 'normal'
                                                 }
+                                                align={
+                                                    header.column.id === 'actions'
+                                                        ? 'right'
+                                                        : header.column.id === 'status'
+                                                            ? 'center'
+                                                            : 'left'
+                                                }
                                                 sx={{
                                                     whiteSpace: 'nowrap',
                                                     bgcolor: 'background.paper',
@@ -1695,7 +1704,9 @@ const PriceworkList = () => {
                                                     justifyContent={
                                                         header.column.id === 'actions'
                                                             ? 'flex-end'
-                                                            : 'flex-start'
+                                                            : header.column.id === 'status'
+                                                                ? 'center'
+                                                                : 'flex-start'
                                                     }
                                                     sx={{
                                                         ...(isSortable && {
@@ -1772,7 +1783,11 @@ const PriceworkList = () => {
                                             <TableCell
                                                 key={cell.id}
                                                 align={
-                                                    cell.column.id === 'actions' ? 'right' : 'left'
+                                                    cell.column.id === 'actions'
+                                                        ? 'right'
+                                                        : cell.column.id === 'status'
+                                                            ? 'center'
+                                                            : 'left'
                                                 }
                                                 padding={
                                                     cell.column.id === 'select'

@@ -39,10 +39,11 @@ const formatSendDate = (value?: string | null) => {
     if (!value) return null;
     const trimmed = String(value).trim();
     if (!trimmed) return null;
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) return trimmed;
+    const dmy = trimmed.match(/^(\d{2}\/\d{2}\/\d{4})/);
+    if (dmy) return dmy[1];
     const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
-    return trimmed;
+    return null;
 };
 
 const ExpenseStatusBadge = ({status, date}: Props) => {
@@ -55,7 +56,8 @@ const ExpenseStatusBadge = ({status, date}: Props) => {
                 display: 'inline-flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: 0.25,
+                justifyContent: 'center',
+                gap: '4px',
             }}
         >
             <Box
@@ -63,6 +65,7 @@ const ExpenseStatusBadge = ({status, date}: Props) => {
                 sx={{
                     display: 'inline-flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     px: 1.25,
                     py: 0.35,
                     borderRadius: '999px',
@@ -84,9 +87,13 @@ const ExpenseStatusBadge = ({status, date}: Props) => {
             </Box>
             {sendDate && (
                 <Typography
-                    className="f-14"
-                    color="text.secondary"
-                    sx={{lineHeight: 1.2, whiteSpace: 'nowrap'}}
+                    sx={{
+                        fontSize: 12,
+                        fontWeight: 400,
+                        lineHeight: 1.25,
+                        color: '#6B7280',
+                        whiteSpace: 'nowrap',
+                    }}
                 >
                     {sendDate}
                 </Typography>
