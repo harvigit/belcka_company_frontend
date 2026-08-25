@@ -1184,9 +1184,16 @@ const PriceworkList = () => {
             columnHelper.accessor('status', {
                 id: 'status',
                 header: () => 'Status',
-                cell: (info) => (
-                    <PriceworkStatusBadge status={normalizePriceworkStatus(info.getValue())} />
-                ),
+                cell: (info) => {
+                    const row = info.row.original;
+
+                    return (
+                        <PriceworkStatusBadge
+                            status={normalizePriceworkStatus(row.status)}
+                            date={row.bookkeeper_date || row.timesheet_date}
+                        />
+                    );
+                },
                 enableSorting: true,
             }),
             columnHelper.display({

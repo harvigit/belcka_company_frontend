@@ -495,7 +495,10 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
                                         {formatAmount(currency, amount)}
                                     </Typography>
                                 )}
-                                <ExpenseStatusBadge status={status}/>
+                                <ExpenseStatusBadge
+                                    status={status}
+                                    date={detail?.timesheet_date || expense?.timesheetDate}
+                                />
                             </Stack>
 
                             <Stack spacing={2.25}>

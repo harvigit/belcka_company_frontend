@@ -403,7 +403,15 @@ const PriceworkDetailsDrawer = ({
                                 <Typography sx={{fontSize: 28, fontWeight: 700, lineHeight: 1.2}}>
                                     {formatAmount(currency, amount)}
                                 </Typography>
-                                <PriceworkStatusBadge status={status} />
+                                <PriceworkStatusBadge
+                                    status={status}
+                                    date={
+                                        detail?.bookkeeper_date
+                                        || detail?.timesheet_date
+                                        || pricework?.bookkeeper_date
+                                        || pricework?.timesheet_date
+                                    }
+                                />
                             </Stack>
 
                             <Stack spacing={2.25}>

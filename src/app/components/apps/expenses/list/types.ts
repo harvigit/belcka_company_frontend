@@ -74,6 +74,7 @@ export type ExpenseListItem = {
     sentBy?: number | null;
     sentByName?: string | null;
     sentAt?: string | null;
+    timesheetDate?: string | null;
 };
 
 export type ExpenseActivityLog = {

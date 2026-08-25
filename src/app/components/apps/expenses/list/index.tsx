@@ -205,6 +205,7 @@ const mapApiRowToListItem = (row: ExpenseRow): ExpenseListItem => {
         sentBy: row.sent_by ?? null,
         sentByName: row.sent_by_name ?? null,
         sentAt: row.sent_at ?? null,
+        timesheetDate: row.timesheet_date ?? null,
     };
 };
 
@@ -703,13 +704,18 @@ const ExpenseList = () => {
         columnHelper.accessor('status', {
             id: 'status',
             header: 'Status',
-            cell: (info: any) => (
-                <Box sx={{px: 1.5}}>
-                    <ExpenseStatusBadge
-                        status={normalizeExpenseStatus(info.getValue()) ?? 'pending'}
-                    />
-                </Box>
-            ),
+            cell: (info: any) => {
+                const row = info.row.original as ExpenseRow;
+
+                return (
+                    <Box sx={{px: 1.5}}>
+                        <ExpenseStatusBadge
+                            status={normalizeExpenseStatus(row.status) ?? 'pending'}
+                            date={row.timesheet_date}
+                        />
+                    </Box>
+                );
+            },
             enableSorting: false,
         }),
 
