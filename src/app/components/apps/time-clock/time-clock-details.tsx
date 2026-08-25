@@ -771,7 +771,15 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     };
 
     const handleOpenPriceworkDetails = async (pricework: any) => {
-        const priceworkId = Number(pricework?.pricework_id || pricework?.id);
+        const isChecklogRow =
+            pricework?.record_type === 'timesheet_light'
+            || pricework?.source_type === 'user_checklog'
+            || Boolean(pricework?.user_checklog_id);
+        const priceworkId = Number(
+            isChecklogRow
+                ? pricework?.user_checklog_id || pricework?.id
+                : pricework?.pricework_id || pricework?.id,
+        );
         if (!Number.isInteger(priceworkId) || priceworkId <= 0) {
             toast.error('Pricework record not found.');
             return;

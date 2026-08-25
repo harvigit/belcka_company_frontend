@@ -79,8 +79,8 @@ const getFullAttachmentUrl = (attachment: Attachment) =>
 const asAttachmentList = (value?: Attachment[] | null) =>
     Array.isArray(value) ? value : [];
 
-const isBeforeAttachment = (attachment: Attachment) => {
-    const value = attachment.is_before;
+const isBeforeAttachment = (attachment: Attachment & { isBefore?: boolean | number | string | null }) => {
+    const value = attachment.is_before ?? attachment.isBefore;
     return value === true || value === 1 || value === '1';
 };
 
@@ -150,7 +150,13 @@ const PriceworkDetails: React.FC<PriceworkDetailsProps> = ({
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [zoom, setZoom] = useState(1);
 
-    const priceworkId = pricework?.pricework_id || pricework?.id;
+    const isTimesheetLightRow =
+        details?.record_type === 'timesheet_light'
+        || pricework?.record_type === 'timesheet_light'
+        || Boolean(details?.user_checklog_id || pricework?.user_checklog_id);
+    const priceworkId = isTimesheetLightRow
+        ? Number(pricework?.user_checklog_id || details?.user_checklog_id || pricework?.id)
+        : Number(pricework?.pricework_id || pricework?.id);
     const selectedImage = previewImages[selectedImageIndex] ?? null;
 
     useEffect(() => {
@@ -202,21 +208,22 @@ const PriceworkDetails: React.FC<PriceworkDetailsProps> = ({
         [attachments],
     );
     const beforeAttachments = useMemo(() => {
-        const fromApi = asAttachmentList(details?.before_attachments).filter(isVisibleAttachment);
-        const afterFromApi = asAttachmentList(details?.after_attachments).filter(isVisibleAttachment);
+        const fromApi = asAttachmentList(details?.before_attachments || details?.beforeAttachments).filter(isVisibleAttachment);
+        const afterFromApi = asAttachmentList(details?.after_attachments || details?.afterAttachments).filter(isVisibleAttachment);
         if (fromApi.length > 0 || afterFromApi.length > 0) return fromApi;
         return visibleAttachments.filter(isBeforeAttachment);
-    }, [details?.before_attachments, details?.after_attachments, visibleAttachments]);
+    }, [details?.before_attachments, details?.beforeAttachments, details?.after_attachments, details?.afterAttachments, visibleAttachments]);
     const afterAttachments = useMemo(() => {
-        const fromApi = asAttachmentList(details?.before_attachments).filter(isVisibleAttachment);
-        const afterFromApi = asAttachmentList(details?.after_attachments).filter(isVisibleAttachment);
+        const fromApi = asAttachmentList(details?.before_attachments || details?.beforeAttachments).filter(isVisibleAttachment);
+        const afterFromApi = asAttachmentList(details?.after_attachments || details?.afterAttachments).filter(isVisibleAttachment);
         if (fromApi.length > 0 || afterFromApi.length > 0) return afterFromApi;
-        const hasBeforeAfterFlag = visibleAttachments.some(
-            (attachment) => attachment.is_before != null && attachment.is_before !== '',
-        );
-        if (!hasBeforeAfterFlag) return [];
+        const hasBeforeAfterFlag = visibleAttachments.some((attachment) => {
+            const value = attachment.is_before ?? (attachment as {isBefore?: unknown}).isBefore;
+            return value != null && value !== '';
+        });
+        if (!hasBeforeAfterFlag) return visibleAttachments;
         return visibleAttachments.filter((attachment) => !isBeforeAttachment(attachment));
-    }, [details?.before_attachments, details?.after_attachments, visibleAttachments]);
+    }, [details?.before_attachments, details?.beforeAttachments, details?.after_attachments, details?.afterAttachments, visibleAttachments]);
     const hasSplitGroups = beforeAttachments.length > 0 || afterAttachments.length > 0;
     const hideEditAction = isLockedOrPaid(details);
 

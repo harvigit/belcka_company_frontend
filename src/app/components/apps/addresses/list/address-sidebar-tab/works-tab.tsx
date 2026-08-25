@@ -149,7 +149,7 @@ export const WorksTab = ({
       const works = rawWorks;
       const priceworks = rawPriceworks.map((record: any) => ({
         ...record,
-        id: record.pricework_id,
+        id: record.pricework_id ?? record.user_checklog_id ?? record.id,
         name: record.work_type,
         is_pricework_record: true,
       }));
@@ -263,7 +263,15 @@ export const WorksTab = ({
   };
 
   const handlePriceworkClick = async (pricework: any) => {
-    const priceworkId = Number(pricework?.pricework_id || pricework?.id);
+    const isChecklogRow =
+      pricework?.record_type === "timesheet_light"
+      || pricework?.source_type === "user_checklog"
+      || Boolean(pricework?.user_checklog_id);
+    const priceworkId = Number(
+      isChecklogRow
+        ? pricework?.user_checklog_id || pricework?.source_id || pricework?.id
+        : pricework?.pricework_id || pricework?.id,
+    );
     if (!Number.isInteger(priceworkId) || priceworkId <= 0) {
       toast.error("Pricework record not found.");
       return;
