@@ -33,7 +33,7 @@ export const useTimeClockData = (user_id: any) => {
                 start_date: format(start, 'dd/MM/yyyy'),
                 end_date: format(end, 'dd/MM/yyyy'),
             };
-            const response = await api.get('/time-clock/details', {params});
+            const response = await api.get('/time-clock/table-data', {params});
 
             if (response.data.IsSuccess) {
                 setData(response.data.info || []);
