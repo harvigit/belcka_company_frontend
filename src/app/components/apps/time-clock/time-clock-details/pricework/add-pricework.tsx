@@ -251,9 +251,37 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     }, [pricework?.pricework_id, pricework?.pricework_date, pricework?.date_added]);
 
     useEffect(() => {
-        setCategoryId(pricework?.category_id ? String(pricework.category_id) : '');
-        setSubCategoryId(pricework?.sub_category_id ? String(pricework.sub_category_id) : '');
-    }, [pricework?.pricework_id, pricework?.category_id, pricework?.sub_category_id]);
+        if (pricework?.category_id) {
+            setCategoryId(String(pricework.category_id));
+            setSubCategoryId(pricework?.sub_category_id ? String(pricework.sub_category_id) : '');
+            return;
+        }
+
+        if (!isEditMode) {
+            setCategoryId('');
+            setSubCategoryId('');
+        }
+    }, [isEditMode, pricework?.pricework_id, pricework?.category_id, pricework?.sub_category_id]);
+
+    useEffect(() => {
+        if (!isEditMode || categoryId || !pricework?.task_id || categories.length === 0) return;
+
+        const taskId = String(pricework.task_id);
+        for (const category of categories) {
+            if (String(category.task_id) === taskId) {
+                setCategoryId(String(category.id));
+                setSubCategoryId('');
+                return;
+            }
+
+            const subCategory = category.sub_categories?.find((item) => String(item.task_id) === taskId);
+            if (subCategory) {
+                setCategoryId(String(category.id));
+                setSubCategoryId(String(subCategory.id));
+                return;
+            }
+        }
+    }, [isEditMode, categoryId, categories, pricework?.task_id]);
 
     useEffect(() => {
         if (pricework?.trade_id) {
@@ -325,7 +353,9 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
         [selectedCategory, subCategoryId],
     );
 
-    const selectedTaskId = selectedSubCategory?.task_id ?? selectedCategory?.task_id ?? null;
+    const selectedTaskId = selectedSubCategory?.task_id
+        ?? selectedCategory?.task_id
+        ?? (isEditMode && pricework?.task_id ? Number(pricework.task_id) : null);
 
     const selectedWorkTypeLabel = useMemo(() => {
         if (!selectedCategory) return '';
@@ -364,7 +394,7 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             payload.append('task_id', String(selectedTaskId));
             payload.append('category_id', categoryId);
             if (subCategoryId) payload.append('sub_category_id', subCategoryId);
-            payload.append('work_type', selectedWorkTypeLabel);
+            payload.append('work_type', selectedWorkTypeLabel || pricework?.work_type || '');
             payload.append('pricework_date', priceworkDate);
             payload.append('unit_id', unitId);
             payload.append('amount_per_unit', amountPerUnit);
@@ -573,6 +603,11 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
                                 <MenuItem value="" disabled>Select category</MenuItem>
                                 {categories.map((category) =>
                                     <MenuItem key={category.id} value={String(category.id)}>{category.name}</MenuItem>
+                                )}
+                                {categoryId && !categories.some((category) => String(category.id) === categoryId) && (
+                                    <MenuItem value={categoryId}>
+                                        {pricework?.category_name || 'Selected category'}
+                                    </MenuItem>
                                 )}
                             </Select>
                         </FormControl>
