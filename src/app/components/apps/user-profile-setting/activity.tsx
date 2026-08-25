@@ -29,6 +29,8 @@ import {
     IconPencil,
     IconPlus,
     IconEye,
+    IconCoinRupee,
+    IconUsersPlus,
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
 import toast from 'react-hot-toast';
@@ -37,6 +39,7 @@ import { useTranslation } from 'react-i18next';
 import { IconFilter } from '@tabler/icons-react';
 import { IconX } from '@tabler/icons-react';
 import { Stack } from '@mui/system';
+import { IconReceipt } from '@tabler/icons-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -158,6 +161,15 @@ const MODULE_CONFIG: Record<string, ModuleCfg> = {
         dotBg: '#EEF2FF',
         dotColor: '#4338CA',
     },
+    user_companies: {
+        label: 'Rate',
+        icon: IconCoinRupee,
+        chipBg: '#EEF2FF',
+        chipColor: '#125018ff',
+        chipBorder: '#cbfec7ff',
+        dotBg: '#EEF2FF',
+        dotColor: '#125018ff',
+    },
     employee_orders: {
         label: 'Orders',
         icon: IconShoppingCart,
@@ -176,14 +188,23 @@ const MODULE_CONFIG: Record<string, ModuleCfg> = {
         dotBg: '#F0FDF4',
         dotColor: '#15803D',
     },
-    user_leaves: {
-        label: 'Leaves',
-        icon: IconCalendar,
-        chipBg: '#FDF4FF',
+    teams: {
+        label: 'Team',
+        icon: IconUsersPlus,
+        chipBg: '#F0FDF4',
         chipColor: '#9333EA',
         chipBorder: '#E9D5FF',
         dotBg: '#FDF4FF',
         dotColor: '#9333EA',
+    },
+    billing_infos: {
+        label: 'Billing Info',
+        icon: IconReceipt,
+        chipBg: '#f4fff7ff',
+        chipColor: '#2E7D32',
+        chipBorder: '#d5ffdeff',
+        dotBg: '#f4fff4ff',
+        dotColor: '#2E7D32',
     },
 };
 
@@ -600,11 +621,11 @@ const UserActivity: React.FC<UserActivityProps> = ({
         { id: "Rejected", name: "Rejected" }
     ];
     const types = [
-        { id: "Work log", name: "Work log" },
+        { id: "User", name: "Personal Info" },
         { id: "Billing info", name: "Billing info" },
         { id: "Company Rate", name: "Company Rate" },
-        { id: "Leave", name: "Leave" },
-        { id: "Penalty", name: "Penalty" }
+        { id: "Team", name: "Team" },
+        // { id: "Penalty", name: "Penalty" }
     ];
     
     const fetchActivity = useCallback(

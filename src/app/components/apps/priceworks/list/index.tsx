@@ -445,6 +445,37 @@ const PriceworkList = () => {
         [...new Set(getSelectedRows()
             .filter(isChecklogPriceworkRow)
             .map((item) => Number(item.user_checklog_id)))];
+
+    const getActionSources = () =>
+        getSelectedRows()
+            .map((item) => {
+                if (isStandalonePriceworkRow(item)) {
+                    return {
+                        source_type: 'pricework',
+                        source_id: Number(item.pricework_id ?? item.id),
+                        timesheet_id: item.timesheet_id != null ? Number(item.timesheet_id) : null,
+                    };
+                }
+
+                if (isChecklogPriceworkRow(item)) {
+                    return {
+                        source_type: 'user_checklog',
+                        source_id: Number(item.user_checklog_id),
+                        timesheet_id: item.timesheet_id != null ? Number(item.timesheet_id) : null,
+                    };
+                }
+
+                if (isActionableTimesheetLightRow(item)) {
+                    return {
+                        source_type: 'timesheet_light',
+                        source_id: Number(item.timesheet_light_id),
+                        timesheet_id: item.timesheet_id != null ? Number(item.timesheet_id) : Number(item.timesheet_light_id),
+                    };
+                }
+
+                return null;
+            })
+            .filter(Boolean);
     
     const hasOnlyUnactionableSelection = () => {
         const selectedRows = getSelectedRows();
@@ -615,6 +646,7 @@ const PriceworkList = () => {
                 ids,
                 timesheet_light_ids: timesheetLightIds,
                 user_checklog_ids: userChecklogIds,
+                sources: getActionSources(),
                 send_date: sendDate,
             });
             toast.success(res.data?.message || 'Pricework sent to bookkeeper successfully');

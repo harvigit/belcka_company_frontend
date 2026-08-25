@@ -934,6 +934,42 @@ const PurchaseProductList: React.FC<Props> = ({
       },
     }),
 
+    columnHelper.accessor((row) => row?.cutoff, {
+      id: "lowStock",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Low Stock
+          </Typography>
+        </Stack>
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            <Typography
+              className="f-14"
+              sx={{
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: "pointer",
+              }}
+            >
+              {item.cutoff || "0"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
     columnHelper.accessor((row) => row?.qty, {
       id: "qty",
       header: () => (
@@ -950,7 +986,7 @@ const PurchaseProductList: React.FC<Props> = ({
             <Typography textTransform="capitalize" className="f-14">
               {item.qty ? item.qty : "0"}{" "}
               {item.is_sub_qty && item.pack_off_unit != null
-                ? `?${item.pack_off_unit}`
+                ? `${item.pack_off_unit}`
                 : ""}
             </Typography>
           </Stack>

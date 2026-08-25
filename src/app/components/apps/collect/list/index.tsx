@@ -300,6 +300,26 @@ const CollectList = () => {
           );
         },
       }),
+      columnHelper.accessor("receipt_date", {
+        id: "Receipt Date",
+        header: () => (
+          <Stack direction="row" alignItems="center" spacing={4}>
+            <Typography variant="subtitle2" fontWeight="inherit">
+              Receipt Date
+            </Typography>
+          </Stack>
+        ),
+        enableSorting: true,
+        cell: ({ row }) => {
+          const item = row.original;
+
+          return (
+            <Stack direction="row" alignItems="center" px={0.5}>
+              <Typography className="f-14">{item.receipt_date ?? "-"}</Typography>
+            </Stack>
+          );
+        },
+      }),
 
       columnHelper.accessor("project_name", {
         id: "Project",
