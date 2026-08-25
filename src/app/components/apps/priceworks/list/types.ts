@@ -13,6 +13,7 @@ export type PriceworkAttachment = {
     pricework_id?: number;
     image_url?: string | null;
     thumb_url?: string | null;
+    is_before?: boolean | number | string | null;
 };
 
 export type PriceworkActivityLog = {

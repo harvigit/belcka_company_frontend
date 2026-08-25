@@ -23,6 +23,45 @@ type Props = {
     onClose: () => void;
 };
 
+const asAttachmentList = (value?: PriceworkAttachment[] | null) =>
+    Array.isArray(value) ? value : [];
+
+const isTimesheetLightRow = (row?: PriceworkDetail | null) => {
+    if (!row) return false;
+    const recordType = row.record_type || (row as {recordType?: string}).recordType;
+    return recordType === 'timesheet_light'
+        || row.source_type === 'user_checklog'
+        || Boolean(row.user_checklog_id);
+};
+
+const isBeforeAttachment = (attachment: PriceworkAttachment) => {
+    const value = attachment.is_before;
+    return value === true || value === 1 || value === '1';
+};
+
+const splitAttachmentsByType = (
+    beforeItems: PriceworkAttachment[],
+    afterItems: PriceworkAttachment[],
+    allItems: PriceworkAttachment[],
+) => {
+    if (beforeItems.length > 0 || afterItems.length > 0) {
+        return {beforeItems, afterItems};
+    }
+
+    const beforeFromFlag: PriceworkAttachment[] = [];
+    const afterFromFlag: PriceworkAttachment[] = [];
+
+    allItems.forEach((attachment) => {
+        if (isBeforeAttachment(attachment)) {
+            beforeFromFlag.push(attachment);
+            return;
+        }
+        afterFromFlag.push(attachment);
+    });
+
+    return {beforeItems: beforeFromFlag, afterItems: afterFromFlag};
+};
+
 const getAttachmentUrl = (attachment: PriceworkAttachment, preferThumb = false) => {
     if (preferThumb) return attachment.image_url || attachment.thumb_url || '';
     return attachment.thumb_url || attachment.image_url || '';
@@ -46,20 +85,28 @@ const PriceworkAttachmentsDrawer = ({open, pricework, onClose}: Props) => {
     const [lightboxIndex, setLightboxIndex] = useState(0);
     const [lightboxSlides, setLightboxSlides] = useState<ReturnType<typeof toLightboxSlides>>([]);
 
-    const attachments = detail?.attachments || [];
-    const beforeAttachments = detail?.before_attachments || [];
-    const afterAttachments = detail?.after_attachments || [];
-    const hasSplitGroups = beforeAttachments.length > 0 || afterAttachments.length > 0;
-    const hasAnyAttachment = hasSplitGroups || attachments.length > 0;
+    const listBefore = asAttachmentList(pricework?.before_attachments);
+    const listAfter = asAttachmentList(pricework?.after_attachments);
+    const listAttachments = asAttachmentList(pricework?.attachments);
+    const detailBefore = asAttachmentList(detail?.before_attachments);
+    const detailAfter = asAttachmentList(detail?.after_attachments);
+    const detailAttachments = asAttachmentList(detail?.attachments);
+    const attachments = detailAttachments.length > 0 ? detailAttachments : listAttachments;
+    const {beforeItems: beforeAttachments, afterItems: afterAttachments} = splitAttachmentsByType(
+        detailBefore.length > 0 || detailAfter.length > 0 ? detailBefore : listBefore,
+        detailBefore.length > 0 || detailAfter.length > 0 ? detailAfter : listAfter,
+        attachments,
+    );
+    const hasLabeledGroups = beforeAttachments.length > 0 || afterAttachments.length > 0;
+    const hasAnyAttachment = hasLabeledGroups || attachments.length > 0;
 
     const loadDetail = async () => {
         if (!pricework?.id) return;
         setLoading(true);
         try {
-            const params =
-                pricework.record_type === 'timesheet_light'
+            const params = isTimesheetLightRow(pricework)
                     ? {
-                        pricework_id: pricework.timesheet_light_id ?? pricework.id,
+                        pricework_id: pricework.timesheet_light_id ?? pricework.timesheet_id ?? pricework.id,
                         record_type: 'timesheet_light',
                         checklog_id: pricework.user_checklog_id ?? pricework.id,
                     }
@@ -178,7 +225,7 @@ const PriceworkAttachmentsDrawer = ({open, pricework, onClose}: Props) => {
                     </IconButton>
                 </Box>
 
-                {loading ? (
+                {loading && !hasAnyAttachment ? (
                     <Box
                         sx={{
                             flex: 1,
@@ -192,7 +239,7 @@ const PriceworkAttachmentsDrawer = ({open, pricework, onClose}: Props) => {
                 ) : (
                     <Box sx={{flex: 1, overflow: 'auto', px: 2.5, py: 2.5}}>
                         {hasAnyAttachment ? (
-                            hasSplitGroups ? (
+                            hasLabeledGroups ? (
                                 <Stack spacing={3}>
                                     {renderAttachmentGrid(beforeAttachments, 'Before Attachments')}
                                     {renderAttachmentGrid(afterAttachments, 'After Attachments')}
