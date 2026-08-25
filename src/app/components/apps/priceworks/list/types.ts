@@ -74,8 +74,6 @@ export type PriceworkApiRow = {
     timesheet_id?: number | null;
     bookkeeper_date?: string | null;
     timesheet_date?: string | null;
-    lock_status?: string | number | null;
-    lock_status_text?: string | null;
     status?: PriceworkStatus | string | number | null;
     status_value?: string | number | null;
     created_at?: string | null;
