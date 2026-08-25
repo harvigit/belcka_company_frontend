@@ -771,8 +771,27 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     };
 
     const handleOpenPriceworkDetails = async (pricework: any) => {
-        setSelectedPricework(pricework);
-        setPriceworkDetailsSidebar(true);
+        const priceworkId = Number(pricework?.pricework_id || pricework?.id);
+        if (!Number.isInteger(priceworkId) || priceworkId <= 0) {
+            toast.error('Pricework record not found.');
+            return;
+        }
+
+        try {
+            const response = await api.get('/timesheet/pricework-details', {
+                params: {pricework_id: priceworkId},
+            });
+            const details = response.data?.info;
+            if (!details) {
+                toast.error(response.data?.message || 'Pricework record not found.');
+                return;
+            }
+
+            setSelectedPricework({...pricework, ...details, pricework_id: details.pricework_id ?? details.id});
+            setPriceworkDetailsSidebar(true);
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Pricework record not found.');
+        }
     };
 
     const handleEditPricework = (pricework: any) => {

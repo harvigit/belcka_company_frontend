@@ -262,9 +262,32 @@ export const WorksTab = ({
     return `${getCurrencySymbol(record)}${Number.isFinite(amount) ? amount.toFixed(2) : "0.00"}`;
   };
 
-  const handlePriceworkClick = (pricework: any) => {
-    setSelectedPricework(pricework);
-    setOpenPriceworkDetailsSidebar(true);
+  const handlePriceworkClick = async (pricework: any) => {
+    const priceworkId = Number(pricework?.pricework_id || pricework?.id);
+    if (!Number.isInteger(priceworkId) || priceworkId <= 0) {
+      toast.error("Pricework record not found.");
+      return;
+    }
+
+    try {
+      const response = await api.get("/timesheet/pricework-details", {
+        params: { pricework_id: priceworkId },
+      });
+      const details = response.data?.info;
+      if (!details) {
+        toast.error(response.data?.message || "Pricework record not found.");
+        return;
+      }
+
+      setSelectedPricework({
+        ...pricework,
+        ...details,
+        pricework_id: details.pricework_id ?? details.id,
+      });
+      setOpenPriceworkDetailsSidebar(true);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Pricework record not found.");
+    }
   };
 
   const handleEditPricework = (pricework: any) => {

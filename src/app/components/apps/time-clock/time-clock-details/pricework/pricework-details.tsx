@@ -159,8 +159,14 @@ const PriceworkDetails: React.FC<PriceworkDetailsProps> = ({
                 }
             } catch (fetchError: any) {
                 if (mounted) {
-                    setError(fetchError?.response?.data?.message || 'Failed to load pricework details.');
+                    const message =
+                        fetchError?.response?.data?.message || 'Failed to load pricework details.';
+                    setError(message);
                     setDetails(pricework);
+                    // Don't keep an empty/broken details sidebar open for missing records.
+                    if (String(message).toLowerCase().includes('not found')) {
+                        onClose();
+                    }
                 }
             } finally {
                 if (mounted) setLoading(false);
