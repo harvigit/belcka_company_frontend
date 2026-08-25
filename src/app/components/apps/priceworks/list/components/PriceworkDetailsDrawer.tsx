@@ -126,10 +126,18 @@ const PriceworkDetailsDrawer = ({
         if (!pricework?.id) return;
         setLoading(true);
         try {
-            const url = pricework.record_type === 'timesheet_light'
-                ? `pricework/detail?pricework_id=${pricework.timesheet_light_id ?? pricework.id}&record_type=timesheet_light`
-                : `pricework/detail?pricework_id=${pricework.id}`;
-            const res = await api.get(url);
+            const isTimesheetLight =
+                pricework.record_type === 'timesheet_light'
+                || pricework.source_type === 'user_checklog'
+                || Boolean(pricework.user_checklog_id);
+            const params = isTimesheetLight
+                ? {
+                    pricework_id: pricework.timesheet_light_id ?? pricework.timesheet_id ?? pricework.id,
+                    record_type: 'timesheet_light',
+                    checklog_id: pricework.user_checklog_id ?? pricework.id,
+                }
+                : {pricework_id: pricework.pricework_id ?? pricework.id};
+            const res = await api.get('pricework/detail', {params});
             setDetail(res.data?.info || null);
         } catch (error: any) {
             toast.error(error?.response?.data?.message || 'Failed to load pricework details');
@@ -162,13 +170,29 @@ const PriceworkDetailsDrawer = ({
     const amount = Number(
         detail?.pricework_amount ?? pricework?.pricework_amount ?? amountPerUnit * workComplete,
     );
-    const isTimesheetLightRow = pricework?.record_type === 'timesheet_light';
+    const isTimesheetLightRow =
+        pricework?.record_type === 'timesheet_light'
+        || pricework?.source_type === 'user_checklog'
+        || Boolean(pricework?.user_checklog_id);
     const canEditAmounts =
         status !== 'sent' &&
         (isTimesheetLightRow ? Boolean(pricework?.user_checklog_id) : Boolean(pricework?.id));
-    const hasAttachments =
-        !isTimesheetLightRow &&
-        Number(detail?.attachments?.length || pricework?.attachment_count || 0) > 0;
+    const detailAttachmentCount = Number(
+        (detail?.before_attachments?.length || 0)
+        + (detail?.after_attachments?.length || 0)
+        || detail?.attachments?.length
+        || detail?.attachment_count
+        || 0,
+    );
+    const listAttachmentCount = Number(
+        (pricework?.before_attachments?.length || 0)
+        + (pricework?.after_attachments?.length || 0)
+        || pricework?.attachments?.length
+        || pricework?.attachment_count
+        || 0,
+    );
+    const attachmentCount = detailAttachmentCount > 0 ? detailAttachmentCount : listAttachmentCount;
+    const hasAttachments = attachmentCount > 0;
     const activityLogs = detail?.activity_logs || [];
     const showEditButton = Boolean(pricework?.id) && !isTimesheetLightRow;
     const showApproveButton = status === 'pending' || status === 'rejected';
@@ -508,9 +532,7 @@ const PriceworkDetailsDrawer = ({
                                             }}
                                         >
                                             View (
-                                            {detail?.attachments?.length ||
-                                                pricework.attachment_count ||
-                                                0}
+                                            {attachmentCount}
                                             )
                                             <IconExternalLink size={14} />
                                         </Box>
