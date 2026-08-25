@@ -1731,6 +1731,150 @@ const TimeClock = ({queryParams}: Props) => {
             },
         }),
 
+        columnHelper.accessor('name_on_account', {
+            id: 'name_on_account',
+            header: 'NOA',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
+                                {row.name_on_account}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+
+        columnHelper.accessor('sort_code', {
+            id: 'sort_code',
+            header: 'Sort Code',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
+                                {row.sort_code}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+
+        columnHelper.accessor('account_number', {
+            id: 'account_number',
+            header: 'Account Number',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
+                                {row.account_number}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+
+        columnHelper.accessor('utr_name', {
+            id: 'utr_name',
+            header: 'NOU',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
+                                {row.utr_name}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+
+        columnHelper.accessor('utr_number', {
+            id: 'utr_number',
+            header: 'UTR',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
+                                {row.utr_number}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+
+        columnHelper.accessor('nin_number', {
+            id: 'nin_number',
+            header: 'NIN',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography sx={{
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                            }} className="f-14">
+                                {row.nin_number}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+
         columnHelper.accessor('total_hours', {
             id: 'total_hours',
             header: 'Total',
@@ -1900,150 +2044,6 @@ const TimeClock = ({queryParams}: Props) => {
                     <Typography variant="h6" sx={{fontWeight: 700}}>
                         {displayValue}
                     </Typography>
-                );
-            },
-        }),
-
-        columnHelper.accessor('name_on_account', {
-            id: 'name_on_account',
-            header: 'NOA',
-            cell: (info: any) => {
-                const row = info.row.original;
-                return (
-                    <Stack direction="row" alignItems="center" spacing={2}>
-                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{
-                                display: '-webkit-box',
-                                WebkitBoxOrient: 'vertical',
-                                WebkitLineClamp: 1,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                wordBreak: 'break-word',
-                            }} className="f-14">
-                                {row.name_on_account}
-                            </Typography>
-                        </Box>
-                    </Stack>
-                );
-            },
-        }),
-
-        columnHelper.accessor('sort_code', {
-            id: 'sort_code',
-            header: 'Sort Code',
-            cell: (info: any) => {
-                const row = info.row.original;
-                return (
-                    <Stack direction="row" alignItems="center" spacing={2}>
-                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{
-                                display: '-webkit-box',
-                                WebkitBoxOrient: 'vertical',
-                                WebkitLineClamp: 1,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                wordBreak: 'break-word',
-                            }} className="f-14">
-                                {row.sort_code}
-                            </Typography>
-                        </Box>
-                    </Stack>
-                );
-            },
-        }),
-
-        columnHelper.accessor('account_number', {
-            id: 'account_number',
-            header: 'Account Number',
-            cell: (info: any) => {
-                const row = info.row.original;
-                return (
-                    <Stack direction="row" alignItems="center" spacing={2}>
-                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{
-                                display: '-webkit-box',
-                                WebkitBoxOrient: 'vertical',
-                                WebkitLineClamp: 1,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                wordBreak: 'break-word',
-                            }} className="f-14">
-                                {row.account_number}
-                            </Typography>
-                        </Box>
-                    </Stack>
-                );
-            },
-        }),
-
-        columnHelper.accessor('utr_name', {
-            id: 'utr_name',
-            header: 'NOU',
-            cell: (info: any) => {
-                const row = info.row.original;
-                return (
-                    <Stack direction="row" alignItems="center" spacing={2}>
-                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{
-                                display: '-webkit-box',
-                                WebkitBoxOrient: 'vertical',
-                                WebkitLineClamp: 1,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                wordBreak: 'break-word',
-                            }} className="f-14">
-                                {row.utr_name}
-                            </Typography>
-                        </Box>
-                    </Stack>
-                );
-            },
-        }),
-
-        columnHelper.accessor('utr_number', {
-            id: 'utr_number',
-            header: 'UTR',
-            cell: (info: any) => {
-                const row = info.row.original;
-                return (
-                    <Stack direction="row" alignItems="center" spacing={2}>
-                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{
-                                display: '-webkit-box',
-                                WebkitBoxOrient: 'vertical',
-                                WebkitLineClamp: 1,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                wordBreak: 'break-word',
-                            }} className="f-14">
-                                {row.utr_number}
-                            </Typography>
-                        </Box>
-                    </Stack>
-                );
-            },
-        }),
-
-        columnHelper.accessor('nin_number', {
-            id: 'nin_number',
-            header: 'NIN',
-            cell: (info: any) => {
-                const row = info.row.original;
-                return (
-                    <Stack direction="row" alignItems="center" spacing={2}>
-                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography sx={{
-                                display: '-webkit-box',
-                                WebkitBoxOrient: 'vertical',
-                                WebkitLineClamp: 1,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                wordBreak: 'break-word',
-                            }} className="f-14">
-                                {row.nin_number}
-                            </Typography>
-                        </Box>
-                    </Stack>
                 );
             },
         }),
