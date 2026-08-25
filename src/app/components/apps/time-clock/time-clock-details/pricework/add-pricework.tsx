@@ -192,9 +192,6 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     };
 
     const selectMenuProps = {
-        disablePortal: true,
-        anchorOrigin: {vertical: 'bottom', horizontal: 'left'} as const,
-        transformOrigin: {vertical: 'top', horizontal: 'left'} as const,
         PaperProps: {
             sx: {
                 mt: 0.5,
@@ -368,8 +365,10 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
         if (!projectId) return setError('Project is required.');
         if (!addressId) return setError('Address is required.');
         if (!teamId) return setError('Team is required.');
-        if (!categoryId) return setError('Category is required.');
-        if (!selectedTaskId) return setError('Please select a valid category/subcategory.');
+        if (!isEditMode) {
+            if (!categoryId) return setError('Category is required.');
+            if (!selectedTaskId) return setError('Please select a valid category/subcategory.');
+        }
         if (!priceworkDate) return setError('Pricework date is required.');
         if (!isValidDisplayDate(priceworkDate)) return setError('Pricework date must be in dd/MM/yyyy format.');
         if (!unitId) return setError('Unit is required.');
@@ -391,8 +390,8 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             payload.append('team_id', teamId);
             if (tradeId) payload.append('trade_id', tradeId);
             payload.append('note', note.trim());
-            payload.append('task_id', String(selectedTaskId));
-            payload.append('category_id', categoryId);
+            if (selectedTaskId) payload.append('task_id', String(selectedTaskId));
+            if (categoryId) payload.append('category_id', categoryId);
             if (subCategoryId) payload.append('sub_category_id', subCategoryId);
             payload.append('work_type', selectedWorkTypeLabel || pricework?.work_type || '');
             payload.append('pricework_date', priceworkDate);
@@ -539,6 +538,52 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
                             </Select>
                         </FormControl>
 
+                        <FormControl fullWidth>
+                            {fieldLabel('Category')}
+                            <Select
+                                size="small"
+                                value={categoryId}
+                                onChange={(event) => {
+                                    setCategoryId(event.target.value);
+                                    setSubCategoryId('');
+                                }}
+                                displayEmpty
+                                sx={selectSx}
+                                MenuProps={selectMenuProps}
+                            >
+                                <MenuItem value="" disabled>Select category</MenuItem>
+                                {categories.map((category) =>
+                                    <MenuItem key={category.id} value={String(category.id)}>{category.name}</MenuItem>
+                                )}
+                                {categoryId && !categories.some((category) => String(category.id) === categoryId) && (
+                                    <MenuItem value={categoryId}>
+                                        {pricework?.category_name || 'Selected category'}
+                                    </MenuItem>
+                                )}
+                            </Select>
+                        </FormControl>
+
+                        <FormControl fullWidth disabled={!selectedCategory || !selectedCategory.sub_categories?.length}>
+                            {fieldLabel('Sub Category')}
+                            <Select
+                                size="small"
+                                value={subCategoryId}
+                                onChange={(event) => setSubCategoryId(event.target.value)}
+                                displayEmpty
+                                sx={selectSx}
+                                MenuProps={selectMenuProps}
+                            >
+                                <MenuItem value="">
+                                    {selectedCategory?.sub_categories?.length ? 'Select sub category' : 'Select category first'}
+                                </MenuItem>
+                                {(selectedCategory?.sub_categories ?? []).map((subCategory) =>
+                                    <MenuItem key={`${subCategory.id}-${subCategory.task_id}`} value={String(subCategory.id)}>
+                                        {subCategory.name}
+                                    </MenuItem>
+                                )}
+                            </Select>
+                        </FormControl>
+
                         <Box>
                             {fieldLabel('Pricework Date')}
                             <input
@@ -586,52 +631,6 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
                                 }}
                             />
                         </Box>
-
-                        <FormControl fullWidth>
-                            {fieldLabel('Category')}
-                            <Select
-                                size="small"
-                                value={categoryId}
-                                onChange={(event) => {
-                                    setCategoryId(event.target.value);
-                                    setSubCategoryId('');
-                                }}
-                                displayEmpty
-                                sx={selectSx}
-                                MenuProps={selectMenuProps}
-                            >
-                                <MenuItem value="" disabled>Select category</MenuItem>
-                                {categories.map((category) =>
-                                    <MenuItem key={category.id} value={String(category.id)}>{category.name}</MenuItem>
-                                )}
-                                {categoryId && !categories.some((category) => String(category.id) === categoryId) && (
-                                    <MenuItem value={categoryId}>
-                                        {pricework?.category_name || 'Selected category'}
-                                    </MenuItem>
-                                )}
-                            </Select>
-                        </FormControl>
-
-                        <FormControl fullWidth disabled={!selectedCategory || !selectedCategory.sub_categories?.length}>
-                            {fieldLabel('Sub Category')}
-                            <Select
-                                size="small"
-                                value={subCategoryId}
-                                onChange={(event) => setSubCategoryId(event.target.value)}
-                                displayEmpty
-                                sx={selectSx}
-                                MenuProps={selectMenuProps}
-                            >
-                                <MenuItem value="">
-                                    {selectedCategory?.sub_categories?.length ? 'Select sub category' : 'Select category first'}
-                                </MenuItem>
-                                {(selectedCategory?.sub_categories ?? []).map((subCategory) =>
-                                    <MenuItem key={`${subCategory.id}-${subCategory.task_id}`} value={String(subCategory.id)}>
-                                        {subCategory.name}
-                                    </MenuItem>
-                                )}
-                            </Select>
-                        </FormControl>
 
                         <FormControl fullWidth>
                             {fieldLabel('Unit')}
