@@ -40,6 +40,7 @@ type Attachment = {
     image_url?: string | null;
     thumb_url?: string | null;
     url?: string | null;
+    is_before?: boolean | number | string | null;
 };
 
 interface PriceworkDetailsProps {
@@ -74,6 +75,17 @@ const getAttachmentUrl = (attachment: Attachment) =>
 
 const getFullAttachmentUrl = (attachment: Attachment) =>
     attachment.image_url || attachment.url || attachment.image || attachment.thumb_url || '';
+
+const asAttachmentList = (value?: Attachment[] | null) =>
+    Array.isArray(value) ? value : [];
+
+const isBeforeAttachment = (attachment: Attachment) => {
+    const value = attachment.is_before;
+    return value === true || value === 1 || value === '1';
+};
+
+const isVisibleAttachment = (attachment: Attachment) =>
+    Boolean(getAttachmentUrl(attachment) && getFullAttachmentUrl(attachment));
 
 const timesheetStatusText: Record<string, string> = {
     '0': 'Default',
@@ -186,14 +198,71 @@ const PriceworkDetails: React.FC<PriceworkDetailsProps> = ({
         [details?.attachments],
     );
     const visibleAttachments = useMemo(
-        () => attachments.filter((attachment) => getAttachmentUrl(attachment) && getFullAttachmentUrl(attachment)),
+        () => attachments.filter(isVisibleAttachment),
         [attachments],
     );
-    const previewUrls = useMemo(
-        () => visibleAttachments.map((attachment) => getFullAttachmentUrl(attachment)),
-        [visibleAttachments],
-    );
+    const beforeAttachments = useMemo(() => {
+        const fromApi = asAttachmentList(details?.before_attachments).filter(isVisibleAttachment);
+        const afterFromApi = asAttachmentList(details?.after_attachments).filter(isVisibleAttachment);
+        if (fromApi.length > 0 || afterFromApi.length > 0) return fromApi;
+        return visibleAttachments.filter(isBeforeAttachment);
+    }, [details?.before_attachments, details?.after_attachments, visibleAttachments]);
+    const afterAttachments = useMemo(() => {
+        const fromApi = asAttachmentList(details?.before_attachments).filter(isVisibleAttachment);
+        const afterFromApi = asAttachmentList(details?.after_attachments).filter(isVisibleAttachment);
+        if (fromApi.length > 0 || afterFromApi.length > 0) return afterFromApi;
+        const hasBeforeAfterFlag = visibleAttachments.some(
+            (attachment) => attachment.is_before != null && attachment.is_before !== '',
+        );
+        if (!hasBeforeAfterFlag) return [];
+        return visibleAttachments.filter((attachment) => !isBeforeAttachment(attachment));
+    }, [details?.before_attachments, details?.after_attachments, visibleAttachments]);
+    const hasSplitGroups = beforeAttachments.length > 0 || afterAttachments.length > 0;
     const hideEditAction = isLockedOrPaid(details);
+
+    const renderAttachmentGrid = (items: Attachment[], label?: string) => {
+        if (items.length === 0) return null;
+        const groupPreviewUrls = items.map((attachment) => getFullAttachmentUrl(attachment));
+
+        return (
+            <Box>
+                <Typography variant="caption" color="text.secondary" mb={1} display="block">
+                    {label ? `${label} (${items.length})` : `Attachments (${items.length})`}
+                </Typography>
+                <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
+                    {items.map((attachment, index) => {
+                        const thumbUrl = getAttachmentUrl(attachment);
+                        const fullUrl = getFullAttachmentUrl(attachment);
+
+                        return (
+                            <Box
+                                key={`${label || 'attachment'}-${attachment.id}-${index}`}
+                                sx={{
+                                    width: {xs: 'calc(50% - 8px)', sm: 'calc(33.33% - 11px)', md: 'calc(25% - 12px)'},
+                                }}
+                            >
+                                <Card
+                                    sx={{
+                                        cursor: fullUrl ? 'pointer' : 'default',
+                                        '&:hover': fullUrl ? {boxShadow: 3} : {},
+                                    }}
+                                    onClick={() => fullUrl && openPreview(groupPreviewUrls, index)}
+                                >
+                                    <CardMedia
+                                        component="img"
+                                        height="140"
+                                        image={thumbUrl}
+                                        alt={`${label || 'Attachment'} ${index + 1}`}
+                                        sx={{objectFit: 'cover'}}
+                                    />
+                                </Card>
+                            </Box>
+                        );
+                    })}
+                </Box>
+            </Box>
+        );
+    };
 
     const closePreview = () => {
         setPreviewImages([]);
@@ -409,43 +478,13 @@ const PriceworkDetails: React.FC<PriceworkDetailsProps> = ({
                         </Box>
                     )}
 
-                    {visibleAttachments.length > 0 && (
-                        <Box>
-                            <Typography variant="caption" color="text.secondary" mb={1} display="block">
-                                Attachments ({visibleAttachments.length})
-                            </Typography>
-                            <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
-                                {visibleAttachments.map((attachment, index) => {
-                                    const thumbUrl = getAttachmentUrl(attachment);
-                                    const fullUrl = getFullAttachmentUrl(attachment);
-
-                                    return (
-                                        <Box
-                                            key={attachment.id}
-                                            sx={{
-                                                width: {xs: 'calc(50% - 8px)', sm: 'calc(33.33% - 11px)', md: 'calc(25% - 12px)'},
-                                            }}
-                                        >
-                                            <Card
-                                                sx={{
-                                                    cursor: fullUrl ? 'pointer' : 'default',
-                                                    '&:hover': fullUrl ? {boxShadow: 3} : {},
-                                                }}
-                                                onClick={() => fullUrl && openPreview(previewUrls, index)}
-                                            >
-                                                <CardMedia
-                                                    component="img"
-                                                    height="140"
-                                                    image={thumbUrl}
-                                                    alt={`Attachment ${attachment.id}`}
-                                                    sx={{objectFit: 'cover'}}
-                                                />
-                                            </Card>
-                                        </Box>
-                                    );
-                                })}
-                            </Box>
-                        </Box>
+                    {hasSplitGroups ? (
+                        <Stack spacing={3}>
+                            {renderAttachmentGrid(beforeAttachments, 'Before Attachments')}
+                            {renderAttachmentGrid(afterAttachments, 'After Attachments')}
+                        </Stack>
+                    ) : (
+                        visibleAttachments.length > 0 && renderAttachmentGrid(visibleAttachments)
                     )}
 
                     <Dialog
