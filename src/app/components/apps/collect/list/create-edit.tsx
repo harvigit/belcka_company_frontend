@@ -35,6 +35,7 @@ export interface CollectFormData {
   inc_tax?: number | null;
   excl_tax?: number | null;
   total?: number | null;
+  receipt_date?: string | null;
 }
 
 interface CollectAddEditProps {
@@ -70,6 +71,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
     inc_tax: null,
     excl_tax: null,
     total: null,
+    receipt_date: null,
   });
 
   const [projects, setProjects] = useState<any[]>([]);
@@ -105,6 +107,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
         inc_tax: null,
         excl_tax: null,
         total: null,
+        receipt_date: null,
       });
       setFile(null);
       setFilePreview(null);
@@ -147,6 +150,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
           inc_tax: item.inc_tax !== undefined ? item.inc_tax : null,
           excl_tax: item.excl_tax !== undefined ? item.excl_tax : null,
           total: item.total !== undefined ? item.total : null,
+          receipt_date: item.receipt_date || null,
         });
         if (item.poItems && item.poItems.length > 0) {
           setItems(item.poItems);
@@ -204,12 +208,14 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
 
             if (
               res.data.inc_tax !== undefined ||
-              res.data.excl_tax !== undefined
+              res.data.excl_tax !== undefined ||
+              res.data.date !== undefined
             ) {
               setFormData((prev) => ({
                 ...prev,
                 inc_tax: res.data.inc_tax ?? prev.inc_tax,
                 excl_tax: res.data.excl_tax ?? prev.excl_tax,
+                receipt_date: res.data.date ?? prev.receipt_date,
               }));
             }
 
@@ -461,6 +467,28 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                     )}
                   />
                 </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Date
+                  </Typography>
+                  <CustomTextField
+                    type="date"
+                    fullWidth
+                    placeholder="dd/mm/yyyy"
+                    value={formData.receipt_date ?? ""}
+                    onFocus={(e: any) => e.target.showPicker()}
+                    onClick={(e: any) =>
+                      (e.target as HTMLInputElement).showPicker()
+                    }
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        receipt_date: e.target.value,
+                      }))
+                    }
+                  />
+                </Grid>
+
                 <Grid size={{ xs: 6 }}>
                   <Typography variant="body2" gutterBottom>
                     Incl. Tax

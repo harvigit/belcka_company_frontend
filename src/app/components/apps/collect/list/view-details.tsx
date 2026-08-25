@@ -195,6 +195,18 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
                   </Typography>
                 </Box>
                 <Box display="flex" alignItems="center">
+                  <IconCalendar
+                    size={20}
+                    style={{ color: "#888", marginRight: 16 }}
+                  />
+                  <Typography variant="body2" color="textSecondary" width={120}>
+                    Receipt Date
+                  </Typography>
+                  <Typography variant="body2" fontWeight={500}>
+                    {data.receipt_date || "-"}
+                  </Typography>
+                </Box>
+                <Box display="flex" alignItems="center">
                   <IconBuilding
                     size={20}
                     style={{ color: "#888", marginRight: 16 }}
