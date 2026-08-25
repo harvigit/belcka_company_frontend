@@ -424,7 +424,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                 opacity: 0.7,
                             }
                         }}
-                        onClick={() => handleLocationPinClick(Number(log.worklog_id))}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            handleLocationPinClick(Number(log.worklog_id));
+                        }}
                     >
                         {deviceInfo.icon}
                     </Box>
@@ -469,12 +472,27 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                             opacity: 0.7,
                         },
                     }}
-                    onClick={() => handleLocationPinClick(Number(log.worklog_id))}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        handleLocationPinClick(Number(log.worklog_id));
+                    }}
                 >
                     {deviceInfo.icon}
                 </Box>
             </Tooltip>
         );
+    };
+
+    const openCheckinsForWorklog = (worklogId?: number | string | null) => {
+        const id = Number(worklogId);
+        if (!Number.isInteger(id) || id <= 0) return;
+        void openChecklogsSidebar?.(id);
+    };
+
+    const handleWorklogRowClick = (event: React.MouseEvent, worklogId?: number | string | null) => {
+        const target = event.target as HTMLElement | null;
+        if (target?.closest('[data-stop-checkin-open="true"]')) return;
+        openCheckinsForWorklog(worklogId);
     };
 
     const renderTimeWithLocation = (
@@ -686,6 +704,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                     return (
                                         <React.Fragment key={worklogId}>
                                             <TableRow
+                                                onClick={(event) => handleWorklogRowClick(event, log.worklog_id)}
                                                 sx={{
                                                     height: '45px',
                                                     minHeight: '45px',
@@ -696,7 +715,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         borderBottom: '1px solid rgba(224, 224, 224, 1) !important',
                                                     },
                                                     backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
-                                                    cursor: 'pointer',
+                                                    cursor: Number(log.worklog_id) > 0 ? 'pointer' : 'default',
                                                     '&:hover': {
                                                         backgroundColor: '#f4433605',
                                                     },
@@ -725,7 +744,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             verticalAlign: 'middle',
                                                         }}
                                                     >
-                                                        <Box className="select-icon" sx={{
+                                                        <Box
+                                                            className="select-icon"
+                                                            data-stop-checkin-open="true"
+                                                            sx={{
                                                             height: '100%',
                                                             display: 'flex',
                                                             alignItems: 'center',
@@ -772,7 +794,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     right: '2px',
                                                                 }}>
                                                                     <IconButton
-                                                                        onClick={() => startAddingNewRecord(rowData.date as string, projects as any, shifts as any)}
+                                                                        data-stop-checkin-open="true"
+                                                                        onClick={(event) => {
+                                                                            event.stopPropagation();
+                                                                            startAddingNewRecord(rowData.date as string, projects as any, shifts as any);
+                                                                        }}
                                                                         size="small"
                                                                         sx={{
                                                                             padding: 0,
@@ -817,7 +843,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     size="small"
                                                                     color="error"
                                                                     aria-label={`${conflictDaysCount + leaveRequestCount} scheduling conflict${conflictDaysCount + leaveRequestCount !== 1 ? 's' : ''}`}
-                                                                    onClick={(e) => setConflictAnchorEl(e.currentTarget)}
+                                                                    data-stop-checkin-open="true"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setConflictAnchorEl(e.currentTarget);
+                                                                    }}
                                                                     sx={{
                                                                         p: 0,
                                                                         '&:hover': {
@@ -845,7 +875,9 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             <IconButton
                                                                 size="small"
                                                                 color="error"
+                                                                data-stop-checkin-open="true"
                                                                 onClick={(e) => {
+                                                                    e.stopPropagation();
                                                                     setExclamationAnchorEl(e.currentTarget);
                                                                     setSelectedWorklog(log);
                                                                 }}
@@ -865,7 +897,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 {/* Project Column */}
                                                 {visibleColumnConfigs.project?.visible && (
-                                                    <TableCell align="center" sx={{
+                                                    <TableCell
+                                                        align="center"
+                                                        data-stop-checkin-open={!log.is_leave && !log.is_expense && !isLogLocked ? 'true' : undefined}
+                                                        sx={{
                                                         py: 0.5,
                                                         fontSize: '0.875rem',
                                                         height: '45px',
@@ -933,7 +968,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 {/* Shift Column */}
                                                 {visibleColumnConfigs.shift?.visible && (
-                                                    <TableCell align="center" sx={{
+                                                    <TableCell
+                                                        align="center"
+                                                        data-stop-checkin-open={!log.is_leave && !log.is_expense ? 'true' : undefined}
+                                                        sx={{
                                                         py: 0.5,
                                                         fontSize: '0.875rem',
                                                         height: '45px',
@@ -1023,7 +1061,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 {/* Start Time Column */}
                                                 {visibleColumnConfigs.start?.visible && (
-                                                    <TableCell align="center" sx={{
+                                                    <TableCell
+                                                        align="center"
+                                                        data-stop-checkin-open="true"
+                                                        sx={{
                                                         py: 0.5,
                                                         px: 0.5,
                                                         fontSize: '0.875rem',
@@ -1080,7 +1121,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 {/* End Time Column */}
                                                 {visibleColumnConfigs.end?.visible && (
-                                                    <TableCell align="center" sx={{
+                                                    <TableCell
+                                                        align="center"
+                                                        data-stop-checkin-open="true"
+                                                        sx={{
                                                         py: 0.5,
                                                         px: 0.5,
                                                         fontSize: '0.875rem',
@@ -1155,6 +1199,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 {visibleColumnConfigs.penaltyHours?.visible && (
                                                     <TableCell
                                                         align="center"
+                                                        data-stop-checkin-open="true"
                                                         onClick={() => {
                                                             const hasActivePenalty = !log.is_pricework
                                                                 && log.worklog_id
@@ -1216,7 +1261,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 {/* Pricework Column */}
                                                 {visibleColumnConfigs.priceWork?.visible && (
                                                     <TableCell 
-                                                        align="center" 
+                                                        align="center"
+                                                        data-stop-checkin-open="true"
                                                         onClick={() => {
                                                             if (log.is_pricework_record && log.pricework_id) {
                                                                 openPriceworkSidebar?.(log);
@@ -1240,6 +1286,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 {visibleColumnConfigs.expense?.visible && (
                                                     <TableCell
                                                         align="center"
+                                                        data-stop-checkin-open="true"
                                                         onClick={() => {
                                                             if (log.is_expense && log.expense_id) {
                                                                 openExpensesSidebar?.(log.expense_id);
@@ -1311,18 +1358,36 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 {visibleColumnConfigs.checkIns?.visible && (
                                                     <TableCell
                                                         align="center"
-                                                        onClick={() => openChecklogsSidebar?.(log.worklog_id)}
+                                                        title={Number(log.worklog_id) > 0 ? 'Open check-ins' : undefined}
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            openCheckinsForWorklog(log.worklog_id);
+                                                        }}
                                                         sx={{
-                                                            py: 0.5,
+                                                            py: 0,
+                                                            px: 0,
                                                             fontSize: '0.875rem',
                                                             height: '45px',
                                                             verticalAlign: 'middle',
+                                                            cursor: Number(log.worklog_id) > 0 ? 'pointer' : 'default',
                                                             '&:hover': {
-                                                                color: '#1976d2'
-                                                            }
+                                                                color: Number(log.worklog_id) > 0 ? '#1976d2' : 'inherit',
+                                                                backgroundColor: Number(log.worklog_id) > 0 ? 'rgba(25, 118, 210, 0.06)' : 'transparent',
+                                                            },
                                                         }}
                                                     >
-                                                        {`${log.check_ins || 0}`}
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '100%',
+                                                                minHeight: '45px',
+                                                                height: '100%',
+                                                            }}
+                                                        >
+                                                            {`${log.check_ins || 0}`}
+                                                        </Box>
                                                     </TableCell>
                                                 )}
 
@@ -1448,6 +1513,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             rowSpan={currentWeekAdjustmentMeta?.totalPhysicalRows || rowSpan}
                                                             align="center"
                                                             className="rowspan-cell"
+                                                            data-stop-checkin-open="true"
                                                             sx={{ py: 0.5, fontSize: '0.875rem', height: '45px', verticalAlign: 'middle' }}
                                                         >
                                                             <Box
@@ -1472,7 +1538,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     <Tooltip title="View adjustment activity" arrow placement="bottom">
                                                                         <IconButton
                                                                             size="small"
-                                                                            onClick={(event) => handleOpenAdjustmentActivity(event, currentWeekAdjustmentMeta?.activities || [])}
+                                                                            data-stop-checkin-open="true"
+                                                                            onClick={(event) => {
+                                                                                event.stopPropagation();
+                                                                                handleOpenAdjustmentActivity(event, currentWeekAdjustmentMeta?.activities || []);
+                                                                            }}
                                                                             sx={{
                                                                                 p: 0.25,
                                                                                 color: '#5b6574',
@@ -1531,6 +1601,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             <Button
                                                                 size="small"
                                                                 className="action-icon"
+                                                                data-stop-checkin-open="true"
                                                                 sx={{
                                                                     display: 'none',
                                                                     padding: 0,
@@ -1543,7 +1614,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                         background: 'none',
                                                                     },
                                                                 }}
-                                                                onClick={() => {
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
                                                                     if (log.is_expense) {
                                                                         onDeleteClick(log.expense_id, 'expense');
                                                                     } else if (log.is_leave) {
@@ -1598,6 +1670,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                 const mainRow = (
                                     <TableRow
                                         key={row.id}
+                                        onClick={(event) => handleWorklogRowClick(
+                                            event,
+                                            row.original.rowsData?.[0]?.worklog_id ?? row.original.worklog_id,
+                                        )}
                                         sx={{
                                             height: '45px',
                                             minHeight: '45px',
@@ -1635,7 +1711,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             textAlign: 'center',
                                                         }}
                                                     >
-                                                        <Box className="select-icon" sx={{
+                                                        <Box
+                                                            className="select-icon"
+                                                            data-stop-checkin-open="true"
+                                                            sx={{
                                                             height: '100%',
                                                             display: 'flex',
                                                             alignItems: 'center',
@@ -1681,7 +1760,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     right: '8px',
                                                                 }}>
                                                                     <IconButton
-                                                                        onClick={() => startAddingNewRecord(row.original.date as string, projects as any, shifts as any)}
+                                                                        data-stop-checkin-open="true"
+                                                                        onClick={(event) => {
+                                                                            event.stopPropagation();
+                                                                            startAddingNewRecord(row.original.date as string, projects as any, shifts as any);
+                                                                        }}
                                                                         size="small"
                                                                         sx={{
                                                                             padding: 0,
@@ -1730,7 +1813,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     size="small"
                                                                     color="error"
                                                                     aria-label={`${conflictDaysCount + leaveRequestCount} scheduling conflict${conflictDaysCount + leaveRequestCount !== 1 ? 's' : ''}`}
-                                                                    onClick={(e) => setConflictAnchorEl(e.currentTarget)}
+                                                                    data-stop-checkin-open="true"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setConflictAnchorEl(e.currentTarget);
+                                                                    }}
                                                                     sx={{
                                                                         p: 0,
                                                                         '&:hover': {
@@ -1763,6 +1850,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         rowSpan={currentWeekAdjustmentMeta?.totalPhysicalRows || 1}
                                                         align="center"
                                                         className="rowspan-cell"
+                                                        data-stop-checkin-open="true"
                                                         sx={{
                                                             py: 0.5,
                                                             fontSize: '0.875rem',
@@ -1790,7 +1878,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                 <Tooltip title="View adjustment activity" arrow placement="top">
                                                                     <IconButton
                                                                         size="small"
-                                                                        onClick={(event) => handleOpenAdjustmentActivity(event, currentWeekAdjustmentMeta?.activities || [])}
+                                                                        data-stop-checkin-open="true"
+                                                                        onClick={(event) => {
+                                                                            event.stopPropagation();
+                                                                            handleOpenAdjustmentActivity(event, currentWeekAdjustmentMeta?.activities || []);
+                                                                        }}
                                                                         sx={{
                                                                             p: 0.25,
                                                                             color: '#5b6574',
@@ -1953,9 +2045,57 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 }
                                             }
 
+                                            if (column.id === 'checkIns' && row.original.rowType === 'day') {
+                                                const worklogId = row.original.rowsData?.[0]?.worklog_id ?? row.original.worklog_id;
+                                                const canOpen = Number(worklogId) > 0;
+
+                                                return (
+                                                    <TableCell
+                                                        key={cell.id}
+                                                        align="center"
+                                                        title={canOpen ? 'Open check-ins' : undefined}
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            openCheckinsForWorklog(worklogId);
+                                                        }}
+                                                        sx={{
+                                                            py: 0,
+                                                            px: 0,
+                                                            fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                            textAlign: 'center',
+                                                            cursor: canOpen ? 'pointer' : 'default',
+                                                            '&:hover': {
+                                                                color: canOpen ? '#1976d2' : 'inherit',
+                                                                backgroundColor: canOpen ? 'rgba(25, 118, 210, 0.06)' : 'transparent',
+                                                            },
+                                                        }}
+                                                    >
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '100%',
+                                                                minHeight: '45px',
+                                                                height: '100%',
+                                                            }}
+                                                        >
+                                                            {flexRender(column.columnDef.cell, cell.getContext())}
+                                                        </Box>
+                                                    </TableCell>
+                                                );
+                                            }
+
                                             return (
                                                 <TableCell
                                                     key={cell.id}
+                                                    data-stop-checkin-open={
+                                                        ['start', 'end', 'action', 'adjustment', 'project', 'shift', 'select', 'conflicts'].includes(column.id)
+                                                            ? 'true'
+                                                            : undefined
+                                                    }
                                                     sx={{
                                                         py: 0.5,
                                                         px: column.id === 'start' || column.id === 'end' ? 0.5 : undefined,
