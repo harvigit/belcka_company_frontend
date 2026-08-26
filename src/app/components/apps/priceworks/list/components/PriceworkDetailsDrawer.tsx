@@ -194,7 +194,7 @@ const PriceworkDetailsDrawer = ({
     const attachmentCount = detailAttachmentCount > 0 ? detailAttachmentCount : listAttachmentCount;
     const hasAttachments = attachmentCount > 0;
     const activityLogs = detail?.activity_logs || [];
-    const showEditButton = Boolean(pricework?.id) && !isTimesheetLightRow;
+    const showEditButton = Boolean(pricework?.id) && canEditAmounts;
     const showApproveButton = status === 'pending' || status === 'rejected';
     const showRejectButton = status === 'pending' || status === 'approved' || status === 'sent';
 
