@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Typography,
   Box,
@@ -75,7 +75,156 @@ interface ClickToEditProgressProps {
   statusInt: number;
   editedBy?: string | null;
   editedAt?: string | null;
+  onSave: (rowId: number, progress: number) => Promise<void>;
 }
+
+const ADDRESS_PROGRESS_STATUS = {
+  TODO: { status_int: 13, status_text: "To Do" },
+  IN_PROGRESS: { status_int: 3, status_text: "In Progress" },
+  COMPLETED: { status_int: 4, status_text: "Completed" },
+} as const;
+
+const parseProgress = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === "number") return value;
+  return Number(String(value).replace("%", ""));
+};
+
+const progressToStatus = (progress: number) => {
+  if (progress <= 0) return ADDRESS_PROGRESS_STATUS.TODO;
+  if (progress >= 100) return ADDRESS_PROGRESS_STATUS.COMPLETED;
+  return ADDRESS_PROGRESS_STATUS.IN_PROGRESS;
+};
+
+const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
+  value,
+  rowId,
+  statusInt,
+  editedBy,
+  editedAt,
+  onSave,
+}) => {
+  const numericValue = value ? parseProgress(value) : 0;
+
+  const [localValue, setLocalValue] = React.useState(numericValue);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [isHovering, setIsHovering] = React.useState(false);
+  const [loadingProgress, setLoadingProgress] = React.useState(false);
+
+  React.useEffect(() => {
+    setLocalValue(numericValue);
+  }, [numericValue]);
+
+  let color = "textPrimary";
+  if (statusInt === 13) color = "#999999";
+  else if (statusInt === 4) color = "#32A852";
+  else if (statusInt === 3) color = "#FF7F00";
+
+  const saveProgress = async () => {
+    const clampedValue = Math.min(100, Math.max(0, localValue));
+
+    if (clampedValue === numericValue) {
+      setIsEditing(false);
+      setIsHovering(false);
+      return;
+    }
+
+    try {
+      setLoadingProgress(true);
+      await onSave(rowId, clampedValue);
+      setIsEditing(false);
+      setIsHovering(false);
+    } catch (error: any) {
+      setLocalValue(numericValue);
+      toast.error(error?.message || "Failed to update progress");
+    } finally {
+      setLoadingProgress(false);
+    }
+  };
+
+  return (
+    <Box
+      sx={{ display: "flex", alignItems: "center", position: "relative" }}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => {
+        if (!isEditing) setIsHovering(false);
+      }}
+    >
+      {editedBy && editedAt && (
+        <Tooltip
+          title={`Modified by ${editedBy} on ${editedAt.slice(0, 16)}`}
+          arrow
+          placement="top"
+        >
+          <Box
+            onMouseEnter={() => {
+              if (!isEditing) setIsHovering(false);
+            }}
+            onMouseLeave={() => {
+              if (!isEditing) setIsHovering(false);
+            }}
+            sx={{
+              position: "absolute",
+              left: "-15px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+            }}
+          >
+            <IconPointFilled size={16} style={{ color: "#ff9800" }} />
+          </Box>
+        </Tooltip>
+      )}
+
+      {isHovering || isEditing ? (
+        <TextField
+          type="text"
+          size="small"
+          inputProps={{
+            maxLength: 3,
+            min: 0,
+            max: 100,
+            inputMode: "numeric",
+            pattern: "[0-9]*",
+          }}
+          value={localValue}
+          autoFocus={isEditing}
+          disabled={loadingProgress}
+          onChange={(e) => setLocalValue(Number(e.target.value) || 0)}
+          onFocus={() => setIsEditing(true)}
+          onBlur={saveProgress}
+          onKeyDown={(e) => e.key === "Enter" && saveProgress()}
+          sx={{
+            width: 56,
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderColor: isEditing ? "#1976d2" : "transparent",
+            },
+            "&:hover .MuiOutlinedInput-notchedOutline": {
+              borderColor: "#1976d2",
+            },
+            "& .MuiInputBase-input": {
+              textAlign: "center",
+              p: "6px",
+            },
+          }}
+        />
+      ) : (
+        <Typography
+          fontWeight={700}
+          color={color}
+          sx={{ px: 1.5, cursor: "pointer" }}
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => !isEditing && setIsHovering(false)}
+          onClick={() => setIsEditing(true)}
+        >
+          {value}
+        </Typography>
+      )}
+    </Box>
+  );
+};
 
 const CasesList = () => {
   const [data, setData] = useState<CaseSummary[]>([]);
@@ -127,7 +276,6 @@ const CasesList = () => {
   const handleClickMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl2(event.currentTarget);
   };
-  const [page, setPage] = useState(1);
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -270,140 +418,34 @@ const CasesList = () => {
     }
   };
 
-  const parseProgress = (value: string | number | null | undefined) => {
-    if (value === null || value === undefined) return 0;
-    if (typeof value === "number") return value;
-    return Number(value.replace("%", ""));
-  };
+  const handleProgressSave = useCallback(async (rowId: number, clampedValue: number) => {
+    const res = await api.put("address/change-address-progress", {
+      id: rowId,
+      progress: clampedValue,
+    });
 
-  const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
-    value,
-    rowId,
-    statusInt,
-    editedBy,
-    editedAt,
-  }) => {
-    const numericValue = value ? parseProgress(value) : 0;
+    if (!res.data?.IsSuccess) {
+      throw new Error(res.data?.message || "Failed to update progress");
+    }
 
-    const [localValue, setLocalValue] = React.useState(numericValue);
-    const [isEditing, setIsEditing] = React.useState(false);
-    const [isHovering, setIsHovering] = React.useState(false);
-    const [loadingProgress, setLoadingProgress] = React.useState(false);
+    const info = res.data.info || {};
+    const derived = progressToStatus(clampedValue);
 
-    let color = "textPrimary";
-    if (statusInt === 13) color = "#999999";
-    else if (statusInt === 4) color = "#32A852";
-    else if (statusInt === 3) color = "#FF7F00";
-
-    const saveProgress = async () => {
-      const clampedValue = Math.min(100, Math.max(0, localValue));
-
-      if (clampedValue === numericValue) {
-        setIsEditing(false);
-        setIsHovering(false);
-        return;
-      }
-
-      try {
-        setLoadingProgress(true);
-        const res = await api.put("address/change-address-progress", {
-          id: rowId,
-          progress: clampedValue,
-        });
-        fetchCases();
-        toast.success(res.data.message);
-      } catch {
-        setLocalValue(numericValue);
-      } finally {
-        setLoadingProgress(false);
-        setIsEditing(false);
-        setIsHovering(false);
-      }
-    };
-
-    return (
-      <Box
-        sx={{ display: "flex", alignItems: "center", position: "relative" }}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => {
-          if (!isEditing) setIsHovering(false);
-        }}
-      >
-        {editedBy && editedAt && (
-          <Tooltip
-            title={`Modified by ${editedBy} on ${editedAt.slice(0, 16)}`}
-            arrow
-            placement="top"
-          >
-            <Box
-              onMouseEnter={() => {
-                if (!isEditing) setIsHovering(false);
-              }}
-              onMouseLeave={() => {
-                if (!isEditing) setIsHovering(false);
-              }}
-              sx={{
-                position: "absolute",
-                left: "-15px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                display: "flex",
-                alignItems: "center",
-                cursor: "pointer",
-              }}
-            >
-              <IconPointFilled size={16} style={{ color: "#ff9800" }} />
-            </Box>
-          </Tooltip>
-        )}
-
-        {isHovering || isEditing ? (
-          <TextField
-            type="text"
-            size="small"
-            inputProps={{
-              maxLength: 3,
-              min: 0,
-              max: 100,
-              inputMode: "numeric",
-              pattern: "[0-9]*",
-            }}
-            value={localValue}
-            autoFocus={isEditing}
-            disabled={loadingProgress}
-            onChange={(e) => setLocalValue(Number(e.target.value) || 0)}
-            onFocus={() => setIsEditing(true)}
-            onBlur={saveProgress}
-            onKeyDown={(e) => e.key === "Enter" && saveProgress()}
-            sx={{
-              width: 56,
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderColor: isEditing ? "#1976d2" : "transparent",
-              },
-              "&:hover .MuiOutlinedInput-notchedOutline": {
-                borderColor: "#1976d2",
-              },
-              "& .MuiInputBase-input": {
-                textAlign: "center",
-                p: "6px",
-              },
-            }}
-          />
-        ) : (
-          <Typography
-            fontWeight={700}
-            color={color}
-            sx={{ px: 1.5, cursor: "pointer" }}
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => !isEditing && setIsHovering(false)}
-            onClick={() => setIsEditing(true)}
-          >
-            {value}
-          </Typography>
-        )}
-      </Box>
+    setData((prev: any[]) =>
+      prev.map((item) =>
+        item.id === rowId
+          ? {
+              ...item,
+              progress: info.progress ?? `${clampedValue}%`,
+              status_int: info.status ?? derived.status_int,
+              status_text: info.status_text ?? derived.status_text,
+            }
+          : item,
+      ),
     );
-  };
+
+    toast.success(res.data.message);
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -543,6 +585,7 @@ const CasesList = () => {
               statusInt={item.status_int}
               editedBy={item.editedBy ?? undefined}
               editedAt={item.edited_at ?? undefined}
+              onSave={handleProgressSave}
             />
           );
         },
@@ -749,7 +792,7 @@ const CasesList = () => {
         },
       },
     ],
-    [data, selectedRowIds, hoveredRow],
+    [data, selectedRowIds, hoveredRow, handleProgressSave],
   );
   const simpleColumns = columns.map((column: any) => ({
     name: column.id ?? "Unnamed Column",
@@ -807,8 +850,6 @@ const CasesList = () => {
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setPage(1);
-                  setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
                 }}
                 InputProps={{
                   startAdornment: (
@@ -1029,7 +1070,6 @@ const CasesList = () => {
                       parent_address_id: "",
                     });
                     setOpen(false);
-                    setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
                   }}
                   color="inherit"
                 >
@@ -1041,7 +1081,6 @@ const CasesList = () => {
                   onClick={() => {
                     setFilters(tempFilters);
                     setOpen(false);
-                    setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
                   }}
                 >
                   Apply

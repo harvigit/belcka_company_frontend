@@ -116,7 +116,156 @@ interface ClickToEditProgressProps {
   statusInt: number;
   editedBy?: string | null;
   editedAt?: string | null;
+  onSave: (rowId: number, progress: number) => Promise<void>;
 }
+
+const ADDRESS_PROGRESS_STATUS = {
+  TODO: { status_int: 13, status_text: "To Do" },
+  IN_PROGRESS: { status_int: 3, status_text: "In Progress" },
+  COMPLETED: { status_int: 4, status_text: "Completed" },
+} as const;
+
+const parseProgress = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === "number") return value;
+  return Number(String(value).replace("%", ""));
+};
+
+const progressToStatus = (progress: number) => {
+  if (progress <= 0) return ADDRESS_PROGRESS_STATUS.TODO;
+  if (progress >= 100) return ADDRESS_PROGRESS_STATUS.COMPLETED;
+  return ADDRESS_PROGRESS_STATUS.IN_PROGRESS;
+};
+
+const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
+  value,
+  rowId,
+  statusInt,
+  editedBy,
+  editedAt,
+  onSave,
+}) => {
+  const numericValue = value ? parseProgress(value) : 0;
+
+  const [localValue, setLocalValue] = React.useState(numericValue);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [isHovering, setIsHovering] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    setLocalValue(numericValue);
+  }, [numericValue]);
+
+  let color = "textPrimary";
+  if (statusInt === 13) color = "#999999";
+  else if (statusInt === 4) color = "#32A852";
+  else if (statusInt === 3) color = "#FF7F00";
+
+  const saveProgress = async () => {
+    const clampedValue = Math.min(100, Math.max(0, localValue));
+
+    if (clampedValue === numericValue) {
+      setIsEditing(false);
+      setIsHovering(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await onSave(rowId, clampedValue);
+      setIsEditing(false);
+      setIsHovering(false);
+    } catch (error: any) {
+      setLocalValue(numericValue);
+      toast.error(error?.message || "Failed to update progress");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box
+      sx={{ display: "flex", alignItems: "center", position: "relative" }}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => {
+        if (!isEditing) setIsHovering(false);
+      }}
+    >
+      {editedBy && editedAt && (
+        <Tooltip
+          title={`Modified by ${editedBy} on ${editedAt.slice(0, 16)}`}
+          arrow
+          placement="top"
+        >
+          <Box
+            onMouseEnter={() => {
+              if (!isEditing) setIsHovering(false);
+            }}
+            onMouseLeave={() => {
+              if (!isEditing) setIsHovering(false);
+            }}
+            sx={{
+              position: "absolute",
+              left: "-15px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+            }}
+          >
+            <IconPointFilled size={16} style={{ color: "#ff9800" }} />
+          </Box>
+        </Tooltip>
+      )}
+
+      {isHovering || isEditing ? (
+        <TextField
+          type="text"
+          size="small"
+          inputProps={{
+            maxLength: 3,
+            min: 0,
+            max: 100,
+            inputMode: "numeric",
+            pattern: "[0-9]*",
+          }}
+          value={localValue}
+          autoFocus={isEditing}
+          disabled={loading}
+          onChange={(e) => setLocalValue(Number(e.target.value) || 0)}
+          onFocus={() => setIsEditing(true)}
+          onBlur={saveProgress}
+          onKeyDown={(e) => e.key === "Enter" && saveProgress()}
+          sx={{
+            width: 56,
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderColor: isEditing ? "#1976d2" : "transparent",
+            },
+            "&:hover .MuiOutlinedInput-notchedOutline": {
+              borderColor: "#1976d2",
+            },
+            "& .MuiInputBase-input": {
+              textAlign: "center",
+              p: "6px",
+            },
+          }}
+        />
+      ) : (
+        <Typography
+          fontWeight={700}
+          color={color}
+          sx={{ px: 1.5, cursor: "pointer" }}
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => !isEditing && setIsHovering(false)}
+          onClick={() => setIsEditing(true)}
+        >
+          {value}
+        </Typography>
+      )}
+    </Box>
+  );
+};
 
 type PostcoderAddress = {
   summaryline: string;
@@ -530,10 +679,27 @@ const AddressesList = ({
       if (response.data.IsSuccess) {
         toast.success(response.data.message);
         setProgressDrawerOpen(false);
-        fetchAddresses();
+        const info = response.data.info || {};
+        const derived = progressToStatus(Number(radius) || 0);
+        const addressId = sidebarData?.addressId;
+        setData((prev: any[]) =>
+          prev.map((item) =>
+            item.id === addressId
+              ? {
+                  ...item,
+                  progress: info.progress ?? `${radius}%`,
+                  status_int: info.status ?? derived.status_int,
+                  status_text: info.status_text ?? derived.status_text,
+                }
+              : item,
+          ),
+        );
+      } else {
+        toast.error(response.data.message || "Failed to update progress");
       }
     } catch (error) {
       console.error("Download failed", error);
+      toast.error("Failed to update progress");
     }
     setProgress(false);
   };
@@ -859,146 +1025,39 @@ const AddressesList = ({
     }));
   };
 
-  const parseProgress = (value: string | number | null | undefined) => {
-    if (value === null || value === undefined) return 0;
-    if (typeof value === "number") return value;
-    return Number(value.replace("%", ""));
-  };
+  const handleProgressSave = useCallback(
+    async (rowId: number, clampedValue: number) => {
+      const res = await api.put("address/change-address-progress", {
+        id: rowId,
+        progress: clampedValue,
+      });
 
-  const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
-    value,
-    rowId,
-    statusInt,
-    editedBy,
-    editedAt,
-  }) => {
-    const numericValue = value ? parseProgress(value) : 0;
-
-    const [localValue, setLocalValue] = React.useState(numericValue);
-    const [isEditing, setIsEditing] = React.useState(false);
-    const [isHovering, setIsHovering] = React.useState(false);
-    const [loading, setLoading] = React.useState(false);
-
-    // const canEdit = user.user_role_id === 1;
-
-    let color = "textPrimary";
-    if (statusInt === 13) color = "#999999";
-    else if (statusInt === 4) color = "#32A852";
-    else if (statusInt === 3) color = "#FF7F00";
-
-    const saveProgress = async () => {
-      const clampedValue = Math.min(100, Math.max(0, localValue));
-
-      if (clampedValue === numericValue) {
-        setIsEditing(false);
-        setIsHovering(false);
-        return;
+      if (!res.data?.IsSuccess) {
+        throw new Error(res.data?.message || "Failed to update progress");
       }
 
-      try {
-        setLoading(true);
-        await api.put("address/change-address-progress", {
-          id: rowId,
-          progress: clampedValue,
-        });
-        fetchAddresses();
-      } catch {
-        setLocalValue(numericValue);
-      } finally {
-        setLoading(false);
-        setIsEditing(false);
-        setIsHovering(false);
-      }
-    };
+      const info = res.data.info || {};
+      const derived = progressToStatus(clampedValue);
 
-    return (
-      <Box
-        sx={{ display: "flex", alignItems: "center", position: "relative" }}
-        // onMouseEnter={() => canEdit && setIsHovering(true)}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => {
-          if (!isEditing) setIsHovering(false);
-        }}
-      >
-        {editedBy && editedAt && (
-          <Tooltip
-            title={`Modified by ${editedBy} on ${editedAt.slice(0, 16)}`}
-            arrow
-            placement="top"
-          >
-            <Box
-              onMouseEnter={() => {
-                if (!isEditing) setIsHovering(false);
-              }}
-              onMouseLeave={() => {
-                if (!isEditing) setIsHovering(false);
-              }}
-              sx={{
-                position: "absolute",
-                left: "-15px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                display: "flex",
-                alignItems: "center",
-                cursor: "pointer",
-              }}
-            >
-              <IconPointFilled size={16} style={{ color: "#ff9800" }} />
-            </Box>
-          </Tooltip>
-        )}
+      setData((prev: any[]) =>
+        prev.map((item) =>
+          item.id === rowId
+            ? {
+                ...item,
+                progress: info.progress ?? `${clampedValue}%`,
+                status_int: info.status ?? derived.status_int,
+                status_text: info.status_text ?? derived.status_text,
+              }
+            : item,
+        ),
+      );
 
-        {/*{canEdit && (isHovering || isEditing) ? (*/}
-        {isHovering || isEditing ? (
-          <TextField
-            type="text"
-            size="small"
-            inputProps={{
-              maxLength: 3,
-              min: 0,
-              max: 100,
-              inputMode: "numeric",
-              pattern: "[0-9]*",
-            }}
-            value={localValue}
-            autoFocus={isEditing}
-            disabled={loading}
-            onChange={(e) => setLocalValue(Number(e.target.value) || 0)}
-            onFocus={() => setIsEditing(true)}
-            onBlur={saveProgress}
-            onKeyDown={(e) => e.key === "Enter" && saveProgress()}
-            sx={{
-              width: 56,
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderColor: isEditing ? "#1976d2" : "transparent",
-              },
-              "&:hover .MuiOutlinedInput-notchedOutline": {
-                borderColor: "#1976d2",
-              },
-              "& .MuiInputBase-input": {
-                textAlign: "center",
-                p: "6px",
-              },
-            }}
-          />
-        ) : (
-          <Typography
-            fontWeight={700}
-            color={color}
-            // sx={{ px: 1.5, cursor: canEdit ? "pointer" : "default" }}
-            sx={{ px: 1.5, cursor: "pointer" }}
-            // onMouseEnter={() => canEdit && setIsHovering(true)}
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => !isEditing && setIsHovering(false)}
-            // onClick={() => canEdit && setIsEditing(true)}
-            onClick={() => setIsEditing(true)}
-          >
-            {value}
-          </Typography>
-        )}
-      </Box>
-    );
-  };
+      toast.success(res.data.message);
+    },
+    [],
+  );
+
+  const columnHelper = createColumnHelper<any>();
 
   const getProgressColor = (progress: number) => {
     if (progress < 25) return "#FF0000";
@@ -1006,8 +1065,6 @@ const AddressesList = ({
     if (progress < 75) return "#FFD700";
     return "#32A852";
   };
-
-  const columnHelper = createColumnHelper<any>();
 
   const columns = useMemo(
     () => [
@@ -1156,6 +1213,7 @@ const AddressesList = ({
               statusInt={item.status_int}
               editedBy={item.editedBy ?? undefined}
               editedAt={item.edited_at ?? undefined}
+              onSave={handleProgressSave}
             />
           );
         },
@@ -1289,7 +1347,7 @@ const AddressesList = ({
         },
       }),
     ],
-    [data, selectedRowIds, hoveredRow, showAllCheckboxes, processedIds],
+    [data, selectedRowIds, hoveredRow, showAllCheckboxes, processedIds, handleProgressSave],
   );
 
   const {
@@ -1308,7 +1366,6 @@ const AddressesList = ({
 
   useEffect(() => {
     if (onTableReady) onTableReady(table);
-    table.setPageIndex(0);
   }, [table]);
 
   const simpleColumns = columns.map((column) => ({
@@ -1349,7 +1406,9 @@ const AddressesList = ({
               onChange={({ from, to }) => {
                 setCheckinStartDate(from);
                 setCheckinEndDate(to);
-                setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
+                setPagination((prev: any) =>
+                  prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                );
               }}
               buttonMinWidth={230}
             />
@@ -1360,7 +1419,9 @@ const AddressesList = ({
                 onClick={() => {
                   setCheckinStartDate(null);
                   setCheckinEndDate(null);
-                  setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
+                  setPagination((prev: any) =>
+                    prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                  );
                 }}
               >
                 <IconX size={16} />
@@ -1373,7 +1434,12 @@ const AddressesList = ({
               variant="outlined"
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPagination((prev: any) =>
+                  prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                );
+              }}
               slotProps={{
                 input: {
                   endAdornment: (
