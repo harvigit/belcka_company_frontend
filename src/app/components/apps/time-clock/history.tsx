@@ -239,6 +239,20 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
 
   const [loading, setLoading] = useState(false);
 
+  const rangeStart = filterStartDate ?? startDate ?? null;
+  const rangeEnd = filterEndDate ?? endDate ?? null;
+
+  useEffect(() => {
+    if (!open) {
+      setFilterStartDate(null);
+      setFilterEndDate(null);
+      return;
+    }
+
+    setFilterStartDate(startDate ?? null);
+    setFilterEndDate(endDate ?? null);
+  }, [open, startDate, endDate]);
+
   useEffect(() => {
     if (!open || !user?.company_id) {
       setHistory([]);
@@ -283,10 +297,10 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
           ...(typeFilters.length > 0 ? { types: typeFilters.join(",") } : {}),
           ...(searchValue.trim() ? { search: searchValue.trim() } : {}),
           ...(userId ? { user_id: userId } : {}),
-          ...(filterStartDate && filterEndDate
+          ...(rangeStart && rangeEnd
             ? {
-                start_date: format(filterStartDate, "dd/MM/yyyy"),
-                end_date: format(filterEndDate, "dd/MM/yyyy"),
+                start_date: format(rangeStart, "dd/MM/yyyy"),
+                end_date: format(rangeEnd, "dd/MM/yyyy"),
               }
             : {}),
         },

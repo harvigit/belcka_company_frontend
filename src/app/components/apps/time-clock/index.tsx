@@ -2890,7 +2890,12 @@ const TimeClock = ({queryParams}: Props) => {
                     </DialogActions>
                 </Dialog>
 
-                <BookkeeperHistory open={openDrawer} onClose={() => setOpenDrawer(false)}/>
+                <BookkeeperHistory
+                    open={openDrawer}
+                    onClose={() => setOpenDrawer(false)}
+                    startDate={startDate}
+                    endDate={endDate}
+                />
 
                 {isAnyRowSelected && (
                     <Box
