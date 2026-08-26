@@ -1125,7 +1125,7 @@ const AddressesList = ({
                     transition: "all 0.2s ease",
                   }}
                 >
-                  {item.parent_addresses_name}
+                  {item.name}
                 </Typography>
               </Tooltip>
             </Stack>
