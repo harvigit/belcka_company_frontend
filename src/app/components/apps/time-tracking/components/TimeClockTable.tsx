@@ -667,19 +667,38 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 {/* Pricework Column */}
                                                 {visibleColumnConfigs.priceWork?.visible && (
-                                                    <TableCell align="center" onClick={() => {
-                                                        if (log.is_pricework_record && log.pricework_id && !isLogLocked) {
-                                                            openPriceworkSidebar?.(log);
-                                                        }
-                                                    }} sx={{
+                                                    <TableCell align="center" sx={{
                                                         py: 0.5,
                                                         fontSize: '0.875rem',
                                                         height: '45px',
                                                         verticalAlign: 'middle',
-                                                        cursor: log.is_pricework_record && !isLogLocked ? 'pointer' : 'default',
-                                                        color: log.is_pricework_record && !isLogLocked ? '#1976d2' : 'inherit',
                                                     }}>
-                                                        {`${currency}${log.pricework_amount || 0}`}
+                                                        {(() => {
+                                                            const canOpenPriceworkDetails = Boolean(
+                                                                (log.is_pricework_record && log.pricework_id)
+                                                                || (log.is_pricework && log.user_checklog_id),
+                                                            );
+
+                                                            return (
+                                                                <Box
+                                                                    component="span"
+                                                                    onClick={() => {
+                                                                        if (canOpenPriceworkDetails) {
+                                                                            openPriceworkSidebar?.(log);
+                                                                        }
+                                                                    }}
+                                                                    sx={{
+                                                                        cursor: canOpenPriceworkDetails ? 'pointer' : 'default',
+                                                                        color: canOpenPriceworkDetails ? '#1976d2' : 'inherit',
+                                                                        '&:hover': {
+                                                                            textDecoration: canOpenPriceworkDetails ? 'underline' : 'none',
+                                                                        },
+                                                                    }}
+                                                                >
+                                                                    {`${currency}${log.pricework_amount || 0}`}
+                                                                </Box>
+                                                            );
+                                                        })()}
                                                     </TableCell>
                                                 )}
 

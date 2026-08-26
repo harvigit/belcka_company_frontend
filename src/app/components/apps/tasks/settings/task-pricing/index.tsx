@@ -93,6 +93,53 @@ const createRow = (): PricingRow => ({
     project_prices: {},
 });
 
+const buildRowsFromSavedPrices = (savedPrices: any[], priceworkTasks: any[]): PricingRow[] => {
+    const taskMap = priceworkTasks.reduce<Record<string, any>>((map, task) => {
+        map[String(task.id)] = task;
+        return map;
+    }, {});
+    const groupedRows = new Map<string, PricingRow>();
+
+    savedPrices.forEach((priceItem) => {
+        const taskId = priceItem?.task_id != null ? String(priceItem.task_id) : '';
+        const userId = priceItem?.user_id != null ? String(priceItem.user_id) : '';
+        const projectId = priceItem?.project_id != null ? String(priceItem.project_id) : '';
+
+        if (!taskId || !userId || !projectId) return;
+
+        const task = taskMap[taskId];
+        const rowKey = `${userId}-${taskId}`;
+
+        if (!task) return;
+
+        if (!groupedRows.has(rowKey)) {
+            const basePrice = getTaskBasePrice(task);
+
+            groupedRows.set(rowKey, {
+                id: `saved-${rowKey}`,
+                user_id: userId,
+                trade_id: getTaskTradeId(task),
+                category_id: getCategoryId(task),
+                sub_category_id: getSubCategoryId(task),
+                task_id: taskId,
+                base_active: Number(basePrice) > 0,
+                base_price: basePrice,
+                project_prices: {},
+            });
+        }
+
+        const row = groupedRows.get(rowKey);
+        if (!row) return;
+
+        row.project_prices[projectId] = {
+            is_active: true,
+            price: priceItem?.price != null ? String(priceItem.price) : '0.00',
+        };
+    });
+
+    return Array.from(groupedRows.values());
+};
+
 const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) => {
     const session = useSession();
     const user = session.data?.user as User & {company_id?: number | null};
@@ -140,7 +187,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
         setLoading(true);
         try {
-            const [resResources, resTasks] = await Promise.all([
+            const [resResources, resTasks, resSavedPrices] = await Promise.all([
                 api.get('/pricework/get-resources').catch((err) => {
                     console.error('Error fetching pricework resources', err);
                     return {data: {projects: [], trades: [], users: []}};
@@ -149,15 +196,21 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     console.error('Error fetching tasks', err);
                     return [];
                 }),
+                api.get('/pricework/settings/prices').catch((err) => {
+                    console.error('Error fetching saved price work settings', err);
+                    return {data: {info: []}};
+                }),
             ]);
 
             const taskList = Array.isArray(resTasks) ? resTasks : resTasks.data?.info || [];
+            const priceworkTasks = taskList.filter(isPriceworkTask);
+            const savedPrices = Array.isArray(resSavedPrices.data?.info) ? resSavedPrices.data.info : [];
 
             setProjects(resResources.data?.projects || []);
             setTrades(resResources.data?.trades || []);
-            setTasks(taskList.filter(isPriceworkTask));
+            setTasks(priceworkTasks);
             setUsers(resResources.data?.users || []);
-            setRows([]);
+            setRows(buildRowsFromSavedPrices(savedPrices, priceworkTasks));
             setSelectedRowIds(new Set());
         } catch (err) {
             console.error('Failed to load price work settings:', err);

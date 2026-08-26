@@ -77,6 +77,7 @@ import type {User} from 'next-auth';
 import AddExpense from '@/app/components/apps/time-clock/time-clock-details/expenses/add-expense';
 import AddWorklog from '@/app/components/apps/time-clock/time-clock-details/worklog/add-worklog';
 import AddPricework from '@/app/components/apps/time-clock/time-clock-details/pricework/add-pricework';
+import PriceworkDetails from '@/app/components/apps/time-clock/time-clock-details/pricework/pricework-details';
 import Penalties from '@/app/components/apps/time-clock/time-clock-details/penalties';
 import {GOOGLE_MAPS_SHARED_LOADER_OPTIONS} from '@/utils/googleMaps';
 import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
@@ -1146,6 +1147,7 @@ const TimeTracking: React.FC<Props> = () => {
     const [addExpenseSidebar, setAddExpenseSidebar] = useState(false);
     const [addWorklogSidebar, setAddWorklogSidebar] = useState(false);
     const [addPriceworkSidebar, setAddPriceworkSidebar] = useState(false);
+    const [priceworkDetailsSidebar, setPriceworkDetailsSidebar] = useState(false);
     const [penaltySidebar, setPenaltySidebar] = useState(false);
     const [selectedPricework, setSelectedPricework] = useState<any>(null);
     const [selectedPenaltyWorklogId, setSelectedPenaltyWorklogId] = useState<number | null>(null);
@@ -1924,6 +1926,11 @@ const TimeTracking: React.FC<Props> = () => {
         setSelectedPricework(null);
     }, []);
 
+    const closePriceworkDetailsSidebar = useCallback(() => {
+        setPriceworkDetailsSidebar(false);
+        setSelectedPricework(null);
+    }, []);
+
     const closePenaltySidebar = useCallback(async () => {
         setPenaltySidebar(false);
         setSelectedPenaltyWorklogId(null);
@@ -1938,24 +1945,50 @@ const TimeTracking: React.FC<Props> = () => {
 
     const handleAddPricework = useCallback(() => {
         setSelectedPricework(null);
+        setPriceworkDetailsSidebar(false);
         setAddPriceworkSidebar(true);
     }, []);
 
-    const handleEditPricework = useCallback(async (pricework: any) => {
+    const handleOpenPriceworkDetails = useCallback(async (pricework: any) => {
+        const isChecklogRow =
+            pricework?.record_type === 'timesheet_light'
+            || pricework?.source_type === 'user_checklog'
+            || Boolean(pricework?.user_checklog_id);
+        const priceworkId = Number(
+            isChecklogRow
+                ? pricework?.user_checklog_id || pricework?.id
+                : pricework?.pricework_id || pricework?.id,
+        );
+
+        if (!Number.isInteger(priceworkId) || priceworkId <= 0) {
+            showToast('Pricework record not found.', 'error');
+            return;
+        }
+
         try {
             const response = await api.get('/timesheet/pricework-details', {
-                params: {pricework_id: pricework.pricework_id},
+                params: {pricework_id: priceworkId},
             });
             if (!response.data?.IsSuccess || !response.data?.info) {
                 showToast(response.data?.message || 'Failed to load pricework details.', 'error');
                 return;
             }
-            setSelectedPricework(response.data.info);
-            setAddPriceworkSidebar(true);
+            setSelectedPricework({
+                ...pricework,
+                ...response.data.info,
+                pricework_id: response.data.info.pricework_id ?? response.data.info.id,
+            });
+            setPriceworkDetailsSidebar(true);
         } catch (error: any) {
             showToast(error?.response?.data?.message || 'Failed to load pricework details.', 'error');
         }
     }, [showToast]);
+
+    const handleEditPricework = useCallback((pricework: any) => {
+        setSelectedPricework(pricework);
+        setPriceworkDetailsSidebar(false);
+        setAddPriceworkSidebar(true);
+    }, []);
 
     const userImg = (user as any)?.user_image || (user as any)?.image || undefined;
     const userInitials = user?.name
@@ -2336,7 +2369,7 @@ const TimeTracking: React.FC<Props> = () => {
                                 startEditingField={startEditingField} updateEditingField={updateEditingField}
                                 cancelEditingField={cancelEditingField} saveFieldChanges={saveFieldChanges}
                                 onDeleteClick={handleDeleteRecord}
-                                openPriceworkSidebar={handleEditPricework}
+                                openPriceworkSidebar={handleOpenPriceworkDetails}
                                 onPenaltyClick={handlePenaltyClick}
                             />
                         </Box>
@@ -2458,6 +2491,23 @@ const TimeTracking: React.FC<Props> = () => {
                             fetchTimeClockData(startDate, endDate),
                             fetchTodayClock(),
                         ]).then(() => undefined)}
+                    />
+                </Drawer>
+
+                <Drawer anchor="right" open={priceworkDetailsSidebar} onClose={closePriceworkDetailsSidebar}
+                        PaperProps={{
+                            sx: {
+                                width: '504px',
+                                borderTopLeftRadius: 18,
+                                borderBottomLeftRadius: 18,
+                                overflow: 'hidden'
+                            }
+                        }}>
+                    <PriceworkDetails
+                        pricework={selectedPricework}
+                        currency={currency}
+                        onClose={closePriceworkDetailsSidebar}
+                        onEdit={handleEditPricework}
                     />
                 </Drawer>
 
