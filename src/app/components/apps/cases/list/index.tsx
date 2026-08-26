@@ -60,6 +60,98 @@ import CaseEditDrawer from "./case-edit-drawer";
 import CaseAddDrawer from "./case-add-drawer";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
+const CASE_LIST_SORT_FIELDS: Record<string, string> = {
+  name: "name",
+  project_name: "project_name",
+  progress: "progress",
+  status: "status",
+  case_id: "case_id",
+  reference: "ref",
+  address_type: "address_type",
+  start_date: "start_date",
+  end_date: "end_date",
+};
+
+const CASE_LIST_ROW_SORT_KEYS: Record<string, string> = {
+  name: "name",
+  project_name: "project_name",
+  progress: "progress",
+  status: "status_int",
+  case_id: "case_id",
+  reference: "ref",
+  address_type: "address_type",
+  start_date: "start_date",
+  end_date: "end_date",
+};
+
+const isEmptySortValue = (value: any) =>
+  value === null ||
+  value === undefined ||
+  String(value).trim() === "" ||
+  String(value).trim() === "-";
+
+const STATUS_SORT_RANK: Record<number, number> = {
+  13: 1,
+  3: 2,
+  4: 3,
+};
+
+const parseSortDate = (value: any) => {
+  if (value == null || value === "") return null;
+  const parsed = dayjs(value);
+  return parsed.isValid() ? parsed.valueOf() : null;
+};
+
+const sortCaseListRows = (rows: any[], sorting: any[]) => {
+  if (!sorting?.length) return rows;
+  const columnId = sorting[0].id;
+  const key = CASE_LIST_ROW_SORT_KEYS[columnId];
+  if (!key) return rows;
+  const modifier = sorting[0].desc ? -1 : 1;
+
+  return [...rows].sort((a, b) => {
+    const av = a?.[key];
+    const bv = b?.[key];
+
+    if (key === "status_int") {
+      return (
+        ((STATUS_SORT_RANK[Number(av)] ?? 99) -
+          (STATUS_SORT_RANK[Number(bv)] ?? 99)) *
+        modifier
+      );
+    }
+
+    const aEmpty = isEmptySortValue(av);
+    const bEmpty = isEmptySortValue(bv);
+    if (aEmpty && bEmpty) return 0;
+    if (aEmpty) return 1;
+    if (bEmpty) return -1;
+
+    if (key === "progress") {
+      return (
+        ((parseFloat(String(av)) || 0) - (parseFloat(String(bv)) || 0)) *
+        modifier
+      );
+    }
+
+    if (key === "start_date" || key === "end_date") {
+      const at = parseSortDate(av);
+      const bt = parseSortDate(bv);
+      if (at == null && bt == null) return 0;
+      if (at == null) return 1;
+      if (bt == null) return -1;
+      return (at - bt) * modifier;
+    }
+
+    return (
+      String(av).localeCompare(String(bv), undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }) * modifier
+    );
+  });
+};
+
 interface CaseSummary {
   id: number;
   name: string;
@@ -209,7 +301,10 @@ const CasesList = () => {
       if (search) url += `&search=${search}`;
 
       if (sorting && sorting.length > 0) {
-        url += `&sort_by=${sorting[0].id}&sort_order=${sorting[0].desc ? "desc" : "asc"}`;
+        const sortBy = CASE_LIST_SORT_FIELDS[sorting[0].id];
+        if (sortBy) {
+          url += `&sort_by=${sortBy}&sort_order=${sorting[0].desc ? "desc" : "asc"}`;
+        }
       }
 
       const res = await api.get(url);
@@ -217,7 +312,7 @@ const CasesList = () => {
       if (res.data) {
         const responseData =
           res.data.info?.data || res.data.info || res.data.data || [];
-        setData(responseData);
+        setData(sortCaseListRows(responseData, sorting));
         const pagMeta =
           res.data.data?.totalPages !== undefined ||
           res.data.data?.totalItems !== undefined
@@ -409,6 +504,7 @@ const CasesList = () => {
     () => [
       {
         id: "select",
+        enableSorting: false,
         header: () => (
           <Stack direction="row" alignItems="center">
             <CustomCheckbox
@@ -470,6 +566,7 @@ const CasesList = () => {
 
       {
         header: "Cases",
+        id: "name",
         accessorKey: "name",
         cell: ({ row }: any) => {
           const item = row.original;
@@ -502,6 +599,7 @@ const CasesList = () => {
 
       {
         header: "Projects",
+        id: "project_name",
         accessorKey: "project_name",
         cell: ({ row }: any) => {
           const item = row.original;
@@ -533,6 +631,7 @@ const CasesList = () => {
 
       {
         header: "Progress",
+        id: "progress",
         accessorKey: "progress",
         cell: ({ row, getValue }: any) => {
           const item = row.original;
@@ -550,6 +649,7 @@ const CasesList = () => {
 
       {
         header: "Status",
+        id: "status",
         accessorKey: "status",
         cell: ({ row }: any) => {
           const status = row.original.status_text;
@@ -576,6 +676,7 @@ const CasesList = () => {
 
       {
         header: "Case Id",
+        id: "case_id",
         accessorKey: "case_id",
         cell: ({ row }: any) => {
           const case_id = row.original.case_id ? row.original.case_id : "";
@@ -625,6 +726,7 @@ const CasesList = () => {
 
       {
         header: "Reference",
+        id: "reference",
         accessorKey: "reference",
         cell: ({ row }: any) => {
           const item = row.original;
@@ -656,6 +758,7 @@ const CasesList = () => {
 
       {
         header: "Type",
+        id: "address_type",
         accessorKey: "address_type",
         cell: ({ getValue }: any) => (
           <Typography
@@ -670,6 +773,7 @@ const CasesList = () => {
 
       {
         header: "Latest Start",
+        id: "start_date",
         accessorKey: "start_date",
         cell: ({ getValue }: any) => (
           <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
@@ -680,6 +784,7 @@ const CasesList = () => {
 
       {
         header: "Finish Date",
+        id: "end_date",
         accessorKey: "end_date",
         cell: ({ getValue }: any) => (
           <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
@@ -689,6 +794,7 @@ const CasesList = () => {
       },
       {
         id: "actions",
+        enableSorting: false,
         header: "Actions",
         cell: ({ row }: any) => {
           const item = row.original;
