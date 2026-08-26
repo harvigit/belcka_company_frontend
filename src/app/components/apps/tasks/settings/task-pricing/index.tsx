@@ -2,6 +2,7 @@
 
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
+    Autocomplete,
     Box,
     Button,
     CircularProgress,
@@ -42,13 +43,20 @@ type CellState = {
 type PricingRow = {
     id: string;
     user_id: string;
+    original_user_id?: string;
     trade_id: string;
     category_id: string;
     sub_category_id: string;
     task_id: string;
+    original_task_id?: string;
     base_active: boolean;
     base_price: string;
     project_prices: Record<string, CellState>;
+};
+
+type DeletedPricingRow = {
+    task_id: number;
+    user_id: number;
 };
 
 const TASKS_PAGE_SIZE = 500;
@@ -72,6 +80,8 @@ const getProjectName = (project: any) =>
 
 const isPriceworkTask = (task: any) =>
     task?.shift_is_pricework === true ||
+    task?.shift_is_pricework === 1 ||
+    String(task?.shift_is_pricework || '').trim().toLowerCase() === 'true' ||
     String(task?.shift_name || '').trim().toLowerCase() === 'pricework' ||
     String(task?.shift_name || '').trim().toLowerCase() === 'price work';
 
@@ -84,14 +94,77 @@ const getSubCategoryId = (task: any) =>
 const createRow = (): PricingRow => ({
     id: `row-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     user_id: '',
+    original_user_id: '',
     trade_id: '',
     category_id: '',
     sub_category_id: '',
     task_id: '',
+    original_task_id: '',
     base_active: false,
     base_price: '0.00',
     project_prices: {},
 });
+
+const isCompletePricingRow = (row: PricingRow) =>
+    Boolean(row.user_id && row.trade_id && row.category_id && row.task_id);
+
+const isEmptyPricingRow = (row: PricingRow) =>
+    !row.user_id &&
+    !row.trade_id &&
+    !row.category_id &&
+    !row.sub_category_id &&
+    !row.task_id &&
+    !row.base_active &&
+    Object.keys(row.project_prices).length === 0;
+
+const buildRowsFromSavedPrices = (savedPrices: any[], priceworkTasks: any[]): PricingRow[] => {
+    const taskMap = priceworkTasks.reduce<Record<string, any>>((map, task) => {
+        map[String(task.id)] = task;
+        return map;
+    }, {});
+    const groupedRows = new Map<string, PricingRow>();
+
+    savedPrices.forEach((priceItem) => {
+        const taskId = priceItem?.task_id != null ? String(priceItem.task_id) : '';
+        const userId = priceItem?.user_id != null ? String(priceItem.user_id) : '';
+        const projectId = priceItem?.project_id != null ? String(priceItem.project_id) : '';
+
+        if (!taskId || !userId || !projectId) return;
+
+        const task = taskMap[taskId];
+        const rowKey = `${userId}-${taskId}`;
+
+        if (!task) return;
+
+        if (!groupedRows.has(rowKey)) {
+            const basePrice = getTaskBasePrice(task);
+
+            groupedRows.set(rowKey, {
+                id: `saved-${rowKey}`,
+                user_id: userId,
+                original_user_id: userId,
+                trade_id: getTaskTradeId(task),
+                category_id: getCategoryId(task),
+                sub_category_id: getSubCategoryId(task),
+                task_id: taskId,
+                original_task_id: taskId,
+                base_active: Number(basePrice) > 0,
+                base_price: basePrice,
+                project_prices: {},
+            });
+        }
+
+        const row = groupedRows.get(rowKey);
+        if (!row) return;
+
+        row.project_prices[projectId] = {
+            is_active: true,
+            price: priceItem?.price != null ? String(priceItem.price) : '0.00',
+        };
+    });
+
+    return Array.from(groupedRows.values());
+};
 
 const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) => {
     const session = useSession();
@@ -105,6 +178,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     const [users, setUsers] = useState<any[]>([]);
     const [trades, setTrades] = useState<any[]>([]);
     const [rows, setRows] = useState<PricingRow[]>([]);
+    const [pendingDeletedRows, setPendingDeletedRows] = useState<DeletedPricingRow[]>([]);
     const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProjectFilter, setSelectedProjectFilter] = useState('');
@@ -140,7 +214,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
         setLoading(true);
         try {
-            const [resResources, resTasks] = await Promise.all([
+            const [resResources, resTasks, resSavedPrices] = await Promise.all([
                 api.get('/pricework/get-resources').catch((err) => {
                     console.error('Error fetching pricework resources', err);
                     return {data: {projects: [], trades: [], users: []}};
@@ -149,15 +223,22 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     console.error('Error fetching tasks', err);
                     return [];
                 }),
+                api.get('/pricework/settings/prices').catch((err) => {
+                    console.error('Error fetching saved price work settings', err);
+                    return {data: {info: []}};
+                }),
             ]);
 
             const taskList = Array.isArray(resTasks) ? resTasks : resTasks.data?.info || [];
+            const priceworkTasks = taskList.filter(isPriceworkTask);
+            const savedPrices = Array.isArray(resSavedPrices.data?.info) ? resSavedPrices.data.info : [];
 
             setProjects(resResources.data?.projects || []);
             setTrades(resResources.data?.trades || []);
-            setTasks(taskList.filter(isPriceworkTask));
+            setTasks(priceworkTasks);
             setUsers(resResources.data?.users || []);
-            setRows([]);
+            setRows(buildRowsFromSavedPrices(savedPrices, priceworkTasks));
+            setPendingDeletedRows([]);
             setSelectedRowIds(new Set());
         } catch (err) {
             console.error('Failed to load price work settings:', err);
@@ -329,23 +410,25 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
     const handleCategoryChange = (row: PricingRow, categoryId: string) => {
         const matchedTask = findTaskForSelection(row.trade_id, categoryId, '');
+        const isNewRow = !row.original_task_id;
         updateRow(row.id, {
             category_id: categoryId,
             sub_category_id: '',
             task_id: matchedTask ? String(matchedTask.id) : '',
-            base_active: matchedTask ? Number(getTaskBasePrice(matchedTask)) > 0 : false,
-            base_price: matchedTask ? getTaskBasePrice(matchedTask) : '0.00',
+            base_active: isNewRow ? false : matchedTask ? Number(getTaskBasePrice(matchedTask)) > 0 : false,
+            base_price: isNewRow ? '0.00' : matchedTask ? getTaskBasePrice(matchedTask) : '0.00',
             project_prices: {},
         });
     };
 
     const handleSubCategoryChange = (row: PricingRow, subCategoryId: string, taskId: string) => {
         const matchedTask = taskMap[taskId] || findTaskForSelection(row.trade_id, row.category_id, subCategoryId);
+        const isNewRow = !row.original_task_id;
         updateRow(row.id, {
             sub_category_id: subCategoryId,
             task_id: matchedTask ? String(matchedTask.id) : '',
-            base_active: matchedTask ? Number(getTaskBasePrice(matchedTask)) > 0 : false,
-            base_price: matchedTask ? getTaskBasePrice(matchedTask) : '0.00',
+            base_active: isNewRow ? false : matchedTask ? Number(getTaskBasePrice(matchedTask)) > 0 : false,
+            base_price: isNewRow ? '0.00' : matchedTask ? getTaskBasePrice(matchedTask) : '0.00',
             project_prices: {},
         });
     };
@@ -369,6 +452,23 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     };
 
     const removeRow = (rowId: string) => {
+        const rowToRemove = rows.find((row) => row.id === rowId);
+
+        if (rowToRemove?.original_task_id && rowToRemove.original_user_id) {
+            setPendingDeletedRows((prev) => {
+                const deletedRow = {
+                    task_id: Number(rowToRemove.original_task_id),
+                    user_id: Number(rowToRemove.original_user_id),
+                };
+                const alreadyQueued = prev.some((row) =>
+                    row.task_id === deletedRow.task_id &&
+                    row.user_id === deletedRow.user_id,
+                );
+
+                return alreadyQueued ? prev : [...prev, deletedRow];
+            });
+        }
+
         setRows((prev) => prev.filter((row) => row.id !== rowId));
         setSelectedRowIds((prev) => {
             const next = new Set(prev);
@@ -404,8 +504,8 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         const rowsForBackend = selectedRows
             .filter((row) => row.task_id)
             .map((row) => ({
-                user_id: row.user_id ? Number(row.user_id) : null,
-                task_id: Number(row.task_id),
+                user_id: row.original_user_id || row.user_id ? Number(row.original_user_id || row.user_id) : null,
+                task_id: Number(row.original_task_id || row.task_id),
             }));
 
         setDeleting(true);
@@ -429,15 +529,10 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     };
 
     const handleSave = async () => {
+        const rowsToSave = rows.filter(isCompletePricingRow);
         const incompleteRows = rows
-            .filter((row) =>
-                row.category_id ||
-                row.sub_category_id ||
-                row.task_id ||
-                row.base_active ||
-                Object.keys(row.project_prices).length > 0
-            )
-            .filter((row) => !row.user_id || !row.trade_id || !row.category_id || !row.task_id);
+            .filter((row) => !isEmptyPricingRow(row) && !row.original_task_id)
+            .filter((row) => !isCompletePricingRow(row));
 
         if (incompleteRows.length > 0) {
             toast.error('Select user, trade, category, and subcategory before saving price settings.');
@@ -452,8 +547,29 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             is_active: boolean;
         }> = [];
 
+        const changedRows = rows
+            .filter((row) =>
+                row.original_task_id &&
+                row.original_user_id &&
+                isCompletePricingRow(row) &&
+                (
+                    row.original_task_id !== row.task_id ||
+                    row.original_user_id !== row.user_id
+                ),
+            )
+            .map((row) => ({
+                task_id: Number(row.original_task_id),
+                user_id: Number(row.original_user_id),
+            }));
+        const deletedRows = [...pendingDeletedRows, ...changedRows].filter((row, index, allRows) =>
+            allRows.findIndex((item) =>
+                item.task_id === row.task_id &&
+                item.user_id === row.user_id,
+            ) === index,
+        );
+
         const userTradeItems = Array.from(
-            rows.reduce<Map<string, {user_id: number; trade_id: number}>>((map, row) => {
+            rowsToSave.reduce<Map<string, {user_id: number; trade_id: number}>>((map, row) => {
                 if (!row.user_id || !row.trade_id) return map;
 
                 map.set(row.user_id, {
@@ -465,7 +581,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             }, new Map()).values(),
         );
 
-        rows.forEach((row) => {
+        rowsToSave.forEach((row) => {
             if (!row.task_id || !row.user_id) return;
 
             Object.entries(row.project_prices).forEach(([projectId, value]) => {
@@ -477,11 +593,25 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     is_active: value.is_active,
                 });
             });
+
+            const hasActiveProjectPrices = Object.values(row.project_prices).some((value) => value.is_active);
+
+            if (row.base_active && !hasActiveProjectPrices) {
+                projects.forEach((project) => {
+                    items.push({
+                        task_id: Number(row.task_id),
+                        project_id: Number(project.id),
+                        user_id: Number(row.user_id),
+                        price: Number(row.base_price) || 0,
+                        is_active: true,
+                    });
+                });
+            }
         });
 
         setSaving(true);
         try {
-            const basePriceUpdates = rows
+            const basePriceUpdates = rowsToSave
                 .filter((row) => row.task_id)
                 .map((row) => {
                     const selectedTask = taskMap[row.task_id];
@@ -499,7 +629,11 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 .filter(Boolean);
 
             const [res] = await Promise.all([
-                api.post('/pricework/settings/prices/batch', {items, user_trade_items: userTradeItems}),
+                api.post('/pricework/settings/prices/batch', {
+                    items,
+                    user_trade_items: userTradeItems,
+                    deleted_rows: deletedRows,
+                }),
                 ...basePriceUpdates,
             ]);
 
@@ -751,6 +885,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                 const categoryOptions = getCategoryOptions(row.trade_id);
                                 const subCategoryOptions = getSubCategoryOptions(row.trade_id, row.category_id);
                                 const selectedTask = taskMap[row.task_id];
+                                const selectedUser = users.find((item) => String(item.id) === row.user_id) || null;
 
                                 return (
                                     <TableRow key={row.id} hover>
@@ -762,22 +897,41 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                         </TableCell>
 
                                         <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 230, py: 1}}>
-                                            <FormControl size="small" fullWidth>
-                                                <Select
-                                                    value={row.user_id}
-                                                    displayEmpty
-                                                    onChange={(event) => handleUserChange(row, String(event.target.value))}
-                                                    MenuProps={selectMenuProps}
-                                                    sx={{height: 36, fontSize: '0.8rem', bgcolor: '#fff'}}
-                                                >
-                                                    <MenuItem value="">Select user</MenuItem>
-                                                    {users.map((item) => (
-                                                        <MenuItem key={item.id} value={String(item.id)}>
-                                                            {getUserDisplayName(item)}
-                                                        </MenuItem>
-                                                    ))}
-                                                </Select>
-                                            </FormControl>
+                                            <Autocomplete
+                                                size="small"
+                                                options={users}
+                                                value={selectedUser}
+                                                getOptionLabel={(option) => getUserDisplayName(option)}
+                                                isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                                                onChange={(_, value) => handleUserChange(row, value ? String(value.id) : '')}
+                                                renderInput={(params) => (
+                                                    <TextField
+                                                        {...params}
+                                                        placeholder="Select user"
+                                                    />
+                                                )}
+                                                slotProps={{
+                                                    paper: {
+                                                        sx: {
+                                                            mt: 0.5,
+                                                            border: '1px solid #d9e2ef',
+                                                            borderRadius: '8px',
+                                                            boxShadow: '0 10px 28px rgba(15, 23, 42, 0.16)',
+                                                        },
+                                                    },
+                                                }}
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        minHeight: 36,
+                                                        bgcolor: '#fff',
+                                                        fontSize: '0.8rem',
+                                                        py: 0,
+                                                    },
+                                                    '& .MuiAutocomplete-input': {
+                                                        fontSize: '0.8rem',
+                                                    },
+                                                }}
+                                            />
                                         </TableCell>
 
                                         <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 210, py: 1}}>

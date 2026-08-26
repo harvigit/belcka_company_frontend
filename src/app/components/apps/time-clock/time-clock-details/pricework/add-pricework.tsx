@@ -104,7 +104,8 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     const updateDecimalValue = (value: string, setter: React.Dispatch<React.SetStateAction<string>>) => {
         if (/^\d*(?:\.\d{0,2})?$/.test(value)) setter(value);
     };
-    const isEditMode = Boolean(pricework?.pricework_id);
+    const isChecklogEditMode = pricework?.record_type === 'timesheet_light' || Boolean(pricework?.user_checklog_id);
+    const isEditMode = Boolean(pricework?.pricework_id) || isChecklogEditMode;
     const [loading, setLoading] = useState(false);
     const [resourcesLoading, setResourcesLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -382,7 +383,15 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             payload.append('user_id', String(targetUserId));
             
             if (isEditMode) {
-                payload.append('pricework_id', String(pricework.pricework_id));
+                if (isChecklogEditMode) {
+                    payload.append('record_type', 'timesheet_light');
+                    payload.append('user_checklog_id', String(pricework.user_checklog_id ?? pricework.id));
+                    if (pricework.timesheet_light_id ?? pricework.timesheet_id) {
+                        payload.append('timesheet_id', String(pricework.timesheet_light_id ?? pricework.timesheet_id));
+                    }
+                } else {
+                    payload.append('pricework_id', String(pricework.pricework_id));
+                }
             }
             
             payload.append('project_id', projectId);
@@ -420,6 +429,14 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     const fieldLabel = (label: string) => (
         <Typography variant="body2" sx={{fontWeight: 600, mb: 0.75}}>{label}</Typography>
     );
+    const inlineFieldLabelSx = {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        minHeight: 24,
+        mb: 0.75,
+        gap: 1,
+    };
 
     return (
         <Box sx={{height: '100%', display: 'flex', flexDirection: 'column'}}>
@@ -651,24 +668,31 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
 
                         <Box sx={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2}}>
                             <Box>
-                                <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.75}>
-                                    {fieldLabel('Amount Per Unit')}
+                                <Box sx={inlineFieldLabelSx}>
+                                    <Typography variant="body2" sx={{fontWeight: 600}}>Amount Per Unit</Typography>
                                     {priceSource === 'project' && (
-                                        <Chip label="Project Price" color="primary" size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+                                        <Chip label="Project Price" color="primary" size="small" sx={{height: 20, fontSize: '0.7rem', flexShrink: 0}} />
                                     )}
                                     {priceSource === 'base' && (
-                                        <Chip label="Base Cost Fallback" color="warning" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+                                        <Chip label="Base Cost Fallback" color="warning" size="small" variant="outlined" sx={{height: 20, fontSize: '0.7rem', flexShrink: 0}} />
                                     )}
                                 </Box>
                                 <TextField
                                     fullWidth
                                     size="small"
-                                    value={resolvingPrice ? 'Resolving...' : amountPerUnit}
-                                    disabled={true}
+                                    value={amountPerUnit}
+                                    onChange={(event) => updateDecimalValue(event.target.value, setAmountPerUnit)}
                                     placeholder="0.00"
                                     inputProps={{
                                         inputMode: 'decimal',
                                         style: {textAlign: 'left'},
+                                    }}
+                                    InputProps={{
+                                        endAdornment: resolvingPrice ? (
+                                            <InputAdornment position="end">
+                                                <CircularProgress size={16} />
+                                            </InputAdornment>
+                                        ) : undefined,
                                     }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
@@ -681,7 +705,9 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
                                 />
                             </Box>
                             <Box>
-                                {fieldLabel('Work Complete')}
+                                <Box sx={inlineFieldLabelSx}>
+                                    <Typography variant="body2" sx={{fontWeight: 600}}>Work Complete</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     size="small"
