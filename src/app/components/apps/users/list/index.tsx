@@ -969,13 +969,24 @@ const TablePagination = () => {
                 </Typography>
             ),
             cell: (info) => (
-                <Typography
+                <Tooltip title={info.getValue() ?? ''}>
+                    <Typography
                     className="f-14"
-                    color="textPrimary"
-                    sx={{width: 100, ml: 2}}
+                    sx={{
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    wordBreak: "break-word",
+                    minWidth: "120px",
+                    width: "100px",
+                    maxWidth: "100px",
+                    }}
                 >
                     {info.getValue() ?? '-'}
                 </Typography>
+                </Tooltip>
             ),
         }),
 
@@ -1082,9 +1093,20 @@ const TablePagination = () => {
             ),
             cell: (info) => {
                 return (
-                    <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
+                    <Tooltip title={info.getValue() ?? ''}>
+                        <Typography className="f-14" color="textPrimary" sx={{
+                            display: '-webkit-box',
+                            WebkitBoxOrient: 'vertical',
+                            WebkitLineClamp: 1,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            wordBreak: 'break-word',
+                            width: 150,
+                            px: 1.5
+                        }}>
                         {info.getValue() ?? '-'}
                     </Typography>
+                    </Tooltip>
                 );
             },
         }),
@@ -1098,9 +1120,20 @@ const TablePagination = () => {
             ),
             cell: (info) => {
                 return (
-                    <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
+                    <Tooltip title={info.getValue() ?? ''}>
+                        <Typography className="f-14" color="textPrimary" sx={{
+                            display: '-webkit-box',
+                            WebkitBoxOrient: 'vertical',
+                            WebkitLineClamp: 1,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            wordBreak: 'break-word',
+                            width: 150,
+                            px: 1.5
+                        }}>
                         {info.getValue() ?? '-'}
                     </Typography>
+                    </Tooltip>
                 );
             },
         }),
@@ -1278,9 +1311,8 @@ const TablePagination = () => {
                 </Typography>
             ),
             cell: (info) => {
-                const row = info.row.original;
                 return (
-                    <Tooltip title={info.getValue() ?? ''} placement="top" arrow>
+                    <Tooltip title={info.getValue() ?? ''}>
                         <Typography className="f-14" color="textPrimary" sx={{
                             display: '-webkit-box',
                             WebkitBoxOrient: 'vertical',
@@ -1288,7 +1320,7 @@ const TablePagination = () => {
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             wordBreak: 'break-word',
-                            width: 150,
+                            width: 100,
                             ml: 2
                         }}>
                             {info.getValue() ?? '-'}

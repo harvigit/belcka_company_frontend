@@ -23,7 +23,126 @@ import {
   Tooltip,
   Button,
   InputAdornment,
+  Collapse,
+  Chip,
 } from "@mui/material";
+
+const DiffView = ({ diffs }: { diffs: any[] }) => {
+  const IGNORED_KEYS = [
+    "id",
+    "created_at",
+    "updated_at",
+    "deleted_at",
+    "user_id",
+    "company_id",
+    "expired_at",
+  ];
+  const filteredDiffs = diffs?.filter(
+    (diff) => !IGNORED_KEYS.includes(diff.key),
+  );
+  const [open, setOpen] = useState(false);
+
+  if (!filteredDiffs?.length) return null;
+
+  return (
+    <Box width="100%">
+      <Box
+        display="flex"
+        alignItems="center"
+        sx={{ cursor: "pointer", width: "fit-content" }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(!open);
+        }}
+      >
+        <Typography fontSize={12} color="primary" fontWeight={600}>
+          {open ? "Hide Changes" : "View Changes"}
+        </Typography>
+      </Box>
+      <Collapse in={open}>
+        <Box
+          mt={0.5}
+          p={1}
+          bgcolor="#f8fafc"
+          borderRadius={2}
+          border="1px solid #e2e8f0"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          {filteredDiffs.map((diff: any, i: number) => (
+            <Typography
+              key={i}
+              fontSize={11}
+              color="text.secondary"
+              mt={i > 0 ? 0.75 : 0}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 0.5,
+              }}
+            >
+              <Typography
+                component="span"
+                fontSize={11}
+                fontWeight={600}
+                sx={{ textTransform: "uppercase" }}
+              >
+                {diff.key.replace(/_/g, " ")}
+              </Typography>
+              {(!diff.old || diff.old === "") && diff.new && diff.new !== "" ? (
+                <>
+                  {" - added as "}
+                  <Chip
+                    size="small"
+                    label={String(diff.new)}
+                    sx={{
+                      height: 18,
+                      fontSize: 10,
+                      bgcolor: "#E8F5E9",
+                      color: "#2E7D32",
+                      "& .MuiChip-label": { px: 1 },
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  {" - changed from "}
+                  <Chip
+                    size="small"
+                    label={String(diff.old || "none")}
+                    sx={{
+                      height: 18,
+                      fontSize: 10,
+                      bgcolor: "#E8F5E9",
+                      color: "#2E7D32",
+                      "& .MuiChip-label": { px: 1 },
+                    }}
+                  />
+                  {" to "}
+                  <Chip
+                    size="small"
+                    label={String(diff.new || "none")}
+                    sx={{
+                      height: 18,
+                      fontSize: 10,
+                      bgcolor: "#E8F5E9",
+                      color: "#2E7D32",
+                      "& .MuiChip-label": { px: 1 },
+                    }}
+                  />
+                </>
+              )}
+            </Typography>
+          ))}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+};
 import {
   IconArrowLeft,
   IconX,
@@ -403,87 +522,119 @@ export default function UserRequests({
   return (
     <>
       <Drawer
-        anchor="right"
+        anchor="bottom"
         open={open}
         onClose={onClose}
-        sx={{
-          width: 500,
-          flexShrink: 0,
-          "& .MuiDrawer-paper": {
-            width: 500,
-            padding: 2,
-            backgroundColor: "#f9f9f9",
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            height: "95vh",
+            boxShadow: "none",
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            overflow: "hidden",
           },
         }}
       >
-        {/* Header */}
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <IconButton onClick={onClose}>
-              <IconArrowLeft />
-            </IconButton>
-            <Typography variant="h6" fontWeight={700}>
-              {isAdmin || user?.user_role_id == 1 ? t("Requests") : t("My Requests")}
-            </Typography>
-          </Stack>
-          <IconButton onClick={onClose}>
-            <IconX />
-          </IconButton>
-        </Box>
-
-        {/* Search / filters */}
-        <Box mb={2} display="flex" gap={1} alignItems="center" flexWrap="wrap">
-          <DateRangePickerBox
-            from={startDate}
-            to={endDate}
-            onChange={handleDateRangeChange}
-            buttonMinWidth={200}
-          />
-          <TextField
-            size="small"
-            placeholder={t("Search...")}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <IconSearch size={20} />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ flex: 1, minWidth: 140 }}
-          />
-          <Button
-            variant="contained"
-            onClick={() => {
-              setTempFilters(filters);
-              setFilterOpen(true);
-            }}
-            sx={{ minWidth: "40px", px: 1 }}
-          >
-            <IconFilter width={18} />
-          </Button>
-        </Box>
-
-        {/* Content */}
         <Box
-          flex={1}
-          overflow="auto"
-          px={2}
-          pb={2}
-          sx={{ maxHeight: "calc(95vh - 120px)" }}
+          sx={{
+            position: "relative",
+            p: 3,
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
         >
-          {loading ? (
-            <Box
-              display="flex"
-              justifyContent="center"
-              alignItems="center"
-              minHeight={240}
-            >
-              <CircularProgress size={36} />
+          {/* Header */}
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={2}
+          >
+            <Box display={"flex"} gap={3} alignItems="end">
+              <Box display="flex" alignItems="center" gap={1}>
+                <IconButton onClick={onClose}>
+                  <IconArrowLeft />
+                </IconButton>
+                <Typography variant="h6" fontWeight={600}>
+                  {isAdmin || user?.user_role_id == 1
+                    ? t("Requests")
+                    : t("My Requests")}
+                </Typography>
+              </Box>
+              {/* Filters Row */}
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                alignItems="center"
+                spacing={2}
+              >
+                <TextField
+                  placeholder={t("Search...")}
+                  size="small"
+                  sx={{ width: { xs: "100%", md: 300 } }}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconSearch size={16} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                <Box sx={{ width: { xs: "100%", md: "auto" } }}>
+                  <DateRangePickerBox
+                    from={startDate}
+                    to={endDate}
+                    onChange={handleDateRangeChange}
+                  />
+                </Box>
+
+                <Tooltip title="Filter requests" arrow>
+                  <Button
+                    variant={
+                      Object.values(filters).some(Boolean)
+                        ? "contained"
+                        : "outlined"
+                    }
+                    color="primary"
+                    onClick={() => {
+                      setTempFilters(filters);
+                      setFilterOpen(true);
+                    }}
+                    startIcon={<IconFilter size={18} />}
+                    sx={{
+                      minWidth: 120,
+                      height: 40,
+                      width: { xs: "100%", md: "auto" },
+                    }}
+                  >
+                    Filters
+                  </Button>
+                </Tooltip>
+              </Stack>
             </Box>
-          ) : data.length > 0 ? (
-            <Grid container spacing={2}>
+
+            <IconButton onClick={onClose}>
+              <IconX />
+            </IconButton>
+          </Box>
+
+          {/* Content Area */}
+          <Box sx={{ flex: 1, overflowY: "auto", px: 1, pb: 2 }}>
+            {loading ? (
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                minHeight={240}
+              >
+                <CircularProgress size={36} />
+              </Box>
+            ) : data.length > 0 ? (
+              <Grid container spacing={3} marginTop={2}>
                 {data.map((work, idx) => {
                   const href = (() => {
                     const routeFn = REQUEST_ROUTE_MAP[work.type_name];
@@ -503,7 +654,11 @@ export default function UserRequests({
                       const formattedDate = dateAdded
                         ? format(dateAdded, "yyyy-MM-dd")
                         : undefined;
-                      return routeFn(work.user_id, formattedDate, formattedDate);
+                      return routeFn(
+                        work.user_id,
+                        formattedDate,
+                        formattedDate,
+                      );
                     } else if (work.type_name === "Leave") {
                       const leaveDate = getLeaveDate(work);
                       return routeFn(work.user_id, leaveDate, leaveDate);
@@ -517,151 +672,187 @@ export default function UserRequests({
                   })();
 
                   return (
-                    <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
+                    <Grid size={{ xs: 12, sm: 4 }} key={idx}>
                       <Link
                         href={href}
-                        style={{ textDecoration: "none", color: "inherit", display: "block" }}
+                        style={{
+                          textDecoration: "none",
+                          color: "inherit",
+                          display: "block",
+                          height: "100%",
+                        }}
                         onClick={() => onClose()}
                       >
                         <Box
+                          position="relative"
+                          display="flex"
+                          flexDirection="column"
+                          p={1.5}
+                          pt={2.5}
                           sx={{
-                            border: "1px solid #ddd",
-                            borderRadius: 2,
-                            position: "relative",
-                            p: 2,
-                            bgcolor: "white",
-                            transition: "0.2s",
-                            cursor: "pointer",
-                            "&:hover": {
-                              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                              transform: "translateY(-1px)",
-                            },
+                            width: "100%",
+                            height: "fit-content",
+                            borderRadius: "16px",
+                            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.05)",
+                            border: "1px solid #eaeaea",
+                            background: "#fff",
                           }}
                         >
-                    <Box
-                      justifyContent="space-between"
-                      alignItems="center"
-                      mb={1}
-                      sx={{ top: -8, position: "absolute" }}
-                      flexWrap="wrap"
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          px: 1.2,
-                          py: 0.2,
-                          borderRadius: "12px",
-                          bgcolor: TYPE_COLOR[work.type_name] || "#757575",
-                          color: "#fff",
-                          fontSize: "0.75rem",
-                          fontWeight: 500,
-                          textTransform: "capitalize",
-                        }}
-                      >
-                        {t(work.type_name)}
-                      </Typography>
-                    </Box>
-                    <Box display={"flex"} gap={1} mt={1}>
-                      <Avatar
-                        src={work.user_image}
-                        alt={work.user_name}
-                        sx={{ width: 36, height: 36 }}
-                      />
-                      <Box
-                        display={"flex"}
-                        justifyContent={"space-between"}
-                        width={"100%"}
-                      >
-                        <Box>
-                          <Typography variant="h1" fontSize={"16px !important"}>
-                            {work.user_name}:
-                          </Typography>
-                          <Typography variant="h5">{translateRequestText(work.message)}</Typography>
-                          {work.request_note && (
+                          <Box
+                            position="absolute"
+                            top="-12px"
+                            left="12px"
+                            display="flex"
+                            gap={1}
+                          >
                             <Box
-                              display={"flex"}
-                              alignItems={"center"}
-                              gap={0.3}
+                              bgcolor={TYPE_COLOR[work.type_name] || "#757575"}
+                              px={1.5}
+                              py={0.5}
+                              borderRadius="8px"
+                              boxShadow={`0px 4px 10px ${TYPE_COLOR[work.type_name] || "#757575"}40`}
                             >
                               <Typography
-                                variant="subtitle1"
-                                color="textSecondary"
+                                color="#fff"
+                                fontSize={11}
+                                fontWeight={700}
+                                textTransform="uppercase"
+                                letterSpacing={0.5}
                               >
-                                {t("Note:")}
+                                {t(work.type_name)}
                               </Typography>
-                              <Tooltip title={work.request_note ?? ""}>
+                            </Box>
+                            {work.project_name && (
+                              <Box
+                                bgcolor="#fff"
+                                border="1px solid"
+                                borderColor="primary.main"
+                                px={1.5}
+                                py={0.5}
+                                borderRadius="8px"
+                              >
                                 <Typography
-                                  variant="subtitle1"
-                                  color="textSecondary"
+                                  color="primary.main"
+                                  fontSize={11}
+                                  fontWeight={700}
+                                  textTransform="uppercase"
+                                  letterSpacing={0.5}
+                                >
+                                  {t(work.project_name)}
+                                </Typography>
+                              </Box>
+                            )}
+                          </Box>
+
+                          <Box display="flex" gap={1} mb={0.5}>
+                            <Avatar
+                              src={work.user_image}
+                              alt={work.user_name}
+                              sx={{ width: 36, height: 36 }}
+                            />
+                            <Box flex={1}>
+                              <Box
+                                display="flex"
+                                justifyContent="space-between"
+                                alignItems="flex-start"
+                                gap={1}
+                              >
+                                <Typography
+                                  variant="subtitle2"
+                                  fontWeight={700}
+                                >
+                                  {work.user_name}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
                                   sx={{
-                                    display: "-webkit-box",
-                                    WebkitBoxOrient: "vertical",
-                                    WebkitLineClamp: 1,
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    wordBreak: "break-word",
-                                    maxWidth: "500px",
-                                    borderRadius: 1,
-                                    border: "1px solid transparent",
-                                    transition: "all 0.2s ease",
+                                    px: 1,
+                                    py: 0.25,
+                                    borderRadius: "12px",
+                                    border: "1px solid",
+                                    borderColor:
+                                      STATUS_COLOR[
+                                        work.status_text.toLowerCase()
+                                      ] || "#757575",
+                                    color:
+                                      STATUS_COLOR[
+                                        work.status_text.toLowerCase()
+                                      ] || "#757575",
+                                    fontWeight: 600,
+                                    fontSize: "0.65rem",
+                                    textTransform: "uppercase",
                                   }}
                                 >
-                                  {work.request_note}
+                                  {t(work.status_text)}
                                 </Typography>
-                              </Tooltip>
+                              </Box>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ mt: 0.25, lineHeight: 1.2 }}
+                              >
+                                {translateRequestText(work.message)}
+                              </Typography>
+                            </Box>
+                          </Box>
+
+                          {work.diff_data && work.diff_data.length > 0 && (
+                            <Box ml={5.5}>
+                              <DiffView diffs={work.diff_data} />
                             </Box>
                           )}
-                        </Box>
-                        <Box justifyContent={"flex-end"}>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              px: 1.6,
-                              py: 0.7,
-                              borderRadius: "18px",
-                              border: 2,
-                              borderColor:
-                                STATUS_COLOR[work.status_text.toLowerCase()] ||
-                                "#757575",
-                              color:
-                                STATUS_COLOR[work.status_text.toLowerCase()] ||
-                                "#757575",
-                              fontSize: "0.75rem",
-                              fontWeight: 500,
-                              textTransform: "capitalize",
-                            }}
+                          {work.request_note && (
+                            <Box
+                              bgcolor="#f8fafc"
+                              p={1}
+                              borderRadius={2}
+                              my={0.5}
+                              ml={5.5}
+                              sx={{ border: "1px solid #f1f5f9" }}
+                            >
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={600}
+                                display="block"
+                              >
+                                {t("NOTE")}:
+                              </Typography>
+                              <Typography variant="caption" color="text.primary">
+                                {work.request_note}
+                              </Typography>
+                            </Box>
+                          )}
+                          <Box
+                            mt="auto"
+                            display="flex"
+                            justifyContent="end"
+                            alignItems="center"
                           >
-                            {t(work.status_text)}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-
-                    <Box display={"flex"} justifyContent={"flex-end"} mt={0}>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        fontSize={"12px !important"}
-                      >
-                        {work.date}
-                      </Typography>
-                    </Box>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {work.date}
+                            </Typography>
+                          </Box>
                         </Box>
                       </Link>
                     </Grid>
                   );
                 })}
-            </Grid>
-          ) : (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              textAlign="center"
-              mt={4}
-            >
-              {t("No requests found.")}
-            </Typography>
-          )}
+              </Grid>
+            ) : (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                textAlign="center"
+                mt={4}
+              >
+                {t("No requests found.")}
+              </Typography>
+            )}
+          </Box>
         </Box>
       </Drawer>
 
@@ -685,7 +876,7 @@ export default function UserRequests({
           <Stack spacing={2} mt={1}>
             <Autocomplete
               options={userOptions}
-              getOptionLabel={(option) => option.name ? t(option.name) : ""}
+              getOptionLabel={(option) => (option.name ? t(option.name) : "")}
               getOptionKey={(option) => String(option.id)}
               isOptionEqualToValue={(option, value) =>
                 String(option.id) === String(value?.id)
@@ -707,7 +898,7 @@ export default function UserRequests({
             />
             <Autocomplete
               options={statusOptions}
-              getOptionLabel={(option) => option.name ? t(option.name) : ""}
+              getOptionLabel={(option) => (option.name ? t(option.name) : "")}
               getOptionKey={(option) => String(option.id)}
               isOptionEqualToValue={(option, value) =>
                 String(option.id) === String(value?.id)
@@ -729,7 +920,7 @@ export default function UserRequests({
             />
             <Autocomplete
               options={typeOptions}
-              getOptionLabel={(option) => option.name ? t(option.name) : ""}
+              getOptionLabel={(option) => (option.name ? t(option.name) : "")}
               getOptionKey={(option) => String(option.id)}
               isOptionEqualToValue={(option, value) =>
                 String(option.id) === String(value?.id)
