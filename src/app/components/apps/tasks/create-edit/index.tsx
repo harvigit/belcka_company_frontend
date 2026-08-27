@@ -100,14 +100,17 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
   const getShiftValidationError = (value: TaskFormData["shift_id"]) =>
     isRequiredEmpty(value) ? "Shift is required" : "";
 
-  const getCategoryValidationError = (value: TaskFormData["category_id"]) => {
-    if (isCategoryEmpty(value)) return "Category is required";
+    const getCategoryValidationError = (value: TaskFormData["category_id"]) => {
+        if (isCategoryEmpty(value)) return "Category is required";
 
-    const exists = categories.some(
-      (category) => String(category.id) === String(value),
-    );
-    return exists ? "" : "Category not exists!";
-  };
+        const isExistingId = categories.some(
+            (category) => String(category.id) === String(value),
+        );
+        const isFreeTypedName =
+            typeof value === "string" && value.trim() !== "" && isNaN(Number(value));
+
+        return isExistingId || isFreeTypedName ? "" : "Category not exists!";
+    };
 
   const fetchTask = async () => {
     if (!taskId || fetching) return;
