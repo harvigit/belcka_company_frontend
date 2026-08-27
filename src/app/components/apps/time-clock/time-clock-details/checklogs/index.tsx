@@ -33,6 +33,11 @@ interface ChecklogItem {
     total_hours?: string | number | null;
     checkin_time?: string;
     checkout_time?: string;
+    status?: string | number | null;
+    timesheet_status?: string | number | null;
+    can_edit?: boolean;
+    is_locked?: boolean;
+    is_paid?: boolean;
 }
 
 interface FilterOption {
@@ -133,6 +138,15 @@ export default function Checklogs({worklogId, onClose}: ChecklogsPageProps) {
     const handleWorkClick = (checklogId: number) => {
         setSelectedChecklogId(checklogId);
         setOpenSidebar(true);
+    };
+
+    const canEditChecklog = (checklog: ChecklogItem) => {
+        if (checklog.can_edit !== undefined) return Boolean(checklog.can_edit);
+
+        return ![
+            checklog.status,
+            checklog.timesheet_status,
+        ].some((status) => ['6', '9'].includes(String(status ?? '')));
     };
 
     const handleChecklogDelete = async () => {
@@ -417,17 +431,19 @@ export default function Checklogs({worklogId, onClose}: ChecklogsPageProps) {
                                         )}
                                     </Box>
 
-                                    <IconButton
-                                        color="error"
-                                        aria-label="Delete checklog"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setOpenDialog(true);
-                                            setSelectedId(record.checklog_id);
-                                        }}
-                                    >
-                                        <IconTrash width={18} />
-                                    </IconButton>
+                                    {canEditChecklog(record) && (
+                                        <IconButton
+                                            color="error"
+                                            aria-label="Delete checklog"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenDialog(true);
+                                                setSelectedId(record.checklog_id);
+                                            }}
+                                        >
+                                            <IconTrash width={18} />
+                                        </IconButton>
+                                    )}
                                 </Box>
                             </Stack>
                         </Box>

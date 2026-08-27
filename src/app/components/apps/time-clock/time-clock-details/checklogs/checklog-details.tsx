@@ -76,6 +76,10 @@ interface ChecklogTask {
     date_added?: string | null;
     status?: string | number | null;
     status_text?: string | null;
+    timesheet_status?: string | number | null;
+    can_edit?: boolean;
+    is_locked?: boolean;
+    is_paid?: boolean;
     progress?: string | number | null;
     amount_per_unit?: string | number | null;
     unit_name?: string | null;
@@ -126,6 +130,23 @@ const checklogStatusText: Record<string, string> = {
     '3': 'Completed',
     '4': 'Approved',
     '5': 'Rejected',
+    '6': 'Locked',
+    '7': 'Unlocked',
+    '9': 'Paid',
+};
+
+const isLockedOrPaidStatus = (status?: string | number | null) => ['6', '9'].includes(String(status ?? ''));
+
+const canEditChecklog = (checklog?: ChecklogTask | null, data?: any) => {
+    const canEdit = checklog?.can_edit ?? data?.can_edit;
+    if (canEdit !== undefined) return Boolean(canEdit);
+
+    return ![
+        checklog?.status,
+        checklog?.timesheet_status,
+        data?.status,
+        data?.timesheet_status,
+    ].some(isLockedOrPaidStatus);
 };
 
 const getStatusText = (checklog: ChecklogTask, data: any) => {
@@ -136,7 +157,7 @@ const getStatusText = (checklog: ChecklogTask, data: any) => {
 };
 
 const shouldShowStatus = (checklog: ChecklogTask, data: any) => {
-    const status = String(checklog.status ?? data?.status ?? '');
+    const status = String(checklog.status ?? data?.status ?? checklog.timesheet_status ?? data?.timesheet_status ?? '');
 
     return ['6', '7', '9'].includes(status);
 };
@@ -237,6 +258,8 @@ export default function ChecklogDetailPage({checklogId, open, onClose, onUpdated
 
     const handleOpenEdit = () => {
         const detail = checklogTasks[0] ?? data;
+        if (!canEditChecklog(detail, data)) return;
+
         setEditForm({
             address_name: detail?.address_name || detail?.address || '',
             trade_name: detail?.trade_name || '',
@@ -259,6 +282,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose, onUpdated
 
     const handleSaveEdit = async () => {
         if (!checklogId) return;
+        if (!canEditChecklog(checklogTasks[0], data)) return setEditError('Cannot modify locked or paid checklog record.');
         if (editForm.amount_per_unit === '' || Number(editForm.amount_per_unit) < 0) return setEditError('Valid amount per unit is required.');
         if (editForm.work_complete === '' || Number(editForm.work_complete) < 0) return setEditError('Valid work done is required.');
 
@@ -540,7 +564,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose, onUpdated
                             Checklog Details
                         </Typography>
                     </Box>
-                    {checklogTasks.length > 0 && (
+                    {checklogTasks.length > 0 && canEditChecklog(checklogTasks[0], data) && (
                         <Button
                             variant="contained"
                             size="small"
