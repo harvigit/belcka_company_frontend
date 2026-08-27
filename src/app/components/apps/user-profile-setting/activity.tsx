@@ -306,15 +306,15 @@ const ActorRow: React.FC<{ actor: Actor; role: ActorRole }> = ({ actor, role }) 
 const getDiffs = (oldData: any, newData: any, moduleName: string) => {
     const diffs: { key: string; old: any; new: any }[] = [];
     if (!newData) return diffs;
-    if (!moduleName || !moduleName.toLowerCase().includes('billing')) return diffs;
+    if (!moduleName) return diffs;
 
-    const IGNORED_KEYS = ['id', 'created_at', 'updated_at', 'deleted_at', 'user_id', 'company_id'];
+    const IGNORED_KEYS = ['id', 'created_at', 'updated_at', 'deleted_at', 'user_id', 'company_id','action','expired_at'];
 
     try {
         let oldObj = typeof oldData === 'string' ? JSON.parse(oldData) : oldData || {};
         let newObj = typeof newData === 'string' ? JSON.parse(newData) : newData || {};
 
-        const safeParse = (val: any) => {
+        const safeParse: any = (val: any) => {
             if (typeof val === 'string') {
                 if (val === '[object Object]') return {};
                 try { return JSON.parse(val); } catch (e) { return val; }
@@ -328,6 +328,16 @@ const getDiffs = (oldData: any, newData: any, moduleName: string) => {
         } else if (newObj.billin_info) {
             newObj = safeParse(newObj.billin_info);
             oldObj = safeParse(oldObj.billin_info) || safeParse(oldObj) || {};
+        } else if (newObj.user) {
+            newObj = safeParse(newObj.user);
+            oldObj = safeParse(oldObj.user) || safeParse(oldObj) || {};
+        } else if (newObj.rate) {
+            newObj = safeParse(newObj.rate);
+            oldObj = safeParse(oldObj.rate) || safeParse(oldObj) || {};
+        }
+         else if (newObj.teams) {
+            newObj = safeParse(newObj.team);
+            oldObj = safeParse(oldObj.team) || safeParse(oldObj) || {};
         }
 
         const isDiffObject = Object.values(newObj).some((val: any) => val && typeof val === 'object' && ('old' in val || 'new' in val));

@@ -34,6 +34,7 @@ import { User } from "next-auth";
 import api from "@/utils/axios";
 import { format } from "date-fns";
 import DateRangePickerBox from "../../common/DateRangePickerBox";
+import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
 
 interface BookkeeperProps {
   open: boolean;
@@ -51,12 +52,11 @@ const ACTIVITY_FILTER_OPTIONS = [
   { value: "pricework", label: "Pricework", requestTypes: [121] },
   { value: "adjustment", label: "Adjustment", requestTypes: [126] },
   { value: "billing_info", label: "Billing info", requestTypes: [103] },
+  { value: "rate", label: "Rate", requestTypes: [105] },
+  { value: "user", label: "Personal Info", requestTypes: [104] },
 ] as const;
 
-const getDiffs = (oldData: any, newData: any) => {
-  const diffs: { key: string; old: any; new: any }[] = [];
-  if (!newData) return diffs;
-
+const DiffView = ({ diffs }: { diffs: any[] }) => {
   const IGNORED_KEYS = [
     "id",
     "created_at",
@@ -64,66 +64,17 @@ const getDiffs = (oldData: any, newData: any) => {
     "deleted_at",
     "user_id",
     "company_id",
+    "expired_at",
   ];
-
-  try {
-    let oldObj =
-      typeof oldData === "string" ? JSON.parse(oldData) : oldData || {};
-    let newObj =
-      typeof newData === "string" ? JSON.parse(newData) : newData || {};
-
-    const safeParse = (val: any) => {
-      if (typeof val === "string") {
-        if (val === "[object Object]") return {};
-        try {
-          return JSON.parse(val);
-        } catch (e) {
-          return val;
-        }
-      }
-      return val;
-    };
-
-    if (newObj.billing_info) {
-      newObj = safeParse(newObj.billing_info);
-      oldObj = safeParse(oldObj.billing_info) || safeParse(oldObj) || {};
-    } else if (newObj.billin_info) {
-      newObj = safeParse(newObj.billin_info);
-      oldObj = safeParse(oldObj.billin_info) || safeParse(oldObj) || {};
-    }
-
-    const isDiffObject = Object.values(newObj).some(
-      (val: any) =>
-        val && typeof val === "object" && ("old" in val || "new" in val),
-    );
-
-    if (isDiffObject) {
-      for (const [key, val] of Object.entries(newObj)) {
-        if (IGNORED_KEYS.includes(key)) continue;
-        const v = val as any;
-        if (v.old !== v.new) {
-          diffs.push({ key, old: v.old, new: v.new });
-        }
-      }
-      return diffs;
-    }
-
-    for (const [key, val] of Object.entries(newObj)) {
-      if (IGNORED_KEYS.includes(key)) continue;
-      if (oldObj[key] !== val) {
-        diffs.push({ key, old: oldObj[key], new: val });
-      }
-    }
-  } catch (e) {
-    // ignore parse errors
-  }
-  return diffs;
-};
-
-const BillingDiffView = ({ diffs }: { diffs: any[] }) => {
+  const filteredDiffs = diffs.filter(
+    (diff) => !IGNORED_KEYS.includes(diff.key),
+  );
   const [open, setOpen] = useState(false);
+
+  if (!filteredDiffs?.length) return null;
+
   return (
-    <Box width={"80%"}>
+    <Box width="100%">
       <Box
         display="flex"
         alignItems="center"
@@ -142,7 +93,7 @@ const BillingDiffView = ({ diffs }: { diffs: any[] }) => {
           borderRadius={2}
           border="1px solid #e2e8f0"
         >
-          {diffs.map((diff: any, i: number) => (
+          {filteredDiffs.map((diff: any, i: number) => (
             <Typography
               key={i}
               fontSize={11}
@@ -231,7 +182,7 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
   const [draftSelectedTypes, setDraftSelectedTypes] = useState<string[]>([]);
   const [filterStartDate, setFilterStartDate] = useState<Date | null>(null);
   const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
-  const limit = 20;
+  const limit = 50;
   const session = useSession();
   const user = session.data?.user as User & {
     company_id?: number | null;
@@ -368,268 +319,293 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
   return (
     <Box>
       <Drawer
-        anchor="right"
+        anchor="bottom"
         open={open}
         onClose={onClose}
         PaperProps={{
           sx: {
-            width: 500,
-            maxWidth: "100%",
-            "& .MuiDrawer-paper": {
-              width: 500,
-              padding: 2,
-              backgroundColor: "#f9f9f9",
-            },
+            borderRadius: 0,
+            height: "95vh",
+            boxShadow: "none",
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            overflow: "hidden",
           },
         }}
       >
         <Box
           sx={{
             position: "relative",
-            p: 2,
+            p: 3,
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            bgcolor: "#f9fafb",
           }}
         >
-          <IconButton
-            onClick={onClose}
-            sx={{
-              position: "absolute",
-              right: 0,
-              top: 8,
-            }}
+          {/* Header */}
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            mb={2}
           >
-            <IconX size={18} />
-          </IconButton>
-
-          <Grid container spacing={2} display="block">
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-            >
-              <Box display="flex" alignItems="center">
+            <Box display={"flex"} gap={3} alignItems="end">
+              <Box display="flex" alignItems="center" gap={1}>
                 <IconButton onClick={onClose}>
                   <IconArrowLeft />
                 </IconButton>
-
-                <Typography variant="h6" fontWeight={700}>
+                <Typography variant="h6" fontWeight={600}>
                   Bookkeeper Activities
                 </Typography>
               </Box>
-            </Box>
+              {/* Filters Row */}
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                alignItems="center"
+                spacing={2}
+              >
+                <TextField
+                  placeholder="Search..."
+                  size="small"
+                  sx={{ width: { xs: "100%", md: 300 } }}
+                  value={activitySearch}
+                  onChange={(e) => setActivitySearch(e.target.value)}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconSearch size={16} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
 
-            <Stack direction="row" alignItems="center" spacing={1} mt={2}>
-              <TextField
-                placeholder="Search..."
-                size="small"
-                fullWidth
-                value={activitySearch}
-                onChange={(e) => setActivitySearch(e.target.value)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconSearch size={16} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Stack>
+                <DateRangePickerBox
+                  from={filterStartDate}
+                  to={filterEndDate}
+                  onChange={({ from, to }) => {
+                    setFilterStartDate(from);
+                    setFilterEndDate(to);
+                  }}
+                />
 
-            <Stack direction="row" alignItems="center" spacing={2} mt={2}>
-              <DateRangePickerBox
-                from={filterStartDate}
-                to={filterEndDate}
-                onChange={({ from, to }) => {
-                  setFilterStartDate(from);
-                  setFilterEndDate(to);
-                }}
-                buttonMinWidth={400}
-              />
-
-              <Tooltip title="Filter activities" arrow>
-                <IconButton
-                  color={selectedTypes.length > 0 ? "primary" : "default"}
-                  onClick={handleFilterOpen}
-                >
-                  <IconFilter size={20} />
-                </IconButton>
-              </Tooltip>
-            </Stack>
-
-            {selectedTypes.length > 0 && (
-              <Stack direction="row" flexWrap="wrap" gap={1} mt={1}>
-                {selectedTypes.map((type) => {
-                  const option = ACTIVITY_FILTER_OPTIONS.find(
-                    (item) => item.value === type,
-                  );
-                  if (!option) return null;
-
-                  return (
-                    <Chip
-                      key={type}
-                      label={option.label}
-                      size="small"
-                      onDelete={() => handleAppliedTypeDelete(type)}
-                    />
-                  );
-                })}
+                <Tooltip title="Filter activities" arrow>
+                  <Button
+                    variant={
+                      selectedTypes.length > 0 ? "contained" : "outlined"
+                    }
+                    color={selectedTypes.length > 0 ? "primary" : "primary"}
+                    onClick={handleFilterOpen}
+                    startIcon={<IconFilter size={18} />}
+                    sx={{ minWidth: 120, height: 40 }}
+                  >
+                    Filters{" "}
+                    {selectedTypes.length > 0 && `(${selectedTypes.length})`}
+                  </Button>
+                </Tooltip>
               </Stack>
-            )}
+            </Box>
+            <IconButton onClick={onClose}>
+              <IconX size={20} />
+            </IconButton>
+          </Box>
 
+          {selectedTypes.length > 0 && (
+            <Stack direction="row" flexWrap="wrap" gap={1} mb={2}>
+              {selectedTypes.map((type) => {
+                const option = ACTIVITY_FILTER_OPTIONS.find(
+                  (item) => item.value === type,
+                );
+                if (!option) return null;
+
+                return (
+                  <Chip
+                    key={type}
+                    label={option.label}
+                    size="small"
+                    onDelete={() => handleAppliedTypeDelete(type)}
+                  />
+                );
+              })}
+            </Stack>
+          )}
+
+          {/* Content Area */}
+          <Box sx={{ flex: 1, overflowY: "auto", px: 1, pb: 2 }}>
             {loading && history.length === 0 ? (
               <Box display="flex" justifyContent="center" mt={4}>
                 <CircularProgress />
               </Box>
             ) : history.length > 0 ? (
-              <Box mt={1}>
-                {history.map((addr, index) => {
-                  let color = "";
+              <>
+                <Grid container spacing={3} marginTop={2}>
+                  {history.map((addr, index) => {
+                    let color = "";
+                    switch (addr.request_type) {
+                      case 126:
+                        color = "#0066ff";
+                        break;
+                      case 111:
+                        color = "#A600FF";
+                        break;
+                      case 102:
+                        color = "#FF7F00";
+                        break;
+                      case 121:
+                        color = "#32A852";
+                        break;
+                      case 110:
+                        color = "#949090";
+                        break;
+                      case 103:
+                        color = "#4CBC6D";
+                        break;
+                      case 105:
+                        color = "#f5c21bf8";
+                        break;
+                      case 104:
+                        color = "#0066ff";
+                        break;
+                      default:
+                        color = "#ff3737";
+                    }
 
-                  switch (addr.request_type) {
-                    case 126:
-                      color = "#0066ff";
-                      break;
-
-                    case 111:
-                      color = "#A600FF";
-                      break;
-
-                    case 102:
-                      color = "#FF7F00";
-                      break;
-
-                    case 121:
-                      color = "#32A852";
-                      break;
-
-                    case 110:
-                      color = "#949090";
-                      break;
-
-                    case 103:
-                      color = "#4CBC6D";
-                      break;
-
-                    default:
-                      color = "#ff3737";
-                  }
-
-                  return (
-                    <Box
-                      key={addr.id ?? index}
-                      mt={2}
-                      p={2}
-                      position="relative"
-                      display="flex"
-                      alignItems="center"
-                      sx={{
-                        width: "100%",
-                        minHeight: "100px",
-                        borderRadius: "25px",
-                        boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
-                        border: "1px solid rgb(240 240 240)",
-                        background: "#fff",
-                      }}
-                    >
-                      <Box
-                        position="absolute"
-                        top="-10px"
-                        left="15px"
-                        bgcolor={color}
-                        px={1.5}
-                        borderRadius="10px"
-                      >
-                        <Typography color="#fff" fontSize={12} fontWeight={700}>
-                          {addr.type_name}
-                        </Typography>
-                      </Box>
-
-                      <Box width="100%" textAlign="start">
-                        <Typography fontSize="14px" className="multi-ellipsis">
-                          <b>{addr.user_name}:</b>{" "}
-                          <Tooltip
-                            title={
-                              addr.request_type === 103 &&
-                              addr.message?.includes(
-                                "changed from [object Object]",
-                              )
-                                ? "Requested to update billing information"
-                                : addr.message
-                            }
-                            arrow
-                          >
-                            <span>
-                              {addr.request_type === 103 &&
-                              addr.message?.includes(
-                                "changed from [object Object]",
-                              )
-                                ? "Requested to update billing information"
-                                : addr.message}
-                            </span>
-                          </Tooltip>
-                        </Typography>
-
-                        {addr.request_type === 103 &&
-                        getDiffs(addr.old_data, addr.new_data).length > 0 ? (
-                          <BillingDiffView
-                            diffs={getDiffs(addr.old_data, addr.new_data)}
-                          />
-                        ) : (
-                          <Typography></Typography>
-                        )}
+                    return (
+                      <Grid size={{ xs: 12, sm: 6 }} key={addr.id ?? index}>
                         <Box
-                          display={"flex"}
-                          alignItems={"center"}
-                          justifyContent={"end"}
+                          position="relative"
+                          display="flex"
+                          flexDirection="column"
+                          p={2.5}
+                          pt={3.5}
+                          sx={{
+                            width: "100%",
+                            height: "fit-content",
+                            borderRadius: "16px",
+                            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.05)",
+                            border: "1px solid #eaeaea",
+                            background: "#fff",
+                            transition: "transform 0.2s ease-in-out",
+                          }}
                         >
-                          <Typography
-                            fontSize="12px"
-                            textAlign="end"
-                            color="gray"
+                          <Box
+                            position="absolute"
+                            top="-12px"
+                            left="20px"
+                            bgcolor={color}
+                            px={1.5}
+                            py={0.5}
+                            borderRadius="8px"
+                            boxShadow={`0px 4px 10px ${color}40`}
                           >
-                            {addr.date}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                  );
-                })}
+                            <Typography
+                              color="#fff"
+                              fontSize={11}
+                              fontWeight={700}
+                              textTransform="uppercase"
+                              letterSpacing={0.5}
+                            >
+                              {addr.type_name}
+                            </Typography>
+                          </Box>
 
+                          <Box display="flex" flexDirection="column" flex={1}>
+                            <Typography
+                              fontSize="14px"
+                              fontWeight={600}
+                              sx={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                            >
+                              {addr.user_name}:{" "}
+                              <Tooltip
+                                title={
+                                  addr.request_type === 103 &&
+                                  addr.message?.includes(
+                                    "changed from [object Object]",
+                                  )
+                                    ? "Requested to update billing information"
+                                    : addr.message
+                                }
+                                arrow
+                              >
+                                <Typography
+                                  component="span"
+                                  fontSize="14px"
+                                  fontWeight={400}
+                                  color="text.secondary"
+                                >
+                                  {addr.request_type === 103 &&
+                                  addr.message?.includes(
+                                    "changed from [object Object]",
+                                  )
+                                    ? "Requested to update billing information"
+                                    : addr.message}
+                                </Typography>
+                              </Tooltip>
+                            </Typography>
+
+                            {addr.diff_data && addr.diff_data.length > 0 && (
+                              <Box flex={1}>
+                                <DiffView diffs={addr.diff_data} />
+                              </Box>
+                            )}
+
+                            <Box
+                              mt="auto"
+                              display="flex"
+                              justifyContent="flex-end"
+                            >
+                              <Typography
+                                fontSize="12px"
+                                color="text.secondary"
+                                fontWeight={500}
+                              >
+                                {addr.date}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Box>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
                 {hasMore && (
-                  <Box display="flex" justifyContent="center" my={2}>
+                  <Box display="flex" justifyContent="center" my={4}>
                     <Button
                       variant="outlined"
                       disabled={loading}
                       onClick={handleSeeMore}
                       startIcon={loading && <CircularProgress size={16} />}
+                      sx={{ borderRadius: 2, px: 4 }}
                     >
-                      See More
+                      Load More
                     </Button>
                   </Box>
                 )}
-              </Box>
+              </>
             ) : (
-              <Box mt={3} ml={2}>
-                <Typography variant="h5">
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "100%",
+                  opacity: 0.5,
+                }}
+              >
+                <Typography variant="h6" color="text.secondary">
                   {selectedTypes.length > 0
                     ? "No activities found for selected filter."
                     : "No activities are found for bookkeeper!!"}
                 </Typography>
-
-                {hasMore && (
-                  <Box display="flex" justifyContent="center" my={2}>
-                    <Button
-                      variant="outlined"
-                      disabled={loading}
-                      onClick={handleSeeMore}
-                      startIcon={loading && <CircularProgress size={16} />}
-                    >
-                      See More
-                    </Button>
-                  </Box>
-                )}
               </Box>
             )}
-          </Grid>
+          </Box>
         </Box>
       </Drawer>
 
@@ -666,7 +642,7 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
               <FormControlLabel
                 key={option.value}
                 control={
-                  <Checkbox
+                  <CustomCheckbox
                     checked={draftSelectedTypes.includes(option.value)}
                     onChange={() => handleDraftTypeToggle(option.value)}
                   />
@@ -686,7 +662,11 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
             <Button
               size="small"
               disabled={draftSelectedTypes.length === 0}
-              onClick={() => setDraftSelectedTypes([])}
+              onClick={() => {
+                setSelectedTypes([]);
+                setDraftSelectedTypes([]);
+                setFilterOpen(false);
+              }}
             >
               Clear
             </Button>
