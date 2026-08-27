@@ -43,31 +43,58 @@ type CellState = {
 type PricingRow = {
     id: string;
     user_id: string;
-    original_user_id?: string;
+    user_name?: string;
+    original_user_id?: string | null;
     trade_id: string;
+    trade_name?: string;
     category_id: string;
+    category_name?: string;
     sub_category_id: string;
+    sub_category_name?: string;
     task_id: string;
     original_task_id?: string;
     base_active: boolean;
+    original_base_active: boolean;
     base_price: string;
+    original_base_price: string;
     project_prices: Record<string, CellState>;
 };
 
 type DeletedPricingRow = {
     task_id: number;
-    user_id: number;
+    user_id: number | null;
 };
 
 const TASKS_PAGE_SIZE = 500;
 const DEFAULT_PROJECT_COLUMNS_PER_PAGE = 8;
 const PROJECT_COLUMNS_PER_PAGE_OPTIONS = [8, 12, 20];
 
-const getTaskBasePrice = (task: any) =>
-    task?.base_cost != null && task.base_cost !== '' ? String(task.base_cost) : '0.00';
+const getTaskBasePrice = (_task: any) => '0.00';
+
+const getSavedPriceBasePrice = (priceItem: any) =>
+    priceItem?.base_cost != null && priceItem.base_cost !== '' ? String(priceItem.base_cost) : '0.00';
+
+const getSavedPriceBaseActive = (priceItem: any) =>
+    priceItem?.base_active === true ||
+    priceItem?.base_active === 1 ||
+    String(priceItem?.base_active || '').trim().toLowerCase() === 'true';
+
+const getSavedPriceProjectActive = (priceItem: any) =>
+    priceItem?.project_active === true ||
+    priceItem?.project_active === 1 ||
+    String(priceItem?.project_active || '').trim().toLowerCase() === 'true';
 
 const getTaskTradeId = (task: any) =>
     task?.trade_id != null && task.trade_id !== '' ? String(task.trade_id) : '';
+
+const getSavedPriceTradeId = (priceItem: any) =>
+    priceItem?.trade_id != null && priceItem.trade_id !== '' ? String(priceItem.trade_id) : '';
+
+const getSavedPriceUserName = (priceItem: any) =>
+    priceItem?.user_name && priceItem.user_name !== '-' ? String(priceItem.user_name) : '';
+
+const getSavedPriceTradeName = (priceItem: any) =>
+    priceItem?.trade_name && priceItem.trade_name !== '-' ? String(priceItem.trade_name) : '';
 
 const getUserDisplayName = (user: any) =>
     user?.name ||
@@ -91,22 +118,40 @@ const getCategoryId = (task: any) =>
 const getSubCategoryId = (task: any) =>
     task?.sub_category_id != null && task.sub_category_id !== '' ? String(task.sub_category_id) : '';
 
+const getSavedPriceCategoryId = (priceItem: any) =>
+    priceItem?.category_id != null && priceItem.category_id !== '' ? String(priceItem.category_id) : '';
+
+const getSavedPriceSubCategoryId = (priceItem: any) =>
+    priceItem?.sub_category_id != null && priceItem.sub_category_id !== '' ? String(priceItem.sub_category_id) : '';
+
+const getSavedPriceCategoryName = (priceItem: any) =>
+    priceItem?.category_name && priceItem.category_name !== '-' ? String(priceItem.category_name) : '';
+
+const getSavedPriceSubCategoryName = (priceItem: any) =>
+    priceItem?.sub_category_name && priceItem.sub_category_name !== '-' ? String(priceItem.sub_category_name) : '';
+
 const createRow = (): PricingRow => ({
     id: `row-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     user_id: '',
-    original_user_id: '',
+    user_name: '',
+    original_user_id: undefined,
     trade_id: '',
+    trade_name: '',
     category_id: '',
+    category_name: '',
     sub_category_id: '',
+    sub_category_name: '',
     task_id: '',
     original_task_id: '',
     base_active: false,
+    original_base_active: false,
     base_price: '0.00',
+    original_base_price: '0.00',
     project_prices: {},
 });
 
 const isCompletePricingRow = (row: PricingRow) =>
-    Boolean(row.user_id && row.trade_id && row.category_id && row.task_id);
+    Boolean(row.trade_id && row.category_id && row.task_id);
 
 const isEmptyPricingRow = (row: PricingRow) =>
     !row.user_id &&
@@ -129,27 +174,34 @@ const buildRowsFromSavedPrices = (savedPrices: any[], priceworkTasks: any[]): Pr
         const userId = priceItem?.user_id != null ? String(priceItem.user_id) : '';
         const projectId = priceItem?.project_id != null ? String(priceItem.project_id) : '';
 
-        if (!taskId || !userId || !projectId) return;
+        if (!projectId) return;
 
+        const rowKey = `${userId || 'unassigned'}-${taskId || priceItem.id || projectId}`;
         const task = taskMap[taskId];
-        const rowKey = `${userId}-${taskId}`;
-
-        if (!task) return;
+        const tradeId = getTaskTradeId(task) || getSavedPriceTradeId(priceItem);
+        const categoryId = getCategoryId(task) || getSavedPriceCategoryId(priceItem);
 
         if (!groupedRows.has(rowKey)) {
-            const basePrice = getTaskBasePrice(task);
+            const basePrice = getSavedPriceBasePrice(priceItem) || getTaskBasePrice(task);
+            const baseActive = getSavedPriceBaseActive(priceItem);
 
             groupedRows.set(rowKey, {
                 id: `saved-${rowKey}`,
                 user_id: userId,
-                original_user_id: userId,
-                trade_id: getTaskTradeId(task),
-                category_id: getCategoryId(task),
-                sub_category_id: getSubCategoryId(task),
+                user_name: getSavedPriceUserName(priceItem) || 'All users',
+                original_user_id: userId || null,
+                trade_id: tradeId,
+                trade_name: task?.trade_name || getSavedPriceTradeName(priceItem),
+                category_id: categoryId,
+                category_name: task?.category_name || getSavedPriceCategoryName(priceItem),
+                sub_category_id: getSubCategoryId(task) || getSavedPriceSubCategoryId(priceItem),
+                sub_category_name: task?.sub_category_name || getSavedPriceSubCategoryName(priceItem),
                 task_id: taskId,
                 original_task_id: taskId,
-                base_active: Number(basePrice) > 0,
+                base_active: baseActive,
+                original_base_active: baseActive,
                 base_price: basePrice,
+                original_base_price: basePrice,
                 project_prices: {},
             });
         }
@@ -158,7 +210,7 @@ const buildRowsFromSavedPrices = (savedPrices: any[], priceworkTasks: any[]): Pr
         if (!row) return;
 
         row.project_prices[projectId] = {
-            is_active: true,
+            is_active: getSavedPriceProjectActive(priceItem),
             price: priceItem?.price != null ? String(priceItem.price) : '0.00',
         };
     });
@@ -359,14 +411,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             .filter((task) => getTaskTradeId(task) === tradeId && getCategoryId(task) === categoryId)
             .forEach((task) => {
                 const subCategoryId = getSubCategoryId(task);
-                if (!subCategoryId) {
-                    subCategoryMap.set(`task-${task.id}`, {
-                        id: '',
-                        name: '-',
-                        task_id: String(task.id),
-                    });
-                    return;
-                }
+                if (!subCategoryId) return;
 
                 if (subCategoryMap.has(subCategoryId)) return;
                 subCategoryMap.set(subCategoryId, {
@@ -390,8 +435,11 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     const handleTradeChange = (row: PricingRow, tradeId: string) => {
         updateRow(row.id, {
             trade_id: tradeId,
+            trade_name: trades.find((trade) => String(trade.id) === tradeId)?.name || '',
             category_id: '',
+            category_name: '',
             sub_category_id: '',
+            sub_category_name: '',
             task_id: '',
             base_active: false,
             base_price: '0.00',
@@ -404,7 +452,11 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         handleTradeChange(row, selectedUserTradeId ? String(selectedUserTradeId) : '');
         updateRow(row.id, {
             user_id: userId,
+            user_name: users.find((item) => String(item.id) === userId)?.name || '',
             trade_id: selectedUserTradeId ? String(selectedUserTradeId) : '',
+            trade_name: selectedUserTradeId
+                ? trades.find((trade) => String(trade.id) === String(selectedUserTradeId))?.name || ''
+                : '',
         });
     };
 
@@ -413,10 +465,14 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         const isNewRow = !row.original_task_id;
         updateRow(row.id, {
             category_id: categoryId,
+            category_name: matchedTask?.category_name || '',
             sub_category_id: '',
+            sub_category_name: '',
             task_id: matchedTask ? String(matchedTask.id) : '',
             base_active: isNewRow ? false : matchedTask ? Number(getTaskBasePrice(matchedTask)) > 0 : false,
+            original_base_active: isNewRow ? false : row.original_base_active,
             base_price: isNewRow ? '0.00' : matchedTask ? getTaskBasePrice(matchedTask) : '0.00',
+            original_base_price: isNewRow ? '0.00' : row.original_base_price,
             project_prices: {},
         });
     };
@@ -426,9 +482,12 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         const isNewRow = !row.original_task_id;
         updateRow(row.id, {
             sub_category_id: subCategoryId,
+            sub_category_name: matchedTask?.sub_category_name || '',
             task_id: matchedTask ? String(matchedTask.id) : '',
             base_active: isNewRow ? false : matchedTask ? Number(getTaskBasePrice(matchedTask)) > 0 : false,
+            original_base_active: isNewRow ? false : row.original_base_active,
             base_price: isNewRow ? '0.00' : matchedTask ? getTaskBasePrice(matchedTask) : '0.00',
+            original_base_price: isNewRow ? '0.00' : row.original_base_price,
             project_prices: {},
         });
     };
@@ -454,11 +513,11 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     const removeRow = (rowId: string) => {
         const rowToRemove = rows.find((row) => row.id === rowId);
 
-        if (rowToRemove?.original_task_id && rowToRemove.original_user_id) {
+        if (rowToRemove?.original_task_id) {
             setPendingDeletedRows((prev) => {
                 const deletedRow = {
                     task_id: Number(rowToRemove.original_task_id),
-                    user_id: Number(rowToRemove.original_user_id),
+                    user_id: rowToRemove.original_user_id ? Number(rowToRemove.original_user_id) : null,
                 };
                 const alreadyQueued = prev.some((row) =>
                     row.task_id === deletedRow.task_id &&
@@ -535,7 +594,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             .filter((row) => !isCompletePricingRow(row));
 
         if (incompleteRows.length > 0) {
-            toast.error('Select user, trade, category, and subcategory before saving price settings.');
+            toast.error('Select trade, category, and subcategory before saving price settings.');
             return;
         }
 
@@ -543,14 +602,42 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             project_id: number;
             task_id: number;
             user_id: number | null;
+            trade_id: number | null;
+            category_id: number | null;
+            sub_category_id: number | null;
+            base_cost: number;
+            base_active: boolean;
+            project_active: boolean;
             price: number;
             is_active: boolean;
         }> = [];
+        const basePriceItems = Array.from(
+            rowsToSave.reduce<Map<string, {task_id: number; user_id: number | null; base_cost: number; base_active: boolean}>>((map, row) => {
+                if (!row.task_id) return map;
+
+                const originalPrice = row.original_base_price || getTaskBasePrice(taskMap[row.task_id]);
+                const currentPrice = row.base_active ? row.base_price : '0.00';
+
+                if (
+                    row.base_active === row.original_base_active &&
+                    Number(currentPrice || 0) === Number(originalPrice || 0)
+                ) return map;
+
+                map.set(`${row.user_id || 'unassigned'}-${row.task_id}`, {
+                    task_id: Number(row.task_id),
+                    user_id: row.user_id ? Number(row.user_id) : null,
+                    base_cost: Number(currentPrice) || 0,
+                    base_active: row.base_active,
+                });
+
+                return map;
+            }, new Map()).values(),
+        );
 
         const changedRows = rows
             .filter((row) =>
                 row.original_task_id &&
-                row.original_user_id &&
+                row.original_user_id !== undefined &&
                 isCompletePricingRow(row) &&
                 (
                     row.original_task_id !== row.task_id ||
@@ -559,7 +646,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             )
             .map((row) => ({
                 task_id: Number(row.original_task_id),
-                user_id: Number(row.original_user_id),
+                user_id: row.original_user_id ? Number(row.original_user_id) : null,
             }));
         const deletedRows = [...pendingDeletedRows, ...changedRows].filter((row, index, allRows) =>
             allRows.findIndex((item) =>
@@ -582,13 +669,19 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         );
 
         rowsToSave.forEach((row) => {
-            if (!row.task_id || !row.user_id) return;
+            if (!row.task_id) return;
 
             Object.entries(row.project_prices).forEach(([projectId, value]) => {
                 items.push({
                     task_id: Number(row.task_id),
                     project_id: Number(projectId),
-                    user_id: Number(row.user_id),
+                    user_id: row.user_id ? Number(row.user_id) : null,
+                    trade_id: row.trade_id ? Number(row.trade_id) : null,
+                    category_id: row.category_id ? Number(row.category_id) : null,
+                    sub_category_id: row.sub_category_id ? Number(row.sub_category_id) : null,
+                    base_cost: row.base_active ? Number(row.base_price) || 0 : 0,
+                    base_active: row.base_active,
+                    project_active: value.is_active,
                     price: Number(value.price) || 0,
                     is_active: value.is_active,
                 });
@@ -601,9 +694,15 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     items.push({
                         task_id: Number(row.task_id),
                         project_id: Number(project.id),
-                        user_id: Number(row.user_id),
+                        user_id: row.user_id ? Number(row.user_id) : null,
+                        trade_id: row.trade_id ? Number(row.trade_id) : null,
+                        category_id: row.category_id ? Number(row.category_id) : null,
+                        sub_category_id: row.sub_category_id ? Number(row.sub_category_id) : null,
+                        base_cost: row.base_active ? Number(row.base_price) || 0 : 0,
+                        base_active: row.base_active,
+                        project_active: false,
                         price: Number(row.base_price) || 0,
-                        is_active: true,
+                        is_active: false,
                     });
                 });
             }
@@ -611,31 +710,12 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
         setSaving(true);
         try {
-            const basePriceUpdates = rowsToSave
-                .filter((row) => row.task_id)
-                .map((row) => {
-                    const selectedTask = taskMap[row.task_id];
-                    const originalPrice = getTaskBasePrice(selectedTask);
-                    const currentPrice = row.base_active ? row.base_price : '0.00';
-
-                    if (Number(currentPrice || 0) === Number(originalPrice || 0)) return null;
-
-                    return api.post('/tasks/update', {
-                        id: Number(row.task_id),
-                        company_id: user?.company_id,
-                        base_cost: Number(currentPrice) || 0,
-                    });
-                })
-                .filter(Boolean);
-
-            const [res] = await Promise.all([
-                api.post('/pricework/settings/prices/batch', {
-                    items,
-                    user_trade_items: userTradeItems,
-                    deleted_rows: deletedRows,
-                }),
-                ...basePriceUpdates,
-            ]);
+            const res = await api.post('/pricework/settings/prices/batch', {
+                items,
+                user_trade_items: userTradeItems,
+                deleted_rows: deletedRows,
+                base_price_items: basePriceItems,
+            });
 
             if (res.data?.IsSuccess) {
                 toast.success(res.data?.message || 'Settings saved!');
@@ -884,8 +964,10 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                             filteredRows.map((row) => {
                                 const categoryOptions = getCategoryOptions(row.trade_id);
                                 const subCategoryOptions = getSubCategoryOptions(row.trade_id, row.category_id);
+                                const hasSubCategoryOptions = subCategoryOptions.length > 0;
                                 const selectedTask = taskMap[row.task_id];
-                                const selectedUser = users.find((item) => String(item.id) === row.user_id) || null;
+                                const selectedUser = users.find((item) => String(item.id) === row.user_id) ||
+                                    (row.user_name ? {id: row.user_id, name: row.user_name} : null);
 
                                 return (
                                     <TableRow key={row.id} hover>
@@ -940,6 +1022,14 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                                     value={row.trade_id}
                                                     displayEmpty
                                                     onChange={(event) => handleTradeChange(row, String(event.target.value))}
+                                                    renderValue={(selected) => {
+                                                        if (!selected) return 'Select trade';
+
+                                                        return tradeOptions.find((trade) => trade.id === String(selected))?.name ||
+                                                            row.trade_name ||
+                                                            selectedTask?.trade_name ||
+                                                            'Select trade';
+                                                    }}
                                                     MenuProps={selectMenuProps}
                                                     sx={{height: 36, fontSize: '0.8rem', bgcolor: '#fff'}}
                                                 >
@@ -960,6 +1050,14 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                                     displayEmpty
                                                     disabled={!row.trade_id}
                                                     onChange={(event) => handleCategoryChange(row, String(event.target.value))}
+                                                    renderValue={(selected) => {
+                                                        if (!selected) return 'Select category';
+
+                                                        return categoryOptions.find((category) => category.id === String(selected))?.name ||
+                                                            row.category_name ||
+                                                            selectedTask?.category_name ||
+                                                            'Select category';
+                                                    }}
                                                     MenuProps={selectMenuProps}
                                                     sx={{height: 36, fontSize: '0.8rem', bgcolor: '#fff'}}
                                                 >
@@ -978,10 +1076,22 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                                 <Select
                                                     value={row.sub_category_id}
                                                     displayEmpty
-                                                    disabled={!row.category_id}
+                                                    disabled={!row.category_id || !hasSubCategoryOptions}
                                                     onChange={(event) => {
                                                         const selected = subCategoryOptions.find((item) => item.id === String(event.target.value));
                                                         handleSubCategoryChange(row, String(event.target.value), selected?.task_id || '');
+                                                    }}
+                                                    renderValue={(selected) => {
+                                                        const selectedSubCategory = subCategoryOptions.find((item) =>
+                                                            item.id === String(selected) &&
+                                                            (!row.task_id || item.task_id === row.task_id),
+                                                        );
+
+                                                        if (selectedSubCategory) return selectedSubCategory.name;
+                                                        if (!selected && row.task_id && row.category_id) return row.sub_category_name || selectedTask?.sub_category_name || '-';
+                                                        if (!selected) return 'Select subcategory';
+
+                                                        return row.sub_category_name || selectedTask?.sub_category_name || 'Select subcategory';
                                                     }}
                                                     MenuProps={selectMenuProps}
                                                     sx={{height: 36, fontSize: '0.8rem', bgcolor: '#fff'}}
@@ -1043,7 +1153,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                                     <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1}}>
                                                         <IOSSwitch
                                                             checked={isProjectActive}
-                                                            disabled={!row.task_id || !row.user_id}
+                                                            disabled={!row.task_id}
                                                             onChange={() => updateProjectPrice(row, Number(project.id), {
                                                                 is_active: !isProjectActive,
                                                                 price: projectPrice?.price ?? row.base_price ?? getTaskBasePrice(selectedTask),
@@ -1053,7 +1163,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                                         <TextField
                                                             size="small"
                                                             value={projectPrice?.price ?? row.base_price ?? '0.00'}
-                                                            disabled={!row.task_id || !row.user_id || !isProjectActive}
+                                                            disabled={!row.task_id || !isProjectActive}
                                                             onChange={(event) => {
                                                                 if (/^\d*(?:\.\d{0,2})?$/.test(event.target.value)) {
                                                                     updateProjectPrice(row, Number(project.id), {price: event.target.value});

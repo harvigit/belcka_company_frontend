@@ -17,6 +17,7 @@ import { useDropzone } from "react-dropzone";
 import api from "@/utils/axios";
 import Image from "next/image";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
+import toast from "react-hot-toast";
 
 export interface TaskFormData {
   id: number;
@@ -80,6 +81,33 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
+  const [tradeError, setTradeError] = useState("");
+  const [categoryError, setCategoryError] = useState("");
+  const [shiftError, setShiftError] = useState("");
+
+  const isRequiredEmpty = (value: number | string | null | undefined) =>
+    value === undefined ||
+    value === null ||
+    value === 0 ||
+    String(value).trim() === "";
+
+  const isCategoryEmpty = (value: TaskFormData["category_id"]) =>
+    isRequiredEmpty(value);
+
+  const getTradeValidationError = (value: TaskFormData["trade_id"]) =>
+    isRequiredEmpty(value) ? "Trade is required" : "";
+
+  const getShiftValidationError = (value: TaskFormData["shift_id"]) =>
+    isRequiredEmpty(value) ? "Shift is required" : "";
+
+  const getCategoryValidationError = (value: TaskFormData["category_id"]) => {
+    if (isCategoryEmpty(value)) return "Category is required";
+
+    const exists = categories.some(
+      (category) => String(category.id) === String(value),
+    );
+    return exists ? "" : "Category not exists!";
+  };
 
   const fetchTask = async () => {
     if (!taskId || fetching) return;
@@ -124,6 +152,9 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
       setGalleryFiles([]);
       setGalleryPreview([]);
       setRemovedImageIds([]);
+      setTradeError("");
+      setCategoryError("");
+      setShiftError("");
     }
   }, [open]);
 
@@ -209,6 +240,29 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
       ]);
     },
   });
+
+  const handleSave = (e: React.FormEvent) => {
+    const tradeValidationError = getTradeValidationError(formData.trade_id);
+    const categoryValidationError = getCategoryValidationError(
+      formData.category_id,
+    );
+    const shiftValidationError = getShiftValidationError(formData.shift_id);
+
+    setTradeError(tradeValidationError);
+    setCategoryError(categoryValidationError);
+    setShiftError(shiftValidationError);
+
+    const error =
+      tradeValidationError || categoryValidationError || shiftValidationError;
+
+    if (error) {
+      e.preventDefault();
+      toast.error(error);
+      return;
+    }
+
+    handleSubmit(e, galleryFiles, removedImageIds);
+  };
 
   return (
     <Drawer
@@ -314,14 +368,21 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                             (item) => item.id === formData.trade_id,
                           ) ?? null
                         }
-                        onChange={(_, value) =>
+                        onChange={(_, value) => {
+                          setTradeError("");
                           setFormData((prev) => ({
                             ...prev,
                             trade_id: value?.id ?? null,
-                          }))
-                        }
+                          }));
+                        }}
                         renderInput={(params) => (
-                          <TextField {...params} placeholder="Select Trade" />
+                          <TextField
+                            {...params}
+                            placeholder="Select Trade"
+                            required
+                            error={Boolean(tradeError)}
+                            helperText={tradeError}
+                          />
                         )}
                       />
                     </Box>
@@ -343,6 +404,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                       }
                       onChange={(_, value) => {
                         const val = typeof value === "string" ? value : (value?.id ?? null);
+                        setCategoryError("");
                         setFormData((prev) => ({
                           ...prev,
                           category_id: val,
@@ -351,6 +413,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                       }}
                       onInputChange={(_, newInputValue, reason) => {
                         if (reason === "input" || reason === "clear") {
+                          setCategoryError("");
                           setFormData((prev) => ({
                             ...prev,
                             category_id: newInputValue || null,
@@ -359,7 +422,13 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                         }
                       }}
                       renderInput={(params) => (
-                        <TextField {...params} placeholder="Select Category" />
+                        <TextField
+                          {...params}
+                          placeholder="Select Category"
+                          required
+                          error={Boolean(categoryError)}
+                          helperText={categoryError}
+                        />
                       )}
                     />
                   </Box>
@@ -422,14 +491,21 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                         shifts.find((item) => item.id === formData.shift_id) ??
                         null
                       }
-                      onChange={(_, value) =>
+                      onChange={(_, value) => {
+                        setShiftError("");
                         setFormData((prev) => ({
                           ...prev,
                           shift_id: value?.id ?? null,
-                        }))
-                      }
+                        }));
+                      }}
                       renderInput={(params) => (
-                        <TextField {...params} placeholder="Select Shift" />
+                        <TextField
+                          {...params}
+                          placeholder="Select Shift"
+                          required
+                          error={Boolean(shiftError)}
+                          helperText={shiftError}
+                        />
                       )}
                     />
                   </Box>
@@ -732,7 +808,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
             variant="contained"
             size="large"
             type="submit"
-            onClick={(e) => handleSubmit(e, galleryFiles, removedImageIds)}
+            onClick={handleSave}
             disabled={isSaving}
             sx={{ borderRadius: 3, width: "10%" }}
           >

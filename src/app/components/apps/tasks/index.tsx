@@ -528,11 +528,10 @@ const TaskLists = () => {
         try {
             const payload = {
                 id: Number(id),
-                company_id: Number(user.company_id),
                 is_show,
             };
 
-            const res = await api.post('tasks/update', payload);
+            const res = await api.post('/pricework/settings/tasks/show', payload);
 
             if (res.data?.IsSuccess) {
                 toast.success(res.data.message);
@@ -546,9 +545,12 @@ const TaskLists = () => {
                             : p,
                     ),
                 );
+            } else {
+                toast.error(res.data?.message || 'Failed to update show setting');
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
+            toast.error(err?.response?.data?.message || 'Failed to update show setting');
         }
     };
 
