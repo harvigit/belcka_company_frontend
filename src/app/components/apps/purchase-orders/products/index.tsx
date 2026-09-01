@@ -106,6 +106,7 @@ const PurchaseProductList: React.FC<Props> = ({
   useEffect(() => {
     selectedRowIdsRef.current = selectedRowIds;
   }, [selectedRowIds]);
+  const manuallyDeselectedRef = useRef<Set<number>>(new Set());
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const { columnVisibility, onColumnVisibilityChange } =
@@ -144,6 +145,9 @@ const PurchaseProductList: React.FC<Props> = ({
   const [manuallyDeselected, setManuallyDeselected] = useState<Set<number>>(
     new Set(),
   );
+  useEffect(() => {
+    manuallyDeselectedRef.current = manuallyDeselected;
+  }, [manuallyDeselected]);
   const [originalData, setOriginalData] = useState<any[]>([]);
   const [latestFetchedIds, setLatestFetchedIds] = useState<Set<number>>(
     new Set(),
@@ -267,15 +271,16 @@ const PurchaseProductList: React.FC<Props> = ({
     setFetchStore(true);
 
     try {
+      const isSearching = Boolean(String(searchTerm).trim());
       const params: any = {
         company_id: user.company_id,
         page: String(pagination.pageIndex + 1),
         limit: String(pagination.pageSize),
-        is_all_product: true,
+        is_all_product: isSearching,
       };
 
-      if (searchTerm) {
-        params.search = searchTerm;
+      if (isSearching) {
+        params.search = searchTerm.trim();
       }
       if (filters.supplier && filters.supplier !== "All") {
         const supplierObj = suppliers.find((s) => s.name === filters.supplier);
@@ -295,28 +300,33 @@ const PurchaseProductList: React.FC<Props> = ({
           params.project = projectObj.id;
         }
       }
-      if (filters.lowStock) {
+      if (filters.lowStock && !isSearching) {
         params.low_stock = true;
+        params.is_all_product = true;
       }
       const response = await api.get("purchase-orders/orders", { params });
 
       if (response.data) {
+        const fetchedItems = response.data.info || [];
+        const deselected = manuallyDeselectedRef.current;
         setData((prevData) => {
           const currentSelected = selectedRowIdsRef.current;
-          const selectedItems = prevData.filter(
+          const pinnedItems = prevData.filter(
             (item) =>
               currentSelected.has(item.id) || Number(item.total_qty) > 0,
           );
-          const selectedItemIds = new Set(selectedItems.map((item) => item.id));
-          const newItems = response.data.info.filter(
-            (item: any) => !selectedItemIds.has(item.id),
+          const pinnedIds = new Set(pinnedItems.map((item) => item.id));
+          const newItems = fetchedItems.filter(
+            (item: any) => !pinnedIds.has(item.id),
           );
-          return [...selectedItems, ...newItems];
+          return [...pinnedItems, ...newItems];
         });
-        const fetchedItems = response.data.info;
         setLatestFetchedIds(new Set(fetchedItems.map((item: any) => item.id)));
         const autoSelectedIds = fetchedItems
-          .filter((p: any) => p.total_qty > 0)
+          .filter(
+            (p: any) =>
+              Number(p.total_qty) > 0 && !deselected.has(p.id),
+          )
           .map((p: any) => p.id);
         if (autoSelectedIds.length > 0) {
           setSelectedRowIds((prev) => {
@@ -404,16 +414,18 @@ const PurchaseProductList: React.FC<Props> = ({
 
   const finalFilteredData = useMemo(() => {
     return [...filteredData].sort((a, b) => {
-      const aSearched = searchTerm && latestFetchedIds.has(a.id);
-      const bSearched = searchTerm && latestFetchedIds.has(b.id);
+      const aPinned =
+        selectedRowIds.has(a.id) || Number(a.total_qty) > 0;
+      const bPinned =
+        selectedRowIds.has(b.id) || Number(b.total_qty) > 0;
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
 
+      const aSearched = Boolean(searchTerm) && latestFetchedIds.has(a.id);
+      const bSearched = Boolean(searchTerm) && latestFetchedIds.has(b.id);
       if (aSearched && !bSearched) return -1;
       if (!aSearched && bSearched) return 1;
 
-      const aSelected = selectedRowIds.has(a.id) || Number(a.total_qty) > 0;
-      const bSelected = selectedRowIds.has(b.id) || Number(b.total_qty) > 0;
-      if (aSelected && !bSelected) return -1;
-      if (!aSelected && bSelected) return 1;
       return 0;
     });
   }, [filteredData, selectedRowIds, searchTerm, latestFetchedIds]);

@@ -527,7 +527,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
           const item = row.original;
 
           return (
-            <Box display="flex" alignItems="center">
+            <Box display="flex" alignItems="center" sx={{px:1}}>
               <Typography variant="body2">{item.name}</Typography>
             </Box>
           );
@@ -558,6 +558,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                 width: "100%",
                 maxWidth: "200px",
                 borderRadius: 1,
+                px:1,
                 border: "1px solid transparent",
                 transition: "all 0.2s ease",
               }}
@@ -608,7 +609,15 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
 
       columnHelper.accessor("budget", {
         header: "Budget",
-        cell: (info) => info.getValue() || "-",
+        cell: ({ row }: any) => {
+          const item = row.original;
+
+          return (
+            <Box display="flex" alignItems="center" sx={{px:1}}>
+              <Typography variant="body2">{item.budget ?? "-"}</Typography>
+            </Box>
+          );
+        },
       }),
 
       columnHelper.display({

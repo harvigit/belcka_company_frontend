@@ -23,126 +23,7 @@ import {
   Tooltip,
   Button,
   InputAdornment,
-  Collapse,
-  Chip,
 } from "@mui/material";
-
-const DiffView = ({ diffs }: { diffs: any[] }) => {
-  const IGNORED_KEYS = [
-    "id",
-    "created_at",
-    "updated_at",
-    "deleted_at",
-    "user_id",
-    "company_id",
-    "expired_at",
-  ];
-  const filteredDiffs = diffs?.filter(
-    (diff) => !IGNORED_KEYS.includes(diff.key),
-  );
-  const [open, setOpen] = useState(false);
-
-  if (!filteredDiffs?.length) return null;
-
-  return (
-    <Box width="100%">
-      <Box
-        display="flex"
-        alignItems="center"
-        sx={{ cursor: "pointer", width: "fit-content" }}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setOpen(!open);
-        }}
-      >
-        <Typography fontSize={12} color="primary" fontWeight={600}>
-          {open ? "Hide Changes" : "View Changes"}
-        </Typography>
-      </Box>
-      <Collapse in={open}>
-        <Box
-          mt={0.5}
-          p={1}
-          bgcolor="#f8fafc"
-          borderRadius={2}
-          border="1px solid #e2e8f0"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-        >
-          {filteredDiffs.map((diff: any, i: number) => (
-            <Typography
-              key={i}
-              fontSize={11}
-              color="text.secondary"
-              mt={i > 0 ? 0.75 : 0}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: 0.5,
-              }}
-            >
-              <Typography
-                component="span"
-                fontSize={11}
-                fontWeight={600}
-                sx={{ textTransform: "uppercase" }}
-              >
-                {diff.key.replace(/_/g, " ")}
-              </Typography>
-              {(!diff.old || diff.old === "") && diff.new && diff.new !== "" ? (
-                <>
-                  {" - added as "}
-                  <Chip
-                    size="small"
-                    label={String(diff.new)}
-                    sx={{
-                      height: 18,
-                      fontSize: 10,
-                      bgcolor: "#E8F5E9",
-                      color: "#2E7D32",
-                      "& .MuiChip-label": { px: 1 },
-                    }}
-                  />
-                </>
-              ) : (
-                <>
-                  {" - changed from "}
-                  <Chip
-                    size="small"
-                    label={String(diff.old || "none")}
-                    sx={{
-                      height: 18,
-                      fontSize: 10,
-                      bgcolor: "#E8F5E9",
-                      color: "#2E7D32",
-                      "& .MuiChip-label": { px: 1 },
-                    }}
-                  />
-                  {" to "}
-                  <Chip
-                    size="small"
-                    label={String(diff.new || "none")}
-                    sx={{
-                      height: 18,
-                      fontSize: 10,
-                      bgcolor: "#E8F5E9",
-                      color: "#2E7D32",
-                      "& .MuiChip-label": { px: 1 },
-                    }}
-                  />
-                </>
-              )}
-            </Typography>
-          ))}
-        </Box>
-      </Collapse>
-    </Box>
-  );
-};
 import {
   IconArrowLeft,
   IconX,
@@ -151,6 +32,7 @@ import {
 } from "@tabler/icons-react";
 import { format, parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+import DiffChanges from "@/app/components/common/DiffChanges";
 import { useRouter } from "next/navigation";
 import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 import Link from "next/link";
@@ -798,7 +680,7 @@ export default function UserRequests({
 
                           {work.diff_data && work.diff_data.length > 0 && (
                             <Box ml={5.5}>
-                              <DiffView diffs={work.diff_data} />
+                              <DiffChanges diffs={work.diff_data} />
                             </Box>
                           )}
                           {work.request_note && (

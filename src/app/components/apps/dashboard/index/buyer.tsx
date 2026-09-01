@@ -580,7 +580,7 @@ const BuyerDashboard = () => {
       </Box>
 
       {/* Quick Actions */}
-      <Box mb={4}>
+      <Box mb={3}>
         {/* <Typography variant="h3" fontWeight={700} mb={3} color="#11142D">
           Here's What's Happening With your purchasing today.
         </Typography> */}

@@ -326,7 +326,7 @@ const PurchaseOrder: React.FC<Props> = ({
         price: p.price,
       })),
       tax: taxAmount.toFixed(2),
-      total_amount: totalAmount.toFixed(2),
+      total_amount: unitTotal.toFixed(2),
     }));
   }, [products, taxAmount, totalAmount, setFormData]);
 

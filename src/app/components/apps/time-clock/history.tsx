@@ -19,7 +19,6 @@ import {
   Stack,
   Chip,
   InputAdornment,
-  Collapse,
 } from "@mui/material";
 import {
   IconX,
@@ -35,6 +34,7 @@ import api from "@/utils/axios";
 import { format } from "date-fns";
 import DateRangePickerBox from "../../common/DateRangePickerBox";
 import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
+import DiffChanges from "@/app/components/common/DiffChanges";
 
 interface BookkeeperProps {
   open: boolean;
@@ -55,115 +55,6 @@ const ACTIVITY_FILTER_OPTIONS = [
   { value: "rate", label: "Rate", requestTypes: [105] },
   { value: "user", label: "Personal Info", requestTypes: [104] },
 ] as const;
-
-const DiffView = ({ diffs }: { diffs: any[] }) => {
-  const IGNORED_KEYS = [
-    "id",
-    "created_at",
-    "updated_at",
-    "deleted_at",
-    "user_id",
-    "company_id",
-    "expired_at",
-  ];
-  const filteredDiffs = diffs.filter(
-    (diff) => !IGNORED_KEYS.includes(diff.key),
-  );
-  const [open, setOpen] = useState(false);
-
-  if (!filteredDiffs?.length) return null;
-
-  return (
-    <Box width="100%">
-      <Box
-        display="flex"
-        alignItems="center"
-        sx={{ cursor: "pointer", width: "fit-content" }}
-        onClick={() => setOpen(!open)}
-      >
-        <Typography fontSize={12} color="primary" fontWeight={600}>
-          {open ? "Hide Changes" : "View Changes"}
-        </Typography>
-      </Box>
-      <Collapse in={open}>
-        <Box
-          mt={1}
-          p={1.5}
-          bgcolor="#f8fafc"
-          borderRadius={2}
-          border="1px solid #e2e8f0"
-        >
-          {filteredDiffs.map((diff: any, i: number) => (
-            <Typography
-              key={i}
-              fontSize={11}
-              color="text.secondary"
-              mt={i > 0 ? 0.75 : 0}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: 0.5,
-              }}
-            >
-              <Typography
-                component="span"
-                fontSize={11}
-                fontWeight={600}
-                sx={{ textTransform: "uppercase" }}
-              >
-                {diff.key.replace(/_/g, " ")}
-              </Typography>
-              {(!diff.old || diff.old === "") && diff.new && diff.new !== "" ? (
-                <>
-                  {" - added as "}
-                  <Chip
-                    size="small"
-                    label={String(diff.new)}
-                    sx={{
-                      height: 18,
-                      fontSize: 10,
-                      bgcolor: "#E8F5E9",
-                      color: "#2E7D32",
-                      "& .MuiChip-label": { px: 1 },
-                    }}
-                  />
-                </>
-              ) : (
-                <>
-                  {" - changed from "}
-                  <Chip
-                    size="small"
-                    label={String(diff.old || "none")}
-                    sx={{
-                      height: 18,
-                      fontSize: 10,
-                      bgcolor: "#E8F5E9",
-                      color: "#2E7D32",
-                      "& .MuiChip-label": { px: 1 },
-                    }}
-                  />
-                  {" to "}
-                  <Chip
-                    size="small"
-                    label={String(diff.new || "none")}
-                    sx={{
-                      height: 18,
-                      fontSize: 10,
-                      bgcolor: "#E8F5E9",
-                      color: "#2E7D32",
-                      "& .MuiChip-label": { px: 1 },
-                    }}
-                  />
-                </>
-              )}
-            </Typography>
-          ))}
-        </Box>
-      </Collapse>
-    </Box>
-  );
-};
 
 const BookkeeperHistory: React.FC<BookkeeperProps> = ({
   open,
@@ -550,7 +441,7 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
 
                             {addr.diff_data && addr.diff_data.length > 0 && (
                               <Box flex={1}>
-                                <DiffView diffs={addr.diff_data} />
+                                <DiffChanges diffs={addr.diff_data} />
                               </Box>
                             )}
 

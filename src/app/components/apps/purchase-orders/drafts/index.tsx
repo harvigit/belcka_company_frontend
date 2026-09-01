@@ -240,7 +240,7 @@ const DraftPurchaseOrder: React.FC<DraftPurchaseOrderProps> = ({
         price: p.price,
       })),
       tax: taxAmount.toFixed(2),
-      total_amount: totalAmount.toFixed(2),
+      total_amount: unitTotal.toFixed(2),
     }));
   }, [products, taxAmount, totalAmount]);
 
