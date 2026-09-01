@@ -47,6 +47,7 @@ const IGNORED_KEYS = new Set([
   "joining_date",
   "new_rate_perDay",
   "new_rate_perday",
+  "trade_id"
 ]);
 
 const ID_TO_NAME: Record<string, string> = {
