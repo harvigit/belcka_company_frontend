@@ -104,6 +104,22 @@ const getUserDisplayName = (user: any) =>
     user?.email ||
     '-';
 
+const filterOptionsByWordStart = <T,>(
+    options: T[],
+    inputValue: string,
+    getLabel: (option: T) => string,
+) => {
+    const searchTerm = inputValue.trim().toLowerCase();
+    if (!searchTerm) return options;
+
+    return options.filter((option) =>
+        getLabel(option)
+            .toLowerCase()
+            .split(/\s+/)
+            .some((word) => word.startsWith(searchTerm)),
+    );
+};
+
 const getProjectName = (project: any) =>
     project?.name || project?.project_name || project?.address || '-';
 
@@ -239,6 +255,8 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     const [selectedProjectFilter, setSelectedProjectFilter] = useState('');
     const [projectPage, setProjectPage] = useState(0);
     const [projectColumnsPerPage, setProjectColumnsPerPage] = useState(DEFAULT_PROJECT_COLUMNS_PER_PAGE);
+    const [userSearchByRowId, setUserSearchByRowId] = useState<Record<string, string>>({});
+    const [tradeSearchByRowId, setTradeSearchByRowId] = useState<Record<string, string>>({});
 
     const fetchAllTasks = useCallback(async (companyId: number) => {
         const firstResponse = await api.get(
@@ -389,6 +407,43 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         MenuListProps: {dense: true, sx: {py: 0.5}},
     };
 
+    const tableAutocompleteSlotProps = {
+        paper: {
+            sx: {
+                mt: 0.5,
+                border: '1px solid #d9e2ef',
+                borderRadius: '8px',
+                boxShadow: '0 10px 28px rgba(15, 23, 42, 0.16)',
+                '& .MuiAutocomplete-option': {
+                    minHeight: 36,
+                    px: 1.5,
+                    fontSize: '0.8rem',
+                    whiteSpace: 'normal',
+                },
+            },
+        },
+        listbox: {
+            sx: {
+                py: 0.5,
+                maxHeight: 260,
+            },
+        },
+    };
+
+    const tableAutocompleteSx = {
+        '& .MuiOutlinedInput-root': {
+            minHeight: 36,
+            bgcolor: '#fff',
+            fontSize: '0.8rem',
+            py: 0,
+            borderRadius: '8px',
+        },
+        '& .MuiAutocomplete-input': {
+            minWidth: '0 !important',
+            fontSize: '0.8rem',
+        },
+    };
+
     const updateRow = (rowId: string, changes: Partial<PricingRow>) => {
         setRows((prev) => prev.map((row) => (row.id === rowId ? {...row, ...changes} : row)));
     };
@@ -532,6 +587,16 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         }
 
         setRows((prev) => prev.filter((row) => row.id !== rowId));
+        setUserSearchByRowId((prev) => {
+            const next = {...prev};
+            delete next[rowId];
+            return next;
+        });
+        setTradeSearchByRowId((prev) => {
+            const next = {...prev};
+            delete next[rowId];
+            return next;
+        });
         setSelectedRowIds((prev) => {
             const next = new Set(prev);
             next.delete(rowId);
@@ -990,6 +1055,23 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                 const selectedTask = taskMap[row.task_id];
                                 const selectedUser = users.find((item) => String(item.id) === row.user_id) ||
                                     (row.user_name ? {id: row.user_id, name: row.user_name} : null);
+                                const selectedTrade = tradeOptions.find((trade) => trade.id === row.trade_id) ||
+                                    (
+                                        row.trade_id
+                                            ? {
+                                                id: row.trade_id,
+                                                name: row.trade_name || selectedTask?.trade_name || 'Select trade',
+                                            }
+                                            : null
+                                    );
+                                const userSearchTerm = userSearchByRowId[row.id] ?? '';
+                                const tradeSearchTerm = tradeSearchByRowId[row.id] ?? '';
+                                const filteredUserOptions = filterOptionsByWordStart(users, userSearchTerm, getUserDisplayName);
+                                const filteredTradeOptions = filterOptionsByWordStart(
+                                    tradeOptions,
+                                    tradeSearchTerm,
+                                    (option) => option.name || '',
+                                );
 
                                 return (
                                     <TableRow key={row.id} hover>
@@ -1003,66 +1085,73 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                         <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 230, py: 1}}>
                                             <Autocomplete
                                                 size="small"
-                                                options={users}
+                                                fullWidth
+                                                options={filteredUserOptions}
                                                 value={selectedUser}
                                                 getOptionLabel={(option) => getUserDisplayName(option)}
+                                                filterOptions={(options) => options}
                                                 isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
-                                                onChange={(_, value) => handleUserChange(row, value ? String(value.id) : '')}
+                                                onChange={(_, value) => {
+                                                    handleUserChange(row, value ? String(value.id) : '');
+                                                    setUserSearchByRowId((prev) => ({
+                                                        ...prev,
+                                                        [row.id]: '',
+                                                    }));
+                                                }}
+                                                onInputChange={(_, value, reason) => {
+                                                    if (reason !== 'input' && reason !== 'clear') return;
+                                                    setUserSearchByRowId((prev) => ({
+                                                        ...prev,
+                                                        [row.id]: value,
+                                                    }));
+                                                }}
+                                                autoHighlight
+                                                noOptionsText="No users found"
                                                 renderInput={(params) => (
                                                     <TextField
                                                         {...params}
                                                         placeholder="Select user"
                                                     />
                                                 )}
-                                                slotProps={{
-                                                    paper: {
-                                                        sx: {
-                                                            mt: 0.5,
-                                                            border: '1px solid #d9e2ef',
-                                                            borderRadius: '8px',
-                                                            boxShadow: '0 10px 28px rgba(15, 23, 42, 0.16)',
-                                                        },
-                                                    },
-                                                }}
-                                                sx={{
-                                                    '& .MuiOutlinedInput-root': {
-                                                        minHeight: 36,
-                                                        bgcolor: '#fff',
-                                                        fontSize: '0.8rem',
-                                                        py: 0,
-                                                    },
-                                                    '& .MuiAutocomplete-input': {
-                                                        fontSize: '0.8rem',
-                                                    },
-                                                }}
+                                                slotProps={tableAutocompleteSlotProps}
+                                                sx={tableAutocompleteSx}
                                             />
                                         </TableCell>
 
                                         <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 210, py: 1}}>
-                                            <FormControl size="small" fullWidth>
-                                                <Select
-                                                    value={row.trade_id}
-                                                    displayEmpty
-                                                    onChange={(event) => handleTradeChange(row, String(event.target.value))}
-                                                    renderValue={(selected) => {
-                                                        if (!selected) return 'Select trade';
-
-                                                        return tradeOptions.find((trade) => trade.id === String(selected))?.name ||
-                                                            row.trade_name ||
-                                                            selectedTask?.trade_name ||
-                                                            'Select trade';
-                                                    }}
-                                                    MenuProps={selectMenuProps}
-                                                    sx={{height: 36, fontSize: '0.8rem', bgcolor: '#fff'}}
-                                                >
-                                                    <MenuItem value="">Select trade</MenuItem>
-                                                    {tradeOptions.map((trade) => (
-                                                        <MenuItem key={trade.id} value={trade.id}>
-                                                            {trade.name}
-                                                        </MenuItem>
-                                                    ))}
-                                                </Select>
-                                            </FormControl>
+                                            <Autocomplete
+                                                size="small"
+                                                fullWidth
+                                                options={filteredTradeOptions}
+                                                value={selectedTrade}
+                                                getOptionLabel={(option) => option.name || 'Trade'}
+                                                filterOptions={(options) => options}
+                                                isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                                                onChange={(_, value) => {
+                                                    handleTradeChange(row, value ? String(value.id) : '');
+                                                    setTradeSearchByRowId((prev) => ({
+                                                        ...prev,
+                                                        [row.id]: '',
+                                                    }));
+                                                }}
+                                                onInputChange={(_, value, reason) => {
+                                                    if (reason !== 'input' && reason !== 'clear') return;
+                                                    setTradeSearchByRowId((prev) => ({
+                                                        ...prev,
+                                                        [row.id]: value,
+                                                    }));
+                                                }}
+                                                autoHighlight
+                                                noOptionsText="No trades found"
+                                                renderInput={(params) => (
+                                                    <TextField
+                                                        {...params}
+                                                        placeholder="Select trade"
+                                                    />
+                                                )}
+                                                slotProps={tableAutocompleteSlotProps}
+                                                sx={tableAutocompleteSx}
+                                            />
                                         </TableCell>
 
                                         <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 230, py: 1}}>
