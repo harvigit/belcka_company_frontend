@@ -61,6 +61,7 @@ export type PriceworkApiRow = {
     sub_category_name?: string | null;
     unit_id?: number | null;
     unit_name?: string | null;
+    duration?: number | string | null;
     work_type?: string | null;
     amount_per_unit?: number | string | null;
     work_complete?: number | string | null;

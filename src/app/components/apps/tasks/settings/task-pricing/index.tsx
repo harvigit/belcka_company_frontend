@@ -37,6 +37,7 @@ interface TaskPricingMatrixProps {
 
 type CellState = {
     is_active: boolean;
+    original_is_active?: boolean;
     price: string;
 };
 
@@ -63,6 +64,7 @@ type PricingRow = {
 type DeletedPricingRow = {
     task_id: number;
     user_id: number | null;
+    project_id?: number;
 };
 
 const TASKS_PAGE_SIZE = 500;
@@ -211,6 +213,7 @@ const buildRowsFromSavedPrices = (savedPrices: any[], priceworkTasks: any[]): Pr
 
         row.project_prices[projectId] = {
             is_active: getSavedPriceProjectActive(priceItem),
+            original_is_active: getSavedPriceProjectActive(priceItem),
             price: priceItem?.price != null ? String(priceItem.price) : '0.00',
         };
     });
@@ -648,30 +651,42 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 task_id: Number(row.original_task_id),
                 user_id: row.original_user_id ? Number(row.original_user_id) : null,
             }));
-        const deletedRows = [...pendingDeletedRows, ...changedRows].filter((row, index, allRows) =>
+
+        const deletedRows: DeletedPricingRow[] = [...pendingDeletedRows, ...changedRows].filter((row, index, allRows) =>
             allRows.findIndex((item) =>
                 item.task_id === row.task_id &&
                 item.user_id === row.user_id,
             ) === index,
         );
 
-        const userTradeItems = Array.from(
-            rowsToSave.reduce<Map<string, {user_id: number; trade_id: number}>>((map, row) => {
-                if (!row.user_id || !row.trade_id) return map;
-
-                map.set(row.user_id, {
-                    user_id: Number(row.user_id),
-                    trade_id: Number(row.trade_id),
-                });
-
-                return map;
-            }, new Map()).values(),
-        );
+        // const userTradeItems = Array.from(
+        //     rowsToSave.reduce<Map<string, {user_id: number; trade_id: number}>>((map, row) => {
+        //         if (!row.user_id || !row.trade_id) return map;
+        //
+        //         map.set(row.user_id, {
+        //             user_id: Number(row.user_id),
+        //             trade_id: Number(row.trade_id),
+        //         });
+        //
+        //         return map;
+        //     }, new Map()).values(),
+        // );
 
         rowsToSave.forEach((row) => {
             if (!row.task_id) return;
 
             Object.entries(row.project_prices).forEach(([projectId, value]) => {
+                if (value.original_is_active && !value.is_active) {
+                    deletedRows.push({
+                        task_id: Number(row.task_id),
+                        user_id: row.user_id ? Number(row.user_id) : null,
+                        project_id: Number(projectId),
+                    });
+                    return;
+                }
+
+                if (!value.is_active) return;
+
                 items.push({
                     task_id: Number(row.task_id),
                     project_id: Number(projectId),
@@ -689,31 +704,38 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
             const hasActiveProjectPrices = Object.values(row.project_prices).some((value) => value.is_active);
 
-            if (row.base_active && !hasActiveProjectPrices) {
-                projects.forEach((project) => {
-                    items.push({
-                        task_id: Number(row.task_id),
-                        project_id: Number(project.id),
-                        user_id: row.user_id ? Number(row.user_id) : null,
-                        trade_id: row.trade_id ? Number(row.trade_id) : null,
-                        category_id: row.category_id ? Number(row.category_id) : null,
-                        sub_category_id: row.sub_category_id ? Number(row.sub_category_id) : null,
-                        base_cost: row.base_active ? Number(row.base_price) || 0 : 0,
-                        base_active: row.base_active,
-                        project_active: false,
-                        price: Number(row.base_price) || 0,
-                        is_active: false,
-                    });
+            if (row.base_active && !hasActiveProjectPrices && projects.length > 0) {
+                const project = projects[0];
+                items.push({
+                    task_id: Number(row.task_id),
+                    project_id: Number(project.id),
+                    user_id: row.user_id ? Number(row.user_id) : null,
+                    trade_id: row.trade_id ? Number(row.trade_id) : null,
+                    category_id: row.category_id ? Number(row.category_id) : null,
+                    sub_category_id: row.sub_category_id ? Number(row.sub_category_id) : null,
+                    base_cost: Number(row.base_price) || 0,
+                    base_active: true,
+                    project_active: false,
+                    price: Number(row.base_price) || 0,
+                    is_active: false,
                 });
             }
         });
 
+        const uniqueDeletedRows = deletedRows.filter((row, index, allRows) =>
+            allRows.findIndex((item) =>
+                item.task_id === row.task_id &&
+                item.user_id === row.user_id &&
+                item.project_id === row.project_id,
+            ) === index,
+        );
+
         setSaving(true);
         try {
-            const res = await api.post('/pricework/settings/prices/batch', {
+            const res = await api.post('/pricework/settings/store-prices', {
                 items,
-                user_trade_items: userTradeItems,
-                deleted_rows: deletedRows,
+                // user_trade_items: userTradeItems,
+                deleted_rows: uniqueDeletedRows,
                 base_price_items: basePriceItems,
             });
 

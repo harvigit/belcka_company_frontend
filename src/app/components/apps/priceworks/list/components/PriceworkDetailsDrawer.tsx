@@ -14,7 +14,17 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import {IconExternalLink, IconPencil, IconX} from '@tabler/icons-react';
+import {
+    IconBuilding,
+    IconCalendar,
+    IconClock,
+    IconExternalLink,
+    IconFileText,
+    IconPencil,
+    IconTag,
+    IconUser,
+    IconX,
+} from '@tabler/icons-react';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import {
@@ -38,6 +48,13 @@ type Props = {
 
 const formatAmount = (currency: string, amount: number) =>
     `${currency}${Number(amount || 0).toFixed(2)}`;
+
+const formatDuration = (duration: number | string | null | undefined) => {
+    if (duration === null || duration === undefined || duration === '') return '—';
+    const value = String(duration).trim();
+    if (!value) return '—';
+    return /^\d+(\.\d+)?$/.test(value) ? `${value}m` : value;
+};
 
 const userAvatar = (name?: string | null, image?: string | null, size = 32) => (
     <Avatar
@@ -80,10 +97,25 @@ const ActivityLogItem = ({item}: {item: PriceworkActivityLog}) => {
     );
 };
 
-const FieldBlock = ({label, value}: {label: string; value?: string | number | null}) => (
+const InfoBlock = ({
+    icon,
+    label,
+    value,
+}: {
+    icon: React.ReactNode;
+    label: string;
+    value?: string | number | null;
+}) => (
     <Box>
-        <Typography sx={{fontSize: 12, color: 'text.secondary'}}>{label}</Typography>
-        <Typography sx={{fontSize: 14, fontWeight: 700}}>{value || '—'}</Typography>
+        <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+            {icon}
+            <Typography variant="caption" color="text.secondary">
+                {label}
+            </Typography>
+        </Stack>
+        <Typography variant="body1" fontWeight={500} sx={{wordBreak: 'break-word'}}>
+            {value || '—'}
+        </Typography>
     </Box>
 );
 
@@ -167,6 +199,7 @@ const PriceworkDetailsDrawer = ({
     const workComplete = Number(
         detail?.work_complete ?? pricework?.work_complete ?? 0,
     );
+    const duration = formatDuration(detail?.duration ?? pricework?.duration);
     const amount = Number(
         detail?.pricework_amount ?? pricework?.pricework_amount ?? amountPerUnit * workComplete,
     );
@@ -422,9 +455,9 @@ const PriceworkDetailsDrawer = ({
                                 direction="row"
                                 alignItems="center"
                                 justifyContent="space-between"
-                                mb={2}
+                                mb={3}
                             >
-                                <Typography sx={{fontSize: 28, fontWeight: 700, lineHeight: 1.2}}>
+                                <Typography variant="h4" fontWeight={700} color="primary">
                                     {formatAmount(currency, amount)}
                                 </Typography>
                                 <PriceworkStatusBadge
@@ -438,111 +471,148 @@ const PriceworkDetailsDrawer = ({
                                 />
                             </Stack>
 
-                            <Stack spacing={2.25}>
-                                <Box>
-                                    <Typography sx={{fontSize: 12, color: 'text.secondary', mb: 0.75}}>
-                                        Submitted by
-                                    </Typography>
-                                    <Stack direction="row" alignItems="center" spacing={1.25}>
-                                        {userAvatar(
-                                            detail?.user_name || pricework.user_name,
-                                            detail?.user_thumb_image || pricework.user_thumb_image,
-                                            36,
+                            <Divider sx={{my: 2}}/>
+
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: {xs: 'column', sm: 'row'},
+                                    gap: 2,
+                                    mb: 3,
+                                }}
+                            >
+                                <Box sx={{flex: 1}}>
+                                    <Stack spacing={2}>
+                                        <InfoBlock
+                                            icon={<IconCalendar size={18} color="#666"/>}
+                                            label="Pricework Date"
+                                            value={detail?.pricework_date || pricework.pricework_date}
+                                        />
+                                        <InfoBlock
+                                            icon={<IconTag size={18} color="#666"/>}
+                                            label="Work Type"
+                                            value={detail?.work_type || pricework.work_type}
+                                        />
+                                        <InfoBlock
+                                            icon={<IconBuilding size={18} color="#666"/>}
+                                            label="Unit"
+                                            value={detail?.unit_name || pricework.unit_name}
+                                        />
+                                        <InfoBlock
+                                            icon={<IconClock size={18} color="#666"/>}
+                                            label="Duration"
+                                            value={duration}
+                                        />
+                                        {renderEditableNumberField(
+                                            'Work Complete',
+                                            'work_complete',
+                                            workComplete,
                                         )}
-                                        <Box>
-                                            <Typography sx={{fontSize: 14, fontWeight: 700}}>
-                                                {detail?.user_name || pricework.user_name || '—'}
-                                            </Typography>
-                                            <Typography sx={{fontSize: 12, color: 'text.secondary'}}>
-                                                {detail?.trade_name || pricework.trade_name || '—'}
-                                            </Typography>
-                                        </Box>
                                     </Stack>
                                 </Box>
 
-                                <FieldBlock
-                                    label="Project"
-                                    value={detail?.project_name || pricework.project_name}
-                                />
-                                <FieldBlock
-                                    label="Address"
-                                    value={detail?.address_name || pricework.address_name}
-                                />
-                                <FieldBlock
-                                    label="Team"
-                                    value={detail?.team_name || pricework.team_name}
-                                />
-                                <FieldBlock
-                                    label="Pricework Date"
-                                    value={detail?.pricework_date || pricework.pricework_date}
-                                />
-                                <FieldBlock
-                                    label="Category"
-                                    value={detail?.category_name || pricework.category_name}
-                                />
-                                <FieldBlock
-                                    label="Sub Category"
-                                    value={detail?.sub_category_name || pricework.sub_category_name}
-                                />
-                                <FieldBlock
-                                    label="Unit"
-                                    value={detail?.unit_name || pricework.unit_name}
-                                />
-                                {renderEditableNumberField(
-                                    'Amount Per Unit',
-                                    'amount_per_unit',
-                                    formatAmount(currency, amountPerUnit),
-                                    true,
-                                )}
-                                {renderEditableNumberField(
-                                    'Work Complete',
-                                    'work_complete',
-                                    workComplete,
-                                )}
-                                <FieldBlock
-                                    label="Pricework Amount"
-                                    value={formatAmount(currency, amount)}
-                                />
-                                <FieldBlock
-                                    label="Note"
-                                    value={detail?.note || pricework.note}
-                                />
-                                <Box>
-                                    <Typography sx={{fontSize: 12, color: 'text.secondary'}}>
-                                        Attachments
-                                    </Typography>
-                                    {hasAttachments ? (
-                                        <Box
-                                            component="button"
-                                            type="button"
-                                            onClick={() => onViewAttachments?.()}
-                                            sx={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: 0.5,
-                                                border: 'none',
-                                                background: 'none',
-                                                p: 0,
-                                                cursor: 'pointer',
-                                                color: 'primary.main',
-                                                fontSize: 14,
-                                                fontWeight: 500,
-                                                fontFamily: 'inherit',
-                                                '&:hover': {textDecoration: 'underline'},
-                                            }}
-                                        >
-                                            View (
-                                            {attachmentCount}
-                                            )
-                                            <IconExternalLink size={14} />
-                                        </Box>
-                                    ) : (
-                                        <Typography sx={{fontSize: 14, color: 'text.secondary'}}>
-                                            No attachments
-                                        </Typography>
-                                    )}
+                                <Box sx={{flex: 1}}>
+                                    <Stack spacing={2}>
+                                        <InfoBlock
+                                            icon={<IconFileText size={18} color="#666"/>}
+                                            label="Project"
+                                            value={detail?.project_name || pricework.project_name}
+                                        />
+                                        <InfoBlock
+                                            icon={<IconUser size={18} color="#666"/>}
+                                            label="Team"
+                                            value={detail?.team_name || pricework.team_name}
+                                        />
+                                        <InfoBlock
+                                            icon={<IconUser size={18} color="#666"/>}
+                                            label="User"
+                                            value={detail?.user_name || pricework.user_name}
+                                        />
+                                        <InfoBlock
+                                            icon={<IconUser size={18} color="#666"/>}
+                                            label="Trade"
+                                            value={detail?.trade_name || pricework.trade_name}
+                                        />
+                                        {renderEditableNumberField(
+                                            'Amount Per Unit',
+                                            'amount_per_unit',
+                                            formatAmount(currency, amountPerUnit),
+                                            true,
+                                        )}
+                                    </Stack>
                                 </Box>
-                            </Stack>
+                            </Box>
+
+                            <Divider sx={{my: 2}}/>
+
+                            <Box mb={3}>
+                                <Typography variant="caption" color="text.secondary" mb={0.5} display="block">
+                                    Address
+                                </Typography>
+                                <Typography variant="body1" fontWeight={500} sx={{wordBreak: 'break-word'}}>
+                                    {detail?.address_name || pricework.address_name || '—'}
+                                </Typography>
+                            </Box>
+
+                            {(detail?.category_name || pricework.category_name || detail?.sub_category_name || pricework.sub_category_name) && (
+                                <Box mb={3}>
+                                    <Typography variant="caption" color="text.secondary" mb={0.5} display="block">
+                                        Task
+                                    </Typography>
+                                    <Typography variant="body1" fontWeight={500} sx={{wordBreak: 'break-word'}}>
+                                        {[detail?.category_name || pricework.category_name, detail?.sub_category_name || pricework.sub_category_name]
+                                            .filter(Boolean)
+                                            .join(' / ') || '—'}
+                                    </Typography>
+                                </Box>
+                            )}
+
+                            {(detail?.note || pricework.note) && (
+                                <Box mb={3}>
+                                    <Typography variant="caption" color="text.secondary" mb={0.5} display="block">
+                                        Note
+                                    </Typography>
+                                    <Typography variant="body2" sx={{wordBreak: 'break-word'}}>
+                                        {detail?.note || pricework.note}
+                                    </Typography>
+                                </Box>
+                            )}
+
+                            <Box mb={3}>
+                                <Typography variant="caption" color="text.secondary" mb={0.5} display="block">
+                                    Attachments
+                                </Typography>
+                                {hasAttachments ? (
+                                    <Box
+                                        component="button"
+                                        type="button"
+                                        onClick={() => onViewAttachments?.()}
+                                        sx={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 0.5,
+                                            border: 'none',
+                                            background: 'none',
+                                            p: 0,
+                                            cursor: 'pointer',
+                                            color: 'primary.main',
+                                            fontSize: 14,
+                                            fontWeight: 500,
+                                            fontFamily: 'inherit',
+                                            '&:hover': {textDecoration: 'underline'},
+                                        }}
+                                    >
+                                        View (
+                                        {attachmentCount}
+                                        )
+                                        <IconExternalLink size={14} />
+                                    </Box>
+                                ) : (
+                                    <Typography sx={{fontSize: 14, color: 'text.secondary'}}>
+                                        No attachments
+                                    </Typography>
+                                )}
+                            </Box>
 
                             <Divider sx={{my: 2.5}} />
 

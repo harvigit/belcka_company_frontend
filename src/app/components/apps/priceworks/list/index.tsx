@@ -82,6 +82,7 @@ const COLUMN_LABELS: Record<string, string> = {
   category_name: "Category",
   sub_category_name: "Sub Category",
   unit_name: "Unit",
+  duration: "Duration",
   amount_per_unit: "Amount Per Unit",
   work_complete: "Work Complete",
   pricework_amount: "Pricework Amount",
@@ -103,6 +104,13 @@ const formatAmount = (
   currency: string | null | undefined,
   amount: number | string | null | undefined,
 ) => `${currency || "£"}${Number(amount || 0).toFixed(2)}`;
+
+const formatDuration = (duration: number | string | null | undefined) => {
+  if (duration === null || duration === undefined || duration === "") return "—";
+  const value = String(duration).trim();
+  if (!value) return "—";
+  return /^\d+(\.\d+)?$/.test(value) ? `${value}m` : value;
+};
 
 const BULK_BUTTON_SX = {
   px: 2.5,
@@ -1131,6 +1139,16 @@ const PriceworkList = () => {
         header: () => "Unit",
         cell: (info) => (
           <Typography className="f-14">{info.getValue() || "—"}</Typography>
+        ),
+        enableSorting: false,
+      }),
+      columnHelper.accessor("duration", {
+        id: "duration",
+        header: () => "Duration",
+        cell: (info) => (
+          <Typography className="f-14">
+            {formatDuration(info.getValue())}
+          </Typography>
         ),
         enableSorting: false,
       }),
