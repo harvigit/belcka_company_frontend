@@ -48,6 +48,33 @@ const calculateRates = (netRate: number, cisPercentage: number) => {
   }
 };
 
+const hasDiffField = (companyData: any, field: string) =>
+  Object.prototype.hasOwnProperty.call(companyData?.diff_data || {}, field);
+
+const getEffectiveNetRate = (companyData: any) => {
+  // Only the pending request's old value is the live rate. After approve/reject,
+  // leftover diff_data must not override the actual company rate.
+  if (companyData?.is_pending_request && hasDiffField(companyData, "net_rate_perday")) {
+    const pendingRate = companyData.diff_data.net_rate_perday?.old;
+    if (pendingRate !== undefined && pendingRate !== null && pendingRate !== "") {
+      return pendingRate;
+    }
+  }
+
+  return companyData?.net_rate_perDay ?? companyData?.net_rate_perday ?? 0;
+};
+
+const getEffectiveTradeId = (companyData: any) => {
+  if (companyData?.is_pending_request && hasDiffField(companyData, "trade_id")) {
+    const pendingTrade = companyData.diff_data.trade_id?.old;
+    if (pendingTrade !== undefined && pendingTrade !== null) {
+      return pendingTrade;
+    }
+  }
+
+  return companyData?.trade_id ?? null;
+};
+
 const ComapnyRate: React.FC<ProjectListingProps> = ({
   active,
   name,
@@ -99,24 +126,14 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
         const cisPercentage = Number(companyData.cis) || 0;
         setCisPer(cisPercentage);
 
-        const netRate = Object.keys(companyData?.diff_data || {}).includes(
-          "net_rate_perday",
-        )
-          ? (companyData?.diff_data?.net_rate_perday?.old ?? 0)
-          : (companyData?.net_rate_perDay ?? 0);
+        const netRate = getEffectiveNetRate(companyData);
 
-        // const cisAmount = netRate * (cisPercentage / 100);
-        // const grossAmount = netRate + cisAmount;
-        //
-        // setCis(cisAmount.toFixed(2));
-        // setGross(grossAmount.toFixed(2));
-
-        const { cis, gross } = calculateRates(netRate, cisPercentage);
+        const { cis, gross } = calculateRates(Number(netRate) || 0, cisPercentage);
         setCis(cis);
         setGross(gross);
 
         setFormData({
-          trade_id: companyData.trade_id ?? null,
+          trade_id: getEffectiveTradeId(companyData),
           rate: netRate,
         });
       }
@@ -202,11 +219,11 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
   const hasRateChange = !!comapny?.new_net_rate_perday;
 
   const handleUpdate = async () => {
-    const currentTradeId = comapny?.trade_id ?? null;
+    const currentTradeId = getEffectiveTradeId(comapny);
+    const currentRate = getEffectiveNetRate(comapny);
 
-    const isTradeChanged = currentTradeId !== formData.trade_id;
-    const isRateChanged =
-      Number(comapny.net_rate_perDay) !== Number(formData.rate);
+    const isTradeChanged = Number(currentTradeId) !== Number(formData.trade_id);
+    const isRateChanged = Number(currentRate) !== Number(formData.rate);
 
     if (!isTradeChanged && !isRateChanged) {
       return;
@@ -358,52 +375,6 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       console.error("Rejection failed:", err);
     }
   };
-
-  useEffect(() => {
-    if (!comapny?.diff_data) return;
-
-    if (
-      Object.prototype.hasOwnProperty.call(comapny.diff_data, "net_rate_perday")
-    ) {
-      const rateValue =
-        comapny.is_pending_request === false && comapny?.status !== 12
-          ? comapny.diff_data.net_rate_perday?.new
-          : comapny.diff_data.net_rate_perday?.old;
-
-      if (rateValue !== undefined && rateValue !== null) {
-        const netRate = Number(rateValue);
-
-        setFormData((prev) => ({
-          ...prev,
-          rate: netRate,
-        }));
-
-        // const cisAmount = netRate * (cisPer / 100);
-        // const grossAmount = netRate + cisAmount;
-        //
-        // setCis(cisAmount.toFixed(2));
-        // setGross(grossAmount.toFixed(2));
-
-        const { cis, gross } = calculateRates(netRate, cisPer);
-        setCis(cis);
-        setGross(gross);
-      }
-    }
-
-    if (Object.prototype.hasOwnProperty.call(comapny.diff_data, "trade_id")) {
-      const tradeValue =
-        comapny.is_pending_request === false && comapny?.status !== 12
-          ? comapny.diff_data.trade_id?.new
-          : comapny.diff_data.trade_id?.old;
-
-      if (tradeValue !== undefined && tradeValue !== null) {
-        setFormData((prev) => ({
-          ...prev,
-          trade_id: tradeValue,
-        }));
-      }
-    }
-  }, [comapny]);
 
   if (loading) {
     return (
@@ -568,22 +539,13 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                     options={trade}
                     getOptionLabel={(opt: any) => opt?.name || ""}
                     value={
-                      Object.keys(comapny?.diff_data || {}).includes("trade_id")
-                        ? trade.find(
-                            (t) =>
-                              t.id ===
-                              (comapny.is_pending_request ||
-                              comapny.status === 12
-                                ? comapny.diff_data.trade_id.old
-                                : comapny.diff_data.trade_id.new),
-                          ) || null
-                        : trade.find((t) => t.id === formData.trade_id) || null
+                      trade.find((t) => t.id === formData.trade_id) || null
                     }
                     onChange={(_, newValue) => {
-                      setFormData({
-                        ...formData,
+                      setFormData((prev) => ({
+                        ...prev,
                         trade_id: newValue ? newValue.id : null,
-                      });
+                      }));
                     }}
                     renderInput={(params) => (
                       <TextField {...params} label={t("Trade")} fullWidth />
@@ -695,25 +657,13 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                         }
                         getOptionLabel={(opt: any) => opt?.name || ""}
                         value={
-                          Object.keys(comapny?.diff_data || {}).includes(
-                            "trade_id",
-                          )
-                            ? trade.find(
-                                (t) =>
-                                  t.id ===
-                                  (comapny.status === 12 ||
-                                  comapny.is_pending_request
-                                    ? comapny.diff_data.trade_id.old
-                                    : comapny.diff_data.trade_id.new),
-                              ) || null
-                            : trade.find((t) => t.id === formData.trade_id) ||
-                              null
+                          trade.find((t) => t.id === formData.trade_id) || null
                         }
                         onChange={(_, newValue) => {
-                          setFormData({
-                            ...formData,
+                          setFormData((prev) => ({
+                            ...prev,
                             trade_id: newValue ? newValue.id : null,
-                          });
+                          }));
                         }}
                         renderInput={(params) => (
                           <TextField {...params} label={t("Trade")} fullWidth />
