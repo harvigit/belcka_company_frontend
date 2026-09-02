@@ -109,14 +109,16 @@ const filterOptionsByWordStart = <T,>(
     inputValue: string,
     getLabel: (option: T) => string,
 ) => {
-    const searchTerm = inputValue.trim().toLowerCase();
-    if (!searchTerm) return options;
+    const searchWords = inputValue.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!searchWords.length) return options;
 
     return options.filter((option) =>
-        getLabel(option)
-            .toLowerCase()
-            .split(/\s+/)
-            .some((word) => word.startsWith(searchTerm)),
+        searchWords.every((searchWord) =>
+            getLabel(option)
+                .toLowerCase()
+                .split(/\s+/)
+                .some((word) => word.startsWith(searchWord)),
+        ),
     );
 };
 
@@ -255,8 +257,6 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     const [selectedProjectFilter, setSelectedProjectFilter] = useState('');
     const [projectPage, setProjectPage] = useState(0);
     const [projectColumnsPerPage, setProjectColumnsPerPage] = useState(DEFAULT_PROJECT_COLUMNS_PER_PAGE);
-    const [userSearchByRowId, setUserSearchByRowId] = useState<Record<string, string>>({});
-    const [tradeSearchByRowId, setTradeSearchByRowId] = useState<Record<string, string>>({});
 
     const fetchAllTasks = useCallback(async (companyId: number) => {
         const firstResponse = await api.get(
@@ -344,6 +344,16 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             }))
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [trades]);
+
+    const userOptions = useMemo(() => {
+        return users
+            .map((user) => ({
+                ...user,
+                id: String(user.id),
+                name: getUserDisplayName(user),
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [users]);
 
     const displayedProjects = useMemo(() => {
         const availableProjects = selectedProjectFilter
@@ -507,10 +517,11 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
     const handleUserChange = (row: PricingRow, userId: string) => {
         const selectedUserTradeId = users.find((item) => String(item.id) === userId)?.trade_id;
+        const selectedUser = users.find((item) => String(item.id) === userId);
         handleTradeChange(row, selectedUserTradeId ? String(selectedUserTradeId) : '');
         updateRow(row.id, {
             user_id: userId,
-            user_name: users.find((item) => String(item.id) === userId)?.name || '',
+            user_name: selectedUser ? getUserDisplayName(selectedUser) : '',
             trade_id: selectedUserTradeId ? String(selectedUserTradeId) : '',
             trade_name: selectedUserTradeId
                 ? trades.find((trade) => String(trade.id) === String(selectedUserTradeId))?.name || ''
@@ -587,16 +598,6 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         }
 
         setRows((prev) => prev.filter((row) => row.id !== rowId));
-        setUserSearchByRowId((prev) => {
-            const next = {...prev};
-            delete next[rowId];
-            return next;
-        });
-        setTradeSearchByRowId((prev) => {
-            const next = {...prev};
-            delete next[rowId];
-            return next;
-        });
         setSelectedRowIds((prev) => {
             const next = new Set(prev);
             next.delete(rowId);
@@ -1053,8 +1054,6 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                 const subCategoryOptions = getSubCategoryOptions(row.trade_id, row.category_id);
                                 const hasSubCategoryOptions = subCategoryOptions.length > 0;
                                 const selectedTask = taskMap[row.task_id];
-                                const selectedUser = users.find((item) => String(item.id) === row.user_id) ||
-                                    (row.user_name ? {id: row.user_id, name: row.user_name} : null);
                                 const selectedTrade = tradeOptions.find((trade) => trade.id === row.trade_id) ||
                                     (
                                         row.trade_id
@@ -1064,15 +1063,15 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                             }
                                             : null
                                     );
-                                const userSearchTerm = userSearchByRowId[row.id] ?? '';
-                                const tradeSearchTerm = tradeSearchByRowId[row.id] ?? '';
-                                const filteredUserOptions = filterOptionsByWordStart(users, userSearchTerm, getUserDisplayName);
-                                const filteredTradeOptions = filterOptionsByWordStart(
-                                    tradeOptions,
-                                    tradeSearchTerm,
-                                    (option) => option.name || '',
-                                );
-
+                                const selectedUser = userOptions.find((user) => user.id === row.user_id) ||
+                                    (
+                                        row.user_id
+                                            ? {
+                                                id: row.user_id,
+                                                name: row.user_name || 'Select user',
+                                            }
+                                            : null
+                                    );
                                 return (
                                     <TableRow key={row.id} hover>
                                         <TableCell align="center" sx={{borderRight: '1px solid #e2e8f0', minWidth: 52, py: 1}}>
@@ -1086,24 +1085,15 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                             <Autocomplete
                                                 size="small"
                                                 fullWidth
-                                                options={filteredUserOptions}
+                                                options={userOptions}
                                                 value={selectedUser}
-                                                getOptionLabel={(option) => getUserDisplayName(option)}
-                                                filterOptions={(options) => options}
+                                                getOptionLabel={(option) => option.name || 'User'}
+                                                filterOptions={(options, state) =>
+                                                    filterOptionsByWordStart(options, state.inputValue, (option) => option.name || '')
+                                                }
                                                 isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
                                                 onChange={(_, value) => {
                                                     handleUserChange(row, value ? String(value.id) : '');
-                                                    setUserSearchByRowId((prev) => ({
-                                                        ...prev,
-                                                        [row.id]: '',
-                                                    }));
-                                                }}
-                                                onInputChange={(_, value, reason) => {
-                                                    if (reason !== 'input' && reason !== 'clear') return;
-                                                    setUserSearchByRowId((prev) => ({
-                                                        ...prev,
-                                                        [row.id]: value,
-                                                    }));
                                                 }}
                                                 autoHighlight
                                                 noOptionsText="No users found"
@@ -1122,24 +1112,15 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                             <Autocomplete
                                                 size="small"
                                                 fullWidth
-                                                options={filteredTradeOptions}
+                                                options={tradeOptions}
                                                 value={selectedTrade}
                                                 getOptionLabel={(option) => option.name || 'Trade'}
-                                                filterOptions={(options) => options}
+                                                filterOptions={(options, state) =>
+                                                    filterOptionsByWordStart(options, state.inputValue, (option) => option.name || '')
+                                                }
                                                 isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
                                                 onChange={(_, value) => {
                                                     handleTradeChange(row, value ? String(value.id) : '');
-                                                    setTradeSearchByRowId((prev) => ({
-                                                        ...prev,
-                                                        [row.id]: '',
-                                                    }));
-                                                }}
-                                                onInputChange={(_, value, reason) => {
-                                                    if (reason !== 'input' && reason !== 'clear') return;
-                                                    setTradeSearchByRowId((prev) => ({
-                                                        ...prev,
-                                                        [row.id]: value,
-                                                    }));
                                                 }}
                                                 autoHighlight
                                                 noOptionsText="No trades found"
