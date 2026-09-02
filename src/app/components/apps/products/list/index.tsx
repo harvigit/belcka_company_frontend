@@ -86,6 +86,7 @@ export interface ProductFormData {
   company_id: any;
   uuid: string;
   short_name: string;
+  display_name?: string;
   name?: string;
   status?: boolean;
   description?: string;
@@ -797,6 +798,7 @@ const ProductList = () => {
       name: "",
       sort_id: 0,
       short_name: "",
+      display_name: "",
       description: "",
       uuid: "",
       status: true,
@@ -1383,6 +1385,37 @@ const ProductList = () => {
               </Typography>
             </Tooltip>
           </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.display_name, {
+      id: "displayName",
+      header: () => "Display Name",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Tooltip title={item.display_name ?? ""}>
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              component="div"
+              variant="body1"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                lineHeight: 1.25,
+                maxWidth: 300,
+                width: 250,
+                wordBreak: "break-word",
+              }}
+            >
+              {item.display_name ? item.display_name : "-"}
+            </Typography>
+          </Tooltip>
         );
       },
     }),

@@ -44,6 +44,7 @@ export interface ProductFormData {
   company_id: any;
   uuid: string;
   short_name: string;
+  display_name?: string;
   name?: string;
   status?: boolean;
   description?: string;
@@ -228,7 +229,8 @@ const ProductView: React.FC<ProductViewProps> = ({
           >
             <BlankCard>
               <TabPanel value={value} index={0}>
-                <ProductInformation canEdit={canEdit}
+                <ProductInformation
+                  canEdit={canEdit}
                   shouldRefresh={triggerRefresh}
                   companyId={companyId}
                   productId={productId}
@@ -239,7 +241,8 @@ const ProductView: React.FC<ProductViewProps> = ({
                 />
               </TabPanel>
               <TabPanel value={value} index={1}>
-                <ProductTechnicalInformation canEdit={canEdit}
+                <ProductTechnicalInformation
+                  canEdit={canEdit}
                   companyId={companyId}
                   productId={productId}
                   attachments={attachments}
@@ -247,10 +250,18 @@ const ProductView: React.FC<ProductViewProps> = ({
                 />
               </TabPanel>
               <TabPanel value={value} index={2}>
-                <ProductSets canEdit={canEdit} companyId={companyId} productId={productId} />
+                <ProductSets
+                  canEdit={canEdit}
+                  companyId={companyId}
+                  productId={productId}
+                />
               </TabPanel>
               <TabPanel value={value} index={3}>
-                <ProductTrades canEdit={canEdit} companyId={companyId} productId={productId} />
+                <ProductTrades
+                  canEdit={canEdit}
+                  companyId={companyId}
+                  productId={productId}
+                />
               </TabPanel>
             </BlankCard>
           </Grid>

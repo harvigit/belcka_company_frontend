@@ -215,6 +215,13 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
                 {product?.short_name || product?.name || "-"}
               </Typography>
             </Grid>
+            
+            <Grid size={{ xs: 6 }}>
+              <Typography variant="body2" color="text.secondary">
+                Display Name
+              </Typography>
+              <Typography>{product?.display_name || "-"}</Typography>
+            </Grid>
 
             <Grid size={{ xs: 6 }}>
               <Typography variant="body2" color="text.secondary">

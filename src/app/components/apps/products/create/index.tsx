@@ -42,6 +42,7 @@ export interface ProductFormData {
   company_id: any;
   uuid: string;
   short_name: string;
+  display_name?: string;
   name?: string;
   status?: boolean;
   description?: string;
@@ -227,6 +228,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         company_id: companyId,
         uuid: "",
         short_name: "",
+        display_name: "",
         name: "",
         description: "",
         supplier_code: "",
@@ -273,6 +275,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         company_id: companyId,
         uuid: product.uuid ?? "",
         short_name: product.short_name ?? "",
+        display_name: product.display_name ?? "",
         name: product.name ?? "",
         description: product.description ?? "",
         supplier_code: product.supplier_code ?? "",
@@ -695,7 +698,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
           >
             <Grid container spacing={3}>
               <Grid size={{ xs: 12 }}>
-                <Box display={"flex"} justifyItems={"center"} gap={5}>
+                <Box display={"flex"} justifyItems={"center"} gap={3}>
                   {/* Main Image Upload */}
                   <Box
                     {...mainDropzone.getRootProps()}
@@ -785,6 +788,27 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                         setFormData((p) => ({
                           ...p,
                           short_name: value,
+                        }));
+                      }}
+                      sx={{ mb: 2 }}
+                    />
+                  </Box>
+                  <Box width={"30%"}>
+                    <Typography variant="body2" gutterBottom>
+                      Display Name
+                    </Typography>
+                    <CustomTextField
+                      className="product_input"
+                      placeholder="Display Name"
+                      inputProps={{ maxLength: 100 }}
+                      fullWidth
+                      value={formData.display_name}
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+                        if (!/^[^\u0000-\u001F]*$/.test(value)) return;
+                        setFormData((p) => ({
+                          ...p,
+                          display_name: value,
                         }));
                       }}
                       sx={{ mb: 2 }}

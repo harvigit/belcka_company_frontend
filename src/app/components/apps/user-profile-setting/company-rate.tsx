@@ -54,9 +54,16 @@ const hasDiffField = (companyData: any, field: string) =>
 const getEffectiveNetRate = (companyData: any) => {
   // Only the pending request's old value is the live rate. After approve/reject,
   // leftover diff_data must not override the actual company rate.
-  if (companyData?.is_pending_request && hasDiffField(companyData, "net_rate_perday")) {
+  if (
+    companyData?.is_pending_request &&
+    hasDiffField(companyData, "net_rate_perday")
+  ) {
     const pendingRate = companyData.diff_data.net_rate_perday?.old;
-    if (pendingRate !== undefined && pendingRate !== null && pendingRate !== "") {
+    if (
+      pendingRate !== undefined &&
+      pendingRate !== null &&
+      pendingRate !== ""
+    ) {
       return pendingRate;
     }
   }
@@ -65,7 +72,10 @@ const getEffectiveNetRate = (companyData: any) => {
 };
 
 const getEffectiveTradeId = (companyData: any) => {
-  if (companyData?.is_pending_request && hasDiffField(companyData, "trade_id")) {
+  if (
+    companyData?.is_pending_request &&
+    hasDiffField(companyData, "trade_id")
+  ) {
     const pendingTrade = companyData.diff_data.trade_id?.old;
     if (pendingTrade !== undefined && pendingTrade !== null) {
       return pendingTrade;
@@ -82,6 +92,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
 }) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
   const params = useParams();
   const [comapny, setCompany] = useState<any>();
   const [trade, setTrade] = useState<TradeList[]>([]);
@@ -128,7 +139,10 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
 
         const netRate = getEffectiveNetRate(companyData);
 
-        const { cis, gross } = calculateRates(Number(netRate) || 0, cisPercentage);
+        const { cis, gross } = calculateRates(
+          Number(netRate) || 0,
+          cisPercentage,
+        );
         setCis(cis);
         setGross(gross);
 
@@ -219,6 +233,8 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
   const hasRateChange = !!comapny?.new_net_rate_perday;
 
   const handleUpdate = async () => {
+    setSaving(true);
+
     const currentTradeId = getEffectiveTradeId(comapny);
     const currentRate = getEffectiveNetRate(comapny);
 
@@ -230,6 +246,8 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
     }
 
     try {
+      setSaving(true);
+
       if (isTradeChanged && isRateChanged) {
         if (comapny.user_role_id !== 1 && !formData.trade_id) {
           toast.error("Please select trade");
@@ -253,6 +271,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
           getCompanyData();
+          setSaving(false);
         }
 
         return;
@@ -274,6 +293,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
 
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
+          setSaving(false);
         } else {
           return;
         }
@@ -295,6 +315,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
 
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
+          setSaving(false);
         } else {
           return;
         }
@@ -315,6 +336,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
     } catch (err) {
       console.error("Update failed:", err);
     }
+    setSaving(false);
   };
 
   const handleApprove = async (requestLogId?: number | null) => {
@@ -670,7 +692,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                   variant="contained"
                   color="primary"
                   onClick={handleUpdate}
-                  disabled={comapny.is_pending_request}
+                  disabled={comapny.is_pending_request || saving}
                 >
                   {t("Update")}
                 </Button>
@@ -999,10 +1021,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                               {item.new_net_rate_perday
                                 ? item.new_net_rate_perday
                                 : 0}
-                              <Typography
-                                component="span"
-                                color="success.main"
-                              >
+                              <Typography component="span" color="success.main">
                                 /day
                               </Typography>
                             </Typography>

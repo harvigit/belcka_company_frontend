@@ -600,7 +600,7 @@ export default function UserRequests({
 
                   return (
                     <Grid
-                      size={{ xs: 12, sm: 4 }}
+                      size={{ xs: 12, sm: 12 }}
                       key={idx}
                       sx={{
                         overflow: "visible",
