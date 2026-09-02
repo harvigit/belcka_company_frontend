@@ -47,6 +47,7 @@ const IGNORED_KEYS = new Set([
   "joining_date",
   "new_rate_perDay",
   "new_rate_perday",
+  "net_rate_perhour",
   "trade_id"
 ]);
 
@@ -64,6 +65,7 @@ const ID_TO_NAME: Record<string, string> = {
   supervisor_id: "supervisor_name",
   category_id: "category_name",
   leave_id: "leave_name",
+  net_rate_perday: "rate"
 };
 
 const LABEL_OVERRIDES: Record<string, string> = {
@@ -89,6 +91,9 @@ const LABEL_OVERRIDES: Record<string, string> = {
   leave_id: "Leave",
   leave_name: "Leave",
   utr_number: "UTR Number",
+  net_rate_perday: "Rate",
+  net_rate_perDay: "Rate",
+  rate: "Rate",
 };
 
 export function isBlankDiffValue(value: any, _key?: string): boolean {
@@ -122,6 +127,8 @@ const KEY_ALIASES: Record<string, string> = {
   trade: "trade_name",
   team: "team_title",
   shift: "shift_name",
+  net_rate_perday: "rate",
+  net_rate_perDay: "rate",
 };
 
 export function prepareDisplayDiffs(diffs?: DiffEntry[] | null): DisplayDiff[] {

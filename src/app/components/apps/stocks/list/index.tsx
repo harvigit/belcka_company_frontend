@@ -1706,48 +1706,64 @@ const StockList = () => {
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           sx={{
-            width: 700,
-            "& .MuiDrawer-paper": { width: 700, backgroundColor: "#f9f9f9" },
+            width: 900,
+            "& .MuiDrawer-paper": {
+              width: 900,
+              backgroundColor: "#f9f9f9",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            },
           }}
         >
           <Box
             sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              p: 2,
+              position: "sticky",
+              top: 0,
+              zIndex: 2,
+              flexShrink: 0,
+              bgcolor: "#f9f9f9",
             }}
           >
-            <Typography variant="h6" fontWeight="bold">
-              Stock History
-            </Typography>
-            <Box display={"flex"} gap={2} alignItems={"center"}>
-              <Typography
-                variant="subtitle1"
-                color="textSecondary"
-                fontWeight={500}
-                fontSize={20}
-              >
-                Qty in Stock: {isSubQty ? qty : stockQty}{" "}
-                {isSubQty ? `(${stockQty} ${packOfUnit})` : ""}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                p: 2,
+              }}
+            >
+              <Typography variant="h6" fontWeight="bold">
+                Stock History
               </Typography>
-              <IconButton onClick={() => setDrawerOpen(false)}>
-                <IconX size={18} />
-              </IconButton>
+              <Box display={"flex"} gap={2} alignItems={"center"}>
+                <Typography
+                  variant="subtitle1"
+                  color="textSecondary"
+                  fontWeight={500}
+                  fontSize={20}
+                >
+                  Qty in Stock: {isSubQty ? qty : stockQty}{" "}
+                  {isSubQty ? `(${stockQty} ${packOfUnit})` : ""}
+                </Typography>
+                <IconButton onClick={() => setDrawerOpen(false)}>
+                  <IconX size={18} />
+                </IconButton>
+              </Box>
             </Box>
+            <Divider />
+            <Typography
+              variant="subtitle1"
+              color="text.secondary"
+              fontWeight="medium"
+              gutterBottom
+              ml={2}
+              mt={3}
+            >
+              {productName}
+            </Typography>
+            <Divider sx={{ mt: 2 }} />
           </Box>
-          <Divider />
-          <Typography
-            variant="subtitle1"
-            color="text.secondary"
-            fontWeight="medium"
-            gutterBottom
-            ml={2}
-            mt={3}
-          >
-            {productName}
-          </Typography>
-          <Divider sx={{ mt: 2 }} />
 
           {loading ? (
             <Box sx={{ textAlign: "center" }} mt={3}>
@@ -1764,14 +1780,19 @@ const StockList = () => {
               No history available
             </Typography>
           ) : (
-            <Table size="small">
+            <TableContainer sx={{ flex: 1, overflow: "auto" }}>
+            <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>{isSubQty ? "Sub Qty" : "Qty"}</TableCell>
-                  <TableCell>Reference</TableCell>
-                  <TableCell>Price</TableCell>
-                  <TableCell>New Qty</TableCell>
+                  <TableCell sx={{ bgcolor: "#f9f9f9" }}>Date</TableCell>
+                  <TableCell sx={{ bgcolor: "#f9f9f9" }}>
+                    {isSubQty ? "Sub Qty" : "Qty"}
+                  </TableCell>
+                  <TableCell sx={{ bgcolor: "#f9f9f9" }}>Project</TableCell>
+                  <TableCell sx={{ bgcolor: "#f9f9f9" }}>Location</TableCell>
+                  <TableCell sx={{ bgcolor: "#f9f9f9" }}>Reference</TableCell>
+                  <TableCell sx={{ bgcolor: "#f9f9f9" }}>Price</TableCell>
+                  <TableCell sx={{ bgcolor: "#f9f9f9" }}>New Qty</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1830,7 +1851,52 @@ const StockList = () => {
                             </Typography>
                           </Box>
                         </TableCell>
-
+                        <TableCell>
+                          <Tooltip title={h.project_name ?? ""}>
+                            <Typography
+                              color="text.secondary"
+                              className="f-14"
+                              fontWeight={"bold"}
+                              ml={0.5}
+                              sx={{
+                                display: "-webkit-box",
+                                WebkitBoxOrient: "vertical",
+                                WebkitLineClamp: 1,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                wordBreak: "break-word",
+                                minWidth: "100px",
+                                width: "100%",
+                                maxWidth: "200px",
+                              }}
+                            >
+                              {h.project_name ?? "-"}
+                            </Typography>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title={h.address_name ?? ""}>
+                            <Typography
+                              color="text.secondary"
+                              className="f-14"
+                              fontWeight={"bold"}
+                              ml={0.5}
+                              sx={{
+                                display: "-webkit-box",
+                                WebkitBoxOrient: "vertical",
+                                WebkitLineClamp: 1,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                wordBreak: "break-word",
+                                minWidth: "100px",
+                                width: "100%",
+                                maxWidth: "200px",
+                              }}
+                            >
+                              {h.address_name ?? "-"}
+                            </Typography>
+                          </Tooltip>
+                        </TableCell>
                         <TableCell>
                           <Tooltip
                             title={h.reference ?? ""}
@@ -1904,6 +1970,7 @@ const StockList = () => {
                 })}
               </TableBody>
             </Table>
+            </TableContainer>
           )}
         </Drawer>
 

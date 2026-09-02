@@ -479,35 +479,85 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                         justifyContent: "space-between",
                       }}
                     >
-                      <Typography sx={{ color: "black", mr: 2 }}>
-                        {hasTradeChange && hasRateChange
-                          ? "Trade and Rate request is pending. Please take an action."
-                          : hasTradeChange
-                            ? "Trade request is pending. Please take an action."
-                            : hasRateChange
-                              ? "Rate request is pending. Please take an action."
-                              : "Request is pending. Please take an action."}
+                      <Box sx={{ color: "black", mr: 2 }}>
+                        <Typography sx={{ color: "black" }}>
+                          {hasTradeChange && hasRateChange
+                            ? "Trade and Rate request is pending. Please take an action."
+                            : hasTradeChange
+                              ? "Trade request is pending. Please take an action."
+                              : hasRateChange
+                                ? "Rate request is pending. Please take an action."
+                                : "Request is pending. Please take an action."}
+                        </Typography>
 
-                        <Typography color="textSecondary" className="f-14">
+                        <Box className="f-14" color="text.secondary" mt={0.75}>
                           {hasTradeChange && (
-                            <>
-                              <strong>Trade:</strong>{" "}
-                              {comapny?.diff_data?.trade_name?.old} →{" "}
-                              {comapny?.diff_data?.trade_name?.new}
-                              <br />
-                            </>
+                            <Box
+                              display="flex"
+                              alignItems="center"
+                              flexWrap="wrap"
+                              gap={0.75}
+                              mb={hasRateChange ? 0.5 : 0}
+                            >
+                              <strong>Trade:</strong>
+                              <Box
+                                component="span"
+                                sx={{
+                                  color: "error.main",
+                                  textDecoration: "line-through",
+                                }}
+                              >
+                                {comapny?.diff_data?.trade_name?.old}
+                              </Box>
+                              <Box component="span">→</Box>
+                              <Chip
+                                size="small"
+                                label={comapny?.diff_data?.trade_name?.new}
+                                sx={{
+                                  height: 22,
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  bgcolor: "#E8F5E9",
+                                  color: "#2E7D32",
+                                }}
+                              />
+                            </Box>
                           )}
 
                           {hasRateChange && (
-                            <>
-                              <strong>Rate:</strong> {comapny?.currency}
-                              {comapny?.old_net_rate_perday} →{" "}
-                              {comapny?.currency}
-                              {comapny?.new_net_rate_perday}
-                            </>
+                            <Box
+                              display="flex"
+                              alignItems="center"
+                              flexWrap="wrap"
+                              gap={0.75}
+                            >
+                              <strong>Rate:</strong>
+                              <Box
+                                component="span"
+                                sx={{
+                                  color: "error.main",
+                                  textDecoration: "line-through",
+                                }}
+                              >
+                                {comapny?.currency}
+                                {comapny?.old_net_rate_perday}
+                              </Box>
+                              <Box component="span">→</Box>
+                              <Chip
+                                size="small"
+                                label={`${comapny?.currency ?? ""}${comapny?.new_net_rate_perday ?? ""}`}
+                                sx={{
+                                  height: 22,
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  bgcolor: "#E8F5E9",
+                                  color: "#2E7D32",
+                                }}
+                              />
+                            </Box>
                           )}
-                        </Typography>
-                      </Typography>
+                        </Box>
+                      </Box>
 
                       <Button
                         variant="outlined"
@@ -903,7 +953,14 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                             <Typography variant="h6" fontWeight="bold">
                               Old rate :
                             </Typography>
-                            <Typography variant="body1" fontWeight="bold">
+                            <Typography
+                              variant="body1"
+                              fontWeight="bold"
+                              sx={{
+                                color: "error.main",
+                                textDecoration: "line-through",
+                              }}
+                            >
                               {item.currency}
                               {item.old_net_rate_perday
                                 ? item.old_net_rate_perday
@@ -911,6 +968,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                               <Typography
                                 component="span"
                                 color="textSecondary"
+                                sx={{ textDecoration: "none" }}
                               >
                                 /day
                               </Typography>
@@ -926,14 +984,24 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                             <Typography variant="h6" fontWeight="bold">
                               New rate :
                             </Typography>
-                            <Typography variant="body1" fontWeight="bold">
+                            <Typography
+                              variant="body1"
+                              fontWeight="bold"
+                              sx={{
+                                color: "success.main",
+                                bgcolor: "#E8F5E9",
+                                px: 1,
+                                py: 0.25,
+                                borderRadius: 1,
+                              }}
+                            >
                               {item.currency}
                               {item.new_net_rate_perday
                                 ? item.new_net_rate_perday
                                 : 0}
                               <Typography
                                 component="span"
-                                color="textSecondary"
+                                color="success.main"
                               >
                                 /day
                               </Typography>

@@ -255,20 +255,30 @@ const ProjectDashboard = () => {
         cell: ({ row }: any) => {
           const item = row.original;
           const isChecked = selectedRowIds.has(item.id);
-          const showCheckbox = isChecked || hoveredRow === item.id;
+          const isHovered = hoveredRow === item.id;
+          const showCheckbox = isChecked || isHovered;
 
           return (
-            <Stack direction="row" alignItems="center" sx={{ pl: 1 }}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              onMouseEnter={() => setHoveredRow(item.id)}
+              onMouseLeave={() => setHoveredRow(null)}
+              sx={{ pl: 1 }}
+            >
               <CustomCheckbox
                 checked={isChecked}
-                onClick={(e: any) => e.stopPropagation()}
-                onChange={(e: any) => {
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  const next = new Set(selectedRowIds);
-                  if (isChecked) next.delete(item.id);
-                  else next.add(item.id);
-                  setSelectedRowIds(next);
+                  const newSelected = new Set(selectedRowIds);
+                  if (isChecked) {
+                    newSelected.delete(item.id);
+                  } else {
+                    newSelected.add(item.id);
+                  }
+                  setSelectedRowIds(newSelected);
                 }}
                 sx={{
                   opacity: showCheckbox ? 1 : 0,

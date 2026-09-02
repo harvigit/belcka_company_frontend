@@ -99,11 +99,18 @@ interface Props {
 const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
   const [data, setData] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [addresses, setAddresses] = useState<any[]>([]);
   const [fetchHistory, setFetchHistory] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [isSelectAll, setIsSelectAll] = useState<boolean>(false);
-  const [filters, setFilters] = useState({ type: "", user: "" });
+  const [filters, setFilters] = useState({
+    type: "",
+    user: "",
+    address: "",
+    project: "",
+  });
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
   const session = useSession();
@@ -195,6 +202,18 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
           url += `&user_ids=${userId}`;
         }
       }
+      if (filters.address && filters.address !== "All") {
+        const addressId = addresses.find((c) => c.name === filters.address)?.id;
+        if (addressId) {
+          url += `&address_ids=${addressId}`;
+        }
+      }
+      if (filters.project && filters.project !== "All") {
+        const projectId = projects.find((c) => c.name === filters.project)?.id;
+        if (projectId) {
+          url += `&project_ids=${projectId}`;
+        }
+      }
       const res = await api.get(url);
       if (res.data) {
         const responseData = res.data.info || [];
@@ -239,6 +258,18 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
     }
   };
 
+  const fetchExpenseResources = async () => {
+    try {
+      const res = await api.get("/expense/get-resources");
+      if (res.data) {
+        setProjects(res.data.projects || []);
+        setAddresses(res.data.addresses || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleDateRangeChange = (range: {
     from: Date | null;
     to: Date | null;
@@ -253,6 +284,7 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
   useEffect(() => {
     if (openDrawer && user?.company_id) {
       fetchUsers();
+      fetchExpenseResources();
     }
   }, [openDrawer, user?.company_id]);
 
@@ -437,6 +469,42 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
     columnHelper.accessor((row) => row?.name, {
       id: "name",
       header: () => "Name",
+      cell: (info) => {
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.user_name, {
+      id: "user",
+      header: () => "User",
+      cell: (info) => {
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.project_name, {
+      id: "project",
+      header: () => "Project",
+      cell: (info) => {
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.address_name, {
+      id: "address",
+      header: () => "Address",
       cell: (info) => {
         return (
           <Typography className="f-14" color="textPrimary">
@@ -708,14 +776,67 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
                 ) : (
                   <></>
                 )}
+
+                {projects.length > 0 ? (
+                  <TextField
+                    select
+                    label="Projects"
+                    value={tempFilters.project}
+                    onChange={(e) =>
+                      setTempFilters({
+                        ...tempFilters,
+                        project: e.target.value,
+                      })
+                    }
+                    fullWidth
+                  >
+                    <MenuItem value="All">All</MenuItem>
+                    {projects.map((supervisor, i) => (
+                      <MenuItem key={i} value={supervisor.name}>
+                        {supervisor.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                ) : (
+                  <></>
+                )}
+
+                {addresses.length > 0 ? (
+                  <TextField
+                    select
+                    label="Location"
+                    value={tempFilters.address}
+                    onChange={(e) =>
+                      setTempFilters({
+                        ...tempFilters,
+                        address: e.target.value,
+                      })
+                    }
+                    fullWidth
+                  >
+                    <MenuItem value="All">All</MenuItem>
+                    {addresses.map((supervisor, i) => (
+                      <MenuItem key={i} value={supervisor.name}>
+                        {supervisor.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                ) : (
+                  <></>
+                )}
               </Stack>
             </DialogContent>
 
             <DialogActions>
               <Button
                 onClick={() => {
-                  setTempFilters({ type: "", user: "" });
-                  setFilters({ type: "", user: "" });
+                  setTempFilters({
+                    type: "",
+                    user: "",
+                    address: "",
+                    project: "",
+                  });
+                  setFilters({ type: "", user: "", address: "", project: "" });
                   setOpen(false);
                 }}
                 color="inherit"

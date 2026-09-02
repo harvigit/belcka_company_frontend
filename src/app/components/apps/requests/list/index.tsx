@@ -29,6 +29,7 @@ import {
   IconX,
   IconSearch,
   IconFilter,
+  IconNotes,
 } from "@tabler/icons-react";
 import { format, parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
@@ -97,6 +98,50 @@ const saveDateRangeToStorage = (
     console.error("Error saving date range to localStorage:", error);
   }
 };
+
+function RequestNoteIcon({ note }: { note: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Tooltip
+      open={open}
+      onOpen={() => setOpen(true)}
+      onClose={() => setOpen(false)}
+      placement="right"
+      title={
+        <Typography
+          variant="caption"
+          component="span"
+          sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+        >
+          {note}
+        </Typography>
+      }
+    >
+      <IconButton
+        size="small"
+        aria-label="Request note"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen((prev) => !prev);
+        }}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        sx={{
+          p: 0.25,
+          color: "text.secondary",
+          alignItems: "start",
+          "&:hover": { color: "primary.main", bgcolor: "transparent" },
+        }}
+      >
+        <IconNotes size={16} />
+      </IconButton>
+    </Tooltip>
+  );
+}
 
 export default function UserRequests({
   open,
@@ -554,7 +599,14 @@ export default function UserRequests({
                   })();
 
                   return (
-                    <Grid size={{ xs: 12, sm: 4 }} key={idx}>
+                    <Grid
+                      size={{ xs: 12, sm: 4 }}
+                      key={idx}
+                      sx={{
+                        overflow: "visible",
+                        "&:has([data-diff-open='true'])": { zIndex: 5 },
+                      }}
+                    >
                       <Link
                         href={href}
                         style={{
@@ -578,6 +630,7 @@ export default function UserRequests({
                             boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.05)",
                             border: "1px solid #eaeaea",
                             background: "#fff",
+                            overflow: "visible",
                           }}
                         >
                           <Box
@@ -637,14 +690,22 @@ export default function UserRequests({
                                 display="flex"
                                 justifyContent="space-between"
                                 alignItems="flex-start"
-                                gap={1}
                               >
-                                <Typography
-                                  variant="subtitle2"
-                                  fontWeight={700}
+                                <Box
+                                  display={"flex"}
+                                  alignItems={"start"}
+                                  height={10}
                                 >
-                                  {work.user_name}
-                                </Typography>
+                                  <Typography
+                                    variant="subtitle2"
+                                    fontWeight={700}
+                                  >
+                                    {work.user_name}
+                                  </Typography>
+                                  {work.request_note ? (
+                                    <RequestNoteIcon note={work.request_note} />
+                                  ) : null}
+                                </Box>
                                 <Typography
                                   variant="caption"
                                   sx={{
@@ -679,30 +740,8 @@ export default function UserRequests({
                           </Box>
 
                           {work.diff_data && work.diff_data.length > 0 && (
-                            <Box ml={5.5}>
+                            <Box ml={5.5} mt={0.5}>
                               <DiffChanges diffs={work.diff_data} />
-                            </Box>
-                          )}
-                          {work.request_note && (
-                            <Box
-                              bgcolor="#f8fafc"
-                              p={1}
-                              borderRadius={2}
-                              my={0.5}
-                              ml={5.5}
-                              sx={{ border: "1px solid #f1f5f9" }}
-                            >
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontWeight={600}
-                                display="block"
-                              >
-                                {t("NOTE")}:
-                              </Typography>
-                              <Typography variant="caption" color="text.primary">
-                                {work.request_note}
-                              </Typography>
                             </Box>
                           )}
                           <Box
