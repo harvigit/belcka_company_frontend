@@ -12,7 +12,8 @@ import {
     IconSquarePercentage,
     IconUsersMinus,
     IconFileAlert,
-    IconUserCog
+    IconUserCog,
+    IconUserCheck,
 } from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
@@ -29,6 +30,7 @@ import AnalyticsScore from '@/app/components/apps/analytics/score-settings';
 import RemoveUsers from '@/app/components/apps/settings/remove-users/list';
 import RequestAction from '@/app/components/apps/settings/request-action/list';
 import UserSettings from '@/app/components/apps/settings/user-settings';
+import TaskUserCheckinSettings from '@/app/components/apps/tasks/settings/user-checkin-tasks';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -45,9 +47,14 @@ function TabPanel(props: TabPanelProps) {
             hidden={value !== index}
             id={`vertical-tabpanel-${index}`}
             aria-labelledby={`vertical-tab-${index}`}
+            style={{height: '100%', minHeight: 0}}
             {...other}
         >
-            {value === index && <Box sx={{ pt: 1 }}>{children}</Box>}
+            {value === index && (
+                <Box sx={{pt: 1, height: '100%', minHeight: 0, overflow: 'auto'}}>
+                    {children}
+                </Box>
+            )}
         </div>
     );
 }
@@ -72,10 +79,11 @@ const AdminSetting = () => {
             title="Account Setting"
             description="This is Account Setting"
         >
-            <Grid container spacing={2}>
+            <Grid container spacing={2} sx={{height: 'calc(100vh - 120px)', minHeight: 0, overflow: 'hidden'}}>
                 <Grid
                     container
                     display={'flex'}
+                    sx={{height: '100%', minHeight: 0, overflow: 'hidden'}}
                     size={{
                         xs: 12,
                         lg: 12,
@@ -86,15 +94,17 @@ const AdminSetting = () => {
                             xs: 12,
                             lg: 2,
                         }}
+                        sx={{height: '100%', minHeight: 0}}
                     >
-                        <BlankCard className="tab-balnkcard">
-                            <Stack direction="row" mt={1} ml={2} mb={3} mr={2}>
+                        <BlankCard className="tab-balnkcard" sx={{height: '100%', overflow: 'hidden'}}>
+                            <Stack direction="row" mt={1} ml={2} mb={3} mr={2} sx={{height: 'calc(100% - 32px)', minHeight: 0}}>
                                 <Tabs
                                     className="admin-settings-tabs"
                                     orientation="vertical"
                                     variant="scrollable"
                                     value={value}
                                     onChange={handleChange}
+                                    sx={{height: '100%', overflow: 'auto'}}
                                 >
                                     <Tab
                                         className="admin-settings"
@@ -166,18 +176,26 @@ const AdminSetting = () => {
                                         label="Users Setting"
                                         {...a11yProps(9)}
                                     />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconUserCheck size="20" />}
+                                        label="User Check-in Tasks"
+                                        {...a11yProps(10)}
+                                    />
                                 </Tabs>
                             </Stack>
                         </BlankCard>
                     </Grid>
                     <Grid
                         display={'flex'}
+                        sx={{height: '100%', minHeight: 0}}
                         size={{
                             xs: 12,
                             lg: 10,
                         }}
                     >
-                        <BlankCard>
+                        <BlankCard sx={{width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
                             <TabPanel value={value} index={0}>
                                 <NotificationSettings />
                             </TabPanel>
@@ -207,6 +225,9 @@ const AdminSetting = () => {
                             </TabPanel>
                             <TabPanel value={value} index={9}>
                                 <UserSettings />
+                            </TabPanel>
+                            <TabPanel value={value} index={10}>
+                                <TaskUserCheckinSettings />
                             </TabPanel>
                         </BlankCard>
                     </Grid>

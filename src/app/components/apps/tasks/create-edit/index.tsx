@@ -25,7 +25,7 @@ export interface TaskFormData {
   trade_id?: number | null;
   category_id?: number | string | null;
   sub_category_id?: number | string | null;
-  shift_id?: number | null;
+  shift_type?: "daywork" | "pricework" | "both" | null;
   duration?: string;
   project?: string;
   project_ids?: any[];
@@ -57,6 +57,12 @@ type GalleryImage = {
   type?: string;
 };
 
+const SHIFT_TYPE_OPTIONS = [
+  { id: "daywork", name: "Daywork" },
+  { id: "pricework", name: "Pricework" },
+  { id: "both", name: "Both" },
+] as const;
+
 const TaskAddEdit: React.FC<TaskAddEditProps> = ({
   open,
   onClose,
@@ -71,7 +77,6 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
   const [categories, setCategories] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
-  const [shifts, setShifts] = useState<any[]>([]);
   const [fetchStore, setFetchStore] = useState<boolean>(false);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreview, setGalleryPreview] = useState<GalleryImage[]>([]);
@@ -97,8 +102,12 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
   const getTradeValidationError = (value: TaskFormData["trade_id"]) =>
     isRequiredEmpty(value) ? "Trade is required" : "";
 
-  const getShiftValidationError = (value: TaskFormData["shift_id"]) =>
-    isRequiredEmpty(value) ? "Shift is required" : "";
+  const getShiftValidationError = (value: TaskFormData["shift_type"]) => {
+    if (!value) return "Shift is required";
+    return SHIFT_TYPE_OPTIONS.some((option) => option.id === value)
+      ? ""
+      : "Shift is required";
+  };
 
     const getCategoryValidationError = (value: TaskFormData["category_id"]) => {
         if (isCategoryEmpty(value)) return "Category is required";
@@ -144,7 +153,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
         trade_id: null,
         category_id: null,
         sub_category_id: null,
-        shift_id: null,
+        shift_type: null,
         duration: "",
         project: "All",
         project_ids: [],
@@ -171,7 +180,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
       trade_id: task.trade_id ?? null,
       category_id: task.category_id ?? null,
       sub_category_id: task.sub_category_id ?? null,
-      shift_id: task.shift_id ?? null,
+      shift_type: task.shift_type ?? null,
 
       duration: task.duration ?? "",
       project: task.project ?? "All",
@@ -214,7 +223,6 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
       if (res.data) {
         setCategories(res.data.categories);
         setSubCategories(res.data.subCategories);
-        setShifts(res.data.shifts);
         setTrades(res.data.trades);
         setProjects(res.data.projects || []);
       }
@@ -249,7 +257,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
     const categoryValidationError = getCategoryValidationError(
       formData.category_id,
     );
-    const shiftValidationError = getShiftValidationError(formData.shift_id);
+    const shiftValidationError = getShiftValidationError(formData.shift_type);
 
     setTradeError(tradeValidationError);
     setCategoryError(categoryValidationError);
@@ -488,17 +496,18 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                     </Typography>
 
                     <Autocomplete
-                      options={shifts}
+                      options={SHIFT_TYPE_OPTIONS}
                       getOptionLabel={(option) => option.name}
                       value={
-                        shifts.find((item) => item.id === formData.shift_id) ??
+                        SHIFT_TYPE_OPTIONS.find((item) => item.id === formData.shift_type) ??
                         null
                       }
                       onChange={(_, value) => {
                         setShiftError("");
+                        const shiftType = value?.id ?? null;
                         setFormData((prev) => ({
                           ...prev,
-                          shift_id: value?.id ?? null,
+                          shift_type: shiftType,
                         }));
                       }}
                       renderInput={(params) => (

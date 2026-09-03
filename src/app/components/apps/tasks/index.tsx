@@ -208,7 +208,7 @@ const TaskLists = () => {
         trade_id: 0,
         category_id: 0,
         sub_category_id: 0,
-        shift_id: 0,
+        shift_type: null,
         duration: '',
         project: 'All',
         project_ids: [],
@@ -305,6 +305,7 @@ const TaskLists = () => {
         try {
             const formPayload = new FormData();
             Object.entries(formData).forEach(([key, value]) => {
+                if (key === 'shift_id') return;
                 if (value === undefined || value === null) return;
 
                 if (key === 'image') return;
@@ -358,6 +359,7 @@ const TaskLists = () => {
         try {
             const formPayload = new FormData();
             Object.entries(formData).forEach(([key, value]) => {
+                if (key === 'shift_id') return;
                 if (value === undefined || value === null) return;
 
                 if (key === 'image') return;
@@ -396,7 +398,7 @@ const TaskLists = () => {
                     trade_id: 0,
                     category_id: 0,
                     sub_category_id: 0,
-                    shift_id: 0,
+                    shift_type: null,
                     duration: '',
                     project: 'All',
                     project_ids: [],

@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
     Autocomplete,
     Box,
@@ -23,7 +23,24 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import {IconDeviceFloppy, IconPlus, IconSearch, IconTrash} from '@tabler/icons-react';
+import {
+    DndContext,
+    DragEndEvent,
+    KeyboardSensor,
+    MouseSensor,
+    TouchSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    arrayMove,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {CSS} from '@dnd-kit/utilities';
+import {IconDeviceFloppy, IconGripVertical, IconPlus, IconSearch, IconTrash} from '@tabler/icons-react';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
 import api from '@/utils/axios';
 import {useSession} from 'next-auth/react';
@@ -67,9 +84,28 @@ type DeletedPricingRow = {
     project_id?: number;
 };
 
+type PriceWorkSettingsCache = {
+    loaded: boolean;
+    tasks: any[];
+    projects: any[];
+    users: any[];
+    trades: any[];
+    rows: PricingRow[];
+};
+
 const TASKS_PAGE_SIZE = 500;
 const DEFAULT_PROJECT_COLUMNS_PER_PAGE = 8;
 const PROJECT_COLUMNS_PER_PAGE_OPTIONS = [8, 12, 20];
+const PRICE_WORK_ROW_ORDER_STORAGE_KEY_PREFIX = 'price-work-settings-row-order';
+
+let priceWorkSettingsCache: PriceWorkSettingsCache = {
+    loaded: false,
+    tasks: [],
+    projects: [],
+    users: [],
+    trades: [],
+    rows: [],
+};
 
 const getTaskBasePrice = (_task: any) => '0.00';
 
@@ -104,6 +140,9 @@ const getUserDisplayName = (user: any) =>
     user?.email ||
     '-';
 
+const getUserOptionDetail = (user: any) =>
+    [user?.trade_name, user?.user_code].filter(Boolean).join(' - ');
+
 const filterOptionsByWordStart = <T,>(
     options: T[],
     inputValue: string,
@@ -125,12 +164,18 @@ const filterOptionsByWordStart = <T,>(
 const getProjectName = (project: any) =>
     project?.name || project?.project_name || project?.address || '-';
 
-const isPriceworkTask = (task: any) =>
-    task?.shift_is_pricework === true ||
-    task?.shift_is_pricework === 1 ||
-    String(task?.shift_is_pricework || '').trim().toLowerCase() === 'true' ||
-    String(task?.shift_name || '').trim().toLowerCase() === 'pricework' ||
-    String(task?.shift_name || '').trim().toLowerCase() === 'price work';
+const isPriceworkTask = (task: any) => {
+    const shiftType = String(task?.shift_type || '').trim().toLowerCase();
+    if (shiftType) return shiftType === 'pricework' || shiftType === 'both';
+
+    return (
+        task?.shift_is_pricework === true ||
+        task?.shift_is_pricework === 1 ||
+        String(task?.shift_is_pricework || '').trim().toLowerCase() === 'true' ||
+        String(task?.shift_name || '').trim().toLowerCase() === 'pricework' ||
+        String(task?.shift_name || '').trim().toLowerCase() === 'price work'
+    );
+};
 
 const getCategoryId = (task: any) =>
     task?.category_id != null && task.category_id !== '' ? String(task.category_id) : '';
@@ -239,24 +284,151 @@ const buildRowsFromSavedPrices = (savedPrices: any[], priceworkTasks: any[]): Pr
     return Array.from(groupedRows.values());
 };
 
+const getPricingRowOrderKey = (row: PricingRow) => {
+    if (row.task_id) return `${row.user_id || 'unassigned'}-${row.task_id}`;
+
+    return row.id;
+};
+
+const getRowOrderStorageKey = (companyId?: number | null) =>
+    companyId ? `${PRICE_WORK_ROW_ORDER_STORAGE_KEY_PREFIX}-${companyId}` : '';
+
+const readStoredRowOrder = (companyId?: number | null) => {
+    const storageKey = getRowOrderStorageKey(companyId);
+    if (!storageKey || typeof window === 'undefined') return [];
+
+    try {
+        const storedOrder = window.localStorage.getItem(storageKey);
+        const parsedOrder = storedOrder ? JSON.parse(storedOrder) : [];
+
+        return Array.isArray(parsedOrder) ? parsedOrder.filter((item) => typeof item === 'string') : [];
+    } catch {
+        return [];
+    }
+};
+
+const saveStoredRowOrder = (companyId: number | null | undefined, rowsToStore: PricingRow[]) => {
+    const storageKey = getRowOrderStorageKey(companyId);
+    if (!storageKey || typeof window === 'undefined') return;
+
+    try {
+        window.localStorage.setItem(
+            storageKey,
+            JSON.stringify(rowsToStore.map(getPricingRowOrderKey)),
+        );
+    } catch {
+        // Ignore storage failures; row order still updates for the current render.
+    }
+};
+
+const preserveRowOrder = (nextRows: PricingRow[], orderedKeys: string[]) => {
+    if (orderedKeys.length === 0 || nextRows.length === 0) return nextRows;
+
+    const nextRowsByOrderKey = new Map(nextRows.map((row) => [getPricingRowOrderKey(row), row]));
+    const orderedRows = orderedKeys
+        .map((orderKey) => nextRowsByOrderKey.get(orderKey))
+        .filter((row): row is PricingRow => Boolean(row));
+    const orderedRowKeys = new Set(orderedRows.map(getPricingRowOrderKey));
+    const newRows = nextRows.filter((row) => !orderedRowKeys.has(getPricingRowOrderKey(row)));
+
+    return [...orderedRows, ...newRows];
+};
+
+const SortablePricingTableRow = ({
+    rowId,
+    children,
+}: {
+    rowId: string;
+    children: (params: {
+        attributes: ReturnType<typeof useSortable>['attributes'];
+        listeners: ReturnType<typeof useSortable>['listeners'];
+        setActivatorNodeRef: ReturnType<typeof useSortable>['setActivatorNodeRef'];
+        isDragging: boolean;
+    }) => React.ReactNode;
+}) => {
+    const {
+        attributes,
+        listeners,
+        setActivatorNodeRef,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({id: rowId});
+
+    return (
+        <TableRow
+            ref={setNodeRef}
+            hover
+            style={{
+                transform: CSS.Transform.toString(transform),
+                transition,
+                position: isDragging ? 'relative' : undefined,
+                zIndex: isDragging ? 2 : undefined,
+            }}
+        >
+            {children({attributes, listeners, setActivatorNodeRef, isDragging})}
+        </TableRow>
+    );
+};
+
+const RowDragHandle = ({
+    attributes,
+    listeners,
+    setActivatorNodeRef,
+    isDragging,
+}: {
+    attributes: ReturnType<typeof useSortable>['attributes'];
+    listeners: ReturnType<typeof useSortable>['listeners'];
+    setActivatorNodeRef: ReturnType<typeof useSortable>['setActivatorNodeRef'];
+    isDragging: boolean;
+}) => (
+    <Tooltip title="Drag row">
+        <IconButton
+            ref={setActivatorNodeRef}
+            size="small"
+            aria-label="Drag price work row"
+            {...attributes}
+            {...listeners}
+            sx={{
+                width: 22,
+                height: 22,
+                cursor: isDragging ? 'grabbing' : 'grab',
+                color: '#64748b',
+                '&:hover': {backgroundColor: 'transparent', color: '#1976d2'},
+            }}
+            onClick={(event) => event.stopPropagation()}
+        >
+            <IconGripVertical size={16}/>
+        </IconButton>
+    </Tooltip>
+);
+
 const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) => {
     const session = useSession();
     const user = session.data?.user as User & {company_id?: number | null};
+    const hasLoadedOnceRef = useRef(priceWorkSettingsCache.loaded);
+    const savingRef = useRef(false);
 
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!priceWorkSettingsCache.loaded);
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState(false);
-    const [tasks, setTasks] = useState<any[]>([]);
-    const [projects, setProjects] = useState<any[]>([]);
-    const [users, setUsers] = useState<any[]>([]);
-    const [trades, setTrades] = useState<any[]>([]);
-    const [rows, setRows] = useState<PricingRow[]>([]);
+    const [tasks, setTasks] = useState<any[]>(priceWorkSettingsCache.tasks);
+    const [projects, setProjects] = useState<any[]>(priceWorkSettingsCache.projects);
+    const [users, setUsers] = useState<any[]>(priceWorkSettingsCache.users);
+    const [trades, setTrades] = useState<any[]>(priceWorkSettingsCache.trades);
+    const [rows, setRows] = useState<PricingRow[]>(priceWorkSettingsCache.rows);
     const [pendingDeletedRows, setPendingDeletedRows] = useState<DeletedPricingRow[]>([]);
     const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProjectFilter, setSelectedProjectFilter] = useState('');
     const [projectPage, setProjectPage] = useState(0);
     const [projectColumnsPerPage, setProjectColumnsPerPage] = useState(DEFAULT_PROJECT_COLUMNS_PER_PAGE);
+    const sensors = useSensors(
+        useSensor(MouseSensor),
+        useSensor(TouchSensor),
+        useSensor(KeyboardSensor),
+    );
 
     const fetchAllTasks = useCallback(async (companyId: number) => {
         const firstResponse = await api.get(
@@ -285,7 +457,9 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             return;
         }
 
-        setLoading(true);
+        if (!hasLoadedOnceRef.current) {
+            setLoading(true);
+        }
         try {
             const [resResources, resTasks, resSavedPrices] = await Promise.all([
                 api.get('/pricework/get-resources').catch((err) => {
@@ -305,14 +479,33 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             const taskList = Array.isArray(resTasks) ? resTasks : resTasks.data?.info || [];
             const priceworkTasks = taskList.filter(isPriceworkTask);
             const savedPrices = Array.isArray(resSavedPrices.data?.info) ? resSavedPrices.data.info : [];
+            const nextProjects = resResources.data?.projects || [];
+            const nextTrades = resResources.data?.trades || [];
+            const nextUsers = resResources.data?.users || [];
+            const storedRowOrder = readStoredRowOrder(user.company_id);
+            const cachedRowOrder = priceWorkSettingsCache.rows.map(getPricingRowOrderKey);
+            const nextRows = preserveRowOrder(
+                buildRowsFromSavedPrices(savedPrices, priceworkTasks),
+                storedRowOrder.length > 0 ? storedRowOrder : cachedRowOrder,
+            );
 
-            setProjects(resResources.data?.projects || []);
-            setTrades(resResources.data?.trades || []);
+            priceWorkSettingsCache = {
+                loaded: true,
+                tasks: priceworkTasks,
+                projects: nextProjects,
+                users: nextUsers,
+                trades: nextTrades,
+                rows: nextRows,
+            };
+
+            setProjects(nextProjects);
+            setTrades(nextTrades);
             setTasks(priceworkTasks);
-            setUsers(resResources.data?.users || []);
-            setRows(buildRowsFromSavedPrices(savedPrices, priceworkTasks));
+            setUsers(nextUsers);
+            setRows(nextRows);
             setPendingDeletedRows([]);
             setSelectedRowIds(new Set());
+            hasLoadedOnceRef.current = true;
         } catch (err) {
             console.error('Failed to load price work settings:', err);
             toast.error('Failed to load price work settings');
@@ -320,6 +513,56 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             setLoading(false);
         }
     }, [fetchAllTasks, user?.company_id]);
+
+    const syncSavedRows = (savedRows: PricingRow[]) => {
+        const savedRowIds = new Set(savedRows.map((row) => row.id));
+
+        setRows((prev) => {
+            const nextRows = prev
+                .filter((row) => !isEmptyPricingRow(row))
+                .map((row) => {
+                    if (!savedRowIds.has(row.id)) return row;
+
+                    const projectPrices = Object.entries(row.project_prices).reduce<Record<string, CellState>>(
+                        (prices, [projectId, value]) => {
+                            prices[projectId] = {
+                                ...value,
+                                original_is_active: value.is_active,
+                            };
+                            return prices;
+                        },
+                        {},
+                    );
+
+                    return {
+                        ...row,
+                        original_user_id: row.user_id || null,
+                        original_task_id: row.task_id,
+                        original_base_active: row.base_active,
+                        original_base_price: row.base_active ? row.base_price : '0.00',
+                        project_prices: projectPrices,
+                    };
+                });
+
+            priceWorkSettingsCache = {
+                ...priceWorkSettingsCache,
+                loaded: true,
+                tasks,
+                projects,
+                users,
+                trades,
+                rows: nextRows,
+            };
+            saveStoredRowOrder(user?.company_id, nextRows);
+
+            return nextRows;
+        });
+
+        setPendingDeletedRows([]);
+        setSelectedRowIds(new Set());
+    };
+
+    const isInitialLoading = loading && rows.length === 0 && projects.length === 0 && tasks.length === 0;
 
     useEffect(() => {
         fetchData();
@@ -337,16 +580,28 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     }, [tasks]);
 
     const tradeOptions = useMemo(() => {
+        const priceworkTradeIds = new Set(
+            tasks
+                .filter(isPriceworkTask)
+                .map(getTaskTradeId)
+                .filter(Boolean),
+        );
+
         return trades
+            .filter((trade) => priceworkTradeIds.has(String(trade.id)))
             .map((trade) => ({
                 id: String(trade.id),
                 name: trade.name || 'Trade',
             }))
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [trades]);
+    }, [tasks, trades]);
 
     const userOptions = useMemo(() => {
-        return users
+        const uniqueUsers = Array.from(
+            new Map(users.map((user) => [String(user.id), user])).values(),
+        );
+
+        return uniqueUsers
             .map((user) => ({
                 ...user,
                 id: String(user.id),
@@ -396,6 +651,28 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
     const isAllVisibleSelected = filteredRows.length > 0 && selectedVisibleRowIds.length === filteredRows.length;
     const isSomeVisibleSelected = selectedVisibleRowIds.length > 0 && selectedVisibleRowIds.length < filteredRows.length;
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const {active, over} = event;
+
+        if (!over || active.id === over.id) return;
+
+        setRows((prev) => {
+            const oldIndex = prev.findIndex((row) => row.id === String(active.id));
+            const newIndex = prev.findIndex((row) => row.id === String(over.id));
+
+            if (oldIndex === -1 || newIndex === -1) return prev;
+
+            const nextRows = arrayMove(prev, oldIndex, newIndex);
+            priceWorkSettingsCache = {
+                ...priceWorkSettingsCache,
+                rows: nextRows,
+            };
+            saveStoredRowOrder(user?.company_id, nextRows);
+
+            return nextRows;
+        });
+    };
 
     const selectMenuProps = {
         disablePortal: true,
@@ -576,7 +853,47 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     };
 
     const addRow = () => {
-        setRows((prev) => [...prev, createRow()]);
+        setRows((prev) => {
+            const nextRows = [...prev, createRow()];
+            priceWorkSettingsCache = {
+                ...priceWorkSettingsCache,
+                rows: nextRows,
+            };
+            saveStoredRowOrder(user?.company_id, nextRows);
+
+            return nextRows;
+        });
+    };
+
+    const addRowBelowWithUser = (sourceRow: PricingRow) => {
+        setRows((prev) => {
+            const sourceIndex = prev.findIndex((row) => row.id === sourceRow.id);
+            const selectedUser = users.find((item) => String(item.id) === sourceRow.user_id);
+            const selectedUserTradeId = selectedUser?.trade_id ? String(selectedUser.trade_id) : sourceRow.trade_id;
+            const newRow = {
+                ...createRow(),
+                user_id: sourceRow.user_id,
+                user_name: selectedUser ? getUserDisplayName(selectedUser) : sourceRow.user_name,
+                trade_id: selectedUserTradeId || '',
+                trade_name: selectedUserTradeId
+                    ? trades.find((trade) => String(trade.id) === selectedUserTradeId)?.name || sourceRow.trade_name || ''
+                    : '',
+            };
+            const insertIndex = sourceIndex === -1 ? prev.length : sourceIndex + 1;
+            const nextRows = [
+                ...prev.slice(0, insertIndex),
+                newRow,
+                ...prev.slice(insertIndex),
+            ];
+
+            priceWorkSettingsCache = {
+                ...priceWorkSettingsCache,
+                rows: nextRows,
+            };
+            saveStoredRowOrder(user?.company_id, nextRows);
+
+            return nextRows;
+        });
     };
 
     const removeRow = (rowId: string) => {
@@ -657,6 +974,8 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     };
 
     const handleSave = async () => {
+        if (savingRef.current) return;
+
         const rowsToSave = rows.filter(isCompletePricingRow);
         const incompleteRows = rows
             .filter((row) => !isEmptyPricingRow(row) && !row.original_task_id)
@@ -796,6 +1115,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             ) === index,
         );
 
+        savingRef.current = true;
         setSaving(true);
         try {
             const res = await api.post('/pricework/settings/store-prices', {
@@ -807,7 +1127,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
             if (res.data?.IsSuccess) {
                 toast.success(res.data?.message || 'Settings saved!');
-                await fetchData();
+                syncSavedRows(rowsToSave);
                 onSaveSuccess?.();
             } else {
                 toast.error(res.data?.message || 'Failed to save settings');
@@ -815,17 +1135,10 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Failed to save settings');
         } finally {
+            savingRef.current = false;
             setSaving(false);
         }
     };
-
-    if (loading) {
-        return (
-            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8}}>
-                <CircularProgress/>
-            </Box>
-        );
-    }
 
     return (
         <Box sx={{p: 2, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', gap: 2}}>
@@ -929,15 +1242,17 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     )}
 
                     <Button
+                        type="button"
                         variant="contained"
                         onClick={handleSave}
                         disabled={saving}
-                        startIcon={saving ? null : <IconDeviceFloppy size={18}/>}
+                        startIcon={saving ? <CircularProgress size={16} color="inherit"/> : <IconDeviceFloppy size={18}/>}
                         sx={{
                             bgcolor: '#1976d2',
                             color: '#fff',
                             textTransform: 'none',
                             borderRadius: '8px',
+                            minWidth: 146,
                             px: 3,
                             py: 0.8,
                             fontWeight: 700,
@@ -945,7 +1260,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                             '&:hover': {bgcolor: '#1565c0'},
                         }}
                     >
-                        {saving ? <CircularProgress size={20} color="inherit"/> : 'Save Changes'}
+                        {saving ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </Box>
             </Box>
@@ -965,15 +1280,16 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     <TableHead>
                         <TableRow>
                             {[
-                                ['', 52],
-                                ['User', 230],
-                                ['Trade', 210],
-                                ['Category', 230],
-                                ['Subcategory', 230],
-                                ['Base price', 150],
-                            ].map(([label, width]) => (
+                                ['drag-handle', '', 36],
+                                ['select', '', 52],
+                                ['user', 'User', 300],
+                                ['trade', 'Trade', 210],
+                                ['category', 'Category', 230],
+                                ['subcategory', 'Subcategory', 230],
+                                ['base-price', 'Base price', 150],
+                            ].map(([key, label, width]) => (
                                 <TableCell
-                                    key={label}
+                                    key={key}
                                     align={label ? 'left' : 'center'}
                                     sx={{
                                         bgcolor: '#f8fafc',
@@ -983,7 +1299,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                         color: '#1e293b',
                                     }}
                                 >
-                                    {label || (
+                                    {key === 'select' && (
                                         <CustomCheckbox
                                             className="header-checkbox"
                                             checked={isAllVisibleSelected}
@@ -994,6 +1310,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                             }}
                                         />
                                     )}
+                                    {key !== 'select' && key !== 'drag-handle' ? label : null}
                                 </TableCell>
                             ))}
 
@@ -1047,9 +1364,26 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                         </TableRow>
                     </TableHead>
 
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
                     <TableBody>
+                        {isInitialLoading && (
+                            <TableRow>
+                                <TableCell colSpan={8 + displayedProjects.length} align="center" sx={{py: 8}}>
+                                    <CircularProgress/>
+                                </TableCell>
+                            </TableRow>
+                        )}
+
                         {filteredRows.length > 0 && (
-                            filteredRows.map((row) => {
+                            <SortableContext
+                                items={filteredRows.map((row) => row.id)}
+                                strategy={verticalListSortingStrategy}
+                            >
+                            {filteredRows.map((row) => {
                                 const categoryOptions = getCategoryOptions(row.trade_id);
                                 const subCategoryOptions = getSubCategoryOptions(row.trade_id, row.category_id);
                                 const hasSubCategoryOptions = subCategoryOptions.length > 0;
@@ -1073,39 +1407,95 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                             : null
                                     );
                                 return (
-                                    <TableRow key={row.id} hover>
-                                        <TableCell align="center" sx={{borderRight: '1px solid #e2e8f0', minWidth: 52, py: 1}}>
+                                    <SortablePricingTableRow key={row.id} rowId={row.id}>
+                                        {({attributes, listeners, setActivatorNodeRef, isDragging}) => (
+                                        <>
+                                        <TableCell align="center" sx={{borderRight: '1px solid #e2e8f0', minWidth: 36, px: 0.5, py: 1}}>
+                                            <RowDragHandle
+                                                attributes={attributes}
+                                                listeners={listeners}
+                                                setActivatorNodeRef={setActivatorNodeRef}
+                                                isDragging={isDragging}
+                                            />
+                                        </TableCell>
+
+                                        <TableCell align="center" sx={{borderRight: '1px solid #e2e8f0', minWidth: 52, px: 0.5, py: 1}}>
                                             <CustomCheckbox
                                                 checked={selectedRowIds.has(row.id)}
                                                 onChange={() => toggleRowSelection(row.id)}
                                             />
                                         </TableCell>
 
-                                        <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 230, py: 1}}>
-                                            <Autocomplete
-                                                size="small"
-                                                fullWidth
-                                                options={userOptions}
-                                                value={selectedUser}
-                                                getOptionLabel={(option) => option.name || 'User'}
-                                                filterOptions={(options, state) =>
-                                                    filterOptionsByWordStart(options, state.inputValue, (option) => option.name || '')
-                                                }
-                                                isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
-                                                onChange={(_, value) => {
-                                                    handleUserChange(row, value ? String(value.id) : '');
-                                                }}
-                                                autoHighlight
-                                                noOptionsText="No users found"
-                                                renderInput={(params) => (
-                                                    <TextField
-                                                        {...params}
-                                                        placeholder="Select user"
-                                                    />
-                                                )}
-                                                slotProps={tableAutocompleteSlotProps}
-                                                sx={tableAutocompleteSx}
-                                            />
+                                        <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 300, py: 1}}>
+                                            <Box sx={{display: 'flex', alignItems: 'center', gap: 0.75}}>
+                                                <Autocomplete
+                                                    size="small"
+                                                    fullWidth
+                                                    options={userOptions}
+                                                    value={selectedUser}
+                                                    getOptionKey={(option) => String(option.id)}
+                                                    getOptionLabel={(option) => option.name || 'User'}
+                                                    filterOptions={(options, state) =>
+                                                        filterOptionsByWordStart(
+                                                            options,
+                                                            state.inputValue,
+                                                            (option) => [option.name, getUserOptionDetail(option)].filter(Boolean).join(' '),
+                                                        )
+                                                    }
+                                                    isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                                                    onChange={(_, value) => {
+                                                        handleUserChange(row, value ? String(value.id) : '');
+                                                    }}
+                                                    autoHighlight
+                                                    noOptionsText="No users found"
+                                                    renderOption={(props, option) => {
+                                                        const {key, ...optionProps} = props;
+                                                        const detail = getUserOptionDetail(option);
+
+                                                        return (
+                                                            <Box component="li" key={String(option.id)} {...optionProps}>
+                                                                <Box sx={{display: 'flex', flexDirection: 'column', minWidth: 0}}>
+                                                                    <Typography component="span" sx={{fontSize: '0.8rem', lineHeight: 1.25}}>
+                                                                        {option.name || 'User'}
+                                                                    </Typography>
+                                                                    {detail && (
+                                                                        <Typography component="span" sx={{fontSize: '0.72rem', lineHeight: 1.25, color: '#64748b'}}>
+                                                                            {detail}
+                                                                        </Typography>
+                                                                    )}
+                                                                </Box>
+                                                            </Box>
+                                                        );
+                                                    }}
+                                                    renderInput={(params) => (
+                                                        <TextField
+                                                            {...params}
+                                                            placeholder="Select user"
+                                                        />
+                                                    )}
+                                                    slotProps={tableAutocompleteSlotProps}
+                                                    sx={{...tableAutocompleteSx, flex: 1, minWidth: 0}}
+                                                />
+
+                                                <Tooltip title={row.user_id ? 'Add row for this user' : 'Select user first'}>
+                                                    <span>
+                                                        <IconButton
+                                                            size="small"
+                                                            disabled={!row.user_id}
+                                                            onClick={() => addRowBelowWithUser(row)}
+                                                            aria-label="Add row below with selected user"
+                                                            sx={{
+                                                                width: 28,
+                                                                height: 28,
+                                                                color: '#1976d2',
+                                                                '&:hover': {backgroundColor: 'transparent'},
+                                                            }}
+                                                        >
+                                                            <IconPlus size={18}/>
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
+                                            </Box>
                                         </TableCell>
 
                                         <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 210, py: 1}}>
@@ -1291,27 +1681,34 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                                 </IconButton>
                                             </Tooltip>
                                         </TableCell>
-                                    </TableRow>
+                                        </>
+                                        )}
+                                    </SortablePricingTableRow>
                                 );
-                            })
+                            })}
+                            </SortableContext>
                         )}
 
-                        <TableRow hover>
-                            <TableCell sx={{borderRight: '1px solid #e2e8f0', py: 1}}/>
-                            <TableCell sx={{borderRight: '1px solid #e2e8f0', py: 1}}>
-                                <Tooltip title="Add price work row">
-                                    <IconButton
-                                        size="small"
-                                        onClick={addRow}
-                                        sx={{width: 28, height: 28, '&:hover': {backgroundColor: 'transparent'}}}
-                                    >
-                                        <IconPlus size={18} color="#1976d2"/>
-                                    </IconButton>
-                                </Tooltip>
-                            </TableCell>
-                            <TableCell colSpan={5 + displayedProjects.length} sx={{py: 1}}/>
-                        </TableRow>
+                        {!isInitialLoading && (
+                            <TableRow hover>
+                                <TableCell sx={{borderRight: '1px solid #e2e8f0', py: 1, minWidth: 36}}/>
+                                <TableCell sx={{borderRight: '1px solid #e2e8f0', py: 1, minWidth: 52}}/>
+                                <TableCell sx={{borderRight: '1px solid #e2e8f0', py: 1, minWidth: 300}}>
+                                    <Tooltip title="Add price work row">
+                                        <IconButton
+                                            size="small"
+                                            onClick={addRow}
+                                            sx={{width: 28, height: 28, '&:hover': {backgroundColor: 'transparent'}}}
+                                        >
+                                            <IconPlus size={18} color="#1976d2"/>
+                                        </IconButton>
+                                    </Tooltip>
+                                </TableCell>
+                                <TableCell colSpan={5 + displayedProjects.length} sx={{py: 1}}/>
+                            </TableRow>
+                        )}
                     </TableBody>
+                    </DndContext>
                 </Table>
             </TableContainer>
 

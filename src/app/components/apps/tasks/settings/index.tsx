@@ -2,13 +2,15 @@
 
 import React, {useState} from 'react';
 import {Box, Drawer, Snackbar, Typography} from '@mui/material';
-import {IconSettings, IconCurrencyDollar} from '@tabler/icons-react';
+import {IconBriefcase, IconSettings, IconCurrencyDollar} from '@tabler/icons-react';
 import TaskCategory from './task-categories';
 import TaskCategoryList from './task-sub-categories';
 import TaskPricingMatrix from './task-pricing';
+import TaskTradeCheckinSettings from './trades';
 
 const menuItems = [
     {icon: <IconCurrencyDollar size={18}/>, label: 'Price Work'},
+    {icon: <IconBriefcase size={18}/>, label: 'Trades'},
     {icon: <IconSettings size={18}/>, label: 'Task Categories'},
     {icon: <IconSettings size={18}/>, label: 'Sub Categories'},
 ];
@@ -123,6 +125,7 @@ const Settings: React.FC<SettingsProps> = ({settingOpen, onClose}) => {
                         }}
                     >
                         {activeMenuItem === 'Price Work' && <TaskPricingMatrix onSaveSuccess={handleSaveSuccess}/>}
+                        {activeMenuItem === 'Trades' && <TaskTradeCheckinSettings/>}
                         {activeMenuItem === 'Task Categories' && <TaskCategory/>}
                         {activeMenuItem === 'Sub Categories' && <TaskCategoryList/>}
                     </Box>
