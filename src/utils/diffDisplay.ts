@@ -53,6 +53,7 @@ const IGNORED_KEYS = new Set([
   "is_account_conflict_resolved",
   "conflict_resolved_by",
   "account_conflict_resolved_by",
+  "account_id"
 ]);
 
 const ID_TO_NAME: Record<string, string> = {
