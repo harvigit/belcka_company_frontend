@@ -155,6 +155,13 @@ interface ExtendedTimeClockDetailsProps extends TimeClockDetailsProps {
     onDataChange?: () => void;
     isRemovedUser?: boolean;
     isArchivedUser?: boolean;
+    filters?: {
+        teams?: number[];
+        statuses?: string[];
+        users?: number[];
+        projects?: number[];
+    };
+    typeFilter?: string;
     queryParams?: {
         user_id?: string | null;
         is_removed_user?: boolean;
@@ -179,6 +186,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                                                                        onDataChange,
                                                                        isRemovedUser,
                                                                        isArchivedUser,
+                                                                       filters,
+                                                                       typeFilter,
                                                                        queryParams
                                                                    }) => {
     const today = new Date();
@@ -277,7 +286,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         fetchTimeClockData,
         payrollCycle,
         fetchPayrollCycle,
-    } = useTimeClockData(user_id, currency, isRemovedUser, isArchivedUser);
+    } = useTimeClockData(user_id, currency, isRemovedUser, isArchivedUser, filters, typeFilter);
 
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => ({
         priceWork: false,
@@ -590,7 +599,15 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             if (timesheetIds.length === 0) return;
             
             const ids = timesheetIds.join(',');
-            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export-details', {ids, format: option});
+            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export-details', {
+                ids,
+                format: option,
+                ...(filters?.teams?.length ? {teams: filters.teams.join(',')} : {}),
+                ...(filters?.statuses?.length ? {statuses: filters.statuses.join(',')} : {}),
+                ...(filters?.users?.length ? {users: filters.users.join(',')} : {}),
+                ...(filters?.projects?.length ? {projects: filters.projects.join(',')} : {}),
+                ...(typeFilter && typeFilter !== 'all_data' ? {data_type: typeFilter} : {}),
+            });
 
             if (response.data.IsSuccess) {
                 const {file, filename, contentType} = response.data.data;

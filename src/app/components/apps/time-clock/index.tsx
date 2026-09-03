@@ -2193,6 +2193,11 @@ const TimeClock = ({queryParams}: Props) => {
                 format: selected.format,
                 start_date: format(exportStartDate, 'yyyy-MM-dd'),
                 end_date: format(exportEndDate, 'yyyy-MM-dd'),
+                ...(filters.teams.length > 0 ? {teams: filters.teams.join(',')} : {}),
+                ...(filters.statuses.length > 0 ? {statuses: filters.statuses.join(',')} : {}),
+                ...(filters.users.length > 0 ? {users: filters.users.join(',')} : {}),
+                ...(filters.projects.length > 0 ? {projects: filters.projects.join(',')} : {}),
+                ...(typeFilter !== 'all_data' ? {data_type: typeFilter} : {}),
             });
 
             if (response.data.IsSuccess) {
@@ -3328,6 +3333,8 @@ const TimeClock = ({queryParams}: Props) => {
                     onDataChange={handleDataChange}
                     isRemovedUser={isRemovedUser}
                     isArchivedUser={isArchivedUser}
+                    filters={filters}
+                    typeFilter={typeFilter}
                     queryParams={resolvedQueryParams}
                 />
             </Drawer>

@@ -9,6 +9,13 @@ export const useTimeClockData = (
     currency: string,
     isRemovedUser?: boolean,
     isArchivedUser?: boolean,
+    filters?: {
+        teams?: number[];
+        statuses?: string[];
+        users?: number[];
+        projects?: number[];
+    },
+    typeFilter?: string,
 ) => {
     const [data, setData] = useState<Index[]>([]);
     const [headerDetail, setHeaderDetail] = useState<TimeClockDetailResponse | null>(null);
@@ -52,6 +59,26 @@ export const useTimeClockData = (
                 params.is_archived_user = '1';
             }
 
+            if (filters?.teams?.length) {
+                params.teams = filters.teams.join(',');
+            }
+
+            if (filters?.statuses?.length) {
+                params.statuses = filters.statuses.join(',');
+            }
+
+            if (filters?.users?.length) {
+                params.users = filters.users.join(',');
+            }
+
+            if (filters?.projects?.length) {
+                params.projects = filters.projects.join(',');
+            }
+
+            if (typeFilter) {
+                params.data_type = typeFilter;
+            }
+
             
             const response = await api.get('/time-clock/details', {params});
 
@@ -72,7 +99,7 @@ export const useTimeClockData = (
             console.error('Error fetching timeClock data:', error);
             setRatePermissionLoaded(true);
         }
-    }, [user_id, isRemovedUser, isArchivedUser]);
+    }, [user_id, isRemovedUser, isArchivedUser, filters, typeFilter]);
 
     const fetchConflicts = useCallback(async (userId?: any): Promise<void> => {
         try {
