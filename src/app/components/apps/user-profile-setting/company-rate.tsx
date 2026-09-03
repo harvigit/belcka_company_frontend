@@ -48,22 +48,80 @@ const calculateRates = (netRate: number, cisPercentage: number) => {
   }
 };
 
+const formatHistoryRate = (value: any, currency?: string | null) => {
+  const symbol = currency || "£";
+  if (value == null || value === "") return `${symbol}0.00`;
+
+  const numeric = String(value)
+    .replace(/&[a-zA-Z]+;|&#\d+;/g, "")
+    .replace(/[^\d.-]/g, "");
+  const num = Number(numeric);
+  const amount = Number.isFinite(num) ? num.toFixed(2) : "0.00";
+  return `${symbol}${amount}`;
+};
+
 const hasDiffField = (companyData: any, field: string) =>
   Object.prototype.hasOwnProperty.call(companyData?.diff_data || {}, field);
+
+const isBlankValue = (value: any) =>
+  value === undefined || value === null || value === "";
+
+const valuesDiffer = (oldVal: any, newVal: any) => {
+  if (isBlankValue(oldVal) && isBlankValue(newVal)) return false;
+  if (isBlankValue(oldVal) || isBlankValue(newVal)) return true;
+  if (oldVal === newVal) return false;
+
+  const oldNum = Number(oldVal);
+  const newNum = Number(newVal);
+  if (Number.isFinite(oldNum) && Number.isFinite(newNum)) {
+    return oldNum !== newNum;
+  }
+
+  return String(oldVal) !== String(newVal);
+};
+
+const getDiffEntry = (companyData: any, keys: string[]) => {
+  const diff = companyData?.diff_data || {};
+  for (const key of keys) {
+    if (diff[key] && typeof diff[key] === "object") {
+      return diff[key];
+    }
+  }
+  return null;
+};
+
+const isPendingFieldChange = (companyData: any, keys: string[]) => {
+  if (!companyData?.is_pending_request) return false;
+  const entry = getDiffEntry(companyData, keys);
+  return !!(entry && valuesDiffer(entry.old, entry.new));
+};
+
+const hasPendingTradeChange = (companyData: any) => {
+  if (typeof companyData?.has_trade_change === "boolean") {
+    return !!companyData.is_pending_request && companyData.has_trade_change;
+  }
+  return isPendingFieldChange(companyData, ["trade_id", "trade_name"]);
+};
+
+const hasPendingRateChange = (companyData: any) => {
+  if (typeof companyData?.has_rate_change === "boolean") {
+    return !!companyData.is_pending_request && companyData.has_rate_change;
+  }
+  if (isPendingFieldChange(companyData, ["net_rate_perday", "net_rate_perDay"])) {
+    return true;
+  }
+  return (
+    !!companyData?.is_pending_request &&
+    valuesDiffer(companyData?.old_net_rate_perday, companyData?.new_net_rate_perday)
+  );
+};
 
 const getEffectiveNetRate = (companyData: any) => {
   // Only the pending request's old value is the live rate. After approve/reject,
   // leftover diff_data must not override the actual company rate.
-  if (
-    companyData?.is_pending_request &&
-    hasDiffField(companyData, "net_rate_perday")
-  ) {
+  if (hasPendingRateChange(companyData) && hasDiffField(companyData, "net_rate_perday")) {
     const pendingRate = companyData.diff_data.net_rate_perday?.old;
-    if (
-      pendingRate !== undefined &&
-      pendingRate !== null &&
-      pendingRate !== ""
-    ) {
+    if (!isBlankValue(pendingRate)) {
       return pendingRate;
     }
   }
@@ -72,12 +130,9 @@ const getEffectiveNetRate = (companyData: any) => {
 };
 
 const getEffectiveTradeId = (companyData: any) => {
-  if (
-    companyData?.is_pending_request &&
-    hasDiffField(companyData, "trade_id")
-  ) {
+  if (hasPendingTradeChange(companyData) && hasDiffField(companyData, "trade_id")) {
     const pendingTrade = companyData.diff_data.trade_id?.old;
-    if (pendingTrade !== undefined && pendingTrade !== null) {
+    if (!isBlankValue(pendingTrade)) {
       return pendingTrade;
     }
   }
@@ -104,6 +159,9 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [actionUsers, setActionUsers] = useState<number[]>([]);
+  const [requestAction, setRequestAction] = useState<
+    "approve" | "reject" | null
+  >(null);
   const { data: session, update } = useSession();
   const user = session?.user as User & { user_role_id?: number | null } & {
     id: number;
@@ -125,9 +183,11 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
     rate: "",
   });
 
-  const getCompanyData = async () => {
+  const getCompanyData = async (options?: { showPageLoader?: boolean }) => {
     if (!userId) return;
-    setLoading(true);
+    if (options?.showPageLoader !== false) {
+      setLoading(true);
+    }
     try {
       const res = await api.get(`company/active-company?user_id=${userId}`);
       if (res.data.info) {
@@ -229,8 +289,16 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
     }
   }, [comapny]);
 
-  const hasTradeChange = !!comapny?.new_data?.trade_id;
-  const hasRateChange = !!comapny?.new_net_rate_perday;
+  const hasTradeChange = hasPendingTradeChange(comapny);
+  const hasRateChange = hasPendingRateChange(comapny);
+  const pendingTradeIdOld = getDiffEntry(comapny, ["trade_id"])?.old;
+  const pendingTradeIdNew = getDiffEntry(comapny, ["trade_id"])?.new;
+  const pendingTradeOld =
+    getDiffEntry(comapny, ["trade_name"])?.old ||
+    trade.find((item) => Number(item.id) === Number(pendingTradeIdOld))?.name;
+  const pendingTradeNew =
+    getDiffEntry(comapny, ["trade_name"])?.new ||
+    trade.find((item) => Number(item.id) === Number(pendingTradeIdNew))?.name;
 
   const handleUpdate = async () => {
     setSaving(true);
@@ -340,18 +408,18 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
   };
 
   const handleApprove = async (requestLogId?: number | null) => {
-    const payload = {
-      log_id: requestLogId,
-      user_id: user.id,
-    };
-    if (!requestLogId) {
+    if (!requestLogId || requestAction) {
       return;
     }
+    setRequestAction("approve");
     try {
-      const res = await api.post("/requests/approve-request", payload);
+      const res = await api.post("/requests/approve-request", {
+        log_id: requestLogId,
+        user_id: user.id,
+      });
       if (res.data.IsSuccess == true) {
         toast.success(res.data.message);
-        getCompanyData();
+        await getCompanyData({ showPageLoader: false });
         if (Number(userId) === Number(user?.id)) {
           await update({
             ...session,
@@ -365,23 +433,25 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       }
     } catch (err) {
       console.error("Approval failed:", err);
+    } finally {
+      setRequestAction(null);
     }
   };
 
   /*  Reject request */
   const handleReject = async (requestLogId?: number | null) => {
-    if (!requestLogId) {
+    if (!requestLogId || requestAction) {
       return;
     }
-    const payload = {
-      log_id: requestLogId,
-      user_id: user.id,
-    };
+    setRequestAction("reject");
     try {
-      const res = await api.post("/requests/reject-request", payload);
+      const res = await api.post("/requests/reject-request", {
+        log_id: requestLogId,
+        user_id: user.id,
+      });
       if (res.data.IsSuccess == true) {
         toast.success(res.data.message);
-        getCompanyData();
+        await getCompanyData({ showPageLoader: false });
         if (Number(userId) === Number(user?.id)) {
           await update({
             ...session,
@@ -395,6 +465,8 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       }
     } catch (err) {
       console.error("Rejection failed:", err);
+    } finally {
+      setRequestAction(null);
     }
   };
 
@@ -513,7 +585,9 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                         </Typography>
 
                         <Box className="f-14" color="text.secondary" mt={0.75}>
-                          {hasTradeChange && (
+                          {hasTradeChange &&
+                            (!isBlankValue(pendingTradeOld) ||
+                              !isBlankValue(pendingTradeNew)) && (
                             <Box
                               display="flex"
                               alignItems="center"
@@ -522,27 +596,34 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                               mb={hasRateChange ? 0.5 : 0}
                             >
                               <strong>Trade:</strong>
-                              <Box
-                                component="span"
-                                sx={{
-                                  color: "error.main",
-                                  textDecoration: "line-through",
-                                }}
-                              >
-                                {comapny?.diff_data?.trade_name?.old}
-                              </Box>
-                              <Box component="span">→</Box>
-                              <Chip
-                                size="small"
-                                label={comapny?.diff_data?.trade_name?.new}
-                                sx={{
-                                  height: 22,
-                                  fontSize: 12,
-                                  fontWeight: 700,
-                                  bgcolor: "#E8F5E9",
-                                  color: "#2E7D32",
-                                }}
-                              />
+                              {!isBlankValue(pendingTradeOld) && (
+                                <Box
+                                  component="span"
+                                  sx={{
+                                    color: "error.main",
+                                    textDecoration: "line-through",
+                                  }}
+                                >
+                                  {pendingTradeOld}
+                                </Box>
+                              )}
+                              {!isBlankValue(pendingTradeOld) &&
+                                !isBlankValue(pendingTradeNew) && (
+                                  <Box component="span">→</Box>
+                                )}
+                              {!isBlankValue(pendingTradeNew) && (
+                                <Chip
+                                  size="small"
+                                  label={pendingTradeNew}
+                                  sx={{
+                                    height: 22,
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    bgcolor: "#E8F5E9",
+                                    color: "#2E7D32",
+                                  }}
+                                />
+                              )}
                             </Box>
                           )}
 
@@ -584,7 +665,14 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                       <Button
                         variant="outlined"
                         color="success"
-                        startIcon={<IconCheck size={16} />}
+                        disabled={!!requestAction}
+                        startIcon={
+                          requestAction === "approve" ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : (
+                            <IconCheck size={16} />
+                          )
+                        }
                         onClick={() => handleApprove(comapny?.request_log_id)}
                         sx={{ mr: 1 }}
                       >
@@ -594,7 +682,14 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                       <Button
                         variant="outlined"
                         color="error"
-                        startIcon={<IconX size={16} />}
+                        disabled={!!requestAction}
+                        startIcon={
+                          requestAction === "reject" ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : (
+                            <IconX size={16} />
+                          )
+                        }
                         onClick={() => handleReject(comapny?.request_log_id)}
                       >
                         Reject
@@ -983,10 +1078,10 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                                 textDecoration: "line-through",
                               }}
                             >
-                              {item.currency}
-                              {item.old_net_rate_perday
-                                ? item.old_net_rate_perday
-                                : 0}
+                              {formatHistoryRate(
+                                item.old_net_rate_perday,
+                                item.currency || comapny?.currency,
+                              )}
                               <Typography
                                 component="span"
                                 color="textSecondary"
@@ -1017,10 +1112,10 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                                 borderRadius: 1,
                               }}
                             >
-                              {item.currency}
-                              {item.new_net_rate_perday
-                                ? item.new_net_rate_perday
-                                : 0}
+                              {formatHistoryRate(
+                                item.new_net_rate_perday,
+                                item.currency || comapny?.currency,
+                              )}
                               <Typography component="span" color="success.main">
                                 /day
                               </Typography>

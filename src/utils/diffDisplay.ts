@@ -109,6 +109,7 @@ const LABEL_OVERRIDES: Record<string, string> = {
   date: "Date",
   start_time: "Start Time",
   end_time: "End Time",
+  total_hours: "Total Hours",
   start_date: "Start Date",
   end_date: "End Date",
 };
