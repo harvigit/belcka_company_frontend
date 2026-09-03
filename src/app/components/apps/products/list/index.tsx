@@ -121,6 +121,25 @@ export interface ProductFormData {
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
+import { appendTableSortQuery } from "@/utils/tableSort";
+
+const PRODUCT_TABLE_SORT_MAP: Record<string, string> = {
+  Id: "uuid",
+  name: "short_name",
+  displayName: "display_name",
+  supplier: "supplier",
+  code: "supplier_code",
+  stockLimit: "max_stock",
+  lowStock: "cutoff",
+  qty: "qty",
+  buying: "price",
+  market: "market_price",
+  barcode: "barcode",
+  availability: "availability",
+  packOff: "is_sub_qty",
+  categories: "categories",
+  projects: "projects",
+};
 
 const ProductList = () => {
   const [data, setData] = useState<any[]>([]);
@@ -250,7 +269,13 @@ const ProductList = () => {
   const [openDrawer, setOpenDrawer] = useState(false);
   const [editing, setEditing] = useState<{
     id: number | null;
-    field: "price" | "market_price" | "max_stock" | "cutoff" | null;
+    field:
+      | "price"
+      | "market_price"
+      | "max_stock"
+      | "cutoff"
+      | "display_name"
+      | null;
   }>({ id: null, field: null });
   const [savingCell, setSavingCell] = useState<{
     id: number | null;
@@ -260,6 +285,7 @@ const ProductList = () => {
       | "max_stock"
       | "cutoff"
       | "is_sub_qty"
+      | "display_name"
       | null;
   }>({ id: null, field: null });
   const [inputValue, setInputValue] = useState("");
@@ -584,6 +610,7 @@ const ProductList = () => {
       if (filters.status && filters.status !== "All") {
         url += `&stock_status=${filters.status}`;
       }
+      url = appendTableSortQuery(url, sorting, PRODUCT_TABLE_SORT_MAP);
 
       const res = await api.get(url);
       if (res.data) {
@@ -993,6 +1020,37 @@ const ProductList = () => {
     }
   };
 
+  const updateDisplayName = async (id: string | number, displayName: string) => {
+    setSavingCell({ id: Number(id), field: "display_name" });
+    try {
+      const payload = {
+        id: Number(id),
+        company_id: Number(user.company_id),
+        display_name: displayName,
+      };
+      const res = await api.post("products/update", payload);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        setData((prev: any[]) =>
+          prev.map((p) =>
+            Number(p.id) === Number(id)
+              ? { ...p, display_name: displayName }
+              : p,
+          ),
+        );
+      } else {
+        toast.error(res.data?.message || "Failed to update display name");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(
+        err?.response?.data?.message || "Failed to update display name",
+      );
+    } finally {
+      setSavingCell({ id: null, field: null });
+    }
+  };
+
   const updateStockLimit = async (id: string, limit: any) => {
     setSavingCell({ id: Number(id), field: "max_stock" });
     try {
@@ -1190,6 +1248,7 @@ const ProductList = () => {
   const columns = [
     {
       id: "select",
+      enableSorting: false,
       header: ({ table }: any) => (
         <Stack direction="row" alignItems="center">
           <CustomCheckbox
@@ -1299,6 +1358,7 @@ const ProductList = () => {
 
     columnHelper.accessor("image_url", {
       id: "Image",
+      enableSorting: false,
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2">Image</Typography>
@@ -1394,28 +1454,98 @@ const ProductList = () => {
       header: () => "Display Name",
       cell: ({ row }) => {
         const item = row.original;
+        const isEditing =
+          editing.id === item.id && editing.field === "display_name";
+        const isSaving = isCellSaving(item.id, "display_name");
+
         return (
-          <Tooltip title={item.display_name ?? ""}>
-            <Typography
-              textTransform="capitalize"
-              className="f-14"
-              component="div"
-              variant="body1"
-              sx={{
-                display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 1,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                lineHeight: 1.25,
-                maxWidth: 300,
-                width: 250,
-                wordBreak: "break-word",
-              }}
-            >
-              {item.display_name ? item.display_name : "-"}
-            </Typography>
-          </Tooltip>
+          <Stack
+            direction="row"
+            alignItems="center"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            {isSaving ? (
+              <CircularProgress size={16} />
+            ) : isEditing ? (
+              <TextField
+                className="f-14"
+                size="small"
+                value={inputValue}
+                autoFocus
+                type="text"
+                variant="standard"
+                sx={{ width: 250 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                }}
+                onBlur={async () => {
+                  const next = inputValue.trim();
+                  const prev = String(item.display_name ?? "").trim();
+                  setEditing({ id: null, field: null });
+                  if (next === prev) return;
+                  await updateDisplayName(item.id, next);
+                }}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const next = inputValue.trim();
+                    const prev = String(item.display_name ?? "").trim();
+                    setEditing({ id: null, field: null });
+                    if (next === prev) return;
+                    await updateDisplayName(item.id, next);
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setEditing({ id: null, field: null });
+                  }
+                }}
+              />
+            ) : (
+              <Tooltip title={item.display_name ?? ""}>
+                <Typography
+                  textTransform="capitalize"
+                  className="f-14"
+                  component="div"
+                  variant="body1"
+                  sx={{
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    // lineHeight: 1.25,
+                    maxWidth: 300,
+                    width: 250,
+                    wordBreak: "break-word",
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 1,
+                    cursor: canEdit ? "pointer" : "default",
+                    border: "1px solid transparent",
+                    transition: "all 0.2s ease",
+                    "&:hover": canEdit
+                      ? {
+                          border: "1px solid #1976d2",
+                        }
+                      : undefined,
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!canEdit || isSaving) return;
+                    setEditing({ id: item.id, field: "display_name" });
+                    setInputValue(item.display_name ?? "");
+                  }}
+                >
+                  {item.display_name ? item.display_name : "-"}
+                </Typography>
+              </Tooltip>
+            )}
+          </Stack>
         );
       },
     }),
@@ -2237,6 +2367,7 @@ const ProductList = () => {
     debounceDependencies: [searchTerm, filters, user.company_id, categories],
     state: { columnVisibility },
     onColumnVisibilityChange,
+    manualSorting: true,
   });
 
   // Reset to first page when search term changes

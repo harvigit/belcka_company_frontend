@@ -6,6 +6,12 @@ import {
   getSortedRowModel,
   getPaginationRowModel,
 } from '@tanstack/react-table';
+import api from '@/utils/axios';
+import {
+  axiosRequestHasPagination,
+  axiosRequestHasSort,
+  applyFetchAllPaginationToAxiosConfig,
+} from '@/utils/tableSort';
 
 interface UseServerTableOptions<TData> {
   data: TData[];
@@ -33,7 +39,7 @@ export function useServerTable<TData>({
   debounceTimeMs = 300,
   onSortingChange: controlledOnSortingChange,
   onColumnVisibilityChange,
-  manualSorting = false,
+  manualSorting = true,
   manualPagination = true,
   manualFiltering = true,
   shouldResetPageOnDebounce,
@@ -61,6 +67,18 @@ export function useServerTable<TData>({
   const fetchRef = useRef(fetchData);
   const shouldResetPageOnDebounceRef = useRef(shouldResetPageOnDebounce);
   const paginationRef = useRef(pagination);
+  const injectingSortRef = useRef(false);
+  const sortingRef = useRef(sorting);
+  const dataLenRef = useRef(Array.isArray(data) ? data.length : 0);
+  const totalRowsRef = useRef(totalRows);
+  const clientFullSortRef = useRef(false);
+  const fetchAllUsedRef = useRef(false);
+
+  const dataLen = Array.isArray(data) ? data.length : 0;
+  const hasFullDataset = totalRows > 0 && dataLen >= totalRows;
+  const useClientFullSort =
+    sorting.length > 0 && (hasFullDataset || fetchAllUsedRef.current);
+
   useEffect(() => {
     fetchRef.current = fetchData;
   }, [fetchData]);
@@ -70,6 +88,47 @@ export function useServerTable<TData>({
   useEffect(() => {
     paginationRef.current = pagination;
   }, [pagination]);
+  useEffect(() => {
+    sortingRef.current = sorting;
+  }, [sorting]);
+  useEffect(() => {
+    dataLenRef.current = dataLen;
+  }, [dataLen]);
+  useEffect(() => {
+    totalRowsRef.current = totalRows;
+  }, [totalRows]);
+  useEffect(() => {
+    clientFullSortRef.current = useClientFullSort;
+  }, [useClientFullSort]);
+
+  useEffect(() => {
+    const interceptor = api.interceptors.request.use((config) => {
+      if (!injectingSortRef.current) return config;
+      if ((config.method || "get").toLowerCase() !== "get") return config;
+      if (!sortingRef.current?.length) return config;
+      if (!axiosRequestHasPagination(config)) return config;
+      // List fetchers that already send sort_by keep server pagination.
+      if (axiosRequestHasSort(config)) return config;
+      applyFetchAllPaginationToAxiosConfig(config);
+      fetchAllUsedRef.current = true;
+      return config;
+    });
+    return () => {
+      api.interceptors.request.eject(interceptor);
+    };
+  }, []);
+
+  const skipNextPaginationFetchRef = useRef(false);
+
+  const runFetch = async () => {
+    fetchAllUsedRef.current = false;
+    injectingSortRef.current = true;
+    try {
+      await fetchRef.current();
+    } finally {
+      injectingSortRef.current = false;
+    }
+  };
 
   // Handle debounced fetch when dependencies like search or filters change
   // Skip the initial mount run — the pagination effect already fetches once on mount.
@@ -87,30 +146,69 @@ export function useServerTable<TData>({
         currentPageIndex !== 0 &&
         (shouldResetPageOnDebounceRef.current?.() ?? true)
       ) {
+        skipNextPaginationFetchRef.current = true;
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-      } else {
-        // Otherwise fetch immediately
-        fetchRef.current();
       }
+      runFetch();
     }, debounceTimeMs);
 
     return () => clearTimeout(handler);
-  }, [...debounceDependencies, JSON.stringify(sorting)]);
+  }, [...debounceDependencies]);
+
+  const isFirstSortRun = useRef(true);
+  useEffect(() => {
+    if (isFirstSortRun.current) {
+      isFirstSortRun.current = false;
+      return;
+    }
+
+    const alreadyHasAllRows =
+      dataLenRef.current >= totalRowsRef.current && totalRowsRef.current > 0;
+    // Full dataset is already loaded — sort client-side without refetching.
+    if (sorting.length > 0 && (alreadyHasAllRows || fetchAllUsedRef.current)) {
+      if (paginationRef.current.pageIndex !== 0) {
+        skipNextPaginationFetchRef.current = true;
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+      }
+      return;
+    }
+
+    const currentPageIndex = paginationRef.current.pageIndex;
+    if (
+      currentPageIndex !== 0 &&
+      (shouldResetPageOnDebounceRef.current?.() ?? true)
+    ) {
+      skipNextPaginationFetchRef.current = true;
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    }
+    runFetch();
+  }, [JSON.stringify(sorting)]);
 
   // Handle fetching when page changes
   useEffect(() => {
-    fetchRef.current();
+    if (skipNextPaginationFetchRef.current) {
+      skipNextPaginationFetchRef.current = false;
+      return;
+    }
+    if (clientFullSortRef.current) {
+      return;
+    }
+    runFetch();
   }, [pagination.pageIndex, pagination.pageSize]);
+
+  const tablePageCount = useClientFullSort
+    ? Math.max(1, Math.ceil(dataLen / Math.max(pagination.pageSize, 1)))
+    : pageCount;
 
   const table = useReactTable({
     data,
     columns,
     state: { columnFilters, sorting, pagination, rowSelection, columnVisibility, ...controlledState },
-    pageCount: pageCount,
-    rowCount: totalRows,
-    manualPagination: manualPagination,
+    pageCount: tablePageCount,
+    rowCount: useClientFullSort ? dataLen : totalRows,
+    manualPagination: useClientFullSort ? false : manualPagination,
     manualFiltering: manualFiltering,
-    manualSorting: manualSorting,
+    manualSorting: useClientFullSort ? false : manualSorting,
     autoResetPageIndex: false,
     enableRowSelection: true,
     onPaginationChange: setPagination,
@@ -128,9 +226,9 @@ export function useServerTable<TData>({
     table,
     pagination,
     setPagination,
-    pageCount,
+    pageCount: tablePageCount,
     setPageCount,
-    totalRows,
+    totalRows: useClientFullSort ? dataLen : totalRows,
     setTotalRows,
     sorting,
     setSorting,

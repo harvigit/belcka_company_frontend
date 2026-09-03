@@ -84,6 +84,11 @@ function DiffChangeRows({ rows }: { rows: DisplayDiff[] }) {
               {" - removed "}
               <ValueChip value={diff.old} tone="old" />
             </>
+          ) : String(diff.old) === String(diff.new) ? (
+            <>
+              {" - "}
+              <ValueChip value={diff.new} tone="new" />
+            </>
           ) : (
             <>
               {" - changed from "}

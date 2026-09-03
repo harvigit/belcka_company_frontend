@@ -48,7 +48,11 @@ const IGNORED_KEYS = new Set([
   "new_rate_perDay",
   "new_rate_perday",
   "net_rate_perhour",
-  "trade_id"
+  "trade_id",
+  "is_conflict_resolved",
+  "is_account_conflict_resolved",
+  "conflict_resolved_by",
+  "account_conflict_resolved_by",
 ]);
 
 const ID_TO_NAME: Record<string, string> = {
@@ -76,6 +80,7 @@ const LABEL_OVERRIDES: Record<string, string> = {
   shift_name: "Shift",
   team_id: "Team",
   team_title: "Team",
+  team_name: "Team",
   project_id: "Project",
   project_name: "Project",
   store_id: "Store",
@@ -88,12 +93,24 @@ const LABEL_OVERRIDES: Record<string, string> = {
   supervisor_name: "Supervisor",
   category_id: "Category",
   category_name: "Category",
-  leave_id: "Leave",
-  leave_name: "Leave",
+  leave_id: "Leave Type",
+  leave_name: "Leave Type",
   utr_number: "UTR Number",
   net_rate_perday: "Rate",
   net_rate_perDay: "Rate",
   rate: "Rate",
+  start_work_location: "Start Location",
+  stop_work_location: "End Location",
+  penalty_note: "Penalty Note",
+  appeal_note: "Appeal Note",
+  penalty_type: "Type",
+  penalty_hours: "Penalty Hours",
+  penalty_minutes: "Penalty Hours",
+  date: "Date",
+  start_time: "Start Time",
+  end_time: "End Time",
+  start_date: "Start Date",
+  end_date: "End Date",
 };
 
 export function isBlankDiffValue(value: any, _key?: string): boolean {

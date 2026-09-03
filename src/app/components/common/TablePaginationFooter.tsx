@@ -53,7 +53,8 @@ export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({
                 visible: table.getRowModel().rows.length,
                 total: totalRows,
               })
-            : table.options.manualPagination
+            : table.options.manualPagination ||
+              table.getRowModel().rows.length < totalRows
             ? t("table.outOfRows", {
                 visible: table.getRowModel().rows.length,
                 total: totalRows,
