@@ -149,15 +149,27 @@ const getPriceworkRowKey = (row: PriceworkRow) => {
   return `pricework:${row.pricework_id ?? row.id}`;
 };
 
-const PriceworkList = () => {
+const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
   const { data: session } = useSession();
   const user = session?.user as User | undefined;
 
   const [data, setData] = useState<PriceworkRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState(defaultFilters);
-  const [tempFilters, setTempFilters] = useState(defaultFilters);
+  const [filters, setFilters] = useState({
+    ...defaultFilters,
+    project_id: projectId ?? defaultFilters.project_id,
+  });
+  const [tempFilters, setTempFilters] = useState({
+    ...defaultFilters,
+    project_id: projectId ?? defaultFilters.project_id,
+  });
+
+  useEffect(() => {
+    if (!projectId) return;
+    setFilters((prev) => ({ ...prev, project_id: projectId }));
+    setTempFilters((prev) => ({ ...prev, project_id: projectId }));
+  }, [projectId]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(
     subDays(new Date(), 6),
@@ -220,7 +232,36 @@ const PriceworkList = () => {
   }>({ rowKey: null, field: null });
   const [cellInputValue, setCellInputValue] = useState("");
   const [savingCellKeys, setSavingCellKeys] = useState<Set<string>>(new Set());
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = React.useState(false);
 
+  React.useEffect(() => {
+    const checkScroll = () => {
+      if (tableContainerRef.current) {
+        setIsScrollable(
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
+        );
+      }
+    };
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+
+    const observer = new MutationObserver(checkScroll);
+    if (tableContainerRef.current) {
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    }
+
+    return () => {
+      window.removeEventListener("resize", checkScroll);
+      observer.disconnect();
+    };
+  }, []);
+  
   const clearSelection = () => {
     setIsSelectAll(false);
     setSelectedRowIds(new Set());
@@ -1544,7 +1585,7 @@ const PriceworkList = () => {
       JSON.stringify(filters),
       activeTab,
     ],
-    state: { sorting, columnVisibility },
+    state: { sorting, columnVisibility: projectId ? { ...columnVisibility, project_name: false } : columnVisibility },
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
     manualSorting: true,
@@ -1561,7 +1602,9 @@ const PriceworkList = () => {
     [tabCounts],
   );
 
-  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const activeFilterCount = Object.entries(filters).filter(
+    ([key, value]) => Boolean(value) && !(projectId && key === "project_id"),
+  ).length;
 
   const handleDateRangeChange = (range: {
     from: Date | null;
@@ -1581,8 +1624,11 @@ const PriceworkList = () => {
 
   const handleClearAppliedFilters = (event: React.MouseEvent) => {
     event.stopPropagation();
-    setTempFilters(defaultFilters);
-    setFilters(defaultFilters);
+    const nextFilters = projectId
+      ? { ...defaultFilters, project_id: projectId }
+      : defaultFilters;
+    setTempFilters(nextFilters);
+    setFilters(nextFilters);
     clearSelection();
     setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
   };
@@ -1628,6 +1674,7 @@ const PriceworkList = () => {
   const filteredColumnToggles = Object.keys(COLUMN_LABELS).filter(
     (id) =>
       id !== "actions" &&
+      !(projectId && id === "project_name") &&
       COLUMN_LABELS[id]
         .toLowerCase()
         .includes(columnSearch.trim().toLowerCase()),
@@ -1643,7 +1690,7 @@ const PriceworkList = () => {
   return (
     <Box
       sx={{
-        height: "calc(100vh - 100px)",
+        height: projectId ? "100%" : "calc(100vh - 100px)",
         display: "flex",
         flexDirection: "column",
         position: "relative",
@@ -1923,7 +1970,23 @@ const PriceworkList = () => {
                           whiteSpace: "nowrap",
                           bgcolor: "background.paper",
                           py: 1.25,
+                          width:
+                            header.column.id === "actions"
+                              ? 120
+                              : header.column.id === "select"
+                                ? 30
+                                : "auto",
+
                           cursor: isSortable ? "pointer" : "default",
+                          ...(header.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 3,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
                         }}
                         onClick={
                           isSortable
@@ -2023,6 +2086,18 @@ const PriceworkList = () => {
                               ? "center"
                               : "left"
                         }
+                        sx={{
+                          padding: "10px",
+                          ...(cell.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 1,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
                         padding={
                           cell.column.id === "select" ? "checkbox" : "normal"
                         }
@@ -2426,28 +2501,30 @@ const PriceworkList = () => {
                 <TextField {...params} label="User" fullWidth />
               )}
             />
-            <Autocomplete
-              options={projects}
-              getOptionLabel={(option) => option.name || ""}
-              getOptionKey={(option) => String(option.id)}
-              isOptionEqualToValue={(option, value) =>
-                String(option.id) === String(value?.id)
-              }
-              value={
-                projects.find(
-                  (p) => String(p.id) === String(tempFilters.project_id),
-                ) || null
-              }
-              onChange={(_, value) =>
-                setTempFilters({
-                  ...tempFilters,
-                  project_id: value ? value.id : "",
-                })
-              }
-              renderInput={(params) => (
-                <TextField {...params} label="Project" fullWidth />
-              )}
-            />
+            {!projectId && (
+              <Autocomplete
+                options={projects}
+                getOptionLabel={(option) => option.name || ""}
+                getOptionKey={(option) => String(option.id)}
+                isOptionEqualToValue={(option, value) =>
+                  String(option.id) === String(value?.id)
+                }
+                value={
+                  projects.find(
+                    (p) => String(p.id) === String(tempFilters.project_id),
+                  ) || null
+                }
+                onChange={(_, value) =>
+                  setTempFilters({
+                    ...tempFilters,
+                    project_id: value ? value.id : "",
+                  })
+                }
+                renderInput={(params) => (
+                  <TextField {...params} label="Project" fullWidth />
+                )}
+              />
+            )}
             <Autocomplete
               options={addresses}
               getOptionLabel={(option) => option.name || ""}
@@ -2520,8 +2597,11 @@ const PriceworkList = () => {
           <Button
             color="inherit"
             onClick={() => {
-              setTempFilters(defaultFilters);
-              setFilters(defaultFilters);
+              const nextFilters = projectId
+                ? { ...defaultFilters, project_id: projectId }
+                : defaultFilters;
+              setTempFilters(nextFilters);
+              setFilters(nextFilters);
               setFilterOpen(false);
               clearSelection();
               setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
@@ -2532,7 +2612,11 @@ const PriceworkList = () => {
           <Button
             variant="contained"
             onClick={() => {
-              setFilters(tempFilters);
+              setFilters(
+                projectId
+                  ? { ...tempFilters, project_id: projectId }
+                  : tempFilters,
+              );
               setFilterOpen(false);
               clearSelection();
               setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));

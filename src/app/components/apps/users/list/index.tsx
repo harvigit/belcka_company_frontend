@@ -1139,51 +1139,51 @@ const TablePagination = () => {
         }),
 
 
-        columnHelper.accessor((row) => row.permissions, {
-            id: 'permissions',
-            header: () => (
-                <Typography variant="subtitle2" noWrap>
-                    {t('Permissions')}
-                </Typography>
-            ),
-            cell: (info) => {
-                const user = info.row.original;
-                const canAccess = canAccessPermissions();
-                const canEdit = canEditPermissions();
+        // columnHelper.accessor((row) => row.permissions, {
+        //     id: 'permissions',
+        //     header: () => (
+        //         <Typography variant="subtitle2" noWrap>
+        //             {t('Permissions')}
+        //         </Typography>
+        //     ),
+        //     cell: (info) => {
+        //         const user = info.row.original;
+        //         const canAccess = canAccessPermissions();
+        //         const canEdit = canEditPermissions();
 
-                return (
-                    <Chip
-                        size="small"
-                        onClick={
-                            canAccess ? () => handleOpenPermissionsDrawer(user) : undefined
-                        }
-                        label={
-                            user.permission_count === 0
-                                ? t('Select')
-                                : t('permissions.count', {count: user.permission_count})
-                        }
-                        sx={{
-                            backgroundColor: (theme) => theme.palette.primary.light,
-                            color: (theme) => theme.palette.primary.main,
-                            fontWeight: 500,
-                            borderRadius: '10px',
-                            px: 1.5,
-                            cursor: canAccess ? 'pointer' : 'not-allowed',
-                            opacity: canAccess ? 1 : 0.6,
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                                transform: canAccess ? 'translateY(-2px)' : 'none',
-                                boxShadow: canAccess ? '0 4px 8px rgba(0,0,0,0.15)' : 'none',
-                            },
-                        }}
-                        {...(!canAccess && {
-                            onMouseEnter: undefined,
-                            onMouseLeave: undefined,
-                        })}
-                    />
-                );
-            },
-        }),
+        //         return (
+        //             <Chip
+        //                 size="small"
+        //                 onClick={
+        //                     canAccess ? () => handleOpenPermissionsDrawer(user) : undefined
+        //                 }
+        //                 label={
+        //                     user.permission_count === 0
+        //                         ? t('Select')
+        //                         : t('permissions.count', {count: user.permission_count})
+        //                 }
+        //                 sx={{
+        //                     backgroundColor: (theme) => theme.palette.primary.light,
+        //                     color: (theme) => theme.palette.primary.main,
+        //                     fontWeight: 500,
+        //                     borderRadius: '10px',
+        //                     px: 1.5,
+        //                     cursor: canAccess ? 'pointer' : 'not-allowed',
+        //                     opacity: canAccess ? 1 : 0.6,
+        //                     transition: 'all 0.2s ease',
+        //                     '&:hover': {
+        //                         transform: canAccess ? 'translateY(-2px)' : 'none',
+        //                         boxShadow: canAccess ? '0 4px 8px rgba(0,0,0,0.15)' : 'none',
+        //                     },
+        //                 }}
+        //                 {...(!canAccess && {
+        //                     onMouseEnter: undefined,
+        //                     onMouseLeave: undefined,
+        //                 })}
+        //             />
+        //         );
+        //     },
+        // }),
 
         columnHelper.accessor((row) => row.is_invited, {
             id: 'isInvited',

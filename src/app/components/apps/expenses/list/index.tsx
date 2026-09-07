@@ -216,7 +216,7 @@ const mapApiRowToListItem = (row: ExpenseRow): ExpenseListItem => {
   };
 };
 
-const ExpenseList = () => {
+const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
   const session = useSession();
   const user = session.data?.user as User & {
     company_id?: number | null;
@@ -231,8 +231,14 @@ const ExpenseList = () => {
   const [data, setData] = useState<ExpenseRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState(defaultFilters);
-  const [tempFilters, setTempFilters] = useState(defaultFilters);
+  const [filters, setFilters] = useState({
+    ...defaultFilters,
+    project_id: projectId ?? defaultFilters.project_id,
+  });
+  const [tempFilters, setTempFilters] = useState({
+    ...defaultFilters,
+    project_id: projectId ?? defaultFilters.project_id,
+  });
   const [filterOpen, setFilterOpen] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([
     { id: "date_added", desc: true },
@@ -291,6 +297,13 @@ const ExpenseList = () => {
   const [isRejecting, setIsRejecting] = useState(false);
   const [preferencesHydrated, setPreferencesHydrated] = useState(false);
   const loadedFilterCompanyIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!projectId) return;
+    if (expensePreferencesCookieKey && !preferencesHydrated) return;
+    setFilters((prev) => ({ ...prev, project_id: projectId }));
+    setTempFilters((prev) => ({ ...prev, project_id: projectId }));
+  }, [projectId, preferencesHydrated, expensePreferencesCookieKey]);
   const [editingAmount, setEditingAmount] = useState<{ id: number | null }>({
     id: null,
   });
@@ -903,7 +916,7 @@ const ExpenseList = () => {
       JSON.stringify(filters),
       activeTab,
     ],
-    state: { sorting, columnVisibility },
+    state: { sorting, columnVisibility: projectId ? { ...columnVisibility, project_name: false } : columnVisibility },
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
     manualSorting: true,
@@ -919,7 +932,10 @@ const ExpenseList = () => {
       const stored = Cookies.get(expensePreferencesCookieKey);
       if (stored) {
         const parsed = JSON.parse(stored) as ExpenseStoredPreferences;
-        const nextFilters = normalizeStoredFilters(parsed.filters);
+        const nextFilters = {
+          ...normalizeStoredFilters(parsed.filters),
+          ...(projectId ? { project_id: projectId } : {}),
+        };
         const nextPagination = normalizeStoredPagination(parsed.pagination);
 
         setFilters(nextFilters);
@@ -944,7 +960,7 @@ const ExpenseList = () => {
     } finally {
       setPreferencesHydrated(true);
     }
-  }, [expensePreferencesCookieKey, setPagination]);
+  }, [expensePreferencesCookieKey, projectId, setPagination]);
 
   const saveExpensePreferencesCookie = useCallback(() => {
     if (!expensePreferencesCookieKey || !preferencesHydrated) return;
@@ -1014,7 +1030,9 @@ const ExpenseList = () => {
     listItems[0]?.currency ||
     "£";
 
-  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const activeFilterCount = Object.entries(filters).filter(
+    ([key, value]) => Boolean(value) && !(projectId && key === "project_id"),
+  ).length;
 
   const handleDateRangeChange = (range: {
     from: Date | null;
@@ -1032,8 +1050,11 @@ const ExpenseList = () => {
 
   const handleClearAppliedFilters = (event: React.MouseEvent) => {
     event.stopPropagation();
-    setTempFilters(defaultFilters);
-    setFilters(defaultFilters);
+    const nextFilters = projectId
+      ? { ...defaultFilters, project_id: projectId }
+      : defaultFilters;
+    setTempFilters(nextFilters);
+    setFilters(nextFilters);
     setIsSelectAll(false);
     setSelectedRowIds(new Set());
     setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
@@ -1396,7 +1417,11 @@ const ExpenseList = () => {
 
   const columnToggles = table
     .getAllLeafColumns()
-    .filter((column) => column.id !== "select")
+    .filter(
+      (column) =>
+        column.id !== "select" &&
+        !(projectId && column.id === "project_name"),
+    )
     .map((column) => ({
       id: column.id,
       label: COLUMN_LABELS[column.id] || column.id,
@@ -1427,7 +1452,7 @@ const ExpenseList = () => {
   return (
     <Box
       sx={{
-        height: "calc(100vh - 100px)",
+        height: projectId ? "100%" : "calc(100vh - 100px)",
         display: "flex",
         flexDirection: "column",
         position: "relative",
@@ -2207,28 +2232,30 @@ const ExpenseList = () => {
                 <TextField {...params} label="User" fullWidth />
               )}
             />
-            <Autocomplete
-              options={projects}
-              getOptionLabel={(option) => option.name || ""}
-              getOptionKey={(option) => String(option.id)}
-              isOptionEqualToValue={(option, value) =>
-                String(option.id) === String(value?.id)
-              }
-              value={
-                projects.find(
-                  (p) => String(p.id) === String(tempFilters.project_id),
-                ) || null
-              }
-              onChange={(_, value) =>
-                setTempFilters({
-                  ...tempFilters,
-                  project_id: value ? value.id : "",
-                })
-              }
-              renderInput={(params) => (
-                <TextField {...params} label="Project" fullWidth />
-              )}
-            />
+            {!projectId && (
+              <Autocomplete
+                options={projects}
+                getOptionLabel={(option) => option.name || ""}
+                getOptionKey={(option) => String(option.id)}
+                isOptionEqualToValue={(option, value) =>
+                  String(option.id) === String(value?.id)
+                }
+                value={
+                  projects.find(
+                    (p) => String(p.id) === String(tempFilters.project_id),
+                  ) || null
+                }
+                onChange={(_, value) =>
+                  setTempFilters({
+                    ...tempFilters,
+                    project_id: value ? value.id : "",
+                  })
+                }
+                renderInput={(params) => (
+                  <TextField {...params} label="Project" fullWidth />
+                )}
+              />
+            )}
             <Autocomplete
               options={categories}
               getOptionLabel={(option) => option.name || ""}
@@ -2323,8 +2350,11 @@ const ExpenseList = () => {
           <Button
             color="inherit"
             onClick={() => {
-              setTempFilters(defaultFilters);
-              setFilters(defaultFilters);
+              const nextFilters = projectId
+                ? { ...defaultFilters, project_id: projectId }
+                : defaultFilters;
+              setTempFilters(nextFilters);
+              setFilters(nextFilters);
               setFilterOpen(false);
               setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
             }}
@@ -2334,7 +2364,11 @@ const ExpenseList = () => {
           <Button
             variant="contained"
             onClick={() => {
-              setFilters(tempFilters);
+              setFilters(
+                projectId
+                  ? { ...tempFilters, project_id: projectId }
+                  : tempFilters,
+              );
               setFilterOpen(false);
               setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
             }}

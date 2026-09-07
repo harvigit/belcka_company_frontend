@@ -318,19 +318,25 @@ const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
   );
 };
 
-const CasesList = () => {
+const CasesList = ({ projectId }: { projectId?: number } = {}) => {
   const [data, setData] = useState<CaseSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [filters, setFilters] = useState({
     status: "",
-    project_id: "",
+    project_id: projectId ? String(projectId) : "",
     parent_address_id: "",
   });
   const [tempFilters, setTempFilters] = useState(filters);
   const [projectList, setProjectList] = useState<any[]>([]);
   const [parentAddressList, setParentAddressList] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    setFilters((prev) => ({ ...prev, project_id: String(projectId) }));
+    setTempFilters((prev) => ({ ...prev, project_id: String(projectId) }));
+  }, [projectId]);
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const handleSelectAllRows = (checked: boolean) => {
@@ -917,7 +923,12 @@ const CasesList = () => {
     columns,
     fetchData: fetchCases,
     debounceDependencies: [user?.company_id, search, JSON.stringify(filters)],
-    state: { columnVisibility, sorting },
+    state: {
+      columnVisibility: projectId
+        ? { ...columnVisibility, project_name: false }
+        : columnVisibility,
+      sorting,
+    },
     onColumnVisibilityChange,
     onSortingChange: setSorting,
     manualSorting: true,
@@ -927,15 +938,17 @@ const CasesList = () => {
     <PermissionGuard permission="Cases">
       <Box
         sx={{
-          height: "calc(100vh - 100px)",
+          height: projectId ? "100%" : "calc(100vh - 100px)",
           display: "flex",
           flexDirection: "column",
+          overflow: "hidden",
         }}
       >
         <Stack
           mr={2}
           ml={2}
           mb={2}
+          mt={1}
           justifyContent="space-between"
           direction={{ xs: "column", sm: "row" }}
           spacing={{ xs: 1, sm: 2, md: 4 }}
@@ -1009,7 +1022,11 @@ const CasesList = () => {
               >
                 <FormGroup sx={{ p: 2 }}>
                   {table.getAllLeafColumns().map((column) => {
-                    if (column.id === "select" || column.id === "actions")
+                    if (
+                      column.id === "select" ||
+                      column.id === "actions" ||
+                      (projectId && column.id === "project_name")
+                    )
                       return null;
                     return (
                       <FormControlLabel
@@ -1122,24 +1139,26 @@ const CasesList = () => {
                     <MenuItem value="In Progress">In Progress</MenuItem>
                   </TextField>
 
-                  <Autocomplete
-                    options={projectList}
-                    getOptionLabel={(option) => option.name || ""}
-                    value={
-                      projectList.find(
-                        (p) => p.id === tempFilters.project_id,
-                      ) || null
-                    }
-                    onChange={(e, value) => {
-                      setTempFilters({
-                        ...tempFilters,
-                        project_id: value ? value.id : "",
-                      });
-                    }}
-                    renderInput={(params) => (
-                      <TextField {...params} label="Project" fullWidth />
-                    )}
-                  />
+                  {!projectId && (
+                    <Autocomplete
+                      options={projectList}
+                      getOptionLabel={(option) => option.name || ""}
+                      value={
+                        projectList.find(
+                          (p) => p.id === tempFilters.project_id,
+                        ) || null
+                      }
+                      onChange={(e, value) => {
+                        setTempFilters({
+                          ...tempFilters,
+                          project_id: value ? value.id : "",
+                        });
+                      }}
+                      renderInput={(params) => (
+                        <TextField {...params} label="Project" fullWidth />
+                      )}
+                    />
+                  )}
 
                   <Autocomplete
                     options={parentAddressList}
@@ -1165,16 +1184,13 @@ const CasesList = () => {
               <DialogActions>
                 <Button
                   onClick={() => {
-                    setTempFilters({
+                    const nextFilters = {
                       status: "",
-                      project_id: "",
+                      project_id: projectId ? String(projectId) : "",
                       parent_address_id: "",
-                    });
-                    setFilters({
-                      status: "",
-                      project_id: "",
-                      parent_address_id: "",
-                    });
+                    };
+                    setTempFilters(nextFilters);
+                    setFilters(nextFilters);
                     setOpen(false);
                   }}
                   color="inherit"
@@ -1185,7 +1201,11 @@ const CasesList = () => {
                 <Button
                   variant="contained"
                   onClick={() => {
-                    setFilters(tempFilters);
+                    setFilters(
+                      projectId
+                        ? { ...tempFilters, project_id: String(projectId) }
+                        : tempFilters,
+                    );
                     setOpen(false);
                   }}
                 >

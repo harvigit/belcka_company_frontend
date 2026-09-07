@@ -39,6 +39,7 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import toast from "react-hot-toast";
 import PermissionGuard from "@/app/auth/PermissionGuard";
+import { useRouter } from "next/navigation";
 
 dayjs.extend(customParseFormat);
 
@@ -118,6 +119,7 @@ const StackedHeader = ({ top, bottom }: { top: string; bottom: string }) => (
 );
 
 const ProjectDashboard = () => {
+  const router = useRouter();
   const [data, setData] = useState<ProjectDashboardRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -881,7 +883,14 @@ const ProjectDashboard = () => {
                 </TableRow>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
+                  <TableRow
+                    key={row.id}
+                    hover
+                    sx={{ cursor: "pointer" }}
+                    onClick={() =>
+                      router.push(`/apps/project/list/${row.original.id}`)
+                    }
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}

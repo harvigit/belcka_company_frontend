@@ -171,10 +171,14 @@ export function prepareDisplayDiffs(diffs?: DiffEntry[] | null): DisplayDiff[] {
     const oldValue = isBlankDiffValue(diff.old, diff.key) ? null : diff.old;
     const newValue = isBlankDiffValue(diff.new, diff.key) ? null : diff.new;
     if (oldValue == null && newValue == null) continue;
+    const sameValue =
+      oldValue != null &&
+      newValue != null &&
+      String(oldValue) === String(newValue);
     rows.push({
       key: diff.key,
       old: oldValue,
-      new: newValue,
+      new: sameValue ? null : newValue,
       label: formatDiffLabel(diff.key),
     });
   }
