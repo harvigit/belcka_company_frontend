@@ -3479,7 +3479,7 @@ const TimeClock = ({queryParams}: Props) => {
             <LeaveLists open={openLeaves} onClose={() => setOpenLeaves(false)} queryParams={resolvedQueryParams}/>
             
             {/* Request list */}
-            <UserRequests open={requestList} onRequestCountChange={() => {}} onClose={() => setRequestList(false)} isAdmin={true}/>
+            <UserRequests open={requestList} onRequestCountChange={() => {}} onClose={() => setRequestList(false)} isAdmin={true} showRequestActions/>
 
             {/*  Recover Worklogs list */}
             <RecoverWorklogs

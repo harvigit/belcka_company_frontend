@@ -30,6 +30,7 @@ import {
   IconSearch,
   IconFilter,
   IconNotes,
+  IconCheck,
 } from "@tabler/icons-react";
 import { format, parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
@@ -38,6 +39,7 @@ import { useRouter } from "next/navigation";
 import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 
 dayjs.extend(customParseFormat);
 
@@ -46,6 +48,7 @@ interface Props {
   onClose: () => void;
   onRequestCountChange: any;
   isAdmin?: boolean;
+  showRequestActions?: boolean;
 }
 
 type FilterOption = { id: number; name?: string };
@@ -148,6 +151,7 @@ export default function UserRequests({
   onClose,
   onRequestCountChange,
   isAdmin,
+  showRequestActions = false,
 }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -188,6 +192,10 @@ export default function UserRequests({
   const [statusOptions, setStatusOptions] = useState<FilterOption[]>([]);
   const [typeOptions, setTypeOptions] = useState<FilterOption[]>([]);
   const [userOptions, setUserOptions] = useState<FilterOption[]>([]);
+  const [actioningId, setActioningId] = useState<number | null>(null);
+  const [actioningType, setActioningType] = useState<
+    "approve" | "reject" | null
+  >(null);
   const session = useSession();
   const user = session.data?.user as User & {
     company_id?: string | null;
@@ -313,6 +321,149 @@ export default function UserRequests({
     }
   };
 
+  const isPendingRequest = (work: any) => {
+    const statusText = String(work?.status_text || "").toLowerCase();
+    if (statusText === "pending") return true;
+    return Number(work?.status) === 3;
+  };
+
+  const getRequestTypeKey = (work: any) =>
+    String(work?.type_name || "")
+      .trim()
+      .toLowerCase();
+
+  const getRequestTableName = (work: any) =>
+    String(work?.table_name || "")
+      .trim()
+      .toLowerCase();
+
+  const isPenaltyAppealRequest = (work: any) => {
+    const type = getRequestTypeKey(work);
+    const message =
+      `${work?.message || ""} ${work?.short_message || ""}`.toLowerCase();
+    return type === "penalty appeal" || message.includes("appeal");
+  };
+
+  const postGenericRequestAction = (
+    work: any,
+    action: "approve" | "reject",
+  ) => {
+    const endpoint =
+      action === "approve"
+        ? "/requests/approve-request"
+        : "/requests/reject-request";
+    return api.post(endpoint, {
+      log_id: Number(work?.id),
+      user_id: Number(work?.user_id),
+    });
+  };
+
+  const postTimesheetRequestAction = (
+    work: any,
+    action: "approve" | "reject",
+  ) => {
+    const endpoint =
+      action === "approve"
+        ? "/timesheet/web-request-approve"
+        : "/timesheet/web-request-reject";
+    const payload: {
+      ids: string;
+      userId: number;
+      reason?: string;
+    } = {
+      ids: String(work?.id),
+      userId: Number(work?.user_id),
+    };
+    if (action === "reject") {
+      payload.reason = "";
+    }
+    return api.post(endpoint, payload);
+  };
+
+  const postLeaveRequestAction = (work: any, action: "approve" | "reject") => {
+    const leaveId = Number(work?.leave_id ?? work?.record_id);
+    const endpoint =
+      action === "approve" ? "/user-leaves/approve" : "/user-leaves/reject";
+    return api.post(`${endpoint}?user_leave_id=${leaveId}`);
+  };
+
+  const postPenaltyAppealAction = async (
+    work: any,
+    action: "approve" | "reject",
+  ) => {
+    const penaltyId = Number(work?.penalty_id ?? work?.record_id);
+    const details = await api.get(
+      `/time-clock/penalty-details?penalty_id=${penaltyId}`,
+    );
+    const appealId = Number(details.data?.info?.appeal_id);
+    if (!appealId) {
+      throw new Error(t("Appeal ID not found"));
+    }
+    return api.post("/time-clock/appeal-action", {
+      appeal_id: appealId,
+      status: action === "approve" ? 5 : 12,
+      admin_note: null,
+    });
+  };
+
+  const postRequestAction = async (work: any, action: "approve" | "reject") => {
+    const type = getRequestTypeKey(work);
+    const table = getRequestTableName(work);
+
+    if (table === "user_leaves" || type === "leave") {
+      return postLeaveRequestAction(work, action);
+    }
+
+    if (
+      table === "penalty_appeals" ||
+      type === "penalty appeal" ||
+      isPenaltyAppealRequest(work)
+    ) {
+      return postPenaltyAppealAction(work, action);
+    }
+
+    if (table === "penalty_details" || type === "penalty") {
+      return postTimesheetRequestAction(work, action);
+    }
+
+    if (
+      table === "user_worklogs" ||
+      type === "work log" ||
+      type === "worklog"
+    ) {
+      return postTimesheetRequestAction(work, action);
+    }
+
+    // Billing info, rate, trade, company, timesheet, and any other
+    // pending request types use the generic request approve/reject APIs.
+    return postGenericRequestAction(work, action);
+  };
+
+  const handleRequestAction = async (
+    work: any,
+    action: "approve" | "reject",
+  ) => {
+    const logId = Number(work?.id);
+    if (!logId || actioningId) return;
+
+    setActioningId(logId);
+    setActioningType(action);
+    try {
+      const res = await postRequestAction(work, action);
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message);
+        if (startDate && endDate) {
+          await fetchRequests(startDate, endDate, filters, debouncedSearch);
+        }
+      }
+    } catch (err: any) {
+      console.error(err, "error while approving or rejecting this request!");
+    } finally {
+      setActioningId(null);
+      setActioningType(null);
+    }
+  };
+
   // Helper to parse leave date from work record
   const getLeaveDate = (work: any): string | undefined => {
     // Try dedicated leave date fields first
@@ -371,6 +522,7 @@ export default function UserRequests({
     "Billing Info": (id) => getUserDetailsHref(id, { tab: "billing" }),
     Company: (id) => getUserDetailsHref(id, { tab: "rate" }),
     Rate: (id) => getUserDetailsHref(id, { tab: "rate" }),
+    Trade: (id) => getUserDetailsHref(id, { tab: "rate" }),
     Comapny: (id) => getUserDetailsHref(id, { tab: "billing" }),
     Project: (id) => `/apps/projects/index?id=${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
@@ -428,6 +580,7 @@ export default function UserRequests({
     "Billing Info": "#4CBC6D",
     Company: "#f5c21bf8",
     Rate: "#f5c21bf8",
+    Trade: "#f5c21bf8",
     Leave: "#949090ff",
     "Work log": "#FF7F00",
     Worklog: "#FF7F00",
@@ -588,7 +741,11 @@ export default function UserRequests({
                       );
                     } else if (work.type_name === "Leave") {
                       const leaveDate = getLeaveDate(work);
-                      return routeFn(work.user_id, leaveDate, leaveDate);
+                      return routeFn(
+                        work.user_id ?? work.record_id,
+                        leaveDate,
+                        leaveDate,
+                      );
                     } else if (work.type_name === "Team") {
                       return routeFn(work.team_id);
                     } else if (work.type_name === "Project") {
@@ -607,31 +764,31 @@ export default function UserRequests({
                         "&:has([data-diff-open='true'])": { zIndex: 5 },
                       }}
                     >
-                      <Link
-                        href={href}
-                        style={{
-                          textDecoration: "none",
-                          color: "inherit",
-                          display: "block",
-                          height: "100%",
+                      <Box
+                        position="relative"
+                        display="flex"
+                        flexDirection="column"
+                        p={1.5}
+                        pt={2.5}
+                        sx={{
+                          width: "100%",
+                          height: "fit-content",
+                          borderRadius: "16px",
+                          boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.05)",
+                          border: "1px solid #eaeaea",
+                          background: "#fff",
+                          overflow: "visible",
                         }}
-                        onClick={() => onClose()}
                       >
-                        <Box
-                          position="relative"
-                          display="flex"
-                          flexDirection="column"
-                          p={1.5}
-                          pt={2.5}
-                          sx={{
-                            width: "100%",
-                            height: "fit-content",
-                            borderRadius: "16px",
-                            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.05)",
-                            border: "1px solid #eaeaea",
-                            background: "#fff",
-                            overflow: "visible",
+                        <Link
+                          href={href}
+                          style={{
+                            textDecoration: "none",
+                            color: "inherit",
+                            display: "block",
+                            height: "100%",
                           }}
+                          onClick={() => onClose()}
                         >
                           <Box
                             position="absolute"
@@ -715,11 +872,15 @@ export default function UserRequests({
                                     border: "1px solid",
                                     borderColor:
                                       STATUS_COLOR[
-                                        work.status_text.toLowerCase()
+                                        String(
+                                          work.status_text || "",
+                                        ).toLowerCase()
                                       ] || "#757575",
                                     color:
                                       STATUS_COLOR[
-                                        work.status_text.toLowerCase()
+                                        String(
+                                          work.status_text || "",
+                                        ).toLowerCase()
                                       ] || "#757575",
                                     fontWeight: 600,
                                     fontSize: "0.65rem",
@@ -757,8 +918,61 @@ export default function UserRequests({
                               {work.date}
                             </Typography>
                           </Box>
-                        </Box>
-                      </Link>
+                        </Link>
+                        {showRequestActions && isPendingRequest(work) && (
+                          <Box
+                            mt={1.25}
+                            display="flex"
+                            justifyContent="flex-end"
+                            gap={1}
+                          >
+                            <Button
+                              variant="outlined"
+                              color="success"
+                              size="small"
+                              disabled={actioningId === work.id}
+                              startIcon={
+                                actioningId === work.id &&
+                                actioningType === "approve" ? (
+                                  <CircularProgress size={14} color="inherit" />
+                                ) : (
+                                  <IconCheck size={16} />
+                                )
+                              }
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleRequestAction(work, "approve");
+                              }}
+                              sx={{ textTransform: "none", fontWeight: 600 }}
+                            >
+                              {t("Approve")}
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              size="small"
+                              disabled={actioningId === work.id}
+                              startIcon={
+                                actioningId === work.id &&
+                                actioningType === "reject" ? (
+                                  <CircularProgress size={14} color="inherit" />
+                                ) : (
+                                  <IconX size={16} />
+                                )
+                              }
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleRequestAction(work, "reject");
+                              }}
+                              sx={{ textTransform: "none", fontWeight: 600 }}
+                            >
+                              {t("Reject")}
+                            </Button>
+                          </Box>
+                        )}
+                      </Box>
                     </Grid>
                   );
                 })}
