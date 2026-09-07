@@ -16,6 +16,7 @@ import {
     Skeleton,
     Snackbar,
     Alert,
+    AlertTitle,
     CircularProgress,
     Dialog,
     DialogActions,
@@ -802,9 +803,13 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
     const [locationLoading, setLocationLoading] = useState(false);
     const [locationError, setLocationError] = useState<LocationErrorType>(null);
     const [locationDialogOpen, setLocationDialogOpen] = useState(false);
+    const [allowedIpAddresses, setAllowedIpAddresses] = useState<string[]>([]);
+    const [ipRestrictionLoading, setIpRestrictionLoading] = useState(false);
     const resourcesRequestInProgressRef = useRef(false);
     const resourcesLoadedForOpenRef = useRef(false);
     const locationRequestInProgressRef = useRef(false);
+    const {data: session} = useSession();
+    const authUser = session?.user as User & { company_id?: string | null; id?: number };
 
     const handleShiftChange = useCallback((shiftId: number | '', currentShifts: ShiftOption[]) => {
         setSelectedShift(shiftId);
@@ -824,6 +829,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
         if (!open) {
             resourcesRequestInProgressRef.current = false;
             resourcesLoadedForOpenRef.current = false;
+            setAllowedIpAddresses([]);
             return;
         }
         if (resourcesRequestInProgressRef.current || resourcesLoadedForOpenRef.current) return;
@@ -858,6 +864,41 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
                 setLoadingProjects(false);
             });
     }, [open]);
+
+    useEffect(() => {
+        if (!open || !authUser?.company_id) {
+            return;
+        }
+
+        let cancelled = false;
+        setIpRestrictionLoading(true);
+        api.get('/user/get-my-allowed-ips', {
+            params: {company_id: Number(authUser.company_id)},
+        })
+            .then((res) => {
+                if (cancelled) return;
+                if (res.data?.IsSuccess) {
+                    const ips = Array.isArray(res.data.ip_addresses)
+                        ? res.data.ip_addresses.filter(Boolean)
+                        : (res.data.info || [])
+                            .map((row: { ip_address?: string }) => row.ip_address)
+                            .filter(Boolean);
+                    setAllowedIpAddresses(ips);
+                } else {
+                    setAllowedIpAddresses([]);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) setAllowedIpAddresses([]);
+            })
+            .finally(() => {
+                if (!cancelled) setIpRestrictionLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open, authUser?.company_id]);
 
     // Load shifts from selected project's resources
     useEffect(() => {
@@ -924,6 +965,45 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
 
                 <DialogContent sx={{pt: 1}}>
                     <Stack spacing={2} mt={1}>
+                        {!ipRestrictionLoading && allowedIpAddresses.length > 0 && (
+                            <Alert
+                                severity="info"
+                                variant="outlined"
+                                sx={{alignItems: 'flex-start'}}
+                            >
+                                <AlertTitle sx={{fontWeight: 700, mb: 0.5}}>
+                                    IP Restriction
+                                </AlertTitle>
+                                <Typography variant="body2" sx={{mb: 1}}>
+                                    Your work can only be started from the IP address configured by
+                                    the User Admin. Please connect to the approved network/IP address
+                                    to start your work.
+                                </Typography>
+                                <Typography variant="body2" fontWeight={600} sx={{mb: 0.5}}>
+                                    Allowed IP{allowedIpAddresses.length > 1 ? 's' : ''}:
+                                </Typography>
+                                <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                                    {allowedIpAddresses.map((ip) => (
+                                        <Box
+                                            key={ip}
+                                            sx={{
+                                                px: 1,
+                                                py: 0.25,
+                                                borderRadius: 1,
+                                                bgcolor: 'rgba(2, 136, 209, 0.08)',
+                                                border: '1px solid rgba(2, 136, 209, 0.25)',
+                                                fontSize: 12,
+                                                fontWeight: 600,
+                                                fontFamily: 'monospace',
+                                            }}
+                                        >
+                                            {ip}
+                                        </Box>
+                                    ))}
+                                </Stack>
+                            </Alert>
+                        )}
+
                         {/* Project */}
                         <FormControl fullWidth size="small" required>
                             <InputLabel>Select Project</InputLabel>
