@@ -30,14 +30,14 @@ const TABS = [
   { key: "materials", label: "Materials", icon: IconPackage },
   { key: "labour", label: "Labour", icon: IconUsers },
   { key: "internal-orders", label: "Internal Orders", icon: IconReorder },
-  {
-    key: "assigned-materials",
-    label: "Assigned Materials",
-    icon: IconUsers,
-  },
-  { key: "client-invoice", label: "Client Invoice", icon: IconFileInvoice },
-  { key: "subcon-inv", label: "Subcon Inv", icon: IconFileInvoice },
-  { key: "supplier-inv", label: "Supplier Inv", icon: IconTruck },
+  // {
+  //   key: "assigned-materials",
+  //   label: "Assigned Materials",
+  //   icon: IconUsers,
+  // },
+  // { key: "client-invoice", label: "Client Invoice", icon: IconFileInvoice },
+  // { key: "subcon-inv", label: "Subcon Inv", icon: IconFileInvoice },
+  // { key: "supplier-inv", label: "Supplier Inv", icon: IconTruck },
   { key: "settings", label: "Settings", icon: IconSettings },
 ] as const;
 
@@ -80,11 +80,11 @@ const ProjectDetail = () => {
         case "internal-orders":
           return <InternalOrders projectId={projectId} />;
       case "labour":
-      case "assigned-materials":
-      case "client-invoice":
-      case "subcon-inv":
-      case "supplier-inv":
-      case "settings":
+      // case "assigned-materials":
+      // case "client-invoice":
+      // case "subcon-inv":
+      // case "supplier-inv":
+      // case "settings":
       // return (
       //   <Box p={2}>
       //     <Typography color="text.secondary" mb={2}>

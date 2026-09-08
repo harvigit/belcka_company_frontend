@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Box, Stack, Tooltip, Typography } from "@mui/material";
 import dayjs, { Dayjs } from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -24,11 +24,10 @@ export const GANTT_COLORS: Record<string, string> = {
   "Not Started": "#94A3B8",
 };
 
-const NAME_COL = 150;
-const DAY_W = 28;
-const ROW_H = 50;
-const HEADER_H = 54;
-const LABEL_PAD = 44;
+const NAME_COL = 128;
+const ROW_H = 32;
+const BAR_H = 8;
+const HEADER_H = 40;
 
 const withAlpha = (hex: string, alpha: number) => {
   const value = hex.replace("#", "");
@@ -82,8 +81,7 @@ const buildTimeline = (items: GanttItem[]) => {
     if (today.isAfter(max)) max = today;
   }
 
-  if (max.diff(min, "day") < 13) max = min.add(13, "day");
-  if (max.diff(min, "day") > 89) max = min.add(89, "day");
+  if (max.diff(min, "day") < 7) max = min.add(7, "day");
 
   const days: Dayjs[] = [];
   for (
@@ -111,6 +109,9 @@ const buildTimeline = (items: GanttItem[]) => {
 };
 
 const GanttOverview = ({ items }: { items: GanttItem[] }) => {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [sectionW, setSectionW] = useState(0);
+
   const timeline = useMemo(() => {
     try {
       return buildTimeline(items || []);
@@ -119,6 +120,16 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
       return null;
     }
   }, [items]);
+
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const apply = () => setSectionW(el.clientWidth);
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [timeline]);
 
   if (!items.length || !timeline) {
     return (
@@ -129,15 +140,22 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
   }
 
   const { days, months, min, todayIndex } = timeline;
-  const chartWidth = days.length * DAY_W + LABEL_PAD;
+  const chartAvail = Math.max(sectionW - NAME_COL, 0);
+  const dayW =
+    days.length > 0 && chartAvail > 0
+      ? Math.max(chartAvail / days.length, 1)
+      : 16;
+  const chartWidth = days.length * dayW;
+  const compactDays = dayW < 18;
+  const sparseDays = dayW < 10;
   const todayLeft =
-    todayIndex >= 0 ? NAME_COL + todayIndex * DAY_W + DAY_W / 2 : null;
+    todayIndex >= 0 ? NAME_COL + todayIndex * dayW + dayW / 2 : null;
 
   return (
-    <Box>
+    <Box ref={wrapRef} sx={{ minWidth: 0, width: "100%" }}>
       <Box
         sx={{
-          overflowX: "auto",
+          overflowX: "hidden",
           overflowY: "visible",
           mx: { xs: -0.5, md: -0.5 },
         }}
@@ -146,7 +164,8 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
           sx={{
             position: "relative",
             minWidth: NAME_COL + chartWidth,
-            pb: 0.5,
+            width: "100%",
+            pb: 0.25,
           }}
         >
           <Box
@@ -172,40 +191,50 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
               }}
             />
             <Box sx={{ width: chartWidth, minWidth: chartWidth }}>
-              <Box display="flex" height={22}>
+              <Box display="flex" height={18}>
                 {months.map((month) => (
                   <Typography
                     key={`${month.label}-${month.start}`}
-                    fontSize={11}
+                    fontSize={10}
                     fontWeight={600}
                     color="text.secondary"
+                    noWrap
                     sx={{
-                      width: month.span * DAY_W,
+                      width: month.span * dayW,
                       textAlign: "center",
-                      lineHeight: "22px",
+                      lineHeight: "18px",
+                      px: 0.25,
                     }}
                   >
                     {month.label}
                   </Typography>
                 ))}
               </Box>
-              <Box display="flex" height={32}>
-                {days.map((day) => (
-                  <Typography
-                    key={day.format("YYYY-MM-DD")}
-                    fontSize={11}
-                    color="text.secondary"
-                    sx={{
-                      width: DAY_W,
-                      minWidth: DAY_W,
-                      textAlign: "center",
-                      lineHeight: "32px",
-                      borderLeft: "1px solid #F1F5F9",
-                    }}
-                  >
-                    {day.format("DD")}
-                  </Typography>
-                ))}
+              <Box display="flex" height={22}>
+                {days.map((day) => {
+                  const showLabel = sparseDays
+                    ? day.date() === 1
+                    : compactDays
+                      ? day.date() === 1 || day.day() === 1
+                      : true;
+                  return (
+                    <Typography
+                      key={day.format("YYYY-MM-DD")}
+                      fontSize={9}
+                      color="text.secondary"
+                      sx={{
+                        width: dayW,
+                        minWidth: dayW,
+                        textAlign: "center",
+                        lineHeight: "22px",
+                        borderLeft: "1px solid #F1F5F9",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {showLabel ? day.format("DD") : ""}
+                    </Typography>
+                  );
+                })}
               </Box>
             </Box>
           </Box>
@@ -216,8 +245,8 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
             const startIdx = Math.max(0, start.diff(min, "day"));
             const endIdx = Math.min(days.length - 1, end.diff(min, "day"));
             const visible = endIdx >= 0 && startIdx <= days.length - 1;
-            const left = startIdx * DAY_W;
-            const width = Math.max((endIdx - startIdx + 1) * DAY_W, DAY_W);
+            const left = startIdx * dayW;
+            const width = Math.max((endIdx - startIdx + 1) * dayW, dayW);
             const progress = Math.min(Math.max(Number(item.progress || 0), 0), 100);
             const color = GANTT_COLORS[item.status] || "#3B82F6";
             const startLabel = start.format("DD/MM/YYYY");
@@ -242,13 +271,17 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
                     bgcolor: "background.paper",
                     borderRight: "1px solid #E8EEF5",
                     display: "flex",
-                    alignItems: "center",
-                    px: 1.5,
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    px: 1,
                     boxShadow: "4px 0 8px -6px rgba(15, 23, 42, 0.18)",
                   }}
                 >
-                  <Typography fontSize={12} fontWeight={600} noWrap>
+                  <Typography fontSize={11} fontWeight={600} noWrap>
                     {item.name}
+                  </Typography>
+                  <Typography fontSize={10} fontWeight={700} color={color} lineHeight={1.2}>
+                    {progress}%
                   </Typography>
                 </Box>
                 <Box
@@ -259,9 +292,9 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
                     backgroundImage: `repeating-linear-gradient(
                       to right,
                       transparent 0,
-                      transparent ${DAY_W - 1}px,
-                      #EEF2F7 ${DAY_W - 1}px,
-                      #EEF2F7 ${DAY_W}px
+                      transparent ${Math.max(dayW - 1, 0)}px,
+                      #EEF2F7 ${Math.max(dayW - 1, 0)}px,
+                      #EEF2F7 ${dayW}px
                     )`,
                   }}
                 >
@@ -300,11 +333,11 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
                           top: "50%",
                           left,
                           width,
-                          height: 22,
+                          height: BAR_H,
                           transform: "translateY(-50%)",
                           borderRadius: 999,
                           bgcolor: withAlpha(color, 0.22),
-                          overflow: "visible",
+                          overflow: "hidden",
                           cursor: "pointer",
                         }}
                       >
@@ -316,22 +349,6 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
                             bgcolor: color,
                           }}
                         />
-                        <Typography
-                          sx={{
-                            position: "absolute",
-                            top: "50%",
-                            left: width + 8,
-                            transform: "translateY(-50%)",
-                            fontSize: 11,
-                            fontWeight: 700,
-                            color,
-                            lineHeight: 1,
-                            pointerEvents: "none",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {progress}%
-                        </Typography>
                       </Box>
                     </Tooltip>
                   )}
@@ -344,7 +361,7 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
             <Box
               sx={{
                 position: "absolute",
-                top: 18,
+                top: 14,
                 bottom: 0,
                 left: todayLeft,
                 width: 0,
@@ -356,20 +373,20 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
               <Box
                 sx={{
                   position: "absolute",
-                  top: -10,
+                  top: -8,
                   left: "50%",
                   transform: "translateX(-50%)",
-                  width: 22,
-                  height: 22,
+                  width: 16,
+                  height: 16,
                   borderRadius: "50%",
                   bgcolor: "#EF4444",
                   color: "#fff",
-                  fontSize: 10,
+                  fontSize: 8,
                   fontWeight: 700,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 0 0 3px #fff",
+                  boxShadow: "0 0 0 2px #fff",
                 }}
               >
                 {days[todayIndex].format("DD")}
@@ -381,15 +398,20 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
 
       <Stack
         direction="row"
-        spacing={1.5}
+        spacing={1.25}
         flexWrap="wrap"
         useFlexGap
-        pt={1.5}
+        pt={1}
       >
         {Object.entries(GANTT_COLORS).map(([label, color]) => (
-          <Stack key={label} direction="row" spacing={1} alignItems="center">
-            <Box width={20} height={8} borderLeft="20%" bgcolor={color} />
-            <Typography fontSize={11} color="text.secondary">
+          <Stack key={label} direction="row" spacing={0.75} alignItems="center">
+            <Box
+              width={16}
+              height={6}
+              borderRadius={999}
+              bgcolor={color}
+            />
+            <Typography fontSize={10} color="text.secondary">
               {label}
             </Typography>
           </Stack>

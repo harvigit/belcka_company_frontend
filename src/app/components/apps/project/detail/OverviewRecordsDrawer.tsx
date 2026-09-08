@@ -130,6 +130,7 @@ export const overviewTableSx = {
     fontSize: 11,
     letterSpacing: 0.3,
     bgcolor: "#F8FAFC",
+    zIndex: 3,
   },
 };
 
@@ -175,7 +176,7 @@ function PagedList<T>({
   children: (visible: T[]) => React.ReactNode;
 }) {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const source = previewRows(rows, limit);
   const maxPage = Math.max(0, Math.ceil(source.length / rowsPerPage) - 1);
   const currentPage = Math.min(page, maxPage);
@@ -191,7 +192,18 @@ function PagedList<T>({
   }, [source.length, rowsPerPage, paginate, limit]);
 
   return (
-    <Box>
+    <Box
+      sx={
+        paginate
+          ? {
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+            }
+          : undefined
+      }
+    >
       {children(visible)}
       {paginate && source.length > 0 && (
         <TablePagination
@@ -204,9 +216,13 @@ function PagedList<T>({
             setRowsPerPage(parseInt(event.target.value, 10));
             setPage(0);
           }}
-          rowsPerPageOptions={[5, 10, 20, 50]}
+          rowsPerPageOptions={[50, 100, 250, 500]}
           sx={{
+            flexShrink: 0,
+            borderTop: "1px solid",
+            borderColor: "divider",
             overflow: "visible",
+            bgcolor: "background.paper",
             ".MuiTablePagination-toolbar": {
               flexWrap: "wrap",
               minHeight: 52,
@@ -230,8 +246,22 @@ export const AddressActivityTable = ({
   return (
     <PagedList rows={rows} limit={limit} paginate={paginate}>
       {(visible) => (
-        <TableContainer sx={{ overflowX: "auto" }}>
-          <Table size="small" sx={{ ...overviewTableSx, minWidth: 280 }}>
+        <TableContainer
+          sx={{
+            overflowX: "auto",
+            ...(paginate && {
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+            }),
+          }}
+        >
+          <Table
+            stickyHeader={!!paginate}
+            size="small"
+            aria-label={paginate ? "sticky table" : undefined}
+            sx={{ ...overviewTableSx, minWidth: 280 }}
+          >
             <TableHead>
               <TableRow>
                 <TableCell>Address</TableCell>
@@ -295,8 +325,22 @@ export const LabourTeamTable = ({
   return (
     <PagedList rows={rows} limit={limit} paginate={paginate}>
       {(visible) => (
-        <TableContainer sx={{ overflowX: "auto" }}>
-          <Table size="small" sx={{ ...overviewTableSx, minWidth: 820 }}>
+        <TableContainer
+          sx={{
+            overflowX: "auto",
+            ...(paginate && {
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+            }),
+          }}
+        >
+          <Table
+            stickyHeader={!!paginate}
+            size="small"
+            aria-label={paginate ? "sticky table" : undefined}
+            sx={{ ...overviewTableSx, minWidth: 820 }}
+          >
             <TableHead>
               <TableRow>
                 {LABOUR_COLUMNS.map((label) => (
@@ -421,8 +465,22 @@ export const MonthlyFinancialTable = ({
   return (
     <PagedList rows={rows} limit={limit} paginate={paginate}>
       {(visible) => (
-        <TableContainer sx={{ overflowX: "auto" }}>
-          <Table size="small" sx={{ ...overviewTableSx, minWidth: 720 }}>
+        <TableContainer
+          sx={{
+            overflowX: "auto",
+            ...(paginate && {
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+            }),
+          }}
+        >
+          <Table
+            stickyHeader={!!paginate}
+            size="small"
+            aria-label={paginate ? "sticky table" : undefined}
+            sx={{ ...overviewTableSx, minWidth: 720 }}
+          >
             <TableHead>
               <TableRow>
                 {MONTHLY_COLUMNS.map((label) => (
@@ -466,11 +524,7 @@ export const MonthlyFinancialTable = ({
                 <TableRow sx={totalRowSx}>
                   <TableCell>TOTAL</TableCell>
                   {MONTHLY_TOTAL_KEYS.map((key) => (
-                    <TableCell
-                      key={key}
-                      align="right"
-                      sx={totalMoneyCellSx}
-                    >
+                    <TableCell key={key} align="right" sx={totalMoneyCellSx}>
                       {money(currency, totals[key] || 0)}
                     </TableCell>
                   ))}
@@ -532,13 +586,17 @@ const OverviewRecordsDrawer = ({
 
   return (
     <Drawer
-      anchor="right"
+      anchor="bottom"
       open={open}
       onClose={onClose}
       PaperProps={{
         sx: {
-          width: { xs: "100%", sm: 720, md: 920 },
-          maxWidth: "100%",
+          borderRadius: 0,
+          height: "95vh",
+          boxShadow: "none",
+          borderTopLeftRadius: 12,
+          borderTopRightRadius: 12,
+          overflow: "hidden",
           display: "flex",
           flexDirection: "column",
         },
@@ -552,6 +610,7 @@ const OverviewRecordsDrawer = ({
         py={1.5}
         borderBottom="1px solid"
         borderColor="divider"
+        sx={{ flexShrink: 0 }}
       >
         <Box display={"flex"} alignItems={"center"}>
           <IconButton onClick={onClose} size="small">
@@ -577,6 +636,7 @@ const OverviewRecordsDrawer = ({
           borderBottom: "1px solid",
           borderColor: "divider",
           minHeight: 48,
+          flexShrink: 0,
           "& .MuiTab-root": {
             textTransform: "none",
             minHeight: 48,
@@ -595,7 +655,14 @@ const OverviewRecordsDrawer = ({
       </Tabs>
 
       <Box
-        sx={{ flex: 1, minHeight: 0, overflow: "auto", p: { xs: 1.5, md: 2 } }}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          p: { xs: 1.5, md: 2 },
+        }}
       >
         {tab === "addresses" &&
           (addresses.length ? (
@@ -629,9 +696,9 @@ const OverviewRecordsDrawer = ({
 
         {tab === "cases" &&
           (gantt.length || (caseStatus?.total || 0) > 0 ? (
-            <Stack spacing={2}>
+            <Stack spacing={2} sx={{ height: "100%", minHeight: 0 }}>
               {(caseStatus?.items || []).length > 0 && (
-                <Stack spacing={0.75}>
+                <Stack spacing={0.75} sx={{ flexShrink: 0 }}>
                   {(caseStatus?.items || []).map((row) => (
                     <Stack
                       key={row.status}
@@ -644,9 +711,7 @@ const OverviewRecordsDrawer = ({
                           width={8}
                           height={8}
                           borderRadius="50%"
-                          bgcolor={
-                            CASE_STATUS_COLORS[row.status] || row.color
-                          }
+                          bgcolor={CASE_STATUS_COLORS[row.status] || row.color}
                         />
                         <Typography fontSize={13}>{row.status}</Typography>
                       </Stack>
@@ -659,7 +724,18 @@ const OverviewRecordsDrawer = ({
               )}
               {gantt.length ? (
                 <PagedList rows={gantt} paginate>
-                  {(visible) => <GanttOverview items={visible} />}
+                  {(visible) => (
+                    <Box
+                      sx={{
+                        overflowX: "auto",
+                        flex: 1,
+                        minHeight: 0,
+                        overflowY: "auto",
+                      }}
+                    >
+                      <GanttOverview items={visible} />
+                    </Box>
+                  )}
                 </PagedList>
               ) : (
                 <EmptyState message="No related case timeline for this project." />

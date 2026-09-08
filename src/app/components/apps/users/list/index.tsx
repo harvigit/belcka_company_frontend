@@ -268,6 +268,7 @@ const TablePagination = () => {
     const [open, setOpen] = useState(false);
     const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [isArchiving, setIsArchiving] = useState(false);
     const [supervisorReplacementOpen, setSupervisorReplacementOpen] =
         useState(false);
     const [newSupervisorId, setNewSupervisorId] = useState<number | ''>('');
@@ -2461,43 +2462,49 @@ const TablePagination = () => {
 
                     <DialogActions>
                         <Button
-                            onClick={async () => {
-                                const supervisorsToReplace = data.filter(
-                                    (u: any) =>
-                                        usersToDelete.includes(u.id) && u.supervisor_team_id,
-                                );
-                                if (supervisorsToReplace.length > 0) {
-                                    setSupervisorDetails({
-                                        team_id: supervisorsToReplace[0].supervisor_team_id,
-                                        team_name:
-                                            supervisorsToReplace[0].supervisor_team_name ||
-                                            'the team',
-                                    });
-                                    setSupervisorReplacementOpen(true);
-                                    setConfirmOpen(false);
-                                    return;
-                                }
+                        onClick={async () => {
+                            const supervisorsToReplace = data.filter(
+                                (u: any) =>
+                                    usersToDelete.includes(u.id) && u.supervisor_team_id,
+                            );
 
-                                try {
-                                    const payload = {
-                                        user_ids: usersToDelete.join(','),
-                                        company_id: user.company_id,
-                                    };
-                                    const response = await api.post('user/archive-user', payload);
-                                    toast.success(response.data.message);
-                                    setSelectedRowIds(new Set());
-                                    await fetchUsers();
-                                } catch (error) {
-                                    console.error('Failed to archive users', error);
-                                } finally {
-                                    setConfirmOpen(false);
-                                }
-                            }}
-                            variant="outlined"
-                            color="primary"
-                        >
-                            {t('Archive')}
-                        </Button>
+                            if (supervisorsToReplace.length > 0) {
+                                setSupervisorDetails({
+                                    team_id: supervisorsToReplace[0].supervisor_team_id,
+                                    team_name:
+                                        supervisorsToReplace[0].supervisor_team_name || 'the team',
+                                });
+                                setSupervisorReplacementOpen(true);
+                                setConfirmOpen(false);
+                                return;
+                            }
+
+                            try {
+                                setIsArchiving(true);
+
+                                const payload = {
+                                    user_ids: usersToDelete.join(','),
+                                    company_id: user.company_id,
+                                };
+
+                                const response = await api.post('user/archive-user', payload);
+
+                                toast.success(response.data.message);
+                                setSelectedRowIds(new Set());
+                                await fetchUsers();
+                            } catch (error) {
+                                console.error('Failed to archive users', error);
+                            } finally {
+                                setIsArchiving(false);
+                                setConfirmOpen(false);
+                            }
+                        }}
+                        variant="outlined"
+                        color="primary"
+                        disabled={isArchiving}
+                    >
+                        {isArchiving ? 'Archiving...' : t('Archive')}
+                    </Button>
                     </DialogActions>
                 </Dialog>
 
