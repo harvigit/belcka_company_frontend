@@ -126,6 +126,20 @@ const isPaidOrLockedStatus = (status: any): boolean => {
     return status === 6 || status === '6' || status === 9 || status === '9';
 };
 
+const isValidTimesheetId = (id: string): boolean => {
+    return id.trim() !== '' && id.trim() !== '--' && id.trim() !== 'null' && id.trim() !== 'undefined';
+};
+
+const appendTimesheetIds = (ids: Set<string>, value: unknown) => {
+    if (value === null || value === undefined) return;
+
+    String(value)
+        .split(',')
+        .map((id) => id.trim())
+        .filter(isValidTimesheetId)
+        .forEach((id) => ids.add(id));
+};
+
 const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, columnVisibility: VisibilityState) => {
     try {
         const pageState = loadStorageState(TIME_CLOCK_PAGE);
@@ -1235,6 +1249,14 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
             const filteredDayRows = (week.days || []).flatMap((day: any) => {
                 let worklogs = day.worklogs || [];
+                const dayStatusMatchesFilter =
+                    (filterValue === 'lock' && (day.status === '6' || day.status === 6)) ||
+                    (filterValue === 'unlock' && (day.status === '7' || day.status === 7)) ||
+                    (filterValue === 'paid' && (day.status === '9' || day.status === 9));
+                const hasAdjustmentTimesheet =
+                    Boolean(day.adjustment_id) ||
+                    Boolean(day.timesheet_ids) ||
+                    Boolean(day.export_timesheet_ids);
 
                 // Apply filter
                 if (filterValue === 'lock') {
@@ -1248,7 +1270,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 }
 
                 const isFilterActive = ['lock', 'unlock', 'paid', 'leave'].includes(filterValue);
-                if (isFilterActive && worklogs.length === 0) {
+                if (isFilterActive && worklogs.length === 0 && !(dayStatusMatchesFilter && hasAdjustmentTimesheet)) {
                     return [];
                 }
 
@@ -1412,7 +1434,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     rowData.rowsData.forEach((worklog: any) => {
                         if (isRecordLocked(worklog)) {
                             hasLockedRows = true;
-                        } else if (isRecordUnlocked(rowData)) {
+                        } else if (isRecordUnlocked(worklog)) {
                             hasUnlockedRows = true;
                         }
                     });
@@ -1421,6 +1443,38 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         });
 
         return {hasLockedRows, hasUnlockedRows};
+    };
+
+    const getTimesheetIdsFromRow = (rowData?: DailyBreakdown): string[] => {
+        const ids = new Set<string>();
+
+        if (!rowData || rowData.rowType !== 'day') {
+            return [];
+        }
+
+        appendTimesheetIds(ids, rowData.timesheet_ids);
+        appendTimesheetIds(ids, rowData.export_timesheet_ids);
+
+        if (Array.isArray(rowData.rowsData)) {
+            rowData.rowsData.forEach((record: any) => {
+                appendTimesheetIds(ids, record.timesheet_id);
+                appendTimesheetIds(ids, record.timesheet_ids);
+                appendTimesheetIds(ids, record.export_timesheet_ids);
+            });
+        }
+
+        return Array.from(ids);
+    };
+
+    const getSelectedTimesheetIds = (): string[] => {
+        const ids = new Set<string>();
+
+        Array.from(selectedRows).forEach((rowId) => {
+            const rowIndex = parseInt(rowId.replace('row-', ''));
+            getTimesheetIdsFromRow(dailyData[rowIndex]).forEach((id) => ids.add(id));
+        });
+
+        return Array.from(ids);
     };
 
     const toggleTimesheetStatus = useCallback(async (timesheetIds: (string | number)[], action: 'approve' | 'unapprove') => {
@@ -1503,17 +1557,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     };
 
     const handleLockClick = () => {
-        const timesheetIds: (string | number)[] = [];
-        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
-            return parseInt(rowId.replace('row-', ''));
-        });
-
-        selectedRowIndices.forEach((rowIndex) => {
-            const rowData = dailyData[rowIndex];
-            if (rowData && rowData.rowType === 'day') {
-                timesheetIds.push(rowData.timesheet_ids);
-            }
-        });
+        const timesheetIds = getSelectedTimesheetIds();
 
         if (timesheetIds.length === 0) return;
 
@@ -1531,17 +1575,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     };
 
     const handleUnlockClick = () => {
-        const timesheetIds: (string | number)[] = [];
-        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
-            return parseInt(rowId.replace('row-', ''));
-        });
-
-        selectedRowIndices.forEach((rowIndex) => {
-            const rowData = dailyData[rowIndex];
-            if (rowData && rowData.rowType === 'day') {
-                timesheetIds.push(rowData.timesheet_ids);
-            }
-        });
+        const timesheetIds = getSelectedTimesheetIds();
 
         if (timesheetIds.length === 0) return;
 
@@ -1692,30 +1726,18 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const handleConfirmAction = async () => {
         if (!confirmDialog) return;
 
-        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
-            return parseInt(rowId.replace('row-', ''));
-        });
-
         setConfirmDialog(null);
 
         switch (confirmDialog.actionType) {
             case 'lock': {
-                const timesheetIds: (string | number)[] = [];
-                selectedRowIndices.forEach((rowIndex) => {
-                    const rowData = dailyData[rowIndex];
-                    timesheetIds.push(rowData.timesheet_ids);
-                });
+                const timesheetIds = getSelectedTimesheetIds();
                 if (timesheetIds.length > 0) {
                     await toggleTimesheetStatus(timesheetIds, 'approve');
                 }
                 break;
             }
             case 'unlock': {
-                const timesheetIds: (string | number)[] = [];
-                selectedRowIndices.forEach((rowIndex) => {
-                    const rowData = dailyData[rowIndex];
-                    timesheetIds.push(rowData.timesheet_ids);
-                });
+                const timesheetIds = getSelectedTimesheetIds();
                 if (timesheetIds.length > 0) {
                     await toggleTimesheetStatus(timesheetIds, 'unapprove');
                 }
