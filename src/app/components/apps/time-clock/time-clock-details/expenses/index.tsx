@@ -69,6 +69,10 @@ interface ExpenseActivityLog {
     action_user_name?: string | null;
     action_user_image?: string | null;
     action_user_thumb_image?: string | null;
+    old_data?: Record<string, any> | null;
+    new_data?: Record<string, any> | null;
+    expense_amount?: number | string | null;
+    total_amount?: number | null;
 }
 
 interface ExpenseDetail {

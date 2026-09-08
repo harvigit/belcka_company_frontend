@@ -24,7 +24,6 @@ const IGNORED_KEYS = new Set([
   "company_id",
   "record_id",
   "action",
-  "expired_at",
   "request_date",
   "qr_code_image",
   "user_code",
@@ -36,7 +35,6 @@ const IGNORED_KEYS = new Set([
   "is_active",
   "is_invited",
   "is_check_in",
-  "status",
   "joined_on",
   "archived_at",
   "removed_on",
@@ -53,7 +51,7 @@ const IGNORED_KEYS = new Set([
   "is_account_conflict_resolved",
   "conflict_resolved_by",
   "account_conflict_resolved_by",
-  "account_id",
+  // "account_id",
   "user_company_id"
 ]);
 
@@ -114,9 +112,24 @@ const LABEL_OVERRIDES: Record<string, string> = {
   total_hours: "Total Hours",
   start_date: "Start Date",
   end_date: "End Date",
+  expense: "Amount",
+  total_amount: "Amount",
+  amount: "Amount",
+  status: "Status",
+  approval_status: "Status",
+  lock_status: "Lock",
+  timesheet_date: "Timesheet Date",
+  reject_note: "Reject Note",
+  first_name: "First Name",
+  last_name: "Last Name",
+  date_of_birth: "Date of Birth",
+  expired_at: "Expiry Date",
+  account_id: "Account Id",
+  phone: "Phone",
+  email: "Email",
 };
 
-export function isBlankDiffValue(value: any, _key?: string): boolean {
+export function isBlankDiffValue(value: any, key?: string): boolean {
   if (value === null || value === undefined) return true;
   if (typeof value === "object") return true;
   const text = String(value).trim().toLowerCase();
@@ -125,12 +138,13 @@ export function isBlankDiffValue(value: any, _key?: string): boolean {
     text === "null" ||
     text === "none" ||
     text === "undefined" ||
-    text === "nan" ||
-    text === "0" ||
-    value === 0
+    text === "nan"
   ) {
     return true;
   }
+  const keepZeroKeys = new Set(["status", "approval_status", "lock_status"]);
+  if (keepZeroKeys.has(key || "")) return false;
+  if (text === "0" || value === 0) return true;
   return false;
 }
 
@@ -226,6 +240,14 @@ export function fallbackDiffsFromPayload(
     } else if (newObj.user || oldObj.user) {
       newObj = nested(newObj, "user");
       oldObj = nested(oldObj, "user");
+    } else if (
+      (newObj.expense && typeof newObj.expense === "object") ||
+      (oldObj.expense && typeof oldObj.expense === "object")
+    ) {
+      newObj = { ...newObj, ...nested(newObj, "expense") };
+      oldObj = { ...oldObj, ...nested(oldObj, "expense") };
+      delete newObj.expense;
+      delete oldObj.expense;
     } else if (newObj.rate_trade || oldObj.rate_trade) {
       newObj = nested(newObj, "rate_trade");
       oldObj = nested(oldObj, "rate_trade");

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, Stack, Tooltip, Typography } from "@mui/material";
 import dayjs, { Dayjs } from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 
@@ -28,6 +28,7 @@ const NAME_COL = 150;
 const DAY_W = 28;
 const ROW_H = 50;
 const HEADER_H = 54;
+const LABEL_PAD = 44;
 
 const withAlpha = (hex: string, alpha: number) => {
   const value = hex.replace("#", "");
@@ -128,7 +129,7 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
   }
 
   const { days, months, min, todayIndex } = timeline;
-  const chartWidth = days.length * DAY_W;
+  const chartWidth = days.length * DAY_W + LABEL_PAD;
   const todayLeft =
     todayIndex >= 0 ? NAME_COL + todayIndex * DAY_W + DAY_W / 2 : null;
 
@@ -137,7 +138,7 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
       <Box
         sx={{
           overflowX: "auto",
-          overflowY: "hidden",
+          overflowY: "visible",
           mx: { xs: -0.5, md: -0.5 },
         }}
       >
@@ -219,7 +220,8 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
             const width = Math.max((endIdx - startIdx + 1) * DAY_W, DAY_W);
             const progress = Math.min(Math.max(Number(item.progress || 0), 0), 100);
             const color = GANTT_COLORS[item.status] || "#3B82F6";
-            const progressWidth = (width * progress) / 100;
+            const startLabel = start.format("DD/MM/YYYY");
+            const endLabel = end.format("DD/MM/YYYY");
 
             return (
               <Box
@@ -264,49 +266,74 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
                   }}
                 >
                   {visible && (
-                    <Box
-                      sx={{
-                        position: "absolute",
-                        top: "50%",
-                        left,
-                        width,
-                        height: 22,
-                        transform: "translateY(-50%)",
-                        borderRadius: 999,
-                        bgcolor: withAlpha(color, 0.22),
-                        overflow: "visible",
+                    <Tooltip
+                      arrow
+                      placement="top"
+                      describeChild
+                      title={
+                        <Box sx={{ px: 0.25, py: 0.25 }}>
+                          <Typography fontSize={12} fontWeight={700}>
+                            {item.name}
+                          </Typography>
+                          <Typography fontSize={11}>
+                            {item.status} · {progress}%
+                          </Typography>
+                          <Typography fontSize={11}>
+                            {startLabel} – {endLabel}
+                          </Typography>
+                        </Box>
+                      }
+                      slotProps={{
+                        popper: { sx: { zIndex: 2000 } },
+                        tooltip: {
+                          sx: {
+                            maxWidth: 280,
+                            bgcolor: "#0F172A",
+                            "& .MuiTooltip-arrow": { color: "#0F172A" },
+                          },
+                        },
                       }}
                     >
                       <Box
                         sx={{
-                          width: `${progress}%`,
-                          height: "100%",
-                          borderRadius: 999,
-                          bgcolor: color,
-                        }}
-                      />
-                      <Typography
-                        sx={{
                           position: "absolute",
                           top: "50%",
-                          left:
-                            progressWidth > 34
-                              ? progressWidth - 6
-                              : progressWidth + 6,
-                          transform:
-                            progressWidth > 34
-                              ? "translate(-100%, -50%)"
-                              : "translateY(-50%)",
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: progressWidth > 34 ? "#fff" : color,
-                          lineHeight: 1,
-                          pointerEvents: "none",
+                          left,
+                          width,
+                          height: 22,
+                          transform: "translateY(-50%)",
+                          borderRadius: 999,
+                          bgcolor: withAlpha(color, 0.22),
+                          overflow: "visible",
+                          cursor: "pointer",
                         }}
                       >
-                        {progress}%
-                      </Typography>
-                    </Box>
+                        <Box
+                          sx={{
+                            width: `${progress}%`,
+                            height: "100%",
+                            borderRadius: 999,
+                            bgcolor: color,
+                          }}
+                        />
+                        <Typography
+                          sx={{
+                            position: "absolute",
+                            top: "50%",
+                            left: width + 8,
+                            transform: "translateY(-50%)",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color,
+                            lineHeight: 1,
+                            pointerEvents: "none",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {progress}%
+                        </Typography>
+                      </Box>
+                    </Tooltip>
                   )}
                 </Box>
               </Box>
@@ -360,8 +387,8 @@ const GanttOverview = ({ items }: { items: GanttItem[] }) => {
         pt={1.5}
       >
         {Object.entries(GANTT_COLORS).map(([label, color]) => (
-          <Stack key={label} direction="row" spacing={0.75} alignItems="center">
-            <Box width={8} height={8} borderRadius="50%" bgcolor={color} />
+          <Stack key={label} direction="row" spacing={1} alignItems="center">
+            <Box width={20} height={8} borderLeft="20%" bgcolor={color} />
             <Typography fontSize={11} color="text.secondary">
               {label}
             </Typography>

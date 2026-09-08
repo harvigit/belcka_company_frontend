@@ -92,6 +92,8 @@ export type ExpenseActivityLog = {
     action_user_thumb_image?: string | null;
     old_data?: Record<string, any> | null;
     new_data?: Record<string, any> | null;
+    expense_amount?: number | string | null;
+    total_amount?: number | null;
 };
 
 export type ExpenseDetail = ExpenseApiRow & {
