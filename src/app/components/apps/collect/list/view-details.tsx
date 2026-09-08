@@ -26,6 +26,7 @@ import {
   IconFileText,
   IconCheck,
   IconArrowLeft,
+  IconEdit,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import Image from "next/image";
@@ -38,6 +39,7 @@ interface CollectViewDetailsProps {
   onClose: () => void;
   collectId: number | null;
   onSuccess: () => void;
+  onEdit?: (id: number) => void;
 }
 
 const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
@@ -46,6 +48,7 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
   onClose,
   collectId,
   onSuccess,
+  onEdit,
 }) => {
   const [loading, setLoading] = useState(false);
   const [reviewing, setReviewing] = useState(false);
@@ -151,9 +154,25 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
               Collect Details
             </Typography>
           </Box>
-          <IconButton onClick={onClose}>
-            <IconX />
-          </IconButton>
+          <Box display="flex" alignItems="center" gap={1}>
+            {onEdit && collectId && (
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<IconEdit size={16} />}
+                onClick={() => {
+                  onEdit(collectId);
+                  onClose();
+                }}
+                sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+              >
+                Edit
+              </Button>
+            )}
+            <IconButton onClick={onClose}>
+              <IconX />
+            </IconButton>
+          </Box>
         </Box>
 
         {loading ? (

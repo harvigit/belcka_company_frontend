@@ -351,12 +351,16 @@ const ProjectDashboard = () => {
       columnHelper.accessor("checking_hour", {
         header: () => <HeaderLabel>Check in Hours</HeaderLabel>,
         meta: { label: "Check in Hours" },
-        cell: ({ getValue }) => <NumberCell value={getValue()} />,
+        cell: ({ getValue }) => (
+          <NumberCell value={Number(getValue() || 0).toFixed(2)} />
+        ),
       }),
       columnHelper.accessor("shift_hour", {
         header: () => <HeaderLabel>Shift Hours</HeaderLabel>,
         meta: { label: "Shift Hours" },
-        cell: ({ getValue }) => <NumberCell value={getValue()} />,
+        cell: ({ getValue }) => (
+          <NumberCell value={Number(getValue() || 0).toFixed(2)} />
+        ),
       }),
       columnHelper.accessor("risk_percent", {
         header: () => <HeaderLabel>Risk</HeaderLabel>,
@@ -364,7 +368,7 @@ const ProjectDashboard = () => {
         cell: ({ row }) => (
           <Typography
             className="f-14"
-            sx={{ px: 1.5, whiteSpace: "nowrap" }}
+            sx={{ px: 1.5, whiteSpace: "nowrap", fontWeight: 600 }}
             color={
               row.original.risk < 0
                 ? "error.main"

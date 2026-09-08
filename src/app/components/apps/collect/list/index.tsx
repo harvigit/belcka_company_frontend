@@ -1146,6 +1146,12 @@ const CollectList = () => {
           onSuccess={() => {
             fetchCollects();
           }}
+          onEdit={(id) => {
+            setViewDrawerOpen(false);
+            setIsEdit(true);
+            setSelectedCollectId(id);
+            setEditDrawerOpen(true);
+          }}
         />
       </Box>
     </PermissionGuard>

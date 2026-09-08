@@ -17,7 +17,7 @@ import {
   Paper,
 } from "@mui/material";
 import { Grid } from "@mui/system";
-import { IconTrash, IconX } from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useDropzone } from "react-dropzone";
 import api from "@/utils/axios";
@@ -51,6 +51,30 @@ type GalleryImage = {
   src: string;
   isExisting?: boolean;
   type?: string;
+};
+
+const parseDateForInput = (dateStr?: string | null) => {
+  if (!dateStr || dateStr === "-") return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const parts = String(dateStr).split(/[/-]/);
+  if (parts.length === 3 && parts[2].length === 4) {
+    return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+  }
+  return dateStr;
+};
+
+const emptyCollectItem = () => ({
+  description: "",
+  qty: "",
+  unit_price: "",
+  total: "",
+});
+
+const lineTotal = (qty: any, unitPrice: any) => {
+  const qtyNum = Number(qty);
+  const priceNum = Number(unitPrice);
+  if (!Number.isFinite(qtyNum) || !Number.isFinite(priceNum)) return "";
+  return (qtyNum * priceNum).toFixed(2);
 };
 
 const CollectAddEdit: React.FC<CollectAddEditProps> = ({
@@ -132,7 +156,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
   };
 
   const fetchCollect = async () => {
-    if (!collectId || fetching) return;
+    if (!collectId) return;
     setFetching(true);
     try {
       const res = await api.get(
@@ -150,10 +174,21 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
           inc_tax: item.inc_tax !== undefined ? item.inc_tax : null,
           excl_tax: item.excl_tax !== undefined ? item.excl_tax : null,
           total: item.total !== undefined ? item.total : null,
-          receipt_date: item.receipt_date || null,
+          receipt_date: parseDateForInput(item.receipt_date) || null,
         });
         if (item.poItems && item.poItems.length > 0) {
-          setItems(item.poItems);
+          setItems(
+            item.poItems.map((row: any) => ({
+              ...row,
+              qty: row.qty ?? "",
+              unit_price: row.unit_price ?? row.price ?? "",
+              description: row.description || row.item_name || "",
+              total:
+                row.total ??
+                row.line_total ??
+                lineTotal(row.qty, row.unit_price ?? row.price),
+            })),
+          );
         } else {
           setItems([]);
         }
@@ -169,9 +204,11 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
           setFilePreview(null);
         }
         setFile(null);
+        setScannedData(null);
       }
     } catch (err) {
       console.error("Failed to fetch collect detail", err);
+      toast.error("Failed to load collect details");
     } finally {
       setFetching(false);
     }
@@ -204,7 +241,20 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
           if (res.data) {
             toast.success("Document scanned successfully", { id: toastId });
             setScannedData(res.data);
-            if (res.data.items) setItems(res.data.items);
+            if (res.data.items) {
+              setItems(
+                res.data.items.map((row: any) => ({
+                  ...row,
+                  qty: row.qty ?? "",
+                  unit_price: row.unit_price ?? row.price ?? "",
+                  description: row.description || row.item_name || "",
+                  total:
+                    row.total ??
+                    row.line_total ??
+                    lineTotal(row.qty, row.unit_price ?? row.price),
+                })),
+              );
+            }
 
             if (
               res.data.inc_tax !== undefined ||
@@ -215,7 +265,8 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                 ...prev,
                 inc_tax: res.data.inc_tax ?? prev.inc_tax,
                 excl_tax: res.data.excl_tax ?? prev.excl_tax,
-                receipt_date: res.data.date ?? prev.receipt_date,
+                receipt_date:
+                  parseDateForInput(res.data.date) || prev.receipt_date,
               }));
             }
 
@@ -247,32 +298,64 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
     },
   });
 
+  const updateItem = (index: number, field: string, value: string) => {
+    setItems((prev) =>
+      prev.map((item, idx) => {
+        if (idx !== index) return item;
+        const next = { ...item, [field]: value };
+        if (field === "qty" || field === "unit_price") {
+          next.total = lineTotal(next.qty, next.unit_price);
+        }
+        return next;
+      }),
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.project_id) {
+      toast.error("Please select a project");
+      return;
+    }
+    if (!isEdit && !file) {
+      toast.error("Receipt image is required");
+      return;
+    }
+    if (isEdit && !file && !filePreview) {
+      toast.error("Receipt image is required");
+      return;
+    }
 
     setIsSaving(true);
     try {
       const payload = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
-          payload.append(key, String(value));
-        }
+        if (value === null || value === undefined || value === "") return;
+        if (key === "id" && !isEdit) return;
+        payload.append(key, String(value));
       });
 
       if (file) {
         payload.append("file", file);
       }
-      if (items.length > 0) {
-        const payloadItems = items.map((it: any) => {
-          if (it.id) {
-            return {
-              id: it.id,
-            };
-          }
-          return it;
-        });
-        payload.append("items", JSON.stringify(payloadItems));
+      if (isEdit && (formData.id || collectId)) {
+        payload.set("id", String(formData.id || collectId));
       }
+
+      const payloadItems = items.map((it: any) => {
+        const qty = Number(it.qty) || 0;
+        const unit_price = Number(it.unit_price ?? it.price) || 0;
+        const row: Record<string, any> = {
+          description: it.description || it.item_name || "",
+          qty,
+          unit_price,
+          total: Number(it.total ?? it.line_total) || qty * unit_price || 0,
+        };
+        if (it.id) row.id = Number(it.id);
+        return row;
+      });
+      payload.append("items", JSON.stringify(payloadItems));
 
       const endpoint = isEdit ? "po-collect/update" : "po-collect/create";
       const result = await api.post(endpoint, payload, {
@@ -283,9 +366,12 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
         toast.success(result.data.message);
         onSuccess();
         onClose();
+      } else {
+        toast.error(result.data?.message || "Failed to save collect");
       }
     } catch (error) {
       console.error("Submit failed:", error);
+      toast.error("Failed to save collect");
     } finally {
       setIsSaving(false);
     }
@@ -642,81 +728,142 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                   </Box>
                 </Grid>
               </Grid>
-              {(scannedData || (items && items.length > 0)) && (
+              <Box
+                mt={2}
+                p={2}
+                bgcolor="#f8f9fa"
+                borderRadius={2}
+                border="1px solid #eef0f4"
+              >
                 <Box
-                  mt={2}
-                  p={2}
-                  bgcolor="#f8f9fa"
-                  borderRadius={2}
-                  border="1px solid #eef0f4"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  mb={1}
                 >
-                  <Typography variant="subtitle2" gutterBottom>
-                    Scanned Data Preview
+                  <Typography variant="subtitle2">
+                    Items ({items.length})
                   </Typography>
-                  {scannedData?.supplier && (
-                    <Typography variant="body2">
-                      <strong>Supplier:</strong> {scannedData.supplier}
-                    </Typography>
-                  )}
-                  {scannedData?.amount && (
-                    <Typography variant="body2">
-                      <strong>Amount:</strong> {scannedData.amount}
-                    </Typography>
-                  )}
-                  {scannedData?.date && (
-                    <Typography variant="body2">
-                      <strong>Date:</strong> {scannedData.date}
-                    </Typography>
-                  )}
-                  {items && items.length > 0 && (
-                    <Box mt={1}>
-                      <Typography variant="body2">
-                        <strong>Items ({items.length}):</strong>
-                      </Typography>
-                      <TableContainer
-                        component={Paper}
-                        variant="outlined"
-                        sx={{ mt: 1 }}
-                      >
-                        <Table size="small">
-                          <TableHead sx={{ bgcolor: "background.default" }}>
-                            <TableRow>
-                              <TableCell sx={{ fontWeight: 600 }}>
-                                Qty
-                              </TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>
-                                Description
-                              </TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600 }}>
-                                Unit Price
-                              </TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600 }}>
-                                Total
-                              </TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {items.map((it: any, idx: number) => (
-                              <TableRow key={idx}>
-                                <TableCell>{it.qty || "-"}</TableCell>
-                                <TableCell>
-                                  {it.description || it.item_name || "-"}
-                                </TableCell>
-                                <TableCell align="right">
-                                  {it.unit_price || it.price || "-"}
-                                </TableCell>
-                                <TableCell align="right">
-                                  {it.total || it.line_total || "-"}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Box>
-                  )}
+                  <Button
+                    size="small"
+                    startIcon={<IconPlus size={16} />}
+                    onClick={() => setItems((prev) => [...prev, emptyCollectItem()])}
+                    sx={{ textTransform: "none" }}
+                  >
+                    Add item
+                  </Button>
                 </Box>
-              )}
+                {scannedData?.supplier && (
+                  <Typography variant="body2">
+                    <strong>Supplier:</strong> {scannedData.supplier}
+                  </Typography>
+                )}
+                {scannedData?.amount && (
+                  <Typography variant="body2">
+                    <strong>Amount:</strong> {scannedData.amount}
+                  </Typography>
+                )}
+                {scannedData?.date && (
+                  <Typography variant="body2">
+                    <strong>Date:</strong> {scannedData.date}
+                  </Typography>
+                )}
+                <TableContainer
+                  component={Paper}
+                  variant="outlined"
+                  sx={{ mt: 1 }}
+                >
+                  <Table size="small">
+                    <TableHead sx={{ bgcolor: "background.default" }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, width: 80 }}>
+                          Qty
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>
+                          Description
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: 110 }}>
+                          Unit Price
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: 90 }}>
+                          Total
+                        </TableCell>
+                        <TableCell sx={{ width: 40 }} />
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {items.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5}>
+                            <Typography variant="body2" color="textSecondary">
+                              No items yet. Scan a receipt or add an item.
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        items.map((it: any, idx: number) => (
+                          <TableRow key={it.id ?? `new-${idx}`}>
+                            <TableCell>
+                              <CustomTextField
+                                size="small"
+                                value={it.qty ?? ""}
+                                onChange={(e: any) => {
+                                  const value = e.target.value;
+                                  if (value !== "" && !/^\d*\.?\d{0,2}$/.test(value)) {
+                                    return;
+                                  }
+                                  updateItem(idx, "qty", value);
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <CustomTextField
+                                size="small"
+                                fullWidth
+                                value={it.description || it.item_name || ""}
+                                onChange={(e: any) =>
+                                  updateItem(idx, "description", e.target.value)
+                                }
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <CustomTextField
+                                size="small"
+                                value={it.unit_price ?? it.price ?? ""}
+                                onChange={(e: any) => {
+                                  const value = e.target.value;
+                                  if (value !== "" && !/^\d*\.?\d{0,2}$/.test(value)) {
+                                    return;
+                                  }
+                                  updateItem(idx, "unit_price", value);
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {it.total || it.line_total || "0.00"}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() =>
+                                  setItems((prev) =>
+                                    prev.filter((_, itemIdx) => itemIdx !== idx),
+                                  )
+                                }
+                              >
+                                <IconTrash size={16} />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
             </Box>
 
             {/* Sticky Footer */}
@@ -738,16 +885,18 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                 variant="contained"
                 size="large"
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || fetching}
                 sx={{ borderRadius: 3, minWidth: 120 }}
               >
                 {isSaving
                   ? isEdit
                     ? "Updating..."
                     : "Saving..."
-                  : isEdit
-                    ? "Update"
-                    : "Save"}
+                  : fetching && isEdit
+                    ? "Loading..."
+                    : isEdit
+                      ? "Update"
+                      : "Save"}
               </Button>
               <Button
                 color="inherit"
