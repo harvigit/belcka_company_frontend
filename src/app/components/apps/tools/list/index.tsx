@@ -349,7 +349,7 @@ const ToolsList = () => {
       const storeFilter = activeStore?.id ? `&store_id=${activeStore.id}` : "";
       let url = `product-tools/get?company_id=${user.company_id}&is_web=true${storeFilter}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
-        url += `&search=${searchTerm}`;
+        url += `&search=${encodeURIComponent(searchTerm)}`;
       }
       const res = await api.get(url);
       if (res.data) {

@@ -1235,9 +1235,23 @@ const TimeClock = ({queryParams}: Props) => {
                         const query = state.inputValue.trim().toLowerCase();
                         if (!query) return list;
 
-                        return list.filter((option) =>
-                            `${option.name} ${option.user_code ?? ''}`.toLowerCase().includes(query)
-                        );
+                        // Deduplicate by id (resources can return the same user twice).
+                        const seen = new Set<string>();
+                        const unique = list.filter((option) => {
+                            const id = String(option.id);
+                            if (seen.has(id)) return false;
+                            seen.add(id);
+                            return true;
+                        });
+
+                        const words = query.split(/\s+/).filter(Boolean);
+                        return unique.filter((option) => {
+                            const haystack =
+                                `${option.name} ${option.user_code ?? ''}`.toLowerCase();
+                            // Keep legacy contiguous match, plus token AND for full names.
+                            if (haystack.includes(query)) return true;
+                            return words.every((word) => haystack.includes(word));
+                        });
                     }}
                     onChange={(_, selected) => {
                         const selectedIds = selected.map((option) =>

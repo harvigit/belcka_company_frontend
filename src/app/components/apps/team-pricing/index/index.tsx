@@ -132,12 +132,12 @@ const TeamPricing = () => {
       const [productRes, pricingRes] = await Promise.all([
         api.get(
           `products/get?company_id=${user.company_id}&is_products=true&page=${currentPage}&limit=20&team_id=${team.team_id}${
-            targetSearch ? `&search=${targetSearch}` : ""
+            targetSearch ? `&search=${encodeURIComponent(targetSearch)}` : ""
           }`,
         ),
         api.get(
           `team/get-team-pricing-details?company_id=${user.company_id}&team_id=${team.team_id}&page=${currentPage}&limit=20${
-            targetSearch ? `&search=${targetSearch}` : ""
+            targetSearch ? `&search=${encodeURIComponent(targetSearch)}` : ""
           }`,
         ),
       ]);

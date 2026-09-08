@@ -159,7 +159,7 @@ const SupplierList = () => {
     try {
       let url = `suppliers/get?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
-        url += `&search=${searchTerm}`;
+        url += `&search=${encodeURIComponent(searchTerm)}`;
       }
       const res = await api.get(url);
       if (res.data) {

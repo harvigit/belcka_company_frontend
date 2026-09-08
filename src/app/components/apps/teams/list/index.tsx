@@ -177,7 +177,7 @@ const TablePagination = () => {
         url += `&project_id=${projectId}`;
       }
       if (searchTerm) {
-        url += `&search=${searchTerm}`;
+        url += `&search=${encodeURIComponent(searchTerm)}`;
       }
       if (filters.team && filters.team !== "All") {
         url += `&team_ids=${filters.team}`;

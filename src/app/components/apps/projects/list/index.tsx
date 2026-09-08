@@ -225,7 +225,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
       setLoading(true);
       let url = `project/get?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}&is_assign_user=true`;
       if (searchTerm) {
-        url += `&search=${searchTerm}`;
+        url += `&search=${encodeURIComponent(searchTerm)}`;
       }
       const res = await api.get(url);
       if (res.data) {

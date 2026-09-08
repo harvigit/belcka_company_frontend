@@ -79,6 +79,12 @@ dayjs.extend(customParseFormat);
 
 const columnHelper = createColumnHelper<any>();
 
+const SHIFT_TYPE_FILTER_OPTIONS = [
+    { id: 'daywork', name: 'Daywork' },
+    { id: 'pricework', name: 'Pricework' },
+    { id: 'both', name: 'Both' },
+] as const;
+
 const TaskLists = () => {
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -99,6 +105,7 @@ const TaskLists = () => {
     const [filters, setFilters] = useState({
         trade: '',
         shift: '',
+        shiftType: '',
         category: '',
         subCategory: '',
     });
@@ -224,7 +231,7 @@ const TaskLists = () => {
             setLoading(true);
             let url = `tasks/get?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
             if (searchTerm) {
-                url += `&search=${searchTerm}`;
+                url += `&search=${encodeURIComponent(searchTerm)}`;
             }
             if (filters.category && filters.category !== 'All') {
                 const categoryId = categories.find(
@@ -245,6 +252,9 @@ const TaskLists = () => {
                 if (shiftObj) {
                     url += `&shift_ids=${shiftObj.id}`;
                 }
+            }
+            if (filters.shiftType && filters.shiftType !== 'All') {
+                url += `&shift_type=${encodeURIComponent(filters.shiftType)}`;
             }
             if (filters.subCategory && filters.subCategory !== 'All') {
                 const subCategoryObj = subCategories.find(
@@ -999,7 +1009,10 @@ const TaskLists = () => {
                         />
                         <Button
                             variant="contained"
-                            onClick={() => setOpen(true)}
+                            onClick={() => {
+                                setTempFilters(filters);
+                                setOpen(true);
+                            }}
                             sx={{mt: {xs: 1, sm: 0}, minWidth: '40px', px: 1}}
                         >
                             <IconFilter width={18}/>
@@ -1763,6 +1776,28 @@ const TaskLists = () => {
                                     ))}
                                 </TextField>
                             )}
+                            <TextField
+                                select
+                                label="Shift Type"
+                                value={tempFilters.shiftType || 'All'}
+                                onChange={(e) =>
+                                    setTempFilters({
+                                        ...tempFilters,
+                                        shiftType:
+                                            e.target.value === 'All'
+                                                ? ''
+                                                : e.target.value,
+                                    })
+                                }
+                                fullWidth
+                            >
+                                <MenuItem value="All">All</MenuItem>
+                                {SHIFT_TYPE_FILTER_OPTIONS.map((option) => (
+                                    <MenuItem key={option.id} value={option.id}>
+                                        {option.name}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
                         </Stack>
                     </DialogContent>
 
@@ -1772,12 +1807,14 @@ const TaskLists = () => {
                                 setTempFilters({
                                     trade: '',
                                     shift: '',
+                                    shiftType: '',
                                     category: '',
                                     subCategory: '',
                                 });
                                 setFilters({
                                     trade: '',
                                     shift: '',
+                                    shiftType: '',
                                     category: '',
                                     subCategory: '',
                                 });

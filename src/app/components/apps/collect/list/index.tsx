@@ -137,7 +137,7 @@ const CollectList = () => {
     setLoading(true);
     try {
       let url = `po-collect/list?company_id=${user?.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
-      if (searchTerm) url += `&search=${searchTerm}`;
+      if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
       if (filters.projectId) url += `&project_id=${filters.projectId}`;
       if (filters.supplierId) url += `&supplier_id=${filters.supplierId}`;
       if (filters.addressId) url += `&address_id=${filters.addressId}`;

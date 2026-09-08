@@ -266,7 +266,7 @@ const TablePagination = () => {
     try {
       let url = `team/get-team-member-list?team_id=${teamId}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
-        url += `&search=${searchTerm}`;
+        url += `&search=${encodeURIComponent(searchTerm)}`;
       }
       if (filters.team && filters.team !== "All") {
         url += `&user_ids=${filters.team}`;
@@ -305,7 +305,21 @@ const TablePagination = () => {
             return [];
           }
 
-          return team.users.map((user: any) => ({
+          // Case-insensitive full-name safety net (backend already filters when deployed).
+          const searchWords = searchTerm
+            .trim()
+            .toLowerCase()
+            .split(/\s+/)
+            .filter(Boolean);
+
+          const users = searchWords.length
+            ? team.users.filter((user: any) => {
+                const name = String(user.name ?? "").toLowerCase();
+                return searchWords.every((word) => name.includes(word));
+              })
+            : team.users;
+
+          return users.map((user: any) => ({
             supervisor_id: team.supervisor_id,
             supervisor_name: team.supervisor_name,
             supervisor_image: team.supervisor_image,
@@ -339,6 +353,7 @@ const TablePagination = () => {
               ? res.data.info
               : res.data.data || {};
 
+        // Prefer server totals so pagination stays correct when searching.
         if (pagMeta.totalItems !== undefined) {
           setTotalRows(pagMeta.totalItems);
         } else if (pagMeta.total !== undefined) {
@@ -357,6 +372,15 @@ const TablePagination = () => {
           setPageCount(pagMeta.totalPages);
         } else if (pagMeta.last_page !== undefined) {
           setPageCount(pagMeta.last_page);
+        } else {
+          setPageCount(
+            Math.max(
+              1,
+              Math.ceil(
+                flattened.length / Math.max(pagination.pageSize || 1, 1),
+              ),
+            ),
+          );
         }
 
         if (restorePage !== undefined) {

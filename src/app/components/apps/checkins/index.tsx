@@ -136,7 +136,7 @@ const CheckinsList = () => {
       setLoading(true);
       let url = `user-checklog/company-checklogs?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
-        url += `&search=${searchTerm}`;
+        url += `&search=${encodeURIComponent(searchTerm)}`;
       }
 
       if (filters.project && filters.project !== "All") {

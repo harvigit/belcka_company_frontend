@@ -143,7 +143,7 @@ const ArchiveUserList = () => {
         try {
             let url = `user/archive-users-list?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
             
-            if (searchTerm) url += `&search=${searchTerm}`;
+            if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
             if (filters.team && filters.team !== "All") url += `&team_ids=${filters.team}`;
             if (filters.supervisor && filters.supervisor !== "All") url += `&supervisor_ids=${filters.supervisor}`;
 
