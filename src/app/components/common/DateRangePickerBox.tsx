@@ -75,14 +75,16 @@ const DateRangePickerBox: React.FC<Props> = ({
     buttonMinWidth = 230,
 }) => {
     const { t } = useTranslation();
-    const today     = new Date();
-    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-    const weekEnd   = endOfWeek(today,   { weekStartsOn: 1 });
+    const today = new Date();
 
     const [anchorEl,            setAnchorEl]            = useState<null | HTMLElement>(null);
-    const [tempRange,           setTempRange]           = useState<DateRange>({ from: from ?? weekStart, to: to ?? weekEnd });
+    // When no range is applied, open with no selection (do not auto-select current week).
+    const [tempRange,           setTempRange]           = useState<DateRange>({
+        from: from ?? undefined,
+        to: to ?? undefined,
+    });
     const [selectedPresetIndex, setSelectedPresetIndex] = useState<number | null>(null);
-    const [calendarMonth,       setCalendarMonth]       = useState<Date>(from ?? weekStart);
+    const [calendarMonth,       setCalendarMonth]       = useState<Date>(from ?? today);
 
     const open = Boolean(anchorEl);
 
@@ -92,8 +94,8 @@ const DateRangePickerBox: React.FC<Props> = ({
     }, [payrollCycle]);
 
     useEffect(() => {
-        setTempRange({ from: from ?? weekStart, to: to ?? weekEnd });
-        setCalendarMonth(from ?? weekStart);
+        setTempRange({ from: from ?? undefined, to: to ?? undefined });
+        setCalendarMonth(from ?? new Date());
     }, [from, to]);
 
     const handleOpen   = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
@@ -107,7 +109,7 @@ const DateRangePickerBox: React.FC<Props> = ({
     };
 
     const handleCancel = () => {
-        setTempRange({ from: from ?? weekStart, to: to ?? weekEnd });
+        setTempRange({ from: from ?? undefined, to: to ?? undefined });
         setSelectedPresetIndex(null);
         handleClose();
     };
