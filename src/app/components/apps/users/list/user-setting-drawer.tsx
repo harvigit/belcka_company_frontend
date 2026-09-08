@@ -77,6 +77,7 @@ interface AllowedIpRow {
     ip_address: string;
     user_name?: string;
     user_image?: string | null;
+    user_thumb_image?: string | null;
     shared_users?: { user_id: number; user_name: string }[];
     shared_user_count?: number;
 }
@@ -847,7 +848,11 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                                                                     <Stack direction="row" spacing={1} alignItems="center">
                                                                         <Avatar
                                                                             alt={name}
-                                                                            src={row.user_image || undefined}
+                                                                            src={
+                                                                                row.user_thumb_image ||
+                                                                                row.user_image ||
+                                                                                undefined
+                                                                            }
                                                                             sx={{width: 32, height: 32}}
                                                                         >
                                                                             {name.charAt(0)}
