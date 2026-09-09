@@ -1183,6 +1183,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 project_id: newRecord.project_id,
                 start_time: formattedStart,
                 end_time: formattedEnd,
+                source_screen: 'time-clock-details',
             };
 
             const response = await api.post('/time-clock/add-worklog', params);

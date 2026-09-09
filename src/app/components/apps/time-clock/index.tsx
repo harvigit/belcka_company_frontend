@@ -3462,6 +3462,7 @@ const TimeClock = ({queryParams}: Props) => {
                     userId={selectedTimeClock?.user_id}
                     companyId={user.company_id}
                     onDataRefresh={refreshTimeClockData}
+                    sourceScreen="time-clock"
                 />
             </Drawer>
 

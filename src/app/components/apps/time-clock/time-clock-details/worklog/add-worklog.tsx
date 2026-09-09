@@ -42,6 +42,7 @@ interface AddWorklogProps {
     companyId: number;
     onDataRefresh?: () => void;
     selectUser?: boolean;
+    sourceScreen?: "time-clock" | "time-clock-details" | "time-tracking";
 }
 
 export type NewRecord = {
@@ -100,6 +101,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                                                    companyId,
                                                    onDataRefresh,
                                                    selectUser = true,
+                                                   sourceScreen,
                                                }) => {
     const [loading, setLoading] = useState<boolean>(false);
     const [users, setUsers] = useState<User[]>([]);
@@ -323,6 +325,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
             start_time: newRecord.start,
             end_time: newRecord.end,
             comment: newRecord.comment.trim(),
+            ...(sourceScreen ? { source_screen: sourceScreen } : {}),
         };
 
         setLoading(true);
