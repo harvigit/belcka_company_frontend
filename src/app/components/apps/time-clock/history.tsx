@@ -362,7 +362,7 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
                     }
 
                     return (
-                      <Grid size={{ xs: 12, sm: 6 }} key={addr.id ?? index}>
+                      <Grid size={{ xs: 12, sm: 12 }} key={addr.id ?? index}>
                         <Box
                           position="relative"
                           display="flex"

@@ -526,6 +526,7 @@ export default function UserRequests({
     Comapny: (id) => getUserDetailsHref(id, { tab: "billing" }),
     Project: (id) => `/apps/projects/index?id=${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
+    // "Team Cap Increase": (id) => `/apps/teams/team?team_id=${id}`,
     Penalty: (recordId, startDate, endDate) => {
       let url = `/apps/time-clock/list`;
       const params: any[] = [];
@@ -588,6 +589,8 @@ export default function UserRequests({
     "User Account": "#FF3F51B5",
     Penalty: "#ff3737ff",
     Adjustment: "#0066ffff",
+    "Team Cap Increase": "#2276FF",
+    Team: "#2276FF",
   };
 
   const translateRequestText = (value?: string | null) => {
@@ -746,8 +749,11 @@ export default function UserRequests({
                         leaveDate,
                         leaveDate,
                       );
-                    } else if (work.type_name === "Team") {
-                      return routeFn(work.team_id);
+                    } else if (
+                      work.type_name === "Team" ||
+                      work.type_name === "Team Cap Increase"
+                    ) {
+                      return routeFn(work.team_id ?? work.record_id);
                     } else if (work.type_name === "Project") {
                       return routeFn(work?.project_id ?? work?.record_id);
                     } else {
@@ -906,11 +912,19 @@ export default function UserRequests({
                             </Box>
                           )}
                           <Box
+                            ml={5.5}
                             mt="auto"
                             display="flex"
-                            justifyContent="end"
-                            alignItems="center"
+                            justifyContent={"space-between"}
                           >
+                            {work.note && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                <b>NOTE: </b> {work.note}
+                              </Typography>
+                            )}
                             <Typography
                               variant="caption"
                               color="text.secondary"
@@ -921,7 +935,7 @@ export default function UserRequests({
                         </Link>
                         {showRequestActions && isPendingRequest(work) && (
                           <Box
-                            mt={1.25}
+                            mt={1}
                             display="flex"
                             justifyContent="flex-end"
                             gap={1}
