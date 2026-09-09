@@ -3,9 +3,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import {
+  Autocomplete,
   Box,
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
   Link,
   MenuItem,
   Paper,
@@ -30,6 +36,7 @@ import {
   IconLogin,
   IconUsers,
   IconUsersGroup,
+  IconX,
 } from "@tabler/icons-react";
 import { ApexOptions } from "apexcharts";
 import dayjs from "dayjs";
@@ -38,6 +45,7 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+import { useProjectDetailFilters } from "./ProjectDetailFiltersContext";
 import GanttOverview from "./GanttOverview";
 import OverviewRecordsDrawer, {
   AddressActivityTable,
@@ -379,14 +387,22 @@ const Overview = ({
 }) => {
   const { data: session } = useSession();
   const user = session?.user as User & { company_id?: number | null };
+  const sharedFilters = useProjectDetailFilters();
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<OverviewData | null>(null);
-  const [teamId, setTeamId] = useState<string>("all");
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [tempTeamId, setTempTeamId] = useState<string | number>("");
+  const [tempTradeId, setTempTradeId] = useState<string | number>("");
+  const [filterTeams, setFilterTeams] = useState<any[]>([]);
+  const [filterTrades, setFilterTrades] = useState<any[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState<OverviewDrawerTab>("addresses");
-  const [labourPeriod, setLabourPeriod] = useState("7");
+  const [labourPeriod, setLabourPeriod] = useState("all");
+
+  const startDate = sharedFilters?.startDate ?? null;
+  const endDate = sharedFilters?.endDate ?? null;
+  const teamId = sharedFilters?.teamId ? String(sharedFilters.teamId) : "all";
+  const tradeId = sharedFilters?.tradeId ?? "";
 
   const openDrawer = (tab: OverviewDrawerTab) => {
     setDrawerTab(tab);
@@ -396,17 +412,19 @@ const Overview = ({
   const applyLabourPeriod = (value: string) => {
     setLabourPeriod(value);
     if (value === "all") {
-      setStartDate(null);
-      setEndDate(null);
+      sharedFilters?.setDateRange(null, null);
       return;
     }
     const days = value === "7" ? 6 : 29;
-    setEndDate(new Date());
-    setStartDate(dayjs().subtract(days, "day").startOf("day").toDate());
+    sharedFilters?.setDateRange(
+      dayjs().subtract(days, "day").startOf("day").toDate(),
+      new Date(),
+    );
   };
 
   const fetchOverview = async () => {
     if (!projectId || !user?.company_id) return;
+    if (sharedFilters && !sharedFilters.hydrated) return;
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -418,6 +436,7 @@ const Overview = ({
         params.set("end_date", dayjs(endDate).format("DD/MM/YYYY"));
       }
       if (teamId !== "all") params.set("team_id", teamId);
+      if (tradeId) params.set("trade_id", String(tradeId));
       const res = await api.get(`project-analytics/web-overview?${params}`);
       if (res.data?.IsSuccess) {
         setInfo(res.data.info);
@@ -435,7 +454,65 @@ const Overview = ({
   useEffect(() => {
     fetchOverview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, user?.company_id, teamId, startDate, endDate]);
+  }, [
+    projectId,
+    user?.company_id,
+    teamId,
+    tradeId,
+    startDate,
+    endDate,
+    sharedFilters?.hydrated,
+  ]);
+
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      try {
+        const res = await api.get("expense/list-filters");
+        const info = res.data?.info || {};
+        setFilterTeams(info.teams || []);
+        setFilterTrades(info.trades || []);
+      } catch (error) {
+        console.error("Failed to load overview filter options", error);
+      }
+    };
+    loadFilterOptions();
+  }, []);
+
+  const openFilters = () => {
+    setTempTeamId(sharedFilters?.teamId || "");
+    setTempTradeId(sharedFilters?.tradeId || "");
+    setFilterOpen(true);
+  };
+
+  const applyOverviewFilters = () => {
+    sharedFilters?.applyFilters({
+      team_id: tempTeamId || "",
+      trade_id: tempTradeId || "",
+    });
+    setFilterOpen(false);
+  };
+
+  const clearOverviewFilters = () => {
+    setTempTeamId("");
+    setTempTradeId("");
+    sharedFilters?.clearSharedFilters();
+    setLabourPeriod("all");
+    setFilterOpen(false);
+  };
+
+  const hasActiveOverviewFilters = Boolean(
+    startDate || endDate || (teamId && teamId !== "all") || tradeId,
+  );
+
+  const handleClearOverviewToolbarFilters = (
+    event: React.MouseEvent,
+  ) => {
+    event.stopPropagation();
+    setTempTeamId("");
+    setTempTradeId("");
+    sharedFilters?.clearSharedFilters();
+    setLabourPeriod("all");
+  };
 
   const currency = info?.currency || "£";
   const addresses = info?.on_site_by_address || [];
@@ -901,7 +978,11 @@ const Overview = ({
                   select
                   size="small"
                   value={teamId}
-                  onChange={(e) => setTeamId(e.target.value)}
+                  onChange={(e) =>
+                    sharedFilters?.applyFilters({
+                      team_id: e.target.value === "all" ? "" : e.target.value,
+                    })
+                  }
                   sx={{ minWidth: { xs: 120, sm: 140 } }}
                 >
                   <MenuItem value="all">All Teams</MenuItem>
@@ -989,8 +1070,7 @@ const Overview = ({
                     from={startDate}
                     to={endDate}
                     onChange={({ from, to }) => {
-                      setStartDate(from);
-                      setEndDate(to);
+                      sharedFilters?.setDateRange(from, to);
                       setLabourPeriod("all");
                     }}
                     buttonMinWidth="100%"
@@ -1000,11 +1080,27 @@ const Overview = ({
                 <Button
                   variant="outlined"
                   startIcon={<IconFilter size={16} />}
-                  onClick={fetchOverview}
+                  onClick={openFilters}
                   sx={{ whiteSpace: "nowrap", minHeight: 40 }}
                 >
                   Filters
                 </Button>
+                {hasActiveOverviewFilters && (
+                  <Button
+                    color="error"
+                    variant="outlined"
+                    onClick={handleClearOverviewToolbarFilters}
+                    sx={{
+                      whiteSpace: "nowrap",
+                      minHeight: 40,
+                      minWidth: 40,
+                      px: 1.5,
+                    }}
+                    aria-label="Clear filters"
+                  >
+                    <IconX size={18} />
+                  </Button>
+                )}
               </Stack>
               <Box
                 sx={{
@@ -1193,6 +1289,76 @@ const Overview = ({
             : info?.case_status
         }
       />
+
+      <Dialog
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ m: 0, position: "relative" }}>
+          Filters
+          <IconButton
+            aria-label="close"
+            onClick={() => setFilterOpen(false)}
+            sx={{ position: "absolute", right: 12, top: 8 }}
+          >
+            <IconX size={24} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <Autocomplete
+              options={filterTeams}
+              getOptionLabel={(option) =>
+                option.title || option.name || ""
+              }
+              getOptionKey={(option) => String(option.id)}
+              isOptionEqualToValue={(option, value) =>
+                String(option.id) === String(value?.id)
+              }
+              value={
+                filterTeams.find(
+                  (t) => String(t.id) === String(tempTeamId),
+                ) || null
+              }
+              onChange={(_, value) =>
+                setTempTeamId(value ? value.id : "")
+              }
+              renderInput={(params) => (
+                <TextField {...params} label="Team" fullWidth />
+              )}
+            />
+            <Autocomplete
+              options={filterTrades}
+              getOptionLabel={(option) => option.name || ""}
+              getOptionKey={(option) => String(option.id)}
+              isOptionEqualToValue={(option, value) =>
+                String(option.id) === String(value?.id)
+              }
+              value={
+                filterTrades.find(
+                  (t) => String(t.id) === String(tempTradeId),
+                ) || null
+              }
+              onChange={(_, value) =>
+                setTempTradeId(value ? value.id : "")
+              }
+              renderInput={(params) => (
+                <TextField {...params} label="Trade" fullWidth />
+              )}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button color="inherit" onClick={clearOverviewFilters}>
+            Clear
+          </Button>
+          <Button variant="contained" onClick={applyOverviewFilters}>
+            Apply
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

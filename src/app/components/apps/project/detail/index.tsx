@@ -21,6 +21,7 @@ import InternalOrders from "./InternalOrders";
 import ExpenseList from "@/app/components/apps/expenses/list";
 import PriceworkList from "@/app/components/apps/priceworks/list";
 import CasesList from "@/app/components/apps/cases/list";
+import { ProjectDetailFiltersProvider } from "./ProjectDetailFiltersContext";
 
 const TABS = [
   { key: "overview", label: "Overview", icon: IconChartPie },
@@ -105,6 +106,7 @@ const ProjectDetail = () => {
     tab === "internal-orders";
 
   return (
+    <ProjectDetailFiltersProvider projectId={projectId}>
     <Box
       sx={{
         height: "calc(100vh - 100px)",
@@ -201,6 +203,7 @@ const ProjectDetail = () => {
         {content}
       </Box>
     </Box>
+    </ProjectDetailFiltersProvider>
   );
 };
 

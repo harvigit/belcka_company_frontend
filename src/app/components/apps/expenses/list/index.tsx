@@ -67,6 +67,7 @@ import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import ExpenseAttachmentsDrawer from "./components/ExpenseAttachmentsDrawer";
+import { useProjectDetailFilters } from "@/app/components/apps/project/detail/ProjectDetailFiltersContext";
 import {
   ExpenseApiRow,
   ExpenseListItem,
@@ -222,6 +223,7 @@ const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
     company_id?: number | null;
     id?: string | number | null;
   };
+  const sharedFilters = useProjectDetailFilters();
   const expensePreferencesCookieKey = useMemo(() => {
     if (!user?.company_id) return null;
 
@@ -263,9 +265,11 @@ const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
   });
 
   const [startDate, setStartDate] = useState<Date | null>(
-    subDays(new Date(), 6),
+    projectId ? null : subDays(new Date(), 6),
   );
-  const [endDate, setEndDate] = useState<Date | null>(new Date());
+  const [endDate, setEndDate] = useState<Date | null>(
+    projectId ? null : new Date(),
+  );
 
   const [users, setUsers] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -843,10 +847,9 @@ const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
       let url = `expense/list-web?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
 
       if (search) url += `&search=${encodeURIComponent(search)}`;
-      if (startDate) {
+      // Only apply date filter when both ends are set → empty = all records.
+      if (startDate && endDate) {
         url += `&start_date=${format(startDate, "dd/MM/yyyy")}`;
-      }
-      if (endDate) {
         url += `&end_date=${format(endDate, "dd/MM/yyyy")}`;
       }
       if (filters.user_id) url += `&user_id=${filters.user_id}`;
@@ -927,6 +930,10 @@ const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
       setPreferencesHydrated(false);
       return;
     }
+    // Wait for shared project filters so Overview/Expenses/Pricework stay in sync.
+    if (projectId && sharedFilters && !sharedFilters.hydrated) {
+      return;
+    }
 
     try {
       const stored = Cookies.get(expensePreferencesCookieKey);
@@ -938,21 +945,40 @@ const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
         };
         const nextPagination = normalizeStoredPagination(parsed.pagination);
 
+        if (projectId && sharedFilters) {
+          nextFilters.team_id = sharedFilters.teamId || "";
+          nextFilters.trade_id = sharedFilters.tradeId || "";
+          setStartDate(sharedFilters.startDate);
+          setEndDate(sharedFilters.endDate);
+        } else {
+          setStartDate(
+            parseStoredDate(parsed.startDate) ?? subDays(new Date(), 6),
+          );
+          setEndDate(parseStoredDate(parsed.endDate) ?? new Date());
+        }
+
         setFilters(nextFilters);
         setTempFilters(nextFilters);
         setSearch(typeof parsed.search === "string" ? parsed.search : "");
         setActiveTab(
           isExpenseTabKey(parsed.activeTab) ? parsed.activeTab : "all",
         );
-        setStartDate(
-          parseStoredDate(parsed.startDate) ?? subDays(new Date(), 6),
-        );
-        setEndDate(parseStoredDate(parsed.endDate) ?? new Date());
         setSorting(normalizeStoredSorting(parsed.sorting));
         setPagination({
           pageIndex: 0,
           pageSize: nextPagination.pageSize,
         });
+      } else if (projectId && sharedFilters) {
+        const nextFilters = {
+          ...defaultFilters,
+          project_id: projectId,
+          team_id: sharedFilters.teamId || "",
+          trade_id: sharedFilters.tradeId || "",
+        };
+        setFilters(nextFilters);
+        setTempFilters(nextFilters);
+        setStartDate(sharedFilters.startDate);
+        setEndDate(sharedFilters.endDate);
       }
     } catch (error) {
       console.error("Failed to load expense list preferences cookie:", error);
@@ -960,7 +986,43 @@ const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
     } finally {
       setPreferencesHydrated(true);
     }
-  }, [expensePreferencesCookieKey, projectId, setPagination]);
+  }, [
+    expensePreferencesCookieKey,
+    projectId,
+    setPagination,
+    sharedFilters?.hydrated,
+    sharedFilters?.startDate,
+    sharedFilters?.endDate,
+    sharedFilters?.teamId,
+    sharedFilters?.tradeId,
+  ]);
+
+  // Keep project Expenses in sync when shared Overview/Pricework filters change.
+  useEffect(() => {
+    if (!projectId || !sharedFilters?.hydrated || !preferencesHydrated) return;
+    setStartDate(sharedFilters.startDate);
+    setEndDate(sharedFilters.endDate);
+    setFilters((prev) => ({
+      ...prev,
+      project_id: projectId,
+      team_id: sharedFilters.teamId || "",
+      trade_id: sharedFilters.tradeId || "",
+    }));
+    setTempFilters((prev) => ({
+      ...prev,
+      project_id: projectId,
+      team_id: sharedFilters.teamId || "",
+      trade_id: sharedFilters.tradeId || "",
+    }));
+  }, [
+    projectId,
+    preferencesHydrated,
+    sharedFilters?.hydrated,
+    sharedFilters?.startDate,
+    sharedFilters?.endDate,
+    sharedFilters?.teamId,
+    sharedFilters?.tradeId,
+  ]);
 
   const saveExpensePreferencesCookie = useCallback(() => {
     if (!expensePreferencesCookieKey || !preferencesHydrated) return;
@@ -1033,6 +1095,8 @@ const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
   const activeFilterCount = Object.entries(filters).filter(
     ([key, value]) => Boolean(value) && !(projectId && key === "project_id"),
   ).length;
+  const hasActiveFilters =
+    activeFilterCount > 0 || Boolean(startDate || endDate);
 
   const handleDateRangeChange = (range: {
     from: Date | null;
@@ -1040,6 +1104,9 @@ const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
   }) => {
     setStartDate(range.from);
     setEndDate(range.to);
+    if (projectId) {
+      sharedFilters?.setDateRange(range.from, range.to);
+    }
     setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
   };
 
@@ -1055,6 +1122,11 @@ const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
       : defaultFilters;
     setTempFilters(nextFilters);
     setFilters(nextFilters);
+    setStartDate(null);
+    setEndDate(null);
+    if (projectId) {
+      sharedFilters?.clearSharedFilters();
+    }
     setIsSelectAll(false);
     setSelectedRowIds(new Set());
     setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
@@ -1520,7 +1592,7 @@ const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
               <IconFilter size={18} />
             </Button>
 
-            {activeFilterCount > 0 && (
+            {hasActiveFilters && (
               <Button
                 color="error"
                 variant="outlined"
@@ -2355,6 +2427,11 @@ const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
                 : defaultFilters;
               setTempFilters(nextFilters);
               setFilters(nextFilters);
+              if (projectId) {
+                sharedFilters?.clearSharedFilters();
+                setStartDate(null);
+                setEndDate(null);
+              }
               setFilterOpen(false);
               setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
             }}
@@ -2364,11 +2441,16 @@ const ExpenseList = ({ projectId }: { projectId?: number } = {}) => {
           <Button
             variant="contained"
             onClick={() => {
-              setFilters(
-                projectId
-                  ? { ...tempFilters, project_id: projectId }
-                  : tempFilters,
-              );
+              const nextFilters = projectId
+                ? { ...tempFilters, project_id: projectId }
+                : tempFilters;
+              setFilters(nextFilters);
+              if (projectId) {
+                sharedFilters?.applyFilters({
+                  team_id: nextFilters.team_id || "",
+                  trade_id: nextFilters.trade_id || "",
+                });
+              }
               setFilterOpen(false);
               setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
             }}

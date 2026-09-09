@@ -61,6 +61,7 @@ import PriceworkStatusBadge from "./components/PriceworkStatusBadge";
 import PriceworkDetailsDrawer from "./components/PriceworkDetailsDrawer";
 import PriceworkAttachmentsDrawer from "./components/PriceworkAttachmentsDrawer";
 import AddPricework from "@/app/components/apps/time-clock/time-clock-details/pricework/add-pricework";
+import { useProjectDetailFilters } from "@/app/components/apps/project/detail/ProjectDetailFiltersContext";
 import {
   PriceworkApiRow,
   PriceworkTabItem,
@@ -152,6 +153,7 @@ const getPriceworkRowKey = (row: PriceworkRow) => {
 const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
   const { data: session } = useSession();
   const user = session?.user as User | undefined;
+  const sharedFilters = useProjectDetailFilters();
 
   const [data, setData] = useState<PriceworkRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -172,9 +174,42 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
   }, [projectId]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(
-    subDays(new Date(), 6),
+    projectId ? null : subDays(new Date(), 6),
   );
-  const [endDate, setEndDate] = useState<Date | null>(new Date());
+  const [endDate, setEndDate] = useState<Date | null>(
+    projectId ? null : new Date(),
+  );
+  const [sharedFiltersReady, setSharedFiltersReady] = useState(!projectId);
+
+  useEffect(() => {
+    if (!projectId) {
+      setSharedFiltersReady(true);
+      return;
+    }
+    if (!sharedFilters?.hydrated) return;
+    setFilters((prev) => ({
+      ...prev,
+      project_id: projectId,
+      team_id: sharedFilters.teamId || "",
+      trade_id: sharedFilters.tradeId || "",
+    }));
+    setTempFilters((prev) => ({
+      ...prev,
+      project_id: projectId,
+      team_id: sharedFilters.teamId || "",
+      trade_id: sharedFilters.tradeId || "",
+    }));
+    setStartDate(sharedFilters.startDate);
+    setEndDate(sharedFilters.endDate);
+    setSharedFiltersReady(true);
+  }, [
+    projectId,
+    sharedFilters?.hydrated,
+    sharedFilters?.startDate,
+    sharedFilters?.endDate,
+    sharedFilters?.teamId,
+    sharedFilters?.tradeId,
+  ]);
   const [sorting, setSorting] = useState<SortingState>([
     { id: "pricework_date", desc: true },
   ]);
@@ -1494,13 +1529,18 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
 
   const fetchPriceworks = async () => {
     if (!user?.company_id) return;
+    // Wait for shared project filters so we don't fetch with the wrong date range.
+    if (projectId && !sharedFiltersReady) return;
     setLoading(true);
     try {
       let url = `pricework/list-web?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
 
       if (search) url += `&search=${encodeURIComponent(search)}`;
-      if (startDate) url += `&start_date=${format(startDate, "dd/MM/yyyy")}`;
-      if (endDate) url += `&end_date=${format(endDate, "dd/MM/yyyy")}`;
+      // Only apply date filter when both ends are set → empty = all records.
+      if (startDate && endDate) {
+        url += `&start_date=${format(startDate, "dd/MM/yyyy")}`;
+        url += `&end_date=${format(endDate, "dd/MM/yyyy")}`;
+      }
       if (filters.user_id) url += `&user_id=${filters.user_id}`;
       if (filters.project_id) url += `&project_id=${filters.project_id}`;
       if (filters.address_id) url += `&address_id=${filters.address_id}`;
@@ -1579,6 +1619,7 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
     fetchData: fetchPriceworks,
     debounceDependencies: [
       user?.company_id,
+      sharedFiltersReady,
       search,
       startDate ? format(startDate, "yyyy-MM-dd") : "",
       endDate ? format(endDate, "yyyy-MM-dd") : "",
@@ -1605,6 +1646,8 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
   const activeFilterCount = Object.entries(filters).filter(
     ([key, value]) => Boolean(value) && !(projectId && key === "project_id"),
   ).length;
+  const hasActiveFilters =
+    activeFilterCount > 0 || Boolean(startDate || endDate);
 
   const handleDateRangeChange = (range: {
     from: Date | null;
@@ -1612,6 +1655,9 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
   }) => {
     setStartDate(range.from);
     setEndDate(range.to);
+    if (projectId) {
+      sharedFilters?.setDateRange(range.from, range.to);
+    }
     clearSelection();
     setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
   };
@@ -1629,6 +1675,11 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
       : defaultFilters;
     setTempFilters(nextFilters);
     setFilters(nextFilters);
+    setStartDate(null);
+    setEndDate(null);
+    if (projectId) {
+      sharedFilters?.clearSharedFilters();
+    }
     clearSelection();
     setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
   };
@@ -1757,7 +1808,7 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
               <IconFilter size={18} />
             </Button>
 
-            {activeFilterCount > 0 && (
+            {hasActiveFilters && (
               <Button
                 color="error"
                 variant="outlined"
@@ -2602,6 +2653,11 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
                 : defaultFilters;
               setTempFilters(nextFilters);
               setFilters(nextFilters);
+              if (projectId) {
+                sharedFilters?.clearSharedFilters();
+                setStartDate(null);
+                setEndDate(null);
+              }
               setFilterOpen(false);
               clearSelection();
               setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
@@ -2612,11 +2668,16 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
           <Button
             variant="contained"
             onClick={() => {
-              setFilters(
-                projectId
-                  ? { ...tempFilters, project_id: projectId }
-                  : tempFilters,
-              );
+              const nextFilters = projectId
+                ? { ...tempFilters, project_id: projectId }
+                : tempFilters;
+              setFilters(nextFilters);
+              if (projectId) {
+                sharedFilters?.applyFilters({
+                  team_id: nextFilters.team_id || "",
+                  trade_id: nextFilters.trade_id || "",
+                });
+              }
               setFilterOpen(false);
               clearSelection();
               setPagination((prev: any) => ({ ...prev, pageIndex: 0 }));
