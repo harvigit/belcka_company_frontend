@@ -21,6 +21,7 @@ import api from '@/utils/axios';
 import {User} from 'next-auth';
 import {useSession} from 'next-auth/react';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
+import UserProfileLink from '@/app/components/common/UserProfileLink';
 
 export interface ConflictItem {
     user_id: number;
@@ -44,6 +45,7 @@ export interface ConflictItem {
 }
 
 export interface Conflict {
+    user_id?: number;
     user_thumb_image: string;
     user_name: string;
     formatted_date: string;
@@ -474,9 +476,19 @@ const AccountIdConflictCase = ({ conflict, onClose }: { conflict: Conflict; onCl
                 {users.map((u: any) => (
                     <Box key={u.user_id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Avatar src={u.image || ''} alt={u.first_name} sx={{ width: 32, height: 32 }} />
+                            <UserProfileLink userId={u.user_id}>
+                                <Avatar src={u.image || ''} alt={u.first_name} sx={{ width: 32, height: 32 }} />
+                            </UserProfileLink>
                             <Box>
-                                <Typography variant="body2" fontWeight={600}>{u.first_name} {u.last_name}</Typography>
+                                <UserProfileLink userId={u.user_id}>
+                                    <Typography
+                                        variant="body2"
+                                        fontWeight={600}
+                                        sx={{ '&:hover': { color: '#173f98' } }}
+                                    >
+                                        {u.first_name} {u.last_name}
+                                    </Typography>
+                                </UserProfileLink>
                                 {editingUserId === u.user_id ? (
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                                         <CustomTextField
@@ -665,6 +677,7 @@ export default function Conflicts({
                     {filteredConflicts.map((conflict, idx) => {
                         const userName = conflict.user_name ?? '';
                         const userThumbImage = conflict.user_thumb_image ?? '';
+                        const profileUserId = conflict.user_id ?? conflict.items?.[0]?.user_id;
                         const isDuplicateAccount = conflict.items.some(i => i.conflict_type === 'duplicate_account_id');
 
                         return (
@@ -701,18 +714,24 @@ export default function Conflicts({
                                                             mb: 0.5,
                                                         }}
                                                     >
-                                                        <Avatar
-                                                            src={userThumbImage || ''}
-                                                            alt={userName}
-                                                            sx={{width: 36, height: 36}}
-                                                        />
+                                                        <UserProfileLink userId={profileUserId} style={{ gap: 8 }}>
+                                                            <Avatar
+                                                                src={userThumbImage || ''}
+                                                                alt={userName}
+                                                                sx={{width: 36, height: 36}}
+                                                            />
 
-                                                        <Typography
-                                                            variant="subtitle2"
-                                                            sx={{fontSize: '0.9rem', fontWeight: 500}}
-                                                        >
-                                                            {userName}
-                                                        </Typography>
+                                                            <Typography
+                                                                variant="subtitle2"
+                                                                sx={{
+                                                                    fontSize: '0.9rem',
+                                                                    fontWeight: 500,
+                                                                    '&:hover': { color: '#173f98' },
+                                                                }}
+                                                            >
+                                                                {userName}
+                                                            </Typography>
+                                                        </UserProfileLink>
                                                     </Box>
                                                 )}
 

@@ -36,6 +36,7 @@ export interface CollectFormData {
   excl_tax?: number | null;
   total?: number | null;
   receipt_date?: string | null;
+  invoice_number?: string | null;
 }
 
 interface CollectAddEditProps {
@@ -44,7 +45,7 @@ interface CollectAddEditProps {
   onClose: () => void;
   isEdit?: boolean;
   collectId?: number | null;
-  onSuccess: () => void;
+  onSuccess: (savedId: number, isUpdate: boolean) => void;
 }
 
 type GalleryImage = {
@@ -96,6 +97,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
     excl_tax: null,
     total: null,
     receipt_date: null,
+    invoice_number: null,
   });
 
   const [projects, setProjects] = useState<any[]>([]);
@@ -132,6 +134,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
         excl_tax: null,
         total: null,
         receipt_date: null,
+        invoice_number: null,
       });
       setFile(null);
       setFilePreview(null);
@@ -175,6 +178,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
           excl_tax: item.excl_tax !== undefined ? item.excl_tax : null,
           total: item.total !== undefined ? item.total : null,
           receipt_date: parseDateForInput(item.receipt_date) || null,
+          invoice_number: item.invoice_number || null,
         });
         if (item.poItems && item.poItems.length > 0) {
           setItems(
@@ -265,6 +269,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                 ...prev,
                 inc_tax: res.data.inc_tax ?? prev.inc_tax,
                 excl_tax: res.data.excl_tax ?? prev.excl_tax,
+                invoice_number: res.data.invoice_number ?? prev.invoice_number,
                 receipt_date:
                   parseDateForInput(res.data.date) || prev.receipt_date,
               }));
@@ -364,7 +369,10 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
 
       if (result.data?.IsSuccess) {
         toast.success(result.data.message);
-        onSuccess();
+        const savedId = Number(
+          result.data.info?.id ?? formData.id ?? collectId ?? 0,
+        );
+        onSuccess(savedId, !!isEdit);
         onClose();
       } else {
         toast.error(result.data?.message || "Failed to save collect");
@@ -436,6 +444,24 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
           >
             <Box sx={{ flex: 1, overflowY: "auto", paddingRight: 1, pb: 2 }}>
               <Grid container spacing={3}>
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Invoice number
+                  </Typography>
+                  <CustomTextField
+                    fullWidth
+                    placeholder="Enter invoice number"
+                    value={formData.invoice_number}
+                    inputProps={{ maxLength: 22 }}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        invoice_number: e.target.value,
+                      }))
+                    }
+                  />
+                </Grid>
+
                 <Grid size={{ xs: 12 }}>
                   <Typography variant="body2" gutterBottom>
                     Project
@@ -747,7 +773,9 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                   <Button
                     size="small"
                     startIcon={<IconPlus size={16} />}
-                    onClick={() => setItems((prev) => [...prev, emptyCollectItem()])}
+                    onClick={() =>
+                      setItems((prev) => [...prev, emptyCollectItem()])
+                    }
                     sx={{ textTransform: "none" }}
                   >
                     Add item
@@ -809,7 +837,10 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                                 value={it.qty ?? ""}
                                 onChange={(e: any) => {
                                   const value = e.target.value;
-                                  if (value !== "" && !/^\d*\.?\d{0,2}$/.test(value)) {
+                                  if (
+                                    value !== "" &&
+                                    !/^\d*\.?\d{0,2}$/.test(value)
+                                  ) {
                                     return;
                                   }
                                   updateItem(idx, "qty", value);
@@ -832,7 +863,10 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                                 value={it.unit_price ?? it.price ?? ""}
                                 onChange={(e: any) => {
                                   const value = e.target.value;
-                                  if (value !== "" && !/^\d*\.?\d{0,2}$/.test(value)) {
+                                  if (
+                                    value !== "" &&
+                                    !/^\d*\.?\d{0,2}$/.test(value)
+                                  ) {
                                     return;
                                   }
                                   updateItem(idx, "unit_price", value);
@@ -850,7 +884,9 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                                 color="error"
                                 onClick={() =>
                                   setItems((prev) =>
-                                    prev.filter((_, itemIdx) => itemIdx !== idx),
+                                    prev.filter(
+                                      (_, itemIdx) => itemIdx !== idx,
+                                    ),
                                   )
                                 }
                               >

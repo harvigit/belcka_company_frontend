@@ -25,6 +25,7 @@ import toast from "react-hot-toast";
 
 import api from "@/utils/axios";
 import { Avatar } from "@mui/material";
+import UserProfileLink from "@/app/components/common/UserProfileLink";
 
 // Types
 export interface AccountIdConflictDetails {
@@ -304,26 +305,31 @@ const ConflictingUserCard = React.memo(({ user, isSaving, setIsSaving, onResolve
         alignItems="flex-start"
         sx={{ mb: 2 }}
       >
-        <UserAvatar
-          name={`${user.first_name} ${user.last_name}`}
-          image={user.image}
-          size={48}
-        />
+        <UserProfileLink userId={user.user_id}>
+          <UserAvatar
+            name={`${user.first_name} ${user.last_name}`}
+            image={user.image}
+            size={48}
+          />
+        </UserProfileLink>
         <Box sx={{ flex: 1 }}>
           <Stack
             direction="row"
             alignItems="center"
             justifyContent="space-between"
           >
-            <Typography
-              sx={{
-                fontSize: "1rem",
-                fontWeight: 700,
-                color: "#111827",
-              }}
-            >
-              {user.first_name} {user.last_name}
-            </Typography>
+            <UserProfileLink userId={user.user_id}>
+              <Typography
+                sx={{
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  color: "#111827",
+                  "&:hover": { color: "#173f98" },
+                }}
+              >
+                {user.first_name} {user.last_name}
+              </Typography>
+            </UserProfileLink>
           </Stack>
           <Divider sx={{ my: 1.5 }} />
           <Stack spacing={1.5}>

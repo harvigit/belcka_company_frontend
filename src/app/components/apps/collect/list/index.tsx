@@ -176,6 +176,56 @@ const CollectList = () => {
     }
   };
 
+  const upsertCollectRecord = async (savedId: number, isUpdate: boolean) => {
+    if (!user?.company_id || !savedId) {
+      await fetchCollects();
+      return;
+    }
+
+    try {
+      const res = await api.get(
+        `po-collect/detail?company_id=${user.company_id}&id=${savedId}`,
+      );
+      if (!res.data?.IsSuccess || !res.data.info) {
+        await fetchCollects();
+        return;
+      }
+
+      const record = res.data.info;
+      const matchesTab =
+        activeTab === "All" ||
+        (activeTab === "New" && record.status === "New") ||
+        (activeTab === "Reviewed" &&
+          (record.status === "Review" || record.status === "Reviewed"));
+
+      setData((prev) => {
+        const existingIndex = prev.findIndex((row) => row.id === record.id);
+        if (existingIndex >= 0) {
+          if (isUpdate && !matchesTab) {
+            return prev.filter((row) => row.id !== record.id);
+          }
+          const next = [...prev];
+          next[existingIndex] = { ...prev[existingIndex], ...record };
+          return next;
+        }
+        if (!matchesTab) return prev;
+        return [record, ...prev];
+      });
+
+      if (!isUpdate) {
+        setTabCounts((prev) => ({
+          All: prev.All + 1,
+          New: prev.New + 1,
+          Reviewed: prev.Reviewed,
+        }));
+        setTotalRows((prev) => prev + 1);
+      }
+    } catch (err) {
+      console.error(err);
+      await fetchCollects();
+    }
+  };
+
   React.useEffect(() => {
     const checkScroll = () => {
       if (tableContainerRef.current) {
@@ -300,6 +350,45 @@ const CollectList = () => {
           );
         },
       }),
+
+      columnHelper.accessor("invoice_number", {
+        id: "Invoice Number",
+        header: () => (
+          <Stack direction="row" alignItems="center" spacing={4}>
+            <Typography variant="subtitle2" fontWeight="inherit">
+              Invoice Number
+            </Typography>
+          </Stack>
+        ),
+        enableSorting: true,
+        cell: ({ row }) => {
+          const item = row.original;
+
+          return (
+            <Stack direction="row" alignItems="center" px={0.5}>
+              <Tooltip title={item.invoice_number ?? ""}>
+                <Typography
+                  className="f-14"
+                  sx={{
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    wordBreak: "break-word",
+                    minWidth: "100px",
+                    width: "100px",
+                    maxWidth: "120px",
+                  }}
+                >
+                  {item.invoice_number ?? "-"}
+                </Typography>
+              </Tooltip>
+            </Stack>
+          );
+        },
+      }),
+
       columnHelper.accessor("receipt_date", {
         id: "Receipt Date",
         header: () => (
@@ -1133,8 +1222,8 @@ const CollectList = () => {
           companyId={user?.company_id || null}
           isEdit={isEdit}
           collectId={selectedCollectId}
-          onSuccess={() => {
-            fetchCollects();
+          onSuccess={(savedId, isUpdate) => {
+            upsertCollectRecord(savedId, isUpdate);
           }}
         />
 

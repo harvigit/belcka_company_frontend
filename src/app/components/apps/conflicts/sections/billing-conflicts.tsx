@@ -23,6 +23,7 @@ import { useSession } from 'next-auth/react';
 import { User } from 'next-auth';
 
 import api from '@/utils/axios';
+import UserProfileLink from '@/app/components/common/UserProfileLink';
 
 // Types 
 export interface ConflictItem {
@@ -83,18 +84,29 @@ const UserAvatar = React.memo(({ name, image, size = 36 }: {
 ));
 UserAvatar.displayName = 'UserAvatar';
 
-const DrawerHeader = React.memo(({ title, subtitle, image, onClose, badge }: {
+const DrawerHeader = React.memo(({ title, subtitle, image, onClose, badge, userId }: {
     title: string; subtitle?: string; image?: string;
-    onClose: () => void; badge?: React.ReactNode;
+    onClose: () => void; badge?: React.ReactNode; userId?: number;
 }) => (
     <Box sx={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         px: 2.5, py: 2, borderBottom: '1px solid #E5E7EB', bgcolor: '#FAFAFA', flexShrink: 0,
     }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
-            <UserAvatar name={title} image={image} />
+            <UserProfileLink userId={userId}>
+                <UserAvatar name={title} image={image} />
+            </UserProfileLink>
             <Box>
-                <Typography sx={{ fontSize: '0.92rem', fontWeight: 700, color: '#111827' }}>{title}</Typography>
+                <UserProfileLink userId={userId}>
+                    <Typography sx={{
+                        fontSize: '0.92rem',
+                        fontWeight: 700,
+                        color: '#111827',
+                        '&:hover': userId ? { color: '#173f98' } : undefined,
+                    }}>
+                        {title}
+                    </Typography>
+                </UserProfileLink>
                 {subtitle && <Typography sx={{ fontSize: '0.7rem', color: '#6B7280' }}>{subtitle}</Typography>}
             </Box>
         </Stack>
@@ -170,12 +182,21 @@ export const BillingConflictRow = React.memo(({ conflict, onClick }: {
         borderBottom: '1px solid #F3F4F6', cursor: 'pointer', transition: 'background 0.15s',
         '&:hover': { bgcolor: '#F9FAFB' },
     }}>
-        <UserAvatar name={conflict.user_name} image={conflict.user_thumb_image} />
+        <UserProfileLink userId={conflict.user_id}>
+            <UserAvatar name={conflict.user_name} image={conflict.user_thumb_image} />
+        </UserProfileLink>
         <Box sx={{ flex: 1, minWidth: 0 }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.3 }}>
-                <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#111827' }}>
-                    {conflict.user_name}
-                </Typography>
+                <UserProfileLink userId={conflict.user_id}>
+                    <Typography sx={{
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        color: '#111827',
+                        '&:hover': { color: '#173f98' },
+                    }}>
+                        {conflict.user_name}
+                    </Typography>
+                </UserProfileLink>
                 <LabelPill label="Billing Info" color="#1D4ED8" bg="#EFF6FF" border="#BFDBFE" />
             </Stack>
             <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap">
@@ -252,6 +273,7 @@ const BillingDetailPanel = React.memo(({
                 title={conflict.user_name}
                 image={conflict.user_thumb_image}
                 subtitle={conflict.formatted_date}
+                userId={conflict.user_id}
                 onClose={onClose}
                 badge={
                     <Chip

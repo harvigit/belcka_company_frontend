@@ -20,6 +20,7 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
 import api from '@/utils/axios';
+import UserProfileLink from '@/app/components/common/UserProfileLink';
 
 // Types
 export interface TeamConflict {
@@ -69,19 +70,31 @@ const UserAvatar = React.memo(({ name, image, size = 36, color = '#7C3AED', bg =
 ));
 UserAvatar.displayName = 'UserAvatar';
 
-const DrawerHeader = React.memo(({ title, subtitle, image, onClose, badge }: {
+const DrawerHeader = React.memo(({ title, subtitle, image, onClose, badge, userId }: {
     title: string; subtitle?: string; image?: string;
-    onClose: () => void; badge?: React.ReactNode;
+    onClose: () => void; badge?: React.ReactNode; userId?: number;
 }) => (
     <Box sx={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         px: 2.5, py: 2, borderBottom: '1px solid #E5E7EB', bgcolor: '#FAFAFA', flexShrink: 0,
     }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
-            <UserAvatar name={title} image={image} />
+            <UserProfileLink userId={userId}>
+                <UserAvatar name={title} image={image} />
+            </UserProfileLink>
             <Box>
                 <Typography sx={{ fontSize: '0.92rem', fontWeight: 700, color: '#111827' }}>{title}</Typography>
-                {subtitle && <Typography sx={{ fontSize: '0.7rem', color: '#6B7280' }}>{subtitle}</Typography>}
+                {subtitle && (
+                    <UserProfileLink userId={userId}>
+                        <Typography sx={{
+                            fontSize: '0.7rem',
+                            color: '#6B7280',
+                            '&:hover': userId ? { color: '#173f98' } : undefined,
+                        }}>
+                            {subtitle}
+                        </Typography>
+                    </UserProfileLink>
+                )}
             </Box>
         </Stack>
         <Stack direction="row" alignItems="center" spacing={1}>
@@ -115,7 +128,9 @@ export const TeamConflictRow = React.memo(({ item, onClick }: {
             borderBottom: '1px solid #F3F4F6', cursor: 'pointer', transition: 'background 0.15s',
             '&:hover': { bgcolor: '#F9FAFB' },
         }}>
-            <UserAvatar name={item.team_name} image={item.supervisor_thumb_image } color="#7C3AED" bg="#EDE9FE" />
+            <UserProfileLink userId={item.supervisor_id}>
+                <UserAvatar name={item.supervisor_name} image={item.supervisor_thumb_image } color="#7C3AED" bg="#EDE9FE" />
+            </UserProfileLink>
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
                     <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#111827' }}>
@@ -134,9 +149,16 @@ export const TeamConflictRow = React.memo(({ item, onClick }: {
                             {item.current_member_count}/{item.max_member_limit}
                         </Typography>
                     </Stack>
-                <Typography sx={{ fontSize: '0.7rem', color: '#6B7280', mt: 0.3 }}>
-                    Supervisor: {item.supervisor_name}
-                </Typography>
+                <UserProfileLink userId={item.supervisor_id}>
+                    <Typography sx={{
+                        fontSize: '0.7rem',
+                        color: '#6B7280',
+                        mt: 0.3,
+                        '&:hover': { color: '#173f98' },
+                    }}>
+                        Supervisor: {item.supervisor_name}
+                    </Typography>
+                </UserProfileLink>
             </Box>
             <IconChevronRight size={16} color="#D1D5DB" style={{ flexShrink: 0 }} />
         </Box>
@@ -170,6 +192,7 @@ const TeamDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved }
                 title={conflict.team_name}
                 image={conflict.supervisor_thumb_image}
                 subtitle={`Supervisor: ${conflict.supervisor_name}`}
+                userId={conflict.supervisor_id}
                 onClose={onClose}
                 badge={<LabelPill label={"Team Limit"} color="#7C3AED" bg="#EDE9FE" border="#DDD6FE" />}
             />
@@ -224,12 +247,21 @@ const TeamDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved }
                     </Typography>
                     {[
                         { label: 'Team Name', value: conflict.team_name },
-                        { label: 'Supervisor', value: conflict.supervisor_name },
+                        { label: 'Supervisor', value: conflict.supervisor_name, userId: conflict.supervisor_id },
                         { label: 'Conflict Type', value: 'Member Limit Exceeded'},
-                    ].map(({ label, value }) => (
+                    ].map(({ label, value, userId }: { label: string; value: string; userId?: number }) => (
                         <Stack key={label} direction="row" justifyContent="space-between" sx={{ py: 0.6 }}>
                             <Typography sx={{ fontSize: '0.78rem', color: '#6B7280' }}>{label}</Typography>
-                            <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#111827' }}>{value}</Typography>
+                            <UserProfileLink userId={userId}>
+                                <Typography sx={{
+                                    fontSize: '0.78rem',
+                                    fontWeight: 600,
+                                    color: '#111827',
+                                    '&:hover': userId ? { color: '#173f98' } : undefined,
+                                }}>
+                                    {value}
+                                </Typography>
+                            </UserProfileLink>
                         </Stack>
                     ))}
                 </Box>
