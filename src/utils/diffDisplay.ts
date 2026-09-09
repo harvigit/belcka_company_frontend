@@ -151,6 +151,18 @@ export function isBlankDiffValue(value: any, key?: string): boolean {
   return false;
 }
 
+function isBooleanLike(value: any): boolean {
+  if (typeof value === "boolean") return true;
+  const text = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  return text === "true" || text === "false";
+}
+
+function isBooleanStatusDiff(key: string, oldVal: any, newVal: any): boolean {
+  return key === "status" && (isBooleanLike(oldVal) || isBooleanLike(newVal));
+}
+
 export function formatDiffLabel(key: string): string {
   if (LABEL_OVERRIDES[key]) return LABEL_OVERRIDES[key];
   return key
@@ -175,6 +187,7 @@ export function prepareDisplayDiffs(diffs?: DiffEntry[] | null): DisplayDiff[] {
   for (const diff of diffs) {
     const key = KEY_ALIASES[diff?.key] || diff?.key;
     if (!key || IGNORED_KEYS.has(key) || IGNORED_KEYS.has(diff.key)) continue;
+    if (isBooleanStatusDiff(key, diff.old, diff.new)) continue;
     byKey.set(key, { ...diff, key });
   }
 
@@ -286,6 +299,7 @@ export function fallbackDiffsFromPayload(
     }
     const oldVal = oldObj[key];
     const newVal = newObj[key];
+    if (isBooleanStatusDiff(mappedKey, oldVal, newVal)) continue;
     if (oldVal && typeof oldVal === "object") continue;
     if (newVal && typeof newVal === "object") continue;
     if (isBlankDiffValue(oldVal, key) && isBlankDiffValue(newVal, key)) continue;

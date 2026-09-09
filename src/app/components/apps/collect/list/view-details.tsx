@@ -155,7 +155,7 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
             </Typography>
           </Box>
           <Box display="flex" alignItems="center" gap={1}>
-            {onEdit && collectId && (
+            {/* {onEdit && collectId && (
               <Button
                 variant="contained"
                 size="small"
@@ -168,7 +168,7 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
               >
                 Edit
               </Button>
-            )}
+            )} */}
             <IconButton onClick={onClose}>
               <IconX />
             </IconButton>

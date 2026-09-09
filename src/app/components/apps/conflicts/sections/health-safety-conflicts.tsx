@@ -18,6 +18,7 @@ import {
 import toast from 'react-hot-toast';
 
 import api from '@/utils/axios';
+import UserProfileLink from '@/app/components/common/UserProfileLink';
 
 // Types
 export interface HealthSafetyConflict {
@@ -79,18 +80,29 @@ const UserAvatar = React.memo(({ name, image, size = 32, color = '#DC2626', bg =
 UserAvatar.displayName = 'UserAvatar';
 
 // Drawer Header
-const DrawerHeader = React.memo(({ title, subtitle, image, onClose, badge }: {
+const DrawerHeader = React.memo(({ title, subtitle, image, onClose, badge, userId }: {
     title: string; subtitle?: string; image?: string;
-    onClose: () => void; badge?: React.ReactNode;
+    onClose: () => void; badge?: React.ReactNode; userId?: number;
 }) => (
     <Box sx={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         px: 2.5, py: 2, borderBottom: '1px solid #E5E7EB', bgcolor: '#FAFAFA', flexShrink: 0,
     }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
-            <UserAvatar name={title} image={image} size={36} />
+            <UserProfileLink userId={userId}>
+                <UserAvatar name={title} image={image} size={36} />
+            </UserProfileLink>
             <Box>
-                <Typography sx={{ fontSize: '0.92rem', fontWeight: 700, color: '#111827' }}>{title}</Typography>
+                <UserProfileLink userId={userId}>
+                    <Typography sx={{
+                        fontSize: '0.92rem',
+                        fontWeight: 700,
+                        color: '#111827',
+                        '&:hover': userId ? { color: '#173f98' } : undefined,
+                    }}>
+                        {title}
+                    </Typography>
+                </UserProfileLink>
                 {subtitle && <Typography sx={{ fontSize: '0.7rem', color: '#6B7280' }}>{subtitle}</Typography>}
             </Box>
         </Stack>
@@ -120,17 +132,26 @@ export const HSConflictRow = React.memo(({ item, onClick }: {
         '&:hover': { bgcolor: '#F9FAFB' },
     }}>
         <Stack direction="row" alignItems="flex-start" spacing={1.5}>
-            <UserAvatar
-                name={item.reported_by_name}
-                image={item.reported_by_thumb_image}
-                size={32}
-            />
+            <UserProfileLink userId={item.reported_by_id}>
+                <UserAvatar
+                    name={item.reported_by_name}
+                    image={item.reported_by_thumb_image}
+                    size={32}
+                />
+            </UserProfileLink>
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                     <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.4, flexWrap: 'wrap' }}>
-                        <Typography sx={{ fontSize: '0.83rem', fontWeight: 700, color: '#111827' }}>
-                            {item.reported_by_name}
-                        </Typography>
+                        <UserProfileLink userId={item.reported_by_id}>
+                            <Typography sx={{
+                                fontSize: '0.83rem',
+                                fontWeight: 700,
+                                color: '#111827',
+                                '&:hover': { color: '#173f98' },
+                            }}>
+                                {item.reported_by_name}
+                            </Typography>
+                        </UserProfileLink>
                         <LabelPill
                             label={item.hazard_name}
                             color="#DC2626"
@@ -192,6 +213,7 @@ const HSDetailPanel = React.memo(({ conflict, onClose, onResolved }: {
                 title={conflict.reported_by_name}
                 subtitle={conflict.hazard_name}
                 image={conflict.reported_by_thumb_image}
+                userId={conflict.reported_by_id}
                 onClose={onClose}
                 badge={
                     <LabelPill
@@ -249,16 +271,24 @@ const HSDetailPanel = React.memo(({ conflict, onClose, onResolved }: {
                         Report Details
                     </Typography>
                     {[
-                        { label: 'Reported By', value: conflict.reported_by_name },
+                        { label: 'Reported By', value: conflict.reported_by_name, userId: conflict.reported_by_id },
                         { label: 'Hazard', value: conflict.hazard_name },
                         { label: 'Conflict Type', value: conflict.conflict_type.replace(/_/g, ' ') },
                         { label: 'Record ID', value: `#${conflict.record_id}` },
-                    ].map(({ label, value }) => (
+                    ].map(({ label, value, userId }: { label: string; value: string; userId?: number }) => (
                         <Stack key={label} direction="row" justifyContent="space-between" sx={{ py: 0.6 }}>
                             <Typography sx={{ fontSize: '0.78rem', color: '#6B7280' }}>{label}</Typography>
-                            <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#111827', textTransform: 'capitalize' }}>
-                                {value}
-                            </Typography>
+                            <UserProfileLink userId={userId}>
+                                <Typography sx={{
+                                    fontSize: '0.78rem',
+                                    fontWeight: 600,
+                                    color: '#111827',
+                                    textTransform: 'capitalize',
+                                    '&:hover': userId ? { color: '#173f98' } : undefined,
+                                }}>
+                                    {value}
+                                </Typography>
+                            </UserProfileLink>
                         </Stack>
                     ))}
                 </Box>
