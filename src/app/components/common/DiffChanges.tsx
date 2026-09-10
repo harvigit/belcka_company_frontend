@@ -108,7 +108,13 @@ export function DiffChangeLines({ diffs }: { diffs?: DiffEntry[] | null }) {
   );
 }
 
-export default function DiffChanges({ diffs }: { diffs?: DiffEntry[] | null }) {
+export default function DiffChanges({
+  diffs,
+  date,
+}: {
+  diffs?: DiffEntry[] | null;
+  date: any;
+}) {
   const rows = prepareDisplayDiffs(diffs);
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -127,7 +133,8 @@ export default function DiffChanges({ diffs }: { diffs?: DiffEntry[] | null }) {
           ref={setAnchorEl}
           display="flex"
           alignItems="center"
-          sx={{ cursor: "pointer", width: "fit-content" }}
+          justifyContent={"space-between"}
+          sx={{ cursor: "pointer", width: "100%" }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -136,6 +143,14 @@ export default function DiffChanges({ diffs }: { diffs?: DiffEntry[] | null }) {
         >
           <Typography fontSize={12} color="primary" fontWeight={600}>
             {open ? "Hide Changes" : "View Changes"}
+          </Typography>
+          <Typography
+            fontSize="12px"
+            color="text.secondary"
+            fontWeight={500}
+            sx={{ flexShrink: 0 }}
+          >
+            {date}
           </Typography>
         </Box>
         <Popper

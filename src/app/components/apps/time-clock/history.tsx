@@ -210,67 +210,80 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
   return (
     <Box>
       <Drawer
-        anchor="bottom"
+        anchor="right"
         open={open}
         onClose={onClose}
-        PaperProps={{
-          sx: {
-            borderRadius: 0,
-            height: "95vh",
-            boxShadow: "none",
-            borderTopLeftRadius: 12,
-            borderTopRightRadius: 12,
-            overflow: "hidden",
+        sx={{
+          width: 600,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 600,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
           },
         }}
       >
         <Box
           sx={{
             position: "relative",
-            p: 3,
+            // p: 3,
             height: "100%",
             display: "flex",
             flexDirection: "column",
             bgcolor: "#f9fafb",
           }}
         >
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={1}
+            justifyContent={"space-between"}
+          >
+            <Box
+              display={"flex"}
+              justifyContent={"space-between"}
+              alignItems={"center"}
+            >
+              <IconButton onClick={onClose}>
+                <IconArrowLeft />
+              </IconButton>
+              <Typography variant="h6" fontWeight={600}>
+                Bookkeeper Activities
+              </Typography>
+            </Box>
+            <IconButton onClick={onClose}>
+              <IconX size={20} />
+            </IconButton>
+          </Box>
+          <TextField
+            placeholder="Search..."
+            size="small"
+            // sx={{ width: { xs: "100%", md: 300 } }}
+            value={activitySearch}
+            onChange={(e) => setActivitySearch(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconSearch size={16} />
+                </InputAdornment>
+              ),
+            }}
+          />
           {/* Header */}
           <Box
             display="flex"
             alignItems="center"
             justifyContent="space-between"
             mb={2}
+            mt={2}
           >
-            <Box display={"flex"} gap={3} alignItems="end">
-              <Box display="flex" alignItems="center" gap={1}>
-                <IconButton onClick={onClose}>
-                  <IconArrowLeft />
-                </IconButton>
-                <Typography variant="h6" fontWeight={600}>
-                  Bookkeeper Activities
-                </Typography>
-              </Box>
+            <Box display={"flex"} gap={1} alignItems="end">
               {/* Filters Row */}
               <Stack
                 direction={{ xs: "column", md: "row" }}
                 alignItems="center"
                 spacing={2}
               >
-                <TextField
-                  placeholder="Search..."
-                  size="small"
-                  sx={{ width: { xs: "100%", md: 300 } }}
-                  value={activitySearch}
-                  onChange={(e) => setActivitySearch(e.target.value)}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconSearch size={16} />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-
                 <DateRangePickerBox
                   from={filterStartDate}
                   to={filterEndDate}
@@ -296,9 +309,6 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
                 </Tooltip>
               </Stack>
             </Box>
-            <IconButton onClick={onClose}>
-              <IconX size={20} />
-            </IconButton>
           </Box>
 
           {selectedTypes.length > 0 && (
@@ -322,7 +332,7 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
           )}
 
           {/* Content Area */}
-          <Box sx={{ flex: 1, overflowY: "auto", px: 1, pb: 2 }}>
+          <Box sx={{ flex: 1, overflowY: "auto", pb: 2 }}>
             {loading && history.length === 0 ? (
               <Box display="flex" justifyContent="center" mt={4}>
                 <CircularProgress />
@@ -368,7 +378,6 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
                           display="flex"
                           flexDirection="column"
                           p={2.5}
-                          pt={3.5}
                           sx={{
                             width: "100%",
                             height: "fit-content",
@@ -441,22 +450,32 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
 
                             {addr.diff_data && addr.diff_data.length > 0 && (
                               <Box flex={1}>
-                                <DiffChanges diffs={addr.diff_data} />
+                                <DiffChanges
+                                  diffs={addr.diff_data}
+                                  date={addr.date}
+                                />
                               </Box>
                             )}
 
                             <Box
                               mt="auto"
                               display="flex"
-                              justifyContent="flex-end"
+                              justifyContent="space-between"
+                              alignItems="flex-end"
+                              gap={1}
                             >
-                              <Typography
-                                fontSize="12px"
-                                color="text.secondary"
-                                fontWeight={500}
-                              >
-                                {addr.date}
-                              </Typography>
+                              {addr.note ? (
+                                <Typography
+                                  fontSize="12px"
+                                  color="text.secondary"
+                                  fontWeight={500}
+                                  sx={{ wordBreak: "break-word" }}
+                                >
+                                  <b>NOTE: </b> {addr.note}
+                                </Typography>
+                              ) : (
+                                <span />
+                              )}
                             </Box>
                           </Box>
                         </Box>

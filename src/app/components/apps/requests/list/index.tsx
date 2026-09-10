@@ -899,7 +899,7 @@ export default function UserRequests({
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
-                                sx={{ mt: 0.25, lineHeight: 1.2 }}
+                                sx={{ lineHeight: 1.2 }}
                               >
                                 {translateRequestText(work.message)}
                               </Typography>
@@ -908,38 +908,15 @@ export default function UserRequests({
 
                           {work.diff_data && work.diff_data.length > 0 && (
                             <Box ml={5.5} mt={0.5}>
-                              <DiffChanges diffs={work.diff_data} />
+                              <DiffChanges
+                                diffs={work.diff_data}
+                                date={work.date}
+                              />
                             </Box>
                           )}
-                          <Box
-                            ml={5.5}
-                            mt="auto"
-                            display="flex"
-                            justifyContent={"space-between"}
-                          >
-                            {work.note && (
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                <b>NOTE: </b> {work.note}
-                              </Typography>
-                            )}
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {work.date}
-                            </Typography>
-                          </Box>
                         </Link>
                         {showRequestActions && isPendingRequest(work) && (
-                          <Box
-                            mt={1}
-                            display="flex"
-                            justifyContent="flex-end"
-                            gap={1}
-                          >
+                          <Box display="flex" justifyContent="flex-end" gap={1}>
                             <Button
                               variant="outlined"
                               color="success"

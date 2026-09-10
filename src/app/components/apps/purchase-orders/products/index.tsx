@@ -315,6 +315,15 @@ const PurchaseProductList: React.FC<Props> = ({
             (item) =>
               currentSelected.has(item.id) || Number(item.total_qty) > 0,
           );
+          const fetchedIds = new Set(
+            fetchedItems.map((item: any) => item.id),
+          );
+          const pinnedNotInFetch = pinnedItems.filter(
+            (item) => !fetchedIds.has(item.id),
+          );
+          if (isSearching) {
+            return [...fetchedItems, ...pinnedNotInFetch];
+          }
           const pinnedIds = new Set(pinnedItems.map((item) => item.id));
           const newItems = fetchedItems.filter(
             (item: any) => !pinnedIds.has(item.id),
@@ -413,18 +422,19 @@ const PurchaseProductList: React.FC<Props> = ({
   }, [data]);
 
   const finalFilteredData = useMemo(() => {
+    const hasSearch = Boolean(String(searchTerm).trim());
     return [...filteredData].sort((a, b) => {
+      const aSearched = hasSearch && latestFetchedIds.has(a.id);
+      const bSearched = hasSearch && latestFetchedIds.has(b.id);
+      if (aSearched && !bSearched) return -1;
+      if (!aSearched && bSearched) return 1;
+
       const aPinned =
         selectedRowIds.has(a.id) || Number(a.total_qty) > 0;
       const bPinned =
         selectedRowIds.has(b.id) || Number(b.total_qty) > 0;
       if (aPinned && !bPinned) return -1;
       if (!aPinned && bPinned) return 1;
-
-      const aSearched = Boolean(searchTerm) && latestFetchedIds.has(a.id);
-      const bSearched = Boolean(searchTerm) && latestFetchedIds.has(b.id);
-      if (aSearched && !bSearched) return -1;
-      if (!aSearched && bSearched) return 1;
 
       return 0;
     });
