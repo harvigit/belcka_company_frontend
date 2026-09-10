@@ -70,7 +70,7 @@ interface SupplierFormData {
   phone?: string;
   extension?: string;
   status: boolean;
-  store_manager_id?: number | null;
+  store_manager_ids?: number[];
   manager_name?: string;
   product_ids?: string;
 }
@@ -183,6 +183,7 @@ const StoreList = () => {
       name: "",
       status: true,
       company_id: user.company_id,
+      store_manager_ids: [],
     });
     setDrawerOpen(true);
   };
@@ -210,7 +211,7 @@ const StoreList = () => {
           status: true,
           company_id: user.company_id,
           phone: "",
-          store_manager_id: 0,
+          store_manager_ids: [],
           street: "",
           location: "",
         });
@@ -247,7 +248,7 @@ const StoreList = () => {
           status: true,
           company_id: user.company_id,
           phone: "",
-          store_manager_id: 0,
+          store_manager_ids: [],
           street: "",
           location: "",
         });
@@ -476,7 +477,7 @@ const StoreList = () => {
 
     columnHelper.accessor((row) => row?.manager_name, {
       id: "storeManager",
-      header: () => "Store Manager",
+      header: () => "Store Managers",
       cell: ({ row }) => {
         const item = row.original;
         return (

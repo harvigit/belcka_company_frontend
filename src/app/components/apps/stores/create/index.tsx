@@ -6,6 +6,7 @@ import {
   Typography,
   Button,
   Autocomplete,
+  Chip,
   CircularProgress,
   MenuItem,
   Divider,
@@ -54,7 +55,7 @@ interface SupplierFormData {
   phone?: string;
   extension?: string;
   status: boolean;
-  store_manager_id?: number | null;
+  store_manager_ids?: number[];
   manager_name?: string;
   product_ids?: string;
 }
@@ -604,29 +605,40 @@ const CreateStore: React.FC<CreateStoreProps> = ({
                   />
 
                   <Typography variant="body2" mt={2}>
-                    Store Manager
+                    Store Managers
                   </Typography>
 
                   <Autocomplete
+                    multiple
                     fullWidth
                     options={users}
-                    value={
-                      users.find((t) => t.id === formData.store_manager_id) ??
-                      null
-                    }
+                    value={users.filter((user) =>
+                      (formData.store_manager_ids || []).includes(user.id),
+                    )}
                     onChange={(_, newValue) => {
-                      if (newValue) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          store_manager_id: newValue.id,
-                        }));
-                      }
+                      setFormData((prev) => ({
+                        ...prev,
+                        store_manager_ids: newValue.map((user) => user.id),
+                      }));
                     }}
                     getOptionLabel={(option) => option.name || ""}
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip
+                          {...getTagProps({ index })}
+                          key={option.id}
+                          size="small"
+                          label={option.name}
+                        />
+                      ))
+                    }
                     renderInput={(params) => (
                       <CustomTextField
                         {...params}
-                        placeholder="Select manager"
+                        placeholder="Select managers"
                       />
                     )}
                   />

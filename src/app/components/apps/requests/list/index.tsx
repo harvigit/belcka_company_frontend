@@ -526,7 +526,7 @@ export default function UserRequests({
     Comapny: (id) => getUserDetailsHref(id, { tab: "billing" }),
     Project: (id) => `/apps/projects/index?id=${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
-    // "Team Cap Increase": (id) => `/apps/teams/team?team_id=${id}`,
+    "Team Cap Increase": (id) => `/apps/teams/team?team_id=${id}`,
     Penalty: (recordId, startDate, endDate) => {
       let url = `/apps/time-clock/list`;
       const params: any[] = [];

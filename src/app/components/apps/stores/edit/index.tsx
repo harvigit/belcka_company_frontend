@@ -6,6 +6,7 @@ import {
   Typography,
   Button,
   Autocomplete,
+  Chip,
   CircularProgress,
   MenuItem,
   Divider,
@@ -54,7 +55,7 @@ interface SupplierFormData {
   phone?: string;
   extension?: string;
   status: boolean;
-  store_manager_id?: number | null;
+  store_manager_ids?: number[];
   manager_name?: string;
   product_ids?: string;
 }
@@ -211,7 +212,12 @@ const EditStore: React.FC<EditStoreProps> = ({
           postcode: data.postcode || "",
           phone: data.phone || "",
           extension: data.extension || "+44",
-          store_manager_id: data.manager_id || 0,
+          store_manager_ids:
+            data.manager_ids?.length
+              ? data.manager_ids
+              : data.manager_id
+                ? [data.manager_id]
+                : [],
           manager_name: data.manager_name || "",
           address: data.address || "",
           status: data.status,
@@ -228,8 +234,9 @@ const EditStore: React.FC<EditStoreProps> = ({
       console.error("Failed to fetch supplier", err);
     }
   };
-  const selectedManager =
-    users.find((u) => u.id === formData.store_manager_id) || null;
+  const selectedManagers = users.filter((user) =>
+    (formData.store_manager_ids || []).includes(user.id),
+  );
 
   useEffect(() => {
     if (open) {
@@ -645,28 +652,42 @@ const EditStore: React.FC<EditStoreProps> = ({
                   />
 
                   <Typography variant="body2" mt={2}>
-                    Store Manager
+                    Store Managers
                   </Typography>
 
                   <Autocomplete
+                    multiple
                     fullWidth
                     options={users}
-                    value={selectedManager}
+                    value={selectedManagers}
                     onChange={(_, newValue) => {
                       setFormData((prev) => ({
                         ...prev,
-                        store_manager_id: newValue?.id || null,
-                        manager_name: newValue?.name || "",
+                        store_manager_ids: newValue.map((user) => user.id),
+                        manager_name: newValue
+                          .map((user) => user.name)
+                          .filter(Boolean)
+                          .join(", "),
                       }));
                     }}
                     getOptionLabel={(option) => option?.name || ""}
                     isOptionEqualToValue={(option, value) =>
                       option.id === value.id
                     }
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip
+                          {...getTagProps({ index })}
+                          key={option.id}
+                          size="small"
+                          label={option.name}
+                        />
+                      ))
+                    }
                     renderInput={(params) => (
                       <CustomTextField
                         {...params}
-                        placeholder="Select Manager"
+                        placeholder="Select Managers"
                       />
                     )}
                   />

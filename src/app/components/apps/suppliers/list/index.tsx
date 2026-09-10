@@ -571,9 +571,25 @@ const SupplierList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1} ml={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.name ? item.name : "-"}
-            </Typography>
+            <Tooltip title={item.name ?? ""}>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  minWidth: "120px",
+                  width: "100px",
+                  maxWidth: "100px",
+                }}
+              >
+                {item.name ? item.name : "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },
@@ -586,9 +602,25 @@ const SupplierList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1} ml={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.email ? item.email : "-"}
-            </Typography>
+            <Tooltip title={item.email ?? ""}>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  minWidth: "120px",
+                  width: "150px",
+                  maxWidth: "150px",
+                }}
+              >
+                {item.email ? item.email : "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },
@@ -616,9 +648,25 @@ const SupplierList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1} ml={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.company_name ? item.company_name : "-"}
-            </Typography>
+            <Tooltip title={item.company_name ?? ""}>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  minWidth: "120px",
+                  width: "150px",
+                  maxWidth: "150px",
+                }}
+              >
+                {item.company_name ? item.company_name : "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },
@@ -646,9 +694,25 @@ const SupplierList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1} ml={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.contact_person_name ? item.contact_person_name : "-"}
-            </Typography>
+            <Tooltip title={item.contact_person_name ?? ""}>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  minWidth: "120px",
+                  width: "150px",
+                  maxWidth: "150px",
+                }}
+              >
+                {item.contact_person_name ? item.contact_person_name : "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },
@@ -661,9 +725,25 @@ const SupplierList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1} ml={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.contact_person_email ? item.contact_person_email : "-"}
-            </Typography>
+            <Tooltip title={item.contact_person_email ?? ""}>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  minWidth: "120px",
+                  width: "150px",
+                  maxWidth: "150px",
+                }}
+              >
+                {item.contact_person_email ? item.contact_person_email : "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },
@@ -706,9 +786,25 @@ const SupplierList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1} ml={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.street ? item.street : "-"}
-            </Typography>
+            <Tooltip title={item.contact_person_email ?? ""}>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  minWidth: "120px",
+                  width: "150px",
+                  maxWidth: "150px",
+                }}
+              >
+                {item.street ? item.street : "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },
@@ -721,9 +817,25 @@ const SupplierList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1} ml={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.location ? item.location : "-"}
-            </Typography>
+            <Tooltip title={item.location ?? ""}>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  wordBreak: "break-word",
+                  minWidth: "120px",
+                  width: "150px",
+                  maxWidth: "150px",
+                }}
+              >
+                {item.location ? item.location : "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },

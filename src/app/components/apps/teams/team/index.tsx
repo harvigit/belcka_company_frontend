@@ -34,6 +34,7 @@ import {
   Tooltip,
   CircularProgress,
   Avatar,
+  Alert,
 } from "@mui/material";
 import {
   flexRender,
@@ -52,6 +53,7 @@ import {
   IconUserPlus,
   IconArrowLeft,
   IconEdit,
+  IconCheck,
 } from "@tabler/icons-react";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import api from "@/utils/axios";
@@ -139,7 +141,8 @@ const TablePagination = () => {
   const session = useSession();
   const id = session.data?.user as User & {
     company_id?: number | null;
-    id?: string;
+    id?: string | number;
+    user_role_id?: number;
   };
   const { columnVisibility, onColumnVisibilityChange } =
     usePersistentColumnVisibility({
@@ -182,9 +185,21 @@ const TablePagination = () => {
 
   const [openTeamHistory, setOpenTeamHistory] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
+  const [capDialogOpen, setCapDialogOpen] = useState(false);
+  const [capSubmitting, setCapSubmitting] = useState(false);
+  const [capForm, setCapForm] = useState({
+    type: "lifetime",
+    new_limit: "",
+    reason: "",
+    start_date: "",
+    end_date: "",
+  });
   const [historyPage, setHistoryPage] = useState<number>(1);
   const historyLimit = 20;
   const [historyLoading, setHistoryLoading] = useState<boolean>(false);
+  const [capRequestAction, setCapRequestAction] = useState<
+    "approve" | "reject" | null
+  >(null);
 
   const handleGeoToggle = (key: string) => async (event: any) => {
     const checked = event.target.checked;
@@ -289,6 +304,11 @@ const TablePagination = () => {
             extension: firstTeam.extension,
             supervisor_phone: firstTeam.supervisor_phone,
             team_name: firstTeam.team_name,
+            max_members: firstTeam.max_members,
+            type: firstTeam.type,
+            start_date: firstTeam.start_date,
+            end_date: firstTeam.end_date,
+            pending_cap_request: firstTeam.pending_cap_request,
           }));
         }
 
@@ -467,7 +487,8 @@ const TablePagination = () => {
   const filteredHistory =
     history?.filter(
       (item) =>
-        item.request_type === 109 && String(item.record_id) === String(teamId),
+        (item.request_type === 109 || item.request_type === 147) &&
+        String(item.record_id) === String(teamId),
     ) || [];
   const paginatedHistory = filteredHistory.slice(0, historyPage * historyLimit);
 
@@ -480,6 +501,45 @@ const TablePagination = () => {
 
   const handleCloseTeamHistory = () => {
     setOpenTeamHistory(false);
+  };
+
+  const pendingCapRequest =
+    teamInfo?.pending_cap_request &&
+    typeof teamInfo.pending_cap_request === "object"
+      ? teamInfo.pending_cap_request
+      : null;
+  const pendingCapLogId = Number(
+    pendingCapRequest?.log_id ?? pendingCapRequest?.id ?? 0,
+  );
+
+  const capTypeLabel = (type?: string | null) => {
+    const raw = String(type ?? "").toLowerCase();
+    if (raw === "temporary") return "Temporary";
+    if (raw === "lifetime") return "Lifetime";
+    return type || "-";
+  };
+
+  const handleCapRequestAction = async (action: "approve" | "reject") => {
+    if (!pendingCapLogId || capRequestAction) return;
+    setCapRequestAction(action);
+    try {
+      const endpoint =
+        action === "approve"
+          ? "/requests/approve-request"
+          : "/requests/reject-request";
+      const res = await api.post(endpoint, {
+        log_id: pendingCapLogId,
+        user_id: Number(id?.id),
+      });
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message);
+        await fetchData();
+      }
+    } catch {
+      // Axios interceptor already shows the error toast.
+    } finally {
+      setCapRequestAction(null);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -955,6 +1015,133 @@ const TablePagination = () => {
                 <IconEdit size={20} />
               </IconButton>
             </Grid>
+
+            {pendingCapLogId > 0 && (
+              <Alert
+                severity="info"
+                variant="outlined"
+                color="error"
+                sx={{
+                  mx: 2,
+                  mt: 1.5,
+                  mb: 1,
+                  alignItems: "stretch",
+                  // borderColor: "#ffb4b4",
+                  // color: "text.primary",
+                  "& .MuiAlert-message": { width: "100%", py: 0.5 },
+                }}
+              >
+                <Stack
+                 display={"block"}
+                  spacing={2}
+                  justifyContent="space-between"
+                  alignItems={{ xs: "stretch", md: "center" }}
+                >
+                  <Box>
+                    <Typography fontWeight={700} sx={{ mb: 0.75 }}>
+                      Cap increase request pending
+                    </Typography>
+                    <Stack
+                      direction="row"
+                      flexWrap="wrap"
+                      columnGap={2}
+                      rowGap={0.5}
+                      sx={{ fontSize: 14, color: "text.secondary" }}
+                    >
+                      {pendingCapRequest?.requested_by_name && (
+                        <Box>
+                          <strong>Requested by:</strong>{" "}
+                          {pendingCapRequest.requested_by_name}
+                        </Box>
+                      )}
+                      <Box>
+                        <strong>Capacity:</strong>{" "}
+                        <Box
+                          component="span"
+                          sx={{
+                            color: "error.main",
+                            textDecoration: "line-through",
+                          }}
+                        >
+                          {pendingCapRequest?.current_cap ?? "-"}
+                        </Box>{" "}
+                        →{" "}
+                        <Chip
+                          size="small"
+                          label={pendingCapRequest?.requested_cap ?? "-"}
+                          sx={{
+                            height: 22,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            bgcolor: "#E8F5E9",
+                            color: "#2E7D32",
+                          }}
+                        />
+                      </Box>
+                      <Box>
+                        <strong>Type:</strong>{" "}
+                        {capTypeLabel(pendingCapRequest?.type)}
+                      </Box>
+                      {String(pendingCapRequest?.type ?? "").toLowerCase() ===
+                        "temporary" && (
+                        <Box>
+                          <strong>Dates:</strong>{" "}
+                          {pendingCapRequest?.start_date || "-"} to{" "}
+                          {pendingCapRequest?.end_date || "-"}
+                        </Box>
+                      )}
+                      {pendingCapRequest?.reason && (
+                        <Box>
+                          <strong>Reason:</strong> {pendingCapRequest.reason}
+                        </Box>
+                      )}
+                    </Stack>
+                  </Box>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    justifyContent="flex-start"
+                    alignItems="center"
+                    sx={{ flexShrink: 0 }}
+                  >
+                    <Button
+                      variant="outlined"
+                      color="success"
+                      size="small"
+                      disabled={Boolean(capRequestAction)}
+                      startIcon={
+                        capRequestAction === "approve" ? (
+                          <CircularProgress size={14} color="inherit" />
+                        ) : (
+                          <IconCheck size={16} />
+                        )
+                      }
+                      onClick={() => handleCapRequestAction("approve")}
+                      sx={{ textTransform: "none", fontWeight: 600 }}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      disabled={Boolean(capRequestAction)}
+                      startIcon={
+                        capRequestAction === "reject" ? (
+                          <CircularProgress size={14} color="inherit" />
+                        ) : (
+                          <IconX size={16} />
+                        )
+                      }
+                      onClick={() => handleCapRequestAction("reject")}
+                      sx={{ textTransform: "none", fontWeight: 600 }}
+                    >
+                      Reject
+                    </Button>
+                  </Stack>
+                </Stack>
+              </Alert>
+            )}
 
             <Stack
               mr={2}
@@ -1802,7 +1989,7 @@ const TablePagination = () => {
                       >
                         <Box
                           position="absolute"
-                          top="-10px"
+                          top="-15px"
                           left="15px"
                           bgcolor="#FF7F00"
                           px={1.5}
