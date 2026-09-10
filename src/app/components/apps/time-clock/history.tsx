@@ -210,80 +210,67 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
   return (
     <Box>
       <Drawer
-        anchor="right"
+        anchor="bottom"
         open={open}
         onClose={onClose}
-        sx={{
-          width: 600,
-          flexShrink: 0,
-          "& .MuiDrawer-paper": {
-            width: 600,
-            padding: 2,
-            backgroundColor: "#f9f9f9",
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            height: "95vh",
+            boxShadow: "none",
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            overflow: "hidden",
           },
         }}
       >
         <Box
           sx={{
             position: "relative",
-            // p: 3,
+            p: 3,
             height: "100%",
             display: "flex",
             flexDirection: "column",
             bgcolor: "#f9fafb",
           }}
         >
-          <Box
-            display="flex"
-            alignItems="center"
-            gap={1}
-            justifyContent={"space-between"}
-          >
-            <Box
-              display={"flex"}
-              justifyContent={"space-between"}
-              alignItems={"center"}
-            >
-              <IconButton onClick={onClose}>
-                <IconArrowLeft />
-              </IconButton>
-              <Typography variant="h6" fontWeight={600}>
-                Bookkeeper Activities
-              </Typography>
-            </Box>
-            <IconButton onClick={onClose}>
-              <IconX size={20} />
-            </IconButton>
-          </Box>
-          <TextField
-            placeholder="Search..."
-            size="small"
-            // sx={{ width: { xs: "100%", md: 300 } }}
-            value={activitySearch}
-            onChange={(e) => setActivitySearch(e.target.value)}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconSearch size={16} />
-                </InputAdornment>
-              ),
-            }}
-          />
           {/* Header */}
           <Box
             display="flex"
             alignItems="center"
             justifyContent="space-between"
             mb={2}
-            mt={2}
           >
-            <Box display={"flex"} gap={1} alignItems="end">
+            <Box display={"flex"} gap={3} alignItems="end">
+              <Box display="flex" alignItems="center" gap={1}>
+                <IconButton onClick={onClose}>
+                  <IconArrowLeft />
+                </IconButton>
+                <Typography variant="h6" fontWeight={600}>
+                  Bookkeeper Activities
+                </Typography>
+              </Box>
               {/* Filters Row */}
               <Stack
                 direction={{ xs: "column", md: "row" }}
                 alignItems="center"
                 spacing={2}
               >
+                <TextField
+                  placeholder="Search..."
+                  size="small"
+                  sx={{ width: { xs: "100%", md: 300 } }}
+                  value={activitySearch}
+                  onChange={(e) => setActivitySearch(e.target.value)}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconSearch size={16} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
                 <DateRangePickerBox
                   from={filterStartDate}
                   to={filterEndDate}
@@ -309,8 +296,10 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
                 </Tooltip>
               </Stack>
             </Box>
+            <IconButton onClick={onClose}>
+              <IconX size={20} />
+            </IconButton>
           </Box>
-
           {selectedTypes.length > 0 && (
             <Stack direction="row" flexWrap="wrap" gap={1} mb={2}>
               {selectedTypes.map((type) => {
