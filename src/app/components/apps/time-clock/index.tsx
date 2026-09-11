@@ -282,6 +282,7 @@ export type Index = {
     has_expense_request?: boolean;
     has_worklog_request?: boolean;
     has_penalty_appeal_request?: boolean;
+    total_requests?: number;
     bookkeeper_notification?: {
         has_green_dot?: boolean;
         tooltip?: string | null;
@@ -521,6 +522,7 @@ const TimeClock = ({queryParams}: Props) => {
     const [addPriceworkSidebar, setAddPriceworkSidebar] = useState<boolean>(false);
     const [openLeaves, setOpenLeaves] = useState(false);
     const [requestList ,setRequestList] = useState(false);
+    const [requestCount, setRequestCount] = useState<number>(0);
 
     // Conflict sidebar
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
@@ -634,6 +636,22 @@ const TimeClock = ({queryParams}: Props) => {
     useEffect(() => {
         queryParamsRef.current = resolvedQueryParams;
     }, [resolvedQueryParams]);
+
+    const fetchRequestCount = useCallback(async () => {
+        if (!user?.company_id || !user?.id) return;
+
+        try {
+            const response = await api.get(`get-feeds?company_id=${user.company_id}&user_id=${user.id}`);
+            const feeds = response.data?.info ?? [];
+            setRequestCount(Number(feeds?.[0]?.request_count || 0));
+        } catch (error) {
+            console.error('Failed to fetch pending request count:', error);
+        }
+    }, [user?.company_id, user?.id]);
+
+    useEffect(() => {
+        fetchRequestCount();
+    }, [fetchRequestCount]);
 
     const saveTimeClockFiltersCookie = useCallback((
         nextFilters: TimeClockFilterState,
@@ -1486,11 +1504,16 @@ const TimeClock = ({queryParams}: Props) => {
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
 
-    const hasPendingRequest = (row: Index): boolean =>
-        row.has_leave_request === true ||
-        row.has_expense_request === true ||
-        row.has_worklog_request === true ||
-        row.has_penalty_appeal_request === true;
+    const hasPendingRequest = (row: Index): boolean => {
+        if (row.total_requests !== undefined && row.total_requests !== null) {
+            return Number(row.total_requests) > 0;
+        }
+
+        return row.has_leave_request === true ||
+            row.has_expense_request === true ||
+            row.has_worklog_request === true ||
+            row.has_penalty_appeal_request === true;
+    };
 
     const columns = [
         {
@@ -2563,7 +2586,13 @@ const TimeClock = ({queryParams}: Props) => {
                                     whiteSpace: 'nowrap',
                                 }}
                             >
-                                {t('Requests')}
+                                <Badge
+                                    badgeContent={requestCount > 0 ? requestCount : null}
+                                    color="error"
+                                    overlap="rectangular"
+                                >
+                                    {t('Requests')}
+                                </Badge>
                             </Button>
 
                             {!isReadOnlyUser && (
@@ -3494,7 +3523,13 @@ const TimeClock = ({queryParams}: Props) => {
             <LeaveLists open={openLeaves} onClose={() => setOpenLeaves(false)} queryParams={resolvedQueryParams}/>
             
             {/* Request list */}
-            <UserRequests open={requestList} onRequestCountChange={() => {}} onClose={() => setRequestList(false)} isAdmin={true} showRequestActions/>
+            <UserRequests
+                open={requestList}
+                onRequestCountChange={(count: number) => setRequestCount(count || 0)}
+                onClose={() => setRequestList(false)}
+                isAdmin={true}
+                showRequestActions
+            />
 
             {/*  Recover Worklogs list */}
             <RecoverWorklogs
