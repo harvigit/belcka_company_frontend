@@ -14,6 +14,9 @@ import {
     FormGroup,
     IconButton,
     InputAdornment,
+    ListItemIcon,
+    Menu,
+    MenuItem,
     Popover,
     Stack,
     Table,
@@ -32,7 +35,9 @@ import {
     IconChevronLeft,
     IconChevronRight,
     IconDoorExit,
+    IconDotsVertical,
     IconEye,
+    IconNotes,
     IconPlus,
     IconSearch,
     IconSettings,
@@ -78,6 +83,7 @@ import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import Image from 'next/image';
 import Cookies from 'js-cookie';
+import ArchivedUserLeavesDrawer from '@/app/components/apps/leaves/archived-user-leaves';
 
 const LEAVE_STORAGE_KEY = 'leave-module-range';
 const LEAVE_LIST_PREFERENCES_COOKIE_PREFIX = 'leave-list-preferences';
@@ -744,6 +750,8 @@ const Leaves = () => {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [activityOpen, setActivityOpen] = useState(false);
     const [addLeaveOpen, setAddLeaveOpen] = useState(false);
+    const [archivedLeaveOpen, setArchivedLeaveOpen] = useState(false);
+    const [headerMenuAnchor, setHeaderMenuAnchor] = useState<null | HTMLElement>(null);
     const [columnPopover, setColumnPopover] = useState<HTMLElement | null>(null);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
         storedRange?.columnVisibility || {},
@@ -1436,11 +1444,40 @@ const Leaves = () => {
                             </IconButton>
                         </Tooltip>
                         { user.user_role_id === 1 && (
+                        <>
                         <Tooltip title="Settings">
                             <IconButton color="primary" onClick={() => setSettingsOpen(true)}>
                                 <IconSettings size={20} />
                             </IconButton>
                         </Tooltip>
+                        <Tooltip title="More">
+                            <IconButton
+                                color="primary"
+                                onClick={(event) => setHeaderMenuAnchor(event.currentTarget)}
+                            >
+                                <IconDotsVertical size={20} />
+                            </IconButton>
+                        </Tooltip>
+                        <Menu
+                            anchorEl={headerMenuAnchor}
+                            open={Boolean(headerMenuAnchor)}
+                            onClose={() => setHeaderMenuAnchor(null)}
+                            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                        >
+                            <MenuItem
+                                onClick={() => {
+                                    setHeaderMenuAnchor(null);
+                                    setArchivedLeaveOpen(true);
+                                }}
+                            >
+                                <ListItemIcon>
+                                    <IconNotes size={18} />
+                                </ListItemIcon>
+                                Archived Leave
+                            </MenuItem>
+                        </Menu>
+                        </>
                         )}
                     </Stack>
                 </Stack>
@@ -1964,6 +2001,12 @@ const Leaves = () => {
             <LeaveSettingsDrawer
                 open={settingsOpen}
                 onClose={() => setSettingsOpen(false)}
+            />
+
+            <ArchivedUserLeavesDrawer
+                open={archivedLeaveOpen}
+                onClose={() => setArchivedLeaveOpen(false)}
+                onWorkUpdated={refreshLeaves}
             />
         </Box>
     );
