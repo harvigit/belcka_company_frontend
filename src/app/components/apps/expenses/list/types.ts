@@ -15,6 +15,7 @@ export type ExpenseApiRow = {
     currency?: string;
     receipt_date?: string | null;
     date_added?: string | null;
+    created_at?: string | null;
     timesheet_date?: string | null;
     user_id?: number;
     user_name?: string | null;
