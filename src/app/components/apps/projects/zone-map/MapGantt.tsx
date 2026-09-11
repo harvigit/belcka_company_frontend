@@ -22,6 +22,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   Tabs,
@@ -1186,121 +1187,129 @@ export default function MapGantt({
             maxHeight: { xs: 360, md: "unset" },
           }}
         >
-          {/* Scrollable table area */}
-          <Box sx={{ flex: 1, overflow: "auto" }}>
-            <Paper>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ background: "#f5f5f5" }}>
-                    <TableCell>
-                      <b>Name</b>
-                    </TableCell>
-                    <TableCell sx={{ width: 152, minWidth: 152 }}>
-                      <b>Action</b>
+          <TableContainer
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              overflow: "auto",
+            }}
+          >
+            <Table stickyHeader aria-label="sticky table">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ background: "#f5f5f5" }}>
+                    <b>Name</b>
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      width: 152,
+                      minWidth: 152,
+                      background: "#f5f5f5",
+                    }}
+                  >
+                    <b>Action</b>
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filterData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} align="center" sx={{ py: 4 }}>
+                      No zones found.
                     </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filterData.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={2} align="center" sx={{ py: 4 }}>
-                        No zones found.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedZones.map((z) => {
-                      const isHidden = hiddenZoneIds.has(z.id);
-                      return (
-                        <TableRow key={z.id}>
-                          <TableCell>
+                ) : (
+                  paginatedZones.map((z) => {
+                    const isHidden = hiddenZoneIds.has(z.id);
+                    return (
+                      <TableRow key={z.id}>
+                        <TableCell>
+                          <Typography
+                            sx={{ color: "text.primary", fontWeight: 600 }}
+                          >
+                            {z.name}
+                          </Typography>
+                          <Typography sx={{ color: "text.secondary" }}>
+                            {z.project_name}
+                          </Typography>
+                          <Tooltip title={z.address_name || z.address} arrow>
                             <Typography
-                              sx={{ color: "text.primary", fontWeight: 600 }}
+                              variant="body2"
+                              sx={{
+                                color: "text.disabled",
+                                maxWidth: 250,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                cursor: "pointer",
+                              }}
                             >
-                              {z.name}
+                              {z.address_name || z.address}
                             </Typography>
-                            <Typography sx={{ color: "text.secondary" }}>
-                              {z.project_name}
-                            </Typography>
-                            <Tooltip title={z.address_name || z.address} arrow>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  color: "text.disabled",
-                                  maxWidth: 250,
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                {z.address_name || z.address}
-                              </Typography>
-                            </Tooltip>
-                          </TableCell>
-                          <TableCell sx={{ width: 152, minWidth: 152 }}>
-                            <Box display="flex" gap={0.5} flexWrap="nowrap">
-                              <IconButton
-                                color={isHidden ? "default" : "success"}
-                                onClick={() => {
-                                  setHiddenZoneIds((prev) => {
-                                    const newSet = new Set(prev);
-                                    if (isHidden) newSet.delete(z.id);
-                                    else newSet.add(z.id);
-                                    return newSet;
-                                  });
-                                }}
-                              >
-                                {isHidden ? (
-                                  <IconEyeOff size={20} />
-                                ) : (
-                                  <IconEye size={20} />
-                                )}
-                              </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell sx={{ width: 152, minWidth: 152 }}>
+                          <Box display="flex" gap={0.5} flexWrap="nowrap">
+                            <IconButton
+                              color={isHidden ? "default" : "success"}
+                              onClick={() => {
+                                setHiddenZoneIds((prev) => {
+                                  const newSet = new Set(prev);
+                                  if (isHidden) newSet.delete(z.id);
+                                  else newSet.add(z.id);
+                                  return newSet;
+                                });
+                              }}
+                            >
+                              {isHidden ? (
+                                <IconEyeOff size={20} />
+                              ) : (
+                                <IconEye size={20} />
+                              )}
+                            </IconButton>
 
-                              <IconButton
-                                color="primary"
-                                onClick={() => {
-                                  if (mainMapRef.current) {
-                                    flyToZone(mainMapRef.current, z);
-                                    setSelected(null);
-                                  }
-                                }}
-                                title="Zoom to zone on map"
-                              >
-                                <IconMapPin size={20} />
-                              </IconButton>
+                            <IconButton
+                              color="primary"
+                              onClick={() => {
+                                if (mainMapRef.current) {
+                                  flyToZone(mainMapRef.current, z);
+                                  setSelected(null);
+                                }
+                              }}
+                              title="Zoom to zone on map"
+                            >
+                              <IconMapPin size={20} />
+                            </IconButton>
 
-                              <IconButton
-                                color="primary"
-                                onClick={() => {
-                                  setAddZoneOpen(false);
-                                  setSelected({ ...z, mode: "edit" });
-                                }}
-                              >
-                                <IconEdit size={20} />
-                              </IconButton>
+                            <IconButton
+                              color="primary"
+                              onClick={() => {
+                                setAddZoneOpen(false);
+                                setSelected({ ...z, mode: "edit" });
+                              }}
+                            >
+                              <IconEdit size={20} />
+                            </IconButton>
 
-                              <IconButton
-                                color="error"
-                                onClick={() => {
-                                  setDeleteId(z.id);
-                                  setDeleteConfirmOpen(true);
-                                }}
-                              >
-                                <IconTrash size={20} />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </Paper>
-          </Box>
+                            <IconButton
+                              color="error"
+                              onClick={() => {
+                                setDeleteId(z.id);
+                                setDeleteConfirmOpen(true);
+                              }}
+                            >
+                              <IconTrash size={20} />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
-          {/* ── Pagination footer ── */}
           {filterData.length > 0 && (
             <>
               <Divider />
