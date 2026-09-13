@@ -68,7 +68,6 @@ type PriceWorkSettingsCache = {
     rows: PricingRow[];
 };
 
-const TASKS_PAGE_SIZE = 500;
 const DEFAULT_PROJECT_COLUMNS_PER_PAGE = 8;
 const PROJECT_COLUMNS_PER_PAGE_OPTIONS = [8, 12, 20];
 const PRICE_WORK_ROW_ORDER_STORAGE_KEY_PREFIX = 'price-work-settings-row-order';
@@ -339,25 +338,9 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         useSensor(KeyboardSensor),
     );
 
-    const fetchAllTasks = useCallback(async (companyId: number) => {
-        const firstResponse = await api.get(
-            `/tasks/get?company_id=${companyId}&page=1&limit=${TASKS_PAGE_SIZE}&shift_type=pricework`,
-        );
-        const firstTasks = firstResponse.data?.info || [];
-        const totalPages = Number(firstResponse.data?.data?.totalPages) || 1;
-
-        if (totalPages <= 1) return firstTasks;
-
-        const remainingResponses = await Promise.all(
-            Array.from({length: totalPages - 1}, (_, index) =>
-                api.get(`/tasks/get?company_id=${companyId}&page=${index + 2}&limit=${TASKS_PAGE_SIZE}&shift_type=pricework`),
-            ),
-        );
-
-        return remainingResponses.reduce(
-            (allTasks: any[], response) => allTasks.concat(response.data?.info || []),
-            firstTasks,
-        );
+    const fetchSettingsTasks = useCallback(async () => {
+        const response = await api.get('/pricework/settings/tasks');
+        return Array.isArray(response.data?.info) ? response.data.info : [];
     }, []);
 
     const hydrateFromCache = useCallback(() => {
@@ -404,8 +387,8 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     console.error('Error fetching pricework resources', err);
                     return {data: {projects: [], trades: [], users: []}};
                 }),
-                fetchAllTasks(user.company_id).catch((err) => {
-                    console.error('Error fetching tasks', err);
+                fetchSettingsTasks().catch((err) => {
+                    console.error('Error fetching price work tasks', err);
                     return [];
                 }),
                 api.get('/pricework/settings/prices').catch((err) => {
@@ -449,7 +432,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         } finally {
             setLoading(false);
         }
-    }, [fetchAllTasks, hydrateFromCache, user?.company_id, writePriceWorkCache]);
+    }, [fetchSettingsTasks, hydrateFromCache, user?.company_id, writePriceWorkCache]);
 
     const syncSavedRows = (savedRows: PricingRow[]) => {
         const savedRowIds = new Set(savedRows.map((row) => row.id));
