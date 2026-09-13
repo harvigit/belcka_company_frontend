@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {
     Box,
     Button,
@@ -317,8 +317,6 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     const savingRef = useRef(false);
     const [tableScrollEl, setTableScrollEl] = useState<HTMLDivElement | null>(null);
     const [isDragging, setIsDragging] = useState(false);
-    const [isScrolling, setIsScrolling] = useState(false);
-    const scrollLoaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [loading, setLoading] = useState(!priceWorkSettingsCache.loaded);
     const [saving, setSaving] = useState(false);
@@ -574,47 +572,60 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         count: filteredRows.length,
         getScrollElement: () => tableScrollEl,
         estimateSize: () => PRICE_WORK_ROW_HEIGHT,
-        overscan: isDragging ? filteredRows.length : 8,
+        overscan: isDragging ? filteredRows.length : 20,
         getItemKey: (index) => filteredRows[index]?.id ?? index,
     });
 
     const virtualItems = rowVirtualizer.getVirtualItems();
-    const virtualPaddingTop = virtualItems[0]?.start ?? 0;
-    const virtualPaddingBottom = Math.max(
-        0,
-        rowVirtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]?.end ?? 0),
+    const firstVirtualIndex = virtualItems[0]?.index;
+    const lastVirtualIndex = virtualItems[virtualItems.length - 1]?.index;
+    const [keptRange, setKeptRange] = useState({start: 0, end: -1});
+
+    useLayoutEffect(() => {
+        setKeptRange({start: 0, end: -1});
+    }, [searchTerm, selectedProjectFilter]);
+
+    useLayoutEffect(() => {
+        if (isDragging && filteredRows.length > 0) {
+            setKeptRange({start: 0, end: filteredRows.length - 1});
+        }
+    }, [filteredRows.length, isDragging]);
+
+    useLayoutEffect(() => {
+        if (firstVirtualIndex == null || lastVirtualIndex == null) return;
+
+        setKeptRange((prev) => {
+            if (prev.end < 0) return {start: firstVirtualIndex, end: lastVirtualIndex};
+
+            const nextStart = Math.min(prev.start, firstVirtualIndex);
+            const nextEnd = Math.max(prev.end, lastVirtualIndex);
+            if (nextStart === prev.start && nextEnd === prev.end) return prev;
+
+            return {start: nextStart, end: nextEnd};
+        });
+    }, [firstVirtualIndex, lastVirtualIndex]);
+
+    const renderStart = keptRange.end < 0
+        ? (virtualItems[0]?.index ?? 0)
+        : Math.max(0, Math.min(keptRange.start, filteredRows.length - 1));
+    const renderEnd = keptRange.end < 0
+        ? (virtualItems[virtualItems.length - 1]?.index ?? -1)
+        : Math.min(keptRange.end, filteredRows.length - 1);
+    const virtualRows = useMemo(
+        () => (renderEnd < renderStart ? [] : filteredRows.slice(renderStart, renderEnd + 1)),
+        [filteredRows, renderEnd, renderStart],
     );
-    const virtualRows = virtualItems
-        .map((virtualRow) => filteredRows[virtualRow.index])
-        .filter((row): row is PricingRow => Boolean(row));
+    const virtualPaddingTop = renderStart > 0 ? renderStart * PRICE_WORK_ROW_HEIGHT : 0;
+    const virtualPaddingBottom = renderEnd >= 0
+        ? Math.max(0, (filteredRows.length - renderEnd - 1) * PRICE_WORK_ROW_HEIGHT)
+        : 0;
     const matrixColumnCount = 8 + displayedProjects.length;
+    const sortableRowIds = useMemo(() => filteredRows.map((row) => row.id), [filteredRows]);
 
     useEffect(() => {
         if (!tableScrollEl || filteredRows.length === 0) return;
         rowVirtualizer.scrollToIndex(0, {align: 'start'});
-    }, [projectPage, rowVirtualizer, searchTerm, selectedProjectFilter, tableScrollEl]);
-
-    useEffect(() => {
-        if (!tableScrollEl) return;
-
-        const handleScroll = () => {
-            setIsScrolling(true);
-            if (scrollLoaderTimeoutRef.current) {
-                clearTimeout(scrollLoaderTimeoutRef.current);
-            }
-            scrollLoaderTimeoutRef.current = setTimeout(() => {
-                setIsScrolling(false);
-            }, 200);
-        };
-
-        tableScrollEl.addEventListener('scroll', handleScroll, {passive: true});
-        return () => {
-            tableScrollEl.removeEventListener('scroll', handleScroll);
-            if (scrollLoaderTimeoutRef.current) {
-                clearTimeout(scrollLoaderTimeoutRef.current);
-            }
-        };
-    }, [tableScrollEl]);
+    }, [projectPage, searchTerm, selectedProjectFilter, tableScrollEl]);
 
     const isAllVisibleSelected = filteredRows.length > 0 && selectedVisibleRowIds.length === filteredRows.length;
     const isSomeVisibleSelected = selectedVisibleRowIds.length > 0 && selectedVisibleRowIds.length < filteredRows.length;
@@ -1304,7 +1315,6 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 </Box>
             </Box>
 
-            <Box sx={{position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column'}}>
             <TableContainer
                 ref={setTableScrollEl}
                 component={Paper}
@@ -1423,7 +1433,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
                         {filteredRows.length > 0 && (
                             <SortableContext
-                                items={filteredRows.map((row) => row.id)}
+                                items={sortableRowIds}
                                 strategy={verticalListSortingStrategy}
                             >
                             <>
@@ -1487,23 +1497,6 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     </DndContext>
                 </Table>
             </TableContainer>
-            {isScrolling && !isDragging && !isInitialLoading && filteredRows.length > 0 && (
-                <Box
-                    sx={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: 'rgba(255,255,255,0.45)',
-                        pointerEvents: 'none',
-                        zIndex: 2,
-                    }}
-                >
-                    <CircularProgress size={28}/>
-                </Box>
-            )}
-            </Box>
 
             <Typography sx={{fontSize: '0.8rem', color: '#64748b', pl: 1}}>
                 {filteredRows.length} row{filteredRows.length === 1 ? '' : 's'}
