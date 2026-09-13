@@ -304,10 +304,6 @@ const TaskLists = () => {
         setEditDrawerOpen(true);
     };
 
-    useEffect(() => {
-        fetchTasks();
-    }, [user.company_id]);
-
     const handleSubmit = async (e: React.FormEvent, galleryFiles: File[]) => {
         e.preventDefault();
         setIsSaving(true);
@@ -953,7 +949,6 @@ const TaskLists = () => {
     const {
         table,
         pagination,
-        setPagination,
         pageCount,
         setPageCount,
         totalRows,
@@ -965,11 +960,8 @@ const TaskLists = () => {
         debounceDependencies: [searchTerm, filters, user.company_id],
         state: {columnVisibility},
         onColumnVisibilityChange,
+        enableSorting: false,
     });
-
-    useEffect(() => {
-        setPagination((prev) => ({...prev, pageIndex: 0}));
-    }, [searchTerm]);
 
     const simpleColumns = columns.map((column: any) => ({
         name: column.id ?? 'Unnamed Column',

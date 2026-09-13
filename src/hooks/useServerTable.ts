@@ -26,6 +26,7 @@ interface UseServerTableOptions<TData> {
   manualPagination?: boolean;
   manualFiltering?: boolean;
   shouldResetPageOnDebounce?: () => boolean;
+  enableSorting?: boolean;
   state?: any;
   getRowId?: (originalRow: TData, index: number, parent?: any) => string;
 }
@@ -43,6 +44,7 @@ export function useServerTable<TData>({
   manualPagination = true,
   manualFiltering = true,
   shouldResetPageOnDebounce,
+  enableSorting = true,
   state: controlledState,
   getRowId,
 }: UseServerTableOptions<TData>) {
@@ -210,6 +212,7 @@ export function useServerTable<TData>({
     manualFiltering: manualFiltering,
     manualSorting: useClientFullSort ? false : manualSorting,
     autoResetPageIndex: false,
+    enableSorting,
     enableRowSelection: true,
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
