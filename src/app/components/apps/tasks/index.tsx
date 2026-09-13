@@ -229,7 +229,7 @@ const TaskLists = () => {
         if (!user?.company_id) return;
         try {
             setLoading(true);
-            let url = `tasks/get?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+            let url = `tasks/list-web?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
             if (searchTerm) {
                 url += `&search=${encodeURIComponent(searchTerm)}`;
             }
