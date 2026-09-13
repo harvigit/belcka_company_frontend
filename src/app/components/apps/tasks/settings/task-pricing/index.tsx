@@ -72,6 +72,7 @@ const DEFAULT_PROJECT_COLUMNS_PER_PAGE = 8;
 const PROJECT_COLUMNS_PER_PAGE_OPTIONS = [8, 12, 20];
 const PRICE_WORK_ROW_ORDER_STORAGE_KEY_PREFIX = 'price-work-settings-row-order';
 const PRICE_WORK_CACHE_TTL_MS = 5 * 60 * 1000;
+const PRICE_WORK_SEARCH_DEBOUNCE_MS = 300;
 const PRICE_WORK_ROW_HEIGHT = 52;
 const EMPTY_NAMED_OPTIONS: NamedOption[] = [];
 const EMPTY_SUB_CATEGORY_OPTIONS: SubCategoryOption[] = [];
@@ -329,6 +330,9 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     const [pendingDeletedRows, setPendingDeletedRows] = useState<DeletedPricingRow[]>([]);
     const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const [serverSearchRowKeys, setServerSearchRowKeys] = useState<Set<string> | null>(null);
+    const searchRequestIdRef = useRef(0);
     const [selectedProjectFilter, setSelectedProjectFilter] = useState('');
     const [projectPage, setProjectPage] = useState(0);
     const [projectColumnsPerPage, setProjectColumnsPerPage] = useState(DEFAULT_PROJECT_COLUMNS_PER_PAGE);
@@ -488,6 +492,50 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     }, [fetchData]);
 
     useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm.trim());
+        }, PRICE_WORK_SEARCH_DEBOUNCE_MS);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        const requestId = ++searchRequestIdRef.current;
+        const term = debouncedSearchTerm;
+        const projectIds = selectedProjectFilter ? String(selectedProjectFilter) : '';
+
+        if (!term && !projectIds) {
+            setServerSearchRowKeys(null);
+            return;
+        }
+
+        const params: {search?: string; project_ids?: string} = {};
+        if (term) params.search = term;
+        if (projectIds) params.project_ids = projectIds;
+
+        let cancelled = false;
+
+        (async () => {
+            try {
+                const res = await api.get('/pricework/settings/prices', {params});
+                if (cancelled || requestId !== searchRequestIdRef.current) return;
+
+                const savedPrices = Array.isArray(res.data?.info) ? res.data.info : [];
+                const nextRows = buildRowsFromSavedPrices(savedPrices, tasks);
+                setServerSearchRowKeys(new Set(nextRows.map(getPricingRowOrderKey)));
+            } catch (err) {
+                if (cancelled || requestId !== searchRequestIdRef.current) return;
+                console.error('Error filtering price work settings', err);
+                setServerSearchRowKeys(term ? new Set() : null);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [debouncedSearchTerm, selectedProjectFilter, tasks]);
+
+    useEffect(() => {
         setProjectPage(0);
     }, [selectedProjectFilter]);
 
@@ -546,22 +594,15 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     const projectColumnEnd = Math.min(projectColumnCount, (projectPage + 1) * projectColumnsPerPage);
 
     const filteredRows = useMemo(() => {
-        const term = searchTerm.trim().toLowerCase();
-        if (!term) return rows;
+        if (!searchTerm.trim()) return rows;
+        if (!serverSearchRowKeys) return rows;
 
         return rows.filter((row) => {
-            const selectedTask = taskMap[row.task_id];
-            const selectedUser = users.find((item) => String(item.id) === row.user_id);
-            const searchable = [
-                getUserDisplayName(selectedUser || {}),
-                selectedTask?.trade_name,
-                selectedTask?.category_name,
-                selectedTask?.sub_category_name,
-            ].join(' ').toLowerCase();
+            if (!row.original_task_id) return true;
 
-            return searchable.includes(term);
+            return serverSearchRowKeys.has(getPricingRowOrderKey(row));
         });
-    }, [rows, searchTerm, taskMap, users]);
+    }, [rows, searchTerm, serverSearchRowKeys]);
 
     const selectedVisibleRowIds = useMemo(
         () => filteredRows.filter((row) => selectedRowIds.has(row.id)).map((row) => row.id),
