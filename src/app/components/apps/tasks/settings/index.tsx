@@ -124,7 +124,17 @@ const Settings: React.FC<SettingsProps> = ({settingOpen, onClose}) => {
                             overflow: 'hidden',
                         }}
                     >
-                        {activeMenuItem === 'Price Work' && <TaskPricingMatrix onSaveSuccess={handleSaveSuccess}/>}
+                        <Box
+                            sx={{
+                                display: activeMenuItem === 'Price Work' ? 'flex' : 'none',
+                                flex: activeMenuItem === 'Price Work' ? 1 : undefined,
+                                flexDirection: 'column',
+                                overflow: 'hidden',
+                                height: activeMenuItem === 'Price Work' ? '100%' : 0,
+                            }}
+                        >
+                            {settingOpen ? <TaskPricingMatrix onSaveSuccess={handleSaveSuccess}/> : null}
+                        </Box>
                         {activeMenuItem === 'Trades' && <TaskTradeCheckinSettings/>}
                         {activeMenuItem === 'Task Categories' && <TaskCategory/>}
                         {activeMenuItem === 'Sub Categories' && <TaskCategoryList/>}

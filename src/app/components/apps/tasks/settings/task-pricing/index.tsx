@@ -40,7 +40,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
-import {IconDeviceFloppy, IconGripVertical, IconPlus, IconSearch, IconTrash} from '@tabler/icons-react';
+import {IconDeviceFloppy, IconGripVertical, IconPlus, IconRefresh, IconSearch, IconTrash} from '@tabler/icons-react';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
 import api from '@/utils/axios';
 import {useSession} from 'next-auth/react';
@@ -56,6 +56,7 @@ type CellState = {
     is_active: boolean;
     original_is_active?: boolean;
     price: string;
+    original_price?: string;
 };
 
 type PricingRow = {
@@ -86,6 +87,8 @@ type DeletedPricingRow = {
 
 type PriceWorkSettingsCache = {
     loaded: boolean;
+    companyId: number | null;
+    fetchedAt: number;
     tasks: any[];
     projects: any[];
     users: any[];
@@ -97,14 +100,32 @@ const TASKS_PAGE_SIZE = 500;
 const DEFAULT_PROJECT_COLUMNS_PER_PAGE = 8;
 const PROJECT_COLUMNS_PER_PAGE_OPTIONS = [8, 12, 20];
 const PRICE_WORK_ROW_ORDER_STORAGE_KEY_PREFIX = 'price-work-settings-row-order';
+const PRICE_WORK_CACHE_TTL_MS = 5 * 60 * 1000;
 
 let priceWorkSettingsCache: PriceWorkSettingsCache = {
     loaded: false,
+    companyId: null,
+    fetchedAt: 0,
     tasks: [],
     projects: [],
     users: [],
     trades: [],
     rows: [],
+};
+
+const isPriceWorkCacheWarm = (companyId: number) =>
+    priceWorkSettingsCache.loaded &&
+    priceWorkSettingsCache.companyId === companyId &&
+    Date.now() - priceWorkSettingsCache.fetchedAt < PRICE_WORK_CACHE_TTL_MS;
+
+const isDirtyActiveProjectCell = (value: CellState) => {
+    if (!value.is_active) return false;
+    if (value.original_is_active === undefined || value.original_price === undefined) return true;
+
+    return (
+        value.original_is_active !== value.is_active ||
+        String(value.original_price) !== String(value.price)
+    );
 };
 
 const getTaskBasePrice = (_task: any) => '0.00';
@@ -274,10 +295,12 @@ const buildRowsFromSavedPrices = (savedPrices: any[], priceworkTasks: any[]): Pr
         const row = groupedRows.get(rowKey);
         if (!row) return;
 
+        const savedPrice = priceItem?.price != null ? String(priceItem.price) : '0.00';
         row.project_prices[projectId] = {
             is_active: getSavedPriceProjectActive(priceItem),
             original_is_active: getSavedPriceProjectActive(priceItem),
-            price: priceItem?.price != null ? String(priceItem.price) : '0.00',
+            price: savedPrice,
+            original_price: savedPrice,
         };
     });
 
@@ -334,7 +357,7 @@ const preserveRowOrder = (nextRows: PricingRow[], orderedKeys: string[]) => {
     return [...orderedRows, ...newRows];
 };
 
-const SortablePricingTableRow = ({
+const SortablePricingTableRow = React.memo(({
     rowId,
     children,
 }: {
@@ -370,9 +393,9 @@ const SortablePricingTableRow = ({
             {children({attributes, listeners, setActivatorNodeRef, isDragging})}
         </TableRow>
     );
-};
+});
 
-const RowDragHandle = ({
+const RowDragHandle = React.memo(({
     attributes,
     listeners,
     setActivatorNodeRef,
@@ -402,7 +425,7 @@ const RowDragHandle = ({
             <IconGripVertical size={16}/>
         </IconButton>
     </Tooltip>
-);
+));
 
 const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) => {
     const session = useSession();
@@ -432,7 +455,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
     const fetchAllTasks = useCallback(async (companyId: number) => {
         const firstResponse = await api.get(
-            `/tasks/get?company_id=${companyId}&page=1&limit=${TASKS_PAGE_SIZE}`,
+            `/tasks/get?company_id=${companyId}&page=1&limit=${TASKS_PAGE_SIZE}&shift_type=pricework`,
         );
         const firstTasks = firstResponse.data?.info || [];
         const totalPages = Number(firstResponse.data?.data?.totalPages) || 1;
@@ -441,7 +464,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
         const remainingResponses = await Promise.all(
             Array.from({length: totalPages - 1}, (_, index) =>
-                api.get(`/tasks/get?company_id=${companyId}&page=${index + 2}&limit=${TASKS_PAGE_SIZE}`),
+                api.get(`/tasks/get?company_id=${companyId}&page=${index + 2}&limit=${TASKS_PAGE_SIZE}&shift_type=pricework`),
             ),
         );
 
@@ -451,9 +474,38 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         );
     }, []);
 
-    const fetchData = useCallback(async () => {
+    const hydrateFromCache = useCallback(() => {
+        setProjects(priceWorkSettingsCache.projects);
+        setTrades(priceWorkSettingsCache.trades);
+        setTasks(priceWorkSettingsCache.tasks);
+        setUsers(priceWorkSettingsCache.users);
+        setRows(priceWorkSettingsCache.rows);
+        setPendingDeletedRows([]);
+        setSelectedRowIds(new Set());
+        hasLoadedOnceRef.current = true;
+        setLoading(false);
+    }, []);
+
+    const writePriceWorkCache = useCallback((
+        next: Partial<Omit<PriceWorkSettingsCache, 'loaded' | 'companyId' | 'fetchedAt'>>,
+    ) => {
+        priceWorkSettingsCache = {
+            ...priceWorkSettingsCache,
+            ...next,
+            loaded: true,
+            companyId: user?.company_id ?? priceWorkSettingsCache.companyId,
+            fetchedAt: Date.now(),
+        };
+    }, [user?.company_id]);
+
+    const fetchData = useCallback(async (forceRefresh = false) => {
         if (!user?.company_id) {
             setLoading(false);
+            return;
+        }
+
+        if (!forceRefresh && isPriceWorkCacheWarm(user.company_id)) {
+            hydrateFromCache();
             return;
         }
 
@@ -489,14 +541,13 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 storedRowOrder.length > 0 ? storedRowOrder : cachedRowOrder,
             );
 
-            priceWorkSettingsCache = {
-                loaded: true,
+            writePriceWorkCache({
                 tasks: priceworkTasks,
                 projects: nextProjects,
                 users: nextUsers,
                 trades: nextTrades,
                 rows: nextRows,
-            };
+            });
 
             setProjects(nextProjects);
             setTrades(nextTrades);
@@ -512,7 +563,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         } finally {
             setLoading(false);
         }
-    }, [fetchAllTasks, user?.company_id]);
+    }, [fetchAllTasks, hydrateFromCache, user?.company_id, writePriceWorkCache]);
 
     const syncSavedRows = (savedRows: PricingRow[]) => {
         const savedRowIds = new Set(savedRows.map((row) => row.id));
@@ -528,6 +579,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                             prices[projectId] = {
                                 ...value,
                                 original_is_active: value.is_active,
+                                original_price: value.price,
                             };
                             return prices;
                         },
@@ -544,15 +596,13 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     };
                 });
 
-            priceWorkSettingsCache = {
-                ...priceWorkSettingsCache,
-                loaded: true,
+            writePriceWorkCache({
                 tasks,
                 projects,
                 users,
                 trades,
                 rows: nextRows,
-            };
+            });
             saveStoredRowOrder(user?.company_id, nextRows);
 
             return nextRows;
@@ -664,10 +714,6 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             if (oldIndex === -1 || newIndex === -1) return prev;
 
             const nextRows = arrayMove(prev, oldIndex, newIndex);
-            priceWorkSettingsCache = {
-                ...priceWorkSettingsCache,
-                rows: nextRows,
-            };
             saveStoredRowOrder(user?.company_id, nextRows);
 
             return nextRows;
@@ -735,39 +781,67 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         setRows((prev) => prev.map((row) => (row.id === rowId ? {...row, ...changes} : row)));
     };
 
-    const getCategoryOptions = (tradeId: string) => {
-        const categoryMap = new Map<string, {id: string; name: string}>();
+    const categoriesByTrade = useMemo(() => {
+        const optionsByTrade = new Map<string, Array<{id: string; name: string}>>();
+        const seenByTrade = new Map<string, Set<string>>();
 
-        tasks
-            .filter((task) => getTaskTradeId(task) === tradeId)
-            .forEach((task) => {
-                const categoryId = getCategoryId(task);
-                if (!categoryId || categoryMap.has(categoryId)) return;
-                categoryMap.set(categoryId, {id: categoryId, name: task.category_name || 'Category'});
+        tasks.forEach((task) => {
+            const tradeId = getTaskTradeId(task);
+            const categoryId = getCategoryId(task);
+            if (!tradeId || !categoryId) return;
+
+            if (!optionsByTrade.has(tradeId)) {
+                optionsByTrade.set(tradeId, []);
+                seenByTrade.set(tradeId, new Set());
+            }
+
+            const seen = seenByTrade.get(tradeId);
+            if (!seen || seen.has(categoryId)) return;
+            seen.add(categoryId);
+            optionsByTrade.get(tradeId)?.push({
+                id: categoryId,
+                name: task.category_name || 'Category',
             });
+        });
 
-        return Array.from(categoryMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    };
+        optionsByTrade.forEach((options) => options.sort((a, b) => a.name.localeCompare(b.name)));
+        return optionsByTrade;
+    }, [tasks]);
 
-    const getSubCategoryOptions = (tradeId: string, categoryId: string) => {
-        const subCategoryMap = new Map<string, {id: string; name: string; task_id: string}>();
+    const subCategoriesByTradeCategory = useMemo(() => {
+        const optionsByKey = new Map<string, Array<{id: string; name: string; task_id: string}>>();
+        const seenByKey = new Map<string, Set<string>>();
 
-        tasks
-            .filter((task) => getTaskTradeId(task) === tradeId && getCategoryId(task) === categoryId)
-            .forEach((task) => {
-                const subCategoryId = getSubCategoryId(task);
-                if (!subCategoryId) return;
+        tasks.forEach((task) => {
+            const tradeId = getTaskTradeId(task);
+            const categoryId = getCategoryId(task);
+            const subCategoryId = getSubCategoryId(task);
+            if (!tradeId || !categoryId || !subCategoryId) return;
 
-                if (subCategoryMap.has(subCategoryId)) return;
-                subCategoryMap.set(subCategoryId, {
-                    id: subCategoryId,
-                    name: task.sub_category_name || 'Subcategory',
-                    task_id: String(task.id),
-                });
+            const key = `${tradeId}::${categoryId}`;
+            if (!optionsByKey.has(key)) {
+                optionsByKey.set(key, []);
+                seenByKey.set(key, new Set());
+            }
+
+            const seen = seenByKey.get(key);
+            if (!seen || seen.has(subCategoryId)) return;
+            seen.add(subCategoryId);
+            optionsByKey.get(key)?.push({
+                id: subCategoryId,
+                name: task.sub_category_name || 'Subcategory',
+                task_id: String(task.id),
             });
+        });
 
-        return Array.from(subCategoryMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    };
+        optionsByKey.forEach((options) => options.sort((a, b) => a.name.localeCompare(b.name)));
+        return optionsByKey;
+    }, [tasks]);
+
+    const getCategoryOptions = (tradeId: string) => categoriesByTrade.get(tradeId) || [];
+
+    const getSubCategoryOptions = (tradeId: string, categoryId: string) =>
+        subCategoriesByTradeCategory.get(`${tradeId}::${categoryId}`) || [];
 
     const findTaskForSelection = (tradeId: string, categoryId: string, subCategoryId: string) => {
         return tasks.find((task) =>
@@ -793,16 +867,23 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     };
 
     const handleUserChange = (row: PricingRow, userId: string) => {
-        const selectedUserTradeId = users.find((item) => String(item.id) === userId)?.trade_id;
         const selectedUser = users.find((item) => String(item.id) === userId);
-        handleTradeChange(row, selectedUserTradeId ? String(selectedUserTradeId) : '');
+        const selectedUserTradeId = selectedUser?.trade_id ? String(selectedUser.trade_id) : '';
         updateRow(row.id, {
             user_id: userId,
             user_name: selectedUser ? getUserDisplayName(selectedUser) : '',
-            trade_id: selectedUserTradeId ? String(selectedUserTradeId) : '',
+            trade_id: selectedUserTradeId,
             trade_name: selectedUserTradeId
-                ? trades.find((trade) => String(trade.id) === String(selectedUserTradeId))?.name || ''
+                ? trades.find((trade) => String(trade.id) === selectedUserTradeId)?.name || ''
                 : '',
+            category_id: '',
+            category_name: '',
+            sub_category_id: '',
+            sub_category_name: '',
+            task_id: '',
+            base_active: false,
+            base_price: '0.00',
+            project_prices: {},
         });
     };
 
@@ -840,25 +921,29 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
     const updateProjectPrice = (row: PricingRow, projectId: number, changes: Partial<CellState>) => {
         const projectKey = String(projectId);
-        updateRow(row.id, {
-            project_prices: {
-                ...row.project_prices,
-                [projectKey]: {
-                    is_active: row.project_prices[projectKey]?.is_active ?? false,
-                    price: row.project_prices[projectKey]?.price ?? row.base_price ?? '0.00',
-                    ...changes,
+        setRows((prev) => prev.map((current) => {
+            if (current.id !== row.id) return current;
+
+            const existing = current.project_prices[projectKey];
+            return {
+                ...current,
+                project_prices: {
+                    ...current.project_prices,
+                    [projectKey]: {
+                        is_active: existing?.is_active ?? false,
+                        original_is_active: existing?.original_is_active,
+                        original_price: existing?.original_price,
+                        price: existing?.price ?? current.base_price ?? '0.00',
+                        ...changes,
+                    },
                 },
-            },
-        });
+            };
+        }));
     };
 
     const addRow = () => {
         setRows((prev) => {
             const nextRows = [...prev, createRow()];
-            priceWorkSettingsCache = {
-                ...priceWorkSettingsCache,
-                rows: nextRows,
-            };
             saveStoredRowOrder(user?.company_id, nextRows);
 
             return nextRows;
@@ -886,10 +971,6 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 ...prev.slice(insertIndex),
             ];
 
-            priceWorkSettingsCache = {
-                ...priceWorkSettingsCache,
-                rows: nextRows,
-            };
             saveStoredRowOrder(user?.company_id, nextRows);
 
             return nextRows;
@@ -964,7 +1045,17 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 toast.success(res.data?.message || 'Selected settings deleted successfully');
             }
 
-            setRows((prev) => prev.filter((row) => !selectedRowIds.has(row.id)));
+            setRows((prev) => {
+                const nextRows = prev.filter((row) => !selectedRowIds.has(row.id));
+                writePriceWorkCache({
+                    tasks,
+                    projects,
+                    users,
+                    trades,
+                    rows: nextRows,
+                });
+                return nextRows;
+            });
             setSelectedRowIds(new Set());
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Failed to delete selected settings');
@@ -1071,6 +1162,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 }
 
                 if (!value.is_active) return;
+                if (!isDirtyActiveProjectCell(value)) return;
 
                 items.push({
                     task_id: Number(row.task_id),
@@ -1240,6 +1332,19 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                             {deleting ? 'Deleting...' : `Delete selected (${selectedRowIds.size})`}
                         </Button>
                     )}
+
+                    <Tooltip title="Refresh price work settings">
+                        <span>
+                            <IconButton
+                                color="primary"
+                                onClick={() => fetchData(true)}
+                                disabled={loading || saving || deleting}
+                                aria-label="Refresh price work settings"
+                            >
+                                <IconRefresh size={18}/>
+                            </IconButton>
+                        </span>
+                    </Tooltip>
 
                     <Button
                         type="button"
