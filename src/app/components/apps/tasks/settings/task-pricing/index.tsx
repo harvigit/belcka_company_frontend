@@ -2,7 +2,6 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
-    Autocomplete,
     Box,
     Button,
     CircularProgress,
@@ -36,47 +35,21 @@ import {
 import {
     SortableContext,
     arrayMove,
-    useSortable,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import {CSS} from '@dnd-kit/utilities';
-import {IconDeviceFloppy, IconGripVertical, IconPlus, IconSearch, IconTrash} from '@tabler/icons-react';
-import IOSSwitch from '@/app/components/common/IOSSwitch';
+import {useVirtualizer} from '@tanstack/react-virtual';
+import {IconDeviceFloppy, IconPlus, IconRefresh, IconSearch, IconTrash} from '@tabler/icons-react';
 import api from '@/utils/axios';
 import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import toast from 'react-hot-toast';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
+import PriceWorkMatrixRow from './PriceWorkMatrixRow';
+import type {CellState, NamedOption, PricingRow, SubCategoryOption} from './types';
 
 interface TaskPricingMatrixProps {
     onSaveSuccess?: () => void;
 }
-
-type CellState = {
-    is_active: boolean;
-    original_is_active?: boolean;
-    price: string;
-};
-
-type PricingRow = {
-    id: string;
-    user_id: string;
-    user_name?: string;
-    original_user_id?: string | null;
-    trade_id: string;
-    trade_name?: string;
-    category_id: string;
-    category_name?: string;
-    sub_category_id: string;
-    sub_category_name?: string;
-    task_id: string;
-    original_task_id?: string;
-    base_active: boolean;
-    original_base_active: boolean;
-    base_price: string;
-    original_base_price: string;
-    project_prices: Record<string, CellState>;
-};
 
 type DeletedPricingRow = {
     task_id: number;
@@ -86,6 +59,8 @@ type DeletedPricingRow = {
 
 type PriceWorkSettingsCache = {
     loaded: boolean;
+    companyId: number | null;
+    fetchedAt: number;
     tasks: any[];
     projects: any[];
     users: any[];
@@ -93,18 +68,38 @@ type PriceWorkSettingsCache = {
     rows: PricingRow[];
 };
 
-const TASKS_PAGE_SIZE = 500;
 const DEFAULT_PROJECT_COLUMNS_PER_PAGE = 8;
 const PROJECT_COLUMNS_PER_PAGE_OPTIONS = [8, 12, 20];
 const PRICE_WORK_ROW_ORDER_STORAGE_KEY_PREFIX = 'price-work-settings-row-order';
+const PRICE_WORK_CACHE_TTL_MS = 5 * 60 * 1000;
+const PRICE_WORK_ROW_HEIGHT = 52;
+const EMPTY_NAMED_OPTIONS: NamedOption[] = [];
+const EMPTY_SUB_CATEGORY_OPTIONS: SubCategoryOption[] = [];
 
 let priceWorkSettingsCache: PriceWorkSettingsCache = {
     loaded: false,
+    companyId: null,
+    fetchedAt: 0,
     tasks: [],
     projects: [],
     users: [],
     trades: [],
     rows: [],
+};
+
+const isPriceWorkCacheWarm = (companyId: number) =>
+    priceWorkSettingsCache.loaded &&
+    priceWorkSettingsCache.companyId === companyId &&
+    Date.now() - priceWorkSettingsCache.fetchedAt < PRICE_WORK_CACHE_TTL_MS;
+
+const isDirtyActiveProjectCell = (value: CellState) => {
+    if (!value.is_active) return false;
+    if (value.original_is_active === undefined || value.original_price === undefined) return true;
+
+    return (
+        value.original_is_active !== value.is_active ||
+        String(value.original_price) !== String(value.price)
+    );
 };
 
 const getTaskBasePrice = (_task: any) => '0.00';
@@ -139,27 +134,6 @@ const getUserDisplayName = (user: any) =>
     [user?.first_name, user?.last_name].filter(Boolean).join(' ') ||
     user?.email ||
     '-';
-
-const getUserOptionDetail = (user: any) =>
-    [user?.trade_name, user?.user_code].filter(Boolean).join(' - ');
-
-const filterOptionsByWordStart = <T,>(
-    options: T[],
-    inputValue: string,
-    getLabel: (option: T) => string,
-) => {
-    const searchWords = inputValue.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    if (!searchWords.length) return options;
-
-    return options.filter((option) =>
-        searchWords.every((searchWord) =>
-            getLabel(option)
-                .toLowerCase()
-                .split(/\s+/)
-                .some((word) => word.startsWith(searchWord)),
-        ),
-    );
-};
 
 const getProjectName = (project: any) =>
     project?.name || project?.project_name || project?.address || '-';
@@ -274,10 +248,12 @@ const buildRowsFromSavedPrices = (savedPrices: any[], priceworkTasks: any[]): Pr
         const row = groupedRows.get(rowKey);
         if (!row) return;
 
+        const savedPrice = priceItem?.price != null ? String(priceItem.price) : '0.00';
         row.project_prices[projectId] = {
             is_active: getSavedPriceProjectActive(priceItem),
             original_is_active: getSavedPriceProjectActive(priceItem),
-            price: priceItem?.price != null ? String(priceItem.price) : '0.00',
+            price: savedPrice,
+            original_price: savedPrice,
         };
     });
 
@@ -334,81 +310,13 @@ const preserveRowOrder = (nextRows: PricingRow[], orderedKeys: string[]) => {
     return [...orderedRows, ...newRows];
 };
 
-const SortablePricingTableRow = ({
-    rowId,
-    children,
-}: {
-    rowId: string;
-    children: (params: {
-        attributes: ReturnType<typeof useSortable>['attributes'];
-        listeners: ReturnType<typeof useSortable>['listeners'];
-        setActivatorNodeRef: ReturnType<typeof useSortable>['setActivatorNodeRef'];
-        isDragging: boolean;
-    }) => React.ReactNode;
-}) => {
-    const {
-        attributes,
-        listeners,
-        setActivatorNodeRef,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({id: rowId});
-
-    return (
-        <TableRow
-            ref={setNodeRef}
-            hover
-            style={{
-                transform: CSS.Transform.toString(transform),
-                transition,
-                position: isDragging ? 'relative' : undefined,
-                zIndex: isDragging ? 2 : undefined,
-            }}
-        >
-            {children({attributes, listeners, setActivatorNodeRef, isDragging})}
-        </TableRow>
-    );
-};
-
-const RowDragHandle = ({
-    attributes,
-    listeners,
-    setActivatorNodeRef,
-    isDragging,
-}: {
-    attributes: ReturnType<typeof useSortable>['attributes'];
-    listeners: ReturnType<typeof useSortable>['listeners'];
-    setActivatorNodeRef: ReturnType<typeof useSortable>['setActivatorNodeRef'];
-    isDragging: boolean;
-}) => (
-    <Tooltip title="Drag row">
-        <IconButton
-            ref={setActivatorNodeRef}
-            size="small"
-            aria-label="Drag price work row"
-            {...attributes}
-            {...listeners}
-            sx={{
-                width: 22,
-                height: 22,
-                cursor: isDragging ? 'grabbing' : 'grab',
-                color: '#64748b',
-                '&:hover': {backgroundColor: 'transparent', color: '#1976d2'},
-            }}
-            onClick={(event) => event.stopPropagation()}
-        >
-            <IconGripVertical size={16}/>
-        </IconButton>
-    </Tooltip>
-);
-
 const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) => {
     const session = useSession();
     const user = session.data?.user as User & {company_id?: number | null};
     const hasLoadedOnceRef = useRef(priceWorkSettingsCache.loaded);
     const savingRef = useRef(false);
+    const [tableScrollEl, setTableScrollEl] = useState<HTMLDivElement | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
 
     const [loading, setLoading] = useState(!priceWorkSettingsCache.loaded);
     const [saving, setSaving] = useState(false);
@@ -430,30 +338,43 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         useSensor(KeyboardSensor),
     );
 
-    const fetchAllTasks = useCallback(async (companyId: number) => {
-        const firstResponse = await api.get(
-            `/tasks/get?company_id=${companyId}&page=1&limit=${TASKS_PAGE_SIZE}`,
-        );
-        const firstTasks = firstResponse.data?.info || [];
-        const totalPages = Number(firstResponse.data?.data?.totalPages) || 1;
-
-        if (totalPages <= 1) return firstTasks;
-
-        const remainingResponses = await Promise.all(
-            Array.from({length: totalPages - 1}, (_, index) =>
-                api.get(`/tasks/get?company_id=${companyId}&page=${index + 2}&limit=${TASKS_PAGE_SIZE}`),
-            ),
-        );
-
-        return remainingResponses.reduce(
-            (allTasks: any[], response) => allTasks.concat(response.data?.info || []),
-            firstTasks,
-        );
+    const fetchSettingsTasks = useCallback(async () => {
+        const response = await api.get('/pricework/settings/tasks');
+        return Array.isArray(response.data?.info) ? response.data.info : [];
     }, []);
 
-    const fetchData = useCallback(async () => {
+    const hydrateFromCache = useCallback(() => {
+        setProjects(priceWorkSettingsCache.projects);
+        setTrades(priceWorkSettingsCache.trades);
+        setTasks(priceWorkSettingsCache.tasks);
+        setUsers(priceWorkSettingsCache.users);
+        setRows(priceWorkSettingsCache.rows);
+        setPendingDeletedRows([]);
+        setSelectedRowIds(new Set());
+        hasLoadedOnceRef.current = true;
+        setLoading(false);
+    }, []);
+
+    const writePriceWorkCache = useCallback((
+        next: Partial<Omit<PriceWorkSettingsCache, 'loaded' | 'companyId' | 'fetchedAt'>>,
+    ) => {
+        priceWorkSettingsCache = {
+            ...priceWorkSettingsCache,
+            ...next,
+            loaded: true,
+            companyId: user?.company_id ?? priceWorkSettingsCache.companyId,
+            fetchedAt: Date.now(),
+        };
+    }, [user?.company_id]);
+
+    const fetchData = useCallback(async (forceRefresh = false) => {
         if (!user?.company_id) {
             setLoading(false);
+            return;
+        }
+
+        if (!forceRefresh && isPriceWorkCacheWarm(user.company_id)) {
+            hydrateFromCache();
             return;
         }
 
@@ -466,8 +387,8 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     console.error('Error fetching pricework resources', err);
                     return {data: {projects: [], trades: [], users: []}};
                 }),
-                fetchAllTasks(user.company_id).catch((err) => {
-                    console.error('Error fetching tasks', err);
+                fetchSettingsTasks().catch((err) => {
+                    console.error('Error fetching price work tasks', err);
                     return [];
                 }),
                 api.get('/pricework/settings/prices').catch((err) => {
@@ -489,14 +410,13 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 storedRowOrder.length > 0 ? storedRowOrder : cachedRowOrder,
             );
 
-            priceWorkSettingsCache = {
-                loaded: true,
+            writePriceWorkCache({
                 tasks: priceworkTasks,
                 projects: nextProjects,
                 users: nextUsers,
                 trades: nextTrades,
                 rows: nextRows,
-            };
+            });
 
             setProjects(nextProjects);
             setTrades(nextTrades);
@@ -512,7 +432,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         } finally {
             setLoading(false);
         }
-    }, [fetchAllTasks, user?.company_id]);
+    }, [fetchSettingsTasks, hydrateFromCache, user?.company_id, writePriceWorkCache]);
 
     const syncSavedRows = (savedRows: PricingRow[]) => {
         const savedRowIds = new Set(savedRows.map((row) => row.id));
@@ -528,6 +448,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                             prices[projectId] = {
                                 ...value,
                                 original_is_active: value.is_active,
+                                original_price: value.price,
                             };
                             return prices;
                         },
@@ -544,15 +465,13 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     };
                 });
 
-            priceWorkSettingsCache = {
-                ...priceWorkSettingsCache,
-                loaded: true,
+            writePriceWorkCache({
                 tasks,
                 projects,
                 users,
                 trades,
                 rows: nextRows,
-            };
+            });
             saveStoredRowOrder(user?.company_id, nextRows);
 
             return nextRows;
@@ -649,11 +568,36 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         [filteredRows, selectedRowIds],
     );
 
+    const rowVirtualizer = useVirtualizer({
+        count: filteredRows.length,
+        getScrollElement: () => tableScrollEl,
+        estimateSize: () => PRICE_WORK_ROW_HEIGHT,
+        overscan: isDragging ? filteredRows.length : 8,
+        getItemKey: (index) => filteredRows[index]?.id ?? index,
+    });
+
+    const virtualItems = rowVirtualizer.getVirtualItems();
+    const virtualPaddingTop = virtualItems[0]?.start ?? 0;
+    const virtualPaddingBottom = Math.max(
+        0,
+        rowVirtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]?.end ?? 0),
+    );
+    const virtualRows = virtualItems
+        .map((virtualRow) => filteredRows[virtualRow.index])
+        .filter((row): row is PricingRow => Boolean(row));
+    const matrixColumnCount = 8 + displayedProjects.length;
+
+    useEffect(() => {
+        if (!tableScrollEl || filteredRows.length === 0) return;
+        rowVirtualizer.scrollToIndex(0, {align: 'start'});
+    }, [projectPage, rowVirtualizer, searchTerm, selectedProjectFilter, tableScrollEl]);
+
     const isAllVisibleSelected = filteredRows.length > 0 && selectedVisibleRowIds.length === filteredRows.length;
     const isSomeVisibleSelected = selectedVisibleRowIds.length > 0 && selectedVisibleRowIds.length < filteredRows.length;
 
     const handleDragEnd = (event: DragEndEvent) => {
         const {active, over} = event;
+        setIsDragging(false);
 
         if (!over || active.id === over.id) return;
 
@@ -664,10 +608,6 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             if (oldIndex === -1 || newIndex === -1) return prev;
 
             const nextRows = arrayMove(prev, oldIndex, newIndex);
-            priceWorkSettingsCache = {
-                ...priceWorkSettingsCache,
-                rows: nextRows,
-            };
             saveStoredRowOrder(user?.company_id, nextRows);
 
             return nextRows;
@@ -694,91 +634,85 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         MenuListProps: {dense: true, sx: {py: 0.5}},
     };
 
-    const tableAutocompleteSlotProps = {
-        paper: {
-            sx: {
-                mt: 0.5,
-                border: '1px solid #d9e2ef',
-                borderRadius: '8px',
-                boxShadow: '0 10px 28px rgba(15, 23, 42, 0.16)',
-                '& .MuiAutocomplete-option': {
-                    minHeight: 36,
-                    px: 1.5,
-                    fontSize: '0.8rem',
-                    whiteSpace: 'normal',
-                },
-            },
-        },
-        listbox: {
-            sx: {
-                py: 0.5,
-                maxHeight: 260,
-            },
-        },
-    };
-
-    const tableAutocompleteSx = {
-        '& .MuiOutlinedInput-root': {
-            minHeight: 36,
-            bgcolor: '#fff',
-            fontSize: '0.8rem',
-            py: 0,
-            borderRadius: '8px',
-        },
-        '& .MuiAutocomplete-input': {
-            minWidth: '0 !important',
-            fontSize: '0.8rem',
-        },
-    };
-
-    const updateRow = (rowId: string, changes: Partial<PricingRow>) => {
+    const updateRow = useCallback((rowId: string, changes: Partial<PricingRow>) => {
         setRows((prev) => prev.map((row) => (row.id === rowId ? {...row, ...changes} : row)));
-    };
+    }, []);
 
-    const getCategoryOptions = (tradeId: string) => {
-        const categoryMap = new Map<string, {id: string; name: string}>();
+    const categoriesByTrade = useMemo(() => {
+        const optionsByTrade = new Map<string, Array<{id: string; name: string}>>();
+        const seenByTrade = new Map<string, Set<string>>();
 
-        tasks
-            .filter((task) => getTaskTradeId(task) === tradeId)
-            .forEach((task) => {
-                const categoryId = getCategoryId(task);
-                if (!categoryId || categoryMap.has(categoryId)) return;
-                categoryMap.set(categoryId, {id: categoryId, name: task.category_name || 'Category'});
+        tasks.forEach((task) => {
+            const tradeId = getTaskTradeId(task);
+            const categoryId = getCategoryId(task);
+            if (!tradeId || !categoryId) return;
+
+            if (!optionsByTrade.has(tradeId)) {
+                optionsByTrade.set(tradeId, []);
+                seenByTrade.set(tradeId, new Set());
+            }
+
+            const seen = seenByTrade.get(tradeId);
+            if (!seen || seen.has(categoryId)) return;
+            seen.add(categoryId);
+            optionsByTrade.get(tradeId)?.push({
+                id: categoryId,
+                name: task.category_name || 'Category',
             });
+        });
 
-        return Array.from(categoryMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    };
+        optionsByTrade.forEach((options) => options.sort((a, b) => a.name.localeCompare(b.name)));
+        return optionsByTrade;
+    }, [tasks]);
 
-    const getSubCategoryOptions = (tradeId: string, categoryId: string) => {
-        const subCategoryMap = new Map<string, {id: string; name: string; task_id: string}>();
+    const subCategoriesByTradeCategory = useMemo(() => {
+        const optionsByKey = new Map<string, Array<{id: string; name: string; task_id: string}>>();
+        const seenByKey = new Map<string, Set<string>>();
 
-        tasks
-            .filter((task) => getTaskTradeId(task) === tradeId && getCategoryId(task) === categoryId)
-            .forEach((task) => {
-                const subCategoryId = getSubCategoryId(task);
-                if (!subCategoryId) return;
+        tasks.forEach((task) => {
+            const tradeId = getTaskTradeId(task);
+            const categoryId = getCategoryId(task);
+            const subCategoryId = getSubCategoryId(task);
+            if (!tradeId || !categoryId || !subCategoryId) return;
 
-                if (subCategoryMap.has(subCategoryId)) return;
-                subCategoryMap.set(subCategoryId, {
-                    id: subCategoryId,
-                    name: task.sub_category_name || 'Subcategory',
-                    task_id: String(task.id),
-                });
+            const key = `${tradeId}::${categoryId}`;
+            if (!optionsByKey.has(key)) {
+                optionsByKey.set(key, []);
+                seenByKey.set(key, new Set());
+            }
+
+            const seen = seenByKey.get(key);
+            if (!seen || seen.has(subCategoryId)) return;
+            seen.add(subCategoryId);
+            optionsByKey.get(key)?.push({
+                id: subCategoryId,
+                name: task.sub_category_name || 'Subcategory',
+                task_id: String(task.id),
             });
+        });
 
-        return Array.from(subCategoryMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    };
+        optionsByKey.forEach((options) => options.sort((a, b) => a.name.localeCompare(b.name)));
+        return optionsByKey;
+    }, [tasks]);
 
-    const findTaskForSelection = (tradeId: string, categoryId: string, subCategoryId: string) => {
+    const getCategoryOptions = useCallback((tradeId: string) => (
+        categoriesByTrade.get(tradeId) || EMPTY_NAMED_OPTIONS
+    ), [categoriesByTrade]);
+
+    const getSubCategoryOptions = useCallback((tradeId: string, categoryId: string) => (
+        subCategoriesByTradeCategory.get(`${tradeId}::${categoryId}`) || EMPTY_SUB_CATEGORY_OPTIONS
+    ), [subCategoriesByTradeCategory]);
+
+    const findTaskForSelection = useCallback((tradeId: string, categoryId: string, subCategoryId: string) => {
         return tasks.find((task) =>
             getTaskTradeId(task) === tradeId &&
             getCategoryId(task) === categoryId &&
             getSubCategoryId(task) === subCategoryId,
         );
-    };
+    }, [tasks]);
 
-    const handleTradeChange = (row: PricingRow, tradeId: string) => {
-        updateRow(row.id, {
+    const handleTradeChange = useCallback((rowId: string, tradeId: string) => {
+        updateRow(rowId, {
             trade_id: tradeId,
             trade_name: trades.find((trade) => String(trade.id) === tradeId)?.name || '',
             category_id: '',
@@ -790,84 +724,134 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             base_price: '0.00',
             project_prices: {},
         });
-    };
+    }, [trades, updateRow]);
 
-    const handleUserChange = (row: PricingRow, userId: string) => {
-        const selectedUserTradeId = users.find((item) => String(item.id) === userId)?.trade_id;
+    const handleUserChange = useCallback((rowId: string, userId: string) => {
         const selectedUser = users.find((item) => String(item.id) === userId);
-        handleTradeChange(row, selectedUserTradeId ? String(selectedUserTradeId) : '');
-        updateRow(row.id, {
+        const selectedUserTradeId = selectedUser?.trade_id ? String(selectedUser.trade_id) : '';
+        updateRow(rowId, {
             user_id: userId,
             user_name: selectedUser ? getUserDisplayName(selectedUser) : '',
-            trade_id: selectedUserTradeId ? String(selectedUserTradeId) : '',
+            trade_id: selectedUserTradeId,
             trade_name: selectedUserTradeId
-                ? trades.find((trade) => String(trade.id) === String(selectedUserTradeId))?.name || ''
+                ? trades.find((trade) => String(trade.id) === selectedUserTradeId)?.name || ''
                 : '',
-        });
-    };
-
-    const handleCategoryChange = (row: PricingRow, categoryId: string) => {
-        const matchedTask = findTaskForSelection(row.trade_id, categoryId, '');
-        const isNewRow = !row.original_task_id;
-        updateRow(row.id, {
-            category_id: categoryId,
-            category_name: matchedTask?.category_name || '',
+            category_id: '',
+            category_name: '',
             sub_category_id: '',
             sub_category_name: '',
-            task_id: matchedTask ? String(matchedTask.id) : '',
-            base_active: isNewRow ? false : matchedTask ? Number(getTaskBasePrice(matchedTask)) > 0 : false,
-            original_base_active: isNewRow ? false : row.original_base_active,
-            base_price: isNewRow ? '0.00' : matchedTask ? getTaskBasePrice(matchedTask) : '0.00',
-            original_base_price: isNewRow ? '0.00' : row.original_base_price,
+            task_id: '',
+            base_active: false,
+            base_price: '0.00',
             project_prices: {},
         });
-    };
+    }, [trades, updateRow, users]);
 
-    const handleSubCategoryChange = (row: PricingRow, subCategoryId: string, taskId: string) => {
-        const matchedTask = taskMap[taskId] || findTaskForSelection(row.trade_id, row.category_id, subCategoryId);
-        const isNewRow = !row.original_task_id;
-        updateRow(row.id, {
-            sub_category_id: subCategoryId,
-            sub_category_name: matchedTask?.sub_category_name || '',
-            task_id: matchedTask ? String(matchedTask.id) : '',
-            base_active: isNewRow ? false : matchedTask ? Number(getTaskBasePrice(matchedTask)) > 0 : false,
-            original_base_active: isNewRow ? false : row.original_base_active,
-            base_price: isNewRow ? '0.00' : matchedTask ? getTaskBasePrice(matchedTask) : '0.00',
-            original_base_price: isNewRow ? '0.00' : row.original_base_price,
-            project_prices: {},
-        });
-    };
+    const handleCategoryChange = useCallback((rowId: string, categoryId: string) => {
+        setRows((prev) => prev.map((row) => {
+            if (row.id !== rowId) return row;
 
-    const updateProjectPrice = (row: PricingRow, projectId: number, changes: Partial<CellState>) => {
-        const projectKey = String(projectId);
-        updateRow(row.id, {
-            project_prices: {
-                ...row.project_prices,
-                [projectKey]: {
-                    is_active: row.project_prices[projectKey]?.is_active ?? false,
-                    price: row.project_prices[projectKey]?.price ?? row.base_price ?? '0.00',
-                    ...changes,
-                },
-            },
-        });
-    };
-
-    const addRow = () => {
-        setRows((prev) => {
-            const nextRows = [...prev, createRow()];
-            priceWorkSettingsCache = {
-                ...priceWorkSettingsCache,
-                rows: nextRows,
+            const matchedTask = findTaskForSelection(row.trade_id, categoryId, '');
+            const isNewRow = !row.original_task_id;
+            return {
+                ...row,
+                category_id: categoryId,
+                category_name: matchedTask?.category_name || '',
+                sub_category_id: '',
+                sub_category_name: '',
+                task_id: matchedTask ? String(matchedTask.id) : '',
+                base_active: isNewRow ? false : matchedTask ? Number(getTaskBasePrice(matchedTask)) > 0 : false,
+                original_base_active: isNewRow ? false : row.original_base_active,
+                base_price: isNewRow ? '0.00' : matchedTask ? getTaskBasePrice(matchedTask) : '0.00',
+                original_base_price: isNewRow ? '0.00' : row.original_base_price,
+                project_prices: {},
             };
-            saveStoredRowOrder(user?.company_id, nextRows);
+        }));
+    }, [findTaskForSelection]);
 
-            return nextRows;
-        });
-    };
+    const handleSubCategoryChange = useCallback((rowId: string, subCategoryId: string, taskId: string) => {
+        setRows((prev) => prev.map((row) => {
+            if (row.id !== rowId) return row;
 
-    const addRowBelowWithUser = (sourceRow: PricingRow) => {
+            const matchedTask = taskMap[taskId] || findTaskForSelection(row.trade_id, row.category_id, subCategoryId);
+            const isNewRow = !row.original_task_id;
+            return {
+                ...row,
+                sub_category_id: subCategoryId,
+                sub_category_name: matchedTask?.sub_category_name || '',
+                task_id: matchedTask ? String(matchedTask.id) : '',
+                base_active: isNewRow ? false : matchedTask ? Number(getTaskBasePrice(matchedTask)) > 0 : false,
+                original_base_active: isNewRow ? false : row.original_base_active,
+                base_price: isNewRow ? '0.00' : matchedTask ? getTaskBasePrice(matchedTask) : '0.00',
+                original_base_price: isNewRow ? '0.00' : row.original_base_price,
+                project_prices: {},
+            };
+        }));
+    }, [findTaskForSelection, taskMap]);
+
+    const handleToggleBaseActive = useCallback((rowId: string) => {
+        setRows((prev) => prev.map((row) => (
+            row.id === rowId ? {...row, base_active: !row.base_active} : row
+        )));
+    }, []);
+
+    const handleCommitBasePrice = useCallback((rowId: string, price: string) => {
+        updateRow(rowId, {base_price: price});
+    }, [updateRow]);
+
+    const handleToggleProjectActive = useCallback((
+        rowId: string,
+        projectId: number,
+        nextActive: boolean,
+        fallbackPrice: string,
+    ) => {
+        const projectKey = String(projectId);
+        setRows((prev) => prev.map((current) => {
+            if (current.id !== rowId) return current;
+
+            const existing = current.project_prices[projectKey];
+            return {
+                ...current,
+                project_prices: {
+                    ...current.project_prices,
+                    [projectKey]: {
+                        is_active: nextActive,
+                        original_is_active: existing?.original_is_active,
+                        original_price: existing?.original_price,
+                        price: existing?.price ?? current.base_price ?? fallbackPrice,
+                    },
+                },
+            };
+        }));
+    }, []);
+
+    const handleCommitProjectPrice = useCallback((rowId: string, projectId: number, price: string) => {
+        const projectKey = String(projectId);
+        setRows((prev) => prev.map((current) => {
+            if (current.id !== rowId) return current;
+
+            const existing = current.project_prices[projectKey];
+            return {
+                ...current,
+                project_prices: {
+                    ...current.project_prices,
+                    [projectKey]: {
+                        is_active: existing?.is_active ?? false,
+                        original_is_active: existing?.original_is_active,
+                        original_price: existing?.original_price,
+                        price,
+                    },
+                },
+            };
+        }));
+    }, []);
+
+    const handleAddBelow = useCallback((rowId: string) => {
         setRows((prev) => {
-            const sourceIndex = prev.findIndex((row) => row.id === sourceRow.id);
+            const sourceRow = prev.find((row) => row.id === rowId);
+            if (!sourceRow) return prev;
+
+            const sourceIndex = prev.findIndex((row) => row.id === rowId);
             const selectedUser = users.find((item) => String(item.id) === sourceRow.user_id);
             const selectedUserTradeId = selectedUser?.trade_id ? String(selectedUser.trade_id) : sourceRow.trade_id;
             const newRow = {
@@ -886,50 +870,57 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 ...prev.slice(insertIndex),
             ];
 
-            priceWorkSettingsCache = {
-                ...priceWorkSettingsCache,
-                rows: nextRows,
-            };
+            saveStoredRowOrder(user?.company_id, nextRows);
+
+            return nextRows;
+        });
+    }, [trades, user?.company_id, users]);
+
+    const handleRemoveRow = useCallback((rowId: string) => {
+        setRows((prev) => {
+            const rowToRemove = prev.find((row) => row.id === rowId);
+
+            if (rowToRemove?.original_task_id) {
+                setPendingDeletedRows((pending) => {
+                    const deletedRow = {
+                        task_id: Number(rowToRemove.original_task_id),
+                        user_id: rowToRemove.original_user_id ? Number(rowToRemove.original_user_id) : null,
+                    };
+                    const alreadyQueued = pending.some((row) =>
+                        row.task_id === deletedRow.task_id &&
+                        row.user_id === deletedRow.user_id,
+                    );
+
+                    return alreadyQueued ? pending : [...pending, deletedRow];
+                });
+            }
+
+            return prev.filter((row) => row.id !== rowId);
+        });
+        setSelectedRowIds((prev) => {
+            const next = new Set(prev);
+            next.delete(rowId);
+            return next;
+        });
+    }, []);
+
+    const addRow = () => {
+        setRows((prev) => {
+            const nextRows = [...prev, createRow()];
             saveStoredRowOrder(user?.company_id, nextRows);
 
             return nextRows;
         });
     };
 
-    const removeRow = (rowId: string) => {
-        const rowToRemove = rows.find((row) => row.id === rowId);
-
-        if (rowToRemove?.original_task_id) {
-            setPendingDeletedRows((prev) => {
-                const deletedRow = {
-                    task_id: Number(rowToRemove.original_task_id),
-                    user_id: rowToRemove.original_user_id ? Number(rowToRemove.original_user_id) : null,
-                };
-                const alreadyQueued = prev.some((row) =>
-                    row.task_id === deletedRow.task_id &&
-                    row.user_id === deletedRow.user_id,
-                );
-
-                return alreadyQueued ? prev : [...prev, deletedRow];
-            });
-        }
-
-        setRows((prev) => prev.filter((row) => row.id !== rowId));
-        setSelectedRowIds((prev) => {
-            const next = new Set(prev);
-            next.delete(rowId);
-            return next;
-        });
-    };
-
-    const toggleRowSelection = (rowId: string) => {
+    const toggleRowSelection = useCallback((rowId: string) => {
         setSelectedRowIds((prev) => {
             const next = new Set(prev);
             if (next.has(rowId)) next.delete(rowId);
             else next.add(rowId);
             return next;
         });
-    };
+    }, []);
 
     const toggleVisibleRowsSelection = (checked: boolean) => {
         setSelectedRowIds((prev) => {
@@ -964,7 +955,17 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 toast.success(res.data?.message || 'Selected settings deleted successfully');
             }
 
-            setRows((prev) => prev.filter((row) => !selectedRowIds.has(row.id)));
+            setRows((prev) => {
+                const nextRows = prev.filter((row) => !selectedRowIds.has(row.id));
+                writePriceWorkCache({
+                    tasks,
+                    projects,
+                    users,
+                    trades,
+                    rows: nextRows,
+                });
+                return nextRows;
+            });
             setSelectedRowIds(new Set());
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Failed to delete selected settings');
@@ -1071,6 +1072,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 }
 
                 if (!value.is_active) return;
+                if (!isDirtyActiveProjectCell(value)) return;
 
                 items.push({
                     task_id: Number(row.task_id),
@@ -1241,6 +1243,19 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                         </Button>
                     )}
 
+                    <Tooltip title="Refresh price work settings">
+                        <span>
+                            <IconButton
+                                color="primary"
+                                onClick={() => fetchData(true)}
+                                disabled={loading || saving || deleting}
+                                aria-label="Refresh price work settings"
+                            >
+                                <IconRefresh size={18}/>
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
                     <Button
                         type="button"
                         variant="contained"
@@ -1266,6 +1281,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
             </Box>
 
             <TableContainer
+                ref={setTableScrollEl}
                 component={Paper}
                 elevation={0}
                 sx={{
@@ -1367,6 +1383,8 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     <DndContext
                         sensors={sensors}
                         collisionDetection={closestCenter}
+                        onDragStart={() => setIsDragging(true)}
+                        onDragCancel={() => setIsDragging(false)}
                         onDragEnd={handleDragEnd}
                     >
                     <TableBody>
@@ -1383,309 +1401,42 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                 items={filteredRows.map((row) => row.id)}
                                 strategy={verticalListSortingStrategy}
                             >
-                            {filteredRows.map((row) => {
-                                const categoryOptions = getCategoryOptions(row.trade_id);
-                                const subCategoryOptions = getSubCategoryOptions(row.trade_id, row.category_id);
-                                const hasSubCategoryOptions = subCategoryOptions.length > 0;
-                                const selectedTask = taskMap[row.task_id];
-                                const selectedTrade = tradeOptions.find((trade) => trade.id === row.trade_id) ||
-                                    (
-                                        row.trade_id
-                                            ? {
-                                                id: row.trade_id,
-                                                name: row.trade_name || selectedTask?.trade_name || 'Select trade',
-                                            }
-                                            : null
-                                    );
-                                const selectedUser = userOptions.find((user) => user.id === row.user_id) ||
-                                    (
-                                        row.user_id
-                                            ? {
-                                                id: row.user_id,
-                                                name: row.user_name || 'Select user',
-                                            }
-                                            : null
-                                    );
-                                return (
-                                    <SortablePricingTableRow key={row.id} rowId={row.id}>
-                                        {({attributes, listeners, setActivatorNodeRef, isDragging}) => (
-                                        <>
-                                        <TableCell align="center" sx={{borderRight: '1px solid #e2e8f0', minWidth: 36, px: 0.5, py: 1}}>
-                                            <RowDragHandle
-                                                attributes={attributes}
-                                                listeners={listeners}
-                                                setActivatorNodeRef={setActivatorNodeRef}
-                                                isDragging={isDragging}
-                                            />
-                                        </TableCell>
-
-                                        <TableCell align="center" sx={{borderRight: '1px solid #e2e8f0', minWidth: 52, px: 0.5, py: 1}}>
-                                            <CustomCheckbox
-                                                checked={selectedRowIds.has(row.id)}
-                                                onChange={() => toggleRowSelection(row.id)}
-                                            />
-                                        </TableCell>
-
-                                        <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 300, py: 1}}>
-                                            <Box sx={{display: 'flex', alignItems: 'center', gap: 0.75}}>
-                                                <Autocomplete
-                                                    size="small"
-                                                    fullWidth
-                                                    options={userOptions}
-                                                    value={selectedUser}
-                                                    getOptionKey={(option) => String(option.id)}
-                                                    getOptionLabel={(option) => option.name || 'User'}
-                                                    filterOptions={(options, state) =>
-                                                        filterOptionsByWordStart(
-                                                            options,
-                                                            state.inputValue,
-                                                            (option) => [option.name, getUserOptionDetail(option)].filter(Boolean).join(' '),
-                                                        )
-                                                    }
-                                                    isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
-                                                    onChange={(_, value) => {
-                                                        handleUserChange(row, value ? String(value.id) : '');
-                                                    }}
-                                                    autoHighlight
-                                                    noOptionsText="No users found"
-                                                    renderOption={(props, option) => {
-                                                        const {key, ...optionProps} = props;
-                                                        const detail = getUserOptionDetail(option);
-
-                                                        return (
-                                                            <Box component="li" key={String(option.id)} {...optionProps}>
-                                                                <Box sx={{display: 'flex', flexDirection: 'column', minWidth: 0}}>
-                                                                    <Typography component="span" sx={{fontSize: '0.8rem', lineHeight: 1.25}}>
-                                                                        {option.name || 'User'}
-                                                                    </Typography>
-                                                                    {detail && (
-                                                                        <Typography component="span" sx={{fontSize: '0.72rem', lineHeight: 1.25, color: '#64748b'}}>
-                                                                            {detail}
-                                                                        </Typography>
-                                                                    )}
-                                                                </Box>
-                                                            </Box>
-                                                        );
-                                                    }}
-                                                    renderInput={(params) => (
-                                                        <TextField
-                                                            {...params}
-                                                            placeholder="Select user"
-                                                        />
-                                                    )}
-                                                    slotProps={tableAutocompleteSlotProps}
-                                                    sx={{...tableAutocompleteSx, flex: 1, minWidth: 0}}
-                                                />
-
-                                                <Tooltip title={row.user_id ? 'Add row for this user' : 'Select user first'}>
-                                                    <span>
-                                                        <IconButton
-                                                            size="small"
-                                                            disabled={!row.user_id}
-                                                            onClick={() => addRowBelowWithUser(row)}
-                                                            aria-label="Add row below with selected user"
-                                                            sx={{
-                                                                width: 28,
-                                                                height: 28,
-                                                                color: '#1976d2',
-                                                                '&:hover': {backgroundColor: 'transparent'},
-                                                            }}
-                                                        >
-                                                            <IconPlus size={18}/>
-                                                        </IconButton>
-                                                    </span>
-                                                </Tooltip>
-                                            </Box>
-                                        </TableCell>
-
-                                        <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 210, py: 1}}>
-                                            <Autocomplete
-                                                size="small"
-                                                fullWidth
-                                                options={tradeOptions}
-                                                value={selectedTrade}
-                                                getOptionLabel={(option) => option.name || 'Trade'}
-                                                filterOptions={(options, state) =>
-                                                    filterOptionsByWordStart(options, state.inputValue, (option) => option.name || '')
-                                                }
-                                                isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
-                                                onChange={(_, value) => {
-                                                    handleTradeChange(row, value ? String(value.id) : '');
-                                                }}
-                                                autoHighlight
-                                                noOptionsText="No trades found"
-                                                renderInput={(params) => (
-                                                    <TextField
-                                                        {...params}
-                                                        placeholder="Select trade"
-                                                    />
-                                                )}
-                                                slotProps={tableAutocompleteSlotProps}
-                                                sx={tableAutocompleteSx}
-                                            />
-                                        </TableCell>
-
-                                        <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 230, py: 1}}>
-                                            <FormControl size="small" fullWidth>
-                                                <Select
-                                                    value={row.category_id}
-                                                    displayEmpty
-                                                    disabled={!row.trade_id}
-                                                    onChange={(event) => handleCategoryChange(row, String(event.target.value))}
-                                                    renderValue={(selected) => {
-                                                        if (!selected) return 'Select category';
-
-                                                        return categoryOptions.find((category) => category.id === String(selected))?.name ||
-                                                            row.category_name ||
-                                                            selectedTask?.category_name ||
-                                                            'Select category';
-                                                    }}
-                                                    MenuProps={selectMenuProps}
-                                                    sx={{height: 36, fontSize: '0.8rem', bgcolor: '#fff'}}
-                                                >
-                                                    <MenuItem value="">Select category</MenuItem>
-                                                    {categoryOptions.map((category) => (
-                                                        <MenuItem key={category.id} value={category.id}>
-                                                            {category.name}
-                                                        </MenuItem>
-                                                    ))}
-                                                </Select>
-                                            </FormControl>
-                                        </TableCell>
-
-                                        <TableCell sx={{borderRight: '1px solid #e2e8f0', minWidth: 230, py: 1}}>
-                                            <FormControl size="small" fullWidth>
-                                                <Select
-                                                    value={row.sub_category_id}
-                                                    displayEmpty
-                                                    disabled={!row.category_id || !hasSubCategoryOptions}
-                                                    onChange={(event) => {
-                                                        const selected = subCategoryOptions.find((item) => item.id === String(event.target.value));
-                                                        handleSubCategoryChange(row, String(event.target.value), selected?.task_id || '');
-                                                    }}
-                                                    renderValue={(selected) => {
-                                                        const selectedSubCategory = subCategoryOptions.find((item) =>
-                                                            item.id === String(selected) &&
-                                                            (!row.task_id || item.task_id === row.task_id),
-                                                        );
-
-                                                        if (selectedSubCategory) return selectedSubCategory.name;
-                                                        if (!selected && row.task_id && row.category_id) return row.sub_category_name || selectedTask?.sub_category_name || '-';
-                                                        if (!selected) return 'Select subcategory';
-
-                                                        return row.sub_category_name || selectedTask?.sub_category_name || 'Select subcategory';
-                                                    }}
-                                                    MenuProps={selectMenuProps}
-                                                    sx={{height: 36, fontSize: '0.8rem', bgcolor: '#fff'}}
-                                                >
-                                                    <MenuItem value="">Select subcategory</MenuItem>
-                                                    {subCategoryOptions.map((subCategory) => (
-                                                        <MenuItem key={`${subCategory.id}-${subCategory.task_id}`} value={subCategory.id}>
-                                                            {subCategory.name}
-                                                        </MenuItem>
-                                                    ))}
-                                                </Select>
-                                            </FormControl>
-                                        </TableCell>
-
-                                        <TableCell sx={{borderRight: '1px solid #e2e8f0', px: 1, py: 1, minWidth: 150}}>
-                                            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1}}>
-                                                <IOSSwitch
-                                                    checked={row.base_active}
-                                                    disabled={!row.task_id}
-                                                    onChange={() => updateRow(row.id, {base_active: !row.base_active})}
-                                                />
-
-                                                <TextField
-                                                    size="small"
-                                                    value={row.base_active ? row.base_price : '0.00'}
-                                                    disabled={!row.task_id || !row.base_active}
-                                                    onChange={(event) => {
-                                                        if (/^\d*(?:\.\d{0,2})?$/.test(event.target.value)) {
-                                                            updateRow(row.id, {base_price: event.target.value});
-                                                        }
-                                                    }}
-                                                    placeholder="0.00"
-                                                    sx={{
-                                                        width: 90,
-                                                        '& .MuiInputBase-input': {
-                                                            fontSize: '0.825rem',
-                                                            py: 0.5,
-                                                            px: 0.5,
-                                                            fontWeight: row.base_active ? 700 : 400,
-                                                            color: row.base_active ? '#0f172a' : '#94a3b8',
-                                                            textAlign: 'center',
-                                                        },
-                                                    }}
-                                                />
-                                            </Box>
-                                        </TableCell>
-
-                                        {displayedProjects.map((project) => {
-                                            const projectKey = String(project.id);
-                                            const projectPrice = row.project_prices[projectKey];
-                                            const isProjectActive = projectPrice?.is_active ?? false;
-
-                                            return (
-                                                <TableCell
-                                                    key={project.id}
-                                                    align="center"
-                                                    sx={{borderRight: '1px solid #e2e8f0', px: 1, py: 1, minWidth: 165}}
-                                                >
-                                                    <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1}}>
-                                                        <IOSSwitch
-                                                            checked={isProjectActive}
-                                                            disabled={!row.task_id}
-                                                            onChange={() => updateProjectPrice(row, Number(project.id), {
-                                                                is_active: !isProjectActive,
-                                                                price: projectPrice?.price ?? row.base_price ?? getTaskBasePrice(selectedTask),
-                                                            })}
-                                                        />
-
-                                                        <TextField
-                                                            size="small"
-                                                            value={projectPrice?.price ?? row.base_price ?? '0.00'}
-                                                            disabled={!row.task_id || !isProjectActive}
-                                                            onChange={(event) => {
-                                                                if (/^\d*(?:\.\d{0,2})?$/.test(event.target.value)) {
-                                                                    updateProjectPrice(row, Number(project.id), {price: event.target.value});
-                                                                }
-                                                            }}
-                                                            placeholder="0.00"
-                                                            sx={{
-                                                                width: 90,
-                                                                '& .MuiInputBase-input': {
-                                                                    fontSize: '0.825rem',
-                                                                    py: 0.5,
-                                                                    px: 0.5,
-                                                                    fontWeight: isProjectActive ? 700 : 400,
-                                                                    color: isProjectActive ? '#0f172a' : '#94a3b8',
-                                                                    textAlign: 'center',
-                                                                },
-                                                            }}
-                                                        />
-                                                    </Box>
-                                                </TableCell>
-                                            );
-                                        })}
-
-                                        <TableCell align="center" sx={{py: 1, minWidth: 80}}>
-                                            <Tooltip title="Remove row">
-                                                <IconButton
-                                                    color="error"
-                                                    size="small"
-                                                    onClick={() => removeRow(row.id)}
-                                                    aria-label="Remove price work row"
-                                                >
-                                                    <IconTrash size={18}/>
-                                                </IconButton>
-                                            </Tooltip>
-                                        </TableCell>
-                                        </>
-                                        )}
-                                    </SortablePricingTableRow>
-                                );
-                            })}
+                            <>
+                                {virtualPaddingTop > 0 && (
+                                    <TableRow sx={{height: virtualPaddingTop}}>
+                                        <TableCell colSpan={matrixColumnCount} sx={{height: virtualPaddingTop, p: 0, border: 0}}/>
+                                    </TableRow>
+                                )}
+                                {virtualRows.map((row) => (
+                                    <PriceWorkMatrixRow
+                                        key={row.id}
+                                        row={row}
+                                        displayedProjects={displayedProjects}
+                                        userOptions={userOptions}
+                                        tradeOptions={tradeOptions}
+                                        categoryOptions={getCategoryOptions(row.trade_id)}
+                                        subCategoryOptions={getSubCategoryOptions(row.trade_id, row.category_id)}
+                                        selected={selectedRowIds.has(row.id)}
+                                        selectedTaskName={taskMap[row.task_id]}
+                                        onToggleSelect={toggleRowSelection}
+                                        onUserChange={handleUserChange}
+                                        onTradeChange={handleTradeChange}
+                                        onCategoryChange={handleCategoryChange}
+                                        onSubCategoryChange={handleSubCategoryChange}
+                                        onToggleBaseActive={handleToggleBaseActive}
+                                        onCommitBasePrice={handleCommitBasePrice}
+                                        onToggleProjectActive={handleToggleProjectActive}
+                                        onCommitProjectPrice={handleCommitProjectPrice}
+                                        onAddBelow={handleAddBelow}
+                                        onRemove={handleRemoveRow}
+                                    />
+                                ))}
+                                {virtualPaddingBottom > 0 && (
+                                    <TableRow sx={{height: virtualPaddingBottom}}>
+                                        <TableCell colSpan={matrixColumnCount} sx={{height: virtualPaddingBottom, p: 0, border: 0}}/>
+                                    </TableRow>
+                                )}
+                            </>
                             </SortableContext>
                         )}
 
