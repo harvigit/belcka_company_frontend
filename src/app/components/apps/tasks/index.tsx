@@ -58,6 +58,7 @@ import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import toast from 'react-hot-toast';
 import {useServerTable} from '@/hooks/useServerTable';
+import {appendTableSortQuery} from '@/utils/tableSort';
 import {flexRender, createColumnHelper} from '@tanstack/react-table';
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
@@ -84,6 +85,15 @@ const SHIFT_TYPE_FILTER_OPTIONS = [
     { id: 'pricework', name: 'Pricework' },
     { id: 'both', name: 'Both' },
 ] as const;
+
+const TASKS_TABLE_SORT_MAP: Record<string, string> = {
+    trade: 'trade_name',
+    shift: 'shift_type',
+    category: 'category_name',
+    'sub-cat': 'sub_category_name',
+    show: 'is_show',
+    file: 'file_count',
+};
 
 const KB_RESOURCES_TTL_MS = 5 * 60 * 1000;
 
@@ -324,6 +334,8 @@ const TaskLists = () => {
                     url += `&subcategory_ids=${subCategoryObj.id}`;
                 }
             }
+
+            url = appendTableSortQuery(url, sorting, TASKS_TABLE_SORT_MAP);
 
             const res = await api.get(url);
             if (res.data) {
@@ -626,6 +638,7 @@ const TaskLists = () => {
         () => [
             {
                 id: 'select',
+                enableSorting: false,
                 header: ({table}: any) => (
                     <Stack direction="row" alignItems="center">
                         <CustomCheckbox
@@ -983,6 +996,7 @@ const TaskLists = () => {
             }),
             columnHelper.display({
                 id: 'actions',
+                enableSorting: false,
                 header: 'Actions',
                 cell: ({row}) => {
                     const item = row.original;
@@ -1014,6 +1028,7 @@ const TaskLists = () => {
         setPageCount,
         totalRows,
         setTotalRows,
+        sorting,
     } = useServerTable({
         data: data,
         columns,
@@ -1021,7 +1036,6 @@ const TaskLists = () => {
         debounceDependencies: [searchTerm, filters, user.company_id],
         state: {columnVisibility},
         onColumnVisibilityChange,
-        enableSorting: false,
     });
 
     const simpleColumns = columns.map((column: any) => ({
