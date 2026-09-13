@@ -317,6 +317,8 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
     const savingRef = useRef(false);
     const [tableScrollEl, setTableScrollEl] = useState<HTMLDivElement | null>(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [isScrolling, setIsScrolling] = useState(false);
+    const scrollLoaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [loading, setLoading] = useState(!priceWorkSettingsCache.loaded);
     const [saving, setSaving] = useState(false);
@@ -591,6 +593,28 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
         if (!tableScrollEl || filteredRows.length === 0) return;
         rowVirtualizer.scrollToIndex(0, {align: 'start'});
     }, [projectPage, rowVirtualizer, searchTerm, selectedProjectFilter, tableScrollEl]);
+
+    useEffect(() => {
+        if (!tableScrollEl) return;
+
+        const handleScroll = () => {
+            setIsScrolling(true);
+            if (scrollLoaderTimeoutRef.current) {
+                clearTimeout(scrollLoaderTimeoutRef.current);
+            }
+            scrollLoaderTimeoutRef.current = setTimeout(() => {
+                setIsScrolling(false);
+            }, 200);
+        };
+
+        tableScrollEl.addEventListener('scroll', handleScroll, {passive: true});
+        return () => {
+            tableScrollEl.removeEventListener('scroll', handleScroll);
+            if (scrollLoaderTimeoutRef.current) {
+                clearTimeout(scrollLoaderTimeoutRef.current);
+            }
+        };
+    }, [tableScrollEl]);
 
     const isAllVisibleSelected = filteredRows.length > 0 && selectedVisibleRowIds.length === filteredRows.length;
     const isSomeVisibleSelected = selectedVisibleRowIds.length > 0 && selectedVisibleRowIds.length < filteredRows.length;
@@ -1280,6 +1304,7 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                 </Box>
             </Box>
 
+            <Box sx={{position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column'}}>
             <TableContainer
                 ref={setTableScrollEl}
                 component={Paper}
@@ -1462,6 +1487,23 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                     </DndContext>
                 </Table>
             </TableContainer>
+            {isScrolling && !isDragging && !isInitialLoading && filteredRows.length > 0 && (
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'rgba(255,255,255,0.45)',
+                        pointerEvents: 'none',
+                        zIndex: 2,
+                    }}
+                >
+                    <CircularProgress size={28}/>
+                </Box>
+            )}
+            </Box>
 
             <Typography sx={{fontSize: '0.8rem', color: '#64748b', pl: 1}}>
                 {filteredRows.length} row{filteredRows.length === 1 ? '' : 's'}
