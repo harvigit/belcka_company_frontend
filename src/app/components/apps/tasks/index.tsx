@@ -85,6 +85,26 @@ const SHIFT_TYPE_FILTER_OPTIONS = [
     { id: 'both', name: 'Both' },
 ] as const;
 
+const KB_RESOURCES_TTL_MS = 5 * 60 * 1000;
+
+type KbResourcesCache = {
+    companyId: number | null;
+    expiresAt: number;
+    categories: any[];
+    subCategories: any[];
+    trades: any[];
+    shifts: any[];
+};
+
+let kbResourcesCache: KbResourcesCache = {
+    companyId: null,
+    expiresAt: 0,
+    categories: [],
+    subCategories: [],
+    trades: [],
+    shifts: [],
+};
+
 const TaskLists = () => {
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -144,6 +164,19 @@ const TaskLists = () => {
         setImagesDrawerOpen(true);
     };
 
+    const handleOpenTaskFiles = async (taskId: number, count: number) => {
+        if (!count || !taskId || !user?.company_id) return;
+        try {
+            const res = await api.get(
+                `tasks/images-web?company_id=${user.company_id}&id=${taskId}`,
+            );
+            handleOpenDrawer(res.data?.info || []);
+        } catch (err) {
+            console.error('Failed to fetch task images', err);
+            toast.error('Failed to load files');
+        }
+    };
+
     React.useEffect(() => {
         const checkScroll = () => {
             if (tableContainerRef.current) {
@@ -190,15 +223,42 @@ const TaskLists = () => {
     };
     const handlePopoverClose = () => setAnchorEl2(null);
 
+    const applyKbResources = (payload: {
+        categories?: any[];
+        subCategories?: any[];
+        trades?: any[];
+        shifts?: any[];
+    }) => {
+        setCategories(payload.categories || []);
+        setSubCategories(payload.subCategories || []);
+        setShifts(payload.shifts || []);
+        setTrades(payload.trades || []);
+    };
+
     const fetchResources = async () => {
+        if (!user?.company_id) return;
+        const now = Date.now();
+        if (
+            kbResourcesCache.companyId === user.company_id &&
+            kbResourcesCache.expiresAt > now
+        ) {
+            applyKbResources(kbResourcesCache);
+            return;
+        }
         try {
-            let url = `tasks/get-resources?company_id=${user.company_id}`;
-            const res = await api.get(url);
+            const res = await api.get(
+                `tasks/get-resources?company_id=${user.company_id}&include_projects=false`,
+            );
             if (res.data) {
-                setCategories(res.data.categories);
-                setSubCategories(res.data.subCategories);
-                setShifts(res.data.shifts);
-                setTrades(res.data.trades);
+                applyKbResources(res.data);
+                kbResourcesCache = {
+                    companyId: user.company_id,
+                    expiresAt: now + KB_RESOURCES_TTL_MS,
+                    categories: res.data.categories || [],
+                    subCategories: res.data.subCategories || [],
+                    trades: res.data.trades || [],
+                    shifts: res.data.shifts || [],
+                };
             }
         } catch (err) {
             console.error('Failed to fetch inventory resources', err);
@@ -207,7 +267,7 @@ const TaskLists = () => {
 
     useEffect(() => {
         fetchResources();
-    }, [api]);
+    }, [user?.company_id]);
 
     const initialFormData = {
         id: 0,
@@ -867,11 +927,12 @@ const TaskLists = () => {
                     );
                 },
             }),
-            columnHelper.accessor('task_images', {
+            columnHelper.accessor((row) => row?.file_count ?? row?.task_images?.length ?? 0, {
+                id: 'file',
                 header: 'File',
                 cell: ({row}: any) => {
                     const item = row.original;
-                    const count = item.task_images?.length || 0;
+                    const count = item.file_count ?? item.task_images?.length ?? 0;
 
                     return (
                         <Typography
@@ -887,7 +948,7 @@ const TaskLists = () => {
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (count > 0) {
-                                    handleOpenDrawer(item.task_images);
+                                    handleOpenTaskFiles(item.id, count);
                                 }
                             }}
                         >
