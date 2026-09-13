@@ -982,11 +982,12 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
 
     const addRow = () => {
         setRows((prev) => {
-            const nextRows = [...prev, createRow()];
+            const nextRows = [createRow(), ...prev];
             saveStoredRowOrder(user?.company_id, nextRows);
 
             return nextRows;
         });
+        tableScrollEl?.scrollTo({top: 0});
     };
 
     const toggleRowSelection = useCallback((rowId: string) => {
@@ -1472,6 +1473,64 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                             </TableRow>
                         )}
 
+                        {!isInitialLoading && (
+                            <TableRow hover>
+                                <TableCell
+                                    sx={{
+                                        position: 'sticky',
+                                        top: 41,
+                                        zIndex: 3,
+                                        borderRight: '1px solid #e2e8f0',
+                                        py: 1,
+                                        minWidth: 36,
+                                        bgcolor: '#fff',
+                                    }}
+                                />
+                                <TableCell
+                                    sx={{
+                                        position: 'sticky',
+                                        top: 41,
+                                        zIndex: 3,
+                                        borderRight: '1px solid #e2e8f0',
+                                        py: 1,
+                                        minWidth: 52,
+                                        bgcolor: '#fff',
+                                    }}
+                                />
+                                <TableCell
+                                    sx={{
+                                        position: 'sticky',
+                                        top: 41,
+                                        zIndex: 3,
+                                        borderRight: '1px solid #e2e8f0',
+                                        py: 1,
+                                        minWidth: 300,
+                                        bgcolor: '#fff',
+                                    }}
+                                >
+                                    <Tooltip title="Add price work row">
+                                        <IconButton
+                                            size="small"
+                                            onClick={addRow}
+                                            sx={{width: 28, height: 28, '&:hover': {backgroundColor: 'transparent'}}}
+                                        >
+                                            <IconPlus size={18} color="#1976d2"/>
+                                        </IconButton>
+                                    </Tooltip>
+                                </TableCell>
+                                <TableCell
+                                    colSpan={5 + displayedProjects.length}
+                                    sx={{
+                                        position: 'sticky',
+                                        top: 41,
+                                        zIndex: 3,
+                                        py: 1,
+                                        bgcolor: '#fff',
+                                    }}
+                                />
+                            </TableRow>
+                        )}
+
                         {filteredRows.length > 0 && (
                             <SortableContext
                                 items={sortableRowIds}
@@ -1514,25 +1573,6 @@ const TaskPricingMatrix: React.FC<TaskPricingMatrixProps> = ({onSaveSuccess}) =>
                                 )}
                             </>
                             </SortableContext>
-                        )}
-
-                        {!isInitialLoading && (
-                            <TableRow hover>
-                                <TableCell sx={{borderRight: '1px solid #e2e8f0', py: 1, minWidth: 36}}/>
-                                <TableCell sx={{borderRight: '1px solid #e2e8f0', py: 1, minWidth: 52}}/>
-                                <TableCell sx={{borderRight: '1px solid #e2e8f0', py: 1, minWidth: 300}}>
-                                    <Tooltip title="Add price work row">
-                                        <IconButton
-                                            size="small"
-                                            onClick={addRow}
-                                            sx={{width: 28, height: 28, '&:hover': {backgroundColor: 'transparent'}}}
-                                        >
-                                            <IconPlus size={18} color="#1976d2"/>
-                                        </IconButton>
-                                    </Tooltip>
-                                </TableCell>
-                                <TableCell colSpan={5 + displayedProjects.length} sx={{py: 1}}/>
-                            </TableRow>
                         )}
                     </TableBody>
                     </DndContext>
