@@ -81,7 +81,10 @@ type OverviewData = {
     last_action?: string | null;
   };
   teams?: { id: number; name: string }[];
-  kpis?: Record<string, { value: number; today_delta: number }>;
+  kpis?: Record<
+    string,
+    { value: number; today_delta: number; capacity?: number }
+  >;
   financial_summary?: {
     rows: {
       type: string;
@@ -772,7 +775,9 @@ const Overview = ({
                     fontWeight={800}
                     lineHeight={1.15}
                   >
-                    {item?.value ?? 0}
+                    {kpi.key === "on_site"
+                      ? `${item?.capacity ?? 0} / ${item?.value ?? 0}`
+                      : (item?.value ?? 0)}
                   </Typography>
                   <Typography
                     color={

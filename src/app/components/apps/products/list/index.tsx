@@ -2356,8 +2356,8 @@ const ProductList = () => {
     }),
 
     columnHelper.accessor((row) => row?.status, {
-      id: "inActive",
-      header: () => "In Active",
+      id: "isShow",
+      header: () => "Is Show",
       cell: ({ row }) => {
         const item = row.original;
         const isSaving = isCellSaving(item.id, "status");

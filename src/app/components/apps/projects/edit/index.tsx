@@ -546,7 +546,7 @@ const EditProject: React.FC<EditProjectProps> = ({
                   const showSettingsField = (
                     <ProjectUserMultiSelect
                       id="setting_user_ids"
-                      label="Show Settings"
+                      label="Project setting visible to"
                       placeholder="Select users who can see Settings"
                       options={users}
                       selectedIds={formData.setting_user_ids || ""}
@@ -559,43 +559,6 @@ const EditProject: React.FC<EditProjectProps> = ({
                       // helperText="These users can open this project's Settings tab. Admins can always see it, with or without being assigned."
                       labelMt={embedded ? 0 : 2}
                     />
-                  );
-                  const geofenceField = (
-                    <>
-                      <Typography variant="h5" mt={embedded ? 0 : 2}>
-                        Select Geofence
-                      </Typography>
-                      <Autocomplete
-                        fullWidth
-                        multiple
-                        id="workzone_ids"
-                        options={geofence}
-                        value={geofence.filter((item) =>
-                          formData.workzone_ids
-                            ?.split(",")
-                            .includes(String(item.id)),
-                        )}
-                        onChange={(event, newValue) => {
-                          const selectedIds = newValue
-                            .map((item) => item.id)
-                            .filter(Boolean);
-                          setFormData({
-                            ...formData,
-                            workzone_ids: selectedIds.join(","),
-                          });
-                        }}
-                        getOptionLabel={(option) => option.name}
-                        isOptionEqualToValue={(option, value) =>
-                          option.id === value.id
-                        }
-                        renderInput={(params) => (
-                          <CustomTextField
-                            {...params}
-                            placeholder="Select Geofences"
-                          />
-                        )}
-                      />
-                    </>
                   );
                   const addressField = (
                     <>
@@ -676,7 +639,6 @@ const EditProject: React.FC<EditProjectProps> = ({
                         <Grid size={{ xs: 12, md: 6 }}>{codeField}</Grid>
                         <Grid size={{ xs: 12, md: 6 }}>{teamsField}</Grid>
                         <Grid size={{ xs: 12, md: 6 }}>{usersField}</Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>{geofenceField}</Grid>
                         <Grid size={{ xs: 12, md: 6 }}>{addressField}</Grid>
                         {showSettingsAccess && (
                           <Grid size={{ xs: 6 }}>{showSettingsField}</Grid>
@@ -692,7 +654,7 @@ const EditProject: React.FC<EditProjectProps> = ({
                       {nameField}
                       {teamsField}
                       {usersField}
-                      {geofenceField}
+                      {/* {geofenceField} */}
                       {addressField}
                       {budgetField}
                       {codeField}
