@@ -286,6 +286,7 @@ const ProductList = () => {
       | "cutoff"
       | "is_sub_qty"
       | "display_name"
+      | "status"
       | null;
   }>({ id: null, field: null });
   const [inputValue, setInputValue] = useState("");
@@ -1020,7 +1021,10 @@ const ProductList = () => {
     }
   };
 
-  const updateDisplayName = async (id: string | number, displayName: string) => {
+  const updateDisplayName = async (
+    id: string | number,
+    displayName: string,
+  ) => {
     setSavingCell({ id: Number(id), field: "display_name" });
     try {
       const payload = {
@@ -1177,6 +1181,38 @@ const ProductList = () => {
     } catch (error: any) {
       console.error("Update failed", error);
       toast.error(error?.response?.data?.message || "Failed to update price");
+    } finally {
+      setSavingCell({ id: null, field: null });
+    }
+  };
+
+  const updateStatus = async (id: string, status: boolean) => {
+    setSavingCell({ id: Number(id), field: "status" });
+    try {
+      const payload = {
+        id: Number(id),
+        company_id: Number(user.company_id),
+        status,
+      };
+
+      const res = await api.post("products/update", payload);
+
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message);
+        setData((prev: any[]) =>
+          prev.map((p) =>
+            p.id === Number(id)
+              ? {
+                  ...p,
+                  status,
+                }
+              : p,
+          ),
+        );
+      } else {
+      }
+    } catch (err: any) {
+      console.error(err);
     } finally {
       setSavingCell({ id: null, field: null });
     }
@@ -2319,6 +2355,35 @@ const ProductList = () => {
       },
     }),
 
+    columnHelper.accessor((row) => row?.status, {
+      id: "inActive",
+      header: () => "In Active",
+      cell: ({ row }) => {
+        const item = row.original;
+        const isSaving = isCellSaving(item.id, "status");
+
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isSaving ? (
+              <CircularProgress size={16} />
+            ) : (
+              <IOSSwitch
+                checked={Boolean(item.status)}
+                disabled={!canEdit}
+                onChange={async (e) => {
+                  const checked = e.target.checked;
+                  await updateStatus(item.id, checked);
+                }}
+              />
+            )}
+          </Stack>
+        );
+      },
+    }),
     // columnHelper.display({
     //   id: "actions",
     //   header: "Actions",

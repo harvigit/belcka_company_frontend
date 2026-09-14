@@ -250,6 +250,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         market_price: "",
         sort_id: 0,
         is_sub_qty: false,
+        status: false,
         remove_image: false,
         max_stock: 0,
         model: null,
@@ -298,6 +299,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         sort_id: product.sort_id ?? 0,
         cutoff: product.cutoff ?? 0,
         is_sub_qty: Boolean(product.is_sub_qty),
+        status: Boolean(product.status),
         store_ids: product.store_ids ?? "",
         max_stock: product.max_stock ?? 0,
         model: product.model ?? null,
@@ -697,6 +699,19 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
             }}
           >
             <Grid container spacing={3}>
+              <Grid size={{ xs: 3 }} display={"flex"} justifyContent={"start"}>
+                {/* sub quantity */}
+                <Typography sx={{ mr:2, fontWeight: 700}}>In Active</Typography> 
+                <IOSSwitch
+                  checked={formData.status}
+                  onChange={(e, value) =>
+                    setFormData({
+                      ...formData,
+                      status: value,
+                    })
+                  }
+                />
+              </Grid>
               <Grid size={{ xs: 12 }}>
                 <Box display={"flex"} justifyItems={"center"} gap={3}>
                   {/* Main Image Upload */}
