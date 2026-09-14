@@ -472,14 +472,13 @@ const TablePagination = () => {
     setHistoryLoading(true);
     try {
       const res = await api.get(
-        `requests/get-history?company_id=${id.company_id}`,
+        `requests/get-history?company_id=${id.company_id}&type=109,147`,
       );
       if (res.data?.info) {
         setHistory(res.data.info || []);
       }
     } catch (err) {
       console.error("Failed to fetch team history:", err);
-      toast.error("Failed to load team history");
     }
     setHistoryLoading(false);
   };
