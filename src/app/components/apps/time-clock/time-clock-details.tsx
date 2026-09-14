@@ -1482,11 +1482,21 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         try {
             const ids = timesheetIds.join(',');
             const endpoint = action === 'approve' ? '/timesheet/approve' : '/timesheet/unapprove';
-            const response: AxiosResponse<{ IsSuccess: boolean }> = await api.post(endpoint, {ids});
+            
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            
+            const payload = action === 'approve'
+                ? {
+                    ids,
+                    start_date: format(defaultStartDate, 'dd/MM/yyyy'),
+                    end_date: format(defaultEndDate, 'dd/MM/yyyy'),
+                }
+                : {ids};
+
+            const response: AxiosResponse<{ IsSuccess: boolean }> = await api.post(endpoint, payload);
 
             if (response.data.IsSuccess) {
-                const defaultStartDate = startDate || defaultStart;
-                const defaultEndDate = endDate || defaultEnd;
                 await fetchTimeClockData(defaultStartDate, defaultEndDate);
                 setSelectedRows(new Set());
                 onDataChange?.();

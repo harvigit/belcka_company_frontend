@@ -54,6 +54,11 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
 
     const isConflictResolved = log?.is_conflict_resolved;
     const conflictResolvedBy = log?.conflict_resolved_by_name ?? null;
+    const timeColor = isRequested
+        ? '#f97316'
+        : (log.is_added || log.is_edited || isConflictResolved || requestStatus === 5 || requestStatus === 12)
+            ? '#d32f2f'
+            : 'inherit';
 
     const [isIconHovered, setIsIconHovered] = useState(false);
 
@@ -177,7 +182,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                 borderRadius: '4px',
                 px: '4px',
                 position: 'relative',
-                color: (log.is_added || log.is_edited || isConflictResolved || requestStatus === 5) && !isLocked ? '#d32f2f' : 'inherit',
+                color: timeColor,
                 '&:hover': !isLocked ? {
                     borderColor: '#1976d2',
                     boxShadow: '0 0 0 1px #1976d2',

@@ -282,6 +282,7 @@ export type Index = {
     has_expense_request?: boolean;
     has_worklog_request?: boolean;
     has_penalty_appeal_request?: boolean;
+    has_edited_worklog_time?: boolean;
     total_requests?: number;
     bookkeeper_notification?: {
         has_green_dot?: boolean;
@@ -1901,12 +1902,13 @@ const TimeClock = ({queryParams}: Props) => {
                 const row = info.row.original;
                 const value = info.getValue();
                 const formatted = formatHour(value) || '-';
+                const color = hasPendingRequest(row) ? '#f97316' : row.has_edited_worklog_time ? '#ff0000' : 'inherit';
 
                 return (
                     <Typography
                         variant="h6"
                         sx={{
-                            color: hasPendingRequest(row) ? '#f97316' : 'inherit',
+                            color,
                         }}
                     >
                         {formatted}
@@ -1918,7 +1920,16 @@ const TimeClock = ({queryParams}: Props) => {
         columnHelper.accessor('payable_total_hours', {
             id: 'payable_total_hours',
             header: 'Payable',
-            cell: (info: any) => formatHour(info.getValue()) || '-',
+            cell: (info: any) => {
+                const row = info.row.original;
+                const color = hasPendingRequest(row) ? '#f97316' : row.has_edited_worklog_time ? '#ff0000' : 'inherit';
+
+                return (
+                    <Typography variant="h6" sx={{color}}>
+                        {formatHour(info.getValue()) || '-'}
+                    </Typography>
+                );
+            },
         }),
 
         columnHelper.accessor('daylog_payable_amount', {
@@ -2419,15 +2430,22 @@ const TimeClock = ({queryParams}: Props) => {
         try {
             const ids = timesheetIds.join(',');
             const endpoint = action === 'approve' ? '/timesheet/approve' : '/timesheet/unapprove';
+            const s = startDate || defaultStart;
+            const e = endDate || defaultEnd;
+            const payload = action === 'approve'
+                ? {
+                    ids,
+                    start_date: format(s, 'dd/MM/yyyy'),
+                    end_date: format(e, 'dd/MM/yyyy'),
+                }
+                : {ids};
 
-            const response = await api.post(endpoint, {ids});
+            const response = await api.post(endpoint, payload);
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
                 clearSelectedRows();
                 setHasDataChanged(true);
 
-                const s = startDate || defaultStart;
-                const e = endDate || defaultEnd;
                 await fetchData(s, e);
             } else {
                 setErrorMessage(`Failed to ${action} timesheet(s).`);
