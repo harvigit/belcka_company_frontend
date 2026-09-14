@@ -1,26 +1,28 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Box, IconButton, Stack, Tab, Tabs, Typography } from "@mui/material";
 import {
   IconArrowLeft,
   IconBriefcase,
   IconChartPie,
   IconCoinRupee,
-  IconFileInvoice,
   IconPackage,
   IconReceipt,
   IconReorder,
   IconSettings,
-  IconTruck,
   IconUsers,
 } from "@tabler/icons-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
+import api from "@/utils/axios";
 import Overview from "./Overview";
 import Materials from "./Materials";
 import InternalOrders from "./InternalOrders";
 import ExpenseList from "@/app/components/apps/expenses/list";
 import PriceworkList from "@/app/components/apps/priceworks/list";
 import CasesList from "@/app/components/apps/cases/list";
+import ProjectSettingsTab from "./Settings";
 import { ProjectDetailFiltersProvider } from "./ProjectDetailFiltersContext";
 
 const TABS = [
@@ -48,16 +50,60 @@ const ProjectDetail = () => {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const session = useSession();
+  const user = session.data?.user as User & {
+    company_id?: number | null;
+    user_role_id?: number | null;
+  };
   const projectId = Number(params?.id || 0);
   const requestedTab = (searchParams?.get("tab") as TabKey) || "overview";
-  const initialTab =
-    requestedTab === "settings" ||
-    !TABS.some((item) => item.key === requestedTab)
-      ? "overview"
-      : requestedTab;
-  const [tab, setTab] = useState<TabKey>(initialTab);
+  const [tab, setTab] = useState<TabKey>(
+    TABS.some((item) => item.key === requestedTab) ? requestedTab : "overview",
+  );
   const [projectName, setProjectName] = useState("Project");
-  const [settingOpen, setSettingOpen] = useState(false);
+  const [canViewSettings, setCanViewSettings] = useState(
+    Number(user?.user_role_id) === 1,
+  );
+  const [settingsAccessLoaded, setSettingsAccessLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadSettingsAccess = async () => {
+      if (!projectId || !user?.company_id) return;
+      try {
+        const res = await api.get(
+          `project/get?company_id=${user.company_id}&project_id=${projectId}`,
+        );
+        const projectRow = Array.isArray(res.data?.info)
+          ? res.data.info[0]
+          : res.data?.info;
+        const isAdmin = Number(user.user_role_id) === 1;
+        const assigned = (projectRow?.setting_users || []).some(
+          (item: { id: number }) => Number(item.id) === Number(user.id),
+        );
+        setCanViewSettings(
+          Boolean(projectRow?.can_view_settings) || isAdmin || assigned,
+        );
+      } catch (error) {
+        console.error("Failed to load project settings access", error);
+        setCanViewSettings(Number(user.user_role_id) === 1);
+      } finally {
+        setSettingsAccessLoaded(true);
+      }
+    };
+    loadSettingsAccess();
+  }, [projectId, user?.company_id, user?.id, user?.user_role_id]);
+
+  const visibleTabs = useMemo(
+    () => TABS.filter((item) => item.key !== "settings" || canViewSettings),
+    [canViewSettings],
+  );
+
+  useEffect(() => {
+    if (!settingsAccessLoaded) return;
+    if (tab === "settings" && !canViewSettings) {
+      setTab("overview");
+    }
+  }, [tab, canViewSettings, settingsAccessLoaded]);
 
   const content = useMemo(() => {
     if (!projectId) return null;
@@ -78,25 +124,20 @@ const ProjectDetail = () => {
         return <PriceworkList projectId={projectId} />;
       case "materials":
         return <Materials projectId={projectId} />;
-        case "internal-orders":
-          return <InternalOrders projectId={projectId} />;
+      case "internal-orders":
+        return <InternalOrders projectId={projectId} />;
+      case "settings":
+        return canViewSettings ? (
+          <ProjectSettingsTab
+            projectId={projectId}
+            onProjectName={setProjectName}
+          />
+        ) : null;
       case "labour":
-      // case "assigned-materials":
-      // case "client-invoice":
-      // case "subcon-inv":
-      // case "supplier-inv":
-      // case "settings":
-      // return (
-      //   <Box p={2}>
-      //     <Typography color="text.secondary" mb={2}>
-      //       Project settings
-      //     </Typography>
-      //   </Box>
-      // );
       default:
         return null;
     }
-  }, [tab, projectId]);
+  }, [tab, projectId, canViewSettings]);
 
   const isTableTab =
     tab === "cases" ||
@@ -104,6 +145,10 @@ const ProjectDetail = () => {
     tab === "pricework" ||
     tab === "materials" ||
     tab === "internal-orders";
+
+  const tabValue = visibleTabs.some((item) => item.key === tab)
+    ? tab
+    : "overview";
 
   return (
     <ProjectDetailFiltersProvider projectId={projectId}>
@@ -142,7 +187,7 @@ const ProjectDetail = () => {
         }}
       >
         <Tabs
-          value={tab}
+          value={tabValue}
           onChange={(_, value: TabKey) => {
             setTab(value);
           }}
@@ -165,7 +210,7 @@ const ProjectDetail = () => {
             },
           }}
         >
-          {TABS.map((item) => {
+          {visibleTabs.map((item) => {
             const Icon = item.icon;
             return (
               <Tab

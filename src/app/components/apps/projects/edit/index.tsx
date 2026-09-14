@@ -9,16 +9,16 @@ import {
   Autocomplete,
   TextField,
   Stack,
-  Avatar,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { IconPlus, IconSettings, IconX } from "@tabler/icons-react";
+import { IconSettings, IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import ProjectUserMultiSelect from "@/app/components/apps/projects/UserMultiSelect";
 
 interface FormData {
   id?: number;
@@ -30,6 +30,7 @@ interface FormData {
   // shift_ids: string;
   team_ids: string;
   user_ids?: string;
+  setting_user_ids?: string;
   company_id: number;
   workzone_ids?: string;
 }
@@ -72,6 +73,8 @@ interface EditProjectProps {
   handleSubmit: (e: React.FormEvent) => void;
   isSaving: boolean;
   project: any;
+  embedded?: boolean;
+  showSettingsAccess?: boolean;
 }
 
 const EditProject: React.FC<EditProjectProps> = ({
@@ -83,6 +86,8 @@ const EditProject: React.FC<EditProjectProps> = ({
   handleSubmit,
   project,
   isSaving,
+  embedded = false,
+  showSettingsAccess = false,
 }) => {
   const router = useRouter();
 
@@ -165,6 +170,13 @@ const EditProject: React.FC<EditProjectProps> = ({
         // shift_ids: (project.shifts || []).map((s: any) => s.id).join(","),
         team_ids: (project.teams || []).map((t: any) => t.id).join(","),
         user_ids: (project.assigned_users || []).map((u: any) => u.id).join(","),
+        ...(showSettingsAccess
+          ? {
+              setting_user_ids: (project.setting_users || [])
+                .map((u: any) => u.id)
+                .join(","),
+            }
+          : {}),
         workzone_ids: (project.project_address || [])
           .map((g: any) => g.workzone_id)
           .join(","),
@@ -173,7 +185,7 @@ const EditProject: React.FC<EditProjectProps> = ({
       setBudgetSettings(defaultSettings);
       setSavedBudgetSettings(defaultSettings);
     }
-  }, [project]);
+  }, [project, showSettingsAccess, setFormData]);
 
   // const [shift, setShift] = useState<Shift[]>([]);
   const [team, setTeam] = useState<Team[]>([]);
@@ -335,10 +347,10 @@ const EditProject: React.FC<EditProjectProps> = ({
         console.error("Failed to refresh project data", err);
       }
     };
-    if (open == true) {
+    if (open || embedded) {
       getTeams();
     }
-  }, [open, user?.company_id]);
+  }, [open, embedded, user?.company_id]);
 
   useEffect(() => {
     const getUsers = async () => {
@@ -360,10 +372,10 @@ const EditProject: React.FC<EditProjectProps> = ({
         console.error("Failed to load users", err);
       }
     };
-    if (open == true) {
+    if (open || embedded) {
       getUsers();
     }
-  }, [open, user?.company_id]);
+  }, [open, embedded, user?.company_id]);
 
   useEffect(() => {
     const getGeofence = async () => {
@@ -382,10 +394,10 @@ const EditProject: React.FC<EditProjectProps> = ({
         console.error("Failed to refresh project data", err);
       }
     };
-    if (open == true) {
+    if (open || embedded) {
       getGeofence();
     }
-  }, [open]);
+  }, [open, embedded, user?.company_id]);
 
   async function onHandleSetting() {
     await fetchBudgetSettings();
@@ -412,28 +424,14 @@ const EditProject: React.FC<EditProjectProps> = ({
     router.push("/apps/time-clock/list");
   };
 
-  return (
-    <>
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      sx={{
-        width: 450,
-        flexShrink: 0,
-        "& .MuiDrawer-paper": {
-          width: 450,
-          padding: 2,
-          backgroundColor: "#f9f9f9",
-        },
-      }}
-    >
-      <Box display="flex" flexDirection="column" height="100%">
-        <Box height={"100%"}>
+  const formContent = (
+      <Box display="flex" flexDirection="column" height={embedded ? "auto" : "100%"}>
+        <Box height={embedded ? "auto" : "100%"}>
           <form onSubmit={handleSubmit} className="address-form">
             {" "}
             <Grid container>
               <Grid size={{ xs: 12 }}>
+                {!embedded && (
                 <Box
                   display={"flex"}
                   alignItems={"center"}
@@ -475,220 +473,233 @@ const EditProject: React.FC<EditProjectProps> = ({
                         </IconButton>
                     </Box>
                 </Box>
-                <Typography variant="h5" mt={2}>
-                  Name
-                </Typography>
-                <CustomTextField
-                  id="name"
-                  name="name"
-                  placeholder="Enter address name.."
-                  value={formData.name}
-                  onChange={handleChange}
-                  variant="outlined"
-                  inputProps={{ maxLength: 50 }}
-                  fullWidth
-                />
-                {/*<Typography variant="h5" mt={2}>*/}
-                {/*  Select Shifts*/}
-                {/*</Typography>*/}
-                {/*<Autocomplete*/}
-                {/*  fullWidth*/}
-                {/*  multiple*/}
-                {/*  id="shift_ids"*/}
-                {/*  options={shift}*/}
-                {/*  value={shift.filter((item) =>*/}
-                {/*    formData.shift_ids?.split(",").includes(String(item.id))*/}
-                {/*  )}*/}
-                {/*  onChange={(event, newValue) => {*/}
-                {/*    const selectedIds = newValue*/}
-                {/*      .map((item) => item.id)*/}
-                {/*      .filter(Boolean);*/}
-                {/*    setFormData({*/}
-                {/*      ...formData,*/}
-                {/*      shift_ids: selectedIds.join(","),*/}
-                {/*    });*/}
-                {/*  }}*/}
-                {/*  getOptionLabel={(option) => option.name}*/}
-                {/*  isOptionEqualToValue={(option, value) =>*/}
-                {/*    option.id === value.id*/}
-                {/*  }*/}
-                {/*  renderInput={(params) => (*/}
-                {/*    <CustomTextField {...params} placeholder="Select Shifts" />*/}
-                {/*  )}*/}
-                {/*/>*/}
-                <Typography variant="h5" mt={2}>
-                  Select Teams
-                </Typography>
-                <Autocomplete
-                  fullWidth
-                  multiple
-                  id="team_ids"
-                  options={team}
-                  value={team.filter((item) =>
-                    formData.team_ids?.split(",").includes(String(item.id))
-                  )}
-                  onChange={(event, newValue) => {
-                    const selectedIds = newValue
-                      .map((item) => item.id)
-                      .filter(Boolean);
-                    setFormData({
-                      ...formData,
-                      team_ids: selectedIds.join(","),
-                    });
-                  }}
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) =>
-                    option.id === value.id
-                  }
-                  renderInput={(params) => (
-                    <CustomTextField {...params} placeholder="Select Teams" />
-                  )}
-                />
-                <Typography variant="h5" mt={2}>
-                  Assigned Users
-                </Typography>
-                <Autocomplete
-                  fullWidth
-                  multiple
-                  id="user_ids"
-                  options={users}
-                  value={users.filter((item) =>
-                    formData.user_ids?.split(",").includes(String(item.id))
-                  )}
-                  onChange={(event, newValue) => {
-                    const selectedIds = newValue
-                      .map((item) => item.id)
-                      .filter(Boolean);
-                    setFormData({
-                      ...formData,
-                      user_ids: selectedIds.join(","),
-                    });
-                  }}
-                  getOptionLabel={(option) => option.name}
-                  getOptionKey={(option) => option.id}
-                  isOptionEqualToValue={(option, value) =>
-                    option.id === value.id
-                  }
-                  renderOption={(props, option) => {
-                    const { key, ...optionProps } = props as typeof props & {
-                      key?: React.Key;
-                    };
-                    return (
-                      <Box
-                        component="li"
-                        key={option.id ?? key}
-                        {...optionProps}
-                        sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
-                      >
-                        <Avatar
-                          src={
-                            option.user_thumb_image ||
-                            option.user_image ||
-                            "/images/users/user.png"
-                          }
-                          alt={option.name}
-                          sx={{ width: 28, height: 28, fontSize: "12px" }}
-                        >
-                          {option.name?.[0]?.toUpperCase()}
-                        </Avatar>
-                        <Typography component="span" variant="body2">
-                          {option.name}
-                        </Typography>
-                      </Box>
-                    );
-                  }}
-                  renderInput={(params) => (
-                    <CustomTextField
-                      {...params}
+                )}
+                {(() => {
+                  const nameField = (
+                    <>
+                      <Typography variant="h5" mt={embedded ? 0 : 2}>
+                        Name
+                      </Typography>
+                      <CustomTextField
+                        id="name"
+                        name="name"
+                        placeholder="Enter address name.."
+                        value={formData.name}
+                        onChange={handleChange}
+                        variant="outlined"
+                        inputProps={{ maxLength: 50 }}
+                        fullWidth
+                      />
+                    </>
+                  );
+                  const teamsField = (
+                    <>
+                      <Typography variant="h5" mt={embedded ? 0 : 2}>
+                        Select Teams
+                      </Typography>
+                      <Autocomplete
+                        fullWidth
+                        multiple
+                        id="team_ids"
+                        options={team}
+                        value={team.filter((item) =>
+                          formData.team_ids?.split(",").includes(String(item.id)),
+                        )}
+                        onChange={(event, newValue) => {
+                          const selectedIds = newValue
+                            .map((item) => item.id)
+                            .filter(Boolean);
+                          setFormData({
+                            ...formData,
+                            team_ids: selectedIds.join(","),
+                          });
+                        }}
+                        getOptionLabel={(option) => option.name}
+                        isOptionEqualToValue={(option, value) =>
+                          option.id === value.id
+                        }
+                        renderInput={(params) => (
+                          <CustomTextField
+                            {...params}
+                            placeholder="Select Teams"
+                          />
+                        )}
+                      />
+                    </>
+                  );
+                  const usersField = (
+                    <ProjectUserMultiSelect
+                      id="user_ids"
+                      label="Assigned Users"
                       placeholder="Select Assigned Users"
+                      options={users}
+                      selectedIds={formData.user_ids || ""}
+                      onChange={(ids) =>
+                        setFormData({
+                          ...formData,
+                          user_ids: ids,
+                        })
+                      }
+                      labelMt={embedded ? 0 : 2}
                     />
-                  )}
-                />
-                <Typography variant="h5" mt={2}>
-                  Select Geofence
-                </Typography>
-                <Autocomplete
-                  fullWidth
-                  multiple
-                  id="workzone_ids"
-                  options={geofence}
-                  value={geofence.filter((item) =>
-                    formData.workzone_ids?.split(",").includes(String(item.id))
-                  )}
-                  onChange={(event, newValue) => {
-                    const selectedIds = newValue
-                      .map((item) => item.id)
-                      .filter(Boolean);
-                    setFormData({
-                      ...formData,
-                      workzone_ids: selectedIds.join(","),
-                    });
-                  }}
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) =>
-                    option.id === value.id
+                  );
+                  const showSettingsField = (
+                    <ProjectUserMultiSelect
+                      id="setting_user_ids"
+                      label="Show Settings"
+                      placeholder="Select users who can see Settings"
+                      options={users}
+                      selectedIds={formData.setting_user_ids || ""}
+                      onChange={(ids) =>
+                        setFormData({
+                          ...formData,
+                          setting_user_ids: ids,
+                        })
+                      }
+                      // helperText="These users can open this project's Settings tab. Admins can always see it, with or without being assigned."
+                      labelMt={embedded ? 0 : 2}
+                    />
+                  );
+                  const geofenceField = (
+                    <>
+                      <Typography variant="h5" mt={embedded ? 0 : 2}>
+                        Select Geofence
+                      </Typography>
+                      <Autocomplete
+                        fullWidth
+                        multiple
+                        id="workzone_ids"
+                        options={geofence}
+                        value={geofence.filter((item) =>
+                          formData.workzone_ids
+                            ?.split(",")
+                            .includes(String(item.id)),
+                        )}
+                        onChange={(event, newValue) => {
+                          const selectedIds = newValue
+                            .map((item) => item.id)
+                            .filter(Boolean);
+                          setFormData({
+                            ...formData,
+                            workzone_ids: selectedIds.join(","),
+                          });
+                        }}
+                        getOptionLabel={(option) => option.name}
+                        isOptionEqualToValue={(option, value) =>
+                          option.id === value.id
+                        }
+                        renderInput={(params) => (
+                          <CustomTextField
+                            {...params}
+                            placeholder="Select Geofences"
+                          />
+                        )}
+                      />
+                    </>
+                  );
+                  const addressField = (
+                    <>
+                      <Typography variant="h5" mt={embedded ? 0 : 2}>
+                        Site Address
+                      </Typography>
+                      <CustomTextField
+                        id="address"
+                        name="address"
+                        placeholder="Site Address.."
+                        value={formData.address}
+                        onChange={handleChange}
+                        variant="outlined"
+                        fullWidth
+                      />
+                    </>
+                  );
+                  const budgetField = (
+                    <>
+                      <Typography variant="h5" mt={embedded ? 0 : 2}>
+                        Budget
+                      </Typography>
+                      <CustomTextField
+                        id="budget"
+                        name="budget"
+                        type="text"
+                        placeholder="Enter Budget.."
+                        value={formData.budget}
+                        onChange={handleChange}
+                        inputProps={{
+                          inputMode: "decimal",
+                          pattern: "^[0-9]+(\\.[0-9]{0,2})?$",
+                        }}
+                        variant="outlined"
+                        fullWidth
+                      />
+                    </>
+                  );
+                  const codeField = (
+                    <>
+                      <Typography variant="h5" mt={embedded ? 0 : 2}>
+                        Project Code
+                      </Typography>
+                      <CustomTextField
+                        id="code"
+                        name="code"
+                        placeholder="Project Code.."
+                        value={formData.code}
+                        onChange={handleChange}
+                        variant="outlined"
+                        fullWidth
+                      />
+                    </>
+                  );
+                  const descriptionField = (
+                    <>
+                      <Typography variant="h5" mt={embedded ? 0 : 2}>
+                        Description
+                      </Typography>
+                      <TextField
+                        id="description"
+                        name="description"
+                        multiline
+                        minRows={embedded ? 2 : 1}
+                        placeholder="Enter Description.."
+                        value={formData.description}
+                        onChange={handleChange}
+                        variant="outlined"
+                        fullWidth
+                      />
+                    </>
+                  );
+
+                  if (embedded) {
+                    return (
+                      <Grid container spacing={2.5}>
+                        <Grid size={{ xs: 12, md: 6 }}>{nameField}</Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>{codeField}</Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>{teamsField}</Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>{usersField}</Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>{geofenceField}</Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>{addressField}</Grid>
+                        {showSettingsAccess && (
+                          <Grid size={{ xs: 6 }}>{showSettingsField}</Grid>
+                        )}
+                        <Grid size={{ xs: 12, md: 6 }}>{budgetField}</Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>{descriptionField}</Grid>
+                      </Grid>
+                    );
                   }
-                  renderInput={(params) => (
-                    <CustomTextField
-                      {...params}
-                      placeholder="Select Geofences"
-                    />
-                  )}
-                />
-                <Typography variant="h5" mt={2}>
-                  Site Address
-                </Typography>
-                <CustomTextField
-                  id="address"
-                  name="address"
-                  placeholder="Site Address.."
-                  value={formData.address}
-                  onChange={handleChange}
-                  variant="outlined"
-                  fullWidth
-                />
-                <Typography variant="h5" mt={2}>
-                  Budget
-                </Typography>
-                <CustomTextField
-                  id="budget"
-                  name="budget"
-                  type="text"
-                  placeholder="Enter Budget.."
-                  value={formData.budget}
-                  onChange={handleChange}
-                  inputProps={{
-                    inputMode: "decimal",
-                    pattern: "^[0-9]+(\\.[0-9]{0,2})?$",
-                  }}
-                  variant="outlined"
-                  fullWidth
-                />
-                <Typography variant="h5" mt={2}>
-                  Project Code
-                </Typography>
-                <CustomTextField
-                  id="code"
-                  name="code"
-                  placeholder="Project Code.."
-                  value={formData.code}
-                  onChange={handleChange}
-                  variant="outlined"
-                  fullWidth
-                />
-                <Typography variant="h5" mt={2}>
-                  Description
-                </Typography>
-                <TextField
-                  id="description"
-                  name="description"
-                  multiline
-                  placeholder="Enter Description.."
-                  value={formData.description}
-                  onChange={handleChange}
-                  variant="outlined"
-                  fullWidth
-                />
+
+                  return (
+                    <>
+                      {nameField}
+                      {teamsField}
+                      {usersField}
+                      {geofenceField}
+                      {addressField}
+                      {budgetField}
+                      {codeField}
+                      {descriptionField}
+                    </>
+                  );
+                })()}
               </Grid>
             </Grid>
             <Box
@@ -711,6 +722,7 @@ const EditProject: React.FC<EditProjectProps> = ({
                 {isSaving ? "Saving..." : "Save"}
               </Button>
 
+              {!embedded && (
               <Button
                 color="inherit"
                 onClick={onClose}
@@ -724,11 +736,36 @@ const EditProject: React.FC<EditProjectProps> = ({
               >
                 Close
               </Button>
+              )}
             </Box>
           </form>
         </Box>
       </Box>
-    </Drawer>
+  );
+
+  return (
+    <>
+      {embedded ? (
+        formContent
+      ) : (
+        <Drawer
+          anchor="right"
+          open={open}
+          onClose={onClose}
+          sx={{
+            width: 450,
+            flexShrink: 0,
+            "& .MuiDrawer-paper": {
+              width: 450,
+              padding: 2,
+              backgroundColor: "#f9f9f9",
+            },
+          }}
+        >
+          {formContent}
+        </Drawer>
+      )}
+        {!embedded && (
         <Drawer
             anchor="right"
             open={settingsOpen}
@@ -867,6 +904,7 @@ const EditProject: React.FC<EditProjectProps> = ({
                 </Box>
             </Box>
         </Drawer>
+        )}
     </>
   );
 };
