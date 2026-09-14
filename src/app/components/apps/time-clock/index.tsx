@@ -807,7 +807,7 @@ const TimeClock = ({queryParams}: Props) => {
         const request = (async (): Promise<Index[]> => {
             try {
                 setFetchTimesheet(true);
-                const response: AxiosResponse<TimeClockResponse> = await api.get('/time-clock/get', {params});
+                const response: AxiosResponse<TimeClockResponse> = await api.get('/time-clock/list-web', {params});
                 if (response.data.IsSuccess) {
                     setData(response.data.info);
                     setCompanyId(response.data.company_id);
@@ -818,8 +818,6 @@ const TimeClock = ({queryParams}: Props) => {
                         setFetchTimesheet(false);
                     }
 
-                    // Fetch conflicts separately
-                    await fetchConflictsData();
                     const pagMeta = response.data.data;
                     setTotalRows(pagMeta?.totalItems ?? response.data.info.length);
                     setPageCount(pagMeta?.totalPages ?? 1);
@@ -842,8 +840,14 @@ const TimeClock = ({queryParams}: Props) => {
         }
     };
 
-    const fetchConflictsData = async () => {
+    const fetchConflictsData = async (rangeStart?: Date | null, rangeEnd?: Date | null) => {
+        const s = rangeStart || startDate;
+        const e = rangeEnd || endDate;
         const params: Record<string, string> = {};
+        if (s && e) {
+            params.start_date = format(s, 'dd/MM/yyyy');
+            params.end_date = format(e, 'dd/MM/yyyy');
+        }
         const requestKey = JSON.stringify(params);
         const pendingRequest = conflictRequestsRef.current.get(requestKey);
         if (pendingRequest) return pendingRequest;
@@ -875,13 +879,17 @@ const TimeClock = ({queryParams}: Props) => {
             const e = endDate || defaultEnd;
             if (fullRefresh) {
                 await fetchData(s, e);
-            } else {
-                await fetchConflictsData();
             }
+            await fetchConflictsData(s, e);
         } catch (error) {
             setErrorMessage('Failed to refresh data.');
         }
     }, [startDate, endDate]);
+
+    useEffect(() => {
+        if (!cycleReady || !startDate || !endDate) return;
+        fetchConflictsData(startDate, endDate);
+    }, [cycleReady, startDate, endDate]);
 
     useEffect(() => {
         if (!hasDataChanged) return;
@@ -891,6 +899,7 @@ const TimeClock = ({queryParams}: Props) => {
                 const s = startDate || defaultStart;
                 const e = endDate || defaultEnd;
                 await fetchData(s, e);
+                await fetchConflictsData(s, e);
             } catch (error) {
                 console.error('Background refresh failed:', error);
             }
@@ -1057,6 +1066,7 @@ const TimeClock = ({queryParams}: Props) => {
             saveDateRangeToStorage(from, to, columnVisibility);
 
             await fetchData(from, to);
+            await fetchConflictsData(from, to);
         } catch (error) {
             console.error('Error refreshing data after settings close:', error);
             setErrorMessage('Failed to refresh data after saving settings.');
@@ -1461,6 +1471,7 @@ const TimeClock = ({queryParams}: Props) => {
         const e = endDate || defaultEnd;
         try {
             await fetchData(s, e);
+            await fetchConflictsData(s, e);
             setHasDataChanged(false);
         } catch (error) {
             setErrorMessage('Failed to refresh data. Please try again.');
@@ -2400,6 +2411,7 @@ const TimeClock = ({queryParams}: Props) => {
                 setSuccessMessage(response.data.message);
                 clearSelectedRows();
                 await fetchData(from, to);
+                await fetchConflictsData(from, to);
             }
         } catch (error: any) {
             setErrorMessage(error?.response?.data?.message || 'Failed to delete selected users\' time-clock records.');
@@ -2418,6 +2430,7 @@ const TimeClock = ({queryParams}: Props) => {
                 const s = startDate || defaultStart;
                 const e = endDate || defaultEnd;
                 await fetchData(s, e);
+                await fetchConflictsData(s, e);
             }
         } catch (error) {
             setErrorMessage('Failed to mark timesheets as paid.');
@@ -2447,6 +2460,7 @@ const TimeClock = ({queryParams}: Props) => {
                 setHasDataChanged(true);
 
                 await fetchData(s, e);
+                await fetchConflictsData(s, e);
             } else {
                 setErrorMessage(`Failed to ${action} timesheet(s).`);
             }
