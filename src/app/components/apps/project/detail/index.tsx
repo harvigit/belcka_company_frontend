@@ -17,6 +17,7 @@ import {
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Overview from "./Overview";
 import Materials from "./Materials";
+import Labour from "./Labour";
 import InternalOrders from "./InternalOrders";
 import ExpenseList from "@/app/components/apps/expenses/list";
 import PriceworkList from "@/app/components/apps/priceworks/list";
@@ -78,9 +79,10 @@ const ProjectDetail = () => {
         return <PriceworkList projectId={projectId} />;
       case "materials":
         return <Materials projectId={projectId} />;
-        case "internal-orders":
-          return <InternalOrders projectId={projectId} />;
       case "labour":
+        return <Labour projectId={projectId} />;
+      case "internal-orders":
+        return <InternalOrders projectId={projectId} />;
       // case "assigned-materials":
       // case "client-invoice":
       // case "subcon-inv":
@@ -103,6 +105,7 @@ const ProjectDetail = () => {
     tab === "expenses" ||
     tab === "pricework" ||
     tab === "materials" ||
+    tab === "labour" ||
     tab === "internal-orders";
 
   return (
