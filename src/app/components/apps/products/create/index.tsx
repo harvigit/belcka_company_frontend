@@ -250,7 +250,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         market_price: "",
         sort_id: 0,
         is_sub_qty: false,
-        status: false,
+        status: true,
         remove_image: false,
         max_stock: 0,
         model: null,
@@ -701,7 +701,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
             <Grid container spacing={3}>
               <Grid size={{ xs: 3 }} display={"flex"} justifyContent={"start"}>
                 {/* sub quantity */}
-                <Typography sx={{ mr:2, fontWeight: 700}}>In Active</Typography> 
+                <Typography sx={{ mr:2, fontWeight: 700}}>Is Show</Typography> 
                 <IOSSwitch
                   checked={formData.status}
                   onChange={(e, value) =>

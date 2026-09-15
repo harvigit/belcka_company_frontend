@@ -50,6 +50,7 @@ export type ProjectDashboardRow = {
   status: number;
   status_text: string;
   assigned_teams: number;
+  team_capacity: number;
   total_working_users: number;
   limit: number;
   checkins_7_days: number;
@@ -326,7 +327,11 @@ const ProjectDashboard = () => {
       columnHelper.accessor("total_working_users", {
         header: () => <HeaderLabel>On site</HeaderLabel>,
         meta: { label: "On site" },
-        cell: ({ getValue }) => <NumberCell value={getValue()} />,
+        cell: ({ row }) => (
+          <NumberCell
+            value={`${row.original.team_capacity || 0} / ${row.original.total_working_users || 0}`}
+          />
+        ),
       }),
       columnHelper.accessor("limit", {
         header: () => <HeaderLabel>Limit</HeaderLabel>,

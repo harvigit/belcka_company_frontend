@@ -357,7 +357,9 @@ export const LabourTeamTable = ({
               {visible.map((row) => (
                 <TableRow key={row.team_id}>
                   <TableCell>{row.team}</TableCell>
-                  <TableCell align="right">{row.on_site}</TableCell>
+                  <TableCell align="right">
+                    {row.limit} / {row.on_site}
+                  </TableCell>
                   <TableCell align="right">{row.limit}</TableCell>
                   <TableCell align="right">{row.avg_7_days}</TableCell>
                   <TableCell align="right">{row.avg_30_days}</TableCell>
@@ -384,7 +386,9 @@ export const LabourTeamTable = ({
               {rows.length > 0 && (
                 <TableRow sx={totalRowSx}>
                   <TableCell>TOTAL</TableCell>
-                  <TableCell align="right">{totals?.on_site || 0}</TableCell>
+                  <TableCell align="right">
+                    {totals?.limit || 0} / {totals?.on_site || 0}
+                  </TableCell>
                   <TableCell align="right">{totals?.limit || 0}</TableCell>
                   <TableCell align="right">{totals?.avg_7_days || 0}</TableCell>
                   <TableCell align="right">
