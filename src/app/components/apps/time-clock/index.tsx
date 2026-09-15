@@ -479,6 +479,9 @@ const TimeClock = ({queryParams}: Props) => {
     const [isPaidActionPending, setIsPaidActionPending] = useState(false);
     const isPaidActionPendingRef = useRef(false);
     const isPaidActionMountedRef = useRef(true);
+    const [isLockActionPending, setIsLockActionPending] = useState(false);
+    const isLockActionPendingRef = useRef(false);
+    const isLockActionMountedRef = useRef(true);
     const [companyId, setCompanyId] = useState<number | null>(null);
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
@@ -565,9 +568,12 @@ const TimeClock = ({queryParams}: Props) => {
 
     useEffect(() => {
         isPaidActionMountedRef.current = true;
+        isLockActionMountedRef.current = true;
         return () => {
             isPaidActionMountedRef.current = false;
             isPaidActionPendingRef.current = false;
+            isLockActionMountedRef.current = false;
+            isLockActionPendingRef.current = false;
         };
     }, []);
 
@@ -2311,6 +2317,7 @@ const TimeClock = ({queryParams}: Props) => {
     const handleConfirmAction = async () => {
         if (!confirmDialog) return;
         if (confirmDialog.actionType === 'paid' && isPaidActionPendingRef.current) return;
+        if (confirmDialog.actionType === 'lock' && isLockActionPendingRef.current) return;
 
         const timesheetIds = getSelectedTimesheetIds();
 
@@ -2339,6 +2346,8 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleLock = async () => {
+        if (isLockActionPendingRef.current) return;
+
         const timesheetIds = getSelectedTimesheetIds();
 
         if (timesheetIds.length === 0) {
@@ -2381,7 +2390,7 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleMarkAsPaid = async () => {
-        if (isPaidActionPendingRef.current) return;
+        if (isPaidActionPendingRef.current || isLockActionPendingRef.current) return;
 
         const timesheetIds = getSelectedTimesheetIds();
 
@@ -2436,7 +2445,7 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const proceedWithMarkAsPaid = async (timesheetIds: (number | string)[]) => {
-        if (isPaidActionPendingRef.current || timesheetIds.length === 0) return;
+        if (isPaidActionPendingRef.current || isLockActionPendingRef.current || timesheetIds.length === 0) return;
 
         isPaidActionPendingRef.current = true;
         setIsPaidActionPending(true);
@@ -2478,6 +2487,11 @@ const TimeClock = ({queryParams}: Props) => {
 
     const toggleWeeklyTimesheetStatus = async (timesheetIds: (number | string)[], action: 'approve' | 'unapprove') => {
         if (timesheetIds.length === 0) return;
+        if (action === 'approve') {
+            if (isLockActionPendingRef.current) return;
+            isLockActionPendingRef.current = true;
+            setIsLockActionPending(true);
+        }
 
         try {
             const ids = timesheetIds.join(',');
@@ -2492,7 +2506,12 @@ const TimeClock = ({queryParams}: Props) => {
                 }
                 : {ids};
 
-            const response = await api.post(endpoint, payload);
+            const response = action === 'approve'
+                ? await api.post(endpoint, payload, {
+                    timeout: 120000,
+                    skipToast: true,
+                } as any)
+                : await api.post(endpoint, payload);
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
                 clearSelectedRows();
@@ -2500,13 +2519,44 @@ const TimeClock = ({queryParams}: Props) => {
 
                 await fetchData(s, e);
                 await fetchConflictsData(s, e);
+            } else if (action === 'approve') {
+                try {
+                    await fetchData(s, e);
+                    await fetchConflictsData(s, e);
+                } catch (refreshError) {
+                    console.error('Error refreshing time clock after lock request:', refreshError);
+                }
+                setErrorMessage(
+                    'The lock request did not finish in this browser. The list has been refreshed — please check whether the records are already Locked before trying again.',
+                );
             } else {
                 setErrorMessage(`Failed to ${action} timesheet(s).`);
             }
         } catch (error: any) {
+            if (action === 'approve') {
+                const s = startDate || defaultStart;
+                const e = endDate || defaultEnd;
+                try {
+                    await fetchData(s, e);
+                    await fetchConflictsData(s, e);
+                } catch (refreshError) {
+                    console.error('Error refreshing time clock after lock request:', refreshError);
+                }
+                setErrorMessage(
+                    'The lock request did not finish in this browser. The list has been refreshed — please check whether the records are already Locked before trying again.',
+                );
+            }
+        } finally {
+            if (action === 'approve') {
+                isLockActionPendingRef.current = false;
+                if (isLockActionMountedRef.current) {
+                    setIsLockActionPending(false);
+                }
+            }
         }
     };
 
+    const isTimesheetActionPending = isPaidActionPending || isLockActionPending;
     const isAnyRowSelected = selectedRowIds.size > 0;
 
     const simpleColumns = columns.map((column) => ({
@@ -3019,7 +3069,7 @@ const TimeClock = ({queryParams}: Props) => {
                             <IconButton
                                 size="small"
                                 onClick={clearSelectedRows}
-                                disabled={isPaidActionPending}
+                                disabled={isTimesheetActionPending}
                                 sx={{color: '#666', '&:hover': {bgcolor: 'grey.100'}}}
                             >
                                 <IconX size={16}/>
@@ -3038,7 +3088,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     color="success"
                                     size="small"
                                     onClick={handleLock}
-                                    disabled={isPaidActionPending}
+                                    disabled={isTimesheetActionPending}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     {t('Lock')}
@@ -3050,7 +3100,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     color="error"
                                     size="small"
                                     onClick={handleUnlock}
-                                    disabled={isPaidActionPending}
+                                    disabled={isTimesheetActionPending}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     {t('Unlock')}
@@ -3061,7 +3111,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     color="primary"
                                     size="small"
                                     onClick={handleMarkAsPaid}
-                                    disabled={isPaidActionPending}
+                                    disabled={isTimesheetActionPending}
                                     startIcon={
                                         isPaidActionPending
                                             ? <CircularProgress size={15} color="inherit"/>
@@ -3085,7 +3135,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     color="error"
                                     size="small"
                                     onClick={handleDeleteSelectedUsers}
-                                    disabled={isPaidActionPending}
+                                    disabled={isTimesheetActionPending}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     {t('Delete')}
@@ -3097,7 +3147,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     color="primary"
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                     onClick={handleExportClick}
-                                    disabled={isPaidActionPending}
+                                    disabled={isTimesheetActionPending}
                                     endIcon={open ? <IconChevronUp size={18}/> : <IconChevronDown size={18}/>}
                                 >
                                     {t('Export')}
@@ -3672,7 +3722,7 @@ const TimeClock = ({queryParams}: Props) => {
                 <ConfirmationDialog
                     open={confirmDialog.open}
                     onClose={() => {
-                        if (isPaidActionPendingRef.current) return;
+                        if (isPaidActionPendingRef.current || isLockActionPendingRef.current) return;
                         setConfirmDialog(null);
                     }}
                     onConfirm={handleConfirmAction}
@@ -3709,6 +3759,36 @@ const TimeClock = ({queryParams}: Props) => {
                     <CircularProgress size={28} />
                     <Typography variant="body2" fontWeight={600} color="text.primary">
                         Marking as Paid...
+                    </Typography>
+                </Box>
+            </Backdrop>
+
+            <Backdrop
+                open={isLockActionPending}
+                sx={{
+                    zIndex: 1400,
+                    color: '#fff',
+                    backgroundColor: 'rgba(15, 23, 42, 0.28)',
+                }}
+            >
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 1.5,
+                        px: 3,
+                        py: 2.5,
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                        border: '1px solid #e0e0e0',
+                        minWidth: 220,
+                    }}
+                >
+                    <CircularProgress size={28} />
+                    <Typography variant="body2" fontWeight={600} color="text.primary">
+                        Locking timesheets...
                     </Typography>
                 </Box>
             </Backdrop>

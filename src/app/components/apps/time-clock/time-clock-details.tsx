@@ -11,7 +11,8 @@ import {
     IconButton,
     TableCell,
     TextField,
-    Typography
+    Typography,
+    Backdrop
 } from '@mui/material';
 import {
     useReactTable,
@@ -270,6 +271,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [worklogEditNote, setWorklogEditNote] = useState('');
     const [worklogEditNoteError, setWorklogEditNoteError] = useState(false);
     const [canDirectEditWorklog, setCanDirectEditWorklog] = useState(false);
+    const [isLockActionPending, setIsLockActionPending] = useState(false);
+    const isLockActionPendingRef = useRef(false);
+    const isLockActionMountedRef = useRef(true);
 
     const {data: session} = useSession();
     const sessionUser = session?.user as User & {id?: number; user_role_id?: number | null} | undefined;
@@ -315,6 +319,14 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     }));
 
     useEffect(() => { fetchPayrollCycle(); }, []);
+
+    useEffect(() => {
+        isLockActionMountedRef.current = true;
+        return () => {
+            isLockActionMountedRef.current = false;
+            isLockActionPendingRef.current = false;
+        };
+    }, []);
     
     useEffect(() => {
         if (!ratePermissionLoaded) return;
@@ -1479,6 +1491,12 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     };
 
     const toggleTimesheetStatus = useCallback(async (timesheetIds: (string | number)[], action: 'approve' | 'unapprove') => {
+        if (action === 'approve') {
+            if (isLockActionPendingRef.current) return;
+            isLockActionPendingRef.current = true;
+            setIsLockActionPending(true);
+        }
+
         try {
             const ids = timesheetIds.join(',');
             const endpoint = action === 'approve' ? '/timesheet/approve' : '/timesheet/unapprove';
@@ -1494,7 +1512,12 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 }
                 : {ids};
 
-            const response: AxiosResponse<{ IsSuccess: boolean }> = await api.post(endpoint, payload);
+            const response: AxiosResponse<{ IsSuccess: boolean }> = action === 'approve'
+                ? await api.post(endpoint, payload, {
+                    timeout: 120000,
+                    skipToast: true,
+                } as any)
+                : await api.post(endpoint, payload);
 
             if (response.data.IsSuccess) {
                 await fetchTimeClockData(defaultStartDate, defaultEndDate);
@@ -1502,9 +1525,28 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 onDataChange?.();
             } else {
                 console.error(`Error ${action}ing timesheets`);
+                if (action === 'approve') {
+                    await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                }
             }
         } catch (error) {
             console.error(`Error ${action}ing timesheets:`, error);
+            if (action === 'approve') {
+                try {
+                    const defaultStartDate = startDate || defaultStart;
+                    const defaultEndDate = endDate || defaultEnd;
+                    await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                } catch (refreshError) {
+                    console.error('Error refreshing time clock after lock request:', refreshError);
+                }
+            }
+        } finally {
+            if (action === 'approve') {
+                isLockActionPendingRef.current = false;
+                if (isLockActionMountedRef.current) {
+                    setIsLockActionPending(false);
+                }
+            }
         }
     }, [startDate, endDate, fetchTimeClockData, onDataChange]);
 
@@ -1568,6 +1610,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     };
 
     const handleLockClick = () => {
+        if (isLockActionPendingRef.current) return;
+
         const timesheetIds = getSelectedTimesheetIds();
 
         if (timesheetIds.length === 0) return;
@@ -1736,6 +1780,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const handleConfirmAction = async () => {
         if (!confirmDialog) return;
+        if (confirmDialog.actionType === 'lock' && isLockActionPendingRef.current) return;
 
         setConfirmDialog(null);
 
@@ -2347,6 +2392,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 getSelectedRowsLockStatus={getSelectedRowsLockStatus}
                 getSelectedRowsWorklogs={getSelectedRowsWorklogs}
                 onDeleteClick={handleDeleteWorklogs}
+                disabled={isLockActionPending}
             />
 
             <Drawer
@@ -2642,7 +2688,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             {confirmDialog && (
                 <ConfirmationDialog
                     open={confirmDialog.open}
-                    onClose={() => setConfirmDialog(null)}
+                    onClose={() => {
+                        if (isLockActionPendingRef.current) return;
+                        setConfirmDialog(null);
+                    }}
                     onConfirm={handleConfirmAction}
                     title={confirmDialog.actionType === 'lock' ? 'Lock Records' : confirmDialog.actionType === 'unlock' ? 'Unlock Records' : 'Delete Records'}
                     message={confirmDialog.actionType === 'lock' ? 'Are you sure you want to lock the selected records?' : confirmDialog.actionType === 'unlock' ? 'Are you sure you want to unlock the selected records?' : 'Are you sure you want to delete the selected records? This action cannot be undone.'}
@@ -2650,6 +2699,36 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     actionType={confirmDialog.actionType}
                 />
             )}
+
+            <Backdrop
+                open={isLockActionPending}
+                sx={{
+                    zIndex: 1400,
+                    color: '#fff',
+                    backgroundColor: 'rgba(15, 23, 42, 0.28)',
+                }}
+            >
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 1.5,
+                        px: 3,
+                        py: 2.5,
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                        border: '1px solid #e0e0e0',
+                        minWidth: 220,
+                    }}
+                >
+                    <CircularProgress size={28} />
+                    <Typography variant="body2" fontWeight={600} color="text.primary">
+                        Locking timesheets...
+                    </Typography>
+                </Box>
+            </Backdrop>
 
             <BookkeeperHistory
                 open={bookkeeperActivityOpen}

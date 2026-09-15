@@ -10,6 +10,7 @@ interface ActionBarProps {
     onDeleteClick: () => void;
     getSelectedRowsLockStatus: () => { hasLockedRows: boolean; hasUnlockedRows: boolean };
     getSelectedRowsWorklogs: () => { hasWorklogs: boolean; };
+    disabled?: boolean;
 }
 
 const ActionBar: React.FC<ActionBarProps> = ({
@@ -20,6 +21,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
                                                  onDeleteClick,
                                                  getSelectedRowsLockStatus,
                                                  getSelectedRowsWorklogs,
+                                                 disabled = false,
                                              }) => {
     if (selectedRows.size === 0) return null;
 
@@ -47,6 +49,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
                 <IconButton
                     size="small"
                     onClick={onClearSelection}
+                    disabled={disabled}
                     sx={{ color: '#666', '&:hover': { bgcolor: 'grey.100' } }}
                 >
                     <IconX size={16} />
@@ -71,6 +74,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
                             '&:hover': { boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)' }
                         }}
                         onClick={onLockClick}
+                        disabled={disabled}
                         // disabled={hasLockedRows}
                     >
                         <IconLock size={16} />
@@ -91,6 +95,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
                             '&:hover': { boxShadow: '0 2px 8px rgba(211, 47, 47, 0.2)' }
                         }}
                         onClick={onUnlockClick}
+                        disabled={disabled}
                         // disabled={hasUnlockedRows}
                     >
                         <IconLockOpen size={16} />
@@ -111,7 +116,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
                             '&:hover': { boxShadow: '0 2px 8px rgba(211, 47, 47, 0.2)' }
                         }}
                         onClick={onDeleteClick}
-                        disabled={!hasWorklogs}
+                        disabled={disabled || !hasWorklogs}
                     >
                         <IconTrash size={16} />
                         <Typography variant="caption" sx={{ ml: 0.5, fontWeight: 600 }}>
