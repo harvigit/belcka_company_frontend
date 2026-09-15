@@ -35,6 +35,8 @@ import {
     Select,
     FormControl,
     Autocomplete,
+    CircularProgress,
+    Backdrop,
 } from '@mui/material';
 import {
     IconSearch,
@@ -474,6 +476,9 @@ const TimeClock = ({queryParams}: Props) => {
     const [hasDataChanged, setHasDataChanged] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [isPaidActionPending, setIsPaidActionPending] = useState(false);
+    const isPaidActionPendingRef = useRef(false);
+    const isPaidActionMountedRef = useRef(true);
     const [companyId, setCompanyId] = useState<number | null>(null);
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
@@ -557,6 +562,15 @@ const TimeClock = ({queryParams}: Props) => {
         textTransform: 'none',
         fontWeight: 600,
     };
+
+    useEffect(() => {
+        isPaidActionMountedRef.current = true;
+        return () => {
+            isPaidActionMountedRef.current = false;
+            isPaidActionPendingRef.current = false;
+        };
+    }, []);
+
     useEffect(() => {
         if (queryParams) {
             setResolvedQueryParams({
@@ -2296,6 +2310,7 @@ const TimeClock = ({queryParams}: Props) => {
 
     const handleConfirmAction = async () => {
         if (!confirmDialog) return;
+        if (confirmDialog.actionType === 'paid' && isPaidActionPendingRef.current) return;
 
         const timesheetIds = getSelectedTimesheetIds();
 
@@ -2366,6 +2381,8 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleMarkAsPaid = async () => {
+        if (isPaidActionPendingRef.current) return;
+
         const timesheetIds = getSelectedTimesheetIds();
 
         if (timesheetIds.length === 0) {
@@ -2419,9 +2436,16 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const proceedWithMarkAsPaid = async (timesheetIds: (number | string)[]) => {
+        if (isPaidActionPendingRef.current || timesheetIds.length === 0) return;
+
+        isPaidActionPendingRef.current = true;
+        setIsPaidActionPending(true);
         try {
             const ids = timesheetIds.join(',');
-            const response = await api.post('/timesheet/paid', {ids});
+            const response = await api.post('/timesheet/paid', {ids}, {
+                timeout: 120000,
+                skipToast: true,
+            } as any);
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
                 clearSelectedRows();
@@ -2433,7 +2457,22 @@ const TimeClock = ({queryParams}: Props) => {
                 await fetchConflictsData(s, e);
             }
         } catch (error) {
-            setErrorMessage('Failed to mark timesheets as paid.');
+            const s = startDate || defaultStart;
+            const e = endDate || defaultEnd;
+            try {
+                await fetchData(s, e);
+                await fetchConflictsData(s, e);
+            } catch (refreshError) {
+                console.error('Error refreshing time clock after paid request:', refreshError);
+            }
+            setErrorMessage(
+                'The paid request did not finish in this browser. The list has been refreshed — please check whether the records are already Paid before trying again.',
+            );
+        } finally {
+            isPaidActionPendingRef.current = false;
+            if (isPaidActionMountedRef.current) {
+                setIsPaidActionPending(false);
+            }
         }
     };
 
@@ -2980,6 +3019,7 @@ const TimeClock = ({queryParams}: Props) => {
                             <IconButton
                                 size="small"
                                 onClick={clearSelectedRows}
+                                disabled={isPaidActionPending}
                                 sx={{color: '#666', '&:hover': {bgcolor: 'grey.100'}}}
                             >
                                 <IconX size={16}/>
@@ -2998,6 +3038,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     color="success"
                                     size="small"
                                     onClick={handleLock}
+                                    disabled={isPaidActionPending}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     {t('Lock')}
@@ -3009,6 +3050,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     color="error"
                                     size="small"
                                     onClick={handleUnlock}
+                                    disabled={isPaidActionPending}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     {t('Unlock')}
@@ -3019,6 +3061,12 @@ const TimeClock = ({queryParams}: Props) => {
                                     color="primary"
                                     size="small"
                                     onClick={handleMarkAsPaid}
+                                    disabled={isPaidActionPending}
+                                    startIcon={
+                                        isPaidActionPending
+                                            ? <CircularProgress size={15} color="inherit"/>
+                                            : undefined
+                                    }
                                     sx={{
                                         px: 2.5,
                                         textTransform: 'none',
@@ -3037,6 +3085,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     color="error"
                                     size="small"
                                     onClick={handleDeleteSelectedUsers}
+                                    disabled={isPaidActionPending}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     {t('Delete')}
@@ -3048,6 +3097,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     color="primary"
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                     onClick={handleExportClick}
+                                    disabled={isPaidActionPending}
                                     endIcon={open ? <IconChevronUp size={18}/> : <IconChevronDown size={18}/>}
                                 >
                                     {t('Export')}
@@ -3621,7 +3671,10 @@ const TimeClock = ({queryParams}: Props) => {
             {confirmDialog && (
                 <ConfirmationDialog
                     open={confirmDialog.open}
-                    onClose={() => setConfirmDialog(null)}
+                    onClose={() => {
+                        if (isPaidActionPendingRef.current) return;
+                        setConfirmDialog(null);
+                    }}
                     onConfirm={handleConfirmAction}
                     title={confirmDialog.actionType === 'lock' ? 'Lock Timesheets' : confirmDialog.actionType === 'unlock' ? 'Unlock Timesheets' : confirmDialog.actionType === 'delete' ? 'Delete Time-clock Records' : 'Mark as Paid'}
                     message={confirmDialog.actionType === 'lock' ? 'Are you sure you want to lock the selected timesheets?' : confirmDialog.actionType === 'unlock' ? 'Are you sure you want to unlock the selected timesheets?' : confirmDialog.actionType === 'delete' ? `Are you sure you want to delete all worklogs, leave, penalties, pricework and expenses for ${selectedRowIds.size} selected user(s) from ${format(startDate || defaultStart, 'dd MMM yyyy')} to ${format(endDate || defaultEnd, 'dd MMM yyyy')}? This action cannot be undone.` : 'Are you sure you want to mark the selected timesheets as paid?'}
@@ -3629,6 +3682,36 @@ const TimeClock = ({queryParams}: Props) => {
                     actionType={confirmDialog.actionType}
                 />
             )}
+
+            <Backdrop
+                open={isPaidActionPending}
+                sx={{
+                    zIndex: 1400,
+                    color: '#fff',
+                    backgroundColor: 'rgba(15, 23, 42, 0.28)',
+                }}
+            >
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 1.5,
+                        px: 3,
+                        py: 2.5,
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                        border: '1px solid #e0e0e0',
+                        minWidth: 220,
+                    }}
+                >
+                    <CircularProgress size={28} />
+                    <Typography variant="body2" fontWeight={600} color="text.primary">
+                        Marking as Paid...
+                    </Typography>
+                </Box>
+            </Backdrop>
         </Box>
     );
 };
