@@ -763,18 +763,19 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow, disableDateFilter, read
             },
         }),
 
-        columnHelper.accessor((row) => row?.amount, {
-            id: 'amount',
-            header: () => 'Amount',
-            cell: ({ row }) => (
-                <AmountCell
-                    item={row.original}
-                    startDate={startDate}
-                    endDate={endDate}
-                    fetchPayslips={fetchPayslips}
-                />
-            ),
-        }),
+        // Amount column hidden from listing for now
+        // columnHelper.accessor((row) => row?.amount, {
+        //     id: 'amount',
+        //     header: () => 'Amount',
+        //     cell: ({ row }) => (
+        //         <AmountCell
+        //             item={row.original}
+        //             startDate={startDate}
+        //             endDate={endDate}
+        //             fetchPayslips={fetchPayslips}
+        //         />
+        //     ),
+        // }),
 
         columnHelper.accessor((row) => row?.date, {
             id: 'uploadedDate',
