@@ -482,6 +482,9 @@ const TimeClock = ({queryParams}: Props) => {
     const [isLockActionPending, setIsLockActionPending] = useState(false);
     const isLockActionPendingRef = useRef(false);
     const isLockActionMountedRef = useRef(true);
+    const [isUnlockActionPending, setIsUnlockActionPending] = useState(false);
+    const isUnlockActionPendingRef = useRef(false);
+    const isUnlockActionMountedRef = useRef(true);
     const [companyId, setCompanyId] = useState<number | null>(null);
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
@@ -569,11 +572,14 @@ const TimeClock = ({queryParams}: Props) => {
     useEffect(() => {
         isPaidActionMountedRef.current = true;
         isLockActionMountedRef.current = true;
+        isUnlockActionMountedRef.current = true;
         return () => {
             isPaidActionMountedRef.current = false;
             isPaidActionPendingRef.current = false;
             isLockActionMountedRef.current = false;
             isLockActionPendingRef.current = false;
+            isUnlockActionMountedRef.current = false;
+            isUnlockActionPendingRef.current = false;
         };
     }, []);
 
@@ -2318,6 +2324,7 @@ const TimeClock = ({queryParams}: Props) => {
         if (!confirmDialog) return;
         if (confirmDialog.actionType === 'paid' && isPaidActionPendingRef.current) return;
         if (confirmDialog.actionType === 'lock' && isLockActionPendingRef.current) return;
+        if (confirmDialog.actionType === 'unlock' && isUnlockActionPendingRef.current) return;
 
         const timesheetIds = getSelectedTimesheetIds();
 
@@ -2369,6 +2376,8 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleUnlock = async () => {
+        if (isUnlockActionPendingRef.current) return;
+
         const timesheetIds = getSelectedTimesheetIds();
 
         if (timesheetIds.length === 0) {
@@ -2390,7 +2399,7 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleMarkAsPaid = async () => {
-        if (isPaidActionPendingRef.current || isLockActionPendingRef.current) return;
+        if (isPaidActionPendingRef.current || isLockActionPendingRef.current || isUnlockActionPendingRef.current) return;
 
         const timesheetIds = getSelectedTimesheetIds();
 
@@ -2445,7 +2454,7 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const proceedWithMarkAsPaid = async (timesheetIds: (number | string)[]) => {
-        if (isPaidActionPendingRef.current || isLockActionPendingRef.current || timesheetIds.length === 0) return;
+        if (isPaidActionPendingRef.current || isLockActionPendingRef.current || isUnlockActionPendingRef.current || timesheetIds.length === 0) return;
 
         isPaidActionPendingRef.current = true;
         setIsPaidActionPending(true);
@@ -2492,6 +2501,11 @@ const TimeClock = ({queryParams}: Props) => {
             isLockActionPendingRef.current = true;
             setIsLockActionPending(true);
         }
+        if (action === 'unapprove') {
+            if (isUnlockActionPendingRef.current) return;
+            isUnlockActionPendingRef.current = true;
+            setIsUnlockActionPending(true);
+        }
 
         try {
             const ids = timesheetIds.join(',');
@@ -2506,7 +2520,7 @@ const TimeClock = ({queryParams}: Props) => {
                 }
                 : {ids};
 
-            const response = action === 'approve'
+            const response = (action === 'approve' || action === 'unapprove')
                 ? await api.post(endpoint, payload, {
                     timeout: 120000,
                     skipToast: true,
@@ -2529,6 +2543,16 @@ const TimeClock = ({queryParams}: Props) => {
                 setErrorMessage(
                     'The lock request did not finish in this browser. The list has been refreshed — please check whether the records are already Locked before trying again.',
                 );
+            } else if (action === 'unapprove') {
+                try {
+                    await fetchData(s, e);
+                    await fetchConflictsData(s, e);
+                } catch (refreshError) {
+                    console.error('Error refreshing time clock after unlock request:', refreshError);
+                }
+                setErrorMessage(
+                    'The unlock request did not finish in this browser. The list has been refreshed — please check whether the records are already Unlocked before trying again.',
+                );
             } else {
                 setErrorMessage(`Failed to ${action} timesheet(s).`);
             }
@@ -2545,6 +2569,18 @@ const TimeClock = ({queryParams}: Props) => {
                 setErrorMessage(
                     'The lock request did not finish in this browser. The list has been refreshed — please check whether the records are already Locked before trying again.',
                 );
+            } else if (action === 'unapprove') {
+                const s = startDate || defaultStart;
+                const e = endDate || defaultEnd;
+                try {
+                    await fetchData(s, e);
+                    await fetchConflictsData(s, e);
+                } catch (refreshError) {
+                    console.error('Error refreshing time clock after unlock request:', refreshError);
+                }
+                setErrorMessage(
+                    'The unlock request did not finish in this browser. The list has been refreshed — please check whether the records are already Unlocked before trying again.',
+                );
             }
         } finally {
             if (action === 'approve') {
@@ -2553,10 +2589,16 @@ const TimeClock = ({queryParams}: Props) => {
                     setIsLockActionPending(false);
                 }
             }
+            if (action === 'unapprove') {
+                isUnlockActionPendingRef.current = false;
+                if (isUnlockActionMountedRef.current) {
+                    setIsUnlockActionPending(false);
+                }
+            }
         }
     };
 
-    const isTimesheetActionPending = isPaidActionPending || isLockActionPending;
+    const isTimesheetActionPending = isPaidActionPending || isLockActionPending || isUnlockActionPending;
     const isAnyRowSelected = selectedRowIds.size > 0;
 
     const simpleColumns = columns.map((column) => ({
@@ -3722,7 +3764,7 @@ const TimeClock = ({queryParams}: Props) => {
                 <ConfirmationDialog
                     open={confirmDialog.open}
                     onClose={() => {
-                        if (isPaidActionPendingRef.current || isLockActionPendingRef.current) return;
+                        if (isPaidActionPendingRef.current || isLockActionPendingRef.current || isUnlockActionPendingRef.current) return;
                         setConfirmDialog(null);
                     }}
                     onConfirm={handleConfirmAction}
@@ -3789,6 +3831,36 @@ const TimeClock = ({queryParams}: Props) => {
                     <CircularProgress size={28} />
                     <Typography variant="body2" fontWeight={600} color="text.primary">
                         Locking timesheets...
+                    </Typography>
+                </Box>
+            </Backdrop>
+
+            <Backdrop
+                open={isUnlockActionPending}
+                sx={{
+                    zIndex: 1400,
+                    color: '#fff',
+                    backgroundColor: 'rgba(15, 23, 42, 0.28)',
+                }}
+            >
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 1.5,
+                        px: 3,
+                        py: 2.5,
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                        border: '1px solid #e0e0e0',
+                        minWidth: 220,
+                    }}
+                >
+                    <CircularProgress size={28} />
+                    <Typography variant="body2" fontWeight={600} color="text.primary">
+                        Unlocking timesheets...
                     </Typography>
                 </Box>
             </Backdrop>
