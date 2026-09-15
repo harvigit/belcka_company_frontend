@@ -473,7 +473,7 @@ const AddressesList = ({
         url += `&project_id=${projectId}`;
       }
       if (searchTerm) {
-        url += `&search=${searchTerm}`;
+        url += `&search=${encodeURIComponent(searchTerm)}`;
       }
       if (checkinStartDate && checkinEndDate) {
         url += `&checkin_start_date=${format(checkinStartDate, "dd/MM/yyyy")}`;

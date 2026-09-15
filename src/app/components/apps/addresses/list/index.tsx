@@ -697,7 +697,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     try {
       let url = `address/get-parent?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
-        url += `&search=${searchTerm}`;
+        url += `&search=${encodeURIComponent(searchTerm)}`;
       }
 
       if (sorting && sorting.length > 0) {

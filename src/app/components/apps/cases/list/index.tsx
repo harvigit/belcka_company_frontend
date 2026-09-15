@@ -452,7 +452,7 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
       if (filters.project_id) url += `&project_id=${filters.project_id}`;
       if (filters.parent_address_id)
         url += `&parent_address_id=${filters.parent_address_id}`;
-      if (search) url += `&search=${search}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
 
       if (sorting && sorting.length > 0) {
         const sortBy = CASE_LIST_SORT_FIELDS[sorting[0].id];
@@ -803,6 +803,21 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
             </Tooltip>
           );
         },
+      },
+
+      {
+        header: "Check-ins",
+        id: "check_ins",
+        accessorKey: "check_ins",
+        cell: ({ getValue }: any) => (
+          <Typography
+            className="f-14"
+            color="textPrimary"
+            sx={{ px: 1.5, textTransform: "capitalize" }}
+          >
+            {getValue()}
+          </Typography>
+        ),
       },
 
       {

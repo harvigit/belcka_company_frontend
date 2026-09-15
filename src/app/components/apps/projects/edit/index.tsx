@@ -93,12 +93,12 @@ const EditProject: React.FC<EditProjectProps> = ({
 
   const normalizeBudgetValue = (value: unknown) =>
     String(value ?? "").replace(/[^0-9.]/g, "");
-  
+
   const getBudgetFieldValue = (value: unknown) =>
     normalizeBudgetValue(value) || "0";
-  
+
   const defaultBudgetTypes = ["Labor", "Material", "Others"];
- 
+
   const createDefaultBudgetSettings = (): BudgetSettingRow[] =>
     defaultBudgetTypes.map((type) => ({
       localId: `${type}-${Date.now()}-${Math.random()}`,
@@ -120,7 +120,7 @@ const EditProject: React.FC<EditProjectProps> = ({
 
     const defaultRows = defaultBudgetTypes.map((type) => {
       const savedDefault = normalizedSettings.find(
-        (setting) => setting.type.toLowerCase() === type.toLowerCase()
+        (setting) => setting.type.toLowerCase() === type.toLowerCase(),
       );
 
       return (
@@ -135,15 +135,15 @@ const EditProject: React.FC<EditProjectProps> = ({
     const customRows = normalizedSettings.filter(
       (setting) =>
         !defaultBudgetTypes.some(
-          (type) => type.toLowerCase() === setting.type.toLowerCase()
-        )
+          (type) => type.toLowerCase() === setting.type.toLowerCase(),
+        ),
     );
 
     return [...defaultRows, ...customRows];
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
 
@@ -169,7 +169,9 @@ const EditProject: React.FC<EditProjectProps> = ({
         company_id: project.company_id || 0,
         // shift_ids: (project.shifts || []).map((s: any) => s.id).join(","),
         team_ids: (project.teams || []).map((t: any) => t.id).join(","),
-        user_ids: (project.assigned_users || []).map((u: any) => u.id).join(","),
+        user_ids: (project.assigned_users || [])
+          .map((u: any) => u.id)
+          .join(","),
         ...(showSettingsAccess
           ? {
               setting_user_ids: (project.setting_users || [])
@@ -193,19 +195,24 @@ const EditProject: React.FC<EditProjectProps> = ({
   const [geofence, setGeofence] = useState<Geofence[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [currency, setCurrency] = useState("");
-  
-  const [budgetSettings, setBudgetSettings] = useState<BudgetSettingRow[]>([...createDefaultBudgetSettings()]);
-  const [savedBudgetSettings, setSavedBudgetSettings] = useState<BudgetSettingRow[]>(createDefaultBudgetSettings());
-  
+
+  const [budgetSettings, setBudgetSettings] = useState<BudgetSettingRow[]>([
+    ...createDefaultBudgetSettings(),
+  ]);
+  const [savedBudgetSettings, setSavedBudgetSettings] = useState<
+    BudgetSettingRow[]
+  >(createDefaultBudgetSettings());
+
   const [isBudgetSaving, setIsBudgetSaving] = useState(false);
   const [isBudgetLoading, setIsBudgetLoading] = useState(false);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
-  
+
   const usedBudget = budgetSettings.reduce(
-    (total, row) => total + Number(normalizeBudgetValue(row.budget_amount) || 0),
-    0
+    (total, row) =>
+      total + Number(normalizeBudgetValue(row.budget_amount) || 0),
+    0,
   );
   const formatCurrency = (value: number) =>
     `${currency}${Number.isFinite(value) ? value.toLocaleString() : "0"}`;
@@ -220,9 +227,11 @@ const EditProject: React.FC<EditProjectProps> = ({
 
     try {
       setIsBudgetLoading(true);
-      const res = await api.get(`project/get-budget-settings?project_id=${project.id}`);
+      const res = await api.get(
+        `project/get-budget-settings?project_id=${project.id}`,
+      );
       const nextSettings = normalizeBudgetSettings(res.data?.info || []);
-      if(res.data.IsSuccess) {
+      if (res.data.IsSuccess) {
         setCurrency(res.data.currency);
       }
       setBudgetSettings(nextSettings);
@@ -240,7 +249,7 @@ const EditProject: React.FC<EditProjectProps> = ({
   const handleBudgetSettingChange = (
     localId: string,
     field: "type" | "budget_amount",
-    value: string
+    value: string,
   ) => {
     if (field === "budget_amount" && !/^\d*\.?\d{0,2}$/.test(value)) {
       return;
@@ -253,15 +262,15 @@ const EditProject: React.FC<EditProjectProps> = ({
               ...row,
               [field]: field === "budget_amount" && value === "" ? "0" : value,
             }
-          : row
-      )
+          : row,
+      ),
     );
   };
 
   const isBudgetTypeReadOnly = (row: BudgetSettingRow) =>
     Boolean(row.id) ||
     defaultBudgetTypes.some(
-      (type) => type.toLowerCase() === row.type.toLowerCase()
+      (type) => type.toLowerCase() === row.type.toLowerCase(),
     );
 
   const handleBudgetSubmit = async (e: React.FormEvent) => {
@@ -338,7 +347,7 @@ const EditProject: React.FC<EditProjectProps> = ({
     const getTeams = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=teamList&company_id=${user.company_id}`
+          `get-company-resources?flag=teamList&company_id=${user.company_id}`,
         );
         if (res.data?.info) {
           setTeam(res.data.info);
@@ -356,7 +365,7 @@ const EditProject: React.FC<EditProjectProps> = ({
     const getUsers = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=usersList&company_id=${user.company_id}`
+          `get-company-resources?flag=usersList&company_id=${user.company_id}`,
         );
         if (res.data?.info) {
           const uniqueUsers = Array.from(
@@ -381,7 +390,7 @@ const EditProject: React.FC<EditProjectProps> = ({
     const getGeofence = async () => {
       try {
         const res = await api.get(
-          `work-zone/get?company_id=${user.company_id}`
+          `work-zone/get?company_id=${user.company_id}`,
         );
         if (res.data?.info) {
           const zones: Geofence[] = res.data.info.map((z: any) => ({
@@ -417,7 +426,7 @@ const EditProject: React.FC<EditProjectProps> = ({
       JSON.stringify({
         project_id: Number(projectId),
         project_name: formData.name || project?.name || "",
-      })
+      }),
     );
 
     onClose();
@@ -425,266 +434,293 @@ const EditProject: React.FC<EditProjectProps> = ({
   };
 
   const formContent = (
-      <Box display="flex" flexDirection="column" height={embedded ? "auto" : "100%"}>
-        <Box height={embedded ? "auto" : "100%"}>
-          <form onSubmit={handleSubmit} className="address-form">
-            {" "}
-            <Grid container>
-              <Grid size={{ xs: 12 }}>
-                {!embedded && (
+    <Box
+      display="flex"
+      flexDirection="column"
+      height={embedded ? "auto" : "100%"}
+    >
+      <Box height={embedded ? "auto" : "100%"}>
+        <form onSubmit={handleSubmit} className="address-form">
+          {" "}
+          <Grid container>
+            <Grid size={{ xs: 12 }}>
+              {!embedded && (
                 <Box
                   display={"flex"}
                   alignItems={"center"}
                   justifyContent={"space-between"}
                 >
-                    <Box 
-                        display={"flex"}
-                        alignContent={"center"}
-                        alignItems={"center"}
-                        flexWrap={"wrap"}
-                    >
-                          <IconButton onClick={onClose}>
-                            <IconArrowLeft />
-                          </IconButton>
-                          <Typography variant="h6" fontWeight={700}>
-                            Edit Project
-                          </Typography>
-                    </Box>
+                  <Box
+                    display={"flex"}
+                    alignContent={"center"}
+                    alignItems={"center"}
+                    flexWrap={"wrap"}
+                  >
+                    <IconButton onClick={onClose}>
+                      <IconArrowLeft />
+                    </IconButton>
+                    <Typography variant="h6" fontWeight={700}>
+                      Edit Project
+                    </Typography>
+                  </Box>
 
-                    <Box
-                        display={"flex"}
-                        alignItems={"center"}
+                  <Box display={"flex"} alignItems={"center"}>
+                    <Typography
+                      variant="h6"
+                      fontWeight={600}
+                      onClick={handleShiftManagementClick}
+                      sx={{
+                        cursor: "pointer",
+                        color: "primary.main",
+                      }}
                     >
-                        <Typography
-                            variant="h6"
-                            fontWeight={600}
-                            onClick={handleShiftManagementClick}
-                            sx={{
-                                cursor: "pointer",
-                                color: "primary.main",
-                            }}
-                        
-                        >
-                            Shift Management
-                        </Typography>
+                      Shift Management
+                    </Typography>
 
-                        <IconButton onClick={onHandleSetting}>
-                            <IconSettings />
-                        </IconButton>
-                    </Box>
+                    <IconButton onClick={onHandleSetting}>
+                      <IconSettings />
+                    </IconButton>
+                  </Box>
                 </Box>
-                )}
-                {(() => {
-                  const nameField = (
-                    <>
-                      <Typography variant="h5" mt={embedded ? 0 : 2}>
-                        Name
-                      </Typography>
-                      <CustomTextField
-                        id="name"
-                        name="name"
-                        placeholder="Enter address name.."
-                        value={formData.name}
-                        onChange={handleChange}
-                        variant="outlined"
-                        inputProps={{ maxLength: 50 }}
-                        fullWidth
-                      />
-                    </>
-                  );
-                  const teamsField = (
-                    <>
-                      <Typography variant="h5" mt={embedded ? 0 : 2}>
-                        Select Teams
-                      </Typography>
-                      <Autocomplete
-                        fullWidth
-                        multiple
-                        id="team_ids"
-                        options={team}
-                        value={team.filter((item) =>
-                          formData.team_ids?.split(",").includes(String(item.id)),
-                        )}
-                        onChange={(event, newValue) => {
-                          const selectedIds = newValue
-                            .map((item) => item.id)
-                            .filter(Boolean);
-                          setFormData({
-                            ...formData,
-                            team_ids: selectedIds.join(","),
-                          });
-                        }}
-                        getOptionLabel={(option) => option.name}
-                        isOptionEqualToValue={(option, value) =>
-                          option.id === value.id
-                        }
-                        renderInput={(params) => (
-                          <CustomTextField
-                            {...params}
-                            placeholder="Select Teams"
-                          />
-                        )}
-                      />
-                    </>
-                  );
-                  const usersField = (
-                    <ProjectUserMultiSelect
-                      id="user_ids"
-                      label="Assigned Users"
-                      placeholder="Select Assigned Users"
-                      options={users}
-                      selectedIds={formData.user_ids || ""}
-                      onChange={(ids) =>
+              )}
+              {(() => {
+                const selectedTeamIds = (formData.team_ids || "")
+                  .split(",")
+                  .filter(Boolean);
+                const nameField = (
+                  <>
+                    <Typography
+                      variant="h5"
+                      mt={embedded ? 0 : 2}
+                      className="f-14"
+                    >
+                      Name
+                    </Typography>
+                    <CustomTextField
+                      id="name"
+                      name="name"
+                      placeholder="Enter address name.."
+                      value={formData.name}
+                      onChange={handleChange}
+                      variant="outlined"
+                      inputProps={{ maxLength: 50 }}
+                      fullWidth
+                    />
+                  </>
+                );
+                const teamsField = (
+                  <>
+                    <Typography
+                      variant="h5"
+                      mt={embedded ? 0 : 2}
+                      className="f-14"
+                    >
+                      Select Teams
+                    </Typography>
+                    <Autocomplete
+                      fullWidth
+                      multiple
+                      id="team_ids"
+                      options={team}
+                      value={team.filter((item) =>
+                        formData.team_ids?.split(",").includes(String(item.id)),
+                      )}
+                      onChange={(event, newValue) => {
+                        let selectedIds = newValue
+                          .map((item) => item.id)
+                          .filter(Boolean);
                         setFormData({
                           ...formData,
-                          user_ids: ids,
-                        })
+                          team_ids: selectedIds.join(","),
+                        });
+                      }}
+                      getOptionLabel={(option) => option.name}
+                      isOptionEqualToValue={(option, value) =>
+                        option.id === value.id
                       }
-                      labelMt={embedded ? 0 : 2}
+                      renderInput={(params) => (
+                        <CustomTextField
+                          {...params}
+                          placeholder="Select Teams"
+                        />
+                      )}
                     />
-                  );
-                  const showSettingsField = (
-                    <ProjectUserMultiSelect
-                      id="setting_user_ids"
-                      label="Project setting visible to"
-                      placeholder="Select users who can see Settings"
-                      options={users}
-                      selectedIds={formData.setting_user_ids || ""}
-                      onChange={(ids) =>
-                        setFormData({
-                          ...formData,
-                          setting_user_ids: ids,
-                        })
-                      }
-                      // helperText="These users can open this project's Settings tab. Admins can always see it, with or without being assigned."
-                      labelMt={embedded ? 0 : 2}
+                  </>
+                );
+                const usersField = (
+                  <ProjectUserMultiSelect
+                    id="user_ids"
+                    label="Assigned Users"
+                    placeholder="Select Assigned Users"
+                    options={users}
+                    selectedIds={formData.user_ids || ""}
+                    onChange={(ids) =>
+                      setFormData({
+                        ...formData,
+                        user_ids: ids,
+                      })
+                    }
+                    labelMt={embedded ? 0 : 2}
+                  />
+                );
+                const showSettingsField = (
+                  <ProjectUserMultiSelect
+                    id="setting_user_ids"
+                    label="Project setting visible to"
+                    placeholder="Select users who can see Settings"
+                    options={users}
+                    selectedIds={formData.setting_user_ids || ""}
+                    onChange={(ids) =>
+                      setFormData({
+                        ...formData,
+                        setting_user_ids: ids,
+                      })
+                    }
+                    // helperText="These users can open this project's Settings tab. Admins can always see it, with or without being assigned."
+                    labelMt={embedded ? 0 : 2}
+                  />
+                );
+                const addressField = (
+                  <>
+                    <Typography
+                      variant="h5"
+                      mt={embedded ? 0 : 2}
+                      className="f-14"
+                    >
+                      Site Address
+                    </Typography>
+                    <CustomTextField
+                      id="address"
+                      name="address"
+                      placeholder="Site Address.."
+                      value={formData.address}
+                      onChange={handleChange}
+                      variant="outlined"
+                      fullWidth
                     />
-                  );
-                  const addressField = (
-                    <>
-                      <Typography variant="h5" mt={embedded ? 0 : 2}>
-                        Site Address
-                      </Typography>
-                      <CustomTextField
-                        id="address"
-                        name="address"
-                        placeholder="Site Address.."
-                        value={formData.address}
-                        onChange={handleChange}
-                        variant="outlined"
-                        fullWidth
-                      />
-                    </>
-                  );
-                  const budgetField = (
-                    <>
-                      <Typography variant="h5" mt={embedded ? 0 : 2}>
-                        Budget
-                      </Typography>
-                      <CustomTextField
-                        id="budget"
-                        name="budget"
-                        type="text"
-                        placeholder="Enter Budget.."
-                        value={formData.budget}
-                        onChange={handleChange}
-                        inputProps={{
-                          inputMode: "decimal",
-                          pattern: "^[0-9]+(\\.[0-9]{0,2})?$",
-                        }}
-                        variant="outlined"
-                        fullWidth
-                      />
-                    </>
-                  );
-                  const codeField = (
-                    <>
-                      <Typography variant="h5" mt={embedded ? 0 : 2}>
-                        Project Code
-                      </Typography>
-                      <CustomTextField
-                        id="code"
-                        name="code"
-                        placeholder="Project Code.."
-                        value={formData.code}
-                        onChange={handleChange}
-                        variant="outlined"
-                        fullWidth
-                      />
-                    </>
-                  );
-                  const descriptionField = (
-                    <>
-                      <Typography variant="h5" mt={embedded ? 0 : 2}>
-                        Description
-                      </Typography>
-                      <TextField
-                        id="description"
-                        name="description"
-                        multiline
-                        minRows={embedded ? 2 : 1}
-                        placeholder="Enter Description.."
-                        value={formData.description}
-                        onChange={handleChange}
-                        variant="outlined"
-                        fullWidth
-                      />
-                    </>
-                  );
+                  </>
+                );
+                const budgetField = (
+                  <>
+                    <Typography
+                      variant="h5"
+                      mt={embedded ? 0 : 2}
+                      className="f-14"
+                    >
+                      Budget
+                    </Typography>
+                    <CustomTextField
+                      id="budget"
+                      name="budget"
+                      type="text"
+                      placeholder="Enter Budget.."
+                      value={formData.budget}
+                      onChange={handleChange}
+                      inputProps={{
+                        inputMode: "decimal",
+                        pattern: "^[0-9]+(\\.[0-9]{0,2})?$",
+                      }}
+                      variant="outlined"
+                      fullWidth
+                    />
+                  </>
+                );
+                const codeField = (
+                  <>
+                    <Typography
+                      variant="h5"
+                      mt={embedded ? 0 : 2}
+                      className="f-14"
+                    >
+                      Project Code
+                    </Typography>
+                    <CustomTextField
+                      id="code"
+                      name="code"
+                      placeholder="Project Code.."
+                      value={formData.code}
+                      onChange={handleChange}
+                      variant="outlined"
+                      fullWidth
+                    />
+                  </>
+                );
+                const descriptionField = (
+                  <>
+                    <Typography
+                      variant="h5"
+                      mt={embedded ? 0 : 2}
+                      className="f-14"
+                    >
+                      Description
+                    </Typography>
+                    <TextField
+                      id="description"
+                      name="description"
+                      multiline
+                      minRows={embedded ? 2 : 1}
+                      placeholder="Enter Description.."
+                      value={formData.description}
+                      onChange={handleChange}
+                      variant="outlined"
+                      fullWidth
+                    />
+                  </>
+                );
 
-                  if (embedded) {
-                    return (
-                      <Grid container spacing={2.5}>
-                        <Grid size={{ xs: 12, md: 6 }}>{nameField}</Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>{codeField}</Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>{teamsField}</Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>{usersField}</Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>{addressField}</Grid>
-                        {showSettingsAccess && (
-                          <Grid size={{ xs: 6 }}>{showSettingsField}</Grid>
-                        )}
-                        <Grid size={{ xs: 12, md: 6 }}>{budgetField}</Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>{descriptionField}</Grid>
-                      </Grid>
-                    );
-                  }
-
+                if (embedded) {
                   return (
-                    <>
-                      {nameField}
-                      {teamsField}
-                      {usersField}
-                      {/* {geofenceField} */}
-                      {addressField}
-                      {budgetField}
-                      {codeField}
-                      {descriptionField}
-                    </>
+                    <Grid container spacing={2.5}>
+                      <Grid size={{ xs: 12, md: 6 }}>{nameField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{codeField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{teamsField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{usersField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{addressField}</Grid>
+                      {showSettingsAccess && (
+                        <Grid size={{ xs: 6 }}>{showSettingsField}</Grid>
+                      )}
+                      <Grid size={{ xs: 12, md: 6 }}>{budgetField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{descriptionField}</Grid>
+                    </Grid>
                   );
-                })()}
-              </Grid>
-            </Grid>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "start",
-                gap: 2,
-                marginTop: 3,
-              }}
-            >
-              <Button
-                color="primary"
-                variant="contained"
-                size="large"
-                type="submit"
-                disabled={isSaving}
-                sx={{ borderRadius: 3 }}
-                className="drawer_buttons"
-              >
-                {isSaving ? "Saving..." : "Save"}
-              </Button>
+                }
 
-              {!embedded && (
+                return (
+                  <>
+                    {nameField}
+                    {teamsField}
+                    {usersField}
+                    {/* {geofenceField} */}
+                    {addressField}
+                    {budgetField}
+                    {codeField}
+                    {descriptionField}
+                  </>
+                );
+              })()}
+            </Grid>
+          </Grid>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "start",
+              gap: 2,
+              marginTop: 3,
+            }}
+          >
+            <Button
+              color="primary"
+              variant="contained"
+              size="large"
+              type="submit"
+              disabled={isSaving}
+              sx={{ borderRadius: 3 }}
+              className="drawer_buttons"
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+
+            {!embedded && (
               <Button
                 color="inherit"
                 onClick={onClose}
@@ -698,11 +734,11 @@ const EditProject: React.FC<EditProjectProps> = ({
               >
                 Close
               </Button>
-              )}
-            </Box>
-          </form>
-        </Box>
+            )}
+          </Box>
+        </form>
       </Box>
+    </Box>
   );
 
   return (
@@ -727,146 +763,150 @@ const EditProject: React.FC<EditProjectProps> = ({
           {formContent}
         </Drawer>
       )}
-        {!embedded && (
+      {!embedded && (
         <Drawer
-            anchor="right"
-            open={settingsOpen}
-            onClose={handleBudgetClose}
-            sx={{
-                width: 450,
-                flexShrink: 0,
-                "& .MuiDrawer-paper": {
-                    width: 450,
-                    padding: 2,
-                    backgroundColor: "#f9f9f9",
-                },
-            }}
+          anchor="right"
+          open={settingsOpen}
+          onClose={handleBudgetClose}
+          sx={{
+            width: 450,
+            flexShrink: 0,
+            "& .MuiDrawer-paper": {
+              width: 450,
+              padding: 2,
+              backgroundColor: "#f9f9f9",
+            },
+          }}
         >
-            {/* Header */}
+          {/* Header */}
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              flexShrink: 0,
+            }}
+          >
+            <Typography variant="h6" fontWeight={700}>
+              {formData.name || project?.name}
+            </Typography>
+            <IconButton onClick={handleBudgetClose}>
+              <IconX size={20} />
+            </IconButton>
+          </Box>
+
+          <Box
+            component="form"
+            onSubmit={handleBudgetSubmit}
+            className="address-form"
+            sx={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              pt: 3,
+              overflow: "hidden",
+            }}
+          >
             <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-                sx={{ borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              gap={2}
+              mb={2}
             >
-                <Typography variant="h6" fontWeight={700}>
-                    {formData.name || project?.name}
-                </Typography>
-                <IconButton onClick={handleBudgetClose}>
-                    <IconX size={20} />
-                </IconButton>
+              <Typography variant="subtitle2" color="text.secondary">
+                Total: {formatCurrency(usedBudget)}
+              </Typography>
             </Box>
 
-            <Box
-                component="form"
-                onSubmit={handleBudgetSubmit}
-                className="address-form"
-                sx={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    pt: 3,
-                    overflow: 'hidden',
-                }}
-            >
+            <Stack spacing={2} sx={{ overflowY: "auto", pr: 0.5 }}>
+              {budgetSettings.map((row) => (
                 <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    gap={2}
-                    mb={2}
+                  key={row.localId}
+                  display="flex"
+                  alignItems="flex-start"
+                  gap={1}
                 >
-                    <Typography variant="subtitle2" color="text.secondary">
-                        Total: {formatCurrency(usedBudget)}
-                    </Typography>
-                </Box>
-
-                <Stack spacing={2} sx={{ overflowY: "auto", pr: 0.5 }}>
-                    {budgetSettings.map((row) => (
-                        <Box
-                            key={row.localId}
-                            display="flex"
-                            alignItems="flex-start"
-                            gap={1}
-                        >
-                            <CustomTextField
-                                id={`budget-type-${row.localId}`}
-                                name="type"
-                                placeholder="Type"
-                                value={row.type}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                    handleBudgetSettingChange(
-                                        row.localId,
-                                        "type",
-                                        e.target.value
-                                    )
-                                }
-                                inputProps={{ maxLength: 50 }}
-                                InputProps={{
-                                    readOnly: isBudgetTypeReadOnly(row),
-                                }}
-                                fullWidth
-                                disabled={isBudgetLoading}
-                                sx={{
-                                    "& .MuiInputBase-input.Mui-readOnly": {
-                                        cursor: "default",
-                                    },
-                                }}
-                            />
-                            <CustomTextField
-                                id={`budget-amount-${row.localId}`}
-                                name="budget_amount"
-                                type="text"
-                                placeholder="0"
-                                value={row.budget_amount}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                    handleBudgetSettingChange(
-                                        row.localId,
-                                        "budget_amount",
-                                        e.target.value
-                                    )
-                                }
-                                inputProps={{
-                                    inputMode: 'decimal',
-                                    pattern: '^[0-9]+(\\.[0-9]{0,2})?$',
-                                }}
-                                sx={{ width: 125, flexShrink: 0 }}
-                                disabled={isBudgetLoading}
-                            />
-                        </Box>
-                    ))}
-                </Stack>
-
-                <Box
-                    sx={{
-                        mt: 'auto',       
-                        pt: 2,
-                        display: 'flex',
-                        gap: 2,
+                  <CustomTextField
+                    id={`budget-type-${row.localId}`}
+                    name="type"
+                    placeholder="Type"
+                    value={row.type}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      handleBudgetSettingChange(
+                        row.localId,
+                        "type",
+                        e.target.value,
+                      )
+                    }
+                    inputProps={{ maxLength: 50 }}
+                    InputProps={{
+                      readOnly: isBudgetTypeReadOnly(row),
                     }}
-                >
-                    <Button
-                        color="primary"
-                        variant="contained"
-                        size="large"
-                        type="submit"
-                        disabled={isBudgetSaving}
-                        sx={{ borderRadius: 3, flex: 1 }}
-                    >
-                        {isBudgetSaving ? 'Saving...' : 'Save'}
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        size="large"
-                        onClick={handleBudgetClose}
-                        sx={{ borderRadius: 3, flex: 1 }}
-                    >
-                        Close
-                    </Button>
+                    fullWidth
+                    disabled={isBudgetLoading}
+                    sx={{
+                      "& .MuiInputBase-input.Mui-readOnly": {
+                        cursor: "default",
+                      },
+                    }}
+                  />
+                  <CustomTextField
+                    id={`budget-amount-${row.localId}`}
+                    name="budget_amount"
+                    type="text"
+                    placeholder="0"
+                    value={row.budget_amount}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      handleBudgetSettingChange(
+                        row.localId,
+                        "budget_amount",
+                        e.target.value,
+                      )
+                    }
+                    inputProps={{
+                      inputMode: "decimal",
+                      pattern: "^[0-9]+(\\.[0-9]{0,2})?$",
+                    }}
+                    sx={{ width: 125, flexShrink: 0 }}
+                    disabled={isBudgetLoading}
+                  />
                 </Box>
+              ))}
+            </Stack>
+
+            <Box
+              sx={{
+                mt: "auto",
+                pt: 2,
+                display: "flex",
+                gap: 2,
+              }}
+            >
+              <Button
+                color="primary"
+                variant="contained"
+                size="large"
+                type="submit"
+                disabled={isBudgetSaving}
+                sx={{ borderRadius: 3, flex: 1 }}
+              >
+                {isBudgetSaving ? "Saving..." : "Save"}
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={handleBudgetClose}
+                sx={{ borderRadius: 3, flex: 1 }}
+              >
+                Close
+              </Button>
             </Box>
+          </Box>
         </Drawer>
-        )}
+      )}
     </>
   );
 };

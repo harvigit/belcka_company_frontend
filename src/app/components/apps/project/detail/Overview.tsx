@@ -83,7 +83,7 @@ type OverviewData = {
   teams?: { id: number; name: string }[];
   kpis?: Record<
     string,
-    { value: number; today_delta: number; capacity?: number }
+    { value: number; today_delta: number; capacity?: number; total?: number }
   >;
   financial_summary?: {
     rows: {
@@ -507,9 +507,7 @@ const Overview = ({
     startDate || endDate || (teamId && teamId !== "all") || tradeId,
   );
 
-  const handleClearOverviewToolbarFilters = (
-    event: React.MouseEvent,
-  ) => {
+  const handleClearOverviewToolbarFilters = (event: React.MouseEvent) => {
     event.stopPropagation();
     setTempTeamId("");
     setTempTradeId("");
@@ -736,7 +734,24 @@ const Overview = ({
           const item = info?.kpis?.[kpi.key];
           const Icon = kpi.icon;
           const delta = item?.today_delta ?? 0;
-          const deltaIsBad = kpi.key === "case_open" ? delta > 0 : delta < 0;
+          const mainValue =
+            kpi.key === "on_site" ? (item?.capacity ?? 0) : (item?.value ?? 0);
+          const teamsOverCapacity =
+            kpi.key === "teams" &&
+            (item?.capacity ?? 0) > 0 &&
+            (item?.total ?? 0) > (item?.capacity ?? 0);
+          const behindColor =
+            kpi.key === "on_site"
+              ? delta > 0
+                ? "error.main"
+                : "text.secondary"
+              : teamsOverCapacity
+                ? "error.main"
+                : delta === 0
+                  ? "text.secondary"
+                  : kpi.key === "case_open"
+                    ? "text.secondary"
+                    : "success.main";
           return (
             <Paper
               key={kpi.key}
@@ -775,24 +790,17 @@ const Overview = ({
                     fontWeight={800}
                     lineHeight={1.15}
                   >
-                    {kpi.key === "on_site"
-                      ? `${item?.capacity ?? 0} / ${item?.value ?? 0}`
-                      : (item?.value ?? 0)}
+                    {mainValue}
                   </Typography>
-                  <Typography
-                    color={
-                      delta === 0
-                        ? "text.secondary"
-                        : deltaIsBad
-                          ? "error.main"
-                          : "success.main"
-                    }
-                    fontSize={12}
-                    fontWeight={600}
-                  >
-                    {delta >= 0 ? "+" : ""}
-                    {delta} today
-                  </Typography>
+                  {kpi.key !== "teams" && (
+                    <Typography
+                      color={behindColor}
+                      fontSize={12}
+                      fontWeight={600}
+                    >
+                      {`${delta} today`}
+                    </Typography>
+                  )}
                 </Box>
               </Stack>
             </Paper>
@@ -1032,11 +1040,13 @@ const Overview = ({
               //   {currency}
               // </Typography>
               <Box display="flex" justifyContent="flex-end">
-                <ViewAllLink
-                  label="View all"
-                  count={monthlyRows.length}
-                  onClick={() => openDrawer("monthly")}
-                />
+                {monthlyRows.length > 2 && (
+                  <ViewAllLink
+                    label="View all"
+                    count={monthlyRows.length}
+                    onClick={() => openDrawer("monthly")}
+                  />
+                )}
               </Box>
             }
           >
@@ -1132,11 +1142,13 @@ const Overview = ({
             title="ON SITE BY ADDRESS"
             action={
               <Box display="flex" justifyContent="flex-end">
-                <ViewAllLink
-                  label="View all addresses"
-                  count={addresses.length}
-                  onClick={() => openDrawer("addresses")}
-                />
+                {addresses.length > 2 && (
+                  <ViewAllLink
+                    label="View all addresses"
+                    count={addresses.length}
+                    onClick={() => openDrawer("addresses")}
+                  />
+                )}
               </Box>
             }
           >
@@ -1315,21 +1327,16 @@ const Overview = ({
           <Stack spacing={2} mt={1}>
             <Autocomplete
               options={filterTeams}
-              getOptionLabel={(option) =>
-                option.title || option.name || ""
-              }
+              getOptionLabel={(option) => option.title || option.name || ""}
               getOptionKey={(option) => String(option.id)}
               isOptionEqualToValue={(option, value) =>
                 String(option.id) === String(value?.id)
               }
               value={
-                filterTeams.find(
-                  (t) => String(t.id) === String(tempTeamId),
-                ) || null
+                filterTeams.find((t) => String(t.id) === String(tempTeamId)) ||
+                null
               }
-              onChange={(_, value) =>
-                setTempTeamId(value ? value.id : "")
-              }
+              onChange={(_, value) => setTempTeamId(value ? value.id : "")}
               renderInput={(params) => (
                 <TextField {...params} label="Team" fullWidth />
               )}
@@ -1346,9 +1353,7 @@ const Overview = ({
                   (t) => String(t.id) === String(tempTradeId),
                 ) || null
               }
-              onChange={(_, value) =>
-                setTempTradeId(value ? value.id : "")
-              }
+              onChange={(_, value) => setTempTradeId(value ? value.id : "")}
               renderInput={(params) => (
                 <TextField {...params} label="Trade" fullWidth />
               )}

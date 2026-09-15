@@ -329,7 +329,7 @@ const ProjectDashboard = () => {
         meta: { label: "On site" },
         cell: ({ row }) => (
           <NumberCell
-            value={`${row.original.team_capacity || 0} / ${row.original.total_working_users || 0}`}
+            value={`${row.original.total_working_users || 0}`}
           />
         ),
       }),

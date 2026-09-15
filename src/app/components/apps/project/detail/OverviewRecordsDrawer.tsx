@@ -358,7 +358,7 @@ export const LabourTeamTable = ({
                 <TableRow key={row.team_id}>
                   <TableCell>{row.team}</TableCell>
                   <TableCell align="right">
-                    {row.limit} / {row.on_site}
+                    {row.on_site}
                   </TableCell>
                   <TableCell align="right">{row.limit}</TableCell>
                   <TableCell align="right">{row.avg_7_days}</TableCell>
@@ -387,7 +387,7 @@ export const LabourTeamTable = ({
                 <TableRow sx={totalRowSx}>
                   <TableCell>TOTAL</TableCell>
                   <TableCell align="right">
-                    {totals?.limit || 0} / {totals?.on_site || 0}
+                    {totals?.on_site || 0}
                   </TableCell>
                   <TableCell align="right">{totals?.limit || 0}</TableCell>
                   <TableCell align="right">{totals?.avg_7_days || 0}</TableCell>

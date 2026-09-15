@@ -120,7 +120,7 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
       columnHelper.accessor("order_id", {
         id: "order_id",
         enableSorting: true,
-        header: () => <Typography variant="subtitle2">order ID</Typography>,
+        header: () => <Typography variant="subtitle2">Order ID</Typography>,
         cell: ({ getValue }) => (
           <Typography className="f-14" color="textPrimary" noWrap>
             {getValue() || "-"}

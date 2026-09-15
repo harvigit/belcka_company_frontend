@@ -51,7 +51,7 @@ const ProjectUserMultiSelect: React.FC<ProjectUserMultiSelectProps> = ({
   return (
     <>
       {!hideLabel && (
-        <Typography variant="h5" mt={labelMt}>
+        <Typography variant="h5" mt={labelMt} className="f-14">
           {label}
         </Typography>
       )}
