@@ -183,6 +183,16 @@ const formatDate = (value?: string | null) => {
   return fallback.isValid() ? fallback.format("DD/MM/YYYY") : String(value);
 };
 
+const formatKpiDelta = (delta: number) => {
+  if (delta > 0) {
+    return { color: "success.main", label: `+${delta} today` };
+  }
+  if (delta < 0) {
+    return { color: "error.main", label: `${delta} today` };
+  }
+  return { color: "text.secondary", label: "0 today" };
+};
+
 const Widget = ({
   title,
   children,
@@ -736,22 +746,7 @@ const Overview = ({
           const delta = item?.today_delta ?? 0;
           const mainValue =
             kpi.key === "on_site" ? (item?.capacity ?? 0) : (item?.value ?? 0);
-          const teamsOverCapacity =
-            kpi.key === "teams" &&
-            (item?.capacity ?? 0) > 0 &&
-            (item?.total ?? 0) > (item?.capacity ?? 0);
-          const behindColor =
-            kpi.key === "on_site"
-              ? delta > 0
-                ? "error.main"
-                : "text.secondary"
-              : teamsOverCapacity
-                ? "error.main"
-                : delta === 0
-                  ? "text.secondary"
-                  : kpi.key === "case_open"
-                    ? "text.secondary"
-                    : "success.main";
+          const deltaDisplay = formatKpiDelta(delta);
           return (
             <Paper
               key={kpi.key}
@@ -794,11 +789,11 @@ const Overview = ({
                   </Typography>
                   {kpi.key !== "teams" && (
                     <Typography
-                      color={behindColor}
+                      color={deltaDisplay.color}
                       fontSize={12}
                       fontWeight={600}
                     >
-                      {`${delta} today`}
+                      {deltaDisplay.label}
                     </Typography>
                   )}
                 </Box>
