@@ -50,7 +50,7 @@ type LabourRow = {
     display_id?: string | null;
     team_name?: string | null;
     user_name?: string | null;
-    shift_name?: string | null;
+    type?: string | null;
     trade_name?: string | null;
     date?: string | null;
     shift_hours?: number | string | null;
@@ -132,18 +132,21 @@ const Labour = ({projectId}: { projectId: number }) => {
     const [sorting, setSorting] = useState<SortingState>([
         {id: 'date', desc: true},
     ]);
+    
     const [startDate, setStartDate] = useState<Date | null>(() => {
         const start = new Date();
         start.setMonth(start.getMonth() - 3);
         return start;
     });
     const [endDate, setEndDate] = useState<Date | null>(new Date());
+    
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     const [isSelectAll, setIsSelectAll] = useState(false);
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
     const [filters, setFilters] = useState<LabourFilterState>(EMPTY_LABOUR_FILTERS);
     const [tempFilters, setTempFilters] = useState<LabourFilterState>(EMPTY_LABOUR_FILTERS);
     const [filterOpen, setFilterOpen] = useState(false);
+    
     const [filterOptions, setFilterOptions] = useState<{
         teams: FilterOption[];
         users: FilterOption[];
@@ -155,9 +158,11 @@ const Labour = ({projectId}: { projectId: number }) => {
         types: [],
         trades: [],
     });
+    
     const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(
         null,
     );
+    
     const [columnSearch, setColumnSearch] = useState('');
     const {columnVisibility, onColumnVisibilityChange} =
         usePersistentColumnVisibility({
@@ -349,7 +354,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                     </Typography>
                 ),
             }),
-            columnHelper.accessor('shift_name', {
+            columnHelper.accessor('type', {
                 id: 'type',
                 header: () => <Typography variant="subtitle2">Type</Typography>,
                 cell: ({getValue}) => (
