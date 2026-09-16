@@ -540,6 +540,8 @@ const TimeClock = ({queryParams}: Props) => {
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
     const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);
     const [settingOpen, setSettingOpen] = useState(false);
+    const [settingsInitialMenu, setSettingsInitialMenu] = useState<string | null>(null);
+    const [settingsInitialProjectId, setSettingsInitialProjectId] = useState<number | null>(null);
     const [openDrawer, setOpenDrawer] = useState(false);
 
     const [fetchTimesheet, setFetchTimesheet] = useState<boolean>(false);
@@ -1066,6 +1068,8 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleSettingOpen = () => {
+        setSettingsInitialMenu(null);
+        setSettingsInitialProjectId(null);
         setSettingOpen(true);
     };
 
@@ -1094,6 +1098,26 @@ const TimeClock = ({queryParams}: Props) => {
             setErrorMessage('Failed to refresh data after saving settings.');
         }
     };
+
+    useEffect(() => {
+        const pendingShiftManagementProject = sessionStorage.getItem('shift_management_project');
+        if (!pendingShiftManagementProject) return;
+
+        try {
+            const parsed = JSON.parse(pendingShiftManagementProject);
+            const projectId = Number(parsed?.project_id);
+
+            if (projectId) {
+                setSettingsInitialMenu('Shift Management');
+                setSettingsInitialProjectId(projectId);
+                setSettingOpen(true);
+            }
+        } catch (error) {
+            console.error('Failed to open shift management from project edit', error);
+        } finally {
+            sessionStorage.removeItem('shift_management_project');
+        }
+    }, []);
 
     const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
         setAnchorEl3(event.currentTarget);
@@ -2820,6 +2844,8 @@ const TimeClock = ({queryParams}: Props) => {
                             <Settings
                                 settingOpen={settingOpen}
                                 onClose={handleSettingClose}
+                                initialActiveMenuItem={settingsInitialMenu}
+                                initialProjectId={settingsInitialProjectId}
                             />
 
                             <IconButton

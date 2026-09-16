@@ -3,6 +3,7 @@ import {
     Box,
     Typography,
     TextField,
+    Autocomplete,
     Table,
     TableBody,
     TableCell,
@@ -24,6 +25,8 @@ import {
     IconX,
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
+import {useSession} from 'next-auth/react';
+import {User} from 'next-auth';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import toast from 'react-hot-toast';
 import {useTranslation} from 'react-i18next';
@@ -55,19 +58,29 @@ interface Team {
     users: UserMember[];
 }
 
-interface ShiftManagementProps {
-    projectId: number;
+interface Project {
+    id: number;
+    name: string;
 }
 
-const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
-    const {t} = useTranslation();
+interface ShiftManagementProps {
+    initialProjectId?: number | null;
+}
 
+const ShiftManagement: React.FC<ShiftManagementProps> = ({initialProjectId = null}) => {
+    const {t} = useTranslation();
+    const {data: session} = useSession();
+    const user = session?.user as User & { company_id?: number | null };
+
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [teamUserSearch, setTeamUserSearch] = useState('');
 
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [teamsByShift, setTeamsByShift] = useState<Record<number, Team[]>>({});
 
+    const [loadingProjects, setLoadingProjects] = useState(false);
     const [loadingTeams, setLoadingTeams] = useState(false);
     const [loadingShifts, setLoadingShifts] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -79,6 +92,20 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
     const [primaryShiftId, setPrimaryShiftId] = useState<number | null>(null);
 
     const [openTeams, setOpenTeams] = useState<Record<number, boolean>>({});
+
+    const fetchProjects = useCallback(async () => {
+        try {
+            setLoadingProjects(true);
+            const res = await api.get(`project/get?company_id=${user?.company_id}`);
+            if (res.data?.info) {
+                setProjects(res.data.info);
+            }
+        } catch (error) {
+            console.error('Error fetching projects:', error);
+        } finally {
+            setLoadingProjects(false);
+        }
+    }, [user?.company_id]);
 
     const fetchShifts = useCallback(async () => {
         try {
@@ -158,23 +185,33 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
     }, []);
 
     useEffect(() => {
-        fetchShifts();
-    }, [fetchShifts]);
+        if (user?.company_id) {
+            fetchProjects();
+            fetchShifts();
+        }
+    }, [user?.company_id, fetchProjects, fetchShifts]);
 
     useEffect(() => {
-        const loadTeamsForProject = async () => {
-            if (!projectId) {
+        if (!initialProjectId || projects.length === 0) return;
+
+        const initialProject = projects.find((project) => project.id === Number(initialProjectId));
+        if (initialProject && selectedProject?.id !== initialProject.id) {
+            setSelectedProject(initialProject);
+        }
+    }, [initialProjectId, projects, selectedProject?.id]);
+
+    useEffect(() => {
+        const loadTeamsForSelectedProject = async () => {
+            if (!selectedProject) {
                 setTeams([]);
                 setTeamsByShift({});
-                setShiftAssignments({});
-                setPrimaryShiftId(null);
                 return;
             }
 
             try {
                 setLoadingTeams(true);
 
-                const mergedTeamList = await fetchTeams(projectId);
+                const mergedTeamList = await fetchTeams(selectedProject.id);
                 const nextTeamsByShift = shifts.reduce<Record<number, Team[]>>((acc, shift) => {
                     acc[shift.id] = mergedTeamList;
                     return acc;
@@ -182,7 +219,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
 
                 setTeamsByShift(nextTeamsByShift);
                 setTeams(mergedTeamList);
-                await fetchShiftManagement(projectId, shifts);
+                await fetchShiftManagement(selectedProject.id, shifts);
 
                 setOpenTeams((prev) => {
                     const next = {...prev};
@@ -198,8 +235,8 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
             }
         };
 
-        loadTeamsForProject();
-    }, [projectId, fetchTeams, fetchShiftManagement, shifts]);
+        loadTeamsForSelectedProject();
+    }, [selectedProject, fetchTeams, fetchShiftManagement, shifts]);
 
     const toggleTeamOpen = (teamId: number) => {
         setOpenTeams((prev) => ({...prev, [teamId]: !prev[teamId]}));
@@ -270,7 +307,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
 
     const visibleShifts = shifts;
 
-    const hasProject = Boolean(projectId);
+    const hasSelectedProject = Boolean(selectedProject);
 
     const filteredTeams = useMemo(() => {
         const searchValue = teamUserSearch.trim().toLowerCase();
@@ -372,13 +409,13 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
             );
 
             await api.post('/setting/save-shift-management', {
-                project_id: projectId,
+                project_id: selectedProject?.id,
                 primary_shift_id: primaryShiftId,
                 assignments,
             });
 
-            if (projectId) {
-                await fetchShiftManagement(projectId, visibleShifts);
+            if (selectedProject) {
+                await fetchShiftManagement(selectedProject.id, visibleShifts);
             }
 
             toast.success('Shift assignments updated successfully');
@@ -430,10 +467,10 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
     return (
         <Box
             sx={{
-                p: {xs: 1.5, md: 2},
+                p: 2.5,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 1.5,
+                gap: 2,
                 height: '100%',
                 overflow: 'hidden',
                 bgcolor: '#fff',
@@ -442,62 +479,64 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
             <Box
                 sx={{
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'flex-end',
                     flexWrap: 'wrap',
                     justifyContent: 'space-between',
                     gap: 2,
-                    py: 0.5,
+                    p: 2,
+                    borderRadius: 3,
+                    bgcolor: '#fff',
+                    boxShadow: '0 4px 18px rgba(0,0,0,0.04)',
                 }}
             >
-                <Box sx={{width: {xs: '100%', sm: 320}}}>
-                    <TextField
-                        fullWidth
+                <Box sx={{width: {xs: '100%', sm: 360}}}>
+                    <Autocomplete
                         size="small"
-                        value={teamUserSearch}
-                        onChange={(event) => setTeamUserSearch(event.target.value)}
-                        placeholder={t('Search teams or users')}
-                        disabled={!hasProject || loadingTeams}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <IconSearch size={18}/>
-                                </InputAdornment>
-                            ),
-                            endAdornment: teamUserSearch ? (
-                                <InputAdornment position="end">
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => setTeamUserSearch('')}
-                                        edge="end"
-                                        sx={{p: 0.25}}
-                                    >
-                                        <IconX size={16}/>
-                                    </IconButton>
-                                </InputAdornment>
-                            ) : null,
-                        }}
-                        sx={{
-                            '& .MuiOutlinedInput-root': {
-                                borderRadius: 1,
-                                bgcolor: '#fff',
-                                height: 38,
-                                pr: teamUserSearch ? 0.5 : 1,
-                            },
-                            '& .MuiInputBase-input': {
-                                px: 0.5,
-                                fontSize: 13,
-                            },
-                        }}
+                        options={projects}
+                        getOptionLabel={(option) => option.name}
+                        value={selectedProject}
+                        onChange={(_, newValue) => setSelectedProject(newValue)}
+                        loading={loadingProjects}
+                        clearIcon={<IconX size={16}/>}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                placeholder={selectedProject ? '' : t('Search by project')}
+                                size="small"
+                                InputProps={{
+                                    ...params.InputProps,
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <IconSearch size={18}/>
+                                        </InputAdornment>
+                                    ),
+                                    endAdornment: (
+                                        <React.Fragment>
+                                            {loadingProjects ? (
+                                                <CircularProgress color="inherit" size={18}/>
+                                            ) : null}
+                                            {params.InputProps.endAdornment}
+                                        </React.Fragment>
+                                    ),
+                                }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 1,
+                                        bgcolor: '#fff',
+                                    },
+                                }}
+                            />
+                        )}
                     />
                 </Box>
                 
                 <Button
                     variant="contained"
                     onClick={handleUpdateAssignments}
-                    disabled={!hasProject || saving || loadingTeams || loadingShifts || visibleShifts.length === 0}
+                    disabled={!hasSelectedProject || saving || loadingTeams || loadingShifts || visibleShifts.length === 0}
                     startIcon={saving ? <CircularProgress size={14} color="inherit"/> : null}
                     sx={{
-                        borderRadius: 1,
+                        borderRadius: '10px',
                         textTransform: 'none',
                         fontWeight: 600,
                         boxShadow: 'none',
@@ -581,13 +620,54 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
                                             left: 0,
                                             zIndex: 5,
                                             height: shiftHeaderHeight,
-                                            py: 0.75,
-                                            px: 1,
+                                            p: 1,
                                         }}
                                     >
-                                        <Typography sx={{fontSize: 12, fontWeight: 700, color: '#203040'}}>
-                                            {t('Team / User')}
-                                        </Typography>
+                                        <Box
+                                            sx={{
+                                                width: '100%',
+                                            }}
+                                        >
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                value={teamUserSearch}
+                                                onChange={(event) => setTeamUserSearch(event.target.value)}
+                                                placeholder={t('Search')}
+                                                disabled={!hasSelectedProject || loadingTeams}
+                                                InputProps={{
+                                                    startAdornment: (
+                                                        <InputAdornment position="start">
+                                                            <IconSearch size={18}/>
+                                                        </InputAdornment>
+                                                    ),
+                                                    endAdornment: teamUserSearch ? (
+                                                        <InputAdornment position="end">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => setTeamUserSearch('')}
+                                                                edge="end"
+                                                                sx={{p: 0.25}}
+                                                            >
+                                                                <IconX size={16}/>
+                                                            </IconButton>
+                                                        </InputAdornment>
+                                                    ) : null,
+                                                }}
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        borderRadius: 1,
+                                                        bgcolor: '#fff',
+                                                        height: 36,
+                                                        pr: teamUserSearch ? 0.5 : 1,
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        px: 0.5,
+                                                        fontSize: 13,
+                                                    },
+                                                }}
+                                            />
+                                        </Box>
                                     </TableCell>
                                     {visibleShifts.length > 0 ? (
                                         visibleShifts.map((shift) => (
@@ -651,7 +731,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
                                                         onClick={() =>
                                                             setPrimaryShiftId(shift.id)
                                                         }
-                                                        disabled={!hasProject}
+                                                        disabled={!selectedProject}
                                                         sx={{
                                                             gridColumn: 2,
                                                             justifySelf: 'center',
@@ -734,7 +814,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
                                                     {renderAssignmentCheckbox(
                                                         isShiftFullyAssigned(shift.id),
                                                         () => handleToggleShiftUsers(shift.id),
-                                                        !hasProject || getVisibleEligibleShiftUserIds(shift.id).length === 0,
+                                                        !selectedProject || getVisibleEligibleShiftUserIds(shift.id).length === 0,
                                                         isShiftPartiallyAssigned(shift.id),
                                                     )}
                                                 </Box>
@@ -765,7 +845,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
                                             <CircularProgress size={24}/>
                                         </TableCell>
                                     </TableRow>
-                                ) : !hasProject ? (
+                                ) : !hasSelectedProject ? (
                                     <TableRow>
                                         <TableCell
                                             colSpan={visibleShifts.length + 1}
@@ -773,7 +853,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
                                             sx={{py: 5}}
                                         >
                                             <Typography color="text.secondary">
-                                                {t('Project details are unavailable.')}
+                                                {t('Select a project to manage teams and users.')}
                                             </Typography>
                                         </TableCell>
                                     </TableRow>
@@ -877,7 +957,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
                                                             {renderAssignmentCheckbox(
                                                                 isTeamFullyAssigned(shift.id, team),
                                                                 () => handleToggleTeamShift(shift.id, team),
-                                                                !hasProject || getEligibleTeamUserIds(shift.id, team).length === 0,
+                                                                !selectedProject || getEligibleTeamUserIds(shift.id, team).length === 0,
                                                                 isTeamPartiallyAssigned(shift.id, team),
                                                             )}
                                                         </Box>
@@ -944,7 +1024,7 @@ const ShiftManagement: React.FC<ShiftManagementProps> = ({projectId}) => {
                                                                         {renderAssignmentCheckbox(
                                                                             shiftAssignments[shift.id]?.has(userId) || false,
                                                                             () => handleToggleUserShift(shift.id, userId),
-                                                                            !hasProject || !isUserAvailableForShift(shift.id, userId),
+                                                                            !selectedProject || !isUserAvailableForShift(shift.id, userId),
                                                                         )}
                                                                     </Box>
                                                                 </TableCell>
