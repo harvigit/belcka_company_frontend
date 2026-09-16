@@ -418,6 +418,8 @@ type Props = {
   projectId: number | null;
   companyId: number | null;
   hideClose?: boolean;
+  projectScopeOnly?: boolean;
+  hideAddZone?: boolean;
 };
 
 const LONDON_CENTER = { lat: 51.5074, lng: -0.1278 };
@@ -545,6 +547,8 @@ export default function MapGantt({
   projectId,
   companyId,
   hideClose = false,
+  projectScopeOnly = false,
+  hideAddZone = false,
 }: Props) {
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -640,7 +644,9 @@ export default function MapGantt({
     try {
       const params: any = { company_id: user.company_id };
       let pIds = "";
-      if (currentFilters.projects && currentFilters.projects.length > 0) {
+      if (projectScopeOnly && pid) {
+        pIds = pid.toString();
+      } else if (currentFilters.projects && currentFilters.projects.length > 0) {
         pIds = currentFilters.projects.join(",");
       } else if (pid) {
         pIds = pid.toString();
@@ -731,8 +737,11 @@ export default function MapGantt({
         params.teams = activeFilters.teams.join(",");
       if (activeFilters.trades.length > 0)
         params.trades = activeFilters.trades.join(",");
-      if (activeFilters.projects.length > 0)
+      if (projectScopeOnly && activeProjectId) {
+        params.projects = String(activeProjectId);
+      } else if (activeFilters.projects.length > 0) {
         params.projects = activeFilters.projects.join(",");
+      }
 
       const res = await api.get("user-location/get-user-locations", { params });
 
@@ -961,7 +970,7 @@ export default function MapGantt({
           width={{ xs: "100%", sm: "auto" }}
           mt={{ xs: 0.5, sm: 0 }}
         >
-          {!(projectId == null && activeTab === 1) && (
+          {!hideAddZone && !(projectId == null && activeTab === 1) && (
             <Button
               variant="contained"
               color="primary"
@@ -994,7 +1003,9 @@ export default function MapGantt({
               whiteSpace: "nowrap",
             }}
           >
-            {workingUserCount} / {totalUsers} Users
+            {projectScopeOnly
+              ? `${workingUserCount} Users`
+              : `${workingUserCount} / ${totalUsers} Users`}
           </Button>
 
           {!hideClose && onClose && (
@@ -1105,38 +1116,40 @@ export default function MapGantt({
               ))}
             </TextField>
 
-            <TextField
-              select
-              label="Project"
-              value={tempFilters.projects}
-              onChange={(e) =>
-                setTempFilters({
-                  ...tempFilters,
-                  projects:
-                    typeof e.target.value === "string"
-                      ? e.target.value.split(",").map(Number).filter(Boolean)
-                      : (e.target.value as number[]),
-                })
-              }
-              SelectProps={{
-                multiple: true,
-                renderValue: (selected) =>
-                  (selected as number[])
-                    .map(
-                      (id) =>
-                        resources.projects.find((p: any) => p.id === id)
-                          ?.name ?? id,
-                    )
-                    .join(", "),
-              }}
-              fullWidth
-            >
-              {resources.projects.map((p: any) => (
-                <MenuItem key={p.id} value={p.id}>
-                  {p.name}
-                </MenuItem>
-              ))}
-            </TextField>
+            {!projectScopeOnly && (
+              <TextField
+                select
+                label="Project"
+                value={tempFilters.projects}
+                onChange={(e) =>
+                  setTempFilters({
+                    ...tempFilters,
+                    projects:
+                      typeof e.target.value === "string"
+                        ? e.target.value.split(",").map(Number).filter(Boolean)
+                        : (e.target.value as number[]),
+                  })
+                }
+                SelectProps={{
+                  multiple: true,
+                  renderValue: (selected) =>
+                    (selected as number[])
+                      .map(
+                        (id) =>
+                          resources.projects.find((p: any) => p.id === id)
+                            ?.name ?? id,
+                      )
+                      .join(", "),
+                }}
+                fullWidth
+              >
+                {resources.projects.map((p: any) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    {p.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
           </Stack>
         </DialogContent>
 

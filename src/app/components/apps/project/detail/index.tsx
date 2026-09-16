@@ -6,6 +6,7 @@ import {
   IconBriefcase,
   IconChartPie,
   IconCoinRupee,
+  IconDeviceDesktopCog,
   IconPackage,
   IconReceipt,
   IconReorder,
@@ -25,6 +26,7 @@ import PriceworkList from "@/app/components/apps/priceworks/list";
 import CasesList from "@/app/components/apps/cases/list";
 import ProjectSettingsTab from "./Settings";
 import { ProjectDetailFiltersProvider } from "./ProjectDetailFiltersContext";
+import ShiftManagement from "./ShiftManagement";
 import MapGantt from "../../projects/zone-map/MapGantt";
 import { IconMapPin } from "@tabler/icons-react";
 
@@ -44,7 +46,8 @@ const TABS = [
   // { key: "client-invoice", label: "Client Invoice", icon: IconFileInvoice },
   // { key: "subcon-inv", label: "Subcon Inv", icon: IconFileInvoice },
   // { key: "supplier-inv", label: "Supplier Inv", icon: IconTruck },
-  { key: "map", label: "Map", icon: IconMapPin },
+  { key: "map", label: "Map", icon: IconMapPin }, 
+    { key: "shift-management", label: "Shift Management", icon: IconDeviceDesktopCog},
   { key: "settings", label: "Settings", icon: IconSettings },
 ] as const;
 
@@ -98,13 +101,18 @@ const ProjectDetail = () => {
   }, [projectId, user?.company_id, user?.id, user?.user_role_id]);
 
   const visibleTabs = useMemo(
-    () => TABS.filter((item) => item.key !== "settings" || canViewSettings),
+    () =>
+      TABS.filter(
+        (item) =>
+          !["settings", "shift-management"].includes(item.key) ||
+          canViewSettings,
+      ),
     [canViewSettings],
   );
 
   useEffect(() => {
     if (!settingsAccessLoaded) return;
-    if (tab === "settings" && !canViewSettings) {
+    if ((tab === "settings" || tab === "shift-management") && !canViewSettings) {
       setTab("overview");
     }
   }, [tab, canViewSettings, settingsAccessLoaded]);
@@ -139,6 +147,8 @@ const ProjectDetail = () => {
             hideClose
             projectId={projectId}
             companyId={user?.company_id ?? null}
+            projectScopeOnly
+            hideAddZone
           />
         );
       case "settings":
@@ -147,6 +157,10 @@ const ProjectDetail = () => {
             projectId={projectId}
             onProjectName={setProjectName}
           />
+        ) : null;
+      case "shift-management":
+        return canViewSettings ? (
+          <ShiftManagement projectId={projectId} />
         ) : null;
       default:
         return null;
@@ -159,7 +173,8 @@ const ProjectDetail = () => {
     tab === "pricework" ||
     tab === "materials" ||
     tab === "labour" ||
-    tab === "internal-orders";
+    tab === "internal-orders" ||
+    tab === "shift-management";
 
   const tabValue = visibleTabs.some((item) => item.key === tab)
     ? tab

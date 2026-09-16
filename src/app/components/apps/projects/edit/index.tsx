@@ -421,16 +421,8 @@ const EditProject: React.FC<EditProjectProps> = ({
       return;
     }
 
-    sessionStorage.setItem(
-      "shift_management_project",
-      JSON.stringify({
-        project_id: Number(projectId),
-        project_name: formData.name || project?.name || "",
-      }),
-    );
-
     onClose();
-    router.push("/apps/time-clock/list");
+    router.push(`/apps/project/list/${Number(projectId)}?tab=shift-management`);
   };
 
   const formContent = (
