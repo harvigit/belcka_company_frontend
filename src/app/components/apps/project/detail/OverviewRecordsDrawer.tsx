@@ -6,7 +6,6 @@ import {
   Drawer,
   IconButton,
   Stack,
-  Tab,
   Table,
   TableBody,
   TableCell,
@@ -14,15 +13,13 @@ import {
   TableHead,
   TablePagination,
   TableRow,
-  Tabs,
   Typography,
 } from "@mui/material";
-import { IconArrowLeft, IconX } from "@tabler/icons-react";
-import GanttOverview, { GanttItem } from "./GanttOverview";
+import { IconArrowLeft } from "@tabler/icons-react";
 
 export const OVERVIEW_PREVIEW_LIMIT = 2;
 
-export type OverviewDrawerTab = "addresses" | "labour" | "monthly" | "cases";
+export type OverviewFullListKey = "labour" | "monthly" | "addresses";
 
 export type AddressRow = {
   address_id?: number;
@@ -153,7 +150,7 @@ export const money = (currency: string, value: number) =>
     maximumFractionDigits: 2,
   })}`;
 
-const EmptyState = ({ message }: { message: string }) => (
+export const EmptyState = ({ message }: { message: string }) => (
   <Box py={6} px={2} textAlign="center">
     <Typography fontSize={14} color="text.secondary">
       {message}
@@ -547,210 +544,68 @@ export const MonthlyFinancialTable = ({
   );
 };
 
-const DRAWER_TABS: { key: OverviewDrawerTab; label: string }[] = [
-  { key: "addresses", label: "Addresses" },
-  { key: "labour", label: "Labour" },
-  { key: "monthly", label: "Monthly" },
-  { key: "cases", label: "Cases" },
-];
-
-const OverviewRecordsDrawer = ({
+export const OverviewFullListView = ({
   open,
-  tab,
-  onTabChange,
+  title,
   onClose,
-  currency,
-  addresses,
-  labourTeams,
-  labourTotals,
-  monthlyRows,
-  monthlyTotals,
-  gantt,
-  caseStatus,
+  action,
+  children,
 }: {
   open: boolean;
-  tab: OverviewDrawerTab;
-  onTabChange: (tab: OverviewDrawerTab) => void;
+  title: string;
   onClose: () => void;
-  currency: string;
-  addresses: AddressRow[];
-  labourTeams: LabourTeamRow[];
-  labourTotals?: LabourTotals | null;
-  monthlyRows: MonthlyRow[];
-  monthlyTotals: MonthlyTotals;
-  gantt: GanttItem[];
-  caseStatus?: { total: number; items: CaseStatusItem[] } | null;
-}) => {
-  const counts: Record<OverviewDrawerTab, number> = {
-    addresses: addresses.length,
-    labour: labourTeams.length,
-    monthly: monthlyRows.length,
-    cases: gantt.length || caseStatus?.total || 0,
-  };
-
-  return (
-    <Drawer
-      anchor="bottom"
-      open={open}
-      onClose={onClose}
-      PaperProps={{
-        sx: {
-          borderRadius: 0,
-          height: "95vh",
-          boxShadow: "none",
-          borderTopLeftRadius: 12,
-          borderTopRightRadius: 12,
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-        },
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) => (
+  <Drawer
+    anchor="bottom"
+    open={open}
+    onClose={onClose}
+    ModalProps={{ keepMounted: false }}
+    PaperProps={{
+      sx: {
+        height: "95vh",
+        boxShadow: "none",
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+      },
+    }}
+  >
+    <Stack
+      direction="row"
+      alignItems="center"
+      justifyContent="space-between"
+      gap={1}
+      px={2}
+      py={1.25}
+      borderBottom="1px solid"
+      borderColor="divider"
+      sx={{ flexShrink: 0 }}
+    >
+      <Box display="flex" alignItems="center" minWidth={0}>
+        <IconButton onClick={onClose} size="small" aria-label="Back">
+          <IconArrowLeft size={18} />
+        </IconButton>
+        <Typography fontWeight={700} fontSize={16} noWrap>
+          {title}
+        </Typography>
+      </Box>
+      {action}
+    </Stack>
+    <Box
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        p: { xs: 1.5, md: 2 },
       }}
     >
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        px={2}
-        py={1.5}
-        borderBottom="1px solid"
-        borderColor="divider"
-        sx={{ flexShrink: 0 }}
-      >
-        <Box display={"flex"} alignItems={"center"}>
-          <IconButton onClick={onClose} size="small">
-            <IconArrowLeft size={18} />
-          </IconButton>
-          <Typography fontWeight={700} fontSize={16}>
-            Project records
-          </Typography>
-        </Box>
-        <IconButton onClick={onClose} size="small">
-          <IconX size={18} />
-        </IconButton>
-      </Stack>
+      {children}
+    </Box>
+  </Drawer>
+);
 
-      <Tabs
-        value={tab}
-        onChange={(_, value: OverviewDrawerTab) => onTabChange(value)}
-        variant="scrollable"
-        scrollButtons="auto"
-        allowScrollButtonsMobile
-        sx={{
-          px: 1,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          minHeight: 48,
-          flexShrink: 0,
-          "& .MuiTab-root": {
-            textTransform: "none",
-            minHeight: 48,
-            fontWeight: 600,
-            fontSize: 13,
-          },
-        }}
-      >
-        {DRAWER_TABS.map((item) => (
-          <Tab
-            key={item.key}
-            value={item.key}
-            label={`${item.label} (${counts[item.key]})`}
-          />
-        ))}
-      </Tabs>
-
-      <Box
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          p: { xs: 1.5, md: 2 },
-        }}
-      >
-        {tab === "addresses" &&
-          (addresses.length ? (
-            <AddressActivityTable rows={addresses} paginate />
-          ) : (
-            <EmptyState message="No related address records for this project." />
-          ))}
-
-        {tab === "labour" &&
-          (labourTeams.length ? (
-            <LabourTeamTable
-              rows={labourTeams}
-              totals={labourTotals}
-              paginate
-            />
-          ) : (
-            <EmptyState message="No related labour team records for this project." />
-          ))}
-
-        {tab === "monthly" &&
-          (monthlyRows.length ? (
-            <MonthlyFinancialTable
-              rows={monthlyRows}
-              totals={monthlyTotals}
-              currency={currency}
-              paginate
-            />
-          ) : (
-            <EmptyState message="No related monthly financial records for this project." />
-          ))}
-
-        {tab === "cases" &&
-          (gantt.length || (caseStatus?.total || 0) > 0 ? (
-            <Stack spacing={2} sx={{ height: "100%", minHeight: 0 }}>
-              {(caseStatus?.items || []).length > 0 && (
-                <Stack spacing={0.75} sx={{ flexShrink: 0 }}>
-                  {(caseStatus?.items || []).map((row) => (
-                    <Stack
-                      key={row.status}
-                      direction="row"
-                      justifyContent="space-between"
-                      gap={1}
-                    >
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Box
-                          width={8}
-                          height={8}
-                          borderRadius="50%"
-                          bgcolor={CASE_STATUS_COLORS[row.status] || row.color}
-                        />
-                        <Typography fontSize={13}>{row.status}</Typography>
-                      </Stack>
-                      <Typography fontSize={13} whiteSpace="nowrap">
-                        {row.count} / {row.percent}%
-                      </Typography>
-                    </Stack>
-                  ))}
-                </Stack>
-              )}
-              {gantt.length ? (
-                <PagedList rows={gantt} paginate>
-                  {(visible) => (
-                    <Box
-                      sx={{
-                        overflowX: "auto",
-                        flex: 1,
-                        minHeight: 0,
-                        overflowY: "auto",
-                      }}
-                    >
-                      <GanttOverview items={visible} />
-                    </Box>
-                  )}
-                </PagedList>
-              ) : (
-                <EmptyState message="No related case timeline for this project." />
-              )}
-            </Stack>
-          ) : (
-            <EmptyState message="No related case records for this project." />
-          ))}
-      </Box>
-    </Drawer>
-  );
-};
-
-export default OverviewRecordsDrawer;

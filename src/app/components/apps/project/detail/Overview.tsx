@@ -47,10 +47,11 @@ import api from "@/utils/axios";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { useProjectDetailFilters } from "./ProjectDetailFiltersContext";
 import GanttOverview from "./GanttOverview";
-import OverviewRecordsDrawer, {
+import {
   AddressActivityTable,
   AddressRow,
   CaseStatusItem,
+  EmptyState,
   LabourTeamRow,
   LabourTeamTable,
   LabourTotals,
@@ -58,7 +59,8 @@ import OverviewRecordsDrawer, {
   MonthlyRow,
   MonthlyTotals,
   OVERVIEW_PREVIEW_LIMIT,
-  OverviewDrawerTab,
+  OverviewFullListKey,
+  OverviewFullListView,
   CASE_STATUS_COLORS,
   FINANCIAL_TYPE_COLORS,
   OVERVIEW_COLORS,
@@ -124,6 +126,10 @@ type OverviewData = {
     progress: number;
     status: string;
   }[];
+  filter_options?: {
+    teams?: { id: number; name: string; title?: string }[];
+    trades?: { id: number; name: string }[];
+  };
 };
 
 const KPI_META = [
@@ -408,8 +414,9 @@ const Overview = ({
   const [tempTradeId, setTempTradeId] = useState<string | number>("");
   const [filterTeams, setFilterTeams] = useState<any[]>([]);
   const [filterTrades, setFilterTrades] = useState<any[]>([]);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerTab, setDrawerTab] = useState<OverviewDrawerTab>("addresses");
+  const [fullListView, setFullListView] = useState<OverviewFullListKey | null>(
+    null,
+  );
   const [labourPeriod, setLabourPeriod] = useState("all");
 
   const startDate = sharedFilters?.startDate ?? null;
@@ -417,10 +424,7 @@ const Overview = ({
   const teamId = sharedFilters?.teamId ? String(sharedFilters.teamId) : "all";
   const tradeId = sharedFilters?.tradeId ?? "";
 
-  const openDrawer = (tab: OverviewDrawerTab) => {
-    setDrawerTab(tab);
-    setDrawerOpen(true);
-  };
+  const closeFullListView = () => setFullListView(null);
 
   const applyLabourPeriod = (value: string) => {
     setLabourPeriod(value);
@@ -456,6 +460,9 @@ const Overview = ({
         if (res.data.info?.project?.name) {
           onProjectName?.(res.data.info.project.name);
         }
+        const options = res.data.info?.filter_options;
+        setFilterTeams(options?.teams || res.data.info?.teams || []);
+        setFilterTrades(options?.trades || []);
       }
     } catch (error) {
       console.error("Failed to load project overview", error);
@@ -476,20 +483,6 @@ const Overview = ({
     endDate,
     sharedFilters?.hydrated,
   ]);
-
-  useEffect(() => {
-    const loadFilterOptions = async () => {
-      try {
-        const res = await api.get("expense/list-filters");
-        const info = res.data?.info || {};
-        setFilterTeams(info.teams || []);
-        setFilterTrades(info.trades || []);
-      } catch (error) {
-        console.error("Failed to load overview filter options", error);
-      }
-    };
-    loadFilterOptions();
-  }, []);
 
   const openFilters = () => {
     setTempTeamId(sharedFilters?.teamId || "");
@@ -702,6 +695,46 @@ const Overview = ({
     );
   }, [info]);
 
+  const labourFilterControls = (
+    <Stack
+      direction="row"
+      spacing={1}
+      alignItems="center"
+      flexWrap="wrap"
+      useFlexGap
+    >
+      <TextField
+        select
+        size="small"
+        value={teamId}
+        onChange={(e) =>
+          sharedFilters?.applyFilters({
+            team_id: e.target.value === "all" ? "" : e.target.value,
+          })
+        }
+        sx={{ minWidth: { xs: 120, sm: 140 } }}
+      >
+        <MenuItem value="all">All Teams</MenuItem>
+        {(filterTeams.length ? filterTeams : info?.teams || []).map((team) => (
+          <MenuItem key={team.id} value={String(team.id)}>
+            {team.name}
+          </MenuItem>
+        ))}
+      </TextField>
+      <TextField
+        select
+        size="small"
+        value={labourPeriod}
+        onChange={(e) => applyLabourPeriod(e.target.value)}
+        sx={{ minWidth: { xs: 120, sm: 140 } }}
+      >
+        <MenuItem value="all">All dates</MenuItem>
+        <MenuItem value="7">Last 7 days</MenuItem>
+        <MenuItem value="30">Last 30 days</MenuItem>
+      </TextField>
+    </Stack>
+  );
+
   if (loading && !info) {
     return (
       <Box display="flex" justifyContent="center" py={8}>
@@ -744,8 +777,7 @@ const Overview = ({
           const item = info?.kpis?.[kpi.key];
           const Icon = kpi.icon;
           const delta = item?.today_delta ?? 0;
-          const mainValue =
-            kpi.key === "on_site" ? (item?.capacity ?? 0) : (item?.value ?? 0);
+          const mainValue = item?.value ?? 0;
           const deltaDisplay = formatKpiDelta(delta);
           return (
             <Paper
@@ -982,42 +1014,12 @@ const Overview = ({
                 flexWrap="wrap"
                 useFlexGap
               >
-                <TextField
-                  select
-                  size="small"
-                  value={teamId}
-                  onChange={(e) =>
-                    sharedFilters?.applyFilters({
-                      team_id: e.target.value === "all" ? "" : e.target.value,
-                    })
-                  }
-                  sx={{ minWidth: { xs: 120, sm: 140 } }}
-                >
-                  <MenuItem value="all">All Teams</MenuItem>
-                  {(info?.teams || []).map((team) => (
-                    <MenuItem key={team.id} value={String(team.id)}>
-                      {team.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  select
-                  size="small"
-                  value={labourPeriod}
-                  onChange={(e) => applyLabourPeriod(e.target.value)}
-                  sx={{ minWidth: { xs: 120, sm: 140 } }}
-                >
-                  <MenuItem value="all">All dates</MenuItem>
-                  <MenuItem value="7">Last 7 days</MenuItem>
-                  <MenuItem value="30">Last 30 days</MenuItem>
-                </TextField>
-                {/* <Box display="flex" justifyContent="flex-end"> */}
+                {labourFilterControls}
                 <ViewAllLink
                   label="View all"
                   count={labourTeams.length}
-                  onClick={() => openDrawer("labour")}
+                  onClick={() => setFullListView("labour")}
                 />
-                {/* </Box> */}
               </Stack>
             }
           >
@@ -1039,7 +1041,7 @@ const Overview = ({
                   <ViewAllLink
                     label="View all"
                     count={monthlyRows.length}
-                    onClick={() => openDrawer("monthly")}
+                    onClick={() => setFullListView("monthly")}
                   />
                 )}
               </Box>
@@ -1057,11 +1059,11 @@ const Overview = ({
             title="PROJECT GANTT OVERVIEW"
             action={
               <Box display="flex" justifyContent="flex-end">
-                <ViewAllLink
+                {/* <ViewAllLink
                   label="View all"
                   count={ganttItems.length}
                   onClick={() => openDrawer("cases")}
-                />
+                /> */}
               </Box>
             }
           >
@@ -1141,7 +1143,7 @@ const Overview = ({
                   <ViewAllLink
                     label="View all addresses"
                     count={addresses.length}
-                    onClick={() => openDrawer("addresses")}
+                    onClick={() => setFullListView("addresses")}
                   />
                 )}
               </Box>
@@ -1215,11 +1217,11 @@ const Overview = ({
             title="CASE STATUS"
             action={
               <Box display="flex" justifyContent="flex-end">
-                <ViewAllLink
+                {/* <ViewAllLink
                   label="View all cases"
                   count={ganttItems.length || info?.case_status?.total || 0}
                   onClick={() => openDrawer("cases")}
-                />
+                /> */}
               </Box>
             }
           >
@@ -1283,24 +1285,51 @@ const Overview = ({
         </Stack>
       </Box>
 
-      <OverviewRecordsDrawer
-        open={drawerOpen}
-        tab={drawerTab}
-        onTabChange={setDrawerTab}
-        onClose={() => setDrawerOpen(false)}
-        currency={currency}
-        addresses={addresses}
-        labourTeams={labourTeams}
-        labourTotals={info?.labour_totals}
-        monthlyRows={monthlyRows}
-        monthlyTotals={monthlyTotals}
-        gantt={ganttItems}
-        caseStatus={
-          info?.case_status
-            ? { ...info.case_status, items: caseItems }
-            : info?.case_status
-        }
-      />
+      <OverviewFullListView
+        open={fullListView === "labour"}
+        title="Direct labour team summary"
+        onClose={closeFullListView}
+        action={labourFilterControls}
+      >
+        {labourTeams.length ? (
+          <LabourTeamTable
+            rows={labourTeams}
+            totals={info?.labour_totals}
+            paginate
+          />
+        ) : (
+          <EmptyState message="No related labour team records for this project." />
+        )}
+      </OverviewFullListView>
+
+      <OverviewFullListView
+        open={fullListView === "monthly"}
+        title="Monthly financial summary"
+        onClose={closeFullListView}
+      >
+        {monthlyRows.length ? (
+          <MonthlyFinancialTable
+            rows={monthlyRows}
+            totals={monthlyTotals}
+            currency={currency}
+            paginate
+          />
+        ) : (
+          <EmptyState message="No related monthly financial records for this project." />
+        )}
+      </OverviewFullListView>
+
+      <OverviewFullListView
+        open={fullListView === "addresses"}
+        title="On site by address"
+        onClose={closeFullListView}
+      >
+        {addresses.length ? (
+          <AddressActivityTable rows={addresses} paginate />
+        ) : (
+          <EmptyState message="No related address records for this project." />
+        )}
+      </OverviewFullListView>
 
       <Dialog
         open={filterOpen}

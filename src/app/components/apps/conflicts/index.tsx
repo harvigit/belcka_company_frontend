@@ -17,6 +17,7 @@
         IconBuildingStore,
         IconClock,
         IconCreditCard,
+        IconReceipt,
         IconSearch,
         IconShieldExclamation,
         IconUsers,
@@ -35,6 +36,7 @@
     import HealthSafetyConflicts from './sections/health-safety-conflicts';
     import UserConflicts from './sections/user-conflicts';
     import AccountIdConflicts from './sections/account-id-conflicts';
+    import CollectConflicts, { CollectConflict } from './sections/collect-conflicts';
 
     // Types
     import type { TimesheetConflict } from './sections/timesheet-conflicts';
@@ -50,6 +52,7 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
         total_conflicts: number;
         user_conflicts: { count: number; data: UserConflict[] };
         account_id_conflicts?: { count: number; data: AccountIdConflict[] };
+        collect_conflicts?: { count: number; data: CollectConflict[] };
         timesheet_conflicts: { count: number; data: TimesheetConflict[] };
         billing_conflicts: { count: number; data: BillingConflict[] };
         team_conflicts: { count: number; data: TeamConflict[] };
@@ -168,6 +171,7 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
             team: data?.team_conflicts.count ?? 0,
             health: data?.health_safety_conflicts.count ?? 0,
             store: (data?.store_conflicts.qty_conflicts.count ?? 0) + (data?.store_conflicts.amount_conflicts.count ?? 0),
+            collect: data?.collect_conflicts?.count ?? 0,
             total: data?.total_conflicts ?? 0,
         }), [data]);
     
@@ -180,6 +184,7 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
             { label: 'Team', count: counts.team, color: '#8B5CF6' },
             { label: 'H&S', count: counts.health, color: '#EF4444' },
             { label: 'Store', count: counts.store, color: '#0891B2' },
+            { label: 'Collect', count: counts.collect, color: '#F97316' },
         ], [counts]);
     
         const allStoreConflicts = useMemo(() => [
@@ -345,6 +350,20 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
                                 >
                                     <StoreConflicts
                                         data={allStoreConflicts}
+                                        onResolved={handleResolved}
+                                    />
+                                </SectionShell>
+                            )}
+
+                            {showSection(8) && (
+                                <SectionShell
+                                    icon={<IconReceipt size={16} color="#F97316" />}
+                                    title="Collect Conflicts"
+                                    count={counts.collect}
+                                    accent="#F97316"
+                                >
+                                    <CollectConflicts
+                                        data={data.collect_conflicts?.data ?? []}
                                         onResolved={handleResolved}
                                     />
                                 </SectionShell>

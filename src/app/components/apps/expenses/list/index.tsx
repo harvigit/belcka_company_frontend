@@ -60,6 +60,7 @@ import Image from 'next/image';
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
 import api from '@/utils/axios';
+import {tableFilterOptions} from '@/utils/uniqueFilterOptions';
 import {useServerTable} from '@/hooks/useServerTable';
 import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
@@ -410,7 +411,7 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
 
     useEffect(() => {
         const fetchFilterOptions = async () => {
-            if (!user?.company_id) return;
+            if (!user?.company_id || projectId) return;
             if (loadedFilterCompanyIdRef.current === Number(user.company_id)) return;
 
             loadedFilterCompanyIdRef.current = Number(user.company_id);
@@ -430,7 +431,7 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
         };
 
         fetchFilterOptions();
-    }, [user?.company_id]);
+    }, [user?.company_id, projectId]);
 
     const columns = [
         {
@@ -870,6 +871,64 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
             if (res.data) {
                 const responseData = Array.isArray(res.data.info) ? res.data.info : [];
                 setData(responseData);
+
+                if (projectId) {
+                    const apiFilterOptions = res.data.filter_options || {};
+                    setUsers((prev) =>
+                        tableFilterOptions(
+                            apiFilterOptions.users,
+                            responseData,
+                            'user_id',
+                            'user_name',
+                            prev,
+                        ),
+                    );
+                    setProjects((prev) =>
+                        tableFilterOptions(
+                            apiFilterOptions.projects,
+                            responseData,
+                            'project_id',
+                            'project_name',
+                            prev,
+                        ),
+                    );
+                    setAddresses((prev) =>
+                        tableFilterOptions(
+                            apiFilterOptions.addresses,
+                            responseData,
+                            'address_id',
+                            'address_name',
+                            prev,
+                        ),
+                    );
+                    setCategories((prev) =>
+                        tableFilterOptions(
+                            apiFilterOptions.categories,
+                            responseData,
+                            'category_id',
+                            'category_name',
+                            prev,
+                        ),
+                    );
+                    setTeams((prev) =>
+                        tableFilterOptions(
+                            apiFilterOptions.teams,
+                            responseData,
+                            'team_id',
+                            'team_name',
+                            prev,
+                        ),
+                    );
+                    setTrades((prev) =>
+                        tableFilterOptions(
+                            apiFilterOptions.trades,
+                            responseData,
+                            'trade_id',
+                            'trade_name',
+                            prev,
+                        ),
+                    );
+                }
 
                 const pagMeta = res.data.data || {};
                 if (pagMeta.totalItems !== undefined) {

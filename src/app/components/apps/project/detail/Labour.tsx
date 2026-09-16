@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
     Autocomplete,
     Box,
@@ -43,14 +43,18 @@ import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
+import {tableFilterOptions} from '@/utils/uniqueFilterOptions';
 
 type LabourRow = {
     row_id?: number;
     id?: string | null;
     display_id?: string | null;
+    team_id?: number | null;
     team_name?: string | null;
+    user_id?: number | null;
     user_name?: string | null;
     type?: string | null;
+    trade_id?: number | null;
     trade_name?: string | null;
     date?: string | null;
     shift_hours?: number | string | null;
@@ -170,34 +174,6 @@ const Labour = ({projectId}: { projectId: number }) => {
             enabled: Boolean(user?.company_id),
             alwaysVisibleColumns: ['select'],
         });
-
-    useEffect(() => {
-        const fetchFilterOptions = async () => {
-            if (!user?.company_id || !projectId) return;
-
-            try {
-                const params = new URLSearchParams({
-                    company_id: String(user.company_id),
-                    project_id: String(projectId),
-                });
-                const res = await api.get(`project-analytics/get-resources?${params.toString()}`);
-                const resources = Array.isArray(res.data?.info) ? res.data.info : [];
-                const byKey = (key: string) =>
-                    resources.find((item: {key?: string}) => item.key === key)?.data || [];
-
-                setFilterOptions({
-                    teams: byKey('teams'),
-                    users: byKey('users'),
-                    types: byKey('types'),
-                    trades: byKey('trades'),
-                });
-            } catch (error) {
-                console.error('Failed to fetch project labour filter options', error);
-            }
-        };
-
-        fetchFilterOptions();
-    }, [projectId, user?.company_id]);
 
     const handleToggleSelect = useCallback((id: number) => {
         if (isSelectAll) {
@@ -492,10 +468,41 @@ const Labour = ({projectId}: { projectId: number }) => {
             const res = await api.get(
                 `project-analytics/web-labors?${params.toString()}`,
             );
-            const responseData = res.data?.info || [];
-            
-            setData(Array.isArray(responseData) ? responseData : []);
+            const responseData = Array.isArray(res.data?.info) ? res.data.info : [];
+            const apiFilterOptions = res.data?.filter_options || {};
+
+            setData(responseData);
             setCurrency(res.data?.currency || '£');
+            setFilterOptions((prev) => ({
+                teams: tableFilterOptions(
+                    apiFilterOptions.teams,
+                    responseData,
+                    'team_id',
+                    'team_name',
+                    prev.teams,
+                ),
+                users: tableFilterOptions(
+                    apiFilterOptions.users,
+                    responseData,
+                    'user_id',
+                    'user_name',
+                    prev.users,
+                ),
+                types: tableFilterOptions(
+                    apiFilterOptions.types,
+                    responseData,
+                    'type',
+                    'type',
+                    prev.types,
+                ),
+                trades: tableFilterOptions(
+                    apiFilterOptions.trades,
+                    responseData,
+                    'trade_id',
+                    'trade_name',
+                    prev.trades,
+                ),
+            }));
             
             setIsSelectAll(false);
             setSelectedRowIds(new Set());
