@@ -413,10 +413,11 @@ function DateTimePicker({ value, onChange }: DateTimePickerProps) {
 
 type Props = {
   open: boolean;
-  onClose: () => void;
-  onUpdate: () => void;
+  onClose?: () => void;
+  onUpdate?: () => void;
   projectId: number | null;
   companyId: number | null;
+  hideClose?: boolean;
 };
 
 const LONDON_CENTER = { lat: 51.5074, lng: -0.1278 };
@@ -543,6 +544,7 @@ export default function MapGantt({
   onUpdate,
   projectId,
   companyId,
+  hideClose = false,
 }: Props) {
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -995,9 +997,11 @@ export default function MapGantt({
             {workingUserCount} / {totalUsers} Users
           </Button>
 
-          <IconButton onClick={onClose}>
-            <IconX />
-          </IconButton>
+          {!hideClose && onClose && (
+            <IconButton onClick={onClose}>
+              <IconX />
+            </IconButton>
+          )}
         </Box>
       </Box>
 

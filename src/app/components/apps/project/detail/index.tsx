@@ -25,6 +25,8 @@ import PriceworkList from "@/app/components/apps/priceworks/list";
 import CasesList from "@/app/components/apps/cases/list";
 import ProjectSettingsTab from "./Settings";
 import { ProjectDetailFiltersProvider } from "./ProjectDetailFiltersContext";
+import MapGantt from "../../projects/zone-map/MapGantt";
+import { IconMapPin } from "@tabler/icons-react";
 
 const TABS = [
   { key: "overview", label: "Overview", icon: IconChartPie },
@@ -42,6 +44,7 @@ const TABS = [
   // { key: "client-invoice", label: "Client Invoice", icon: IconFileInvoice },
   // { key: "subcon-inv", label: "Subcon Inv", icon: IconFileInvoice },
   // { key: "supplier-inv", label: "Supplier Inv", icon: IconTruck },
+  { key: "map", label: "Map", icon: IconMapPin },
   { key: "settings", label: "Settings", icon: IconSettings },
 ] as const;
 
@@ -129,20 +132,15 @@ const ProjectDetail = () => {
         return <Labour projectId={projectId} />;
       case "internal-orders":
         return <InternalOrders projectId={projectId} />;
-      // case "assigned-materials":
-      // case "client-invoice":
-      // case "subcon-inv":
-      // case "supplier-inv":
-      // case "settings":
-      // return (
-      //   <Box p={2}>
-      //     <Typography color="text.secondary" mb={2}>
-      //       Project settings
-      //     </Typography>
-      //   </Box>
-      // );
-      case "internal-orders":
-        return <InternalOrders projectId={projectId} />;
+      case "map":
+        return (
+          <MapGantt
+            open
+            hideClose
+            projectId={projectId}
+            companyId={user?.company_id ?? null}
+          />
+        );
       case "settings":
         return canViewSettings ? (
           <ProjectSettingsTab
@@ -150,11 +148,10 @@ const ProjectDetail = () => {
             onProjectName={setProjectName}
           />
         ) : null;
-      case "labour":
       default:
         return null;
     }
-  }, [tab, projectId, canViewSettings]);
+  }, [tab, projectId, canViewSettings, user?.company_id]);
 
   const isTableTab =
     tab === "cases" ||
