@@ -219,6 +219,69 @@ function pixelDistance(
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
+function viewportToPolygonPath(
+  viewport: google.maps.LatLngBounds,
+): { lat: number; lng: number }[] {
+  const ne = viewport.getNorthEast();
+  const sw = viewport.getSouthWest();
+  return [
+    { lat: ne.lat(), lng: sw.lng() },
+    { lat: ne.lat(), lng: ne.lng() },
+    { lat: sw.lat(), lng: ne.lng() },
+    { lat: sw.lat(), lng: sw.lng() },
+  ];
+}
+
+function geoJsonToLatLngPath(geometry: any): { lat: number; lng: number }[] {
+  if (!geometry) return [];
+
+  let ring: number[][] | null = null;
+  if (geometry.type === "Polygon") {
+    ring = geometry.coordinates?.[0] ?? null;
+  } else if (geometry.type === "MultiPolygon") {
+    ring = (geometry.coordinates ?? []).reduce(
+      (best: number[][] | null, polygon: number[][][]) => {
+        const outer = polygon?.[0];
+        if (!outer) return best;
+        if (!best || outer.length > best.length) return outer;
+        return best;
+      },
+      null,
+    );
+  }
+
+  if (!ring?.length) return [];
+
+  const path = ring
+    .map(([lng, lat]) => ({ lat: Number(lat), lng: Number(lng) }))
+    .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+
+  if (path.length > 1) {
+    const first = path[0];
+    const last = path[path.length - 1];
+    if (first.lat === last.lat && first.lng === last.lng) path.pop();
+  }
+
+  return path;
+}
+
+async function fetchOsmBoundaryPath(query: string): Promise<{ lat: number; lng: number }[]> {
+  if (!query.trim()) return [];
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&polygon_geojson=1&limit=1&q=${encodeURIComponent(query)}`;
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  const data = await res.json();
+  const first = Array.isArray(data) ? data[0] : null;
+  return geoJsonToLatLngPath(first?.geojson);
+}
+
+function boundsFromPath(path: { lat: number; lng: number }[]): google.maps.LatLngBounds | null {
+  if (!path.length || typeof google === "undefined") return null;
+  const bounds = new google.maps.LatLngBounds();
+  path.forEach((point) => bounds.extend(point));
+  return bounds;
+}
+
 const AddZone = ({
   onAdded,
   onCancel,
@@ -265,11 +328,13 @@ const AddZone = ({
   } | null>(null);
   const [nearStart, setNearStart] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
+  const [boundaryFromSearch, setBoundaryFromSearch] = useState(false);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const circleRef = useRef<google.maps.Circle | null>(null);
   const polygonRef = useRef<google.maps.Polygon | null>(null);
   const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+  const pendingFitBoundsRef = useRef<google.maps.LatLngBounds | null>(null);
 
   const stateRef = useRef({
     drawMode: "pan" as DrawMode,
@@ -282,6 +347,13 @@ const AddZone = ({
   stateRef.current.drawMode = drawMode;
   stateRef.current.drawPath = drawPath;
   stateRef.current.isClosed = isClosed;
+
+  useEffect(() => {
+    if (!pendingFitBoundsRef.current || !mapRef.current) return;
+    const bounds = pendingFitBoundsRef.current;
+    pendingFitBoundsRef.current = null;
+    mapRef.current.fitBounds(bounds);
+  }, [drawPath, location]);
 
   // ── Address helpers ──────────────────────────────────────────────────────
   const handleAddressChange = (id: number) => {
@@ -303,30 +375,95 @@ const AddZone = ({
     );
   };
 
+  const resetMapFromClearedSearch = () => {
+    pendingFitBoundsRef.current = null;
+    setPredictions([]);
+    setTypedAddress(false);
+    setDrawPath([]);
+    setIsClosed(false);
+    setCursorLatLng(null);
+    setNearStart(false);
+    setBoundaryFromSearch(false);
+    stateRef.current.drawPath = [];
+    stateRef.current.isClosed = false;
+    if (stateRef.current.drawMode !== "polygon") {
+      setZoneType("circle");
+    }
+    setLocation(LONDON_CENTER);
+    mapRef.current?.panTo(LONDON_CENTER);
+    mapRef.current?.setZoom(13);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAddress(e.target.value);
+    const value = e.target.value;
+    setAddress(value);
+    if (!value.trim()) {
+      resetMapFromClearedSearch();
+      return;
+    }
     setTypedAddress(true);
-    fetchPredictions(e.target.value);
+    fetchPredictions(value);
   };
 
   const selectPrediction = (placeId: string) => {
     new google.maps.places.PlacesService(
       document.createElement("div"),
-    ).getDetails({ placeId }, (place, status) => {
-      if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-        setAddress(place.formatted_address || place.name || "");
-        if (place.geometry?.location) {
-          const loc = {
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng(),
-          };
-          setLocation(loc);
+    ).getDetails({ placeId, fields: ["formatted_address", "name", "geometry"] }, (place, status) => {
+      if (status !== google.maps.places.PlacesServiceStatus.OK || !place) {
+        setTypedAddress(false);
+        setPredictions([]);
+        return;
+      }
+
+      void (async () => {
+        const label = place.formatted_address || place.name || "";
+        setAddress(label);
+        const loc = place.geometry?.location
+          ? {
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng(),
+            }
+          : null;
+        if (loc) setLocation(loc);
+
+        const viewport = place.geometry?.viewport;
+        const keepCircleTool = stateRef.current.drawMode === "circle";
+
+        if (!keepCircleTool) {
+          let path: { lat: number; lng: number }[] = [];
+          try {
+            path = await fetchOsmBoundaryPath(place.name || label);
+          } catch (error) {
+            console.error("OSM boundary lookup failed", error);
+          }
+          if (path.length < 3 && viewport) {
+            path = viewportToPolygonPath(viewport);
+          }
+
+          if (path.length >= 3) {
+            const bounds = boundsFromPath(path) ?? viewport ?? null;
+            setZoneType("polygon");
+            setDrawPath(path);
+            setIsClosed(true);
+            setCursorLatLng(null);
+            setNearStart(false);
+            setBoundaryFromSearch(true);
+            stateRef.current.drawPath = path;
+            stateRef.current.isClosed = true;
+            pendingFitBoundsRef.current = bounds;
+            if (bounds) mapRef.current?.fitBounds(bounds);
+          } else if (loc) {
+            mapRef.current?.panTo(loc);
+            mapRef.current?.setZoom(15);
+          }
+        } else if (loc) {
           mapRef.current?.panTo(loc);
           mapRef.current?.setZoom(15);
         }
-      }
-      setTypedAddress(false);
-      setPredictions([]);
+
+        setTypedAddress(false);
+        setPredictions([]);
+      })();
     });
   };
 
@@ -361,10 +498,31 @@ const AddZone = ({
 
   // ── Mode switch ──────────────────────────────────────────────────────────
   const handleModeChange = (mode: DrawMode) => {
+    const hasSearchPolygon =
+      boundaryFromSearch &&
+      zoneType === "polygon" &&
+      isClosed &&
+      drawPath.length >= 3;
+
+    if (hasSearchPolygon && (mode === "polygon" || mode === "pan")) {
+      setDrawMode(mode);
+      setZoneType("polygon");
+      setCursorLatLng(null);
+      setNearStart(false);
+      stateRef.current.drawMode = mode;
+      stateRef.current.isClosed = true;
+      stateRef.current.drawPath = drawPath;
+      mapRef.current?.setOptions({
+        draggableCursor: mode === "polygon" ? "crosshair" : "",
+      });
+      return;
+    }
+
     setDrawMode(mode);
     setCursorLatLng(null);
     setNearStart(false);
     setIsClosed(false);
+    setBoundaryFromSearch(false);
     stateRef.current.drawMode = mode;
     stateRef.current.isClosed = false;
     stateRef.current.drawPath = [];
@@ -890,8 +1048,8 @@ const AddZone = ({
                             strokeColor: color,
                             fillColor: color + "33",
                             strokeWeight: 2,
-                            editable: true,
-                            draggable: true,
+                            editable: !boundaryFromSearch || drawMode === "polygon",
+                            draggable: !boundaryFromSearch || drawMode === "polygon",
                           }}
                           onLoad={(p) => {
                             polygonRef.current = p;
@@ -917,6 +1075,7 @@ const AddZone = ({
                       )}
 
                     {isDrawingActive &&
+                      !(boundaryFromSearch && isClosed) &&
                       drawPath.map((pt, i) => {
                         const isFirst = i === 0;
                         const canClose =
