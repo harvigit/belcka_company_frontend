@@ -19,6 +19,8 @@ import {
   ListItemIcon,
   Tooltip,
   Divider,
+  Badge,
+  Drawer,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -39,6 +41,8 @@ import {
   IconFilter,
   IconEye,
   IconSettings,
+  IconAlertTriangle,
+  IconX,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
@@ -54,6 +58,9 @@ import Link from "next/link";
 import CollectAddEdit from "./create-edit";
 import CollectViewDetails from "./view-details";
 import PermissionGuard from "@/app/auth/PermissionGuard";
+import CollectConflictList, {
+  CollectConflict,
+} from "@/app/components/apps/conflicts/sections/collect-conflicts";
 
 const CollectList = () => {
   const [data, setData] = useState<any[]>([]);
@@ -109,10 +116,15 @@ const CollectList = () => {
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [conflictOpen, setConflictOpen] = useState(false);
+  const [collectConflicts, setCollectConflicts] = useState<CollectConflict[]>(
+    [],
+  );
 
   useEffect(() => {
     if (user?.company_id) {
       fetchFilters();
+      fetchCollectConflicts();
     }
   }, [user?.company_id]);
 
@@ -126,6 +138,17 @@ const CollectList = () => {
         setSuppliers(res.data.info.suppliers || []);
         setAddresses(res.data.info.parentAddresses || []);
         setUsers(res.data.info.users || []);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const fetchCollectConflicts = async () => {
+    try {
+      const res = await api.get("po-collect/conflicts");
+      if (res.data?.IsSuccess) {
+        setCollectConflicts(res.data.info || []);
       }
     } catch (error) {
       console.error(error);
@@ -169,6 +192,7 @@ const CollectList = () => {
           setPageCount(1);
         }
       }
+      await fetchCollectConflicts();
     } catch (err) {
       console.error(err);
     } finally {
@@ -730,6 +754,24 @@ const CollectList = () => {
                 Remove
               </Button>
             )}
+
+            <Tooltip title="Amount conflicts">
+              <Badge
+                badgeContent={collectConflicts.length}
+                color="error"
+                overlap="circular"
+              >
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => setConflictOpen(true)}
+                  sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1, ml: 1 }}
+                >
+                  Conflicts
+                </Button>
+              </Badge>
+            </Tooltip>
+
             <IconButton
               onClick={handlePopoverOpen}
               sx={{ ml: 1 }}
@@ -917,6 +959,68 @@ const CollectList = () => {
                 </Button>
               </DialogActions>
             </Dialog>
+
+            <Drawer
+              anchor="right"
+              open={conflictOpen}
+              onClose={() => setConflictOpen(false)}
+              PaperProps={{
+                sx: {
+                  width: { xs: "100%", sm: 480 },
+                  borderRadius: 0,
+                  boxShadow: "none",
+                  overflow: "hidden",
+                },
+              }}
+            >
+              <Box
+                height="100%"
+                display="flex"
+                flexDirection="column"
+                overflow="hidden"
+              >
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  px={2}
+                  py={1.5}
+                  borderBottom="1px solid"
+                  borderColor="divider"
+                >
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <IconAlertTriangle size={20} color="#F97316" />
+                    <Typography variant="h6" fontWeight={700}>
+                      Collect amount conflicts
+                    </Typography>
+                  </Stack>
+                  <IconButton onClick={() => setConflictOpen(false)}>
+                    <IconX size={18} />
+                  </IconButton>
+                </Box>
+                <Box
+                  flex={1}
+                  minHeight={0}
+                  display="flex"
+                  flexDirection="column"
+                  overflow="hidden"
+                >
+                  <CollectConflictList
+                    data={collectConflicts}
+                    onResolved={async () => {
+                      await fetchCollectConflicts();
+                      await fetchCollects();
+                    }}
+                    onEdit={(id) => {
+                      setConflictOpen(false);
+                      setIsEdit(true);
+                      setSelectedCollectId(id);
+                      setEditDrawerOpen(true);
+                    }}
+                  />
+                </Box>
+              </Box>
+            </Drawer>
 
             <IconButton onClick={handleClick} size="small" sx={{ ml: 1 }}>
               <IconDotsVertical width={20} />
@@ -1224,6 +1328,7 @@ const CollectList = () => {
           collectId={selectedCollectId}
           onSuccess={(savedId, isUpdate) => {
             upsertCollectRecord(savedId, isUpdate);
+            fetchCollectConflicts();
           }}
         />
 

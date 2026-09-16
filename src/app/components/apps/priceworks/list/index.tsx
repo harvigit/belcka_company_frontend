@@ -52,6 +52,7 @@ import {
 import Image from "next/image";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import { tableFilterOptions } from "@/utils/uniqueFilterOptions";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
@@ -464,7 +465,7 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
 
   useEffect(() => {
     const fetchFilterOptions = async () => {
-      if (!user?.company_id) return;
+      if (!user?.company_id || projectId) return;
       if (loadedFilterCompanyIdRef.current === Number(user.company_id)) return;
 
       loadedFilterCompanyIdRef.current = Number(user.company_id);
@@ -483,7 +484,7 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
     };
 
     fetchFilterOptions();
-  }, [user?.company_id]);
+  }, [user?.company_id, projectId]);
 
   const handleToggleSelect = (row: PriceworkRow) => {
     const rowKey = getPriceworkRowKey(row);
@@ -1574,6 +1575,55 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
 
         setData(responseData);
         clearSelection();
+
+        if (projectId) {
+          const apiFilterOptions = res.data.filter_options || {};
+          setUsers((prev) =>
+            tableFilterOptions(
+              apiFilterOptions.users,
+              responseData,
+              "user_id",
+              "user_name",
+              prev,
+            ),
+          );
+          setProjects((prev) =>
+            tableFilterOptions(
+              apiFilterOptions.projects,
+              responseData,
+              "project_id",
+              "project_name",
+              prev,
+            ),
+          );
+          setAddresses((prev) =>
+            tableFilterOptions(
+              apiFilterOptions.addresses,
+              responseData,
+              "address_id",
+              "address_name",
+              prev,
+            ),
+          );
+          setTeams((prev) =>
+            tableFilterOptions(
+              apiFilterOptions.teams,
+              responseData,
+              "team_id",
+              "team_name",
+              prev,
+            ),
+          );
+          setTrades((prev) =>
+            tableFilterOptions(
+              apiFilterOptions.trades,
+              responseData,
+              "trade_id",
+              "trade_name",
+              prev,
+            ),
+          );
+        }
 
         const pagMeta = res.data.data || {};
         setTotalRows(

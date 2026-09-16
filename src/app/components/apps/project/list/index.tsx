@@ -50,6 +50,7 @@ export type ProjectDashboardRow = {
   status: number;
   status_text: string;
   assigned_teams: number;
+  working_teams: number;
   team_capacity: number;
   total_working_users: number;
   limit: number;
@@ -319,7 +320,7 @@ const ProjectDashboard = () => {
           </Typography>
         ),
       }),
-      columnHelper.accessor("assigned_teams", {
+      columnHelper.accessor("working_teams", {
         header: () => <HeaderLabel>Teams</HeaderLabel>,
         meta: { label: "Teams" },
         cell: ({ getValue }) => <NumberCell value={getValue()} />,

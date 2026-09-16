@@ -43,6 +43,7 @@ import { User } from "next-auth";
 import dayjs from "dayjs";
 import Image from "next/image";
 import api from "@/utils/axios";
+import { tableFilterOptions } from "@/utils/uniqueFilterOptions";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
@@ -52,14 +53,15 @@ import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibi
 
 type InternalOrderRow = {
   id: number;
-  source: "store" | "collect";
+  source: "store" | "collect" | "po";
   order_id?: string | null;
   user_name?: string | null;
   address_name?: string | null;
   date?: string | null;
   status_text?: string | null;
+  status_color?: string | null;
   type?: string | null;
-  type_key?: "store" | "collect";
+  type_key?: "store" | "collect" | "po";
   total?: number | string | null;
   total_formatted?: string | null;
   currency?: string | null;
@@ -78,7 +80,7 @@ const COLUMN_LABELS: Record<string, string> = {
 };
 
 const defaultFilters = {
-  type: "all" as "all" | "store" | "collect",
+  type: "all" as "all" | "store" | "collect" | "po",
 };
 
 const columnHelper = createColumnHelper<InternalOrderRow>();
@@ -95,6 +97,9 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
   const [filters, setFilters] = useState(defaultFilters);
   const [tempFilters, setTempFilters] = useState(defaultFilters);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [typeOptions, setTypeOptions] = useState<
+    { id: string | number; name: string }[]
+  >([]);
   const [sorting, setSorting] = useState<SortingState>([
     { id: "date", desc: true },
   ]);
@@ -172,8 +177,13 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
         id: "status_text",
         enableSorting: true,
         header: () => <Typography variant="subtitle2">Status</Typography>,
-        cell: ({ getValue }) => (
-          <Typography className="f-14" color="textPrimary" noWrap>
+        cell: ({ getValue, row }) => (
+          <Typography
+            className="f-14"
+            fontWeight={600}
+            noWrap
+            sx={{ color: row.original.status_color || "text.primary" }}
+          >
             {getValue() || "-"}
           </Typography>
         ),
@@ -185,12 +195,19 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
         cell: ({ getValue, row }) => (
           <Typography
             className="f-14"
-            fontWeight={row.original.type_key === "collect" ? 700 : 500}
+            fontWeight={
+              row.original.type_key === "collect" ||
+              row.original.type_key === "po"
+                ? 700
+                : 500
+            }
             sx={{
               color:
                 row.original.type_key === "collect"
                   ? "error.main"
-                  : "text.primary",
+                  : row.original.type_key === "po"
+                    ? "primary.main"
+                    : "text.primary",
             }}
             noWrap
           >
@@ -262,7 +279,18 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
 
       const res = await api.get(`project/internal-orders?${params.toString()}`);
       const responseData = res.data?.info || [];
-      setData(Array.isArray(responseData) ? responseData : []);
+      const rows = Array.isArray(responseData) ? responseData : [];
+      setData(rows);
+      const apiFilterOptions = res.data?.filter_options || {};
+      setTypeOptions((prev) =>
+        tableFilterOptions(
+          apiFilterOptions.types,
+          rows,
+          "type_key",
+          "type",
+          prev,
+        ),
+      );
 
       const pagMeta =
         res.data?.data?.totalPages !== undefined ||
@@ -635,14 +663,17 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
               onChange={(e) =>
                 setTempFilters({
                   ...tempFilters,
-                  type: e.target.value as "all" | "store" | "collect",
+                  type: e.target.value as "all" | "store" | "collect" | "po",
                 })
               }
               fullWidth
             >
               <MenuItem value="all">All</MenuItem>
-              <MenuItem value="store">Store</MenuItem>
-              <MenuItem value="collect">Collect</MenuItem>
+              {typeOptions.map((option) => (
+                <MenuItem key={String(option.id)} value={String(option.id)}>
+                  {option.name}
+                </MenuItem>
+              ))}
             </TextField>
           </Stack>
         </DialogContent>

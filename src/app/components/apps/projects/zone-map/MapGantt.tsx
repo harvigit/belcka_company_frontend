@@ -59,6 +59,7 @@ import { User } from "next-auth";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import { tableFilterOptions } from "@/utils/uniqueFilterOptions";
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
 
 import AddZone from "./AddZone";
@@ -750,6 +751,26 @@ export default function MapGantt({
         setUserLocations(data);
         setTotalUsers(Number(res.data.total_users ?? 0));
 
+        if (projectId) {
+          setResources((prev) => ({
+            teams: tableFilterOptions(
+              undefined,
+              data,
+              "team_id",
+              "team_name",
+              prev.teams,
+            ),
+            trades: tableFilterOptions(
+              undefined,
+              data,
+              "trade_id",
+              "trade_name",
+              prev.trades,
+            ),
+            projects: prev.projects,
+          }));
+        }
+
         const teams = groupByTeam(data);
         const initial: Record<string, boolean> = {};
         Object.keys(teams).forEach((t) => {
@@ -810,7 +831,9 @@ export default function MapGantt({
   useEffect(() => {
     if (open) {
       setActiveProjectId(projectId);
-      fetchResources();
+      if (!projectId) {
+        fetchResources();
+      }
     }
   }, [open, projectId]);
 

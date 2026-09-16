@@ -48,6 +48,7 @@ import dayjs from "dayjs";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
+import { tableFilterOptions } from "@/utils/uniqueFilterOptions";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import { flexRender } from "@tanstack/react-table";
@@ -159,6 +160,8 @@ interface CaseSummary {
   status: number;
   latest_start: string | null;
   finish_date: string | null;
+  parent_address_id?: number | null;
+  parent_addresses_name?: string | null;
 }
 
 interface ClickToEditProgressProps {
@@ -331,6 +334,7 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
   const [tempFilters, setTempFilters] = useState(filters);
   const [projectList, setProjectList] = useState<any[]>([]);
   const [parentAddressList, setParentAddressList] = useState<any[]>([]);
+  const [parentFilterList, setParentFilterList] = useState<any[]>([]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -429,6 +433,9 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
         addrRes.data?.data ||
         [];
       setParentAddressList(addrData);
+      if (!projectId) {
+        setParentFilterList(addrData);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -440,7 +447,7 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
 
   useEffect(() => {
     fetchProjectsAndAddresses();
-  }, [user?.company_id]);
+  }, [user?.company_id, projectId]);
 
   const fetchCases = async () => {
     if (!user?.company_id) return;
@@ -467,6 +474,18 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
         const responseData =
           res.data.info?.data || res.data.info || res.data.data || [];
         setData(sortCaseListRows(responseData, sorting));
+        if (projectId) {
+          const apiFilterOptions = res.data.filter_options || {};
+          setParentFilterList((prev) =>
+            tableFilterOptions(
+              apiFilterOptions.parent_addresses,
+              responseData,
+              "parent_address_id",
+              "parent_addresses_name",
+              prev,
+            ),
+          );
+        }
         const pagMeta =
           res.data.data?.totalPages !== undefined ||
           res.data.data?.totalItems !== undefined
@@ -1176,10 +1195,10 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                   )}
 
                   <Autocomplete
-                    options={parentAddressList}
+                    options={projectId ? parentFilterList : parentAddressList}
                     getOptionLabel={(option) => option.name || ""}
                     value={
-                      parentAddressList.find(
+                      (projectId ? parentFilterList : parentAddressList).find(
                         (p) => p.id === tempFilters.parent_address_id,
                       ) || null
                     }
