@@ -9,6 +9,7 @@ import {
   IconPackage,
   IconReceipt,
   IconReorder,
+  IconDoorExit,
   IconSettings,
   IconUsers,
 } from "@tabler/icons-react";
@@ -24,6 +25,7 @@ import ExpenseList from "@/app/components/apps/expenses/list";
 import PriceworkList from "@/app/components/apps/priceworks/list";
 import CasesList from "@/app/components/apps/cases/list";
 import ProjectSettingsTab from "./Settings";
+import Leave from "./Leave";
 import { ProjectDetailFiltersProvider } from "./ProjectDetailFiltersContext";
 import MapGantt from "../../projects/zone-map/MapGantt";
 import { IconMapPin } from "@tabler/icons-react";
@@ -46,6 +48,7 @@ const TABS = [
   // { key: "supplier-inv", label: "Supplier Inv", icon: IconTruck },
   { key: "map", label: "Map", icon: IconMapPin },
   { key: "settings", label: "Settings", icon: IconSettings },
+  { key: "leave", label: "Leave", icon: IconDoorExit },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -151,6 +154,8 @@ const ProjectDetail = () => {
             onProjectName={setProjectName}
           />
         ) : null;
+      case "leave":
+        return <Leave projectId={projectId} />;
       default:
         return null;
     }
@@ -162,7 +167,8 @@ const ProjectDetail = () => {
     tab === "pricework" ||
     tab === "materials" ||
     tab === "labour" ||
-    tab === "internal-orders";
+    tab === "internal-orders" ||
+    tab === "leave";
 
   const tabValue = visibleTabs.some((item) => item.key === tab)
     ? tab
