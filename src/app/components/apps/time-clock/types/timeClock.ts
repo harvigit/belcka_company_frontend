@@ -130,6 +130,9 @@ export interface ConflictItem {
     color?: string;
     worklog_id?: number;
     project?: string;
+    is_leave?: boolean;
+    is_pricework?: boolean;
+    conflict_type?: string;
 }
 
 export interface ConflictDetail {

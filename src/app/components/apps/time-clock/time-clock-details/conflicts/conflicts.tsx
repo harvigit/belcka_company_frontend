@@ -37,6 +37,7 @@ export interface ConflictItem {
     is_leave?: boolean;
     leave_name?: string | null;
     user_leave_id?: number | null;
+    is_pricework?: boolean;
     conflict_type?: string;
     message?: string;
     old_data?: any;
@@ -56,6 +57,7 @@ export type ConflictType =
     | 'cut-delete'
     | 'split-delete'
     | 'delete-only'
+    | 'pricework-timesheet'
     | 'billing_info'
     | 'duplicate_account_id';
 
@@ -97,6 +99,17 @@ export const calcDiffHM = (start: DateTime, end: DateTime): string => {
 };
 
 export const getConflictType = (items: ConflictItem[]): ConflictType => {
+    if (items.some((item) => item.conflict_type === 'pricework_timesheet')) {
+        return 'pricework-timesheet';
+    }
+
+    if (
+        items.some((item) => item.is_pricework === true) &&
+        items.some((item) => item.is_pricework === false && !item.is_leave)
+    ) {
+        return 'pricework-timesheet';
+    }
+
     if (items.some((item) => item.conflict_type === 'duplicate_account_id')) {
         return 'duplicate_account_id';
     }
@@ -185,6 +198,8 @@ const ConflictCaseRenderer = React.memo(({conflict, index, startDate, endDate, o
                 return <CutDeleteCase {...commonProps} />;
             case 'split-delete':
                 return <SplitDeleteCase {...commonProps} />;
+            case 'pricework-timesheet':
+                return <DeleteOnlyCase {...commonProps} showResolveConflict />;
             case 'delete-only':
             default:
                 return <DeleteOnlyCase {...commonProps} />;
@@ -284,6 +299,8 @@ const ConflictItemDisplay = React.memo(
                     </Box>
                 ) : item.is_leave && item.leave_name ? (
                     item.leave_name
+                ) : item.conflict_type === 'pricework_timesheet' && item.is_pricework ? (
+                    'Price Work'
                 ) : (
                     item.shift_name
                 );

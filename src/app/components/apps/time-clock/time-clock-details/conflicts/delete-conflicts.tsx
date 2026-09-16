@@ -12,6 +12,7 @@ import {
     IconChevronUp,
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
+import toast from 'react-hot-toast';
 import {
     Conflict,
     ConflictItem,
@@ -26,6 +27,7 @@ interface DeleteOnlyCaseProps {
     startDate: string;
     endDate: string;
     onClose: () => void;
+    showResolveConflict?: boolean;
 }
 
 interface DeletePreviewRow {
@@ -64,7 +66,7 @@ const useMenuState = () => {
     };
 };
 
-const DeleteOnlyCase: React.FC<DeleteOnlyCaseProps> = ({conflict, index, onClose, startDate, endDate}) => {
+const DeleteOnlyCase: React.FC<DeleteOnlyCaseProps> = ({conflict, index, onClose, startDate, endDate, showResolveConflict = false}) => {
     const {
         anchorEl,
         deletePreviewOpen,
@@ -121,6 +123,34 @@ const DeleteOnlyCase: React.FC<DeleteOnlyCaseProps> = ({conflict, index, onClose
         }
     }, [selectedItem, handleMenuClose, onClose, startDate, endDate, isLoading]);
 
+    const handleResolveConflict = useCallback(async () => {
+        if (isLoading) return;
+
+        const worklogIds = conflict.items
+            .map((item) => item.worklog_id)
+            .filter((id): id is number => Number(id) > 0);
+
+        if (worklogIds.length === 0) return;
+
+        setIsLoading(true);
+        try {
+            const response = await api.post('/time-clock/resolve-worklog-conflict', {
+                worklog_ids: worklogIds,
+            });
+
+            if (response.data?.IsSuccess) {
+                toast.success(response.data.message || 'Conflict resolved successfully');
+                onClose();
+            } else {
+                toast.error(response.data?.message || 'Failed to resolve conflict');
+            }
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to resolve conflict');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [conflict.items, isLoading, onClose]);
+
     const handleCancelDelete = useCallback(() => {
         setDeletePreviewOpen(false);
         setSelectedItem(null);
@@ -148,6 +178,25 @@ const DeleteOnlyCase: React.FC<DeleteOnlyCaseProps> = ({conflict, index, onClose
                 >
                     Delete
                 </Button>
+                {showResolveConflict && (
+                    <Button
+                        size="small"
+                        onClick={handleResolveConflict}
+                        variant="outlined"
+                        color="primary"
+                        disabled={isLoading}
+                        sx={{
+                            textTransform: 'none',
+                            fontSize: '0.8rem',
+                            fontWeight: 500,
+                            borderRadius: '6px',
+                            px: 2,
+                            py: 0.5,
+                        }}
+                    >
+                        {isLoading ? 'Resolving...' : 'Resolve Conflict'}
+                    </Button>
+                )}
             </Box>
 
             <Menu
