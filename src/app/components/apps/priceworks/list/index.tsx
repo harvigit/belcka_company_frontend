@@ -107,6 +107,20 @@ const formatAmount = (
   amount: number | string | null | undefined,
 ) => `${currency || "£"}${Number(amount || 0).toFixed(2)}`;
 
+const getNumericResponseValue = (
+  response: any,
+  keys: string[],
+  fallback = 0,
+) => {
+  for (const key of keys) {
+    const value = response?.[key] ?? response?.data?.[key];
+    const amount = Number(value);
+    if (Number.isFinite(amount)) return amount;
+  }
+
+  return fallback;
+};
+
 const formatDuration = (duration: number | string | null | undefined) => {
   if (duration === null || duration === undefined || duration === "") return "—";
   const value = String(duration).trim();
@@ -231,6 +245,8 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
     sent: 0,
     rejected: 0,
   });
+  const [tabAmountTotal, setTabAmountTotal] = useState(0);
+  const [tabAmountCurrency, setTabAmountCurrency] = useState("£");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsPricework, setDetailsPricework] = useState<PriceworkRow | null>(
     null,
@@ -244,6 +260,9 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
   const [sendDate, setSendDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [unapproveDialogOpen, setUnapproveDialogOpen] = useState(false);
   const [isUnapproving, setIsUnapproving] = useState(false);
+  const [pendingDialogMode, setPendingDialogMode] = useState<
+    "unapprove" | "back-to-pending"
+  >("unapprove");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -672,7 +691,12 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
 
   const isUnapprovablePriceworkRow = (row: PriceworkRow) => {
     const status = normalizePriceworkStatus(row.status);
-    return status === "approved" || status === "sent";
+    return status === "approved";
+  };
+
+  const isBackToPendingPriceworkRow = (row: PriceworkRow) => {
+    const status = normalizePriceworkStatus(row.status);
+    return status === "sent" || status === "rejected";
   };
 
   const getUnapproveActionPriceworkIds = () =>
@@ -700,6 +724,31 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
       )
       .map((item) => Number(item.user_checklog_id));
 
+  const getBackToPendingActionPriceworkIds = () =>
+    getSelectedRows()
+      .filter(
+        (item) =>
+          isStandalonePriceworkRow(item) && isBackToPendingPriceworkRow(item),
+      )
+      .map((item) => item.id);
+
+  const getBackToPendingActionTimesheetLightIds = () =>
+    getSelectedRows()
+      .filter(
+        (item) =>
+          isActionableTimesheetLightRow(item) &&
+          isBackToPendingPriceworkRow(item),
+      )
+      .map((item) => Number(item.timesheet_light_id));
+
+  const getBackToPendingActionUserChecklogIds = () =>
+    getSelectedRows()
+      .filter(
+        (item) =>
+          isChecklogPriceworkRow(item) && isBackToPendingPriceworkRow(item),
+      )
+      .map((item) => Number(item.user_checklog_id));
+
   const canUnapproveSelected = useMemo(() => {
     const selectedRows = getSelectedRows();
     if (selectedRows.length === 0) return false;
@@ -712,6 +761,26 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
         isUnapprovablePriceworkRow(item),
     );
   }, [data, isSelectAll, selectedRowIds]);
+
+  const canBackToPendingSelected = useMemo(() => {
+    const selectedRows = getSelectedRows();
+    if (selectedRows.length === 0) return false;
+
+    return selectedRows.every(
+      (item) =>
+        (isStandalonePriceworkRow(item) ||
+          isActionableTimesheetLightRow(item) ||
+          isChecklogPriceworkRow(item)) &&
+        isBackToPendingPriceworkRow(item),
+    );
+  }, [data, isSelectAll, selectedRowIds]);
+
+  const showApproveAction = activeTab === "all" || activeTab === "pending";
+  const showRejectAction = activeTab === "all" || activeTab === "pending";
+  const showUnapproveAction = activeTab === "all" || activeTab === "approved";
+  const showSendAction = activeTab === "all" || activeTab === "approved";
+  const showBackToPendingAction =
+    activeTab === "all" || activeTab === "sent" || activeTab === "rejected";
 
   const refreshAfterAction = async () => {
     clearSelection();
@@ -864,25 +933,49 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
   const openUnapproveDialog = () => {
     if (!canUnapproveSelected) {
       toast.error(
-        "Please select only Approved or Sent priceworks to unapprove",
+        "Please select only Approved priceworks to unapprove",
       );
       return;
     }
+    setPendingDialogMode("unapprove");
+    setUnapproveDialogOpen(true);
+  };
+
+  const openBackToPendingDialog = () => {
+    if (!canBackToPendingSelected) {
+      toast.error(
+        "Please select only Sent or Rejected priceworks to move back to pending",
+      );
+      return;
+    }
+    setPendingDialogMode("back-to-pending");
     setUnapproveDialogOpen(true);
   };
 
   const handleUnapproveSelected = async () => {
-    const ids = getUnapproveActionPriceworkIds();
-    const timesheetLightIds = getUnapproveActionTimesheetLightIds();
-    const userChecklogIds = getUnapproveActionUserChecklogIds();
+    const isBackToPending = pendingDialogMode === "back-to-pending";
+    const ids = isBackToPending
+      ? getBackToPendingActionPriceworkIds()
+      : getUnapproveActionPriceworkIds();
+    const timesheetLightIds = isBackToPending
+      ? getBackToPendingActionTimesheetLightIds()
+      : getUnapproveActionTimesheetLightIds();
+    const userChecklogIds = isBackToPending
+      ? getBackToPendingActionUserChecklogIds()
+      : getUnapproveActionUserChecklogIds();
+    const canSubmit = isBackToPending
+      ? canBackToPendingSelected
+      : canUnapproveSelected;
     if (
       (ids.length === 0 &&
         timesheetLightIds.length === 0 &&
         userChecklogIds.length === 0) ||
-      !canUnapproveSelected
+      !canSubmit
     ) {
       toast.error(
-        "Please select only Approved or Sent priceworks to unapprove",
+        isBackToPending
+          ? "Please select only Sent or Rejected priceworks to move back to pending"
+          : "Please select only Approved priceworks to unapprove",
       );
       setUnapproveDialogOpen(false);
       return;
@@ -899,7 +992,12 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
         toast.error(res.data?.message || "Failed to unapprove priceworks");
         return;
       }
-      toast.success(res.data?.message || "Pricework unapproved successfully");
+      toast.success(
+        res.data?.message ||
+          (isBackToPending
+            ? "Pricework moved back to pending successfully"
+            : "Pricework unapproved successfully"),
+      );
       setUnapproveDialogOpen(false);
       await refreshAfterAction();
     } catch (error: any) {
@@ -1644,12 +1742,25 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
             rejected: Number(res.data.status_counts.rejected || 0),
           });
         }
+        setTabAmountTotal(
+          getNumericResponseValue(
+            res.data,
+            ["total_pricework_amount", "pricework_amount_total", "amount_total"],
+            responseData.reduce(
+              (sum: number, item: PriceworkRow) =>
+                sum + Number(item.pricework_amount || 0),
+              0,
+            ),
+          ),
+        );
+        setTabAmountCurrency(res.data.currency || responseData[0]?.currency || "£");
       }
     } catch (error) {
       console.error("Failed to fetch priceworks", error);
       setData([]);
       setTotalRows(0);
       setPageCount(0);
+      setTabAmountTotal(0);
       clearSelection();
     } finally {
       setLoading(false);
@@ -2003,7 +2114,17 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
           </Box>
         </Popover>
 
-        <Box sx={{ mx: 2, borderBottom: "1px solid", borderColor: "divider" }}>
+        <Box
+          sx={{
+            mx: 2,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+          }}
+        >
           <Tabs
             value={activeTab}
             onChange={(_, value: PriceworkTabKey) => handleTabChange(value)}
@@ -2011,6 +2132,8 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
             scrollButtons="auto"
             sx={{
               minHeight: 42,
+              flex: 1,
+              minWidth: 0,
               "& .MuiTabs-indicator": { height: 2, bgcolor: "primary.main" },
               "& .MuiTab-root": {
                 minHeight: 42,
@@ -2036,6 +2159,27 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
               />
             ))}
           </Tabs>
+          <Box
+            sx={{
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "baseline",
+              gap: 0.75,
+              py: 0.75,
+              px: 1.25,
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 1,
+              bgcolor: "background.paper",
+            }}
+          >
+            <Typography variant="caption" color="text.secondary" noWrap>
+              Total
+            </Typography>
+            <Typography variant="subtitle2" fontWeight={700} noWrap>
+              {formatAmount(tabAmountCurrency, tabAmountTotal)}
+            </Typography>
+          </Box>
         </Box>
 
         <TableContainer
@@ -2290,66 +2434,88 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
                 alignItems="center"
                 sx={{ flexWrap: "nowrap", flexShrink: 0 }}
               >
-                <Button
-                  startIcon={<IconCheck size={15} />}
-                  variant="outlined"
-                  color="success"
-                  size="small"
-                  onClick={() =>
-                    handleApprovePriceworks(
-                      getActionPriceworkIds(),
-                      getActionTimesheetLightIds(),
-                      getActionUserChecklogIds(),
-                    )
-                  }
-                  sx={BULK_BUTTON_SX}
-                >
-                  Approve Selected
-                </Button>
+                {showApproveAction && (
+                  <Button
+                    startIcon={<IconCheck size={15} />}
+                    variant="outlined"
+                    color="success"
+                    size="small"
+                    onClick={() =>
+                      handleApprovePriceworks(
+                        getActionPriceworkIds(),
+                        getActionTimesheetLightIds(),
+                        getActionUserChecklogIds(),
+                      )
+                    }
+                    sx={BULK_BUTTON_SX}
+                  >
+                    Approve Selected
+                  </Button>
+                )}
 
-                <Button
-                  startIcon={<IconX size={15} />}
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  onClick={() =>
-                    openRejectDialog(
-                      getActionPriceworkIds(),
-                      getActionTimesheetLightIds(),
-                      getActionUserChecklogIds(),
-                    )
-                  }
-                  sx={BULK_BUTTON_SX}
-                >
-                  Reject Selected
-                </Button>
+                {showRejectAction && (
+                  <Button
+                    startIcon={<IconX size={15} />}
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={() =>
+                      openRejectDialog(
+                        getActionPriceworkIds(),
+                        getActionTimesheetLightIds(),
+                        getActionUserChecklogIds(),
+                      )
+                    }
+                    sx={BULK_BUTTON_SX}
+                  >
+                    Reject Selected
+                  </Button>
+                )}
 
-                <Button
-                  startIcon={<IconArrowBackUp size={15} />}
-                  variant="outlined"
-                  color="warning"
-                  size="small"
-                  onClick={openUnapproveDialog}
-                  disabled={!canUnapproveSelected || isUnapproving}
-                  sx={BULK_BUTTON_SX}
-                >
-                  Unapprove Selected
-                </Button>
+                {showUnapproveAction && (
+                  <Button
+                    startIcon={<IconArrowBackUp size={15} />}
+                    variant="outlined"
+                    color="warning"
+                    size="small"
+                    onClick={openUnapproveDialog}
+                    disabled={!canUnapproveSelected || isUnapproving}
+                    sx={BULK_BUTTON_SX}
+                  >
+                    Unapprove Selected
+                  </Button>
+                )}
 
-                <Button
-                  startIcon={<IconSend size={15} />}
-                  variant="contained"
-                  color="primary"
-                  size="small"
-                  onClick={openSendDateDialog}
-                  sx={{
-                    ...BULK_BUTTON_SX,
-                    boxShadow: "none",
-                    "&:hover": { boxShadow: "none" },
-                  }}
-                >
-                  Send to Bookkeeper
-                </Button>
+                {showSendAction && (
+                  <Button
+                    startIcon={<IconSend size={15} />}
+                    variant="contained"
+                    color="primary"
+                    size="small"
+                    onClick={openSendDateDialog}
+                    sx={{
+                      ...BULK_BUTTON_SX,
+                      boxShadow: "none",
+                      "&:hover": { boxShadow: "none" },
+                    }}
+                  >
+                    Send to Bookkeeper
+                  </Button>
+                )}
+
+                {showBackToPendingAction && (
+                  <Button
+                    startIcon={<IconArrowBackUp size={15} />}
+                    variant="outlined"
+                    color="warning"
+                    size="small"
+                    onClick={openBackToPendingDialog}
+                    disabled={!canBackToPendingSelected || isUnapproving}
+                    sx={BULK_BUTTON_SX}
+                  >
+                    Back to Pending
+                  </Button>
+                )}
 
                 {/* Ticket 819: hide Delete Selected on Pricework web list */}
                 {/* <Button
@@ -2418,7 +2584,9 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
         maxWidth="xs"
       >
         <DialogTitle sx={{ m: 0, position: "relative" }}>
-          Unapprove Selected
+          {pendingDialogMode === "back-to-pending"
+            ? "Back to Pending"
+            : "Unapprove Selected"}
           <IconButton
             aria-label="close"
             onClick={() => setUnapproveDialogOpen(false)}
@@ -2430,12 +2598,9 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
         </DialogTitle>
         <DialogContent>
           <Typography>
-            You are about to unapprove {selectedCount} pricework
-            {selectedCount === 1 ? "" : "s"} and return
-            {selectedCount === 1 ? " it" : " them"} to Pending. This removes
-            approval and bookkeeper processing so
-            {selectedCount === 1 ? " it" : " they"} can be approved and sent
-            again.
+            {pendingDialogMode === "back-to-pending"
+              ? `You are about to move ${selectedCount} pricework${selectedCount === 1 ? "" : "s"} back to Pending.`
+              : `You are about to unapprove ${selectedCount} pricework${selectedCount === 1 ? "" : "s"} and return ${selectedCount === 1 ? "it" : "them"} to Pending.`}
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -2452,7 +2617,13 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
             onClick={handleUnapproveSelected}
             disabled={isUnapproving}
           >
-            {isUnapproving ? "Unapproving…" : "Unapprove Selected"}
+            {isUnapproving
+              ? pendingDialogMode === "back-to-pending"
+                ? "Moving…"
+                : "Unapproving…"
+              : pendingDialogMode === "back-to-pending"
+                ? "Back to Pending"
+                : "Unapprove Selected"}
           </Button>
         </DialogActions>
       </Dialog>

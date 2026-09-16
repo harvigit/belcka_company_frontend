@@ -187,6 +187,20 @@ const BULK_BUTTON_SX = {
 const formatAmount = (currency: string, amount: number) =>
     `${currency}${Number(amount || 0).toFixed(2)}`;
 
+const getNumericResponseValue = (
+    response: any,
+    keys: string[],
+    fallback = 0,
+) => {
+    for (const key of keys) {
+        const value = response?.[key] ?? response?.data?.[key];
+        const amount = Number(value);
+        if (Number.isFinite(amount)) return amount;
+    }
+
+    return fallback;
+};
+
 const mapApiRowToListItem = (row: ExpenseRow): ExpenseListItem => {
     const name = row.user_name?.trim() || 'Unknown';
     const apiStatus = normalizeExpenseStatus(row.status);
@@ -267,6 +281,8 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
         sent: 0,
         rejected: 0,
     });
+    const [tabAmountTotal, setTabAmountTotal] = useState(0);
+    const [tabAmountCurrency, setTabAmountCurrency] = useState('£');
 
     const [startDate, setStartDate] = useState<Date | null>(
         projectId ? null : subDays(new Date(), 6),
@@ -299,6 +315,9 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [unapproveDialogOpen, setUnapproveDialogOpen] = useState(false);
     const [isUnapproving, setIsUnapproving] = useState(false);
+    const [pendingDialogMode, setPendingDialogMode] = useState<
+        'unapprove' | 'back-to-pending'
+    >('unapprove');
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
     const [rejectExpenseIds, setRejectExpenseIds] = useState<number[]>([]);
     const [rejectNote, setRejectNote] = useState('');
@@ -949,12 +968,27 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                         rejected: Number(res.data.status_counts.rejected || 0),
                     });
                 }
+                setTabAmountTotal(
+                    getNumericResponseValue(
+                        res.data,
+                        ['total_amount', 'total_expense_amount', 'amount_total'],
+                        responseData.reduce(
+                            (sum: number, item: ExpenseRow) =>
+                                sum + Number(item.total_amount || 0),
+                            0,
+                        ),
+                    ),
+                );
+                setTabAmountCurrency(
+                    res.data.currency || responseData[0]?.currency || '£',
+                );
             }
         } catch (error) {
             console.error('Failed to fetch expenses', error);
             setData([]);
             setTotalRows(0);
             setPageCount(0);
+            setTabAmountTotal(0);
         } finally {
             setLoading(false);
         }
@@ -1243,7 +1277,19 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
             .filter(
                 (item) =>
                     selectedIdSet.has(item.id) &&
-                    (item.status === 'approved' || item.status === 'sent'),
+                    item.status === 'approved',
+            )
+            .map((item) => item.id);
+    };
+
+    const getBackToPendingActionExpenseIds = () => {
+        const selectedIds = getActionExpenseIds();
+        const selectedIdSet = new Set(selectedIds);
+        return listItems
+            .filter(
+                (item) =>
+                    selectedIdSet.has(item.id) &&
+                    (item.status === 'sent' || item.status === 'rejected'),
             )
             .map((item) => item.id);
     };
@@ -1257,11 +1303,31 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
         );
         return (
             selectedItems.length === selectedIds.length &&
+            selectedItems.every((item) => item.status === 'approved')
+        );
+    }, [isSelectAll, listItems, selectedRowIds]);
+
+    const canBackToPendingSelected = useMemo(() => {
+        const selectedIds = getActionExpenseIds();
+        if (selectedIds.length === 0) return false;
+        const selectedIdSet = new Set(selectedIds);
+        const selectedItems = listItems.filter((item) =>
+            selectedIdSet.has(item.id),
+        );
+        return (
+            selectedItems.length === selectedIds.length &&
             selectedItems.every(
-                (item) => item.status === 'approved' || item.status === 'sent',
+                (item) => item.status === 'sent' || item.status === 'rejected',
             )
         );
     }, [isSelectAll, listItems, selectedRowIds]);
+
+    const showApproveAction = activeTab === 'all' || activeTab === 'pending';
+    const showRejectAction = activeTab === 'all' || activeTab === 'pending';
+    const showUnapproveAction = activeTab === 'all' || activeTab === 'approved';
+    const showSendAction = activeTab === 'all' || activeTab === 'approved';
+    const showBackToPendingAction =
+        activeTab === 'all' || activeTab === 'sent' || activeTab === 'rejected';
 
     const refreshAfterAction = async () => {
         setIsSelectAll(false);
@@ -1384,16 +1450,36 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
 
     const openUnapproveDialog = () => {
         if (!canUnapproveSelected) {
-            toast.error('Please select only Approved or Sent expenses to unapprove');
+            toast.error('Please select only Approved expenses to unapprove');
             return;
         }
+        setPendingDialogMode('unapprove');
+        setUnapproveDialogOpen(true);
+    };
+
+    const openBackToPendingDialog = () => {
+        if (!canBackToPendingSelected) {
+            toast.error('Please select only Sent or Rejected expenses to move back to pending');
+            return;
+        }
+        setPendingDialogMode('back-to-pending');
         setUnapproveDialogOpen(true);
     };
 
     const handleUnapproveSelected = async () => {
-        const ids = getUnapproveActionExpenseIds();
-        if (ids.length === 0 || !canUnapproveSelected) {
-            toast.error('Please select only Approved or Sent expenses to unapprove');
+        const isBackToPending = pendingDialogMode === 'back-to-pending';
+        const ids = isBackToPending
+            ? getBackToPendingActionExpenseIds()
+            : getUnapproveActionExpenseIds();
+        const canSubmit = isBackToPending
+            ? canBackToPendingSelected
+            : canUnapproveSelected;
+        if (ids.length === 0 || !canSubmit) {
+            toast.error(
+                isBackToPending
+                    ? 'Please select only Sent or Rejected expenses to move back to pending'
+                    : 'Please select only Approved expenses to unapprove',
+            );
             setUnapproveDialogOpen(false);
             return;
         }
@@ -1405,7 +1491,12 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                 toast.error(res.data?.message || 'Failed to unapprove expenses');
                 return;
             }
-            toast.success(res.data?.message || 'Expense unapproved successfully');
+            toast.success(
+                res.data?.message ||
+                (isBackToPending
+                    ? 'Expense moved back to pending successfully'
+                    : 'Expense unapproved successfully'),
+            );
             setUnapproveDialogOpen(false);
             await refreshAfterAction();
         } catch (error: any) {
@@ -1807,7 +1898,17 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                     </Box>
                 </Popover>
 
-                <Box sx={{mx: 2, borderBottom: '1px solid', borderColor: 'divider'}}>
+                <Box
+                    sx={{
+                        mx: 2,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 2,
+                    }}
+                >
                     <Tabs
                         value={activeTab}
                         onChange={(_, value: ExpenseTabKey) => handleTabChange(value)}
@@ -1815,6 +1916,8 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                         scrollButtons="auto"
                         sx={{
                             minHeight: 42,
+                            flex: 1,
+                            minWidth: 0,
                             '& .MuiTabs-indicator': {height: 2, bgcolor: 'primary.main'},
                             '& .MuiTab-root': {
                                 minHeight: 42,
@@ -1840,6 +1943,27 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                             />
                         ))}
                     </Tabs>
+                    <Box
+                        sx={{
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: 0.75,
+                            py: 0.75,
+                            px: 1.25,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1,
+                            bgcolor: 'background.paper',
+                        }}
+                    >
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                            Total
+                        </Typography>
+                        <Typography variant="subtitle2" fontWeight={700} noWrap>
+                            {formatAmount(tabAmountCurrency, tabAmountTotal)}
+                        </Typography>
+                    </Box>
                 </Box>
 
                 <TableContainer
@@ -2062,54 +2186,76 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                                 alignItems="center"
                                 sx={{flexWrap: 'nowrap', flexShrink: 0}}
                             >
-                                <Button
-                                    startIcon={<IconCheck size={15}/>}
-                                    variant="outlined"
-                                    color="success"
-                                    size="small"
-                                    onClick={() => handleApproveExpenses(getActionExpenseIds())}
-                                    sx={BULK_BUTTON_SX}
-                                >
-                                    Approve Selected
-                                </Button>
+                                {showApproveAction && (
+                                    <Button
+                                        startIcon={<IconCheck size={15}/>}
+                                        variant="outlined"
+                                        color="success"
+                                        size="small"
+                                        onClick={() => handleApproveExpenses(getActionExpenseIds())}
+                                        sx={BULK_BUTTON_SX}
+                                    >
+                                        Approve Selected
+                                    </Button>
+                                )}
 
-                                <Button
-                                    startIcon={<IconX size={15}/>}
-                                    variant="outlined"
-                                    color="error"
-                                    size="small"
-                                    onClick={() => openRejectDialog(getActionExpenseIds())}
-                                    sx={BULK_BUTTON_SX}
-                                >
-                                    Reject Selected
-                                </Button>
+                                {showRejectAction && (
+                                    <Button
+                                        startIcon={<IconX size={15}/>}
+                                        variant="outlined"
+                                        color="error"
+                                        size="small"
+                                        onClick={() => openRejectDialog(getActionExpenseIds())}
+                                        sx={BULK_BUTTON_SX}
+                                    >
+                                        Reject Selected
+                                    </Button>
+                                )}
 
-                                <Button
-                                    startIcon={<IconArrowBackUp size={15}/>}
-                                    variant="outlined"
-                                    color="warning"
-                                    size="small"
-                                    onClick={openUnapproveDialog}
-                                    disabled={!canUnapproveSelected || isUnapproving}
-                                    sx={BULK_BUTTON_SX}
-                                >
-                                    Unapprove Selected
-                                </Button>
+                                {showUnapproveAction && (
+                                    <Button
+                                        startIcon={<IconArrowBackUp size={15}/>}
+                                        variant="outlined"
+                                        color="warning"
+                                        size="small"
+                                        onClick={openUnapproveDialog}
+                                        disabled={!canUnapproveSelected || isUnapproving}
+                                        sx={BULK_BUTTON_SX}
+                                    >
+                                        Unapprove Selected
+                                    </Button>
+                                )}
 
-                                <Button
-                                    startIcon={<IconSend size={15}/>}
-                                    variant="contained"
-                                    color="primary"
-                                    size="small"
-                                    onClick={openSendDateDialog}
-                                    sx={{
-                                        ...BULK_BUTTON_SX,
-                                        boxShadow: 'none',
-                                        '&:hover': {boxShadow: 'none'},
-                                    }}
-                                >
-                                    Send to Bookkeeper
-                                </Button>
+                                {showSendAction && (
+                                    <Button
+                                        startIcon={<IconSend size={15}/>}
+                                        variant="contained"
+                                        color="primary"
+                                        size="small"
+                                        onClick={openSendDateDialog}
+                                        sx={{
+                                            ...BULK_BUTTON_SX,
+                                            boxShadow: 'none',
+                                            '&:hover': {boxShadow: 'none'},
+                                        }}
+                                    >
+                                        Send to Bookkeeper
+                                    </Button>
+                                )}
+
+                                {showBackToPendingAction && (
+                                    <Button
+                                        startIcon={<IconArrowBackUp size={15}/>}
+                                        variant="outlined"
+                                        color="warning"
+                                        size="small"
+                                        onClick={openBackToPendingDialog}
+                                        disabled={!canBackToPendingSelected || isUnapproving}
+                                        sx={BULK_BUTTON_SX}
+                                    >
+                                        Back to Pending
+                                    </Button>
+                                )}
 
                                 {/*<Button*/}
                                 {/*    size="small"*/}
@@ -2243,7 +2389,9 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                 maxWidth="xs"
             >
                 <DialogTitle sx={{m: 0, position: 'relative'}}>
-                    Unapprove Selected
+                    {pendingDialogMode === 'back-to-pending'
+                        ? 'Back to Pending'
+                        : 'Unapprove Selected'}
                     <IconButton
                         aria-label="close"
                         onClick={() => setUnapproveDialogOpen(false)}
@@ -2255,12 +2403,9 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                 </DialogTitle>
                 <DialogContent>
                     <Typography>
-                        You are about to unapprove {selectedCount} expense
-                        {selectedCount === 1 ? '' : 's'} and return
-                        {selectedCount === 1 ? ' it' : ' them'} to Pending. This removes
-                        approval and bookkeeper processing so
-                        {selectedCount === 1 ? ' it' : ' they'} can be approved and sent
-                        again.
+                        {pendingDialogMode === 'back-to-pending'
+                            ? `You are about to move ${selectedCount} expense${selectedCount === 1 ? '' : 's'} back to Pending.`
+                            : `You are about to unapprove ${selectedCount} expense${selectedCount === 1 ? '' : 's'} and return ${selectedCount === 1 ? 'it' : 'them'} to Pending.`}
                     </Typography>
                 </DialogContent>
                 <DialogActions>
@@ -2277,7 +2422,13 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                         onClick={handleUnapproveSelected}
                         disabled={isUnapproving}
                     >
-                        {isUnapproving ? 'Unapproving…' : 'Unapprove Selected'}
+                        {isUnapproving
+                            ? pendingDialogMode === 'back-to-pending'
+                                ? 'Moving…'
+                                : 'Unapproving…'
+                            : pendingDialogMode === 'back-to-pending'
+                                ? 'Back to Pending'
+                                : 'Unapprove Selected'}
                     </Button>
                 </DialogActions>
             </Dialog>
