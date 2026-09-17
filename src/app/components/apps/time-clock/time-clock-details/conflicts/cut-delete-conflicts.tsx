@@ -13,6 +13,7 @@ import {
     IconChevronUp,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
+import toast from "react-hot-toast";
 import {
     Conflict,
     ConflictItem,
@@ -20,7 +21,6 @@ import {
     formatHM,
     calcDiffHM,
 } from "./conflicts";
-import { DateTime } from "luxon";
 
 interface CutDeleteConflictsProps {
     conflict: Conflict;
@@ -28,6 +28,7 @@ interface CutDeleteConflictsProps {
     startDate: string;
     endDate: string;
     onClose: () => void;
+    showResolveConflict?: boolean;
 }
 
 interface CutPreviewRow {
@@ -37,6 +38,7 @@ interface CutPreviewRow {
     total: string;
     worklog_id?: number;
     user_id?: number;
+    shift_id?: ConflictItem["shift_id"];
 }
 
 interface DeletePreviewRow {
@@ -45,6 +47,26 @@ interface DeletePreviewRow {
     end: string;
     total: string;
 }
+
+interface CutCandidate {
+    cutItem: ConflictItem;
+    overlapItem?: ConflictItem;
+}
+
+const getItemRange = (item: ConflictItem): {start: ReturnType<typeof parseDT>; end: ReturnType<typeof parseDT>} | null => {
+    const start = parseDT(item.start);
+    let end = parseDT(item.end);
+
+    if (!start.isValid || !end.isValid) {
+        return null;
+    }
+
+    if (end < start) {
+        end = end.plus({days: 1});
+    }
+
+    return {start, end};
+};
 
 const useMenuState = () => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -92,6 +114,7 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                                                                    startDate,
                                                                    endDate,
                                                                    onClose,
+                                                                   showResolveConflict = false,
                                                                }) => {
     const {
         anchorEl,
@@ -106,67 +129,90 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
     } = useMenuState();
 
     const [selectedItem, setSelectedItem] = useState<ConflictItem | null>(null);
+    const [selectedOverlapItem, setSelectedOverlapItem] = useState<ConflictItem | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Determine which worklog is longer
-    const longerWorklog = useMemo(() => {
-        if (conflict.items.length !== 2) {
-            console.warn("Expected exactly 2 conflict items, got:", conflict.items.length);
-            return null;
+    const cutCandidates = useMemo<CutCandidate[]>(() => {
+        const candidates: CutCandidate[] = [];
+        const seen = new Set<string>();
+
+        for (let i = 0; i < conflict.items.length - 1; i++) {
+            for (let j = i + 1; j < conflict.items.length; j++) {
+                const item1 = conflict.items[i];
+                const item2 = conflict.items[j];
+
+                if (!item1.worklog_id || !item2.worklog_id) continue;
+
+                const range1 = getItemRange(item1);
+                const range2 = getItemRange(item2);
+
+                if (!range1 || !range2) continue;
+
+                const {start: start1, end: end1} = range1;
+                const {start: start2, end: end2} = range2;
+
+                const startsTogether = start1.equals(start2);
+                const endsTogether = end1.equals(end2);
+                const sameTimes = startsTogether && endsTogether;
+
+                if ((!startsTogether && !endsTogether) || sameTimes) continue;
+
+                const duration1 = end1.diff(start1, "minutes").minutes;
+                const duration2 = end2.diff(start2, "minutes").minutes;
+
+                if (duration1 <= 0 || duration2 <= 0 || duration1 === duration2) continue;
+
+                const cutItem = duration1 > duration2 ? item1 : item2;
+                const overlapItem = duration1 > duration2 ? item2 : item1;
+                const key = `${cutItem.worklog_id}-${overlapItem.worklog_id}`;
+
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    candidates.push({cutItem, overlapItem});
+                }
+            }
         }
-        const [item1, item2] = conflict.items;
-        const parsedTimes = [
-            { item: item1, start: parseDT(item1.start), end: parseDT(item1.end) },
-            { item: item2, start: parseDT(item2.start), end: parseDT(item2.end) },
-        ];
 
-        if (!parsedTimes.every((t) => t.start.isValid && t.end.isValid)) {
-            console.error("Invalid date/time in conflict items:", parsedTimes);
-            return null;
-        }
-
-        const durations = parsedTimes.map((t) => ({
-            item: t.item,
-            duration: t.end.diff(t.start, "minutes").minutes,
-        }));
-
-        return durations[0].duration >= durations[1].duration
-            ? durations[0].item
-            : durations[1].item;
+        return candidates;
     }, [conflict.items]);
 
     // Cut preview rows
     const cutPreview = useMemo(() => {
-        if (!selectedItem || conflict.items.length !== 2) {
+        if (!selectedItem) {
             console.warn("Cut preview skipped: selectedItem or conflict items invalid", {
                 selectedItem,
+                selectedOverlapItem,
                 itemCount: conflict.items.length,
             });
             return null;
         }
 
-        const shorterItem = conflict.items.find(
-            (item) => item.worklog_id !== selectedItem.worklog_id
-        );
-        if (!shorterItem) {
-            console.error("Shorter item not found for worklog_id:", selectedItem.worklog_id);
+        const selectedRange = getItemRange(selectedItem);
+        const overlapRange = selectedOverlapItem ? getItemRange(selectedOverlapItem) : null;
+
+        if (!selectedRange || (selectedOverlapItem && !overlapRange)) {
+            console.error("Invalid date/time in cut preview:", {selectedItem, selectedOverlapItem});
             return null;
         }
 
-        const times = {
-            selectedStart: parseDT(selectedItem.start),
-            selectedEnd: parseDT(selectedItem.end),
-            shorterStart: parseDT(shorterItem.start),
-            shorterEnd: parseDT(shorterItem.end),
-        };
-
-        if (!Object.values(times).every((dt) => dt.isValid)) {
-            console.error("Invalid date/time in cut preview:", times);
-            return null;
-        }
-
-        const { selectedStart, selectedEnd, shorterStart, shorterEnd } = times;
+        const { start: selectedStart, end: selectedEnd } = selectedRange;
         const rows: CutPreviewRow[] = [];
+
+        if (!selectedOverlapItem || !overlapRange) {
+            rows.push({
+                shift_name: selectedItem.shift_name,
+                start: formatHM(selectedStart),
+                end: formatHM(selectedEnd),
+                total: calcDiffHM(selectedStart, selectedEnd),
+                worklog_id: selectedItem.worklog_id,
+                user_id: selectedItem.user_id,
+                shift_id: selectedItem.shift_id,
+            });
+
+            return rows;
+        }
+
+        const { start: shorterStart, end: shorterEnd } = overlapRange;
 
         // Add segment before shorter item's start
         if (selectedStart < shorterStart) {
@@ -177,6 +223,7 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                 total: calcDiffHM(selectedStart, shorterStart),
                 worklog_id: selectedItem.worklog_id,
                 user_id: selectedItem.user_id,
+                shift_id: selectedItem.shift_id,
             });
         }
 
@@ -189,17 +236,19 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                 total: calcDiffHM(shorterEnd, selectedEnd),
                 worklog_id: selectedItem.worklog_id,
                 user_id: selectedItem.user_id,
+                shift_id: selectedItem.shift_id,
             });
         }
 
         // Add shorter item
         rows.push({
-            shift_name: shorterItem.shift_name,
+            shift_name: selectedOverlapItem.shift_name,
             start: formatHM(shorterStart),
             end: formatHM(shorterEnd),
             total: calcDiffHM(shorterStart, shorterEnd),
-            worklog_id: shorterItem.worklog_id,
-            user_id: shorterItem.user_id,
+            worklog_id: selectedOverlapItem.worklog_id,
+            user_id: selectedOverlapItem.user_id,
+            shift_id: selectedOverlapItem.shift_id,
         });
 
         // Sort by start time
@@ -212,7 +261,7 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
             }
             return timeA < timeB ? -1 : 1;
         });
-    }, [selectedItem, conflict.items, conflict.formatted_date]);
+    }, [selectedItem, selectedOverlapItem, conflict.items, conflict.formatted_date]);
 
     // Delete preview
     const deletePreview = useMemo(() => {
@@ -247,6 +296,7 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
             .map((row) => ({
                 user_id: row.user_id,
                 worklog_id: row.worklog_id,
+                shift_id: row.shift_id,
                 start_time: row.start,
                 end_time: row.end,
                 total_time: row.total,
@@ -254,19 +304,13 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
     }, [cutPreview, selectedItem]);
 
     const handleCutWorklog = useCallback(
-        (worklogId: number) => {
-            const currentItem = conflict.items.find(
-                (item) => item.worklog_id === worklogId
-            );
-            if (currentItem) {
-                setSelectedItem(currentItem);
-                setCutPreviewOpen(true);
-                handleMenuClose();
-            } else {
-                console.error("No conflict item found for worklog_id:", worklogId);
-            }
+        (candidate: CutCandidate) => {
+            setSelectedItem(candidate.cutItem);
+            setSelectedOverlapItem(candidate.overlapItem ?? null);
+            setCutPreviewOpen(true);
+            handleMenuClose();
         },
-        [conflict.items, handleMenuClose]
+        [handleMenuClose]
     );
 
     const handleDeletePreview = useCallback(
@@ -302,12 +346,14 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
 
             setCutPreviewOpen(false);
             setSelectedItem(null);
+            setSelectedOverlapItem(null);
             handleMenuClose();
             onClose(); // Close the sidebar on success
         } catch (error) {
             console.error("Error saving cut action:", error);
             setCutPreviewOpen(false);
             setSelectedItem(null);
+            setSelectedOverlapItem(null);
             handleMenuClose();
         } finally {
             setIsLoading(false);
@@ -325,6 +371,7 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
     const handleCancelCut = useCallback(() => {
         setCutPreviewOpen(false);
         setSelectedItem(null);
+        setSelectedOverlapItem(null);
     }, []);
 
     const handleConfirmDelete = useCallback(async () => {
@@ -364,41 +411,85 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
         setSelectedItem(null);
     }, []);
 
+    const handleResolveConflict = useCallback(async () => {
+        if (isLoading) return;
+
+        const worklogIds = conflict.items
+            .map((item) => item.worklog_id)
+            .filter((id): id is number => Number(id) > 0);
+
+        if (worklogIds.length === 0) return;
+
+        setIsLoading(true);
+        try {
+            const response = await api.post("/time-clock/resolve-worklog-conflict", {
+                worklog_ids: worklogIds,
+            });
+
+            if (response.data?.IsSuccess) {
+                toast.success(response.data.message || "Conflict resolved successfully");
+                onClose();
+            } else {
+                toast.error(response.data?.message || "Failed to resolve conflict");
+            }
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || "Failed to resolve conflict");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [conflict.items, isLoading, onClose]);
+
+    const showCutButton = !showResolveConflict || cutCandidates.length > 0;
+
     return (
         <>
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            <Box
+                sx={{
+                    display: "flex",
+                    gap: 0.75,
+                    flexWrap: "nowrap",
+                    alignItems: "center",
+                    width: "100%",
+                    "& .MuiButton-root": {
+                        whiteSpace: "nowrap",
+                        minWidth: 0,
+                    },
+                }}
+            >
+                {showCutButton && (
+                    <Button
+                        size="small"
+                        startIcon={<IconScissors size={15} />}
+                        endIcon={
+                            anchorEl && menuType === "cut" ? (
+                                <IconChevronUp size={15} />
+                            ) : (
+                                <IconChevronDown size={15} />
+                            )
+                        }
+                        onClick={(e) => handleMenuOpen(e, "cut")}
+                        variant="outlined"
+                        color="primary"
+                        sx={{
+                            textTransform: "none",
+                            fontSize: "0.74rem",
+                            fontWeight: 500,
+                            borderRadius: "6px",
+                            px: 1,
+                            py: 0.5,
+                        }}
+                    >
+                        Cut start/end
+                    </Button>
+                )}
                 <Button
                     size="small"
-                    startIcon={<IconScissors size={16} />}
-                    endIcon={
-                        anchorEl && menuType === "cut" ? (
-                            <IconChevronUp size={16} />
-                        ) : (
-                            <IconChevronDown size={16} />
-                        )
-                    }
-                    onClick={(e) => handleMenuOpen(e, "cut")}
-                    variant="outlined"
-                    color="primary"
-                    sx={{
-                        textTransform: "none",
-                        fontSize: "0.8rem",
-                        fontWeight: 500,
-                        borderRadius: "6px",
-                        px: 2,
-                        py: 0.5,
-                    }}
-                >
-                    Cut start/end
-                </Button>
-                <Button
-                    size="small"
-                    startIcon={<IconTrash size={16} />}
+                    startIcon={<IconTrash size={15} />}
                     endIcon={
                         anchorEl && menuType === "delete" ? (
-                            <IconChevronUp size={16} />
+                            <IconChevronUp size={15} />
                         ) : (
-                            <IconChevronDown size={16} />
+                            <IconChevronDown size={15} />
                         )
                     }
                     onClick={(e) => handleMenuOpen(e, "delete")}
@@ -406,15 +497,34 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                     color="error"
                     sx={{
                         textTransform: "none",
-                        fontSize: "0.8rem",
+                        fontSize: "0.74rem",
                         fontWeight: 500,
                         borderRadius: "6px",
-                        px: 2,
+                        px: 1,
                         py: 0.5,
                     }}
                 >
                     Delete
                 </Button>
+                {showResolveConflict && (
+                    <Button
+                        size="small"
+                        onClick={handleResolveConflict}
+                        variant="outlined"
+                        color="primary"
+                        disabled={isLoading}
+                        sx={{
+                            textTransform: "none",
+                            fontSize: "0.74rem",
+                            fontWeight: 500,
+                            borderRadius: "6px",
+                            px: 1,
+                            py: 0.5,
+                        }}
+                    >
+                        {isLoading ? "Resolving..." : "Resolve"}
+                    </Button>
+                )}
             </Box>
 
             <Menu
@@ -446,74 +556,78 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                     >
                         Cut the overlapping hours from the longer worklog:
                     </Typography>
-                    {longerWorklog ? (
-                        <Box
-                            sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                p: 1.5,
-                                borderRadius: "6px",
-                                border: "1px solid #D8E3F2",
-                                backgroundColor: "#D8E3F2",
-                            }}
-                        >
-                            <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
-                                <Typography
-                                    variant="body2"
+                    {cutCandidates.length > 0 ? (
+                        <Box sx={{display: "flex", flexDirection: "column", gap: 1}}>
+                            {cutCandidates.map((candidate) => (
+                                <Box
+                                    key={`${candidate.cutItem.worklog_id}-${candidate.overlapItem?.worklog_id ?? "mixed"}`}
                                     sx={{
-                                        fontSize: "0.8rem",
-                                        mr: 1,
-                                        color: "#666",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        p: 1.5,
+                                        borderRadius: "6px",
+                                        border: "1px solid #D8E3F2",
+                                        backgroundColor: "#D8E3F2",
                                     }}
                                 >
-                                    Cut from
-                                </Typography>
-                                <Typography
-                                    variant="body2"
-                                    sx={{
-                                        fontSize: "0.8rem",
-                                        fontWeight: 600,
-                                        color: "#333",
-                                        mr: 1,
-                                        textTransform: "capitalize",
-                                    }}
-                                >
-                                    {longerWorklog.shift_name}
-                                </Typography>
-                                <Typography
-                                    variant="body2"
-                                    sx={{
-                                        fontSize: "0.75rem",
-                                        color: "#666",
-                                        backgroundColor: "#fff",
-                                        px: 1,
-                                        py: 0.25,
-                                        borderRadius: "4px",
-                                        border: "1px solid #e0e0e0",
-                                    }}
-                                >
-                                    {longerWorklog.start} – {longerWorklog.end}
-                                </Typography>
-                            </Box>
-                            <Button
-                                size="small"
-                                variant="contained"
-                                color="primary"
-                                onClick={() => longerWorklog.worklog_id && handleCutWorklog(longerWorklog.worklog_id)}
-                                disabled={!longerWorklog.worklog_id}
-                                sx={{
-                                    textTransform: "none",
-                                    fontSize: "0.75rem",
-                                    borderRadius: "6px",
-                                    px: 2,
-                                    py: 0.5,
-                                    minWidth: "60px",
-                                    ml: 2,
-                                }}
-                            >
-                                Cut
-                            </Button>
+                                    <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                fontSize: "0.8rem",
+                                                mr: 1,
+                                                color: "#666",
+                                            }}
+                                        >
+                                            Cut from
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                fontSize: "0.8rem",
+                                                fontWeight: 600,
+                                                color: "#333",
+                                                mr: 1,
+                                                textTransform: "capitalize",
+                                            }}
+                                        >
+                                            {candidate.cutItem.shift_name}
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                fontSize: "0.75rem",
+                                                color: "#666",
+                                                backgroundColor: "#fff",
+                                                px: 1,
+                                                py: 0.25,
+                                                borderRadius: "4px",
+                                                border: "1px solid #e0e0e0",
+                                            }}
+                                        >
+                                            {candidate.cutItem.start} – {candidate.cutItem.end}
+                                        </Typography>
+                                    </Box>
+                                    <Button
+                                        size="small"
+                                        variant="contained"
+                                        color="primary"
+                                        onClick={() => handleCutWorklog(candidate)}
+                                        sx={{
+                                            textTransform: "none",
+                                            fontSize: "0.75rem",
+                                            borderRadius: "6px",
+                                            px: 2,
+                                            py: 0.5,
+                                            minWidth: "60px",
+                                            ml: 2,
+                                        }}
+                                    >
+                                        Cut
+                                    </Button>
+                                </Box>
+                            ))}
                         </Box>
                     ) : (
                         <Typography variant="body2" sx={{ color: "#666", fontStyle: "italic" }}>

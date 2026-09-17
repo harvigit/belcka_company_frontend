@@ -20,6 +20,7 @@ interface PreviewRow {
     total: string;
     worklog_id?: number;
     user_id?: number;
+    shift_id?: ConflictItem["shift_id"];
 }
 
 export const formatHM = (dt: DateTime): string => dt.toFormat('HH:mm');
@@ -65,6 +66,8 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
             end: parseDT(item.end),
         }));
         if (!a.start.isValid || !a.end.isValid || !b.start.isValid || !b.end.isValid) return null;
+        if (!a.start.equals(b.start) && !a.end.equals(b.end)) return null;
+
         const durationA = a.end.diff(a.start, 'minutes').minutes;
         const durationB = b.end.diff(b.start, 'minutes').minutes;
         return durationA >= durationB ? a.item : b.item;
@@ -96,6 +99,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
                 total: calcDiffHM(s1, s2),
                 worklog_id: selectedItem.worklog_id,
                 user_id: selectedItem.user_id,
+                shift_id: selectedItem.shift_id,
             });
         }
 
@@ -107,6 +111,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
                 total: calcDiffHM(e2, e1),
                 worklog_id: selectedItem.worklog_id,
                 user_id: selectedItem.user_id,
+                shift_id: selectedItem.shift_id,
             });
         }
 
@@ -117,6 +122,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
             total: calcDiffHM(s2, e2),
             worklog_id: shorterItem.worklog_id,
             user_id: shorterItem.user_id,
+            shift_id: shorterItem.shift_id,
         });
 
         // Sort chronologically
@@ -166,6 +172,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
                 .map((r) => ({
                     user_id: r.user_id,
                     worklog_id: r.worklog_id,
+                    shift_id: r.shift_id,
                     start_time: r.start,
                     end_time: r.end,
                     total_time: r.total,

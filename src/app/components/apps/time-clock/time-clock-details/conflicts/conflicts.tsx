@@ -199,7 +199,7 @@ const ConflictCaseRenderer = React.memo(({conflict, index, startDate, endDate, o
             case 'split-delete':
                 return <SplitDeleteCase {...commonProps} />;
             case 'pricework-timesheet':
-                return <DeleteOnlyCase {...commonProps} showResolveConflict />;
+                return <CutDeleteCase {...commonProps} showResolveConflict />;
             case 'delete-only':
             default:
                 return <DeleteOnlyCase {...commonProps} />;
