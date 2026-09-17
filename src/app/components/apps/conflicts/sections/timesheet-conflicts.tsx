@@ -44,6 +44,7 @@ export interface ConflictItem {
     is_leave?: boolean;
     leave_name?: string | null;
     user_leave_id?: number | null;
+    is_pricework?: boolean;
     conflict_type?: string;
     message?: string;
     old_data?: Record<string, any>;
@@ -59,7 +60,7 @@ export interface TimesheetConflict {
     items: ConflictItem[];
 }
 
-export type ShiftConflictType = 'cut-delete' | 'split-delete' | 'delete-only';
+export type ShiftConflictType = 'cut-delete' | 'split-delete' | 'delete-only' | 'pricework-timesheet';
 
 export const parseDT = (() => {
     const cache = new Map<string, DateTime>();
@@ -74,7 +75,42 @@ export const parseDT = (() => {
     };
 })();
 
+export const formatHM = (dt: DateTime): string => dt.isValid ? dt.toFormat('HH:mm') : '';
+
+export const calcDiffHM = (start: DateTime, end: DateTime): string => {
+    if (!start.isValid || !end.isValid) return '';
+    const diff = end.diff(start, ['minutes']);
+    const mins = Math.max(0, Math.round(diff.as('minutes')));
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
+const isPriceworkTimesheetConflict = (items: ConflictItem[]): boolean => {
+    if (items.some((item) => item.conflict_type === 'pricework_timesheet')) {
+        return true;
+    }
+
+    return (
+        items.some((item) => item.is_pricework === true) &&
+        items.some((item) => item.is_pricework === false && !item.is_leave)
+    );
+};
+
+const getSortTime = (item: ConflictItem): number => {
+    const parsed = parseDT(item.start);
+    return parsed.isValid ? parsed.toMillis() : Number.MAX_SAFE_INTEGER;
+};
+
+const sortConflictItems = (items: ConflictItem[]): ConflictItem[] => {
+    return [...items].sort((a, b) => getSortTime(a) - getSortTime(b));
+};
+
 const getShiftConflictType = (items: ConflictItem[]): ShiftConflictType => {
+    if (isPriceworkTimesheetConflict(items)) {
+        return 'pricework-timesheet';
+    }
+
     if (items.some((i) => i.is_leave)){
         return 'delete-only';   
     }
@@ -108,6 +144,7 @@ const SHIFT_TYPE_CFG: Record<ShiftConflictType, { label: string; color: string; 
     'cut-delete':    { label: 'Cut & Delete',   color: '#92400E', bg: '#FEF3C7', border: '#FDE68A' },
     'split-delete':  { label: 'Split & Delete', color: '#7C3AED', bg: '#EDE9FE', border: '#DDD6FE' },
     'delete-only':   { label: 'Delete Only',    color: '#DC2626', bg: '#FEE2E2', border: '#FECACA' },
+    'pricework-timesheet': { label: 'Daywork-Pricework', color: '#92400E', bg: '#FEF3C7', border: '#FDE68A' },
 };
 
 // Shared Atoms
@@ -183,7 +220,11 @@ DrawerHeader.displayName = 'DrawerHeader';
 // ShiftBar
 const ShiftBar = React.memo(({ item }: { item: ConflictItem }) => {
     const isLeave = item.is_leave;
-    const label = isLeave && item.leave_name ? item.leave_name : item.shift_name;
+    const label = isLeave && item.leave_name
+        ? item.leave_name
+        : item.conflict_type === 'pricework_timesheet' && item.is_pricework
+            ? 'Price Work'
+            : item.shift_name;
 
     return (
         <Box sx={{ mb: 0.75 }}>
@@ -254,7 +295,7 @@ export const TimesheetConflictRow = React.memo(({ conflict, onClick }: {
                 <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap">
                     <IconCalendarEvent size={11} color="#9CA3AF" />
                     <Typography sx={{ fontSize: '0.72rem', color: '#6B7280' }}>{conflict.formatted_date}</Typography>
-                    {conflict.items.map((item, i) => (
+                    {sortConflictItems(conflict.items).map((item, i) => (
                         <React.Fragment key={i}>
                             <Typography sx={{ fontSize: '0.72rem', color: '#D1D5DB' }}>·</Typography>
                             <Typography sx={{ fontSize: '0.72rem', color: '#6B7280', fontFamily: 'monospace' }}>
@@ -279,9 +320,12 @@ const TimesheetDetailPanel = React.memo(({ conflict, startDate, endDate, onClose
     onResolved: () => void;
 }) => {
     const conflictType = getShiftConflictType(conflict.items);
-    const commonProps = { conflict: conflict as any, index: 0, startDate, endDate, onClose: onResolved };
+    const isPriceworkTimesheet = conflictType === 'pricework-timesheet';
+    const displayConflict = {...conflict, items: sortConflictItems(conflict.items)};
+    const commonProps = { conflict: displayConflict as any, index: 0, startDate, endDate, onClose: onResolved };
 
     const renderActions = () => {
+        if (isPriceworkTimesheet) return <Box mt={2}><CutDeleteCase {...commonProps} showResolveConflict /></Box>;
         if (conflictType === 'cut-delete') return <Box mt={2}><CutDeleteCase {...commonProps} /></Box>;
         if (conflictType === 'split-delete') return <Box mt={2}><SplitDeleteCase {...commonProps} /></Box>;
         return <Box mt={2}><DeleteOnlyCase {...commonProps} /></Box>;
@@ -314,7 +358,7 @@ const TimesheetDetailPanel = React.memo(({ conflict, startDate, endDate, onClose
                     fontSize: '0.7rem', fontWeight: 700, color: '#6B7280',
                     textTransform: 'uppercase', letterSpacing: '0.06em', mb: 1.25,
                 }}>
-                    Overlapping Shifts
+                    {isPriceworkTimesheet ? 'Daywork-Pricework Conflict' : 'Overlapping Shifts'}
                 </Typography>
 
                 <Box>
@@ -331,13 +375,13 @@ const TimesheetDetailPanel = React.memo(({ conflict, startDate, endDate, onClose
                                     fontSize: '0.62rem', fontWeight: 700, color: '#92400E',
                                     textTransform: 'uppercase', letterSpacing: '0.05em',
                                 }}>
-                                    Overlap
+                                    {isPriceworkTimesheet ? 'Conflict' : 'Overlap'}
                                 </Typography>
                             </Box>
                             <Box sx={{ flex: 1, height: '1px', bgcolor: '#E5E7EB' }} />
                         </Stack>
                     )}
-                    {conflict.items.map((item, i) => <ShiftBar key={i} item={item} />)}
+                    {displayConflict.items.map((item, i) => <ShiftBar key={i} item={item} />)}
                 </Box>
 
                 <Divider sx={{ my: 2 }} />
