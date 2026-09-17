@@ -47,6 +47,7 @@ import api from "@/utils/axios";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { useProjectDetailFilters } from "./ProjectDetailFiltersContext";
 import GanttOverview from "./GanttOverview";
+import ProjectActivityDrawer from "./ProjectActivityDrawer";
 import {
   AddressActivityTable,
   AddressRow,
@@ -367,12 +368,16 @@ const DateMetaCard = ({
   icon,
   label,
   value,
+  onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  onClick?: () => void;
 }) => (
   <Box
+    onClick={onClick}
+    role={onClick ? "button" : undefined}
     sx={{
       p: 1.25,
       borderRadius: 1.5,
@@ -380,6 +385,15 @@ const DateMetaCard = ({
       border: "1px solid",
       borderColor: "divider",
       minWidth: 0,
+      ...(onClick
+        ? {
+            cursor: "pointer",
+            "&:hover": {
+              borderColor: "primary.main",
+              bgcolor: "#EEF4FF",
+            },
+          }
+        : {}),
     }}
   >
     <Stack direction="row" spacing={0.75} alignItems="center" mb={0.5}>
@@ -418,6 +432,7 @@ const Overview = ({
     null,
   );
   const [labourPeriod, setLabourPeriod] = useState("all");
+  const [activityOpen, setActivityOpen] = useState(false);
 
   const startDate = sharedFilters?.startDate ?? null;
   const endDate = sharedFilters?.endDate ?? null;
@@ -1097,6 +1112,13 @@ const Overview = ({
                 >
                   Filters
                 </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => setActivityOpen(true)}
+                  sx={{ whiteSpace: "nowrap", minHeight: 40 }}
+                >
+                  Activity
+                </Button>
                 {hasActiveOverviewFilters && (
                   <Button
                     color="error"
@@ -1128,8 +1150,9 @@ const Overview = ({
                 />
                 <DateMetaCard
                   icon={<IconClock size={15} />}
-                  label="Last action"
+                  label="Activity"
                   value={formatDate(info?.project?.last_action)}
+                  onClick={() => setActivityOpen(true)}
                 />
               </Box>
             </Stack>
@@ -1393,6 +1416,14 @@ const Overview = ({
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ProjectActivityDrawer
+        open={activityOpen}
+        onClose={() => setActivityOpen(false)}
+        projectId={projectId}
+        projectName={info?.project?.name}
+        companyId={user?.company_id}
+      />
     </Box>
   );
 };

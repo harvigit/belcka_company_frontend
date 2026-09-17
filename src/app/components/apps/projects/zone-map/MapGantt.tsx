@@ -541,6 +541,84 @@ const spreadOverlappingUsers = (users: any[]): any[] => {
   return result;
 };
 
+const uniqueZonesWithProjectCount = (zones: any[]) => {
+  const groups = new Map<string, any>();
+  for (const zone of zones || []) {
+    const incomingIds =
+      Array.isArray(zone.project_ids) && zone.project_ids.length
+        ? zone.project_ids
+        : zone.project_id != null
+          ? [zone.project_id]
+          : [];
+    const incomingNames =
+      Array.isArray(zone.project_names) && zone.project_names.length
+        ? zone.project_names
+        : zone.project_name
+          ? [zone.project_name]
+          : [];
+    const key = [
+      String(zone.name || "")
+        .trim()
+        .toLowerCase(),
+      Number(zone.latitude).toFixed(6),
+      Number(zone.longitude).toFixed(6),
+      String(zone.type || ""),
+    ].join("|");
+    const existing = groups.get(key);
+    if (!existing) {
+      const projectIds = [
+        ...new Set(
+          incomingIds.map(Number).filter((id) => Number.isFinite(id) && id > 0),
+        ),
+      ];
+      const projectNames = [...new Set(incomingNames.filter(Boolean))];
+      groups.set(key, {
+        ...zone,
+        project_ids: projectIds,
+        project_names: projectNames,
+        project_count: Math.max(
+          Number(zone.project_count) || 0,
+          projectIds.length,
+        ),
+      });
+      continue;
+    }
+    const projectIds = [
+      ...new Set(
+        [...(existing.project_ids || []), ...incomingIds]
+          .map(Number)
+          .filter((id) => Number.isFinite(id) && id > 0),
+      ),
+    ];
+    const projectNames = [
+      ...new Set(
+        [...(existing.project_names || []), ...incomingNames].filter(Boolean),
+      ),
+    ];
+    existing.project_ids = projectIds;
+    existing.project_names = projectNames;
+    existing.project_count = Math.max(
+      existing.project_count || 0,
+      projectIds.length,
+    );
+    existing.project_id = projectIds[0] ?? existing.project_id ?? null;
+    existing.project_name =
+      projectIds.length === 1
+        ? projectNames[0] || existing.project_name
+        : projectNames.join(", ");
+    if (Number(zone.id) < Number(existing.id)) {
+      existing.id = zone.id;
+    }
+  }
+  return [...groups.values()];
+};
+
+const zoneProjectLabel = (zone: any) => {
+  const count = Number(zone.project_count || zone.project_ids?.length || 0);
+  if (count > 1) return `${count} projects`;
+  return zone.project_name || "Unassigned";
+};
+
 export default function MapGantt({
   open,
   onClose,
@@ -647,7 +725,10 @@ export default function MapGantt({
       let pIds = "";
       if (projectScopeOnly && pid) {
         pIds = pid.toString();
-      } else if (currentFilters.projects && currentFilters.projects.length > 0) {
+      } else if (
+        currentFilters.projects &&
+        currentFilters.projects.length > 0
+      ) {
         pIds = currentFilters.projects.join(",");
       } else if (pid) {
         pIds = pid.toString();
@@ -660,17 +741,17 @@ export default function MapGantt({
       if (activeTab === 0) {
         params.is_project = true;
         const res = await api.get("work-zone/get", { params });
-        setGeofences(res.data.info ?? []);
+        setGeofences(uniqueZonesWithProjectCount(res.data.info ?? []));
       } else {
         const res: AxiosResponse<any> = await api.get("address/get-parent", {
           params: { ...params, page: 1, limit: 10000 },
         });
         const responseData =
           res.data.info?.data || res.data.info || res.data.data || [];
-        const filteredData = responseData.filter(
-          (p: any) => p.type == "location",
-        );
-        const mapped = filteredData
+        // const filteredData = responseData.filter(
+        //   (p: any) => p.type == "location",
+        // );
+        const mapped = responseData
           .map((p: any) => {
             let radius = 150;
             if (p.boundary) {
@@ -1240,6 +1321,18 @@ export default function MapGantt({
                   <TableCell sx={{ background: "#f5f5f5" }}>
                     <b>Name</b>
                   </TableCell>
+                  {activeTab == 0 && (
+                    <TableCell
+                      sx={{
+                        width: 88,
+                        minWidth: 88,
+                        background: "#f5f5f5",
+                      }}
+                      align="right"
+                    >
+                      <b>Projects</b>
+                    </TableCell>
+                  )}
                   <TableCell
                     sx={{
                       width: 152,
@@ -1254,7 +1347,7 @@ export default function MapGantt({
               <TableBody>
                 {filterData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={2} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
                       No zones found.
                     </TableCell>
                   </TableRow>
@@ -1268,9 +1361,6 @@ export default function MapGantt({
                             sx={{ color: "text.primary", fontWeight: 600 }}
                           >
                             {z.name}
-                          </Typography>
-                          <Typography sx={{ color: "text.secondary" }}>
-                            {z.project_name}
                           </Typography>
                           <Tooltip title={z.address_name || z.address} arrow>
                             <Typography
@@ -1288,6 +1378,31 @@ export default function MapGantt({
                             </Typography>
                           </Tooltip>
                         </TableCell>
+                        {activeTab == 0 && (
+                          <TableCell
+                            align="right"
+                            sx={{ width: 88, minWidth: 88 }}
+                          >
+                            <Tooltip
+                              title={
+                                (z.project_names || [])
+                                  .filter(Boolean)
+                                  .join(", ") ||
+                                z.project_name ||
+                                "Unassigned"
+                              }
+                              arrow
+                            >
+                              <Typography
+                                sx={{ fontWeight: 600, cursor: "pointer" }}
+                              >
+                                {Number(
+                                  z.project_count || z.project_ids?.length || 0,
+                                )}
+                              </Typography>
+                            </Tooltip>
+                          </TableCell>
+                        )}
                         <TableCell sx={{ width: 152, minWidth: 152 }}>
                           <Box display="flex" gap={0.5} flexWrap="nowrap">
                             <IconButton

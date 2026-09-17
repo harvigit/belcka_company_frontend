@@ -72,11 +72,71 @@ const emptyCollectItem = () => ({
 });
 
 const lineTotal = (qty: any, unitPrice: any) => {
+  if (qty === "" || qty == null || unitPrice === "" || unitPrice == null) {
+    return "";
+  }
   const qtyNum = Number(qty);
   const priceNum = Number(unitPrice);
-  if (!Number.isFinite(qtyNum) || !Number.isFinite(priceNum)) return "";
+  if (
+    !Number.isFinite(qtyNum) ||
+    !Number.isFinite(priceNum) ||
+    qtyNum <= 0 ||
+    priceNum <= 0
+  ) {
+    return "";
+  }
   return (qtyNum * priceNum).toFixed(2);
 };
+
+const isCompleteZeroAmount = (value: string) => {
+  if (value === "" || value.endsWith(".")) return false;
+  const num = Number(value);
+  return Number.isFinite(num) && num === 0;
+};
+
+const isEmptyAmount = (value: any) => {
+  if (value === "" || value == null) return true;
+  const num = Number(value);
+  return Number.isFinite(num) && num === 0;
+};
+
+const isBlankCollectItem = (item: any) => {
+  const desc = String(item?.description || item?.item_name || "").trim();
+  return (
+    !desc &&
+    isEmptyAmount(item?.qty) &&
+    isEmptyAmount(item?.unit_price ?? item?.price)
+  );
+};
+
+const collectItemsSum = (rows: any[]) =>
+  rows.reduce((sum, item) => {
+    const qty = Number(item?.qty);
+    const price = Number(item?.unit_price ?? item?.price);
+    if (
+      !Number.isFinite(qty) ||
+      !Number.isFinite(price) ||
+      qty <= 0 ||
+      price <= 0
+    ) {
+      return sum;
+    }
+    const total = Number(item?.total ?? item?.line_total);
+    const line =
+      Number.isFinite(total) && total > 0 ? total : qty * price;
+    return sum + line;
+  }, 0);
+
+const mapCollectItem = (row: any) => ({
+  ...row,
+  qty: row.qty ?? "",
+  unit_price: row.unit_price ?? row.price ?? "",
+  description: row.description || row.item_name || "",
+  total:
+    row.total ??
+    row.line_total ??
+    lineTotal(row.qty, row.unit_price ?? row.price),
+});
 
 const CollectAddEdit: React.FC<CollectAddEditProps> = ({
   open,
@@ -182,16 +242,9 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
         });
         if (item.poItems && item.poItems.length > 0) {
           setItems(
-            item.poItems.map((row: any) => ({
-              ...row,
-              qty: row.qty ?? "",
-              unit_price: row.unit_price ?? row.price ?? "",
-              description: row.description || row.item_name || "",
-              total:
-                row.total ??
-                row.line_total ??
-                lineTotal(row.qty, row.unit_price ?? row.price),
-            })),
+            item.poItems
+              .map(mapCollectItem)
+              .filter((row: any) => !isBlankCollectItem(row)),
           );
         } else {
           setItems([]);
@@ -247,16 +300,9 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
             setScannedData(res.data);
             if (res.data.items) {
               setItems(
-                res.data.items.map((row: any) => ({
-                  ...row,
-                  qty: row.qty ?? "",
-                  unit_price: row.unit_price ?? row.price ?? "",
-                  description: row.description || row.item_name || "",
-                  total:
-                    row.total ??
-                    row.line_total ??
-                    lineTotal(row.qty, row.unit_price ?? row.price),
-                })),
+                res.data.items
+                  .map(mapCollectItem)
+                  .filter((row: any) => !isBlankCollectItem(row)),
               );
             }
 
@@ -303,17 +349,30 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
     },
   });
 
+  const syncIncTaxFromItems = (nextItems: any[]) => {
+    const sum = collectItemsSum(nextItems);
+    if (sum <= 0) return;
+    setFormData((prev) => ({
+      ...prev,
+      inc_tax: Number(sum.toFixed(2)),
+    }));
+  };
+
   const updateItem = (index: number, field: string, value: string) => {
-    setItems((prev) =>
-      prev.map((item, idx) => {
+    setItems((prev) => {
+      const next = prev.map((item, idx) => {
         if (idx !== index) return item;
-        const next = { ...item, [field]: value };
+        const updated = { ...item, [field]: value };
         if (field === "qty" || field === "unit_price") {
-          next.total = lineTotal(next.qty, next.unit_price);
+          updated.total = lineTotal(updated.qty, updated.unit_price);
         }
-        return next;
-      }),
-    );
+        return updated;
+      });
+      if (field === "qty" || field === "unit_price") {
+        syncIncTaxFromItems(next);
+      }
+      return next;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -348,14 +407,35 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
         payload.set("id", String(formData.id || collectId));
       }
 
-      const payloadItems = items.map((it: any) => {
-        const qty = Number(it.qty) || 0;
-        const unit_price = Number(it.unit_price ?? it.price) || 0;
+      const filledItems = items.filter((it: any) => !isBlankCollectItem(it));
+      const invalidItem = filledItems.find((it: any) => {
+        const desc = String(it.description || it.item_name || "").trim();
+        const qty = Number(it.qty);
+        const unit_price = Number(it.unit_price ?? it.price);
+        return (
+          !desc ||
+          !Number.isFinite(qty) ||
+          qty <= 0 ||
+          !Number.isFinite(unit_price) ||
+          unit_price <= 0
+        );
+      });
+      if (invalidItem) {
+        toast.error(
+          "Each item needs a description, and qty and unit price must be greater than 0",
+        );
+        setIsSaving(false);
+        return;
+      }
+
+      const payloadItems = filledItems.map((it: any) => {
+        const qty = Number(it.qty);
+        const unit_price = Number(it.unit_price ?? it.price);
         const row: Record<string, any> = {
-          description: it.description || it.item_name || "",
+          description: String(it.description || it.item_name || "").trim(),
           qty,
           unit_price,
-          total: Number(it.total ?? it.line_total) || qty * unit_price || 0,
+          total: Number(it.total ?? it.line_total) || qty * unit_price,
         };
         if (it.id) row.id = Number(it.id);
         return row;
@@ -843,6 +923,9 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                                   ) {
                                     return;
                                   }
+                                  if (isCompleteZeroAmount(value)) {
+                                    return;
+                                  }
                                   updateItem(idx, "qty", value);
                                 }}
                               />
@@ -869,13 +952,16 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                                   ) {
                                     return;
                                   }
+                                  if (isCompleteZeroAmount(value)) {
+                                    return;
+                                  }
                                   updateItem(idx, "unit_price", value);
                                 }}
                               />
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2">
-                                {it.total || it.line_total || "0.00"}
+                                {it.total || it.line_total || ""}
                               </Typography>
                             </TableCell>
                             <TableCell>
@@ -883,11 +969,13 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                                 size="small"
                                 color="error"
                                 onClick={() =>
-                                  setItems((prev) =>
-                                    prev.filter(
+                                  setItems((prev) => {
+                                    const next = prev.filter(
                                       (_, itemIdx) => itemIdx !== idx,
-                                    ),
-                                  )
+                                    );
+                                    syncIncTaxFromItems(next);
+                                    return next;
+                                  })
                                 }
                               >
                                 <IconTrash size={16} />

@@ -92,6 +92,8 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
     id?: string | number | null;
   };
   const [data, setData] = useState<InternalOrderRow[]>([]);
+  const [recordsTotal, setRecordsTotal] = useState<number | null>(null);
+  const [recordsCurrency, setRecordsCurrency] = useState("£");
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState(defaultFilters);
@@ -270,8 +272,8 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
       if (searchTerm) params.set("search", searchTerm);
       if (filters.type && filters.type !== "all")
         params.set("type", filters.type);
-      if (formattedStart) params.set("start_date", formattedStart);
-      if (formattedEnd) params.set("end_date", formattedEnd);
+      // if (formattedStart) params.set("start_date", formattedStart);
+      // if (formattedEnd) params.set("end_date", formattedEnd);
       if (sorting.length > 0) {
         params.set("sort_by", sorting[0].id);
         params.set("sort_order", sorting[0].desc ? "desc" : "asc");
@@ -281,6 +283,8 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
       const responseData = res.data?.info || [];
       const rows = Array.isArray(responseData) ? responseData : [];
       setData(rows);
+      setRecordsTotal(Number(res.data?.total ?? 0));
+      setRecordsCurrency(res.data?.currency || rows[0]?.currency || "£");
       const apiFilterOptions = res.data?.filter_options || {};
       setTypeOptions((prev) =>
         tableFilterOptions(
@@ -310,6 +314,7 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
     } catch (err) {
       console.error("Failed to fetch project internal orders", err);
       setData([]);
+      setRecordsTotal(0);
       setTotalRows(0);
       setPageCount(0);
     }
@@ -407,7 +412,7 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
           alignItems={{ sm: "center" }}
         >
           <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-            <DateRangePickerBox
+            {/* <DateRangePickerBox
               from={startDate}
               to={endDate}
               onChange={(range) => {
@@ -416,7 +421,7 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
                   setEndDate(range.to);
                 }
               }}
-            />
+            /> */}
             <TextField
               size="small"
               placeholder="Search..."
@@ -429,7 +434,7 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
                   </InputAdornment>
                 ),
               }}
-              sx={{ width: { xs: "100%", sm: 180 } }}
+              sx={{ width: { xs: "100%", sm: 250 } }}
             />
             <Button
               variant="contained"
@@ -443,6 +448,27 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
             </Button>
           </Box>
           <Box display="flex" justifyContent="flex-end" alignItems="center">
+            <Box
+              sx={{
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "baseline",
+                gap: 0.75,
+                py: 0.75,
+                px: 1.25,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+                bgcolor: "background.paper",
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" noWrap>
+                Total
+              </Typography>
+              <Typography variant="subtitle2" fontWeight={700} noWrap>
+                {recordsCurrency}{recordsTotal}
+              </Typography>
+            </Box>
             <Tooltip title="Column visibility">
               <IconButton
                 onClick={(e) => setColumnMenuAnchor(e.currentTarget)}
