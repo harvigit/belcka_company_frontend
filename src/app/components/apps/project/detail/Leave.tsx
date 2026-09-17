@@ -278,7 +278,7 @@ const Leave = ({ projectId }: { projectId: number }) => {
       }
       if (filters.statuses.length) params.set("status", filters.statuses.join(","));
 
-      const res = await api.get(`user-leaves/project-list?${params.toString()}`);
+      const res = await api.get(`user-leaves/project-leaves?${params.toString()}`);
       const responseData = Array.isArray(res.data?.info) ? res.data.info : [];
       const apiFilterOptions = res.data?.filter_options || {};
 

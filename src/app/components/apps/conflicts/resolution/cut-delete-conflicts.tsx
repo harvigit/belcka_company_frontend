@@ -148,16 +148,12 @@ const CutDeleteCase: React.FC<CutDeleteConflictsProps> = ({
                 const {start: start1, end: end1} = range1;
                 const {start: start2, end: end2} = range2;
 
-                const startsTogether = start1.equals(start2);
-                const endsTogether = end1.equals(end2);
-                const sameTimes = startsTogether && endsTogether;
-
-                if ((!startsTogether && !endsTogether) || sameTimes) continue;
-
                 const duration1 = end1.diff(start1, "minutes").minutes;
                 const duration2 = end2.diff(start2, "minutes").minutes;
+                const hasOverlap = start1 < end2 && start2 < end1;
+                const sameTimes = start1.equals(start2) && end1.equals(end2);
 
-                if (duration1 <= 0 || duration2 <= 0 || duration1 === duration2) continue;
+                if (!hasOverlap || sameTimes || duration1 <= 0 || duration2 <= 0 || duration1 === duration2) continue;
 
                 const cutItem = duration1 > duration2 ? item1 : item2;
                 const overlapItem = duration1 > duration2 ? item2 : item1;

@@ -58,6 +58,10 @@ type LabourRow = {
     trade_name?: string | null;
     date?: string | null;
     shift_hours?: number | string | null;
+    payable_hours?: number | string | null;
+    payable_work_minutes?: number | string | null;
+    amount_per_unit?: number | string | null;
+    work_complete?: number | string | null;
     rate?: number | string | null;
     total?: number | string | null;
     check_in_number?: number | string | null;
@@ -88,6 +92,8 @@ const EMPTY_LABOUR_FILTERS: LabourFilterState = {
 
 const NUMERIC_COLUMNS = new Set([
     'shiftHours',
+    'payable',
+    'workComplete',
     'rate',
     'total',
     'checkInNumber',
@@ -103,7 +109,9 @@ const COLUMN_LABELS: Record<string, string> = {
     trade: 'Trade',
     date: 'Date',
     hours: 'Hours',
+    qty: 'Qty',
     rate: 'Rate',
+    payable: 'Payable Hr',
     total: 'Total',
     checkInNumber: 'Check-in(No.)',
     checkInHours: 'Check-in',
@@ -122,6 +130,32 @@ const formatNumber = (value: number | string | null | undefined) => {
 
 const formatMinutesFromHours = (value: number | string | null | undefined) =>
     String(Math.round(Number(value || 0) * 60));
+
+const formatOptionalNumber = (value: number | string | null | undefined) => {
+    if (value === null || value === undefined || value === '') return '--';
+
+    return formatNumber(value);
+};
+
+const formatPayableHour = (value: number | string | null | undefined) => {
+    if (value === null || value === undefined) return '--';
+
+    const str = value.toString().trim();
+    if (!str) return '--';
+
+    if (/^\d{1,2}:\d{1,2}(\.\d+)?$/.test(str)) {
+        const [h, m] = str.split(':');
+        const minutes = parseFloat(m) || 0;
+        return `${h.padStart(2, '0')}:${Math.floor(minutes).toString().padStart(2, '0')}`;
+    }
+
+    const num = parseFloat(str);
+    if (isNaN(num)) return '--';
+
+    const h = Math.floor(num);
+    const m = Math.round((num - h) * 60);
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+};
 
 const Labour = ({projectId}: { projectId: number }) => {
     const session = useSession();
@@ -303,6 +337,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                     );
                 },
             },
+            
             columnHelper.accessor('display_id', {
                 id: 'id',
                 header: () => <Typography variant="subtitle2">ID</Typography>,
@@ -312,6 +347,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                     </Typography>
                 ),
             }),
+            
             columnHelper.accessor('team_name', {
                 id: 'team',
                 header: () => <Typography variant="subtitle2">Team</Typography>,
@@ -321,6 +357,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                     </Typography>
                 ),
             }),
+            
             columnHelper.accessor('user_name', {
                 id: 'user',
                 header: () => <Typography variant="subtitle2">User</Typography>,
@@ -330,6 +367,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                     </Typography>
                 ),
             }),
+            
             columnHelper.accessor('type', {
                 id: 'type',
                 header: () => <Typography variant="subtitle2">Type</Typography>,
@@ -339,6 +377,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                     </Typography>
                 ),
             }),
+            
             columnHelper.accessor('trade_name', {
                 id: 'trade',
                 header: () => <Typography variant="subtitle2">Trade</Typography>,
@@ -348,6 +387,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                     </Typography>
                 ),
             }),
+            
             columnHelper.accessor('date', {
                 id: 'date',
                 header: () => <Typography variant="subtitle2">Date</Typography>,
@@ -357,15 +397,57 @@ const Labour = ({projectId}: { projectId: number }) => {
                     </Typography>
                 ),
             }),
+
+            columnHelper.accessor('work_complete', {
+                id: 'qty',
+                header: () => <Typography variant="subtitle2">Qty</Typography>,
+                cell: ({row, getValue}) => {
+                    const isPricework = String(row.original.type || '').toLowerCase() === 'pricework';
+
+                    return (
+                        <Typography className="f-14" color="textPrimary" noWrap>
+                            {isPricework ? formatOptionalNumber(getValue()) : '--'}
+                        </Typography>
+                    );
+                },
+            }),
+            
             columnHelper.accessor('rate', {
                 id: 'rate',
                 header: () => <Typography variant="subtitle2">Rate</Typography>,
-                cell: ({getValue}) => (
-                    <Typography className="f-14" color="textPrimary" noWrap>
-                        {currency} {Number(getValue() || 0).toFixed(2)}
-                    </Typography>
-                ),
+                cell: ({row, getValue}) => {
+                    const isDaywork = String(row.original.type || '').toLowerCase() === 'daywork';
+                    const isPricework = String(row.original.type || '').toLowerCase() === 'pricework';
+                    const rateValue = isPricework
+                        ? row.original.amount_per_unit ?? getValue()
+                        : getValue();
+
+                    return (
+                        <Typography className="f-14" color="textPrimary" noWrap>
+                            {currency} {Number(rateValue || 0).toFixed(2)}
+                            {isDaywork ? '/hr' : isPricework ? '/unit' : ''}
+                        </Typography>
+                    );
+                },
             }),
+            
+            columnHelper.accessor('payable_hours', {
+                id: 'payable',
+                header: () => <Typography variant="subtitle2">Payable Hr</Typography>,
+                cell: ({row, getValue}) => {
+                    const isDaywork = String(row.original.type || '').toLowerCase() === 'daywork';
+                    const payableHours = row.original.payable_work_minutes != null
+                        ? Number(row.original.payable_work_minutes) / 60
+                        : getValue();
+
+                    return (
+                        <Typography className="f-14" color="textPrimary" noWrap>
+                            {isDaywork ? formatPayableHour(payableHours) : '--'}
+                        </Typography>
+                    );
+                },
+            }),
+            
             columnHelper.accessor('total', {
                 id: 'total',
                 header: () => <Typography variant="subtitle2">Total</Typography>,
@@ -376,6 +458,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                     </Typography>
                 ),
             }),
+            
             columnHelper.accessor('check_in_number', {
                 id: 'checkInNumber',
                 header: () => (
@@ -387,6 +470,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                     </Typography>
                 ),
             }),
+            
             columnHelper.accessor('check_in_hours', {
                 id: 'checkInHours',
                 header: () => (
@@ -398,6 +482,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                     </Typography>
                 ),
             }),
+            
             columnHelper.accessor('shift_hours', {
                 id: 'shiftHours',
                 header: () => <Typography variant="subtitle2">Shift</Typography>,
@@ -407,6 +492,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                     </Typography>
                 ),
             }),
+            
             columnHelper.accessor('risk', {
                 id: 'risk',
                 header: () => <Typography variant="subtitle2">Risk %</Typography>,
