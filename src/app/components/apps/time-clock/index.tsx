@@ -559,7 +559,11 @@ const TimeClock = ({queryParams}: Props) => {
     const conflictRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
     const hasInitializedFilterResetRef = useRef(false);
     const filterPopoverOpen = Boolean(filterAnchorEl);
-    const activeFilterCount = filters.teams.length + filters.statuses.length + filters.users.length;
+    const activeFilterCount =
+        filters.teams.length +
+        filters.statuses.length +
+        filters.users.length +
+        filters.projects.length;
     const activeTypeFilter = typeFilter !== 'all_data';
     const toolbarButtonSx = {
         minHeight: 34,

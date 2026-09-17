@@ -446,6 +446,17 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
             >
               <IconFilter width={18} />
             </Button>
+            {activeFilterCount > 0 && (
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={handleClearAppliedFilters}
+                aria-label="Clear filters"
+                sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
+              >
+                <IconX width={18} />
+              </Button>
+            )}
           </Box>
           <Box display="flex" justifyContent="flex-end" alignItems="center">
             <Box

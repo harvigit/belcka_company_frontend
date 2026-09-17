@@ -661,6 +661,19 @@ export default function MapGantt({
     trades: [] as number[],
     projects: [] as number[],
   });
+  const emptyMapFilters = { teams: [] as number[], trades: [] as number[], projects: [] as number[] };
+  const activeFilterCount =
+    filters.teams.length +
+    filters.trades.length +
+    (projectScopeOnly ? 0 : filters.projects.length);
+
+  const handleClearAppliedFilters = () => {
+    setTempFilters(emptyMapFilters);
+    setFilters(emptyMapFilters);
+    setFilterDialogOpen(false);
+    fetchUserLocationsWithFilters(emptyMapFilters);
+    fetchProjectDetail(activeProjectId, emptyMapFilters);
+  };
 
   const [geofences, setGeofences] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
@@ -1063,6 +1076,17 @@ export default function MapGantt({
           >
             <IconFilter width={18} />
           </Button>
+          {activeFilterCount > 0 && (
+            <Button
+              color="error"
+              variant="outlined"
+              onClick={handleClearAppliedFilters}
+              aria-label="Clear filters"
+              sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
+            >
+              <IconX width={18} />
+            </Button>
+          )}
         </Box>
 
         <Box
@@ -1259,14 +1283,7 @@ export default function MapGantt({
 
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button
-            onClick={() => {
-              const empty = { teams: [], trades: [], projects: [] };
-              setTempFilters(empty);
-              setFilters(empty);
-              setFilterDialogOpen(false);
-              fetchUserLocationsWithFilters(empty);
-              fetchProjectDetail(activeProjectId, empty);
-            }}
+            onClick={handleClearAppliedFilters}
             color="inherit"
           >
             Clear All

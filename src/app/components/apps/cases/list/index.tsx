@@ -336,6 +336,24 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
   const [parentAddressList, setParentAddressList] = useState<any[]>([]);
   const [parentFilterList, setParentFilterList] = useState<any[]>([]);
 
+  const getClearedFilters = () => ({
+    status: "",
+    project_id: projectId ? String(projectId) : "",
+    parent_address_id: "",
+  });
+
+  const hasActiveFilters = Boolean(
+    (filters.status && filters.status !== "All") ||
+      filters.parent_address_id ||
+      (!projectId && filters.project_id),
+  );
+
+  const handleClearAppliedFilters = () => {
+    const nextFilters = getClearedFilters();
+    setTempFilters(nextFilters);
+    setFilters(nextFilters);
+  };
+
   useEffect(() => {
     if (!projectId) return;
     setFilters((prev) => ({ ...prev, project_id: String(projectId) }));
@@ -1021,6 +1039,17 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
               >
                 <IconFilter width={18} />
               </Button>
+              {hasActiveFilters && (
+                <Button
+                  color="error"
+                  variant="outlined"
+                  onClick={handleClearAppliedFilters}
+                  aria-label="Clear filters"
+                  sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}
+                >
+                  <IconX width={18} />
+                </Button>
+              )}
             </Box>
           </Grid>
 
@@ -1218,13 +1247,7 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
               <DialogActions>
                 <Button
                   onClick={() => {
-                    const nextFilters = {
-                      status: "",
-                      project_id: projectId ? String(projectId) : "",
-                      parent_address_id: "",
-                    };
-                    setTempFilters(nextFilters);
-                    setFilters(nextFilters);
+                    handleClearAppliedFilters();
                     setOpen(false);
                   }}
                   color="inherit"
