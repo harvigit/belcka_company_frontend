@@ -568,7 +568,7 @@ const uniqueZonesWithProjectCount = (zones: any[]) => {
     if (!existing) {
       const projectIds = [
         ...new Set(
-          incomingIds.map(Number).filter((id) => Number.isFinite(id) && id > 0),
+          incomingIds.map(Number).filter((id: any) => Number.isFinite(id) && id > 0),
         ),
       ];
       const projectNames = [...new Set(incomingNames.filter(Boolean))];
