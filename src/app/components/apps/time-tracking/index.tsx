@@ -70,7 +70,6 @@ import {useSession} from 'next-auth/react';
 import api from '@/utils/axios';
 import TimeClockTable from './components/TimeClockTable';
 import TimeClockStats from './components/TimeClockStats';
-import PermissionGuard from '@/app/auth/PermissionGuard';
 import {useTimeClockData} from './hooks/useTimeClockData';
 import {useEditingState} from './hooks/useEditingState';
 import {DailyBreakdown} from './types/timeClock';
@@ -2076,7 +2075,6 @@ const TimeTracking: React.FC<Props> = () => {
         : 'U';
 
     return (
-        <PermissionGuard permission="Time Tracking">
             <Box sx={{width: '100%', background: '#f8f9fb'}}>
                 <Box sx={{px: {xs: 2, sm: 3, md: 4}}}>
 
@@ -2618,7 +2616,6 @@ const TimeTracking: React.FC<Props> = () => {
                     </Alert>
                 </Snackbar>
             </Box>
-        </PermissionGuard>
     );
 };
 

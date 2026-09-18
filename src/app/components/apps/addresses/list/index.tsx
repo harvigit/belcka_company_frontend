@@ -65,7 +65,6 @@ import {
   Marker,
   Circle,
 } from "@react-google-maps/api";
-import PermissionGuard from "@/app/auth/PermissionGuard";
 import Link from "next/link";
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
 import FileDownload from "@mui/icons-material/FileDownload";
@@ -1399,7 +1398,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   }));
 
   return (
-    <PermissionGuard permission="Addresses">
       <Box
         sx={{
           height: "calc(100vh - 100px)",
@@ -2659,7 +2657,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           </DialogActions>
         </Dialog>
       </Box>
-    </PermissionGuard>
   );
 };
 

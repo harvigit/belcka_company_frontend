@@ -24,6 +24,7 @@ import {
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
+import { clearUserPermissionsCache } from "@/lib/userPermissionsCache";
 import toast from "react-hot-toast";
 import {
   IconArrowLeft,
@@ -325,6 +326,7 @@ const Company = () => {
         }
 
         setTimeout(() => {
+          clearUserPermissionsCache();
           window.location.reload();
         }, 1000);
       } else {

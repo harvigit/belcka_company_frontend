@@ -1,5 +1,6 @@
 // axios.ts
 import { getAccessToken } from "@/lib/authToken";
+import { clearUserPermissionsCache } from "@/lib/userPermissionsCache";
 import axios from "axios";
 import { User } from "next-auth";
 import { getSession, signOut } from "next-auth/react";
@@ -18,6 +19,7 @@ const userLogout = async () => {
   if (isLoggingOut) return;
 
   isLoggingOut = true;
+  clearUserPermissionsCache();
 
   toast.error(
     "Your session has ended. Please sign in again to continue.",
@@ -110,12 +112,7 @@ api.interceptors.response.use(
             lastKnownCompanyId !== null &&
             numericActiveId !== lastKnownCompanyId
           ) {
-            console.log(
-              "[Axios] Company switch detected:",
-              lastKnownCompanyId,
-              "=>",
-              numericActiveId,
-            );
+            clearUserPermissionsCache();
             window.location.reload();
           }
           lastKnownCompanyId = numericActiveId;
@@ -166,6 +163,7 @@ api.interceptors.response.use(
               "=>",
               numericActiveId,
             );
+            clearUserPermissionsCache();
             window.location.reload();
           }
           lastKnownCompanyId = numericActiveId;

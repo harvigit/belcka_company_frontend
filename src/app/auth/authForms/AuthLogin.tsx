@@ -13,7 +13,9 @@ import {
 } from "@mui/material";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { getSession, signIn, signOut, useSession } from "next-auth/react";
+import { resolvePostLoginPath } from "@/lib/permissions";
+import { clearUserPermissionsCache } from "@/lib/userPermissionsCache";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import CustomFormLabel from "@/app/components/forms/theme-elements/CustomFormLabel";
@@ -23,6 +25,15 @@ import { Grid } from "@mui/system";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { User } from "next-auth";
+
+async function redirectAfterSuccessfulLogin() {
+  const session = await getSession();
+  const path = await resolvePostLoginPath(
+    session?.user as any,
+    (session as any)?.accessToken,
+  );
+  window.location.href = path;
+}
 
 const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
   const [phone, setPhone] = useState("");
@@ -174,7 +185,6 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
             const result = await signIn("credentials", {
                 redirect: false,
                 ...payload,
-                callbackUrl: "/apps/users/list",
             });
 
             if (result?.error === "NO_COMPANY") {
@@ -184,7 +194,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
 
             if (result?.ok) {
                 toast.success("Logged in successfully!!");
-                window.location.href = "/apps/users/list";
+                await redirectAfterSuccessfulLogin();
             } else {
                 toast.error(result?.error || "Login failed");
             }
@@ -289,10 +299,9 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       otp: otp,
       login: true,
       is_web: true,
-      callbackUrl: "/apps/users/list",
     });
     if (response?.ok) {
-      window.location.href = "/apps/users/list";
+      await redirectAfterSuccessfulLogin();
     } else {
       toast.error(response?.error || "Login failed after registration");
     }
@@ -301,6 +310,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
   const userLogout = async () => {
     toast.success("Logged out successfully!!");
     Cookies.remove(`user_store_${user.id}_${user.company_id}`);
+    clearUserPermissionsCache();
     await signOut({ callbackUrl: "/auth" });
     return loading;
   };

@@ -11,7 +11,8 @@ import { AxiosResponse } from "axios";
 
 import api from "@/utils/axios";
 import { usePermissions } from "@/hooks/usePermissions";
-import { hasPermission, hasAnyPermission } from "@/lib/permissions";
+import { hasPermission, hasAnyPermission, isWebPermissionGranted } from "@/lib/permissions";
+import { clearUserPermissionsCache } from "@/lib/userPermissionsCache";
 import CreateTrade from "../components/apps/settings/company-trades/create";
 import { User } from "next-auth";
 import Cookies from "js-cookie";
@@ -37,7 +38,9 @@ export default function PermissionGuard({
   };
 
   const [profile, setProfile] = useState<any>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [authorizationResolved, setAuthorizationResolved] = useState(false);
   const [showTradePopup, setShowTradePopup] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -55,35 +58,58 @@ export default function PermissionGuard({
       const res = await api.get(
         `user/profile?user_id=${user.id}&company_id=${user.company_id}`,
       );
-      setProfile(res.data.info);
+      setProfile(res.data.info ?? null);
     } catch (err) {
       console.error(err);
+      setProfile(null);
+    } finally {
+      setProfileLoaded(true);
     }
   };
 
   useEffect(() => {
-    if (user?.id && user?.company_id) {
-      getProfile();
+    if (session.status === "loading") {
+      setProfileLoaded(false);
+      setAuthorizationResolved(false);
+      return;
     }
-  }, [user?.id, user?.company_id]);
+
+    if (!user?.id || !user?.company_id) {
+      setProfile(null);
+      setProfileLoaded(true);
+      return;
+    }
+
+    setProfileLoaded(false);
+    setAuthorizationResolved(false);
+    getProfile();
+  }, [user?.id, user?.company_id, session.status]);
 
     useEffect(() => {
-        if (loading || !profile) return;
+        if (loading || !profileLoaded || session.status === "loading") {
+            setAuthorizationResolved(false);
+            return;
+        }
 
         if (user?.user_role_id === 1) {
             if (profile?.is_trade_available === false) {
                 setShowTradePopup(true);
                 setIsAuthorized(false);
+                setAuthorizationResolved(true);
                 return;
             }
+            setShowTradePopup(false);
             setIsAuthorized(true);
+            setAuthorizationResolved(true);
             return;
         }
 
-        const webPermissions = permissions.filter((p) => p.is_web);
+        const hasAnyWebAccess = permissions.some((p) => isWebPermissionGranted(p));
 
-        if (!webPermissions.length && !isUserProfile) {
-            router.push("/");
+        if (!hasAnyWebAccess && !isUserProfile) {
+            router.push(redirectTo);
+            setIsAuthorized(false);
+            setAuthorizationResolved(true);
             return;
         }
 
@@ -102,8 +128,22 @@ export default function PermissionGuard({
         }
 
         setIsAuthorized(authorized);
+        setAuthorizationResolved(true);
 
-    }, [loading, permissions, profile, pathname, isUserProfile]);
+    }, [
+        loading,
+        permissions,
+        profile,
+        profileLoaded,
+        pathname,
+        isUserProfile,
+        permission,
+        requiredPermissions,
+        requireAll,
+        redirectTo,
+        session.status,
+        user?.user_role_id,
+    ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,6 +178,7 @@ export default function PermissionGuard({
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
         Cookies.remove(`user_store_${user.id}_${user.company_id}`);
+        clearUserPermissionsCache();
         await signOut({ callbackUrl: "/auth" });
       } else {
         toast.error(res.data.message);
@@ -147,7 +188,7 @@ export default function PermissionGuard({
     }
   };
 
-  if (loading) {
+  if (loading || !profileLoaded || !authorizationResolved || session.status === "loading") {
     return <PermissionSkeleton />;
   }
 

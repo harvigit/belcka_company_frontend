@@ -4,28 +4,22 @@ import { Box, List, useMediaQuery } from "@mui/material";
 import NavItem from "./NavItem";
 import NavCollapse from "./NavCollapse";
 import NavGroup from "./NavGroup/NavGroup";
-import { useContext, useEffect, useState } from "react";
+import { useContext } from "react";
 import { CustomizerContext } from "@/app/context/customizerContext";
 import React from "react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import api from "@/utils/axios";
-
-interface Permission {
-  id: number;
-  name: string;
-  is_web: boolean;
-}
+import { usePermissions } from "@/hooks/usePermissions";
+import { filterSidebarMenuItems } from "@/lib/permissions";
 
 const SidebarItems = () => {
   const pathname = usePathname() ?? "/";
   const pathDirect = pathname;
   const pathWithoutLastPart = pathname.slice(0, pathname.lastIndexOf("/"));
 
-  // States and Contexts
   const { isSidebarHover, isCollapse, isMobileSidebar, setIsMobileSidebar } =
     useContext(CustomizerContext);
-  const [permissions, setPermissions] = useState<any[]>([]);
+  const { permissions } = usePermissions();
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: string | null } & {
@@ -34,76 +28,15 @@ const SidebarItems = () => {
     company_image?: number | null;
   } & { id: number } & { user_role_id: number };
 
-  useEffect(() => {
-    if (user?.user_role_id === 1) return;
-
-    const fetchPermissions = async () => {
-      try {
-        const payload = {
-          user_id: Number(user.id),
-          company_id: Number(user.company_id),
-        };
-        const response = await api.post("/dashboard/user-permissions", payload);
-        setPermissions(response.data.permissions);
-      } catch (error) {
-        console.error("Error fetching permissions:", error);
-      }
-    };
-
-    fetchPermissions();
-  }, [user?.company_id, user?.id]);
+  const isAdmin = user?.user_role_id === 1;
+  const filteredMenuItems = filterSidebarMenuItems(
+    MenuItems,
+    permissions,
+    isAdmin,
+  );
 
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";
-
-  const hasWebPermission = (title?: string) => {
-    if (!title) return false;
-
-    return permissions.some(
-      (perm) =>
-        perm.name === title &&
-        perm.is_web === true &&
-        (perm.status === 1 || perm.status === 2),
-    );
-  };
-
-  // const filteredMenuItems = MenuItems.filter((item: any) => {
-  //   if (item.title === "Settings" && user?.user_role_id === 1) {
-  //     return true;
-  //   }
-  //
-  //   if (item.slug === "purchase") {
-  //     return true;
-  //   }
-  //
-  //   if (item.children && item.children.length > 0) {
-  //     return item.children.some((child: any) => hasWebPermission(child.title));
-  //   }
-  //
-  //   if (item.subheader) return true;
-  //   return hasWebPermission(item.title);
-  // });
-
-  const filteredMenuItems = MenuItems.filter((item: any) => {
-    if (item.slug === "health_safety") {
-      return user?.user_role_id === 1;
-    }
-
-    if (user?.user_role_id === 1) return true;
-
-    if (item.slug === "purchase") return true;
-
-    if (item.slug === "project") {
-      return hasWebPermission("Projects");
-    }
-
-    if (item.children && item.children.length > 0) {
-      return item.children.some((child: any) => hasWebPermission(child.title));
-    }
-
-    if (item.subheader) return true;
-    return hasWebPermission(item.title);
-  });
 
   const mainMenuItems = filteredMenuItems.filter(
     (item: any) => item.title !== "Settings",

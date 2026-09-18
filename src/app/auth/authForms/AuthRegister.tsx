@@ -17,7 +17,9 @@ import {
 } from "@mui/material";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
-import { signIn, signOut } from "next-auth/react";
+import { getSession, signIn, signOut } from "next-auth/react";
+import { resolvePostLoginPath } from "@/lib/permissions";
+import { clearUserPermissionsCache } from "@/lib/userPermissionsCache";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import CustomFormLabel from "@/app/components/forms/theme-elements/CustomFormLabel";
@@ -25,6 +27,15 @@ import CustomTextField from "@/app/components/forms/theme-elements/CustomTextFie
 import { loginType } from "@/app/(DashboardLayout)/types/auth/auth";
 import { Grid } from "@mui/system";
 import Cookies from "js-cookie";
+
+async function redirectAfterSuccessfulLogin() {
+  const session = await getSession();
+  const path = await resolvePostLoginPath(
+    session?.user as any,
+    (session as any)?.accessToken,
+  );
+  window.location.href = path;
+}
 
 const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const [preview, setPreview] = useState<string | null>(null);
@@ -401,12 +412,11 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       phone: registerData.nationalPhone,
       otp: String(newOtp),
       is_web: true,
-      callbackUrl: "/apps/users/list",
     });
 
     if (response?.ok) {
       setToken("");
-      window.location.href = "/apps/users/list";
+      await redirectAfterSuccessfulLogin();
     } else {
       toast.error(response?.error || "Login failed after registration");
     }
@@ -421,6 +431,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const userLogout = async () => {
     toast.success("Logged out successfully!!");
     Cookies.remove(`user_store_${user.id}_${user.company_id}`);
+    clearUserPermissionsCache();
     await signOut({ callbackUrl: "/auth" });
     return loading;
   };

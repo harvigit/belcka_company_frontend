@@ -75,7 +75,6 @@ import CustomTextField from '@/app/components/forms/theme-elements/CustomTextFie
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
-import PermissionGuard from '@/app/auth/PermissionGuard';
 import {AxiosResponse} from 'axios';
 import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
 import Image from 'next/image';
@@ -1817,7 +1816,6 @@ const TablePagination = () => {
     };
 
     return (
-        <PermissionGuard permission="Users">
             <Box
                 sx={{
                     height: 'calc(100vh - 100px)',
@@ -2947,7 +2945,6 @@ const TablePagination = () => {
                     </Box>
                 </Drawer>
             </Box>
-        </PermissionGuard>
     );
 };
 

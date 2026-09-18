@@ -90,7 +90,6 @@ import Setting from "@/app/components/apps/projects/setting";
 import ArchiveProject from "../../addresses/list/archive-project-list";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import PermissionGuard from "@/app/auth/PermissionGuard";
 import AddressesList from "../../addresses/list/addresses-list";
 import { IconSettings } from "@tabler/icons-react";
 import MapGantt from "../zone-map/MapGantt";
@@ -697,7 +696,6 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   }));
 
   return (
-    <PermissionGuard permission="Projects">
       <Box
         sx={{
           height: "calc(100vh - 100px)",
@@ -1736,7 +1734,6 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
           />
         </Drawer>
       </Box>
-    </PermissionGuard>
   );
 };
 

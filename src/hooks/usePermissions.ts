@@ -6,7 +6,7 @@ import { User } from "next-auth";
 export function usePermissions() {
     const [permissions, setPermissions] = useState<Permission[]>([]);
     const [loading, setLoading] = useState(true);
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
 
     const user = session?.user as User & {
         company_id?: string | null;
@@ -15,11 +15,18 @@ export function usePermissions() {
 
     useEffect(() => {
         const fetchPermissions = async () => {
+            if (status === "loading") {
+                setLoading(true);
+                return;
+            }
+
             if (!user?.id || !user?.company_id) {
+                setPermissions([]);
                 setLoading(false);
                 return;
             }
 
+            setLoading(true);
             try {
                 const perms = await getUserPermissions(
                     Number(user.id),
@@ -35,7 +42,7 @@ export function usePermissions() {
         };
 
         fetchPermissions();
-    }, [user?.id, user?.company_id]);
+    }, [user?.id, user?.company_id, status]);
 
     return { permissions, loading };
 }

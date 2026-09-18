@@ -9,7 +9,7 @@ import ProjectDetail from "@/app/components/apps/project/detail";
 const ProjectDetailPage = () => {
   return (
     <PageContainer title="Project Overview" description="Project overview dashboard">
-      <PermissionGuard permission="Projects">
+      <PermissionGuard permission="Project">
         <BlankCard sx={{ overflow: "hidden" }}>
           <ProjectDetail />
         </BlankCard>

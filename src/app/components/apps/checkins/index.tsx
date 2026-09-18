@@ -48,7 +48,6 @@ import { useServerTable } from "@/hooks/useServerTable";
 import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
-import PermissionGuard from "@/app/auth/PermissionGuard";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import Image from "next/image";
 import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
@@ -688,7 +687,6 @@ const CheckinsList = () => {
   }));
 
   return (
-    <PermissionGuard permission="Check ins">
       <Box
         sx={{
           height: "calc(100vh - 100px)",
@@ -1433,7 +1431,6 @@ const CheckinsList = () => {
           </Box>
         </Dialog>
       </Box>
-    </PermissionGuard>
   );
 };
 
