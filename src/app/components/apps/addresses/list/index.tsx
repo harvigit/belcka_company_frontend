@@ -92,6 +92,7 @@ const ADDRESS_LIST_COOKIE_OPTIONS = {
   path: "/",
 };
 const ADDRESS_PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
+const LONDON_CENTER = { lat: 51.5074, lng: -0.1278 };
 
 type AddressListFilters = {
   status: string;
@@ -273,6 +274,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [showLocationPin, setShowLocationPin] = useState(false);
   const [parentAddressRadius, setParentAddressRadius] = useState(0);
   const circleRef = useRef<any>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
   const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
   const lastRadiusRef = useRef<number>(0);
   const [maxRadius, setMaxRadius] = useState<number>(200);
@@ -381,9 +383,41 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng(),
         });
+        lastCenterRef.current = {
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+        };
 
         setPredictions([]);
       }
+    });
+  };
+
+  const applyLocationFromMap = (lat: number, lng: number) => {
+    setSelectedLocation({ lat, lng });
+    lastCenterRef.current = { lat, lng };
+
+    if (!window.google) {
+      toast.error("Address and Post Code are still required");
+      return;
+    }
+
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === "OK" && results?.[0]) {
+        const place = results[0];
+        let postcode = "";
+        place.address_components?.forEach((component) => {
+          if (component.types.includes("postal_code")) {
+            postcode = component.long_name;
+          }
+        });
+        setParentAddressName(place.formatted_address || "");
+        setParentAddressPostcode(postcode);
+        return;
+      }
+
+      toast.error("Address and Post Code are still required");
     });
   };
 
@@ -420,6 +454,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
               lat: results[0].geometry.location.lat(),
               lng: results[0].geometry.location.lng(),
             });
+            lastCenterRef.current = {
+              lat: results[0].geometry.location.lat(),
+              lng: results[0].geometry.location.lng(),
+            };
           }
         },
       );
@@ -435,6 +473,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     return () => clearTimeout(timer);
   }, [postcodeQuery]);
 
+  useEffect(() => {
+    if (!selectedLocation || !mapRef.current) return;
+    mapRef.current.panTo(selectedLocation);
+    mapRef.current.setZoom(15);
+  }, [selectedLocation]);
+
   const handleOpenParentAddressDrawer = (address?: any) => {
     if (address && address.id) {
       setEditingParentAddress(address);
@@ -447,42 +491,67 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       setParentAddressPostcode(addrPincode);
       setParentAddressType(addrType);
       setShowLocationPin(addrType !== "location");
-      if (address.lat && address.lng) {
-        setSelectedLocation({
-          lat: Number(address.lat),
-          lng: Number(address.lng),
-        });
 
-        let radius = 0;
-        if (address.boundary) {
-          try {
-            const boundary =
-              typeof address.boundary === "string"
-                ? JSON.parse(address.boundary)
-                : address.boundary;
-            if (boundary.radius) {
-              radius = Number(boundary.radius);
-            }
-          } catch (e) {}
+      const rawLat = address.lat ?? address.latitude;
+      const rawLng = address.lng ?? address.longitude;
+      const lat = Number(rawLat);
+      const lng = Number(rawLng);
+      const hasCoords =
+        rawLat != null &&
+        rawLat !== "" &&
+        rawLng != null &&
+        rawLng !== "" &&
+        Number.isFinite(lat) &&
+        Number.isFinite(lng);
+
+      let radius = Number(address.radius);
+      if (!Number.isFinite(radius) && address.boundary) {
+        try {
+          const boundary =
+            typeof address.boundary === "string"
+              ? JSON.parse(address.boundary)
+              : address.boundary;
+          radius = Number(boundary?.radius);
+        } catch (e) {
+          radius = NaN;
         }
-        setParentAddressRadius(radius);
+      }
+      if (!Number.isFinite(radius) || radius <= 0) {
+        radius = maxRadius || 200;
+      }
+      setParentAddressRadius(radius);
+      setRadius(radius);
+      lastRadiusRef.current = radius;
+
+      if (hasCoords) {
+        setSelectedLocation({ lat, lng });
+        lastCenterRef.current = { lat, lng };
       } else if (window.google && (addrName || addrPincode)) {
+        lastCenterRef.current = null;
         const geocoder = new google.maps.Geocoder();
         geocoder.geocode(
           { address: `${addrName}, ${addrPincode}` },
           (results, status) => {
             if (status === "OK" && results?.[0]?.geometry?.location) {
+              const nextLat = results[0].geometry.location.lat();
+              const nextLng = results[0].geometry.location.lng();
               setSelectedLocation({
-                lat: results[0].geometry.location.lat(),
-                lng: results[0].geometry.location.lng(),
+                lat: nextLat,
+                lng: nextLng,
               });
+              lastCenterRef.current = {
+                lat: nextLat,
+                lng: nextLng,
+              };
             } else {
               setSelectedLocation(null);
+              lastCenterRef.current = null;
             }
           },
         );
       } else {
         setSelectedLocation(null);
+        lastCenterRef.current = null;
       }
     } else {
       setEditingParentAddress(null);
@@ -492,6 +561,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       setParentAddressType("address");
       setShowLocationPin(true);
       setSelectedLocation(null);
+      lastCenterRef.current = null;
       setParentAddressRadius(maxRadius || 200);
       setRadius(maxRadius || 200);
     }
@@ -500,13 +570,18 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   };
 
   const handleSaveParentAddress = async (e: any) => {
-    setIsSaving(true);
     e.preventDefault();
 
     if (!parentAddressName) {
       toast.error("Address name is required");
       return;
     }
+    if (!parentAddressPostcode) {
+      toast.error("Post Code is required");
+      return;
+    }
+
+    setIsSaving(true);
     try {
       let boundaryData: any = null;
       if (selectedLocation) {
@@ -2248,20 +2323,36 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         </Dialog>
 
         <Drawer
-          anchor="right"
+          anchor="bottom"
           open={parentAddressDrawerOpen}
           onClose={() => setParentAddressDrawerOpen(false)}
-          sx={{
-            width: 450,
-            "& .MuiDrawer-paper": { width: 450, backgroundColor: "#f9f9f9" },
+          PaperProps={{
+            sx: {
+              borderRadius: 0,
+              height: "90vh",
+              boxShadow: "none",
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              backgroundColor: "#fff",
+            },
           }}
         >
-          <Box display="flex" flexDirection="column" height="100%" p={2}>
+          <Box
+            display="flex"
+            flexDirection="column"
+            height="100%"
+            p={{ xs: 2, md: 3 }}
+            pt={2}
+          >
             <Box
               display="flex"
               justifyContent="space-between"
               alignItems="center"
-              mb={3}
+              mb={2}
+              flexShrink={0}
             >
               <Box display={"flex"} alignItems={"center"}>
                 <IconButton onClick={() => setParentAddressDrawerOpen(false)}>
@@ -2275,247 +2366,283 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 <IconX />
               </IconButton>
             </Box>
-            <Box height="100%" px={2}>
-              <form
-                onSubmit={handleSaveParentAddress}
-                onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
-                className="category-form"
+            <form
+              onSubmit={handleSaveParentAddress}
+              onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+              className="category-form"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                flex: 1,
+                minHeight: 0,
+              }}
+            >
+              <Box
+                className="form_inputs"
+                sx={{ flex: 1, overflowY: "auto", pr: 1 }}
               >
-                <Box className="form_inputs">
-                  <Grid container spacing={3}>
-                    <Grid size={{ xs: 12 }}>
-                      <Typography variant="subtitle2" mb={1}>
-                        Name
-                      </Typography>
-                      <TextField
-                        placeholder="Name.."
-                        value={parentAddressShortName}
-                        onChange={(e) =>
-                          setParentAddressShortName(e.target.value)
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Typography variant="subtitle2" mb={1}>
+                      Name
+                    </Typography>
+                    <TextField
+                      placeholder="Name.."
+                      value={parentAddressShortName}
+                      onChange={(e) =>
+                        setParentAddressShortName(e.target.value)
+                      }
+                      variant="outlined"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Typography variant="subtitle2" mb={1}>
+                      Post Code
+                    </Typography>
+                    <CustomTextField
+                      name="pin_code"
+                      fullWidth
+                      value={parentAddressPostcode}
+                      onChange={(e: any) => {
+                        let value = e.target.value
+                          .replace(/[^a-zA-Z0-9]/g, "")
+                          .slice(0, 10);
+                        setParentAddressPostcode(value);
+                        if (value.length >= 3) {
+                          setPostcodeQuery(value);
                         }
+                      }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Typography variant="subtitle2" mb={1}>
+                      Address
+                    </Typography>
+                    <Box
+                      display={"flex"}
+                      justifyContent={"space-between"}
+                      gap={2}
+                    >
+                      <TextField
+                        placeholder="Search for address.."
+                        value={parentAddressName}
+                        onChange={(e) => setParentAddressName(e.target.value)}
                         variant="outlined"
                         fullWidth
                       />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                      <Typography variant="subtitle2" mb={1}>
-                        Address
-                      </Typography>
-                      <Box
-                        display={"flex"}
-                        justifyContent={"space-between"}
-                        gap={2}
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleSearchClick}
+                        sx={{ flexShrink: 0 }}
                       >
-                        <TextField
-                          placeholder="Search for address.."
-                          value={parentAddressName}
-                          onChange={(e) => setParentAddressName(e.target.value)}
-                          variant="outlined"
-                          fullWidth
-                        />
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          onClick={handleSearchClick}
-                        >
-                          Search
-                        </Button>
-                      </Box>
-                      {typedAddress && predictions.length > 0 && (
-                        <List
-                          sx={{
-                            border: "1px solid #ccc",
-                            maxHeight: 200,
-                            overflow: "auto",
-                            mt: 1,
-                          }}
-                        >
-                          {predictions.map((item, index) => (
-                            <ListItem key={index} disablePadding>
-                              <ListItemButton
-                                onClick={() =>
-                                  item.source === "google"
-                                    ? selectGooglePrediction(item)
-                                    : selectPostcoderPrediction(item)
-                                }
-                              >
-                                {item.source === "google"
-                                  ? item.description
-                                  : item.summaryline}
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                        </List>
-                      )}
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                      <Typography variant="subtitle2" mb={1}>
-                        Post Code
-                      </Typography>
-                      <CustomTextField
-                        name="pin_code"
-                        fullWidth
-                        value={parentAddressPostcode}
-                        onChange={(e: any) => {
-                          let value = e.target.value
-                            .replace(/[^a-zA-Z0-9]/g, "")
-                            .slice(0, 10);
-                          setParentAddressPostcode(value);
-                          if (value.length >= 3) {
-                            setPostcodeQuery(value);
-                          }
+                        Search
+                      </Button>
+                    </Box>
+                    {typedAddress && predictions.length > 0 && (
+                      <List
+                        sx={{
+                          border: "1px solid #ccc",
+                          maxHeight: 200,
+                          overflow: "auto",
+                          mt: 1,
                         }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={parentAddressType === "location"}
-                            onChange={(e) => {
-                              const newType = e.target.checked
-                                ? "location"
-                                : "address";
-                              setParentAddressType(newType);
-                              if (newType === "location") {
-                                setShowLocationPin(false);
-                              } else {
-                                setShowLocationPin(true);
+                      >
+                        {predictions.map((item, index) => (
+                          <ListItem key={index} disablePadding>
+                            <ListItemButton
+                              onClick={() =>
+                                item.source === "google"
+                                  ? selectGooglePrediction(item)
+                                  : selectPostcoderPrediction(item)
                               }
-                            }}
-                          />
-                        }
-                        label="Location"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                      <Box width={"100%"}>
-                        <Typography variant="subtitle2" mb={1}>
-                          Area size [{parentAddressRadius} Meter]
-                        </Typography>
-                        <CustomRangeSlider
-                          value={parentAddressRadius}
-                          onChange={(e: any, newValue: number | number[]) =>
-                            setParentAddressRadius(newValue as number)
-                          }
-                          min={0}
-                          max={maxRadius}
-                          step={1}
+                            >
+                              {item.source === "google"
+                                ? item.description
+                                : item.summaryline}
+                            </ListItemButton>
+                          </ListItem>
+                        ))}
+                      </List>
+                    )}
+                  </Grid>
+                  <Grid
+                    size={{ xs: 12, md: 6 }}
+                    display="flex"
+                    alignItems={{ xs: "flex-start", md: "center" }}
+                    pt={{ md: 3.5 }}
+                  >
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={parentAddressType === "location"}
+                          onChange={(e) => {
+                            const newType = e.target.checked
+                              ? "location"
+                              : "address";
+                            setParentAddressType(newType);
+                            if (newType === "location") {
+                              setShowLocationPin(false);
+                            } else {
+                              setShowLocationPin(true);
+                            }
+                          }}
                         />
-                      </Box>
-                    </Grid>
-                    {isLoaded && selectedLocation && (
-                      <Grid size={{ xs: 12 }}>
-                        <Box
-                          height="350px"
-                          width="100%"
-                          borderRadius={2}
-                          overflow="hidden"
+                      }
+                      label="Location"
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <Box width={"100%"}>
+                      <Typography variant="subtitle2" mb={1}>
+                        Area size [{parentAddressRadius} Meter]
+                      </Typography>
+                      <CustomRangeSlider
+                        value={parentAddressRadius}
+                        onChange={(e: any, newValue: number | number[]) =>
+                          setParentAddressRadius(newValue as number)
+                        }
+                        min={0}
+                        max={maxRadius}
+                        step={1}
+                      />
+                    </Box>
+                  </Grid>
+                  {isLoaded && (
+                    <Grid size={{ xs: 12 }}>
+                      <Box
+                        height={{ xs: 280, md: 380 }}
+                        width="100%"
+                        borderRadius={2}
+                        overflow="hidden"
+                      >
+                        <GoogleMap
+                          mapContainerStyle={{
+                            width: "100%",
+                            height: "100%",
+                          }}
+                          center={selectedLocation ?? LONDON_CENTER}
+                          zoom={selectedLocation ? 15 : 11}
+                          onLoad={(map) => {
+                            mapRef.current = map;
+                            if (selectedLocation) {
+                              map.panTo(selectedLocation);
+                              map.setZoom(15);
+                            } else {
+                              map.panTo(LONDON_CENTER);
+                              map.setZoom(11);
+                            }
+                          }}
+                          onClick={(e) => {
+                            const lat = e.latLng?.lat();
+                            const lng = e.latLng?.lng();
+                            if (lat && lng) applyLocationFromMap(lat, lng);
+                          }}
+                          options={{ clickableIcons: false }}
                         >
-                          <GoogleMap
-                            mapContainerStyle={{
-                              width: "100%",
-                              height: "100%",
-                            }}
-                            center={selectedLocation}
-                            zoom={15}
-                          >
+                          {selectedLocation && (
                             <Marker
                               position={selectedLocation}
                               draggable={true}
                               onDragEnd={(e) => {
                                 const lat = e.latLng?.lat();
                                 const lng = e.latLng?.lng();
-                                if (lat && lng)
-                                  setSelectedLocation({ lat, lng });
+                                if (lat && lng) applyLocationFromMap(lat, lng);
                               }}
                             />
-                            {parentAddressRadius > 0 && (
-                              <Circle
-                                center={selectedLocation}
-                                radius={parentAddressRadius}
-                                options={{
-                                  draggable: true,
-                                  editable: true,
-                                  fillColor: "#FF0000",
-                                  fillOpacity: 0.3,
-                                  strokeColor: "#FF0000",
-                                  strokeOpacity: 1,
-                                  strokeWeight: 1,
-                                }}
-                                onLoad={(circle) => {
-                                  circleRef.current = circle;
-                                }}
-                                onCenterChanged={() => {
-                                  if (!circleRef.current) return;
+                          )}
+                          {selectedLocation && parentAddressRadius > 0 && (
+                            <Circle
+                              center={selectedLocation}
+                              radius={parentAddressRadius}
+                              options={{
+                                draggable: true,
+                                editable: true,
+                                fillColor: "#FF0000",
+                                fillOpacity: 0.3,
+                                strokeColor: "#FF0000",
+                                strokeOpacity: 1,
+                                strokeWeight: 1,
+                              }}
+                              onLoad={(circle) => {
+                                circleRef.current = circle;
+                              }}
+                              onCenterChanged={() => {
+                                if (!circleRef.current) return;
 
-                                  const center = circleRef.current.getCenter();
-                                  if (!center) return;
+                                const center = circleRef.current.getCenter();
+                                if (!center) return;
 
-                                  const lat = center.lat();
-                                  const lng = center.lng();
+                                const lat = center.lat();
+                                const lng = center.lng();
 
-                                  if (
-                                    lastCenterRef.current &&
-                                    lastCenterRef.current.lat === lat &&
-                                    lastCenterRef.current.lng === lng
-                                  ) {
-                                    return;
-                                  }
+                                if (
+                                  lastCenterRef.current &&
+                                  lastCenterRef.current.lat === lat &&
+                                  lastCenterRef.current.lng === lng
+                                ) {
+                                  return;
+                                }
 
-                                  lastCenterRef.current = { lat, lng };
-                                  setSelectedLocation({ lat, lng });
-                                }}
-                                onRadiusChanged={onRadiusChanged}
-
-                                // onRadiusChanged={() => {
-                                //   if (!circleRef.current) return;
-
-                                //   const newRadius = Math.round(
-                                //     circleRef.current.getRadius(),
-                                //   );
-                                //   if (lastRadiusRef.current === newRadius)
-                                //     return;
-
-                                //   lastRadiusRef.current = newRadius;
-                                //   setParentAddressRadius(newRadius);
-                                // }}
-                              />
-                            )}
-                          </GoogleMap>
-                        </Box>
-                      </Grid>
-                    )}
-                  </Grid>
-                </Box>
-                <Box mt={2} display="flex" justifyContent="start" gap={2}>
-                  <Button
-                    color="primary"
-                    variant="contained"
-                    size="large"
-                    type="submit"
-                    sx={{ borderRadius: 3 }}
-                    disabled={isSaving}
-                    className="drawer_buttons"
-                  >
-                    {isSaving ? "Saving..." : "Save"}
-                  </Button>
-                  <Button
-                    color="inherit"
-                    onClick={() => setParentAddressDrawerOpen(false)}
-                    variant="contained"
-                    size="large"
-                    sx={{
-                      backgroundColor: "transparent",
-                      borderRadius: 3,
-                      color: "GrayText",
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </Box>
-              </form>
-            </Box>
+                                lastCenterRef.current = { lat, lng };
+                                setSelectedLocation({ lat, lng });
+                              }}
+                              onDragEnd={() => {
+                                if (!circleRef.current) return;
+                                const center = circleRef.current.getCenter();
+                                if (!center) return;
+                                applyLocationFromMap(center.lat(), center.lng());
+                              }}
+                              onRadiusChanged={onRadiusChanged}
+                            />
+                          )}
+                        </GoogleMap>
+                      </Box>
+                    </Grid>
+                  )}
+                </Grid>
+              </Box>
+              <Box
+                mt={2}
+                pt={2}
+                display="flex"
+                justifyContent="flex-start"
+                alignItems="center"
+                gap={2}
+                flexShrink={0}
+                sx={{
+                  borderTop: "1px solid #eee",
+                  backgroundColor: "#fff",
+                  zIndex: 2,
+                }}
+              >
+                <Button
+                  color="primary"
+                  variant="contained"
+                  size="large"
+                  type="submit"
+                  disabled={isSaving}
+                  sx={{ borderRadius: 3, minWidth: 120, px: 4 }}
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  color="inherit"
+                  onClick={() => setParentAddressDrawerOpen(false)}
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    backgroundColor: "transparent",
+                    borderRadius: 3,
+                    color: "GrayText",
+                    minWidth: 100,
+                  }}
+                >
+                  Cancel
+                </Button>
+              </Box>
+            </form>
           </Box>
         </Drawer>
 
