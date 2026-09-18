@@ -2776,6 +2776,7 @@ const AddressesList = ({
         parentAddressId={parentAddressId}
         onClose={() => setArchiveList(false)}
         onWorkUpdated={fetchAddresses}
+        companyId={Number(user.company_id)}
       />
 
       {/* Dialogs and Drawers */}

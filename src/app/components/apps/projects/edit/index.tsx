@@ -31,6 +31,7 @@ interface FormData {
   team_ids: string;
   user_ids?: string;
   setting_user_ids?: string;
+  user_roles?: { user_id: number; project_role_id: number | null }[];
   company_id: number;
   workzone_ids?: string;
 }
@@ -50,6 +51,11 @@ interface AssignedUser {
   name: string;
   user_image?: string | null;
   user_thumb_image?: string | null;
+}
+
+interface ProjectRoleOption {
+  id: number;
+  name: string;
 }
 
 interface Geofence {
@@ -73,6 +79,20 @@ interface EditProjectProps {
   handleSubmit: (e: React.FormEvent) => void;
   isSaving: boolean;
   project: any;
+  assignedUsers?: {
+    id: number;
+    name?: string;
+    role_id?: number | null;
+    role_name?: string | null;
+  }[];
+  onAssigneeRoleChange?: (
+    users: {
+      id: number;
+      name: string;
+      role_id?: number | null;
+      role_name?: string | null;
+    }[],
+  ) => void;
   embedded?: boolean;
   showSettingsAccess?: boolean;
 }
@@ -85,6 +105,8 @@ const EditProject: React.FC<EditProjectProps> = ({
   setFormData,
   handleSubmit,
   project,
+  assignedUsers,
+  onAssigneeRoleChange,
   isSaving,
   embedded = false,
   showSettingsAccess = false,
@@ -157,8 +179,17 @@ const EditProject: React.FC<EditProjectProps> = ({
     }));
   };
 
+  const mapAssignedRoles = (
+    users: { id: number; role_id?: number | null }[] = [],
+  ) =>
+    users.map((u) => ({
+      user_id: Number(u.id),
+      project_role_id: u.role_id ? Number(u.role_id) : null,
+    }));
+
   useEffect(() => {
     if (project) {
+      const roleUsers = assignedUsers ?? project.assigned_users ?? [];
       setFormData({
         id: project.id,
         name: project.name || "",
@@ -172,6 +203,7 @@ const EditProject: React.FC<EditProjectProps> = ({
         user_ids: (project.assigned_users || [])
           .map((u: any) => u.id)
           .join(","),
+        user_roles: mapAssignedRoles(roleUsers),
         ...(showSettingsAccess
           ? {
               setting_user_ids: (project.setting_users || [])
@@ -189,9 +221,18 @@ const EditProject: React.FC<EditProjectProps> = ({
     }
   }, [project, showSettingsAccess, setFormData]);
 
+  useEffect(() => {
+    if (!assignedUsers) return;
+    setFormData((prevData) => ({
+      ...prevData,
+      user_roles: mapAssignedRoles(assignedUsers),
+    }));
+  }, [assignedUsers, setFormData]);
+
   // const [shift, setShift] = useState<Shift[]>([]);
   const [team, setTeam] = useState<Team[]>([]);
   const [users, setUsers] = useState<AssignedUser[]>([]);
+  const [roles, setRoles] = useState<ProjectRoleOption[]>([]);
   const [geofence, setGeofence] = useState<Geofence[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [currency, setCurrency] = useState("");
@@ -387,6 +428,90 @@ const EditProject: React.FC<EditProjectProps> = ({
   }, [open, embedded, user?.company_id]);
 
   useEffect(() => {
+    const getRoles = async () => {
+      try {
+        const res = await api.get(
+          `project-roles/get?company_id=${user.company_id}`,
+        );
+        if (res.data?.info) {
+          setRoles(
+            (res.data.info as ProjectRoleOption[])
+              .filter((item) => item?.id != null)
+              .map((item) => ({ id: item.id, name: item.name })),
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load project roles", err);
+      }
+    };
+    if (open || embedded) {
+      getRoles();
+    }
+  }, [open, embedded, user?.company_id]);
+
+  const handleAssigneeRoleChange = async (
+    userId: number,
+    newRole: ProjectRoleOption | null,
+    assignedRows: { id: number; name: string }[],
+  ) => {
+    const roleId = newRole?.id ? Number(newRole.id) : null;
+    setFormData((prevData) => {
+      const nextRoles = (prevData.user_roles || []).filter(
+        (role) => Number(role.user_id) !== Number(userId),
+      );
+      nextRoles.push({
+        user_id: Number(userId),
+        project_role_id: roleId,
+      });
+      return { ...prevData, user_roles: nextRoles };
+    });
+
+    const nextAssigned = assignedRows.map((row) => {
+      const isTarget = Number(row.id) === Number(userId);
+      const parentRow = assignedUsers?.find(
+        (item) => Number(item.id) === Number(row.id),
+      );
+      const currentRole = (formData.user_roles || []).find(
+        (role) => Number(role.user_id) === Number(row.id),
+      );
+      const currentRoleOption = roles.find(
+        (role) => Number(role.id) === Number(currentRole?.project_role_id),
+      );
+      return {
+        id: Number(row.id),
+        name: row.name,
+        role_id: isTarget
+          ? roleId
+          : parentRow?.role_id ?? currentRoleOption?.id ?? null,
+        role_name: isTarget
+          ? newRole?.name ?? null
+          : parentRow?.role_name ?? currentRoleOption?.name ?? null,
+      };
+    });
+    onAssigneeRoleChange?.(nextAssigned);
+
+    if (!onAssigneeRoleChange || !project?.id || !user?.company_id) return;
+
+    try {
+      const res = await api.post("project/update-assignee-role", {
+        company_id: user.company_id,
+        project_id: project.id,
+        user_id: userId,
+        project_role_id: roleId,
+      });
+      if (res.data?.IsSuccess) {
+        if (Array.isArray(res.data.info)) {
+          onAssigneeRoleChange(res.data.info);
+        }
+      } else {
+        toast.error(res.data?.message || "Failed to update role");
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to update role");
+    }
+  };
+
+  useEffect(() => {
     const getGeofence = async () => {
       try {
         const res = await api.get(
@@ -554,32 +679,137 @@ const EditProject: React.FC<EditProjectProps> = ({
                     placeholder="Select Assigned Users"
                     options={users}
                     selectedIds={formData.user_ids || ""}
-                    onChange={(ids) =>
+                    onChange={(ids) => {
+                      const idSet = new Set(
+                        String(ids)
+                          .split(",")
+                          .map((value) => Number(value.trim()))
+                          .filter(
+                            (value) => Number.isInteger(value) && value > 0,
+                          ),
+                      );
                       setFormData({
                         ...formData,
                         user_ids: ids,
-                      })
-                    }
+                        user_roles: (formData.user_roles || []).filter((item) =>
+                          idSet.has(Number(item.user_id)),
+                        ),
+                      });
+                    }}
                     labelMt={embedded ? 0 : 2}
                   />
                 );
-                const showSettingsField = (
-                  <ProjectUserMultiSelect
-                    id="setting_user_ids"
-                    label="Project setting visible to"
-                    placeholder="Select users who can see Settings"
-                    options={users}
-                    selectedIds={formData.setting_user_ids || ""}
-                    onChange={(ids) =>
-                      setFormData({
-                        ...formData,
-                        setting_user_ids: ids,
-                      })
-                    }
-                    // helperText="These users can open this project's Settings tab. Admins can always see it, with or without being assigned."
-                    labelMt={embedded ? 0 : 2}
-                  />
+                const assignedIdList = String(formData.user_ids || "")
+                  .split(",")
+                  .map((value) => Number(value.trim()))
+                  .filter((value) => Number.isInteger(value) && value > 0);
+                const assignedUserRows = assignedIdList.map((id) => {
+                  const fromUsers = users.find(
+                    (item) => Number(item.id) === id,
+                  );
+                  const fromProject = (project?.assigned_users || []).find(
+                    (item: any) => Number(item.id) === id,
+                  );
+                  const fromAssigned = assignedUsers?.find(
+                    (item) => Number(item.id) === id,
+                  );
+                  return (
+                    fromUsers ||
+                    fromAssigned ||
+                    fromProject || { id, name: `User ${id}` }
+                  );
+                });
+                const assignRoleField = (
+                  <>
+                    <Typography
+                      variant="h5"
+                      mt={embedded ? 0 : 2}
+                      className="f-14"
+                    >
+                      Assign Role
+                    </Typography>
+                    {assignedUserRows.length === 0 ? (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        mt={0.5}
+                      >
+                        Select assigned users first.
+                      </Typography>
+                    ) : (
+                      <Stack spacing={1.25} mt={1}>
+                        {assignedUserRows.map((item) => {
+                          const selectedRoleId =
+                            (formData.user_roles || []).find(
+                              (role) =>
+                                Number(role.user_id) === Number(item.id),
+                            )?.project_role_id ?? null;
+                          const selectedRole =
+                            roles.find(
+                              (role) =>
+                                Number(role.id) === Number(selectedRoleId),
+                            ) || null;
+
+                          return (
+                            <Stack
+                              key={item.id}
+                              direction={{ xs: "column", sm: "row" }}
+                              spacing={1.5}
+                              alignItems={{ xs: "stretch", sm: "center" }}
+                            >
+                              <Typography
+                                className="f-14"
+                                sx={{ minWidth: { sm: 180 }, fontWeight: 500 }}
+                              >
+                                {item.name}
+                              </Typography>
+                              <Autocomplete
+                                size="small"
+                                fullWidth
+                                options={roles}
+                                value={selectedRole}
+                                onChange={(_, newValue) => {
+                                  handleAssigneeRoleChange(
+                                    Number(item.id),
+                                    newValue,
+                                    assignedUserRows,
+                                  );
+                                }}
+                                getOptionLabel={(option) => option.name}
+                                isOptionEqualToValue={(option, value) =>
+                                  option.id === value.id
+                                }
+                                renderInput={(params) => (
+                                  <CustomTextField
+                                    {...params}
+                                    placeholder="Select role"
+                                  />
+                                )}
+                              />
+                            </Stack>
+                          );
+                        })}
+                      </Stack>
+                    )}
+                  </>
                 );
+                // const showSettingsField = (
+                //   <ProjectUserMultiSelect
+                //     id="setting_user_ids"
+                //     label="Project setting visible to"
+                //     placeholder="Select users who can see Settings"
+                //     options={users}
+                //     selectedIds={formData.setting_user_ids || ""}
+                //     onChange={(ids) =>
+                //       setFormData({
+                //         ...formData,
+                //         setting_user_ids: ids,
+                //       })
+                //     }
+                //     // helperText="These users can open this project's Settings tab. Admins can always see it, with or without being assigned."
+                //     labelMt={embedded ? 0 : 2}
+                //   />
+                // );
                 const addressField = (
                   <>
                     <Typography
@@ -676,11 +906,12 @@ const EditProject: React.FC<EditProjectProps> = ({
                       <Grid size={{ xs: 12, md: 6 }}>{teamsField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{usersField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{addressField}</Grid>
-                      {showSettingsAccess && (
+                      {/* {showSettingsAccess && (
                         <Grid size={{ xs: 6 }}>{showSettingsField}</Grid>
-                      )}
+                      )} */}
                       <Grid size={{ xs: 12, md: 6 }}>{budgetField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{descriptionField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{assignRoleField}</Grid>
                     </Grid>
                   );
                 }
@@ -690,6 +921,7 @@ const EditProject: React.FC<EditProjectProps> = ({
                     {nameField}
                     {teamsField}
                     {usersField}
+                    {assignRoleField}
                     {/* {geofenceField} */}
                     {addressField}
                     {budgetField}

@@ -526,6 +526,18 @@ const StockHistoryList: React.FC<Props> = ({ openDrawer, onClose }) => {
       },
     }),
 
+    columnHelper.accessor((row) => row?.order_type, {
+      id: "order_type",
+      header: () => "Type",
+      cell: (info) => {
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
     columnHelper.accessor((row) => row?.total_amount, {
       id: "amount",
       header: () => "Amount",

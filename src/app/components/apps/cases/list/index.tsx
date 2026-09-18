@@ -1277,6 +1277,7 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
           open={archiveList}
           onClose={() => setArchiveList(false)}
           onWorkUpdated={fetchCases}
+          companyId={Number(user.company_id)}
         />
 
         {/* Dialogs and Drawers */}

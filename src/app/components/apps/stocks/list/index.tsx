@@ -1788,6 +1788,7 @@ const StockList = () => {
                   <TableCell sx={{ bgcolor: "#f9f9f9" }}>
                     {isSubQty ? "Sub Qty" : "Qty"}
                   </TableCell>
+                  <TableCell sx={{ bgcolor: "#f9f9f9" }}>Type</TableCell>
                   <TableCell sx={{ bgcolor: "#f9f9f9" }}>Project</TableCell>
                   <TableCell sx={{ bgcolor: "#f9f9f9" }}>Location</TableCell>
                   <TableCell sx={{ bgcolor: "#f9f9f9" }}>Reference</TableCell>
@@ -1850,6 +1851,11 @@ const StockList = () => {
                                 `(${h.qty} ${h.pack_off_unit_name})`}
                             </Typography>
                           </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography className="f-14" fontWeight={"bold"}>
+                            {h.order_type ?? "-"}
+                          </Typography>
                         </TableCell>
                         <TableCell>
                           <Tooltip title={h.project_name ?? ""}>

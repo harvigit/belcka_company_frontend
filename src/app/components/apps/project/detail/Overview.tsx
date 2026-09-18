@@ -432,6 +432,13 @@ const Overview = ({
     null,
   );
   const [labourPeriod, setLabourPeriod] = useState("all");
+  const [fullLabourTeamId, setFullLabourTeamId] = useState("all");
+  const [fullLabourPeriod, setFullLabourPeriod] = useState("all");
+  const [fullLabourTeams, setFullLabourTeams] = useState<LabourTeamRow[]>([]);
+  const [fullLabourTotals, setFullLabourTotals] = useState<LabourTotals | null>(
+    null,
+  );
+  const [fullLabourLoading, setFullLabourLoading] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
 
   const startDate = sharedFilters?.startDate ?? null;
@@ -452,6 +459,43 @@ const Overview = ({
       dayjs().subtract(days, "day").startOf("day").toDate(),
       new Date(),
     );
+  };
+
+  const labourDateRange = (period: string) => {
+    if (period === "all") return { start: null as Date | null, end: null as Date | null };
+    const days = period === "7" ? 6 : 29;
+    return {
+      start: dayjs().subtract(days, "day").startOf("day").toDate(),
+      end: new Date(),
+    };
+  };
+
+  const fetchFullLabourOverview = async () => {
+    if (!projectId || !user?.company_id) return;
+    setFullLabourLoading(true);
+    try {
+      const params = new URLSearchParams({
+        project_id: String(projectId),
+        company_id: String(user.company_id),
+      });
+      const range = labourDateRange(fullLabourPeriod);
+      if (range.start && range.end) {
+        params.set("start_date", dayjs(range.start).format("DD/MM/YYYY"));
+        params.set("end_date", dayjs(range.end).format("DD/MM/YYYY"));
+      }
+      if (fullLabourTeamId !== "all") {
+        params.set("team_id", fullLabourTeamId);
+      }
+      const res = await api.get(`project-analytics/web-overview?${params}`);
+      if (res.data?.IsSuccess) {
+        setFullLabourTeams(res.data.info?.labour_teams || []);
+        setFullLabourTotals(res.data.info?.labour_totals || null);
+      }
+    } catch (error) {
+      console.error("Failed to load labour team summary", error);
+    } finally {
+      setFullLabourLoading(false);
+    }
   };
 
   const fetchOverview = async () => {
@@ -488,7 +532,6 @@ const Overview = ({
 
   useEffect(() => {
     fetchOverview();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     projectId,
     user?.company_id,
@@ -497,6 +540,18 @@ const Overview = ({
     startDate,
     endDate,
     sharedFilters?.hydrated,
+  ]);
+
+  useEffect(() => {
+    if (fullListView !== "labour") return;
+    fetchFullLabourOverview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    fullListView,
+    fullLabourTeamId,
+    fullLabourPeriod,
+    projectId,
+    user?.company_id,
   ]);
 
   const openFilters = () => {
@@ -750,6 +805,42 @@ const Overview = ({
     </Stack>
   );
 
+  const fullLabourFilterControls = (
+    <Stack
+      direction="row"
+      spacing={1}
+      alignItems="center"
+      flexWrap="wrap"
+      useFlexGap
+    >
+      <TextField
+        select
+        size="small"
+        value={fullLabourTeamId}
+        onChange={(e) => setFullLabourTeamId(e.target.value)}
+        sx={{ minWidth: { xs: 120, sm: 140 } }}
+      >
+        <MenuItem value="all">All Teams</MenuItem>
+        {(filterTeams.length ? filterTeams : info?.teams || []).map((team) => (
+          <MenuItem key={team.id} value={String(team.id)}>
+            {team.name}
+          </MenuItem>
+        ))}
+      </TextField>
+      <TextField
+        select
+        size="small"
+        value={fullLabourPeriod}
+        onChange={(e) => setFullLabourPeriod(e.target.value)}
+        sx={{ minWidth: { xs: 120, sm: 140 } }}
+      >
+        <MenuItem value="all">All dates</MenuItem>
+        <MenuItem value="7">Last 7 days</MenuItem>
+        <MenuItem value="30">Last 30 days</MenuItem>
+      </TextField>
+    </Stack>
+  );
+
   if (loading && !info) {
     return (
       <Box display="flex" justifyContent="center" py={8}>
@@ -882,6 +973,7 @@ const Overview = ({
                       <TableCell>TYPE</TableCell>
                       <TableCell align="right">APPROVED</TableCell>
                       <TableCell align="right">TO APPROVE</TableCell>
+                      <TableCell align="right">Total</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -908,6 +1000,10 @@ const Overview = ({
                         </TableCell>
                         <TableCell align="right">
                           {money(currency, row.to_approve)}
+                        </TableCell>
+                        <TableCell align="right">
+                          {currency}
+                          {row.to_approve + row.approved}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1033,7 +1129,11 @@ const Overview = ({
                 <ViewAllLink
                   label="View all"
                   count={labourTeams.length}
-                  onClick={() => setFullListView("labour")}
+                  onClick={() => {
+                    setFullLabourTeamId("all");
+                    setFullLabourPeriod("all");
+                    setFullListView("labour");
+                  }}
                 />
               </Stack>
             }
@@ -1052,7 +1152,7 @@ const Overview = ({
               //   {currency}
               // </Typography>
               <Box display="flex" justifyContent="flex-end">
-                {monthlyRows.length > 2 && (
+                {monthlyRows.length > 6 && (
                   <ViewAllLink
                     label="View all"
                     count={monthlyRows.length}
@@ -1312,12 +1412,16 @@ const Overview = ({
         open={fullListView === "labour"}
         title="Direct labour team summary"
         onClose={closeFullListView}
-        action={labourFilterControls}
+        action={fullLabourFilterControls}
       >
-        {labourTeams.length ? (
+        {fullLabourLoading ? (
+          <Box display="flex" justifyContent="center" py={6}>
+            <CircularProgress size={28} />
+          </Box>
+        ) : fullLabourTeams.length ? (
           <LabourTeamTable
-            rows={labourTeams}
-            totals={info?.labour_totals}
+            rows={fullLabourTeams}
+            totals={fullLabourTotals}
             paginate
           />
         ) : (

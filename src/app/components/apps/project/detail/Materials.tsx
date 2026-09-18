@@ -45,6 +45,7 @@ type StockHistoryRow = {
   user_name?: string | null;
   address_name?: string | null;
   note?: string | null;
+  order_type?: string | null;
   currency?: string | null;
   total_amount?: number | string | null;
   qty?: number | string | null;
@@ -62,6 +63,7 @@ const COLUMN_LABELS: Record<string, string> = {
   user: "User",
   address: "Address",
   note: "Note",
+  order_type: "Type",
   amount: "Amount",
   adjustedStock: "Adjusted stock",
   stockInHand: "Stock in Hand",
@@ -260,6 +262,15 @@ const Materials = ({ projectId }: { projectId: number }) => {
             }}
             title={getValue() || ""}
           >
+            {getValue() || "-"}
+          </Typography>
+        ),
+      }),
+      columnHelper.accessor("order_type", {
+        id: "order_type",
+        header: () => <Typography variant="subtitle2">Type</Typography>,
+        cell: ({ getValue }) => (
+          <Typography className="f-14" color="textPrimary" noWrap>
             {getValue() || "-"}
           </Typography>
         ),

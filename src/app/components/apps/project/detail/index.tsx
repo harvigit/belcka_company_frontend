@@ -26,6 +26,10 @@ import PriceworkList from "@/app/components/apps/priceworks/list";
 import CasesList from "@/app/components/apps/cases/list";
 import ProjectSettingsTab from "./Settings";
 import Leave from "./Leave";
+import AssigneeRoleChips, {
+  AssignedProjectUser,
+  ProjectRoleOption,
+} from "./AssigneeRoleChips";
 import { ProjectDetailFiltersProvider } from "./ProjectDetailFiltersContext";
 import MapGantt from "../../projects/zone-map/MapGantt";
 import { IconMapPin } from "@tabler/icons-react";
@@ -68,10 +72,16 @@ const ProjectDetail = () => {
     TABS.some((item) => item.key === requestedTab) ? requestedTab : "overview",
   );
   const [projectName, setProjectName] = useState("Project");
+  const [projectCode, setProjectCode] = useState("");
+  const [assignedUsers, setAssignedUsers] = useState<AssignedProjectUser[]>([]);
+  const [projectRoles, setProjectRoles] = useState<ProjectRoleOption[]>([]);
   const [canViewSettings, setCanViewSettings] = useState(
     Number(user?.user_role_id) === 1,
   );
   const [settingsAccessLoaded, setSettingsAccessLoaded] = useState(false);
+  const [settingsMounted, setSettingsMounted] = useState(
+    requestedTab === "settings",
+  );
 
   useEffect(() => {
     const loadSettingsAccess = async () => {
@@ -84,6 +94,8 @@ const ProjectDetail = () => {
           ? res.data.info[0]
           : res.data?.info;
         const isAdmin = Number(user.user_role_id) === 1;
+        setProjectCode(res.data.info[0].code);
+        setAssignedUsers(projectRow?.assigned_users || []);
         const assigned = (projectRow?.setting_users || []).some(
           (item: { id: number }) => Number(item.id) === Number(user.id),
         );
@@ -100,11 +112,39 @@ const ProjectDetail = () => {
     loadSettingsAccess();
   }, [projectId, user?.company_id, user?.id, user?.user_role_id]);
 
+  useEffect(() => {
+    const loadRoles = async () => {
+      if (!user?.company_id) return;
+      try {
+        const res = await api.get(
+          `project-roles/get?company_id=${user.company_id}`,
+        );
+        setProjectRoles(
+          (res.data?.info || [])
+            .filter((item: ProjectRoleOption) => item?.id != null)
+            .map((item: ProjectRoleOption) => ({
+              id: item.id,
+              name: item.name,
+            })),
+        );
+      } catch (error) {
+        console.error("Failed to load project roles", error);
+      }
+    };
+    loadRoles();
+  }, [user?.company_id]);
+
   const visibleTabs = useMemo(
     () =>
       TABS.filter((item) => item.key !== "settings" || canViewSettings),
     [canViewSettings],
   );
+
+  useEffect(() => {
+    if (tab === "settings") {
+      setSettingsMounted(true);
+    }
+  }, [tab]);
 
   useEffect(() => {
     if (!settingsAccessLoaded) return;
@@ -148,12 +188,7 @@ const ProjectDetail = () => {
           />
         );
       case "settings":
-        return canViewSettings ? (
-          <ProjectSettingsTab
-            projectId={projectId}
-            onProjectName={setProjectName}
-          />
-        ) : null;
+        return null;
       case "leave":
         return <Leave projectId={projectId} />;
       default:
@@ -192,14 +227,22 @@ const ProjectDetail = () => {
         px={{ xs: 1.5, md: 2 }}
         pt={1.5}
         pb={0.5}
-        sx={{ flexShrink: 0 }}
+        sx={{ flexShrink: 0, flexWrap: "wrap", rowGap: 0.75 }}
       >
         <IconButton onClick={() => router.push("/apps/project/list")}>
           <IconArrowLeft size={20} />
         </IconButton>
-        <Typography fontWeight={700} noWrap>
-          {projectName}
+        <Typography fontWeight={700} noWrap sx={{ flexShrink: 0 }}>
+          {projectName} {projectCode ? `(${projectCode})` : ""}
         </Typography>
+        <AssigneeRoleChips
+          projectId={projectId}
+          companyId={user?.company_id}
+          users={assignedUsers}
+          roles={projectRoles}
+          canEdit={canViewSettings}
+          onUsersChange={setAssignedUsers}
+        />
       </Stack>
 
       <Box
@@ -269,7 +312,26 @@ const ProjectDetail = () => {
             : {}),
         }}
       >
-        {content}
+        {tab !== "settings" ? content : null}
+        {canViewSettings && settingsMounted ? (
+          <Box
+            sx={{
+              display: tab === "settings" ? "flex" : "none",
+              flex: 1,
+              minHeight: 0,
+              minWidth: 0,
+              overflow: "auto",
+              flexDirection: "column",
+            }}
+          >
+            <ProjectSettingsTab
+              projectId={projectId}
+              assignedUsers={assignedUsers}
+              onProjectName={setProjectName}
+              onAssignedUsers={setAssignedUsers}
+            />
+          </Box>
+        ) : null}
       </Box>
     </Box>
     </ProjectDetailFiltersProvider>

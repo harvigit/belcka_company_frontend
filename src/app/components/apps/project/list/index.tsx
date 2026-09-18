@@ -531,8 +531,8 @@ const ProjectDashboard = () => {
         ),
       }),
       columnHelper.accessor("uuid", {
-        header: () => <HeaderLabel>ID</HeaderLabel>,
-        meta: { label: "ID" },
+        header: () => <HeaderLabel>Code</HeaderLabel>,
+        meta: { label: "Code" },
         cell: ({ getValue }) => (
           <Typography
             className="f-14"

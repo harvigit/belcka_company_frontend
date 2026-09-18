@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import { IconArrowLeft } from "@tabler/icons-react";
 
-export const OVERVIEW_PREVIEW_LIMIT = 2;
+export const OVERVIEW_PREVIEW_LIMIT = 5;
 
 export type OverviewFullListKey = "labour" | "monthly" | "addresses";
 
@@ -360,10 +360,18 @@ export const LabourTeamTable = ({
                   <TableCell align="right">{row.limit}</TableCell>
                   <TableCell align="right">{row.avg_7_days}</TableCell>
                   <TableCell align="right">{row.avg_30_days}</TableCell>
-                  <TableCell align="right">{row.total_hours}</TableCell>
-                  <TableCell align="right">{row.check_in}</TableCell>
-                  <TableCell align="right">{row.check_in_hours}</TableCell>
-                  <TableCell align="right">{row.unallocated_hours}</TableCell>
+                  <TableCell align="right">
+                    {Math.round(Number(row.total_hours || 0))}
+                  </TableCell>
+                  <TableCell align="right">
+                    {Math.round(Number(row.check_in || 0))}
+                  </TableCell>
+                  <TableCell align="right">
+                    {Math.round(Number(row.check_in_hours || 0))}
+                  </TableCell>
+                  <TableCell align="right">
+                    {Math.round(Number(row.unallocated_hours || 0))}
+                  </TableCell>
                   <TableCell
                     align="right"
                     sx={{
@@ -392,14 +400,16 @@ export const LabourTeamTable = ({
                     {totals?.avg_30_days || 0}
                   </TableCell>
                   <TableCell align="right">
-                    {Number(totals?.total_hours || 0).toFixed(2)}
-                  </TableCell>
-                  <TableCell align="right">{totals?.check_in || 0}</TableCell>
-                  <TableCell align="right">
-                    {Number(totals?.check_in_hours || 0).toFixed(2)}
+                    {Math.round(Number(totals?.total_hours || 0))}
                   </TableCell>
                   <TableCell align="right">
-                    {Number(totals?.unallocated_hours || 0).toFixed(2)}
+                    {Math.round(Number(totals?.check_in || 0))}
+                  </TableCell>
+                  <TableCell align="right">
+                    {Math.round(Number(totals?.check_in_hours || 0))}
+                  </TableCell>
+                  <TableCell align="right">
+                    {Math.round(Number(totals?.unallocated_hours || 0))}
                   </TableCell>
                   <TableCell
                     align="right"
