@@ -1251,6 +1251,11 @@ const TimeClock = ({queryParams}: Props) => {
         setTypeFilterOpen(false);
     };
 
+    const handleClearAppliedTypeFilter = (event: React.MouseEvent) => {
+        event.stopPropagation();
+        handleClearTypeFilter();
+    };
+
     const handleApplyTypeFilter = () => {
         setTypeFilter(tempTypeFilter);
         saveTimeClockFiltersCookie(filters, tempTypeFilter);
@@ -2706,13 +2711,30 @@ const TimeClock = ({queryParams}: Props) => {
 
                             <Button
                                 color="primary"
-                                variant='outlined'
+                                variant={activeTypeFilter ? 'contained' : 'outlined'}
                                 size="small"
                                 onClick={handleTypeFilterOpen}
                                 sx={toolbarButtonSx}
                             >
                                 {t('Types')}
                             </Button>
+
+                            {activeTypeFilter && (
+                                <Button
+                                    color="error"
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={handleClearAppliedTypeFilter}
+                                    sx={{
+                                        ...toolbarButtonSx,
+                                        minWidth: 64,
+                                        px: 1.5,
+                                    }}
+                                    aria-label={t('Clear types')}
+                                >
+                                    <IconX size={18}/>
+                                </Button>
+                            )}
 
                             {isFilteredView && (
                                 <Button
