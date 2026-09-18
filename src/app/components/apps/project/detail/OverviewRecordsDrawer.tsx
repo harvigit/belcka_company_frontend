@@ -559,12 +559,14 @@ export const OverviewFullListView = ({
   title,
   onClose,
   action,
+  toolbar,
   children,
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
   action?: React.ReactNode;
+  toolbar?: React.ReactNode;
   children: React.ReactNode;
 }) => (
   <Drawer
@@ -605,6 +607,18 @@ export const OverviewFullListView = ({
       </Box>
       {action}
     </Stack>
+    {toolbar ? (
+      <Box
+        px={2}
+        pt={2}
+        pb={1.25}
+        borderBottom="1px solid"
+        borderColor="divider"
+        sx={{ flexShrink: 0, bgcolor: "background.paper", overflow: "visible" }}
+      >
+        {toolbar}
+      </Box>
+    ) : null}
     <Box
       sx={{
         flex: 1,

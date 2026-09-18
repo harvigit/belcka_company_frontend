@@ -431,7 +431,6 @@ const Overview = ({
   const [fullListView, setFullListView] = useState<OverviewFullListKey | null>(
     null,
   );
-  const [labourPeriod, setLabourPeriod] = useState("all");
   const [fullLabourTeamId, setFullLabourTeamId] = useState("all");
   const [fullLabourPeriod, setFullLabourPeriod] = useState("all");
   const [fullLabourTeams, setFullLabourTeams] = useState<LabourTeamRow[]>([]);
@@ -447,19 +446,6 @@ const Overview = ({
   const tradeId = sharedFilters?.tradeId ?? "";
 
   const closeFullListView = () => setFullListView(null);
-
-  const applyLabourPeriod = (value: string) => {
-    setLabourPeriod(value);
-    if (value === "all") {
-      sharedFilters?.setDateRange(null, null);
-      return;
-    }
-    const days = value === "7" ? 6 : 29;
-    sharedFilters?.setDateRange(
-      dayjs().subtract(days, "day").startOf("day").toDate(),
-      new Date(),
-    );
-  };
 
   const labourDateRange = (period: string) => {
     if (period === "all") return { start: null as Date | null, end: null as Date | null };
@@ -572,7 +558,6 @@ const Overview = ({
     setTempTeamId("");
     setTempTradeId("");
     sharedFilters?.clearSharedFilters();
-    setLabourPeriod("all");
     setFilterOpen(false);
   };
 
@@ -585,7 +570,6 @@ const Overview = ({
     setTempTeamId("");
     setTempTradeId("");
     sharedFilters?.clearSharedFilters();
-    setLabourPeriod("all");
   };
 
   const currency = info?.currency || "£";
@@ -765,50 +749,10 @@ const Overview = ({
     );
   }, [info]);
 
-  const labourFilterControls = (
-    <Stack
-      direction="row"
-      spacing={1}
-      alignItems="center"
-      flexWrap="wrap"
-      useFlexGap
-    >
-      <TextField
-        select
-        size="small"
-        value={teamId}
-        onChange={(e) =>
-          sharedFilters?.applyFilters({
-            team_id: e.target.value === "all" ? "" : e.target.value,
-          })
-        }
-        sx={{ minWidth: { xs: 120, sm: 140 } }}
-      >
-        <MenuItem value="all">All Teams</MenuItem>
-        {(filterTeams.length ? filterTeams : info?.teams || []).map((team) => (
-          <MenuItem key={team.id} value={String(team.id)}>
-            {team.name}
-          </MenuItem>
-        ))}
-      </TextField>
-      <TextField
-        select
-        size="small"
-        value={labourPeriod}
-        onChange={(e) => applyLabourPeriod(e.target.value)}
-        sx={{ minWidth: { xs: 120, sm: 140 } }}
-      >
-        <MenuItem value="all">All dates</MenuItem>
-        <MenuItem value="7">Last 7 days</MenuItem>
-        <MenuItem value="30">Last 30 days</MenuItem>
-      </TextField>
-    </Stack>
-  );
-
   const fullLabourFilterControls = (
     <Stack
       direction="row"
-      spacing={1}
+      spacing={1.5}
       alignItems="center"
       flexWrap="wrap"
       useFlexGap
@@ -816,9 +760,10 @@ const Overview = ({
       <TextField
         select
         size="small"
+        label="Team"
         value={fullLabourTeamId}
         onChange={(e) => setFullLabourTeamId(e.target.value)}
-        sx={{ minWidth: { xs: 120, sm: 140 } }}
+        sx={{ minWidth: { xs: 180, sm: 220 } }}
       >
         <MenuItem value="all">All Teams</MenuItem>
         {(filterTeams.length ? filterTeams : info?.teams || []).map((team) => (
@@ -830,9 +775,10 @@ const Overview = ({
       <TextField
         select
         size="small"
+        label="Dates"
         value={fullLabourPeriod}
         onChange={(e) => setFullLabourPeriod(e.target.value)}
-        sx={{ minWidth: { xs: 120, sm: 140 } }}
+        sx={{ minWidth: { xs: 180, sm: 220 } }}
       >
         <MenuItem value="all">All dates</MenuItem>
         <MenuItem value="7">Last 7 days</MenuItem>
@@ -1118,24 +1064,15 @@ const Overview = ({
           <Widget
             title="DIRECT LABOUR TEAM SUMMARY"
             action={
-              <Stack
-                direction="row"
-                spacing={1}
-                alignItems="center"
-                flexWrap="wrap"
-                useFlexGap
-              >
-                {labourFilterControls}
-                <ViewAllLink
-                  label="View all"
-                  count={labourTeams.length}
-                  onClick={() => {
-                    setFullLabourTeamId("all");
-                    setFullLabourPeriod("all");
-                    setFullListView("labour");
-                  }}
-                />
-              </Stack>
+              <ViewAllLink
+                label="View all"
+                count={labourTeams.length}
+                onClick={() => {
+                  setFullLabourTeamId("all");
+                  setFullLabourPeriod("all");
+                  setFullListView("labour");
+                }}
+              />
             }
           >
             <LabourTeamTable
@@ -1198,7 +1135,6 @@ const Overview = ({
                     to={endDate}
                     onChange={({ from, to }) => {
                       sharedFilters?.setDateRange(from, to);
-                      setLabourPeriod("all");
                     }}
                     buttonMinWidth="100%"
                     buttonLabelAlign="left"
@@ -1412,7 +1348,7 @@ const Overview = ({
         open={fullListView === "labour"}
         title="Direct labour team summary"
         onClose={closeFullListView}
-        action={fullLabourFilterControls}
+        toolbar={fullLabourFilterControls}
       >
         {fullLabourLoading ? (
           <Box display="flex" justifyContent="center" py={6}>
