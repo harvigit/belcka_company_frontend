@@ -171,12 +171,8 @@ const Labour = ({projectId}: { projectId: number }) => {
         {id: 'date', desc: true},
     ]);
     
-    const [startDate, setStartDate] = useState<Date | null>(() => {
-        const start = new Date();
-        start.setMonth(start.getMonth() - 3);
-        return start;
-    });
-    const [endDate, setEndDate] = useState<Date | null>(new Date());
+    const [startDate, setStartDate] = useState<Date | null>(null);
+    const [endDate, setEndDate] = useState<Date | null>(null);
     
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     const [isSelectAll, setIsSelectAll] = useState(false);
@@ -764,10 +760,8 @@ const Labour = ({projectId}: { projectId: number }) => {
                             from={startDate}
                             to={endDate}
                             onChange={(range) => {
-                                if (range.from && range.to) {
-                                    setStartDate(range.from);
-                                    setEndDate(range.to);
-                                }
+                                setStartDate(range.from);
+                                setEndDate(range.to);
                             }}
                         />
                         <TextField

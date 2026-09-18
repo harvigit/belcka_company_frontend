@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Avatar,
     Box,
@@ -31,6 +31,7 @@ export interface LocationPoint {
     longitude: number | string;
     time?: string;
     type: 'start' | 'end';
+    color?: string;
 }
 
 export interface LocationMapDrawerProps {
@@ -42,6 +43,8 @@ export interface LocationMapDrawerProps {
     initials?: string;
     date?: string;
     shiftName?: string;
+    locations?: LocationPoint[];
+    isWorking?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -52,6 +55,41 @@ const toLatLng = (lat: number | string, lng: number | string) => ({
     lat: Number(lat),
     lng: Number(lng),
 });
+
+const toCoordinateKey = (lat: number | string, lng: number | string) =>
+    `${Number(lat)},${Number(lng)}`;
+
+const withVisibleDuplicatePinOffsets = (items: LocationPoint[]) => {
+    const groups = new Map<string, LocationPoint[]>();
+
+    items
+        .filter((item) => item.latitude && item.longitude)
+        .forEach((item) => {
+            const key = toCoordinateKey(item.latitude, item.longitude);
+            groups.set(key, [...(groups.get(key) ?? []), item]);
+        });
+
+    return items.map((item) => {
+        if (!item.latitude || !item.longitude) {
+            return {...item, displayPosition: null, pixelOffset: {x: 0, y: 0}};
+        }
+
+        const key = toCoordinateKey(item.latitude, item.longitude);
+        const group = groups.get(key) ?? [];
+        const index = group.indexOf(item);
+        const spacing = 18;
+        const centerOffset = ((group.length - 1) * spacing) / 2;
+
+        return {
+            ...item,
+            displayPosition: toLatLng(item.latitude, item.longitude),
+            pixelOffset: {
+                x: group.length > 1 ? index * spacing - centerOffset : 0,
+                y: 0,
+            },
+        };
+    });
+};
 
 const PIN_COLORS: Record<'start' | 'end', string> = {
     start: '#1976d2',
@@ -123,6 +161,7 @@ interface PinOverlayProps {
     userImage?: string;
     userInitials?: string;
     isWorking?: boolean;
+    pixelOffset?: { x: number; y: number };
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -135,7 +174,8 @@ const PinOverlay = ({
     userName,
     userImage,
     userInitials,
-    isWorking = false
+    isWorking = false,
+    pixelOffset = { x: 0, y: 0 },
 }: PinOverlayProps) => {
     const [hovered, setHovered] = useState(false);
 
@@ -156,8 +196,8 @@ const PinOverlay = ({
                         position: 'absolute',
                         width: 48,
                         height: 58,
-                        left: -24,
-                        top: -58,
+                        left: -24 + pixelOffset.x,
+                        top: -58 + pixelOffset.y,
                         cursor: 'pointer',
                         filter: hovered
                             ? 'drop-shadow(0 6px 14px rgba(0,0,0,0.38))'
@@ -218,14 +258,16 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
     userImage,
     initials = 'AP',
     date,
-    shiftName
+    shiftName,
+    locations: providedLocations,
+    isWorking: providedIsWorking,
 }) => {
     const [locations, setLocations] = useState<LocationPoint[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [headerUserName, setHeaderUserName] = useState(userName);
     const [headerUserImage, setHeaderUserImage] = useState(userImage);
     const [headerUserInitials, setHeaderUserInitials] = useState(initials);
-    const [isWorking, setIsWorking] = useState(false);
+    const [isWorking, setIsWorking] = useState(providedIsWorking ?? false);
 
     const mapRef = useRef<google.maps.Map | null>(null);
 
@@ -233,6 +275,8 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
         ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
     });
+
+    const displayLocations = useMemo(() => withVisibleDuplicatePinOffsets(locations), [locations]);
 
     const fetchWorklogLocations = async (id: number) => {
         try {
@@ -268,6 +312,15 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
     };
 
     useEffect(() => {
+        if (open && providedLocations) {
+            setLocations(providedLocations);
+            setHeaderUserName(userName);
+            setHeaderUserImage(userImage);
+            setHeaderUserInitials(initials);
+            setIsWorking(providedIsWorking ?? false);
+            return;
+        }
+
         if (open && worklogId) {
             fetchWorklogLocations(worklogId);
         }
@@ -279,29 +332,33 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
             setHeaderUserInitials(initials);
             setIsWorking(false);
         }
-    }, [open, worklogId]);
+    }, [open, worklogId, providedLocations, providedIsWorking, userName, userImage, initials]);
 
     // Fit map bounds
     useEffect(() => {
         if (!open || !mapRef.current || locations.length === 0) return;
 
-        const validPoints = locations.filter((l) => l.latitude && l.longitude);
+        const validPoints = displayLocations
+            .filter((location) => location.displayPosition)
+            .map((location) => location.displayPosition!);
         if (validPoints.length === 0) return;
 
         if (validPoints.length === 1) {
-            mapRef.current.panTo(toLatLng(validPoints[0].latitude, validPoints[0].longitude));
+            mapRef.current.panTo(validPoints[0]);
             mapRef.current.setZoom(DEFAULT_ZOOM);
         } else {
             const bounds = new google.maps.LatLngBounds();
-            validPoints.forEach((l) => bounds.extend(toLatLng(l.latitude, l.longitude)));
+            validPoints.forEach((position) => bounds.extend(position));
             mapRef.current.fitBounds(bounds, { top: 60, bottom: 60, left: 60, right: 60 });
         }
-    }, [open, locations]);
+    }, [open, displayLocations]);
 
     const handleMapLoad = (map: google.maps.Map) => {
         mapRef.current = map;
 
-        const validPoints = locations.filter((l) => l.latitude && l.longitude);
+        const validPoints = displayLocations
+            .filter((location) => location.displayPosition)
+            .map((location) => location.displayPosition!);
         if (validPoints.length === 0) {
             map.setCenter(DEFAULT_CENTER);
             map.setZoom(12);
@@ -309,11 +366,11 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
         }
 
         if (validPoints.length === 1) {
-            map.setCenter(toLatLng(validPoints[0].latitude, validPoints[0].longitude));
+            map.setCenter(validPoints[0]);
             map.setZoom(DEFAULT_ZOOM);
         } else {
             const bounds = new google.maps.LatLngBounds();
-            validPoints.forEach((l) => bounds.extend(toLatLng(l.latitude, l.longitude)));
+            validPoints.forEach((position) => bounds.extend(position));
             map.fitBounds(bounds, { top: 60, bottom: 60, left: 60, right: 60 });
         }
     };
@@ -408,11 +465,11 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
                 <Box sx={{ px: 2.5, py: 1.5, borderBottom: '1px solid #f0f0f0', flexShrink: 0 }}>
                     <Stack direction="column" spacing={1}>
                         {locations.map((loc) => {
-                            const color = PIN_COLORS[loc.type];
+                            const color = loc.color ?? PIN_COLORS[loc.type];
 
                             return (
                                 <Box
-                                    key={loc.type}
+                                    key={`${loc.label}-${loc.latitude}-${loc.longitude}`}
                                     sx={{
                                         display: 'flex',
                                         alignItems: 'flex-start',
@@ -519,23 +576,23 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
                             fullscreenControl: true,
                         }}
                     >
-                        {locations
-                            .filter((l) => l.latitude && l.longitude)
-                            .map((loc) => {
-                                const pos = toLatLng(loc.latitude, loc.longitude);
-                                const color = PIN_COLORS[loc.type];
+                        {displayLocations
+                            .filter((location) => location.displayPosition)
+                            .map((location) => {
+                                const color = location.color ?? PIN_COLORS[location.type];
 
                                 return (
-                                    <React.Fragment key={loc.type}>
+                                    <React.Fragment key={`${location.label}-${location.latitude}-${location.longitude}`}>
                                         <PinOverlay
-                                            position={pos}
-                                            label={loc.label}
+                                            position={location.displayPosition!}
+                                            label={location.label}
                                             color={color}
-                                            time={loc.time}
+                                            time={location.time}
                                             userName={headerUserName}
                                             userImage={headerUserImage}
                                             userInitials={headerUserInitials}
                                             isWorking={isWorking}
+                                            pixelOffset={location.pixelOffset}
                                         />
                                     </React.Fragment>
                                 );

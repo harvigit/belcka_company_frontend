@@ -24,6 +24,7 @@ import {
     IconX,
     IconCheck,
     IconClock,
+    IconMapPin,
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { AxiosResponse } from 'axios';
@@ -32,6 +33,13 @@ import api from '@/utils/axios';
 import { DateTime } from 'luxon';
 import { useSession } from 'next-auth/react';
 import { User } from 'next-auth';
+import LocationMapDrawer, { LocationPoint } from '../components/LocationMapDrawer';
+
+interface WorkLocation {
+    latitude: string | number | null;
+    longitude: string | number | null;
+    location?: string | null;
+}
 
 // Move interfaces to top for better organization
 interface RequestItem {
@@ -68,6 +76,15 @@ interface RequestItem {
         start_time: string;
         end_time: string;
     };
+    is_edit_worklog_request?: boolean;
+    old_work_locations?: {
+        start?: WorkLocation | null;
+        stop?: WorkLocation | null;
+    } | null;
+    requested_work_locations?: {
+        start?: WorkLocation | null;
+        stop?: WorkLocation | null;
+    } | null;
 }
 
 interface RequestListResponse {
@@ -149,6 +166,31 @@ const toTimeInputValue = (val: string | number | null | undefined): string => {
     return '';
 };
 
+const hasWorkLocation = (location?: WorkLocation | null) => {
+    if (!location) return false;
+    return location.latitude !== null && location.latitude !== undefined && location.longitude !== null && location.longitude !== undefined;
+};
+
+const buildLocationPoint = (
+    location: WorkLocation | null | undefined,
+    label: string,
+    type: 'start' | 'end',
+    color: string,
+    time?: string | null,
+): LocationPoint | null => {
+    if (!hasWorkLocation(location)) return null;
+
+    return {
+        label,
+        address: location?.location || 'Location unavailable',
+        latitude: location!.latitude!,
+        longitude: location!.longitude!,
+        type,
+        color,
+        time: time || undefined,
+    };
+};
+
 // Memoized components for better performance
 const RequestCard = React.memo<{
     request: RequestItem;
@@ -157,10 +199,11 @@ const RequestCard = React.memo<{
     onReject: (id: number) => void;
     onAutoUpdate: (id: number, edit: RequestTimeEdit) => Promise<boolean>;
     onTimeEditChange: (id: number, edit: RequestTimeEdit) => void;
+    onOpenMap: (request: RequestItem) => void;
     formatHour: (val: string | number | null | undefined, isPricework?: boolean) => string;
     formatDate: (val: string | number | null | undefined) => string;
     canAction: boolean;
-}>(({ request, isProcessing, onApprove, onReject, onAutoUpdate, onTimeEditChange, formatHour, formatDate, canAction }) => {
+}>(({ request, isProcessing, onApprove, onReject, onAutoUpdate, onTimeEditChange, onOpenMap, formatHour, formatDate, canAction }) => {
 
     const formatPayableHour = (val: string | number | null | undefined, isPricework: boolean = false): string => {
         if (val === null || val === undefined) return isPricework ? '--' : '00:00';
@@ -262,6 +305,20 @@ const RequestCard = React.memo<{
     const getStatusColor = useCallback((status: number): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" => {
         return STATUS_COLORS[status as keyof typeof STATUS_COLORS] || 'default';
     }, []);
+
+    const hasLocation = (location?: WorkLocation | null) => {
+        if (!location) return false;
+        return location.latitude !== null && location.latitude !== undefined && location.longitude !== null && location.longitude !== undefined;
+    };
+
+    const canShowMap =
+        request.is_edit_worklog_request &&
+        (
+            hasLocation(request.old_work_locations?.start) ||
+            hasLocation(request.old_work_locations?.stop) ||
+            hasLocation(request.requested_work_locations?.start) ||
+            hasLocation(request.requested_work_locations?.stop)
+        );
 
     return (
         <Card
@@ -425,6 +482,25 @@ const RequestCard = React.memo<{
                         minWidth: 100,
                         width: "30%"
                     }}>
+                        {canShowMap && (
+                            <Tooltip title="View worklog locations">
+                                <IconButton
+                                    size="small"
+                                    onClick={() => onOpenMap(request)}
+                                    sx={{
+                                        color: 'primary.main',
+                                        border: '1px solid',
+                                        borderColor: 'primary.light',
+                                        bgcolor: 'rgba(25, 118, 210, 0.08)',
+                                        '&:hover': {
+                                            bgcolor: 'rgba(25, 118, 210, 0.16)',
+                                        },
+                                    }}
+                                >
+                                    <IconMapPin size={18} />
+                                </IconButton>
+                            </Tooltip>
+                        )}
                         {request.status === PENDING_STATUS && canAction ? (
                             <>
                                 <Button
@@ -518,6 +594,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
     // State management
     const [requestList, setRequestList] = useState<RequestItem[]>([]);
     const [requestTimeEdits, setRequestTimeEdits] = useState<Record<number, RequestTimeEdit>>({});
+    const [mapRequest, setMapRequest] = useState<RequestItem | null>(null);
     const [loading, setLoading] = useState(false);
     const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
     const [alert, setAlert] = useState<AlertState>({
@@ -813,6 +890,14 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
         }));
     }, []);
 
+    const handleOpenMap = useCallback((request: RequestItem) => {
+        setMapRequest(request);
+    }, []);
+
+    const handleCloseMap = useCallback(() => {
+        setMapRequest(null);
+    }, []);
+
     const handleApproveAll = useCallback(() => handleBulkAction('approve'), [handleBulkAction]);
 
     const handleRejectAll = useCallback(() => {
@@ -873,6 +958,15 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
             return val.toString();
         }
     }, []);
+
+    const mapLocations = useMemo(() => {
+        if (!mapRequest) return [];
+
+        return [
+            buildLocationPoint(mapRequest.old_work_locations?.start, 'ORIGINAL START', 'start', '#00a76f', formatHour(mapRequest.old_data?.start_time)),
+            buildLocationPoint(mapRequest.old_work_locations?.stop, 'ORIGINAL STOP', 'end', '#f44336', formatHour(mapRequest.old_data?.end_time)),
+        ].filter((location): location is LocationPoint => location !== null);
+    }, [formatHour, mapRequest]);
 
     // Effects
     useEffect(() => {
@@ -942,6 +1036,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
                                 onReject={handleRejectRequest}
                                 onAutoUpdate={handleUpdateRequestTime}
                                 onTimeEditChange={handleRequestTimeEditChange}
+                                onOpenMap={handleOpenMap}
                                 formatHour={formatHour}
                                 formatDate={formatDate}
                                 canAction={actionUsers.includes(user?.id)}
@@ -1104,6 +1199,18 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <LocationMapDrawer
+                open={Boolean(mapRequest)}
+                onClose={handleCloseMap}
+                userName={mapRequest?.user_name}
+                userImage={mapRequest?.user_thumb_image || mapRequest?.user_image}
+                initials={mapRequest?.user_name?.charAt(0).toUpperCase() || 'U'}
+                date={mapRequest ? formatDate(mapRequest.date) : undefined}
+                shiftName={mapRequest?.shift_name}
+                locations={mapLocations}
+                isWorking={false}
+            />
         </Box>
     );
 };
