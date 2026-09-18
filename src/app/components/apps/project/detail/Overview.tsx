@@ -438,6 +438,9 @@ const Overview = ({
     null,
   );
   const [fullLabourLoading, setFullLabourLoading] = useState(false);
+  const [financialRange, setFinancialRange] = useState<"6m" | "1y" | "2y">(
+    "6m",
+  );
   const [activityOpen, setActivityOpen] = useState(false);
 
   const startDate = sharedFilters?.startDate ?? null;
@@ -499,6 +502,7 @@ const Overview = ({
       }
       if (teamId !== "all") params.set("team_id", teamId);
       if (tradeId) params.set("trade_id", String(tradeId));
+      params.set("financial_range", financialRange);
       const res = await api.get(`project-analytics/web-overview?${params}`);
       if (res.data?.IsSuccess) {
         setInfo(res.data.info);
@@ -525,6 +529,7 @@ const Overview = ({
     tradeId,
     startDate,
     endDate,
+    financialRange,
     sharedFilters?.hydrated,
   ]);
 
@@ -785,6 +790,22 @@ const Overview = ({
         <MenuItem value="30">Last 30 days</MenuItem>
       </TextField>
     </Stack>
+  );
+
+  const financialRangeControls = (
+    <TextField
+      select
+      size="small"
+      value={financialRange}
+      onChange={(e) =>
+        setFinancialRange(e.target.value as "6m" | "1y" | "2y")
+      }
+      sx={{ minWidth: { xs: 140, sm: 160 } }}
+    >
+      <MenuItem value="6m">6 month</MenuItem>
+      <MenuItem value="1y">1 year</MenuItem>
+      <MenuItem value="2y">2 year</MenuItem>
+    </TextField>
   );
 
   if (loading && !info) {
@@ -1085,10 +1106,15 @@ const Overview = ({
           <Widget
             title="MONTHLY FINANCIAL SUMMARY"
             action={
-              // <Typography fontSize={13} color="text.secondary">
-              //   {currency}
-              // </Typography>
-              <Box display="flex" justifyContent="flex-end">
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                flexWrap="wrap"
+                useFlexGap
+                justifyContent="flex-end"
+              >
+                {financialRangeControls}
                 {monthlyRows.length > 6 && (
                   <ViewAllLink
                     label="View all"
@@ -1096,14 +1122,13 @@ const Overview = ({
                     onClick={() => setFullListView("monthly")}
                   />
                 )}
-              </Box>
+              </Stack>
             }
           >
             <MonthlyFinancialTable
               rows={monthlyRows}
               totals={monthlyTotals}
               currency={currency}
-              limit={OVERVIEW_PREVIEW_LIMIT}
             />
           </Widget>
 
@@ -1369,6 +1394,7 @@ const Overview = ({
         open={fullListView === "monthly"}
         title="Monthly financial summary"
         onClose={closeFullListView}
+        toolbar={financialRangeControls}
       >
         {monthlyRows.length ? (
           <MonthlyFinancialTable
