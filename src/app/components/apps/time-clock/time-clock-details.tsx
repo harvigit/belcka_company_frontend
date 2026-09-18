@@ -59,7 +59,6 @@ import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
 
-const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
 const TIME_CLOCK_DETAILS_COLUMNS_COOKIE = 'time-clock-details-column-visibility';
 const TIME_CLOCK_DETAILS_AMOUNT_COLUMNS = [
@@ -141,27 +140,6 @@ const appendTimesheetIds = (ids: Set<string>, value: unknown) => {
         .forEach((id) => ids.add(id));
 };
 
-const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, columnVisibility: VisibilityState) => {
-    try {
-        const pageState = loadStorageState(TIME_CLOCK_PAGE);
-        const data = {
-            startDate: startDate ? startDate.toISOString() : null,
-            endDate: endDate ? endDate.toISOString() : null,
-            columnVisibility,
-        };
-        
-        localStorage.setItem(TIME_CLOCK_PAGE, JSON.stringify({
-            startDate: data.startDate,
-            endDate: data.endDate,
-            columnVisibility: pageState?.columnVisibility || {},
-        }));
-        
-        localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(data));
-    } catch (error) {
-        console.error('Error saving data to localStorage:', error);
-    }
-};
-
 const loadDateRangeFromStorage = () => {
     return loadStorageState(TIME_CLOCK_DETAILS_PAGE);
 };
@@ -170,6 +148,8 @@ interface ExtendedTimeClockDetailsProps extends TimeClockDetailsProps {
     onDataChange?: () => void;
     isRemovedUser?: boolean;
     isArchivedUser?: boolean;
+    parentStartDate?: Date | null;
+    parentEndDate?: Date | null;
     filters?: {
         teams?: number[];
         statuses?: string[];
@@ -201,6 +181,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                                                                        onDataChange,
                                                                        isRemovedUser,
                                                                        isArchivedUser,
+                                                                       parentStartDate,
+                                                                       parentEndDate,
                                                                        filters,
                                                                        typeFilter,
                                                                        queryParams
@@ -395,11 +377,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             cancelled = true;
         };
     }, [sessionUser?.id, sessionUser?.user_role_id]);
-
-    // Save columnVisibility to localStorage whenever it changes
-    useEffect(() => {
-        saveDateRangeToStorage(startDate, endDate, columnVisibility);
-    }, [startDate, endDate, columnVisibility]); 
 
     useEffect(() => {
         saveColumnVisibilityCookie(TIME_CLOCK_DETAILS_COLUMNS_COOKIE, columnVisibility);
@@ -596,11 +573,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 setEndDate(range.to);
                 setData([]);
                 fetchTimeClockData(range.from, range.to);
-                saveDateRangeToStorage(range.from, range.to, columnVisibility);
                 onDataChange?.();
             }
         },
-        [fetchTimeClockData, columnVisibility, onDataChange]
+        [fetchTimeClockData, onDataChange]
     );
 
     const handleFilterChange = (value: string) => {
@@ -2215,7 +2191,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         let start: Date | null = null;
         let end: Date | null = null;
 
-        if (initialData?.startDate && initialData?.endDate) {
+        if (parentStartDate && parentEndDate) {
+            start = new Date(parentStartDate);
+            end = new Date(parentEndDate);
+        } else if (initialData?.startDate && initialData?.endDate) {
             start = new Date(initialData.startDate);
             end = new Date(initialData.endDate);
         } else {
@@ -2249,6 +2228,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         user_id,
         isRemovedUser,
         isArchivedUser,
+        parentStartDate,
+        parentEndDate,
         initialData.startDate,
         initialData.endDate,
         timeClock?.start_date,

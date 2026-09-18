@@ -3554,6 +3554,8 @@ const TimeClock = ({queryParams}: Props) => {
                     onDataChange={handleDataChange}
                     isRemovedUser={isRemovedUser}
                     isArchivedUser={isArchivedUser}
+                    parentStartDate={startDate}
+                    parentEndDate={endDate}
                     filters={filters}
                     typeFilter={typeFilter}
                     queryParams={resolvedQueryParams}
