@@ -95,7 +95,7 @@ const ProjectSettingsTab: React.FC<ProjectSettingsTabProps> = ({
       user_id: Number(item.id),
       project_role_id: item.role_id ? Number(item.role_id) : null,
     }));
-    setFormData((prev) => {
+    setFormData((prev: any) => {
       const prevKey = (prev.user_roles || [])
         .map((item: any) => `${item.user_id}:${item.project_role_id ?? ""}`)
         .join("|");
