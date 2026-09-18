@@ -32,6 +32,7 @@ import { User } from "next-auth";
 interface ChecklogsPageProps {
     worklogId: number;
     onClose: () => void;
+    onMutated?: () => void | Promise<void>;
     requestOnly?: boolean;
     variant?: 'time-clock' | 'time-tracking';
 }
@@ -377,7 +378,7 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
     );
 };
 
-export default function Penalties({worklogId, onClose, requestOnly = false, variant = 'time-clock'}: ChecklogsPageProps) {
+export default function Penalties({worklogId, onClose, onMutated, requestOnly = false, variant = 'time-clock'}: ChecklogsPageProps) {
     const [loading, setLoading] = useState(false);
     const [penalties, setPenalties] = useState<PenaltyItem[]>([]);
     const [day, setDay] = useState('');
@@ -453,6 +454,7 @@ export default function Penalties({worklogId, onClose, requestOnly = false, vari
             if (res.data?.IsSuccess) {
                 toast.success(appealAction ? "Appeal approved" : "Appeal rejected");
                 fetchPenalties();
+                await onMutated?.();
                 onClose();
                 handleCloseDialog();
             } else {
@@ -502,6 +504,7 @@ export default function Penalties({worklogId, onClose, requestOnly = false, vari
                 toast.success("Penalty deleted successfully");
                 closeDeletePenaltyDialog();
                 await fetchPenalties();
+                await onMutated?.();
                 onClose();
             } else {
                 toast.error(res.data?.message || 'Failed to delete penalty');
@@ -551,6 +554,7 @@ export default function Penalties({worklogId, onClose, requestOnly = false, vari
                 toast.success("Penalty time updated successfully");
                 closeEditPenaltyTimeDialog();
                 await fetchPenalties();
+                await onMutated?.();
             } else {
                 toast.error(res.data?.message || 'Failed to update penalty time');
             }
@@ -578,6 +582,7 @@ export default function Penalties({worklogId, onClose, requestOnly = false, vari
             if (res.data?.IsSuccess) {
                 toast.success('Penalty remove appeal request submitted successfully');
                 await fetchPenalties();
+                await onMutated?.();
             } else {
                 toast.error(res.data?.message || 'Failed to submit penalty remove request');
             }

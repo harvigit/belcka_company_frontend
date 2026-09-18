@@ -47,6 +47,7 @@ const menuItems = [
 interface SettingsProps {
     settingOpen: boolean;
     onClose: () => void;
+    onSaved?: () => void;
     initialActiveMenuItem?: string | null;
     initialProjectId?: number | null;
 }
@@ -54,6 +55,7 @@ interface SettingsProps {
 const Inex: React.FC<SettingsProps> = ({
     settingOpen,
     onClose,
+    onSaved,
     initialActiveMenuItem = null,
     initialProjectId = null,
 }) => {
@@ -73,6 +75,7 @@ const Inex: React.FC<SettingsProps> = ({
 
     const handleSaveSuccess = () => {
         setOpenSnackbar(true);
+        onSaved?.();
     };
 
     return (
@@ -186,7 +189,7 @@ const Inex: React.FC<SettingsProps> = ({
                             <ShiftManagement initialProjectId={initialProjectId} />
                         )}
                         {activeMenuItem === "Payroll" && (
-                            <Payroll />
+                            <Payroll onSaveSuccess={handleSaveSuccess} />
                         )}
                         {activeMenuItem === "Expense Category" && (
                             <CategoryList />

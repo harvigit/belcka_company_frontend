@@ -103,6 +103,7 @@ interface RequestDetailsProps {
     startDate?: Date | null;
     endDate?: Date | null;
     onClose: () => void;
+    onMutated?: () => void | Promise<void>;
     onUserChange?: (user: Index) => void;
 }
 
@@ -586,7 +587,7 @@ const RequestCard = React.memo<{
 
 RequestCard.displayName = 'RequestCard';
 
-const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_id, startDate, endDate, onClose }) => {
+const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_id, startDate, endDate, onClose, onMutated }) => {
     const { data: session } = useSession();
     const user = session?.user as User & { id: number; role_id: number };
     const [actionUsers, setActionUsers] = useState<number[]>([]);
@@ -774,6 +775,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
                     await delay(1500);
 
                     await fetchRequests(selectedDateRange.start, selectedDateRange.end);
+                    await onMutated?.();
                 } else {
                     showAlert(response.data.message || `Error ${action}ing request`, 'error');
                 }
@@ -787,7 +789,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
                 });
             }
         },
-        [fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, getApiErrorMessage, user_id]
+        [fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, getApiErrorMessage, user_id, onMutated]
     );
 
     const handleBulkAction = useCallback(async (action: 'approve' | 'reject', reason?: string) => {
@@ -831,6 +833,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
                 await delay(2000);
 
                 await fetchRequests(selectedDateRange.start, selectedDateRange.end);
+                await onMutated?.();
             } else {
                 showAlert(response.data.message || `Error ${action}ing all requests`, 'error');
             }
@@ -839,7 +842,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
         } finally {
             setLoading(false);
         }
-    }, [pendingRequests, requestTimeEdits, fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, getApiErrorMessage, user_id]);
+    }, [pendingRequests, requestTimeEdits, fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, getApiErrorMessage, user_id, onMutated]);
 
     const handleApproveRequest = useCallback((requestId: number, edit?: RequestTimeEdit) => {
         return handleSingleRequest(requestId, 'approve', undefined, edit);
@@ -866,6 +869,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
             if (response.data.IsSuccess) {
                 showAlert(response.data.message || 'Requested work time updated successfully', 'success');
                 await fetchRequests(selectedDateRange.start, selectedDateRange.end);
+                await onMutated?.();
                 return true;
             } else {
                 showAlert(response.data.message || 'Failed to update requested work time', 'error');
@@ -881,7 +885,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
                 return newSet;
             });
         }
-    }, [fetchRequests, getApiErrorMessage, selectedDateRange.end, selectedDateRange.start, showAlert, user_id]);
+    }, [fetchRequests, getApiErrorMessage, selectedDateRange.end, selectedDateRange.start, showAlert, user_id, onMutated]);
 
     const handleRequestTimeEditChange = useCallback((requestId: number, edit: RequestTimeEdit) => {
         setRequestTimeEdits(prev => ({

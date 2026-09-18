@@ -473,7 +473,9 @@ const TimeClock = ({queryParams}: Props) => {
 
     const [selectedTimeClock, setSelectedTimeClock] = useState<Index | null>(null);
     const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
-    const [hasDataChanged, setHasDataChanged] = useState<boolean>(false);
+    const hasDataChangedRef = useRef(false);
+    const settingsSavedRef = useRef(false);
+    const conflictsMutatedRef = useRef(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isPaidActionPending, setIsPaidActionPending] = useState(false);
@@ -921,23 +923,6 @@ const TimeClock = ({queryParams}: Props) => {
         fetchConflictsData(startDate, endDate);
     }, [cycleReady, startDate, endDate]);
 
-    useEffect(() => {
-        if (!hasDataChanged) return;
-
-        const timer = setTimeout(async () => {
-            try {
-                const s = startDate || defaultStart;
-                const e = endDate || defaultEnd;
-                await fetchData(s, e);
-                await fetchConflictsData(s, e);
-            } catch (error) {
-                console.error('Background refresh failed:', error);
-            }
-        }, 3000);
-
-        return () => clearTimeout(timer);
-    }, [hasDataChanged, startDate, endDate]);
-
     const handleClearSessionFilter = () => {
         sessionStorage.removeItem('timesheet_sensitive_params');
 
@@ -1057,6 +1042,7 @@ const TimeClock = ({queryParams}: Props) => {
     const hasAnyConflicts = totalConflictsCount > 0;
 
     const handleConflicts = async () => {
+        conflictsMutatedRef.current = false;
         setConflictSidebar(true);
         setSelectedConflictUserId(null);
     };
@@ -1064,7 +1050,14 @@ const TimeClock = ({queryParams}: Props) => {
     const closeConflictSidebar = async () => {
         setConflictSidebar(false);
         setSelectedConflictUserId(null);
+        const mutated = conflictsMutatedRef.current;
+        conflictsMutatedRef.current = false;
         try {
+            if (mutated) {
+                const s = startDate || defaultStart;
+                const e = endDate || defaultEnd;
+                await fetchData(s, e);
+            }
             await fetchConflictsData();
         } catch (error) {
             console.error('Error fetching time clock data after closing conflict sidebar:', error);
@@ -1074,11 +1067,15 @@ const TimeClock = ({queryParams}: Props) => {
     const handleSettingOpen = () => {
         setSettingsInitialMenu(null);
         setSettingsInitialProjectId(null);
+        settingsSavedRef.current = false;
         setSettingOpen(true);
     };
 
     const handleSettingClose = async () => {
         setSettingOpen(false);
+        const didSave = settingsSavedRef.current;
+        settingsSavedRef.current = false;
+        if (!didSave) return;
 
         try {
             const response = await api.get('/setting/get-payroll-settings');
@@ -1497,19 +1494,22 @@ const TimeClock = ({queryParams}: Props) => {
         setDetailsOpen(false);
         setSelectedTimeClock(null);
 
+        if (!hasDataChangedRef.current) return;
+
         const s = startDate || defaultStart;
         const e = endDate || defaultEnd;
         try {
             await fetchData(s, e);
             await fetchConflictsData(s, e);
-            setHasDataChanged(false);
         } catch (error) {
             setErrorMessage('Failed to refresh data. Please try again.');
+        } finally {
+            hasDataChangedRef.current = false;
         }
     };
 
     const handleDataChange = () => {
-        setHasDataChanged(true);
+        hasDataChangedRef.current = true;
     };
 
     const filteredData = useMemo(() => {
@@ -1651,6 +1651,7 @@ const TimeClock = ({queryParams}: Props) => {
                                 aria-label={`${conflictCount} scheduling conflict${conflictCount !== 1 ? 's' : ''}`}
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    conflictsMutatedRef.current = false;
                                     setConflictSidebar(true);
                                     setSelectedConflictUserId(userId);
                                 }}
@@ -2311,10 +2312,6 @@ const TimeClock = ({queryParams}: Props) => {
                 window.URL.revokeObjectURL(url);
 
                 clearSelectedRows();
-
-                if (startDate && endDate) {
-                    await fetchData(startDate, endDate);
-                }
             } else {
                 throw new Error(response.data.message || 'Export request failed');
             }
@@ -2471,7 +2468,6 @@ const TimeClock = ({queryParams}: Props) => {
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
                 clearSelectedRows();
-                setHasDataChanged(true);
 
                 const s = startDate || defaultStart;
                 const e = endDate || defaultEnd;
@@ -2533,7 +2529,6 @@ const TimeClock = ({queryParams}: Props) => {
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
                 clearSelectedRows();
-                setHasDataChanged(true);
 
                 await fetchData(s, e);
                 await fetchConflictsData(s, e);
@@ -2848,6 +2843,9 @@ const TimeClock = ({queryParams}: Props) => {
                             <Settings
                                 settingOpen={settingOpen}
                                 onClose={handleSettingClose}
+                                onSaved={() => {
+                                    settingsSavedRef.current = true;
+                                }}
                                 initialActiveMenuItem={settingsInitialMenu}
                                 initialProjectId={settingsInitialProjectId}
                             />
@@ -3707,6 +3705,7 @@ const TimeClock = ({queryParams}: Props) => {
                 open={requestList}
                 onRequestCountChange={(count: number) => setRequestCount(count || 0)}
                 onClose={() => setRequestList(false)}
+                onDataRefresh={refreshTimeClockData}
                 isAdmin={true}
                 showRequestActions
             />
@@ -3715,6 +3714,7 @@ const TimeClock = ({queryParams}: Props) => {
             <RecoverWorklogs
                 open={openRecoverWorklogs}
                 onClose={() => setOpenRecoverWorklogs(false)}
+                onDataRefresh={refreshTimeClockData}
                 startDate={startDate}
                 endDate={endDate}
             />
@@ -3759,6 +3759,9 @@ const TimeClock = ({queryParams}: Props) => {
                     onClose={() => {
                         closeConflictSidebar();
                         setSelectedConflictUserId(null);
+                    }}
+                    onMutated={() => {
+                        conflictsMutatedRef.current = true;
                     }}
                     startDate={startDate ? format(startDate, 'yyyy-MM-dd') : format(defaultStart, 'yyyy-MM-dd')}
                     endDate={endDate ? format(endDate, 'yyyy-MM-dd') : format(defaultEnd, 'yyyy-MM-dd')}

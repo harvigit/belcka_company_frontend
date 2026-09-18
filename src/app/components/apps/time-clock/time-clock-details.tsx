@@ -566,6 +566,13 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setSearch('');
     };
 
+    const refreshDetailsAfterMutation = useCallback(async () => {
+        onDataChange?.();
+        const defaultStartDate = startDate || defaultStart;
+        const defaultEndDate = endDate || defaultEnd;
+        await fetchTimeClockData(defaultStartDate, defaultEndDate);
+    }, [startDate, endDate, fetchTimeClockData, onDataChange]);
+
     const handleDateRangeChange = useCallback(
         (range: { from: Date | null; to: Date | null }) => {
             if (range.from && range.to) {
@@ -573,10 +580,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 setEndDate(range.to);
                 setData([]);
                 fetchTimeClockData(range.from, range.to);
-                onDataChange?.();
             }
         },
-        [fetchTimeClockData, onDataChange]
+        [fetchTimeClockData]
     );
 
     const handleFilterChange = (value: string) => {
@@ -640,11 +646,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
 
-                const defaultStartDate = startDate || defaultStart;
-                const defaultEndDate = endDate || defaultEnd;
-                await fetchTimeClockData(defaultStartDate, defaultEndDate);
                 setSelectedRows(new Set());
-                onDataChange?.();
             } else {
                 throw new Error(response.data.message || 'Export request failed');
             }
@@ -668,18 +670,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setConflictSidebar(true);
     };
 
-    const closeConflictSidebar = async () => {
+    const closeConflictSidebar = () => {
         setConflictSidebar(false);
-        try {
-            if (conflictDetails?.length > 0) {
-                const defaultStartDate = startDate || defaultStart;
-                const defaultEndDate = endDate || defaultEnd;
-                await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                onDataChange?.();
-            }
-        } catch (error) {
-            console.error('Error fetching time clock data after closing conflict sidebar:', error);
-        }
     };
 
     const handleLeaveRequests = async () => {
@@ -713,17 +705,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     }, []);
 
 
-    const closeLeaveRequestSidebar = async () => {
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-
-            setLeaveRequestSidebar(false);
-        } catch (error) {
-            console.error('Error fetching time clock data after closing leaves sidebar:', error);
-        }
+    const closeLeaveRequestSidebar = () => {
+        setLeaveRequestSidebar(false);
     };
 
     const handleChecklogs = async (worklogId: number) => {
@@ -731,16 +714,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setSelectedWorkId(worklogId)
     };
 
-    const closeChecklogsSidebar = async () => {
+    const closeChecklogsSidebar = () => {
         setChecklogsSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error fetching time clock data after closing checklogs sidebar:', error);
-        }
     };
 
     const handleExpenses = async (expenseId: number) => {
@@ -748,16 +723,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setSelectedExpenseId(expenseId)
     };
 
-    const closeExpensesSidebar = async () => {
+    const closeExpensesSidebar = () => {
         setExpensesSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error fetching time clock data after closing expenses sidebar:', error);
-        }
     };
 
     const handlePenalties = async (worklogId: number) => {
@@ -765,16 +732,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setSelectedWorkId(worklogId)
     };
 
-    const closePenaltiesSidebar = async () => {
+    const closePenaltiesSidebar = () => {
         setPenaltiesSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error fetching time clock data after closing penalties sidebar:', error);
-        }
     };
 
     const handleAddLeave = async () => {
@@ -843,28 +802,12 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setAdjustmentActivitySidebar(true);
     };
 
-    const closeAddLeaveSidebar = async () => {
+    const closeAddLeaveSidebar = () => {
         setAddLeaveSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error fetching time clock data after closing add leave sidebar:', error);
-        }
     };
 
-    const closeAddExpenseSidebar = async () => {
+    const closeAddExpenseSidebar = () => {
         setAddExpenseSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error fetching time clock data after closing add expense sidebar:', error);
-        }
     };
 
     const closeAddPriceworkSidebar = async () => {
@@ -872,16 +815,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setSelectedPricework(null);
     };
 
-    const closeAddAdjustmentSidebar = async () => {
+    const closeAddAdjustmentSidebar = () => {
         setAddAdjustmentSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
-        } catch (error) {
-            console.error('Error fetching time clock data after closing add adjustment sidebar:', error);
-        }
     };
 
     const closeAdjustmentActivitySidebar = () => {
@@ -893,18 +828,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setRequestListOpen(true);
     };
 
-    const closeRequestList = async () => {
+    const closeRequestList = () => {
         setRequestListOpen(false);
-        try {
-            if (pendingRequestCount > 0) {
-                const defaultStartDate = startDate || defaultStart;
-                const defaultEndDate = endDate || defaultEnd;
-                await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                onDataChange?.();
-            }
-        } catch (error) {
-            console.error('Error fetching time clock data after closing request list:', error);
-        }
     };
 
     const handleAdjustmentSave = async (date: string, amount: number) => {
@@ -922,8 +847,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             if (response.data.IsSuccess) {
                 const defaultStartDate = startDate || defaultStart;
                 const defaultEndDate = endDate || defaultEnd;
-                await fetchTimeClockData(defaultStartDate, defaultEndDate);
                 onDataChange?.();
+                await fetchTimeClockData(defaultStartDate, defaultEndDate);
             }
         } catch (error) {
             console.error('Error saving adjustment:', error);
@@ -1015,9 +940,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
-
             onDataChange?.();
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
         } catch (error) {
             console.error('Error saving worklog:', error);
             toast.error((error as any)?.response?.data?.message || 'Failed to save worklog changes');
@@ -1072,10 +996,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             });
 
             cancelEditingShift(worklogId);
+            onDataChange?.();
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
             await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
         } catch (error) {
             console.error('Error saving shift:', error);
         } finally {
@@ -1112,10 +1036,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             });
 
             cancelEditingProject(worklogId);
+            onDataChange?.();
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
             await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            onDataChange?.();
         } catch (error) {
             console.error('Error saving project:', error);
         } finally {
@@ -1189,9 +1113,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
                 const defaultStartDate = startDate || defaultStart;
                 const defaultEndDate = endDate || defaultEnd;
-                await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                
                 onDataChange?.();
+                await fetchTimeClockData(defaultStartDate, defaultEndDate);
             } else {
                 toast.error(response.data.message || 'Failed to save worklog');
                 cancelNewRecord(recordKey);
@@ -1505,9 +1428,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             } as any);
 
             if (response.data.IsSuccess) {
+                onDataChange?.();
                 await fetchTimeClockData(defaultStartDate, defaultEndDate);
                 setSelectedRows(new Set());
-                onDataChange?.();
             } else {
                 console.error(`Error ${action}ing timesheets`);
                 if (action === 'approve' || action === 'unapprove') {
@@ -1520,6 +1443,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 try {
                     const defaultStartDate = startDate || defaultStart;
                     const defaultEndDate = endDate || defaultEnd;
+                    onDataChange?.();
                     await fetchTimeClockData(defaultStartDate, defaultEndDate);
                 } catch (refreshError) {
                     console.error(`Error refreshing time clock after ${action === 'approve' ? 'lock' : 'unlock'} request:`, refreshError);
@@ -1740,9 +1664,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
 
+            onDataChange?.();
             await fetchTimeClockData(defaultStartDate, defaultEndDate);
             setSelectedRows(new Set());
-            onDataChange?.();
 
         } catch (error) {
             console.error('Error deleting records:', error);
@@ -1901,9 +1825,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 const defaultStartDate = startDate || defaultStart;
                 const defaultEndDate = endDate || defaultEnd;
 
+                onDataChange?.();
                 await fetchTimeClockData(defaultStartDate, defaultEndDate);
                 setSelectedRows(new Set());
-                onDataChange?.();
             } else {
                 console.error(`Error deleting ${type}`);
             }
@@ -2413,6 +2337,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     conflictDetails={conflictDetails}
                     totalConflicts={totalConflicts}
                     onClose={closeConflictSidebar}
+                    onMutated={refreshDetailsAfterMutation}
                     startDate={startDate ? format(startDate, 'yyyy-MM-dd') : format(defaultStart, 'yyyy-MM-dd')}
                     endDate={endDate ? format(endDate, 'yyyy-MM-dd') : format(defaultEnd, 'yyyy-MM-dd')}
                 />
@@ -2438,6 +2363,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     startDate={startDate}
                     endDate={endDate}
                     onClose={closeLeaveRequestSidebar}
+                    onRefresh={refreshDetailsAfterMutation}
                     companyId={companyId}
                     userId={user_id}
                 />
@@ -2461,6 +2387,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 <Checklogs
                     worklogId={selectedWorkId}
                     onClose={closeChecklogsSidebar}
+                    onMutated={refreshDetailsAfterMutation}
                 />
             </Drawer>
 
@@ -2482,6 +2409,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 <Expenses
                     expenseId={selectedExpenseId}
                     onClose={closeExpensesSidebar}
+                    onMutated={refreshDetailsAfterMutation}
                 />
             </Drawer>
 
@@ -2503,6 +2431,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 <Penalties
                     worklogId={selectedWorkId}
                     onClose={closePenaltiesSidebar}
+                    onMutated={refreshDetailsAfterMutation}
                     requestOnly
                     variant="time-clock"
                 />
@@ -2549,6 +2478,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     onClose={closeAddLeaveSidebar}
                     userId={user_id}
                     companyId={companyId}
+                    onDataRefresh={refreshDetailsAfterMutation}
                 />
             </Drawer>
 
@@ -2572,6 +2502,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     userId={user_id}
                     selectUser={false}
                     companyId={companyId}
+                    onDataRefresh={refreshDetailsAfterMutation}
                 />
             </Drawer>
 
@@ -2595,12 +2526,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     userId={user_id}
                     initialFrom={startDate}
                     initialTo={endDate}
-                    onDataRefresh={async () => {
-                        const defaultStartDate = startDate || defaultStart;
-                        const defaultEndDate = endDate || defaultEnd;
-                        await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                        onDataChange?.();
-                    }}
+                    onDataRefresh={refreshDetailsAfterMutation}
                 />
             </Drawer>
 
@@ -2624,12 +2550,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     userId={user_id}
                     companyId={companyId}
                     pricework={selectedPricework}
-                    onDataRefresh={async () => {
-                        const defaultStartDate = startDate || defaultStart;
-                        const defaultEndDate = endDate || defaultEnd;
-                        await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                        await onDataChange?.();
-                    }}
+                    onDataRefresh={refreshDetailsAfterMutation}
                 />
             </Drawer>
 
@@ -2680,6 +2601,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     startDate={startDate}
                     endDate={endDate}
                     onClose={closeRequestList}
+                    onMutated={refreshDetailsAfterMutation}
                     onUserChange={onUserChange}
                 />
             </Drawer>

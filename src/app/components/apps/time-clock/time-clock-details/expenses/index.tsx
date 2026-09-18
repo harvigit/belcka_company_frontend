@@ -36,6 +36,7 @@ import {getInitials} from '@/app/components/apps/expenses/list/types';
 interface ExpensesPageProps {
     expenseId: number;
     onClose: () => void;
+    onMutated?: () => void | Promise<void>;
     /** When true, only the attachments section is shown (Expense list page). */
     attachmentsOnly?: boolean;
 }
@@ -219,7 +220,7 @@ const selectMenuProps = {
     },
 };
 
-export default function Expenses({expenseId, onClose, attachmentsOnly = false}: ExpensesPageProps) {
+export default function Expenses({expenseId, onClose, onMutated, attachmentsOnly = false}: ExpensesPageProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const [saving, setSaving] = useState(false);
     const [editing, setEditing] = useState(false);
@@ -344,6 +345,7 @@ export default function Expenses({expenseId, onClose, attachmentsOnly = false}: 
             toast.success(res.data?.message || 'Expense updated successfully');
             setEditing(false);
             await fetchExpenseDetail();
+            await onMutated?.();
         } catch (error: any) {
             toast.error(error?.response?.data?.message || 'Failed to update expense');
         } finally {
@@ -363,6 +365,7 @@ export default function Expenses({expenseId, onClose, attachmentsOnly = false}: 
             const response = await api.post('expense/delete', {expense_id: expenseDetail.id});
             if (response.data && typeof response.data === 'object' && response.data.IsSuccess) {
                 toast.success(response.data.message || 'Expense deleted successfully');
+                await onMutated?.();
                 onClose();
             } else {
                 toast.error(response.data?.message || 'Failed to delete expense');

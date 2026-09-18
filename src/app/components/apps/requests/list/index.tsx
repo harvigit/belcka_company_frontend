@@ -47,6 +47,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onRequestCountChange: any;
+  onDataRefresh?: () => void | Promise<void>;
   isAdmin?: boolean;
   showRequestActions?: boolean;
 }
@@ -150,6 +151,7 @@ export default function UserRequests({
   open,
   onClose,
   onRequestCountChange,
+  onDataRefresh,
   isAdmin,
   showRequestActions = false,
 }: Props) {
@@ -455,6 +457,7 @@ export default function UserRequests({
         if (startDate && endDate) {
           await fetchRequests(startDate, endDate, filters, debouncedSearch);
         }
+        await onDataRefresh?.();
       }
     } catch (err: any) {
       console.error(err, "error while approving or rejecting this request!");

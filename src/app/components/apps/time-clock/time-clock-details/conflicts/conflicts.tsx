@@ -159,6 +159,7 @@ interface ConflictsProps {
     conflictDetails: Conflict[];
     totalConflicts: number;
     onClose: () => void;
+    onMutated?: () => void | Promise<void>;
     startDate: string;
     endDate: string;
     selectedUserId?: number | string | null;
@@ -571,6 +572,7 @@ export default function Conflicts({
                                       conflictDetails,
                                       totalConflicts,
                                       onClose,
+                                      onMutated,
                                       startDate,
                                       endDate,
                                       selectedUserId
@@ -615,6 +617,7 @@ export default function Conflicts({
 
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
+                await onMutated?.();
                 onClose();
             }
         } catch (err) {
@@ -638,6 +641,7 @@ export default function Conflicts({
 
                 if (res.data.IsSuccess) {
                     toast.success(res.data.message);
+                    await onMutated?.();
                     onClose();
                 }
 
@@ -651,6 +655,7 @@ export default function Conflicts({
 
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
+                await onMutated?.();
                 onClose();
             }
         } catch (err) {
@@ -768,7 +773,10 @@ export default function Conflicts({
                                         index={idx}
                                         startDate={startDate}
                                         endDate={endDate}
-                                        onClose={onClose}
+                                        onClose={async () => {
+                                            await onMutated?.();
+                                            onClose();
+                                        }}
                                         onApprove={handleApprove}
                                         onReject={handleReject}
                                         isLoading={isLoading}

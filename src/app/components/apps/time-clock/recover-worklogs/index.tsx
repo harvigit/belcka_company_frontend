@@ -76,13 +76,14 @@ const formatTime = (timeStr: string | null): string => {
 interface RecoverWorklogsProps {
     open: boolean;
     onClose: () => void;
+    onDataRefresh?: () => void | Promise<void>;
     startDate: Date | null;   // passed from TimeClock parent
     endDate: Date | null;     // passed from TimeClock parent
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const RecoverWorklogs = ({ open, onClose, startDate, endDate }: RecoverWorklogsProps) => {
+const RecoverWorklogs = ({ open, onClose, onDataRefresh, startDate, endDate }: RecoverWorklogsProps) => {
     const session  = useSession();
     const authUser = session.data?.user as User & {
         company_id?: number | null;
@@ -128,6 +129,7 @@ const RecoverWorklogs = ({ open, onClose, startDate, endDate }: RecoverWorklogsP
             if (res.data?.IsSuccess) {
                 setData((prev) => prev.filter((row) => row.id !== id));
                 setSuccessMessage(res.data?.message ?? 'Worklog restored successfully.');
+                await onDataRefresh?.();
             }
         } catch {}
         setRestoringId(null);

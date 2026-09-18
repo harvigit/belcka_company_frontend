@@ -110,7 +110,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({open, startDate, endDate, on
             const response = await api.post(`/user-leaves/approve?user_leave_id=${user_leave_id}`);
 
             if (response.data.IsSuccess) {
-                onRefresh?.();
+                await onRefresh?.();
                 onClose();
             }
         } catch (error) {
@@ -128,8 +128,6 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({open, startDate, endDate, on
     const closeAddLeaveSidebar = () => {
         setAddLeaveSidebar(false);
         setEditLeaveRequest(undefined);
-        onClose();
-        onRefresh?.();
     };
 
     const handleReject = async (user_leave_id: number) => {
@@ -138,7 +136,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({open, startDate, endDate, on
             const response = await api.post(`/user-leaves/reject?user_leave_id=${user_leave_id}`);
 
             if (response.data.IsSuccess) {
-                onRefresh?.();
+                await onRefresh?.();
                 onClose();
             }
         } catch (error) {
@@ -435,6 +433,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({open, startDate, endDate, on
                     leaveData={editLeaveRequest}
                     userId={userId}
                     companyId={companyId}
+                    onDataRefresh={onRefresh}
                 />
             </Drawer>
         </Box>
