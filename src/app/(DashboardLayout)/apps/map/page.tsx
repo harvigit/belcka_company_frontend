@@ -21,6 +21,7 @@ const MapPage = () => {
             onUpdate={() => {}}
             projectId={null}
             companyId={user?.company_id ?? null}
+            showAllWorkingUsers
           />
         </PermissionGuard>
       </BlankCard>

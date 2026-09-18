@@ -421,6 +421,7 @@ type Props = {
   hideClose?: boolean;
   projectScopeOnly?: boolean;
   hideAddZone?: boolean;
+  showAllWorkingUsers?: boolean;
 };
 
 const LONDON_CENTER = { lat: 51.5074, lng: -0.1278 };
@@ -628,6 +629,7 @@ export default function MapGantt({
   hideClose = false,
   projectScopeOnly = false,
   hideAddZone = false,
+  showAllWorkingUsers = false,
 }: Props) {
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -827,6 +829,8 @@ export default function MapGantt({
         company_id: user.company_id,
         datetime: apiDateTime,
       };
+
+      if (showAllWorkingUsers) params.show_all_working_users = true;
 
       if (activeFilters.teams.length > 0)
         params.teams = activeFilters.teams.join(",");
