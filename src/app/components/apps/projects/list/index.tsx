@@ -266,6 +266,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   };
 
   const handleCreate = () => {
+    handleClose();
     setFormData({ ...initialFormData, company_id: user?.company_id || 0 });
     setDrawerOpen(true);
   };
