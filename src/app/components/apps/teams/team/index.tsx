@@ -54,7 +54,6 @@ import {
   IconArrowLeft,
   IconEdit,
   IconCheck,
-  IconCalendar,
 } from "@tabler/icons-react";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import api from "@/utils/axios";
@@ -77,8 +76,6 @@ import Link from "next/link";
 import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import EditTeam from "../edit";
-import { DayPicker } from "react-day-picker";
-import "react-day-picker/dist/style.css";
 
 dayjs.extend(customParseFormat);
 
@@ -186,10 +183,6 @@ const TablePagination = () => {
   const [enabled, setEnabled] = useState<boolean>(false);
 
   const [geoSettings, setGeoSettings] = useState({ start: false, stop: false });
-  const [lastWorkedUntil, setLastWorkedUntil] = useState<Date | null>(null);
-  const [lastWorkedUntilAnchor, setLastWorkedUntilAnchor] =
-    useState<HTMLElement | null>(null);
-  const [savingLastWorkedUntil, setSavingLastWorkedUntil] = useState(false);
 
   const [openTeamHistory, setOpenTeamHistory] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
@@ -237,40 +230,12 @@ const TablePagination = () => {
     }
   };
 
-  const parseTeamDate = (value?: string | null) => {
-    if (!value) return null;
-    const parsed = dayjs(value, ["DD/MM/YYYY", "YYYY-MM-DD"], true);
-    return parsed.isValid() ? parsed.toDate() : null;
-  };
-
   const formatLastWorkedDate = (value?: string | null) => {
     if (!value) return "";
     const parsed = dayjs(value, ["YYYY-MM-DD", "DD/MM/YYYY"], true);
     if (parsed.isValid()) return parsed.format("DD/MM/YYYY");
     const fallback = dayjs(value);
     return fallback.isValid() ? fallback.format("DD/MM/YYYY") : value;
-  };
-
-  const saveLastWorkedUntil = async (date: Date | null) => {
-    if (!teamId) return;
-    setSavingLastWorkedUntil(true);
-    setLastWorkedUntil(date);
-    try {
-      const payload = {
-        team_id: Number(teamId),
-        last_worked_until: date ? dayjs(date).format("DD/MM/YYYY") : null,
-      };
-      const res = await api.post("/team/update-last-worked-until", payload);
-      if (res.data?.IsSuccess) {
-        toast.success(res.data.message || "Last worked date updated");
-        fetchData();
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update last worked date");
-    } finally {
-      setSavingLastWorkedUntil(false);
-    }
   };
 
   const handleSwitchToggle = () => {
@@ -352,7 +317,6 @@ const TablePagination = () => {
             type: firstTeam.type,
             start_date: firstTeam.start_date,
             end_date: firstTeam.end_date,
-            last_worked_until: firstTeam.last_worked_until,
             pending_cap_request: firstTeam.pending_cap_request,
           }));
         }
@@ -365,7 +329,6 @@ const TablePagination = () => {
             stop: team.is_stop_inside_boundary,
           };
           setGeoSettings(updatedSettings);
-          setLastWorkedUntil(parseTeamDate(team.last_worked_until));
 
           if (!team.users || team.users.length === 0) {
             return [];
@@ -1041,79 +1004,6 @@ const TablePagination = () => {
                     onChange={handleGeoToggle("stop")}
                   />
                 </Box>
-              </CardContent>
-            </BlankCard>
-          </Box>
-
-          <Box
-            sx={{
-              mt: 4,
-              borderRadius: 3,
-              boxShadow: "0px 2px 8px rgba(0,0,0,0.10)",
-              backgroundColor: "background.paper",
-              overflow: "hidden",
-            }}
-          >
-            <BlankCard>
-              <CardContent sx={{ padding: 2 }}>
-                <Typography variant="h6" mb={1.5}>
-                  Last worked as of
-                </Typography>
-                <TextField
-                  fullWidth
-                  size="small"
-                  value={
-                    lastWorkedUntil
-                      ? dayjs(lastWorkedUntil).format("DD/MM/YYYY")
-                      : ""
-                  }
-                  onClick={(event) =>
-                    setLastWorkedUntilAnchor(event.currentTarget)
-                  }
-                  placeholder="Select date"
-                  InputProps={{
-                    readOnly: true,
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        {lastWorkedUntil && (
-                          <IconButton
-                            size="small"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              saveLastWorkedUntil(null);
-                            }}
-                            disabled={savingLastWorkedUntil}
-                          >
-                            <IconX size={16} />
-                          </IconButton>
-                        )}
-                        <IconCalendar size={18} />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    cursor: "pointer",
-                    "& .MuiInputBase-input": { cursor: "pointer" },
-                  }}
-                />
-                <Popover
-                  open={Boolean(lastWorkedUntilAnchor)}
-                  anchorEl={lastWorkedUntilAnchor}
-                  onClose={() => setLastWorkedUntilAnchor(null)}
-                  anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-                  transformOrigin={{ vertical: "top", horizontal: "left" }}
-                >
-                  <Box p={2}>
-                    <DayPicker
-                      mode="single"
-                      selected={lastWorkedUntil ?? undefined}
-                      onSelect={(selectedDate) => {
-                        setLastWorkedUntilAnchor(null);
-                        saveLastWorkedUntil(selectedDate ?? null);
-                      }}
-                    />
-                  </Box>
-                </Popover>
               </CardContent>
             </BlankCard>
           </Box>
