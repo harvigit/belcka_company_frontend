@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Autocomplete,
   Avatar,
@@ -51,6 +51,7 @@ import {
 } from "@tanstack/react-table";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import Cookies from "js-cookie";
 import api from "@/utils/axios";
 import { tableFilterOptions } from "@/utils/uniqueFilterOptions";
 import { useServerTable } from "@/hooks/useServerTable";
@@ -101,6 +102,39 @@ const defaultFilters = {
   trade_id: "" as string | number,
   team_id: "" as string | number,
 };
+
+const PRICEWORK_FILTERS_COOKIE_PREFIX = "pricework-list-filters";
+const PRICEWORK_FILTER_COOKIE_OPTIONS = {
+  expires: 365,
+  path: "/",
+};
+
+type PriceworkStoredPreferences = {
+  filters?: Partial<typeof defaultFilters>;
+  search?: string;
+  activeTab?: PriceworkTabKey;
+  startDate?: string | null;
+  endDate?: string | null;
+};
+
+const isPriceworkTabKey = (value: unknown): value is PriceworkTabKey =>
+  ["all", "pending", "approved", "sent", "rejected"].includes(String(value));
+
+const parseStoredDate = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const normalizeStoredFilters = (
+  value?: Partial<typeof defaultFilters>,
+): typeof defaultFilters => ({
+  user_id: value?.user_id ?? "",
+  project_id: value?.project_id ?? "",
+  address_id: value?.address_id ?? "",
+  trade_id: value?.trade_id ?? "",
+  team_id: value?.team_id ?? "",
+});
 
 const formatAmount = (
   currency: string | null | undefined,
@@ -167,8 +201,15 @@ const getPriceworkRowKey = (row: PriceworkRow) => {
 
 const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
   const { data: session } = useSession();
-  const user = session?.user as User | undefined;
+  const user = session?.user as User & {
+    company_id?: number | null;
+    id?: string | number | null;
+  };
   const sharedFilters = useProjectDetailFilters();
+  const priceworkPreferencesCookieKey = useMemo(() => {
+    if (projectId || !user?.company_id) return null;
+    return `${PRICEWORK_FILTERS_COOKIE_PREFIX}_${user.id ?? "user"}_${user.company_id}`;
+  }, [projectId, user?.id, user?.company_id]);
 
   const [data, setData] = useState<PriceworkRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -195,6 +236,9 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
     projectId ? null : new Date(),
   );
   const [sharedFiltersReady, setSharedFiltersReady] = useState(!projectId);
+  const [preferencesHydrated, setPreferencesHydrated] = useState(
+    Boolean(projectId),
+  );
 
   useEffect(() => {
     if (!projectId) {
@@ -316,6 +360,70 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
       observer.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (projectId) {
+      setPreferencesHydrated(true);
+      return;
+    }
+    if (!priceworkPreferencesCookieKey) {
+      setPreferencesHydrated(false);
+      return;
+    }
+
+    try {
+      const stored = Cookies.get(priceworkPreferencesCookieKey);
+      if (stored) {
+        const parsed = JSON.parse(stored) as PriceworkStoredPreferences;
+        setFilters(normalizeStoredFilters(parsed.filters));
+        setTempFilters(normalizeStoredFilters(parsed.filters));
+        if ("startDate" in parsed || "endDate" in parsed) {
+          setStartDate(parseStoredDate(parsed.startDate));
+          setEndDate(parseStoredDate(parsed.endDate));
+        }
+        setSearch(typeof parsed.search === "string" ? parsed.search : "");
+        setActiveTab(
+          isPriceworkTabKey(parsed.activeTab) ? parsed.activeTab : "all",
+        );
+      }
+    } catch (error) {
+      console.error("Failed to load pricework list preferences cookie:", error);
+      Cookies.remove(priceworkPreferencesCookieKey, { path: "/" });
+    } finally {
+      setPreferencesHydrated(true);
+    }
+  }, [priceworkPreferencesCookieKey, projectId]);
+
+  const savePriceworkPreferencesCookie = useCallback(() => {
+    if (projectId || !priceworkPreferencesCookieKey || !preferencesHydrated) {
+      return;
+    }
+
+    Cookies.set(
+      priceworkPreferencesCookieKey,
+      JSON.stringify({
+        filters,
+        search,
+        activeTab,
+        startDate: startDate ? startDate.toISOString() : null,
+        endDate: endDate ? endDate.toISOString() : null,
+      } satisfies PriceworkStoredPreferences),
+      PRICEWORK_FILTER_COOKIE_OPTIONS,
+    );
+  }, [
+    activeTab,
+    endDate,
+    filters,
+    preferencesHydrated,
+    priceworkPreferencesCookieKey,
+    projectId,
+    search,
+    startDate,
+  ]);
+
+  useEffect(() => {
+    savePriceworkPreferencesCookie();
+  }, [savePriceworkPreferencesCookie]);
   
   const clearSelection = () => {
     setIsSelectAll(false);
@@ -1629,6 +1737,7 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
     if (!user?.company_id) return;
     // Wait for shared project filters so we don't fetch with the wrong date range.
     if (projectId && !sharedFiltersReady) return;
+    if (!projectId && !preferencesHydrated) return;
     setLoading(true);
     try {
       let url = `pricework/list-web?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -1780,6 +1889,7 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
     debounceDependencies: [
       user?.company_id,
       sharedFiltersReady,
+      preferencesHydrated,
       search,
       startDate ? format(startDate, "yyyy-MM-dd") : "",
       endDate ? format(endDate, "yyyy-MM-dd") : "",

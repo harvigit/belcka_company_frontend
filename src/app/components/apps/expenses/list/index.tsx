@@ -1047,9 +1047,15 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                     setEndDate(sharedFilters.endDate);
                 } else {
                     setStartDate(
-                        parseStoredDate(parsed.startDate) ?? subDays(new Date(), 6),
+                        'startDate' in parsed
+                            ? parseStoredDate(parsed.startDate)
+                            : subDays(new Date(), 6),
                     );
-                    setEndDate(parseStoredDate(parsed.endDate) ?? new Date());
+                    setEndDate(
+                        'endDate' in parsed
+                            ? parseStoredDate(parsed.endDate)
+                            : new Date(),
+                    );
                 }
 
                 setFilters(nextFilters);
