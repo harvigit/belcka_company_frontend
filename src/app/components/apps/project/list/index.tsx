@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -41,6 +41,7 @@ import api from "@/utils/axios";
 import { useServerTable } from "@/hooks/useServerTable";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
@@ -81,27 +82,30 @@ export type ProjectDashboardRow = {
   currency: string;
   total_amount?: number;
   total_amount_formatted?: string;
+  material?: number;
+  labour?: number;
+  material_issue?: number;
+  expense?: number;
+  collect?: number;
+  material_formatted?: string;
+  labour_formatted?: string;
+  material_issue_formatted?: string;
+  expense_formatted?: string;
+  collect_formatted?: string;
 };
 
 type ProjectListingExportTotals = {
-  working_teams: number;
-  total_working_users: number;
-  limit: number;
-  checkins_7_days: number;
-  checkins_30_days: number;
-  total_checkins: number;
-  checking_hour: number;
-  shift_hour: number;
-  checking_hour_formatted: string;
-  shift_hour_formatted: string;
-  cases: number;
-  open: number;
-  close: number;
-  in_amount: number;
-  out_amount: number;
+  material: number;
+  labour: number;
+  material_issue: number;
+  expense: number;
+  collect: number;
   total_amount: number;
-  in_amount_formatted: string;
-  out_amount_formatted: string;
+  material_formatted: string;
+  labour_formatted: string;
+  material_issue_formatted: string;
+  expense_formatted: string;
+  collect_formatted: string;
   total_amount_formatted: string;
 };
 
@@ -119,116 +123,47 @@ const formatActivityDate = (value?: string | null) => {
   return fallback.isValid() ? fallback.format("DD/MM/YYYY") : "-";
 };
 
-const getExportPreviewColumns = (currencySymbol: string) => [
+const getExportPreviewColumns = () => [
   {
     key: "name",
-    label: "Name",
+    label: "Project",
     render: (row: ProjectDashboardRow) => row.name || "-",
     footer: () => "Category Totals",
   },
   {
-    key: "uuid",
-    label: "ID",
-    render: (row: ProjectDashboardRow) => row.uuid || "-",
-  },
-  {
-    key: "working_teams",
-    label: "Teams",
-    render: (row: ProjectDashboardRow) => row.working_teams || 0,
-    footer: (totals: ProjectListingExportTotals) => totals.working_teams || 0,
-  },
-  {
-    key: "total_working_users",
-    label: "On site",
-    render: (row: ProjectDashboardRow) => row.total_working_users || 0,
+    key: "material",
+    label: "Material",
+    render: (row: ProjectDashboardRow) => row.material_formatted || "-",
     footer: (totals: ProjectListingExportTotals) =>
-      totals.total_working_users || 0,
+      totals.material_formatted || "-",
   },
   {
-    key: "limit",
-    label: "Limit",
-    render: (row: ProjectDashboardRow) => row.limit || 0,
-    footer: (totals: ProjectListingExportTotals) => totals.limit || 0,
-  },
-  {
-    key: "checkins_7_days",
-    label: "Avrg 7 days",
-    render: (row: ProjectDashboardRow) => row.checkins_7_days || 0,
+    key: "labour",
+    label: "Labour",
+    render: (row: ProjectDashboardRow) => row.labour_formatted || "-",
     footer: (totals: ProjectListingExportTotals) =>
-      totals.checkins_7_days || 0,
+      totals.labour_formatted || "-",
   },
   {
-    key: "checkins_30_days",
-    label: "Avrg 30 days",
-    render: (row: ProjectDashboardRow) => row.checkins_30_days || 0,
+    key: "material_issue",
+    label: "Material Issue",
+    render: (row: ProjectDashboardRow) => row.material_issue_formatted || "-",
     footer: (totals: ProjectListingExportTotals) =>
-      totals.checkins_30_days || 0,
+      totals.material_issue_formatted || "-",
   },
   {
-    key: "total_checkins",
-    label: "Total Check in",
-    render: (row: ProjectDashboardRow) => row.total_checkins || 0,
-    footer: (totals: ProjectListingExportTotals) => totals.total_checkins || 0,
-  },
-  {
-    key: "checking_hour",
-    label: "Check in Hours",
-    render: (row: ProjectDashboardRow) =>
-      Number(row.checking_hour || 0).toFixed(2),
+    key: "expense",
+    label: "Expense",
+    render: (row: ProjectDashboardRow) => row.expense_formatted || "-",
     footer: (totals: ProjectListingExportTotals) =>
-      totals.checking_hour_formatted ||
-      Number(totals.checking_hour || 0).toFixed(2),
+      totals.expense_formatted || "-",
   },
   {
-    key: "shift_hour",
-    label: "Shift Hours",
-    render: (row: ProjectDashboardRow) =>
-      Number(row.shift_hour || 0).toFixed(2),
+    key: "collect",
+    label: "Collect",
+    render: (row: ProjectDashboardRow) => row.collect_formatted || "-",
     footer: (totals: ProjectListingExportTotals) =>
-      totals.shift_hour_formatted || Number(totals.shift_hour || 0).toFixed(2),
-  },
-  {
-    key: "risk_percent",
-    label: "Risk",
-    render: (row: ProjectDashboardRow) => row.risk_percent || "0%",
-  },
-  {
-    key: "activity",
-    label: "Activity",
-    render: (row: ProjectDashboardRow) =>
-      formatActivityDate(row.last_activity_date),
-  },
-  {
-    key: "cases",
-    label: "Case",
-    render: (row: ProjectDashboardRow) => row.cases || 0,
-    footer: (totals: ProjectListingExportTotals) => totals.cases || 0,
-  },
-  {
-    key: "open",
-    label: "Open",
-    render: (row: ProjectDashboardRow) => row.open || 0,
-    footer: (totals: ProjectListingExportTotals) => totals.open || 0,
-  },
-  {
-    key: "close",
-    label: "Close",
-    render: (row: ProjectDashboardRow) => row.close || 0,
-    footer: (totals: ProjectListingExportTotals) => totals.close || 0,
-  },
-  {
-    key: "in_amount",
-    label: `In (${currencySymbol})`,
-    render: (row: ProjectDashboardRow) => row.in_amount_formatted || "-",
-    footer: (totals: ProjectListingExportTotals) =>
-      totals.in_amount_formatted || "-",
-  },
-  {
-    key: "out_amount",
-    label: `Out (${currencySymbol})`,
-    render: (row: ProjectDashboardRow) => row.out_amount_formatted || "-",
-    footer: (totals: ProjectListingExportTotals) =>
-      totals.out_amount_formatted || "-",
+      totals.collect_formatted || "-",
   },
   {
     key: "total_amount",
@@ -247,6 +182,7 @@ const NumberCell = ({ value }: { value: number | string }) => (
 
 const HeaderLabel = ({ children }: { children: React.ReactNode }) => (
   <Typography
+    component="span"
     variant="subtitle2"
     sx={{ whiteSpace: "nowrap", lineHeight: 1.2 }}
   >
@@ -257,13 +193,17 @@ const HeaderLabel = ({ children }: { children: React.ReactNode }) => (
 const StackedHeader = ({ top, bottom }: { top: string; bottom: string }) => (
   <Box>
     <Typography
+      component="span"
       variant="subtitle2"
+      display="block"
       sx={{ whiteSpace: "nowrap", lineHeight: 1.15 }}
     >
       {top}
     </Typography>
     <Typography
+      component="span"
       variant="subtitle2"
+      display="block"
       sx={{ whiteSpace: "nowrap", lineHeight: 1.15 }}
     >
       {bottom}
@@ -293,9 +233,11 @@ const ProjectDashboard = () => {
   const [exportPreviewRows, setExportPreviewRows] = useState<
     ProjectDashboardRow[]
   >([]);
-  const [exportPreviewCurrency, setExportPreviewCurrency] = useState("£");
   const [exportPreviewTotals, setExportPreviewTotals] =
     useState<ProjectListingExportTotals | null>(null);
+  const [exportStartDate, setExportStartDate] = useState<Date | null>(null);
+  const [exportEndDate, setExportEndDate] = useState<Date | null>(null);
+  const exportPreviewRequestId = useRef(0);
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -345,40 +287,72 @@ const ProjectDashboard = () => {
       alwaysVisibleColumns: ["select", "actions"],
     });
 
-  const getExportPayload = () => {
+  const getExportPayload = (range?: {
+    start: Date | null;
+    end: Date | null;
+  }) => {
     const selectedIds = Array.from(selectedRowIds);
+    const start = range !== undefined ? range.start : exportStartDate;
+    const end = range !== undefined ? range.end : exportEndDate;
     return {
       company_id: user.company_id,
       search: searchTerm,
       status: filters.status,
       ...(selectedIds.length > 0 ? { ids: selectedIds.join(",") } : {}),
+      ...(start && end
+        ? {
+            start_date: dayjs(start).format("DD/MM/YYYY"),
+            end_date: dayjs(end).format("DD/MM/YYYY"),
+          }
+        : {}),
     };
   };
 
-  const openExportPreview = async () => {
+  const loadExportPreview = async (range?: {
+    start: Date | null;
+    end: Date | null;
+  }) => {
     if (!user?.company_id) return;
-    setExportPreviewOpen(true);
+    const requestId = ++exportPreviewRequestId.current;
     setExportPreviewLoading(true);
-    setExportPreviewRows([]);
-    setExportPreviewTotals(null);
     try {
       const res = await api.get("project/export-listing", {
-        params: getExportPayload(),
+        params: getExportPayload(range),
       });
+      if (requestId !== exportPreviewRequestId.current) return;
       if (!res.data?.IsSuccess) {
         toast.error(res.data?.message || "Failed to load export preview");
         return;
       }
       const rows = Array.isArray(res.data.info) ? res.data.info : [];
       setExportPreviewRows(rows);
-      if (res.data.currency) setExportPreviewCurrency(res.data.currency);
       if (res.data.totals) setExportPreviewTotals(res.data.totals);
     } catch (err) {
+      if (requestId !== exportPreviewRequestId.current) return;
       console.error("Failed to load project listing export preview", err);
       toast.error("Failed to load export preview");
     } finally {
-      setExportPreviewLoading(false);
+      if (requestId === exportPreviewRequestId.current) {
+        setExportPreviewLoading(false);
+      }
     }
+  };
+
+  const closeExportPreview = () => {
+    if (exportDownloading) return;
+    setExportPreviewOpen(false);
+    setExportStartDate(null);
+    setExportEndDate(null);
+  };
+
+  const openExportPreview = async () => {
+    if (!user?.company_id) return;
+    setExportStartDate(null);
+    setExportEndDate(null);
+    setExportPreviewOpen(true);
+    setExportPreviewRows([]);
+    setExportPreviewTotals(null);
+    await loadExportPreview({ start: null, end: null });
   };
 
   const downloadExportListing = async () => {
@@ -400,6 +374,8 @@ const ProjectDashboard = () => {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       setExportPreviewOpen(false);
+      setExportStartDate(null);
+      setExportEndDate(null);
     } catch (err) {
       console.error("Failed to export project listing", err);
       toast.error("Failed to export project listing");
@@ -777,10 +753,7 @@ const ProjectDashboard = () => {
     name: column.id ?? "Unnamed Column",
     width: "auto",
   }));
-  const exportPreviewColumns = useMemo(
-    () => getExportPreviewColumns(exportPreviewCurrency),
-    [exportPreviewCurrency],
-  );
+  const exportPreviewColumns = useMemo(() => getExportPreviewColumns(), []);
 
   return (
     <PermissionGuard permission="Project">
@@ -1019,17 +992,67 @@ const ProjectDashboard = () => {
 
         <Dialog
           open={exportPreviewOpen}
-          onClose={() =>
-            exportDownloading ? undefined : setExportPreviewOpen(false)
-          }
+          onClose={closeExportPreview}
           fullWidth
           maxWidth="xl"
         >
-          <DialogTitle sx={{ m: 0, position: "relative" }}>
-            Export Preview
+          <DialogTitle
+            component="div"
+            sx={{ m: 0, position: "relative", pr: 7 }}
+          >
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              alignItems={{ xs: "flex-start", sm: "center" }}
+              justifyContent="space-between"
+              spacing={1.5}
+              pr={4}
+            >
+              <Typography variant="h6" component="span">
+                Export Preview
+              </Typography>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <DateRangePickerBox
+                  from={exportStartDate}
+                  to={exportEndDate}
+                  onChange={(range) => {
+                    setExportStartDate(range.from);
+                    setExportEndDate(range.to);
+                    void loadExportPreview({
+                      start: range.from,
+                      end: range.to,
+                    });
+                  }}
+                />
+                {(exportStartDate || exportEndDate) && (
+                  <Button
+                    color="error"
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      setExportStartDate(null);
+                      setExportEndDate(null);
+                      void loadExportPreview({ start: null, end: null });
+                    }}
+                    disabled={exportPreviewLoading || exportDownloading}
+                    aria-label="Clear date range"
+                    sx={{
+                      minHeight: 34,
+                      height: 34,
+                      whiteSpace: "nowrap",
+                      textTransform: "none",
+                      fontWeight: 600,
+                      minWidth: 64,
+                      px: 1.5,
+                    }}
+                  >
+                    <IconX size={18} />
+                  </Button>
+                )}
+              </Stack>
+            </Stack>
             <IconButton
               aria-label="close"
-              onClick={() => setExportPreviewOpen(false)}
+              onClick={closeExportPreview}
               disabled={exportDownloading}
               sx={{ position: "absolute", right: 12, top: 8 }}
             >
@@ -1073,7 +1096,7 @@ const ProjectDashboard = () => {
                             color: "#1E4E8C",
                           }}
                         >
-                          <Typography variant="subtitle2">
+                          <Typography component="span" variant="subtitle2">
                             {column.label}
                           </Typography>
                         </TableCell>
@@ -1148,7 +1171,7 @@ const ProjectDashboard = () => {
           <DialogActions>
             <Button
               color="inherit"
-              onClick={() => setExportPreviewOpen(false)}
+              onClick={closeExportPreview}
               disabled={exportDownloading}
             >
               Cancel
@@ -1225,7 +1248,7 @@ const ProjectDashboard = () => {
                             "&:hover .hoverIcon": { opacity: 1 },
                           }}
                         >
-                          <Typography variant="subtitle2">
+                          <Typography component="span" variant="subtitle2">
                             {flexRender(
                               header.column.columnDef.header,
                               header.getContext(),
