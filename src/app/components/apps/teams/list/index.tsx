@@ -1,5 +1,12 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
+import Cookies from "js-cookie";
 import {
   TableContainer,
   Table,
@@ -101,6 +108,59 @@ import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
+type TeamFilters = {
+  team: string;
+  supervisor: string;
+};
+
+type TeamsTableCookieState = {
+  searchTerm?: string;
+  filters?: Partial<TeamFilters>;
+  pagination?: {
+    pageIndex?: number;
+    pageSize?: number;
+  };
+};
+
+const DEFAULT_TEAM_FILTERS: TeamFilters = {
+  team: "",
+  supervisor: "",
+};
+
+const COOKIE_OPTIONS = { expires: 365, path: "/" };
+
+const getTeamsTableStateKey = (
+  userId?: number | string,
+  companyId?: number | string | null,
+) => (userId && companyId ? `teams_table_state_${userId}_${companyId}` : "");
+
+const normalizeTeamFilterValue = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === "All") return "";
+  return String(value);
+};
+
+const normalizeTeamFilters = (
+  filters?: Partial<TeamFilters> | Record<string, string | number>,
+): TeamFilters => ({
+  team: normalizeTeamFilterValue(filters?.team),
+  supervisor: normalizeTeamFilterValue(filters?.supervisor),
+});
+
+const readTeamsTableStateCookie = (key: string): TeamsTableCookieState => {
+  if (!key) return {};
+
+  const saved = Cookies.get(key);
+  if (!saved) return {};
+
+  try {
+    return JSON.parse(saved);
+  } catch (error) {
+    console.error("Failed to parse teams table state cookie", error);
+    Cookies.remove(key, { path: "/" });
+    return {};
+  }
+};
+
 const TablePagination = () => {
   const session = useSession();
   const id = session.data?.user as User & {
@@ -133,13 +193,16 @@ const TablePagination = () => {
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
 
-  const [filters, setFilters] = useState({
-    team: "",
-    supervisor: "",
-  });
-
+  const [filters, setFilters] = useState<TeamFilters>(DEFAULT_TEAM_FILTERS);
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
+  const teamsTableStateKey = useMemo(
+    () => getTeamsTableStateKey(id?.id, id?.company_id),
+    [id?.id, id?.company_id],
+  );
+  const restoredTableStateKeyRef = useRef("");
+  const skipNextDependencyPageResetRef = useRef(false);
+  const [isTableStateReady, setIsTableStateReady] = useState(false);
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
@@ -172,6 +235,8 @@ const TablePagination = () => {
 
   // Fetch data
   const fetchTeams = async (restorePage?: number) => {
+    if (!isTableStateReady) return;
+
     setFetchTeam(true);
     try {
       let url = `team/get-team-member-list?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -566,11 +631,97 @@ const TablePagination = () => {
     data,
     columns,
     fetchData: fetchTeams,
-    debounceDependencies: [searchTerm, filters, projectId],
+    debounceDependencies: [
+      searchTerm,
+      filters,
+      projectId,
+      isTableStateReady,
+    ],
     state: { columnVisibility },
     onColumnVisibilityChange,
+    shouldResetPageOnDebounce: () => {
+      // Keep the cookie-restore skip until the user changes search/filters.
+      return !skipNextDependencyPageResetRef.current;
+    },
   });
   const rows = table.getRowModel().rows;
+
+  useEffect(() => {
+    if (!teamsTableStateKey) {
+      setIsTableStateReady(false);
+      restoredTableStateKeyRef.current = "";
+      return;
+    }
+    if (restoredTableStateKeyRef.current === teamsTableStateKey) return;
+
+    const savedState = readTeamsTableStateCookie(teamsTableStateKey);
+    const savedPagination = savedState.pagination;
+    const hasSavedState =
+      savedState.searchTerm !== undefined ||
+      savedState.filters !== undefined ||
+      savedState.pagination !== undefined;
+
+    skipNextDependencyPageResetRef.current = hasSavedState;
+    restoredTableStateKeyRef.current = teamsTableStateKey;
+
+    setSearchTerm(savedState.searchTerm ?? "");
+    const restoredFilters = normalizeTeamFilters(savedState.filters);
+    setFilters(restoredFilters);
+    setTempFilters(restoredFilters);
+
+    if (
+      typeof savedPagination?.pageIndex === "number" &&
+      savedPagination.pageIndex >= 0 &&
+      typeof savedPagination?.pageSize === "number" &&
+      savedPagination.pageSize > 0
+    ) {
+      setPagination({
+        pageIndex: savedPagination.pageIndex,
+        pageSize: savedPagination.pageSize,
+      });
+    }
+
+    setIsTableStateReady(true);
+  }, [teamsTableStateKey, setPagination]);
+
+  useEffect(() => {
+    if (!teamsTableStateKey || !isTableStateReady) return;
+    if (restoredTableStateKeyRef.current !== teamsTableStateKey) return;
+
+    Cookies.set(
+      teamsTableStateKey,
+      JSON.stringify({
+        searchTerm,
+        filters,
+        pagination: {
+          pageIndex: pagination.pageIndex,
+          pageSize: pagination.pageSize,
+        },
+      }),
+      COOKIE_OPTIONS,
+    );
+  }, [
+    teamsTableStateKey,
+    isTableStateReady,
+    searchTerm,
+    filters,
+    pagination.pageIndex,
+    pagination.pageSize,
+  ]);
+
+  const hasActiveFilters =
+    Boolean(filters.team && filters.team !== "All") ||
+    Boolean(filters.supervisor && filters.supervisor !== "All");
+
+  const handleClearAppliedFilters = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    skipNextDependencyPageResetRef.current = false;
+    setTempFilters(DEFAULT_TEAM_FILTERS);
+    setFilters(DEFAULT_TEAM_FILTERS);
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  };
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -603,7 +754,15 @@ const TablePagination = () => {
               variant="outlined"
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                skipNextDependencyPageResetRef.current = false;
+                setSearchTerm(e.target.value);
+                setPagination((prev) =>
+                  prev.pageIndex === 0
+                    ? prev
+                    : { ...prev, pageIndex: 0 },
+                );
+              }}
               slotProps={{
                 input: {
                   endAdornment: (
@@ -616,11 +775,32 @@ const TablePagination = () => {
             />
             <Button
               variant="contained"
-              onClick={() => setOpen(true)}
+              onClick={() => {
+                setTempFilters(filters);
+                setOpen(true);
+              }}
               sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}
             >
               <IconFilter width={18} />
             </Button>
+            {hasActiveFilters && (
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={handleClearAppliedFilters}
+                sx={{
+                  mt: { xs: 1, sm: 0 },
+                  ml: 1,
+                  minHeight: 34,
+                  height: 34,
+                  minWidth: 64,
+                  px: 1.5,
+                }}
+                aria-label="Clear filters"
+              >
+                <IconX size={18} />
+              </Button>
+            )}
             <Dialog
               open={open}
               onClose={() => setOpen(false)}
@@ -654,15 +834,27 @@ const TablePagination = () => {
                   <TextField
                     select
                     label="Team"
-                    value={tempFilters.team}
+                    value={tempFilters.team || "All"}
                     onChange={(e) =>
-                      setTempFilters({ ...tempFilters, team: e.target.value })
+                      setTempFilters({
+                        ...tempFilters,
+                        team: normalizeTeamFilterValue(e.target.value),
+                      })
                     }
                     fullWidth
                   >
                     <MenuItem value="All">All</MenuItem>
+                    {tempFilters.team &&
+                      tempFilters.team !== "All" &&
+                      !uniqueTrades.some(
+                        (trade) => String(trade.id) === String(tempFilters.team),
+                      ) && (
+                        <MenuItem value={tempFilters.team}>
+                          {tempFilters.team}
+                        </MenuItem>
+                      )}
                     {uniqueTrades.map((trade) => (
-                      <MenuItem key={trade.id} value={trade.id}>
+                      <MenuItem key={trade.id} value={String(trade.id)}>
                         {trade.name}
                       </MenuItem>
                     ))}
@@ -671,18 +863,32 @@ const TablePagination = () => {
                   <TextField
                     select
                     label="Supervisor"
-                    value={tempFilters.supervisor}
+                    value={tempFilters.supervisor || "All"}
                     onChange={(e) =>
                       setTempFilters({
                         ...tempFilters,
-                        supervisor: e.target.value,
+                        supervisor: normalizeTeamFilterValue(e.target.value),
                       })
                     }
                     fullWidth
                   >
                     <MenuItem value="All">All</MenuItem>
-                    {uniqueSupervisors.map((supervisor, i) => (
-                      <MenuItem key={supervisor.id} value={supervisor.id}>
+                    {tempFilters.supervisor &&
+                      tempFilters.supervisor !== "All" &&
+                      !uniqueSupervisors.some(
+                        (supervisor) =>
+                          String(supervisor.id) ===
+                          String(tempFilters.supervisor),
+                      ) && (
+                        <MenuItem value={tempFilters.supervisor}>
+                          {tempFilters.supervisor}
+                        </MenuItem>
+                      )}
+                    {uniqueSupervisors.map((supervisor) => (
+                      <MenuItem
+                        key={supervisor.id}
+                        value={String(supervisor.id)}
+                      >
                         {supervisor.name}
                       </MenuItem>
                     ))}
@@ -693,14 +899,14 @@ const TablePagination = () => {
               <DialogActions>
                 <Button
                   onClick={() => {
-                    setTempFilters({
-                      team: "",
-                      supervisor: "",
-                    });
-                    setFilters({
-                      team: "",
-                      supervisor: "",
-                    });
+                    skipNextDependencyPageResetRef.current = false;
+                    setTempFilters(DEFAULT_TEAM_FILTERS);
+                    setFilters(DEFAULT_TEAM_FILTERS);
+                    setPagination((prev) =>
+                      prev.pageIndex === 0
+                        ? prev
+                        : { ...prev, pageIndex: 0 },
+                    );
                     setOpen(false);
                   }}
                   color="inherit"
@@ -711,7 +917,13 @@ const TablePagination = () => {
                 <Button
                   variant="contained"
                   onClick={() => {
-                    setFilters(tempFilters);
+                    skipNextDependencyPageResetRef.current = false;
+                    setFilters(normalizeTeamFilters(tempFilters));
+                    setPagination((prev) =>
+                      prev.pageIndex === 0
+                        ? prev
+                        : { ...prev, pageIndex: 0 },
+                    );
                     setOpen(false);
                   }}
                 >

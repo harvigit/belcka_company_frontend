@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import Cookies from "js-cookie";
 import {
   TableContainer,
   Table,
@@ -141,6 +142,82 @@ const PRODUCT_TABLE_SORT_MAP: Record<string, string> = {
   projects: "projects",
 };
 
+type ProductProjectFilter = {
+  id: string;
+  name: string;
+};
+
+type ProductFilters = {
+  supplier: string;
+  category: string;
+  projects: ProductProjectFilter[];
+  status: string;
+};
+
+type ProductsTableCookieState = {
+  searchTerm?: string;
+  filters?: Partial<ProductFilters>;
+  pagination?: {
+    pageIndex?: number;
+    pageSize?: number;
+  };
+};
+
+const DEFAULT_PRODUCT_FILTERS: ProductFilters = {
+  supplier: "",
+  category: "",
+  projects: [],
+  status: "",
+};
+
+const COOKIE_OPTIONS = { expires: 365, path: "/" };
+
+const getProductsTableStateKey = (
+  userId?: number | string,
+  companyId?: number | string | null,
+) => (userId && companyId ? `products_table_state_${userId}_${companyId}` : "");
+
+const normalizeProductFilterValue = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === "All") return "";
+  return String(value);
+};
+
+const normalizeProductProjects = (projects?: any[]): ProductProjectFilter[] => {
+  if (!Array.isArray(projects)) return [];
+  return projects
+    .map((project) => {
+      const id = project?.id ?? project?.project_id;
+      if (id === undefined || id === null || id === "") return null;
+      return {
+        id: String(id),
+        name: String(project?.name || ""),
+      };
+    })
+    .filter(Boolean) as ProductProjectFilter[];
+};
+
+const normalizeProductFilters = (
+  filters?: Partial<ProductFilters> | Record<string, any>,
+): ProductFilters => ({
+  supplier: normalizeProductFilterValue(filters?.supplier),
+  category: normalizeProductFilterValue(filters?.category),
+  projects: normalizeProductProjects(filters?.projects),
+  status: normalizeProductFilterValue(filters?.status),
+});
+
+const readProductsTableStateCookie = (
+  cookieKey: string,
+): ProductsTableCookieState => {
+  try {
+    const stored = Cookies.get(cookieKey);
+    if (!stored) return {};
+    const parsed = JSON.parse(stored);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 const ProductList = () => {
   const [data, setData] = useState<any[]>([]);
   const [fetchProduct, setFetchProduct] = useState<boolean>(true);
@@ -216,13 +293,15 @@ const ProductList = () => {
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
-  const [filters, setFilters] = useState<{
-    supplier: string;
-    category: string;
-    projects: any[];
-    status: string;
-  }>({ supplier: "", category: "", projects: [], status: "" });
+  const [filters, setFilters] = useState<ProductFilters>(DEFAULT_PRODUCT_FILTERS);
   const [tempFilters, setTempFilters] = useState(filters);
+  const productsTableStateKey = useMemo(
+    () => getProductsTableStateKey(user?.id, user?.company_id),
+    [user?.id, user?.company_id],
+  );
+  const restoredTableStateKeyRef = useRef("");
+  const skipNextDependencyPageResetRef = useRef(false);
+  const [isTableStateReady, setIsTableStateReady] = useState(false);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -582,6 +661,7 @@ const ProductList = () => {
 
   // Fetch data
   const fetchProducts = async (restorePage?: number) => {
+    if (!user?.company_id || !isTableStateReady) return;
     setFetchProduct(true);
     try {
       let url = `products/get?company_id=${user.company_id}&is_products=true&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -2429,16 +2509,109 @@ const ProductList = () => {
     data: filteredData,
     columns,
     fetchData: fetchProducts,
-    debounceDependencies: [searchTerm, filters, user.company_id, categories],
+    debounceDependencies: [
+      searchTerm,
+      filters,
+      user?.company_id,
+      isTableStateReady,
+      categories.length,
+      suppliers.length,
+      projects.length,
+    ],
     state: { columnVisibility },
     onColumnVisibilityChange,
     manualSorting: true,
+    shouldResetPageOnDebounce: () => {
+      return !skipNextDependencyPageResetRef.current;
+    },
   });
+
+  useEffect(() => {
+    if (!productsTableStateKey) {
+      setIsTableStateReady(false);
+      restoredTableStateKeyRef.current = "";
+      return;
+    }
+    if (restoredTableStateKeyRef.current === productsTableStateKey) return;
+
+    const savedState = readProductsTableStateCookie(productsTableStateKey);
+    const savedPagination = savedState.pagination;
+    const hasSavedState =
+      savedState.searchTerm !== undefined ||
+      savedState.filters !== undefined ||
+      savedState.pagination !== undefined;
+
+    skipNextDependencyPageResetRef.current = hasSavedState;
+    restoredTableStateKeyRef.current = productsTableStateKey;
+
+    setSearchTerm(savedState.searchTerm ?? "");
+    const restoredFilters = normalizeProductFilters(savedState.filters);
+    setFilters(restoredFilters);
+    setTempFilters(restoredFilters);
+
+    if (
+      typeof savedPagination?.pageIndex === "number" &&
+      savedPagination.pageIndex >= 0 &&
+      typeof savedPagination?.pageSize === "number" &&
+      savedPagination.pageSize > 0
+    ) {
+      setPagination({
+        pageIndex: savedPagination.pageIndex,
+        pageSize: savedPagination.pageSize,
+      });
+    }
+
+    setIsTableStateReady(true);
+  }, [productsTableStateKey, setPagination]);
+
+  useEffect(() => {
+    if (!productsTableStateKey || !isTableStateReady) return;
+    if (restoredTableStateKeyRef.current !== productsTableStateKey) return;
+
+    Cookies.set(
+      productsTableStateKey,
+      JSON.stringify({
+        searchTerm,
+        filters: normalizeProductFilters(filters),
+        pagination: {
+          pageIndex: pagination.pageIndex,
+          pageSize: pagination.pageSize,
+        },
+      }),
+      COOKIE_OPTIONS,
+    );
+  }, [
+    productsTableStateKey,
+    isTableStateReady,
+    searchTerm,
+    filters,
+    pagination.pageIndex,
+    pagination.pageSize,
+  ]);
 
   // Reset to first page when search term changes
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [searchTerm]);
+    if (skipNextDependencyPageResetRef.current) return;
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  }, [searchTerm, setPagination]);
+
+  const hasActiveFilters =
+    Boolean(filters.supplier && filters.supplier !== "All") ||
+    Boolean(filters.category && filters.category !== "All") ||
+    (Array.isArray(filters.projects) && filters.projects.length > 0) ||
+    Boolean(filters.status && filters.status !== "All");
+
+  const handleClearAppliedFilters = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    skipNextDependencyPageResetRef.current = false;
+    setTempFilters(DEFAULT_PRODUCT_FILTERS);
+    setFilters(DEFAULT_PRODUCT_FILTERS);
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  };
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -2796,7 +2969,10 @@ const ProductList = () => {
               variant="outlined"
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                skipNextDependencyPageResetRef.current = false;
+                setSearchTerm(e.target.value);
+              }}
               slotProps={{
                 input: {
                   endAdornment: (
@@ -2809,11 +2985,31 @@ const ProductList = () => {
             />
             <Button
               variant="contained"
-              onClick={() => setOpen(true)}
+              onClick={() => {
+                setTempFilters(normalizeProductFilters(filters));
+                setOpen(true);
+              }}
               sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
             >
               <IconFilter width={18} />
             </Button>
+            {hasActiveFilters && (
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={handleClearAppliedFilters}
+                sx={{
+                  mt: { xs: 1, sm: 0 },
+                  minHeight: 34,
+                  height: 34,
+                  minWidth: 64,
+                  px: 1.5,
+                }}
+                aria-label="Clear filters"
+              >
+                <IconX size={18} />
+              </Button>
+            )}
             <Button
               variant="contained"
               onClick={exportProducts}
@@ -3786,16 +3982,25 @@ const ProductList = () => {
                   <TextField
                     select
                     label="Suppliers"
-                    value={tempFilters.supplier}
+                    value={tempFilters.supplier || "All"}
                     onChange={(e) => {
                       setTempFilters({
                         ...tempFilters,
-                        supplier: e.target.value,
+                        supplier: normalizeProductFilterValue(e.target.value),
                       });
                     }}
                     fullWidth
                   >
                     <MenuItem value="All">All</MenuItem>
+                    {tempFilters.supplier &&
+                      tempFilters.supplier !== "All" &&
+                      !suppliers.some(
+                        (item) => item.name === tempFilters.supplier,
+                      ) && (
+                        <MenuItem value={tempFilters.supplier}>
+                          {tempFilters.supplier}
+                        </MenuItem>
+                      )}
                     {suppliers.map((item, i) => (
                       <MenuItem key={i} value={item.name}>
                         {item.name}
@@ -3806,16 +4011,25 @@ const ProductList = () => {
                   <TextField
                     select
                     label="Category"
-                    value={tempFilters.category}
+                    value={tempFilters.category || "All"}
                     onChange={(e) =>
                       setTempFilters({
                         ...tempFilters,
-                        category: e.target.value,
+                        category: normalizeProductFilterValue(e.target.value),
                       })
                     }
                     fullWidth
                   >
                     <MenuItem value="All">All</MenuItem>
+                    {tempFilters.category &&
+                      tempFilters.category !== "All" &&
+                      !categories.some(
+                        (item) => item.name === tempFilters.category,
+                      ) && (
+                        <MenuItem value={tempFilters.category}>
+                          {tempFilters.category}
+                        </MenuItem>
+                      )}
                     {categories.map((item, i) => (
                       <MenuItem key={i} value={item.name}>
                         {item.name}
@@ -3826,12 +4040,21 @@ const ProductList = () => {
                   <Autocomplete
                     multiple
                     options={projects || []}
-                    getOptionLabel={(option) => option.name}
-                    value={tempFilters.projects || []}
+                    getOptionLabel={(option) => option.name || ""}
+                    isOptionEqualToValue={(option, selected) =>
+                      String(option.id) === String(selected.id)
+                    }
+                    value={(tempFilters.projects || []).map(
+                      (stored) =>
+                        (projects || []).find(
+                          (project) =>
+                            String(project.id) === String(stored.id),
+                        ) || stored,
+                    )}
                     onChange={(_, newValue) => {
                       setTempFilters({
                         ...tempFilters,
-                        projects: newValue,
+                        projects: normalizeProductProjects(newValue),
                       });
                     }}
                     renderInput={(params) => (
@@ -3842,16 +4065,23 @@ const ProductList = () => {
                   <TextField
                     select
                     label="Status"
-                    value={tempFilters.status}
+                    value={tempFilters.status || "All"}
                     onChange={(e) =>
                       setTempFilters({
                         ...tempFilters,
-                        status: e.target.value,
+                        status: normalizeProductFilterValue(e.target.value),
                       })
                     }
                     fullWidth
                   >
                     <MenuItem value="All">All</MenuItem>
+                    {tempFilters.status &&
+                      tempFilters.status !== "All" &&
+                      !["1", "2", "4", "5"].includes(tempFilters.status) && (
+                        <MenuItem value={tempFilters.status}>
+                          {tempFilters.status}
+                        </MenuItem>
+                      )}
                     <MenuItem value="5">In Stock</MenuItem>
                     <MenuItem value="4">Out of Stock</MenuItem>
                     <MenuItem value="2">Minus Stock</MenuItem>
@@ -3863,18 +4093,7 @@ const ProductList = () => {
               <DialogActions>
                 <Button
                   onClick={() => {
-                    setTempFilters({
-                      supplier: "",
-                      category: "",
-                      projects: [],
-                      status: "",
-                    });
-                    setFilters({
-                      supplier: "",
-                      category: "",
-                      projects: [],
-                      status: "",
-                    });
+                    handleClearAppliedFilters();
                     setOpen(false);
                   }}
                   color="inherit"
@@ -3885,7 +4104,13 @@ const ProductList = () => {
                 <Button
                   variant="contained"
                   onClick={() => {
-                    setFilters(tempFilters);
+                    skipNextDependencyPageResetRef.current = false;
+                    setFilters(normalizeProductFilters(tempFilters));
+                    setPagination((prev) =>
+                      prev.pageIndex === 0
+                        ? prev
+                        : { ...prev, pageIndex: 0 },
+                    );
                     setOpen(false);
                   }}
                 >

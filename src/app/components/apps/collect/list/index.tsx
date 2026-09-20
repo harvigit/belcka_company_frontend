@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
+import Cookies from "js-cookie";
 import {
   TableContainer,
   Table,
@@ -62,12 +63,80 @@ import CollectConflictList, {
   CollectConflict,
 } from "@/app/components/apps/conflicts/sections/collect-conflicts";
 
+type CollectFilters = {
+  projectId: string;
+  supplierId: string;
+  addressId: string;
+  createdById: string;
+};
+
+type CollectTab = "All" | "New" | "Reviewed";
+
+type CollectTableCookieState = {
+  searchTerm?: string;
+  filters?: Partial<CollectFilters>;
+  activeTab?: string;
+  pagination?: {
+    pageIndex?: number;
+    pageSize?: number;
+  };
+};
+
+const DEFAULT_COLLECT_FILTERS: CollectFilters = {
+  projectId: "",
+  supplierId: "",
+  addressId: "",
+  createdById: "",
+};
+
+const COOKIE_OPTIONS = { expires: 365, path: "/" };
+
+const getCollectTableStateKey = (
+  userId?: number | string,
+  companyId?: number | string | null,
+) => (userId && companyId ? `collect_table_state_${userId}_${companyId}` : "");
+
+const normalizeCollectFilterValue = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === "All") return "";
+  return String(value);
+};
+
+const normalizeCollectFilters = (
+  filters?: Partial<CollectFilters> | Record<string, string | number>,
+): CollectFilters => ({
+  projectId: normalizeCollectFilterValue(filters?.projectId),
+  supplierId: normalizeCollectFilterValue(filters?.supplierId),
+  addressId: normalizeCollectFilterValue(filters?.addressId),
+  createdById: normalizeCollectFilterValue(filters?.createdById),
+});
+
+const normalizeCollectTab = (value?: string | null): CollectTab => {
+  if (value === "New" || value === "Reviewed") return value;
+  return "All";
+};
+
+const readCollectTableStateCookie = (
+  cookieKey: string,
+): CollectTableCookieState => {
+  try {
+    const stored = Cookies.get(cookieKey);
+    if (!stored) return {};
+    const parsed = JSON.parse(stored);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 const CollectList = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & {
+    company_id?: number | null;
+    id?: number | string;
+  };
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
@@ -100,17 +169,19 @@ const CollectList = () => {
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
-  const [activeTab, setActiveTab] = useState("All");
+  const [activeTab, setActiveTab] = useState<CollectTab>("All");
   const [tabCounts, setTabCounts] = useState({ All: 0, New: 0, Reviewed: 0 });
 
   // Filters
-  const [filters, setFilters] = useState({
-    projectId: "",
-    supplierId: "",
-    addressId: "",
-    createdById: "",
-  });
+  const [filters, setFilters] = useState<CollectFilters>(DEFAULT_COLLECT_FILTERS);
   const [tempFilters, setTempFilters] = useState(filters);
+  const collectTableStateKey = useMemo(
+    () => getCollectTableStateKey(user?.id, user?.company_id),
+    [user?.id, user?.company_id],
+  );
+  const restoredTableStateKeyRef = useRef("");
+  const skipNextDependencyPageResetRef = useRef(false);
+  const [isTableStateReady, setIsTableStateReady] = useState(false);
 
   const [projects, setProjects] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -137,7 +208,7 @@ const CollectList = () => {
         setProjects(res.data.info.projects || []);
         setSuppliers(res.data.info.suppliers || []);
         setAddresses(res.data.info.parentAddresses || []);
-        setUsers(res.data.info.users || []);
+        setUsers(res.data.info.ordered_by || res.data.info.users || []);
       }
     } catch (error) {
       console.error(error);
@@ -156,7 +227,7 @@ const CollectList = () => {
   };
 
   const fetchCollects = async () => {
-    if (!user?.company_id) return;
+    if (!user?.company_id || !isTableStateReady) return;
     setLoading(true);
     try {
       let url = `po-collect/list?company_id=${user?.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -638,14 +709,109 @@ const CollectList = () => {
     data: data,
     columns,
     fetchData: fetchCollects,
-    debounceDependencies: [searchTerm, filters, activeTab, user.company_id],
+    debounceDependencies: [
+      searchTerm,
+      filters,
+      activeTab,
+      user?.company_id,
+      isTableStateReady,
+    ],
     state: { columnVisibility },
     onColumnVisibilityChange,
+    shouldResetPageOnDebounce: () => {
+      return !skipNextDependencyPageResetRef.current;
+    },
   });
 
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [searchTerm, filters, activeTab]);
+    if (!collectTableStateKey) {
+      setIsTableStateReady(false);
+      restoredTableStateKeyRef.current = "";
+      return;
+    }
+    if (restoredTableStateKeyRef.current === collectTableStateKey) return;
+
+    const savedState = readCollectTableStateCookie(collectTableStateKey);
+    const savedPagination = savedState.pagination;
+    const hasSavedState =
+      savedState.searchTerm !== undefined ||
+      savedState.filters !== undefined ||
+      savedState.activeTab !== undefined ||
+      savedState.pagination !== undefined;
+
+    skipNextDependencyPageResetRef.current = hasSavedState;
+    restoredTableStateKeyRef.current = collectTableStateKey;
+
+    setSearchTerm(savedState.searchTerm ?? "");
+    const restoredFilters = normalizeCollectFilters(savedState.filters);
+    setFilters(restoredFilters);
+    setTempFilters(restoredFilters);
+    setActiveTab(normalizeCollectTab(savedState.activeTab));
+
+    if (
+      typeof savedPagination?.pageIndex === "number" &&
+      savedPagination.pageIndex >= 0 &&
+      typeof savedPagination?.pageSize === "number" &&
+      savedPagination.pageSize > 0
+    ) {
+      setPagination({
+        pageIndex: savedPagination.pageIndex,
+        pageSize: savedPagination.pageSize,
+      });
+    }
+
+    setIsTableStateReady(true);
+  }, [collectTableStateKey, setPagination]);
+
+  useEffect(() => {
+    if (!collectTableStateKey || !isTableStateReady) return;
+    if (restoredTableStateKeyRef.current !== collectTableStateKey) return;
+
+    Cookies.set(
+      collectTableStateKey,
+      JSON.stringify({
+        searchTerm,
+        filters: normalizeCollectFilters(filters),
+        activeTab,
+        pagination: {
+          pageIndex: pagination.pageIndex,
+          pageSize: pagination.pageSize,
+        },
+      }),
+      COOKIE_OPTIONS,
+    );
+  }, [
+    collectTableStateKey,
+    isTableStateReady,
+    searchTerm,
+    filters,
+    activeTab,
+    pagination.pageIndex,
+    pagination.pageSize,
+  ]);
+
+  useEffect(() => {
+    if (skipNextDependencyPageResetRef.current) return;
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  }, [searchTerm, filters, activeTab, setPagination]);
+
+  const hasActiveFilters =
+    Boolean(filters.projectId) ||
+    Boolean(filters.supplierId) ||
+    Boolean(filters.addressId) ||
+    Boolean(filters.createdById);
+
+  const handleClearAppliedFilters = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    skipNextDependencyPageResetRef.current = false;
+    setTempFilters(DEFAULT_COLLECT_FILTERS);
+    setFilters(DEFAULT_COLLECT_FILTERS);
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  };
 
   const simpleColumns = columns.map((column: any) => ({
     name: column.id ?? "Unnamed Column",
@@ -675,8 +841,11 @@ const CollectList = () => {
               <Tabs
                 value={activeTab}
                 onChange={(_, value) => {
-                  setActiveTab(value);
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                  skipNextDependencyPageResetRef.current = false;
+                  setActiveTab(normalizeCollectTab(value));
+                  setPagination((prev) =>
+                    prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                  );
                 }}
                 variant="scrollable"
                 scrollButtons="auto"
@@ -720,7 +889,10 @@ const CollectList = () => {
               size="small"
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                skipNextDependencyPageResetRef.current = false;
+                setSearchTerm(e.target.value);
+              }}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -731,11 +903,31 @@ const CollectList = () => {
             />
             <Button
               variant="contained"
-              onClick={() => setOpen(true)}
+              onClick={() => {
+                setTempFilters(normalizeCollectFilters(filters));
+                setOpen(true);
+              }}
               sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
             >
               <IconFilter width={18} />
             </Button>
+            {hasActiveFilters && (
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={handleClearAppliedFilters}
+                sx={{
+                  mt: { xs: 1, sm: 0 },
+                  minHeight: 34,
+                  height: 34,
+                  minWidth: 64,
+                  px: 1.5,
+                }}
+                aria-label="Clear filters"
+              >
+                <IconX size={18} />
+              </Button>
+            )}
           </Box>
 
           <Box display="flex" alignItems="center">
@@ -1220,14 +1412,25 @@ const CollectList = () => {
                 size="small"
                 value={tempFilters.projectId}
                 onChange={(e) =>
-                  setTempFilters({ ...tempFilters, projectId: e.target.value })
+                  setTempFilters({
+                    ...tempFilters,
+                    projectId: normalizeCollectFilterValue(e.target.value),
+                  })
                 }
                 label="Project"
                 fullWidth
               >
                 <MenuItem value="">All</MenuItem>
+                {tempFilters.projectId &&
+                  !projects.some(
+                    (p) => String(p.id) === String(tempFilters.projectId),
+                  ) && (
+                    <MenuItem value={tempFilters.projectId}>
+                      {tempFilters.projectId}
+                    </MenuItem>
+                  )}
                 {projects.map((p) => (
-                  <MenuItem key={p.id} value={p.id}>
+                  <MenuItem key={p.id} value={String(p.id)}>
                     {p.name}
                   </MenuItem>
                 ))}
@@ -1237,14 +1440,25 @@ const CollectList = () => {
                 size="small"
                 value={tempFilters.supplierId}
                 onChange={(e) =>
-                  setTempFilters({ ...tempFilters, supplierId: e.target.value })
+                  setTempFilters({
+                    ...tempFilters,
+                    supplierId: normalizeCollectFilterValue(e.target.value),
+                  })
                 }
                 label="Supplier"
                 fullWidth
               >
                 <MenuItem value="">All</MenuItem>
+                {tempFilters.supplierId &&
+                  !suppliers.some(
+                    (s) => String(s.id) === String(tempFilters.supplierId),
+                  ) && (
+                    <MenuItem value={tempFilters.supplierId}>
+                      {tempFilters.supplierId}
+                    </MenuItem>
+                  )}
                 {suppliers.map((s) => (
-                  <MenuItem key={s.id} value={s.id}>
+                  <MenuItem key={s.id} value={String(s.id)}>
                     {s.name}
                   </MenuItem>
                 ))}
@@ -1254,14 +1468,25 @@ const CollectList = () => {
                 size="small"
                 value={tempFilters.addressId}
                 onChange={(e) =>
-                  setTempFilters({ ...tempFilters, addressId: e.target.value })
+                  setTempFilters({
+                    ...tempFilters,
+                    addressId: normalizeCollectFilterValue(e.target.value),
+                  })
                 }
                 label="Address"
                 fullWidth
               >
                 <MenuItem value="">All</MenuItem>
+                {tempFilters.addressId &&
+                  !addresses.some(
+                    (a) => String(a.id) === String(tempFilters.addressId),
+                  ) && (
+                    <MenuItem value={tempFilters.addressId}>
+                      {tempFilters.addressId}
+                    </MenuItem>
+                  )}
                 {addresses.map((a) => (
-                  <MenuItem key={a.id} value={a.id}>
+                  <MenuItem key={a.id} value={String(a.id)}>
                     {a.name}
                   </MenuItem>
                 ))}
@@ -1273,16 +1498,25 @@ const CollectList = () => {
                 onChange={(e) =>
                   setTempFilters({
                     ...tempFilters,
-                    createdById: e.target.value,
+                    createdById: normalizeCollectFilterValue(e.target.value),
                   })
                 }
                 label="Created By"
                 fullWidth
               >
                 <MenuItem value="">All</MenuItem>
+                {tempFilters.createdById &&
+                  !users.some(
+                    (u) => String(u.id) === String(tempFilters.createdById),
+                  ) && (
+                    <MenuItem value={tempFilters.createdById}>
+                      {tempFilters.createdById}
+                    </MenuItem>
+                  )}
                 {users.map((u) => (
-                  <MenuItem key={u.id} value={u.id}>
-                    {u.first_name} {u.last_name}
+                  <MenuItem key={u.id} value={String(u.id)}>
+                    {u.name ||
+                      `${u.first_name || ""} ${u.last_name || ""}`.trim()}
                   </MenuItem>
                 ))}
               </TextField>
@@ -1291,18 +1525,7 @@ const CollectList = () => {
           <DialogActions>
             <Button
               onClick={() => {
-                setTempFilters({
-                  projectId: "",
-                  supplierId: "",
-                  addressId: "",
-                  createdById: "",
-                });
-                setFilters({
-                  projectId: "",
-                  supplierId: "",
-                  addressId: "",
-                  createdById: "",
-                });
+                handleClearAppliedFilters();
                 setOpen(false);
               }}
             >
@@ -1311,7 +1534,11 @@ const CollectList = () => {
             <Button
               variant="contained"
               onClick={() => {
-                setFilters(tempFilters);
+                skipNextDependencyPageResetRef.current = false;
+                setFilters(normalizeCollectFilters(tempFilters));
+                setPagination((prev) =>
+                  prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                );
                 setOpen(false);
               }}
             >

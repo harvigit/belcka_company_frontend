@@ -51,15 +51,77 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import Image from "next/image";
 import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
+import Cookies from "js-cookie";
 
 const columnHelper = createColumnHelper<any>();
+
+type CheckinFilters = {
+  project: string;
+  trade: string;
+  user: string;
+};
+
+type CheckinsTableCookieState = {
+  searchTerm?: string;
+  filters?: Partial<CheckinFilters>;
+  pagination?: {
+    pageIndex?: number;
+    pageSize?: number;
+  };
+};
+
+const DEFAULT_CHECKIN_FILTERS: CheckinFilters = {
+  project: "All",
+  trade: "All",
+  user: "All",
+};
+
+const COOKIE_OPTIONS = { expires: 365, path: "/" };
+
+const getCheckinsTableStateKey = (
+  userId?: number | string,
+  companyId?: number | string | null,
+) => (userId && companyId ? `checkins_table_state_${userId}_${companyId}` : "");
+
+const normalizeCheckinFilterValue = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === "") return "All";
+  return String(value);
+};
+
+const normalizeCheckinFilters = (
+  filters?: Partial<CheckinFilters> | Record<string, string | number>,
+): CheckinFilters => ({
+  project: normalizeCheckinFilterValue(filters?.project),
+  trade: normalizeCheckinFilterValue(filters?.trade),
+  user: normalizeCheckinFilterValue(filters?.user),
+});
+
+const readCheckinsTableStateCookie = (
+  key: string,
+): CheckinsTableCookieState => {
+  if (!key) return {};
+
+  const saved = Cookies.get(key);
+  if (!saved) return {};
+
+  try {
+    return JSON.parse(saved);
+  } catch (error) {
+    console.error("Failed to parse checkins table state cookie", error);
+    Cookies.remove(key, { path: "/" });
+    return {};
+  }
+};
 
 const CheckinsList = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & {
+    company_id?: number | null;
+    id?: number | string;
+  };
   const { columnVisibility, onColumnVisibilityChange } =
     usePersistentColumnVisibility({
       storageKey: `cv_${user?.company_id}_${user?.id}_checkins`,
@@ -85,16 +147,15 @@ const CheckinsList = () => {
   const [trades, setTrades] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
 
-  const [filters, setFilters] = useState({
-    project: "All",
-    trade: "All",
-    user: "All",
-  });
-  const [tempFilters, setTempFilters] = useState({
-    project: "All",
-    trade: "All",
-    user: "All",
-  });
+  const [filters, setFilters] = useState<CheckinFilters>(DEFAULT_CHECKIN_FILTERS);
+  const [tempFilters, setTempFilters] = useState(filters);
+  const checkinsTableStateKey = useMemo(
+    () => getCheckinsTableStateKey(user?.id, user?.company_id),
+    [user?.id, user?.company_id],
+  );
+  const restoredTableStateKeyRef = useRef("");
+  const skipNextDependencyPageResetRef = useRef(false);
+  const [isTableStateReady, setIsTableStateReady] = useState(false);
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl2(event.currentTarget);
@@ -130,7 +191,7 @@ const CheckinsList = () => {
   };
 
   const fetchChecklogs = async () => {
-    if (!user?.company_id) return;
+    if (!user?.company_id || !isTableStateReady) return;
     try {
       setLoading(true);
       let url = `user-checklog/company-checklogs?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -670,11 +731,97 @@ const CheckinsList = () => {
     data: data,
     columns,
     fetchData: fetchChecklogs,
-    debounceDependencies: [searchTerm, filters, user.company_id],
+    debounceDependencies: [
+      searchTerm,
+      filters,
+      user?.company_id,
+      isTableStateReady,
+    ],
     state: { columnVisibility },
     onColumnVisibilityChange,
     getRowId: (row) => String(row.id),
+    shouldResetPageOnDebounce: () => {
+      return !skipNextDependencyPageResetRef.current;
+    },
   });
+
+  useEffect(() => {
+    if (!checkinsTableStateKey) {
+      setIsTableStateReady(false);
+      restoredTableStateKeyRef.current = "";
+      return;
+    }
+    if (restoredTableStateKeyRef.current === checkinsTableStateKey) return;
+
+    const savedState = readCheckinsTableStateCookie(checkinsTableStateKey);
+    const savedPagination = savedState.pagination;
+    const hasSavedState =
+      savedState.searchTerm !== undefined ||
+      savedState.filters !== undefined ||
+      savedState.pagination !== undefined;
+
+    skipNextDependencyPageResetRef.current = hasSavedState;
+    restoredTableStateKeyRef.current = checkinsTableStateKey;
+
+    setSearchTerm(savedState.searchTerm ?? "");
+    const restoredFilters = normalizeCheckinFilters(savedState.filters);
+    setFilters(restoredFilters);
+    setTempFilters(restoredFilters);
+
+    if (
+      typeof savedPagination?.pageIndex === "number" &&
+      savedPagination.pageIndex >= 0 &&
+      typeof savedPagination?.pageSize === "number" &&
+      savedPagination.pageSize > 0
+    ) {
+      setPagination({
+        pageIndex: savedPagination.pageIndex,
+        pageSize: savedPagination.pageSize,
+      });
+    }
+
+    setIsTableStateReady(true);
+  }, [checkinsTableStateKey, setPagination]);
+
+  useEffect(() => {
+    if (!checkinsTableStateKey || !isTableStateReady) return;
+    if (restoredTableStateKeyRef.current !== checkinsTableStateKey) return;
+
+    Cookies.set(
+      checkinsTableStateKey,
+      JSON.stringify({
+        searchTerm,
+        filters,
+        pagination: {
+          pageIndex: pagination.pageIndex,
+          pageSize: pagination.pageSize,
+        },
+      }),
+      COOKIE_OPTIONS,
+    );
+  }, [
+    checkinsTableStateKey,
+    isTableStateReady,
+    searchTerm,
+    filters,
+    pagination.pageIndex,
+    pagination.pageSize,
+  ]);
+
+  const hasActiveFilters =
+    (filters.project && filters.project !== "All") ||
+    (filters.trade && filters.trade !== "All") ||
+    (filters.user && filters.user !== "All");
+
+  const handleClearAppliedFilters = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    skipNextDependencyPageResetRef.current = false;
+    setTempFilters(DEFAULT_CHECKIN_FILTERS);
+    setFilters(DEFAULT_CHECKIN_FILTERS);
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  };
 
   table.setOptions((prev: any) => ({
     ...prev,
@@ -707,7 +854,13 @@ const CheckinsList = () => {
               size="small"
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                skipNextDependencyPageResetRef.current = false;
+                setSearchTerm(e.target.value);
+                setPagination((prev) =>
+                  prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                );
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -718,11 +871,30 @@ const CheckinsList = () => {
             />
             <Button
               variant="contained"
-              onClick={() => setOpenFilter(true)}
+              onClick={() => {
+                setTempFilters(filters);
+                setOpenFilter(true);
+              }}
               sx={{ minWidth: "40px", px: 1 }}
             >
               <IconFilter width={18} />
             </Button>
+            {hasActiveFilters && (
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={handleClearAppliedFilters}
+                aria-label="Clear filters"
+                sx={{
+                  minHeight: 34,
+                  height: 34,
+                  minWidth: 64,
+                  px: 1.5,
+                }}
+              >
+                <IconX size={18} />
+              </Button>
+            )}
           </Box>
 
           <Box display="flex" alignItems="center">
@@ -1193,15 +1365,27 @@ const CheckinsList = () => {
               <TextField
                 select
                 label="Project"
-                value={tempFilters.project}
+                value={tempFilters.project || "All"}
                 onChange={(e) =>
-                  setTempFilters({ ...tempFilters, project: e.target.value })
+                  setTempFilters({
+                    ...tempFilters,
+                    project: normalizeCheckinFilterValue(e.target.value),
+                  })
                 }
                 fullWidth
               >
                 <MenuItem value="All">All</MenuItem>
-                {projects.map((p, i) => (
-                  <MenuItem key={i} value={p.id}>
+                {tempFilters.project &&
+                  tempFilters.project !== "All" &&
+                  !projects.some(
+                    (p) => String(p.id) === String(tempFilters.project),
+                  ) && (
+                    <MenuItem value={tempFilters.project}>
+                      {tempFilters.project}
+                    </MenuItem>
+                  )}
+                {projects.map((p) => (
+                  <MenuItem key={p.id} value={String(p.id)}>
                     {p.name}
                   </MenuItem>
                 ))}
@@ -1209,15 +1393,27 @@ const CheckinsList = () => {
               <TextField
                 select
                 label="Trade"
-                value={tempFilters.trade}
+                value={tempFilters.trade || "All"}
                 onChange={(e) =>
-                  setTempFilters({ ...tempFilters, trade: e.target.value })
+                  setTempFilters({
+                    ...tempFilters,
+                    trade: normalizeCheckinFilterValue(e.target.value),
+                  })
                 }
                 fullWidth
               >
                 <MenuItem value="All">All</MenuItem>
-                {trades.map((p, i) => (
-                  <MenuItem key={i} value={p.id}>
+                {tempFilters.trade &&
+                  tempFilters.trade !== "All" &&
+                  !trades.some(
+                    (p) => String(p.id) === String(tempFilters.trade),
+                  ) && (
+                    <MenuItem value={tempFilters.trade}>
+                      {tempFilters.trade}
+                    </MenuItem>
+                  )}
+                {trades.map((p) => (
+                  <MenuItem key={p.id} value={String(p.id)}>
                     {p.name}
                   </MenuItem>
                 ))}
@@ -1225,15 +1421,27 @@ const CheckinsList = () => {
               <TextField
                 select
                 label="User"
-                value={tempFilters.user}
+                value={tempFilters.user || "All"}
                 onChange={(e) =>
-                  setTempFilters({ ...tempFilters, user: e.target.value })
+                  setTempFilters({
+                    ...tempFilters,
+                    user: normalizeCheckinFilterValue(e.target.value),
+                  })
                 }
                 fullWidth
               >
                 <MenuItem value="All">All</MenuItem>
-                {users.map((p, i) => (
-                  <MenuItem key={i} value={p.id}>
+                {tempFilters.user &&
+                  tempFilters.user !== "All" &&
+                  !users.some(
+                    (p) => String(p.id) === String(tempFilters.user),
+                  ) && (
+                    <MenuItem value={tempFilters.user}>
+                      {tempFilters.user}
+                    </MenuItem>
+                  )}
+                {users.map((p) => (
+                  <MenuItem key={p.id} value={String(p.id)}>
                     {p.name}
                   </MenuItem>
                 ))}
@@ -1244,16 +1452,7 @@ const CheckinsList = () => {
           <DialogActions>
             <Button
               onClick={() => {
-                setTempFilters({
-                  project: "All",
-                  trade: "All",
-                  user: "All",
-                });
-                setFilters({
-                  project: "All",
-                  trade: "All",
-                  user: "All",
-                });
+                handleClearAppliedFilters();
                 setOpenFilter(false);
               }}
               color="inherit"
@@ -1264,7 +1463,11 @@ const CheckinsList = () => {
             <Button
               variant="contained"
               onClick={() => {
-                setFilters(tempFilters);
+                skipNextDependencyPageResetRef.current = false;
+                setFilters(normalizeCheckinFilters(tempFilters));
+                setPagination((prev) =>
+                  prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                );
                 setOpenFilter(false);
               }}
             >

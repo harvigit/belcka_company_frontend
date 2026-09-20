@@ -324,6 +324,8 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
     const [isRejecting, setIsRejecting] = useState(false);
     const [preferencesHydrated, setPreferencesHydrated] = useState(false);
     const loadedFilterCompanyIdRef = useRef<number | null>(null);
+    const restoredPreferencesKeyRef = useRef('');
+    const skipNextDependencyPageResetRef = useRef(false);
 
     useEffect(() => {
         if (!projectId) return;
@@ -1018,15 +1020,20 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
         onSortingChange: setSorting,
         onColumnVisibilityChange: setColumnVisibility,
         manualSorting: true,
+        shouldResetPageOnDebounce: () => !skipNextDependencyPageResetRef.current,
     });
 
     useEffect(() => {
         if (!expensePreferencesCookieKey) {
             setPreferencesHydrated(false);
+            restoredPreferencesKeyRef.current = '';
             return;
         }
         // Wait for shared project filters so Overview/Expenses/Pricework stay in sync.
         if (projectId && sharedFilters && !sharedFilters.hydrated) {
+            return;
+        }
+        if (restoredPreferencesKeyRef.current === expensePreferencesCookieKey) {
             return;
         }
 
@@ -1065,8 +1072,9 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                     isExpenseTabKey(parsed.activeTab) ? parsed.activeTab : 'all',
                 );
                 setSorting(normalizeStoredSorting(parsed.sorting));
+                skipNextDependencyPageResetRef.current = true;
                 setPagination({
-                    pageIndex: 0,
+                    pageIndex: projectId ? 0 : nextPagination.pageIndex,
                     pageSize: nextPagination.pageSize,
                 });
             } else if (projectId && sharedFilters) {
@@ -1085,6 +1093,7 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
             console.error('Failed to load expense list preferences cookie:', error);
             Cookies.remove(expensePreferencesCookieKey, {path: '/'});
         } finally {
+            restoredPreferencesKeyRef.current = expensePreferencesCookieKey;
             setPreferencesHydrated(true);
         }
     }, [
@@ -1092,15 +1101,12 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
         projectId,
         setPagination,
         sharedFilters?.hydrated,
-        sharedFilters?.startDate,
-        sharedFilters?.endDate,
-        sharedFilters?.teamId,
-        sharedFilters?.tradeId,
     ]);
 
     // Keep project Expenses in sync when shared Overview/Pricework filters change.
     useEffect(() => {
         if (!projectId || !sharedFilters?.hydrated || !preferencesHydrated) return;
+        skipNextDependencyPageResetRef.current = false;
         setStartDate(sharedFilters.startDate);
         setEndDate(sharedFilters.endDate);
         setFilters((prev) => ({
@@ -1115,6 +1121,9 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
             team_id: sharedFilters.teamId || '',
             trade_id: sharedFilters.tradeId || '',
         }));
+        setPagination((prev: any) =>
+            prev.pageIndex === 0 ? prev : {...prev, pageIndex: 0},
+        );
     }, [
         projectId,
         preferencesHydrated,
@@ -1203,6 +1212,7 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
         from: Date | null;
         to: Date | null;
     }) => {
+        skipNextDependencyPageResetRef.current = false;
         setStartDate(range.from);
         setEndDate(range.to);
         if (projectId) {
@@ -1212,12 +1222,14 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
     };
 
     const handleSearchChange = (value: string) => {
+        skipNextDependencyPageResetRef.current = false;
         setSearch(value);
         setPagination((prev: any) => ({...prev, pageIndex: 0}));
     };
 
     const handleClearAppliedFilters = (event: React.MouseEvent) => {
         event.stopPropagation();
+        skipNextDependencyPageResetRef.current = false;
         const nextFilters = projectId
             ? {...defaultFilters, project_id: projectId}
             : defaultFilters;
@@ -1255,6 +1267,7 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
     };
 
     const handleTabChange = (tab: ExpenseTabKey) => {
+        skipNextDependencyPageResetRef.current = false;
         setActiveTab(tab);
         setIsSelectAll(false);
         setSelectedRowIds(new Set());
@@ -2640,6 +2653,7 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                     <Button
                         color="inherit"
                         onClick={() => {
+                            skipNextDependencyPageResetRef.current = false;
                             const nextFilters = projectId
                                 ? {...defaultFilters, project_id: projectId}
                                 : defaultFilters;
@@ -2659,6 +2673,7 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                     <Button
                         variant="contained"
                         onClick={() => {
+                            skipNextDependencyPageResetRef.current = false;
                             const nextFilters = projectId
                                 ? {...tempFilters, project_id: projectId}
                                 : tempFilters;

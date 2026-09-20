@@ -37,6 +37,7 @@ import { User } from "next-auth";
 import Image from "next/image";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import Cookies from "js-cookie";
 import api from "@/utils/axios";
 import { useServerTable } from "@/hooks/useServerTable";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
@@ -110,6 +111,61 @@ type ProjectListingExportTotals = {
 };
 
 const columnHelper = createColumnHelper<ProjectDashboardRow>();
+
+type ProjectDashboardFilters = {
+  status: string;
+};
+
+type ProjectDashboardCookieState = {
+  searchTerm?: string;
+  filters?: Partial<ProjectDashboardFilters>;
+  pagination?: {
+    pageIndex?: number;
+    pageSize?: number;
+  };
+};
+
+const DEFAULT_PROJECT_FILTERS: ProjectDashboardFilters = { status: "all" };
+
+const COOKIE_OPTIONS = { expires: 365, path: "/" };
+
+const getProjectDashboardStateKey = (
+  userId?: number | string,
+  companyId?: number | string | null,
+) =>
+  userId && companyId
+    ? `project_dashboard_table_state_${userId}_${companyId}`
+    : "";
+
+const normalizeProjectStatus = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === "" || value === "All") {
+    return "all";
+  }
+  return String(value);
+};
+
+const normalizeProjectFilters = (
+  filters?: Partial<ProjectDashboardFilters> | Record<string, string | number>,
+): ProjectDashboardFilters => ({
+  status: normalizeProjectStatus(filters?.status),
+});
+
+const readProjectDashboardCookie = (
+  key: string,
+): ProjectDashboardCookieState => {
+  if (!key) return {};
+
+  const saved = Cookies.get(key);
+  if (!saved) return {};
+
+  try {
+    return JSON.parse(saved);
+  } catch (error) {
+    console.error("Failed to parse project dashboard table state cookie", error);
+    Cookies.remove(key, { path: "/" });
+    return {};
+  }
+};
 
 const formatActivityDate = (value?: string | null) => {
   if (!value) return "-";
@@ -218,8 +274,12 @@ const ProjectDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currency, setCurrency] = useState("£");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({ status: "all" });
-  const [tempFilters, setTempFilters] = useState({ status: "all" });
+  const [filters, setFilters] =
+    useState<ProjectDashboardFilters>(DEFAULT_PROJECT_FILTERS);
+  const [tempFilters, setTempFilters] = useState(filters);
+  const restoredTableStateKeyRef = useRef("");
+  const skipNextDependencyPageResetRef = useRef(false);
+  const [isTableStateReady, setIsTableStateReady] = useState(false);
   const [columnSearch, setColumnSearch] = useState("");
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
@@ -280,6 +340,10 @@ const ProjectDashboard = () => {
   const user = session.data?.user as User & { company_id?: number | null } & {
     id: number;
   };
+  const projectDashboardStateKey = useMemo(
+    () => getProjectDashboardStateKey(user?.id, user?.company_id),
+    [user?.id, user?.company_id],
+  );
   const { columnVisibility, onColumnVisibilityChange } =
     usePersistentColumnVisibility({
       storageKey: `cv_${user?.company_id}_${user?.id}_project_dashboard`,
@@ -385,7 +449,7 @@ const ProjectDashboard = () => {
   };
 
   const fetchProjects = async () => {
-    if (!user?.company_id) return;
+    if (!user?.company_id || !isTableStateReady) return;
     try {
       setLoading(true);
       let url = `project/dashboard?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -740,14 +804,102 @@ const ProjectDashboard = () => {
     data,
     columns,
     fetchData: fetchProjects,
-    debounceDependencies: [searchTerm, user?.company_id, filters.status],
+    debounceDependencies: [
+      searchTerm,
+      user?.company_id,
+      filters.status,
+      isTableStateReady,
+    ],
     state: { columnVisibility },
     onColumnVisibilityChange,
+    shouldResetPageOnDebounce: () => {
+      return !skipNextDependencyPageResetRef.current;
+    },
   });
 
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [searchTerm, filters.status]);
+    if (!projectDashboardStateKey) {
+      setIsTableStateReady(false);
+      restoredTableStateKeyRef.current = "";
+      return;
+    }
+    if (restoredTableStateKeyRef.current === projectDashboardStateKey) return;
+
+    const savedState = readProjectDashboardCookie(projectDashboardStateKey);
+    const savedPagination = savedState.pagination;
+    const hasSavedState =
+      savedState.searchTerm !== undefined ||
+      savedState.filters !== undefined ||
+      savedState.pagination !== undefined;
+
+    skipNextDependencyPageResetRef.current = hasSavedState;
+    restoredTableStateKeyRef.current = projectDashboardStateKey;
+
+    setSearchTerm(savedState.searchTerm ?? "");
+    const restoredFilters = normalizeProjectFilters(savedState.filters);
+    setFilters(restoredFilters);
+    setTempFilters(restoredFilters);
+
+    if (
+      typeof savedPagination?.pageIndex === "number" &&
+      savedPagination.pageIndex >= 0 &&
+      typeof savedPagination?.pageSize === "number" &&
+      savedPagination.pageSize > 0
+    ) {
+      setPagination({
+        pageIndex: savedPagination.pageIndex,
+        pageSize: savedPagination.pageSize,
+      });
+    }
+
+    setIsTableStateReady(true);
+  }, [projectDashboardStateKey, setPagination]);
+
+  useEffect(() => {
+    if (!projectDashboardStateKey || !isTableStateReady) return;
+    if (restoredTableStateKeyRef.current !== projectDashboardStateKey) return;
+
+    Cookies.set(
+      projectDashboardStateKey,
+      JSON.stringify({
+        searchTerm,
+        filters,
+        pagination: {
+          pageIndex: pagination.pageIndex,
+          pageSize: pagination.pageSize,
+        },
+      }),
+      COOKIE_OPTIONS,
+    );
+  }, [
+    projectDashboardStateKey,
+    isTableStateReady,
+    searchTerm,
+    filters,
+    pagination.pageIndex,
+    pagination.pageSize,
+  ]);
+
+  useEffect(() => {
+    if (skipNextDependencyPageResetRef.current) return;
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  }, [searchTerm, filters.status, setPagination]);
+
+  const hasActiveFilters = Boolean(
+    filters.status && filters.status !== "all" && filters.status !== "All",
+  );
+
+  const handleClearAppliedFilters = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    skipNextDependencyPageResetRef.current = false;
+    setTempFilters(DEFAULT_PROJECT_FILTERS);
+    setFilters(DEFAULT_PROJECT_FILTERS);
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  };
 
   const simpleColumns = columns.map((column: any) => ({
     name: column.id ?? "Unnamed Column",
@@ -777,7 +929,10 @@ const ProjectDashboard = () => {
               size="small"
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                skipNextDependencyPageResetRef.current = false;
+                setSearchTerm(e.target.value);
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -797,6 +952,23 @@ const ProjectDashboard = () => {
             >
               <IconFilter width={18} />
             </Button>
+            {hasActiveFilters && (
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={handleClearAppliedFilters}
+                aria-label="Clear filters"
+                sx={{
+                  ml: 1,
+                  minHeight: 34,
+                  height: 34,
+                  minWidth: 64,
+                  px: 1.5,
+                }}
+              >
+                <IconX size={18} />
+              </Button>
+            )}
           </Box>
 
           <Box display="flex" alignItems="center">
@@ -955,9 +1127,12 @@ const ProjectDashboard = () => {
               <TextField
                 select
                 label="Status"
-                value={tempFilters.status}
+                value={normalizeProjectStatus(tempFilters.status)}
                 onChange={(e) =>
-                  setTempFilters({ ...tempFilters, status: e.target.value })
+                  setTempFilters({
+                    ...tempFilters,
+                    status: normalizeProjectStatus(e.target.value),
+                  })
                 }
                 fullWidth
               >
@@ -971,8 +1146,7 @@ const ProjectDashboard = () => {
             <Button
               color="inherit"
               onClick={() => {
-                setTempFilters({ status: "all" });
-                setFilters({ status: "all" });
+                handleClearAppliedFilters();
                 setFilterOpen(false);
               }}
             >
@@ -981,7 +1155,8 @@ const ProjectDashboard = () => {
             <Button
               variant="contained"
               onClick={() => {
-                setFilters(tempFilters);
+                skipNextDependencyPageResetRef.current = false;
+                setFilters(normalizeProjectFilters(tempFilters));
                 setFilterOpen(false);
               }}
             >

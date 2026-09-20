@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import Cookies from "js-cookie";
 import {
   TableContainer,
   Table,
@@ -105,6 +106,62 @@ interface TableRow {
   expected_delivery_date?: string;
 }
 
+type PurchaseOrderFilters = {
+  status: string;
+};
+
+type PurchaseOrdersTableCookieState = {
+  searchTerm?: string;
+  filters?: Partial<PurchaseOrderFilters>;
+  pagination?: {
+    pageIndex?: number;
+    pageSize?: number;
+  };
+};
+
+const DEFAULT_PURCHASE_ORDER_FILTERS: PurchaseOrderFilters = { status: "" };
+
+const COOKIE_OPTIONS = { expires: 365, path: "/" };
+
+const getPurchaseOrdersTableStateKey = (
+  userId?: number | string,
+  companyId?: number | string | null,
+) =>
+  userId && companyId
+    ? `purchase_orders_table_state_${userId}_${companyId}`
+    : "";
+
+const normalizePurchaseOrderStatus = (value?: string | number | null) => {
+  if (
+    value === undefined ||
+    value === null ||
+    value === "all" ||
+    value === "All"
+  ) {
+    return "";
+  }
+  return String(value);
+};
+
+const normalizePurchaseOrderFilters = (
+  filters?: Partial<PurchaseOrderFilters> | Record<string, string | number>,
+): PurchaseOrderFilters => ({
+  status: normalizePurchaseOrderStatus(filters?.status),
+});
+
+const readPurchaseOrdersTableStateCookie = (
+  cookieKey: string,
+): PurchaseOrdersTableCookieState => {
+  try {
+    const stored = Cookies.get(cookieKey);
+    if (!stored) return {};
+    const parsed = JSON.parse(stored);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 const PurchaseOrderList = () => {
   const [data, setData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -120,7 +177,10 @@ const PurchaseOrderList = () => {
   };
 
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & {
+    company_id?: number | null;
+    id?: number | string;
+  };
   const { columnVisibility, onColumnVisibilityChange } =
     usePersistentColumnVisibility({
       storageKey: `cv_${user?.company_id}_${user?.id}_purchase_orders`,
@@ -203,11 +263,17 @@ const PurchaseOrderList = () => {
   };
   const [purchaseOrder, setPurchaseOrder] = useState<any | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    status: "",
-  });
-
+  const [filters, setFilters] = useState<PurchaseOrderFilters>(
+    DEFAULT_PURCHASE_ORDER_FILTERS,
+  );
   const [tempFilters, setTempFilters] = useState(filters);
+  const purchaseOrdersTableStateKey = useMemo(
+    () => getPurchaseOrdersTableStateKey(user?.id, user?.company_id),
+    [user?.id, user?.company_id],
+  );
+  const restoredTableStateKeyRef = useRef("");
+  const skipNextDependencyPageResetRef = useRef(false);
+  const [isTableStateReady, setIsTableStateReady] = useState(false);
   const [formData, setFormData] = useState({
     company_id: Number(user?.company_id),
     order_id: "",
@@ -240,6 +306,7 @@ const PurchaseOrderList = () => {
 
   // Fetch data
   const fetchOrders = async () => {
+    if (!user?.company_id || !isTableStateReady) return;
     setFetchStore(true);
     try {
       const queryParams = new URLSearchParams({
@@ -292,10 +359,97 @@ const PurchaseOrderList = () => {
     data,
     columns: [],
     fetchData: fetchOrders,
-    debounceDependencies: [searchTerm, filters],
+    debounceDependencies: [
+      searchTerm,
+      filters,
+      user?.company_id,
+      isTableStateReady,
+    ],
     state: { columnVisibility },
     onColumnVisibilityChange,
+    shouldResetPageOnDebounce: () => {
+      return !skipNextDependencyPageResetRef.current;
+    },
   });
+
+  useEffect(() => {
+    if (!purchaseOrdersTableStateKey) {
+      setIsTableStateReady(false);
+      restoredTableStateKeyRef.current = "";
+      return;
+    }
+    if (restoredTableStateKeyRef.current === purchaseOrdersTableStateKey) return;
+
+    const savedState = readPurchaseOrdersTableStateCookie(
+      purchaseOrdersTableStateKey,
+    );
+    const savedPagination = savedState.pagination;
+    const hasSavedState =
+      savedState.searchTerm !== undefined ||
+      savedState.filters !== undefined ||
+      savedState.pagination !== undefined;
+
+    skipNextDependencyPageResetRef.current = hasSavedState;
+    restoredTableStateKeyRef.current = purchaseOrdersTableStateKey;
+
+    setSearchTerm(savedState.searchTerm ?? "");
+    const restoredFilters = normalizePurchaseOrderFilters(savedState.filters);
+    setFilters(restoredFilters);
+    setTempFilters(restoredFilters);
+
+    if (
+      typeof savedPagination?.pageIndex === "number" &&
+      savedPagination.pageIndex >= 0 &&
+      typeof savedPagination?.pageSize === "number" &&
+      savedPagination.pageSize > 0
+    ) {
+      setPagination({
+        pageIndex: savedPagination.pageIndex,
+        pageSize: savedPagination.pageSize,
+      });
+    }
+
+    setIsTableStateReady(true);
+  }, [purchaseOrdersTableStateKey, setPagination]);
+
+  useEffect(() => {
+    if (!purchaseOrdersTableStateKey || !isTableStateReady) return;
+    if (restoredTableStateKeyRef.current !== purchaseOrdersTableStateKey) return;
+
+    Cookies.set(
+      purchaseOrdersTableStateKey,
+      JSON.stringify({
+        searchTerm,
+        filters: normalizePurchaseOrderFilters(filters),
+        pagination: {
+          pageIndex: pagination.pageIndex,
+          pageSize: pagination.pageSize,
+        },
+      }),
+      COOKIE_OPTIONS,
+    );
+  }, [
+    purchaseOrdersTableStateKey,
+    isTableStateReady,
+    searchTerm,
+    filters,
+    pagination.pageIndex,
+    pagination.pageSize,
+  ]);
+
+  const hasActiveFilters = Boolean(
+    filters.status && filters.status !== "all" && filters.status !== "All",
+  );
+
+  const handleClearAppliedFilters = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    skipNextDependencyPageResetRef.current = false;
+    setTempFilters(DEFAULT_PURCHASE_ORDER_FILTERS);
+    setFilters(DEFAULT_PURCHASE_ORDER_FILTERS);
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  };
 
   useEffect(() => {
     // Initial fetch is handled by useServerTable
@@ -1770,7 +1924,10 @@ Team Belcka
               variant="outlined"
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                skipNextDependencyPageResetRef.current = false;
+                setSearchTerm(e.target.value);
+              }}
               slotProps={{
                 input: {
                   endAdornment: (
@@ -1783,11 +1940,31 @@ Team Belcka
             />
             <Button
               variant="contained"
-              onClick={() => setFilterOpen(true)}
+              onClick={() => {
+                setTempFilters(normalizePurchaseOrderFilters(filters));
+                setFilterOpen(true);
+              }}
               sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
             >
               <IconFilter width={18} />
             </Button>
+            {hasActiveFilters && (
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={handleClearAppliedFilters}
+                sx={{
+                  mt: { xs: 1, sm: 0 },
+                  minHeight: 34,
+                  height: 34,
+                  minWidth: 64,
+                  px: 1.5,
+                }}
+                aria-label="Clear filters"
+              >
+                <IconX size={18} />
+              </Button>
+            )}
 
             <Dialog
               open={filterOpen}
@@ -1822,13 +1999,25 @@ Team Belcka
                   <TextField
                     select
                     label="Status"
-                    value={tempFilters.status}
+                    value={tempFilters.status || "all"}
                     onChange={(e) =>
-                      setTempFilters({ ...tempFilters, status: e.target.value })
+                      setTempFilters({
+                        ...tempFilters,
+                        status: normalizePurchaseOrderStatus(e.target.value),
+                      })
                     }
                     fullWidth
                   >
                     <MenuItem value="all">All</MenuItem>
+                    {tempFilters.status &&
+                      tempFilters.status !== "all" &&
+                      !["1", "2", "3", "4", "5"].includes(
+                        tempFilters.status,
+                      ) && (
+                        <MenuItem value={tempFilters.status}>
+                          {tempFilters.status}
+                        </MenuItem>
+                      )}
                     <MenuItem value="1">Partially Delivered</MenuItem>
                     <MenuItem value="2">Upcoming</MenuItem>
                     <MenuItem value="3">Processing</MenuItem>
@@ -1841,12 +2030,7 @@ Team Belcka
               <DialogActions>
                 <Button
                   onClick={() => {
-                    setTempFilters({
-                      status: "",
-                    });
-                    setFilters({
-                      status: "",
-                    });
+                    handleClearAppliedFilters();
                     setFilterOpen(false);
                   }}
                   color="inherit"
@@ -1857,7 +2041,13 @@ Team Belcka
                 <Button
                   variant="contained"
                   onClick={() => {
-                    setFilters(tempFilters);
+                    skipNextDependencyPageResetRef.current = false;
+                    setFilters(normalizePurchaseOrderFilters(tempFilters));
+                    setPagination((prev) =>
+                      prev.pageIndex === 0
+                        ? prev
+                        : { ...prev, pageIndex: 0 },
+                    );
                     setFilterOpen(false);
                   }}
                 >

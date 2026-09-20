@@ -1485,12 +1485,9 @@ const TablePagination = () => {
         state: {columnVisibility},
         onColumnVisibilityChange,
         shouldResetPageOnDebounce: () => {
-            if (skipNextDependencyPageResetRef.current) {
-                skipNextDependencyPageResetRef.current = false;
-                return false;
-            }
-
-            return true;
+            // Keep the cookie-restore skip until the user changes search/filters.
+            // Consuming it on the first debounce let teams/trades loading reset the page.
+            return !skipNextDependencyPageResetRef.current;
         },
     });
 
@@ -1535,7 +1532,7 @@ const TablePagination = () => {
     }, [usersTableStateKey, setPagination]);
 
     useEffect(() => {
-        if (!usersTableStateKey) return;
+        if (!usersTableStateKey || !isTableStateReady) return;
         if (restoredTableStateKeyRef.current !== usersTableStateKey) return;
 
         Cookies.set(
@@ -1552,11 +1549,28 @@ const TablePagination = () => {
         );
     }, [
         usersTableStateKey,
+        isTableStateReady,
         searchTerm,
         filters,
         pagination.pageIndex,
         pagination.pageSize,
     ]);
+
+    const hasActiveFilters =
+        filters.team.length > 0 ||
+        filters.trade.length > 0 ||
+        filters.supervisor.length > 0;
+
+    const handleClearAppliedFilters = (event?: React.MouseEvent) => {
+        event?.stopPropagation();
+        skipNextDependencyPageResetRef.current = false;
+        setTempFilters(DEFAULT_USER_FILTERS);
+        setFilters(DEFAULT_USER_FILTERS);
+        setPagination((prev) =>
+            prev.pageIndex === 0 ? prev : {...prev, pageIndex: 0},
+        );
+    };
+
     useEffect(() => {
         const eligibleColumns = table
             .getAllLeafColumns()
@@ -1870,6 +1884,24 @@ const TablePagination = () => {
                         >
                             <IconFilter width={18}/>
                         </Button>
+                        {hasActiveFilters && (
+                            <Button
+                                color="error"
+                                variant="outlined"
+                                onClick={handleClearAppliedFilters}
+                                sx={{
+                                    mt: {xs: 1, sm: 0},
+                                    ml: 1,
+                                    minHeight: 34,
+                                    height: 34,
+                                    minWidth: 64,
+                                    px: 1.5,
+                                }}
+                                aria-label={t('Clear filters')}
+                            >
+                                <IconX size={18}/>
+                            </Button>
+                        )}
                     </Grid>
                     <Dialog
                         open={open}
@@ -1924,14 +1956,7 @@ const TablePagination = () => {
                         <DialogActions>
                             <Button
                                 onClick={() => {
-                                    skipNextDependencyPageResetRef.current = false;
-                                    setTempFilters(DEFAULT_USER_FILTERS);
-                                    setFilters(DEFAULT_USER_FILTERS);
-                                    setPagination((prev) =>
-                                        prev.pageIndex === 0
-                                            ? prev
-                                            : {...prev, pageIndex: 0},
-                                    );
+                                    handleClearAppliedFilters();
                                     setOpen(false);
                                 }}
                                 color="inherit"

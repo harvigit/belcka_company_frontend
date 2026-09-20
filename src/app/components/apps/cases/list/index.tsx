@@ -1,5 +1,12 @@
 "use client";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import Cookies from "js-cookie";
 import {
   Typography,
   Box,
@@ -60,6 +67,64 @@ import ArchiveAddress from "../../addresses/list/archive-address-list";
 import CaseEditDrawer from "./case-edit-drawer";
 import CaseAddDrawer from "./case-add-drawer";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
+
+type CaseFilters = {
+  status: string;
+  project_id: string;
+  parent_address_id: string;
+};
+
+type CasesTableCookieState = {
+  search?: string;
+  filters?: Partial<CaseFilters>;
+  pagination?: {
+    pageIndex?: number;
+    pageSize?: number;
+  };
+};
+
+const DEFAULT_CASE_FILTERS: CaseFilters = {
+  status: "",
+  project_id: "",
+  parent_address_id: "",
+};
+
+const COOKIE_OPTIONS = { expires: 365, path: "/" };
+
+const getCasesTableStateKey = (
+  userId?: number | string,
+  companyId?: number | string | null,
+) => (userId && companyId ? `cases_table_state_${userId}_${companyId}` : "");
+
+const normalizeCaseFilterValue = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === "All") return "";
+  return String(value);
+};
+
+const normalizeCaseFilters = (
+  filters?: Partial<CaseFilters> | Record<string, string | number>,
+  lockedProjectId?: string,
+): CaseFilters => ({
+  status: normalizeCaseFilterValue(filters?.status),
+  project_id:
+    lockedProjectId || normalizeCaseFilterValue(filters?.project_id),
+  parent_address_id: normalizeCaseFilterValue(filters?.parent_address_id),
+});
+
+const readCasesTableStateCookie = (key: string): CasesTableCookieState => {
+  if (!key) return {};
+
+  const saved = Cookies.get(key);
+  if (!saved) return {};
+
+  try {
+    return JSON.parse(saved);
+  } catch (error) {
+    console.error("Failed to parse cases table state cookie", error);
+    Cookies.remove(key, { path: "/" });
+    return {};
+  }
+};
 
 const CASE_LIST_SORT_FIELDS: Record<string, string> = {
   name: "name",
@@ -326,20 +391,21 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    status: "",
+  const [filters, setFilters] = useState<CaseFilters>({
+    ...DEFAULT_CASE_FILTERS,
     project_id: projectId ? String(projectId) : "",
-    parent_address_id: "",
   });
   const [tempFilters, setTempFilters] = useState(filters);
   const [projectList, setProjectList] = useState<any[]>([]);
   const [parentAddressList, setParentAddressList] = useState<any[]>([]);
   const [parentFilterList, setParentFilterList] = useState<any[]>([]);
+  const restoredTableStateKeyRef = useRef("");
+  const skipNextDependencyPageResetRef = useRef(false);
+  const [isTableStateReady, setIsTableStateReady] = useState(Boolean(projectId));
 
   const getClearedFilters = () => ({
-    status: "",
+    ...DEFAULT_CASE_FILTERS,
     project_id: projectId ? String(projectId) : "",
-    parent_address_id: "",
   });
 
   const hasActiveFilters = Boolean(
@@ -347,12 +413,6 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
       filters.parent_address_id ||
       (!projectId && filters.project_id),
   );
-
-  const handleClearAppliedFilters = () => {
-    const nextFilters = getClearedFilters();
-    setTempFilters(nextFilters);
-    setFilters(nextFilters);
-  };
 
   useEffect(() => {
     if (!projectId) return;
@@ -400,7 +460,15 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
   const [isScrollable, setIsScrollable] = React.useState(false);
 
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & {
+    company_id?: number | null;
+    id?: number | string;
+  };
+  const casesTableStateKey = useMemo(
+    () =>
+      projectId ? "" : getCasesTableStateKey(user?.id, user?.company_id),
+    [projectId, user?.id, user?.company_id],
+  );
   const { columnVisibility, onColumnVisibilityChange } =
     usePersistentColumnVisibility({
       storageKey: `cv_${user?.company_id}_${user?.id}_cases`,
@@ -469,6 +537,7 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
 
   const fetchCases = async () => {
     if (!user?.company_id) return;
+    if (!projectId && !isTableStateReady) return;
     setLoading(true);
     try {
       let url = `address/get?&company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -974,7 +1043,12 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
     data: data,
     columns,
     fetchData: fetchCases,
-    debounceDependencies: [user?.company_id, search, JSON.stringify(filters)],
+    debounceDependencies: [
+      user?.company_id,
+      search,
+      JSON.stringify(filters),
+      isTableStateReady,
+    ],
     state: {
       columnVisibility: projectId
         ? { ...columnVisibility, project_name: false }
@@ -984,7 +1058,90 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
     onColumnVisibilityChange,
     onSortingChange: setSorting,
     manualSorting: true,
+    shouldResetPageOnDebounce: () => {
+      return !skipNextDependencyPageResetRef.current;
+    },
   });
+
+  useEffect(() => {
+    if (projectId) {
+      setIsTableStateReady(true);
+      restoredTableStateKeyRef.current = "";
+      return;
+    }
+    if (!casesTableStateKey) {
+      setIsTableStateReady(false);
+      restoredTableStateKeyRef.current = "";
+      return;
+    }
+    if (restoredTableStateKeyRef.current === casesTableStateKey) return;
+
+    const savedState = readCasesTableStateCookie(casesTableStateKey);
+    const savedPagination = savedState.pagination;
+    const hasSavedState =
+      savedState.search !== undefined ||
+      savedState.filters !== undefined ||
+      savedState.pagination !== undefined;
+
+    skipNextDependencyPageResetRef.current = hasSavedState;
+    restoredTableStateKeyRef.current = casesTableStateKey;
+
+    setSearch(savedState.search ?? "");
+    const restoredFilters = normalizeCaseFilters(savedState.filters);
+    setFilters(restoredFilters);
+    setTempFilters(restoredFilters);
+
+    if (
+      typeof savedPagination?.pageIndex === "number" &&
+      savedPagination.pageIndex >= 0 &&
+      typeof savedPagination?.pageSize === "number" &&
+      savedPagination.pageSize > 0
+    ) {
+      setPagination({
+        pageIndex: savedPagination.pageIndex,
+        pageSize: savedPagination.pageSize,
+      });
+    }
+
+    setIsTableStateReady(true);
+  }, [projectId, casesTableStateKey, setPagination]);
+
+  useEffect(() => {
+    if (projectId || !casesTableStateKey || !isTableStateReady) return;
+    if (restoredTableStateKeyRef.current !== casesTableStateKey) return;
+
+    Cookies.set(
+      casesTableStateKey,
+      JSON.stringify({
+        search,
+        filters,
+        pagination: {
+          pageIndex: pagination.pageIndex,
+          pageSize: pagination.pageSize,
+        },
+      }),
+      COOKIE_OPTIONS,
+    );
+  }, [
+    projectId,
+    casesTableStateKey,
+    isTableStateReady,
+    search,
+    filters,
+    pagination.pageIndex,
+    pagination.pageSize,
+  ]);
+
+  const handleClearAppliedFilters = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    skipNextDependencyPageResetRef.current = false;
+    const nextFilters = getClearedFilters();
+    setTempFilters(nextFilters);
+    setFilters(nextFilters);
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  };
 
   return (
     <PermissionGuard permission="Cases">
@@ -1020,7 +1177,11 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                 placeholder="Search..."
                 value={search}
                 onChange={(e) => {
+                  skipNextDependencyPageResetRef.current = false;
                   setSearch(e.target.value);
+                  setPagination((prev) =>
+                    prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                  );
                 }}
                 InputProps={{
                   startAdornment: (
@@ -1034,7 +1195,10 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
 
               <Button
                 variant="contained"
-                onClick={() => setOpen(true)}
+                onClick={() => {
+                  setTempFilters(filters);
+                  setOpen(true);
+                }}
                 sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}
               >
                 <IconFilter width={18} />
@@ -1045,9 +1209,16 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                   variant="outlined"
                   onClick={handleClearAppliedFilters}
                   aria-label="Clear filters"
-                  sx={{ mt: { xs: 1, sm: 0 }, ml: 1, minWidth: "40px", px: 1 }}
+                  sx={{
+                    mt: { xs: 1, sm: 0 },
+                    ml: 1,
+                    minHeight: 34,
+                    height: 34,
+                    minWidth: 64,
+                    px: 1.5,
+                  }}
                 >
-                  <IconX width={18} />
+                  <IconX size={18} />
                 </Button>
               )}
             </Box>
@@ -1190,9 +1361,12 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                   <TextField
                     select
                     label="Status"
-                    value={tempFilters.status}
+                    value={tempFilters.status || "All"}
                     onChange={(e) =>
-                      setTempFilters({ ...tempFilters, status: e.target.value })
+                      setTempFilters({
+                        ...tempFilters,
+                        status: normalizeCaseFilterValue(e.target.value),
+                      })
                     }
                     fullWidth
                   >
@@ -1206,15 +1380,21 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                     <Autocomplete
                       options={projectList}
                       getOptionLabel={(option) => option.name || ""}
+                      isOptionEqualToValue={(option, selected) =>
+                        String(option.id) === String(selected.id)
+                      }
                       value={
                         projectList.find(
-                          (p) => p.id === tempFilters.project_id,
+                          (p) =>
+                            String(p.id) === String(tempFilters.project_id),
                         ) || null
                       }
                       onChange={(e, value) => {
                         setTempFilters({
                           ...tempFilters,
-                          project_id: value ? value.id : "",
+                          project_id: value
+                            ? normalizeCaseFilterValue(value.id)
+                            : "",
                         });
                       }}
                       renderInput={(params) => (
@@ -1226,15 +1406,22 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                   <Autocomplete
                     options={projectId ? parentFilterList : parentAddressList}
                     getOptionLabel={(option) => option.name || ""}
+                    isOptionEqualToValue={(option, selected) =>
+                      String(option.id) === String(selected.id)
+                    }
                     value={
                       (projectId ? parentFilterList : parentAddressList).find(
-                        (p) => p.id === tempFilters.parent_address_id,
+                        (p) =>
+                          String(p.id) ===
+                          String(tempFilters.parent_address_id),
                       ) || null
                     }
                     onChange={(e, value) => {
                       setTempFilters({
                         ...tempFilters,
-                        parent_address_id: value ? value.id : "",
+                        parent_address_id: value
+                          ? normalizeCaseFilterValue(value.id)
+                          : "",
                       });
                     }}
                     renderInput={(params) => (
@@ -1258,10 +1445,17 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                 <Button
                   variant="contained"
                   onClick={() => {
+                    skipNextDependencyPageResetRef.current = false;
                     setFilters(
-                      projectId
-                        ? { ...tempFilters, project_id: String(projectId) }
-                        : tempFilters,
+                      normalizeCaseFilters(
+                        tempFilters,
+                        projectId ? String(projectId) : undefined,
+                      ),
+                    );
+                    setPagination((prev) =>
+                      prev.pageIndex === 0
+                        ? prev
+                        : { ...prev, pageIndex: 0 },
                     );
                     setOpen(false);
                   }}

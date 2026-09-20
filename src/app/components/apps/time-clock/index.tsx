@@ -560,6 +560,7 @@ const TimeClock = ({queryParams}: Props) => {
     const dataRequestsRef = useRef<Map<string, Promise<Index[]>>>(new Map());
     const conflictRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
     const hasInitializedFilterResetRef = useRef(false);
+    const skipNextDependencyPageResetRef = useRef(true);
     const filterPopoverOpen = Boolean(filterAnchorEl);
     const activeFilterCount =
         filters.teams.length +
@@ -728,6 +729,7 @@ const TimeClock = ({queryParams}: Props) => {
             console.error('Failed to load time-clock filters cookie:', error);
             Cookies.remove(timeClockFiltersCookieKey, {path: '/'});
         } finally {
+            skipNextDependencyPageResetRef.current = true;
             setFiltersHydrated(true);
         }
     }, [timeClockFiltersCookieKey]);
@@ -924,6 +926,7 @@ const TimeClock = ({queryParams}: Props) => {
     }, [cycleReady, startDate, endDate]);
 
     const handleClearSessionFilter = () => {
+        skipNextDependencyPageResetRef.current = false;
         sessionStorage.removeItem('timesheet_sensitive_params');
 
         const nextQueryParams = {
@@ -1178,6 +1181,7 @@ const TimeClock = ({queryParams}: Props) => {
         to: Date | null;
     }) => {
         if (range.from && range.to) {
+            skipNextDependencyPageResetRef.current = false;
             setStartDate(range.from);
             setEndDate(range.to);
             saveDateRangeToStorage(range.from, range.to, columnVisibility);
@@ -1211,6 +1215,7 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleClearFilters = () => {
+        skipNextDependencyPageResetRef.current = false;
         setTempFilters(EMPTY_TIME_CLOCK_FILTERS);
         setFilters(EMPTY_TIME_CLOCK_FILTERS);
         saveTimeClockFiltersCookie(EMPTY_TIME_CLOCK_FILTERS, typeFilter);
@@ -1220,6 +1225,7 @@ const TimeClock = ({queryParams}: Props) => {
 
     const handleClearAppliedFilters = (event: React.MouseEvent) => {
         event.stopPropagation();
+        skipNextDependencyPageResetRef.current = false;
         setTempFilters(EMPTY_TIME_CLOCK_FILTERS);
         setFilters(EMPTY_TIME_CLOCK_FILTERS);
         saveTimeClockFiltersCookie(EMPTY_TIME_CLOCK_FILTERS, typeFilter);
@@ -1227,6 +1233,7 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleApplyFilters = () => {
+        skipNextDependencyPageResetRef.current = false;
         setFilters(tempFilters);
         saveTimeClockFiltersCookie(tempFilters, typeFilter);
         clearSelectedRows();
@@ -1244,6 +1251,7 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleClearTypeFilter = () => {
+        skipNextDependencyPageResetRef.current = false;
         setTempTypeFilter('all_data');
         setTypeFilter('all_data');
         saveTimeClockFiltersCookie(filters, 'all_data');
@@ -1257,6 +1265,7 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleApplyTypeFilter = () => {
+        skipNextDependencyPageResetRef.current = false;
         setTypeFilter(tempTypeFilter);
         saveTimeClockFiltersCookie(filters, tempTypeFilter);
         clearSelectedRows();
@@ -2216,6 +2225,7 @@ const TimeClock = ({queryParams}: Props) => {
         ],
         state: {columnVisibility},
         onColumnVisibilityChange: setColumnVisibility,
+        shouldResetPageOnDebounce: () => !skipNextDependencyPageResetRef.current,
     });
 
     useEffect(() => {
@@ -2227,6 +2237,9 @@ const TimeClock = ({queryParams}: Props) => {
         if (!cycleReady) return;
         if (!hasInitializedFilterResetRef.current) {
             hasInitializedFilterResetRef.current = true;
+            return;
+        }
+        if (skipNextDependencyPageResetRef.current) {
             return;
         }
 
@@ -2665,7 +2678,10 @@ const TimeClock = ({queryParams}: Props) => {
                                 placeholder={t('Search...')}
                                 size="small"
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => {
+                                    skipNextDependencyPageResetRef.current = false;
+                                    setSearchTerm(e.target.value);
+                                }}
                                 sx={{width: 180}}
                                 InputProps={{
                                     endAdornment: (

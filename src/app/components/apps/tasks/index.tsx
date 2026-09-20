@@ -1,6 +1,7 @@
 'use client';
 
-import React, {useState, useEffect, useMemo} from 'react';
+import React, {useState, useEffect, useMemo, useRef} from 'react';
+import Cookies from 'js-cookie';
 import {
     Box,
     Button,
@@ -115,6 +116,68 @@ let kbResourcesCache: KbResourcesCache = {
     shifts: [],
 };
 
+type TaskFilters = {
+    trade: string;
+    shift: string;
+    shiftType: string;
+    category: string;
+    subCategory: string;
+};
+
+type TasksTableCookieState = {
+    searchTerm?: string;
+    filters?: Partial<TaskFilters>;
+    pagination?: {
+        pageIndex?: number;
+        pageSize?: number;
+    };
+};
+
+const DEFAULT_TASK_FILTERS: TaskFilters = {
+    trade: '',
+    shift: '',
+    shiftType: '',
+    category: '',
+    subCategory: '',
+};
+
+const COOKIE_OPTIONS = {expires: 365, path: '/'};
+
+const getTasksTableStateKey = (
+    userId?: number | string,
+    companyId?: number | string | null,
+) => (userId && companyId ? `tasks_table_state_${userId}_${companyId}` : '');
+
+const normalizeTaskFilterValue = (value?: string | number | null) => {
+    if (value === undefined || value === null || value === 'All') return '';
+    return String(value);
+};
+
+const normalizeTaskFilters = (
+    filters?: Partial<TaskFilters> | Record<string, string | number>,
+): TaskFilters => ({
+    trade: normalizeTaskFilterValue(filters?.trade),
+    shift: normalizeTaskFilterValue(filters?.shift),
+    shiftType: normalizeTaskFilterValue(filters?.shiftType),
+    category: normalizeTaskFilterValue(filters?.category),
+    subCategory: normalizeTaskFilterValue(filters?.subCategory),
+});
+
+const readTasksTableStateCookie = (key: string): TasksTableCookieState => {
+    if (!key) return {};
+
+    const saved = Cookies.get(key);
+    if (!saved) return {};
+
+    try {
+        return JSON.parse(saved);
+    } catch (error) {
+        console.error('Failed to parse tasks table state cookie', error);
+        Cookies.remove(key, {path: '/'});
+        return {};
+    }
+};
+
 const TaskLists = () => {
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -125,21 +188,25 @@ const TaskLists = () => {
     const tableContainerRef = React.useRef<HTMLDivElement>(null);
     const [isScrollable, setIsScrollable] = React.useState(false);
     const session = useSession();
-    const user = session.data?.user as User & { company_id?: number | null };
+    const user = session.data?.user as User & {
+        company_id?: number | null;
+        id?: number | string;
+    };
     const {columnVisibility, onColumnVisibilityChange} =
         usePersistentColumnVisibility({
             storageKey: `cv_${user?.company_id}_${user?.id}_tasks`,
             enabled: !!user?.id,
         });
     const [open, setOpen] = useState(false);
-    const [filters, setFilters] = useState({
-        trade: '',
-        shift: '',
-        shiftType: '',
-        category: '',
-        subCategory: '',
-    });
+    const [filters, setFilters] = useState<TaskFilters>(DEFAULT_TASK_FILTERS);
     const [tempFilters, setTempFilters] = useState(filters);
+    const tasksTableStateKey = useMemo(
+        () => getTasksTableStateKey(user?.id, user?.company_id),
+        [user?.id, user?.company_id],
+    );
+    const restoredTableStateKeyRef = useRef('');
+    const skipNextDependencyPageResetRef = useRef(false);
+    const [isTableStateReady, setIsTableStateReady] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editDrawerOpen, setEditDrawerOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -296,7 +363,7 @@ const TaskLists = () => {
     const [formData, setFormData] = useState<any>(initialFormData);
 
     const fetchTasks = async () => {
-        if (!user?.company_id) return;
+        if (!user?.company_id || !isTableStateReady) return;
         try {
             setLoading(true);
             let url = `tasks/list-web?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -1024,6 +1091,7 @@ const TaskLists = () => {
     const {
         table,
         pagination,
+        setPagination,
         pageCount,
         setPageCount,
         totalRows,
@@ -1033,10 +1101,103 @@ const TaskLists = () => {
         data: data,
         columns,
         fetchData: fetchTasks,
-        debounceDependencies: [searchTerm, filters, user.company_id],
+        debounceDependencies: [
+            searchTerm,
+            filters,
+            user?.company_id,
+            isTableStateReady,
+            categories.length,
+            trades.length,
+            shifts.length,
+            subCategories.length,
+        ],
         state: {columnVisibility},
         onColumnVisibilityChange,
+        shouldResetPageOnDebounce: () => {
+            return !skipNextDependencyPageResetRef.current;
+        },
     });
+
+    useEffect(() => {
+        if (!tasksTableStateKey) {
+            setIsTableStateReady(false);
+            restoredTableStateKeyRef.current = '';
+            return;
+        }
+        if (restoredTableStateKeyRef.current === tasksTableStateKey) return;
+
+        const savedState = readTasksTableStateCookie(tasksTableStateKey);
+        const savedPagination = savedState.pagination;
+        const hasSavedState =
+            savedState.searchTerm !== undefined ||
+            savedState.filters !== undefined ||
+            savedState.pagination !== undefined;
+
+        skipNextDependencyPageResetRef.current = hasSavedState;
+        restoredTableStateKeyRef.current = tasksTableStateKey;
+
+        setSearchTerm(savedState.searchTerm ?? '');
+        const restoredFilters = normalizeTaskFilters(savedState.filters);
+        setFilters(restoredFilters);
+        setTempFilters(restoredFilters);
+
+        if (
+            typeof savedPagination?.pageIndex === 'number' &&
+            savedPagination.pageIndex >= 0 &&
+            typeof savedPagination?.pageSize === 'number' &&
+            savedPagination.pageSize > 0
+        ) {
+            setPagination({
+                pageIndex: savedPagination.pageIndex,
+                pageSize: savedPagination.pageSize,
+            });
+        }
+
+        setIsTableStateReady(true);
+    }, [tasksTableStateKey, setPagination]);
+
+    useEffect(() => {
+        if (!tasksTableStateKey || !isTableStateReady) return;
+        if (restoredTableStateKeyRef.current !== tasksTableStateKey) return;
+
+        Cookies.set(
+            tasksTableStateKey,
+            JSON.stringify({
+                searchTerm,
+                filters,
+                pagination: {
+                    pageIndex: pagination.pageIndex,
+                    pageSize: pagination.pageSize,
+                },
+            }),
+            COOKIE_OPTIONS,
+        );
+    }, [
+        tasksTableStateKey,
+        isTableStateReady,
+        searchTerm,
+        filters,
+        pagination.pageIndex,
+        pagination.pageSize,
+    ]);
+
+    const hasActiveFilters = Boolean(
+        (filters.trade && filters.trade !== 'All') ||
+            (filters.shift && filters.shift !== 'All') ||
+            (filters.shiftType && filters.shiftType !== 'All') ||
+            (filters.category && filters.category !== 'All') ||
+            (filters.subCategory && filters.subCategory !== 'All'),
+    );
+
+    const handleClearAppliedFilters = (event?: React.MouseEvent) => {
+        event?.stopPropagation();
+        skipNextDependencyPageResetRef.current = false;
+        setTempFilters(DEFAULT_TASK_FILTERS);
+        setFilters(DEFAULT_TASK_FILTERS);
+        setPagination((prev) =>
+            prev.pageIndex === 0 ? prev : {...prev, pageIndex: 0},
+        );
+    };
 
     const simpleColumns = columns.map((column: any) => ({
         name: column.id ?? 'Unnamed Column',
@@ -1065,7 +1226,15 @@ const TaskLists = () => {
                             size="small"
                             placeholder="Search..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => {
+                                skipNextDependencyPageResetRef.current = false;
+                                setSearchTerm(e.target.value);
+                                setPagination((prev) =>
+                                    prev.pageIndex === 0
+                                        ? prev
+                                        : {...prev, pageIndex: 0},
+                                );
+                            }}
                             InputProps={{
                                 endAdornment: (
                                     <InputAdornment position="end">
@@ -1084,6 +1253,23 @@ const TaskLists = () => {
                         >
                             <IconFilter width={18}/>
                         </Button>
+                        {hasActiveFilters && (
+                            <Button
+                                color="error"
+                                variant="outlined"
+                                onClick={handleClearAppliedFilters}
+                                aria-label="Clear filters"
+                                sx={{
+                                    mt: {xs: 1, sm: 0},
+                                    minHeight: 34,
+                                    height: 34,
+                                    minWidth: 64,
+                                    px: 1.5,
+                                }}
+                            >
+                                <IconX size={18}/>
+                            </Button>
+                        )}
                     </Box>
 
                     <Box display="flex" alignItems="center">
@@ -1772,13 +1958,23 @@ const TaskLists = () => {
                             <TextField
                                 select
                                 label="Trade"
-                                value={tempFilters.trade}
+                                value={tempFilters.trade || 'All'}
                                 onChange={(e) =>
-                                    setTempFilters({...tempFilters, trade: e.target.value})
+                                    setTempFilters({
+                                        ...tempFilters,
+                                        trade: normalizeTaskFilterValue(e.target.value),
+                                    })
                                 }
                                 fullWidth
                             >
                                 <MenuItem value="All">All</MenuItem>
+                                {tempFilters.trade &&
+                                    tempFilters.trade !== 'All' &&
+                                    !trades.some((p) => p.name === tempFilters.trade) && (
+                                        <MenuItem value={tempFilters.trade}>
+                                            {tempFilters.trade}
+                                        </MenuItem>
+                                    )}
                                 {trades.map((p, i) => (
                                     <MenuItem key={i} value={p.name}>
                                         {p.name}
@@ -1790,9 +1986,12 @@ const TaskLists = () => {
                                 <TextField
                                     select
                                     label="Shift"
-                                    value={tempFilters.shift}
+                                    value={tempFilters.shift || 'All'}
                                     onChange={(e) =>
-                                        setTempFilters({...tempFilters, shift: e.target.value})
+                                        setTempFilters({
+                                            ...tempFilters,
+                                            shift: normalizeTaskFilterValue(e.target.value),
+                                        })
                                     }
                                     fullWidth
                                 >
@@ -1808,9 +2007,12 @@ const TaskLists = () => {
                                 <TextField
                                     select
                                     label="Category"
-                                    value={tempFilters.category}
+                                    value={tempFilters.category || 'All'}
                                     onChange={(e) =>
-                                        setTempFilters({...tempFilters, category: e.target.value})
+                                        setTempFilters({
+                                            ...tempFilters,
+                                            category: normalizeTaskFilterValue(e.target.value),
+                                        })
                                     }
                                     fullWidth
                                 >
@@ -1826,11 +2028,11 @@ const TaskLists = () => {
                                 <TextField
                                     select
                                     label="Sub Category"
-                                    value={tempFilters.subCategory}
+                                    value={tempFilters.subCategory || 'All'}
                                     onChange={(e) =>
                                         setTempFilters({
                                             ...tempFilters,
-                                            subCategory: e.target.value,
+                                            subCategory: normalizeTaskFilterValue(e.target.value),
                                         })
                                     }
                                     fullWidth
@@ -1850,10 +2052,7 @@ const TaskLists = () => {
                                 onChange={(e) =>
                                     setTempFilters({
                                         ...tempFilters,
-                                        shiftType:
-                                            e.target.value === 'All'
-                                                ? ''
-                                                : e.target.value,
+                                        shiftType: normalizeTaskFilterValue(e.target.value),
                                     })
                                 }
                                 fullWidth
@@ -1871,20 +2070,7 @@ const TaskLists = () => {
                     <DialogActions>
                         <Button
                             onClick={() => {
-                                setTempFilters({
-                                    trade: '',
-                                    shift: '',
-                                    shiftType: '',
-                                    category: '',
-                                    subCategory: '',
-                                });
-                                setFilters({
-                                    trade: '',
-                                    shift: '',
-                                    shiftType: '',
-                                    category: '',
-                                    subCategory: '',
-                                });
+                                handleClearAppliedFilters();
                                 setOpen(false);
                             }}
                             color="inherit"
@@ -1895,7 +2081,13 @@ const TaskLists = () => {
                         <Button
                             variant="contained"
                             onClick={() => {
-                                setFilters(tempFilters);
+                                skipNextDependencyPageResetRef.current = false;
+                                setFilters(normalizeTaskFilters(tempFilters));
+                                setPagination((prev) =>
+                                    prev.pageIndex === 0
+                                        ? prev
+                                        : {...prev, pageIndex: 0},
+                                );
                                 setOpen(false);
                             }}
                         >

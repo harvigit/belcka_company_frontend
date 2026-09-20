@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
   TableContainer,
   Table,
@@ -103,6 +103,60 @@ import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 
+type StockListingFilters = {
+  supplier: string;
+  category: string;
+  store: string;
+};
+
+type StocksTableCookieState = {
+  searchTerm?: string;
+  filters?: Partial<Pick<StockListingFilters, "supplier" | "category">>;
+  pagination?: {
+    pageIndex?: number;
+    pageSize?: number;
+  };
+};
+
+const DEFAULT_STOCK_LISTING_FILTERS = {
+  supplier: "",
+  category: "",
+};
+
+const COOKIE_OPTIONS = { expires: 365, path: "/" };
+
+const getStocksTableStateKey = (
+  userId?: number | string,
+  companyId?: number | string | null,
+) => (userId && companyId ? `stocks_table_state_${userId}_${companyId}` : "");
+
+const normalizeStockFilterValue = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === "All") return "";
+  return String(value);
+};
+
+const normalizeStockListingFilters = (
+  filters?: Partial<StockListingFilters> | Record<string, string | number>,
+  storeName = "",
+): StockListingFilters => ({
+  supplier: normalizeStockFilterValue(filters?.supplier),
+  category: normalizeStockFilterValue(filters?.category),
+  store: storeName || String(filters?.store || ""),
+});
+
+const readStocksTableStateCookie = (
+  cookieKey: string,
+): StocksTableCookieState => {
+  try {
+    const stored = Cookies.get(cookieKey);
+    if (!stored) return {};
+    const parsed = JSON.parse(stored);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 const StockList = () => {
   const [data, setData] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
@@ -119,7 +173,10 @@ const StockList = () => {
   };
 
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & {
+    company_id?: number | null;
+    id?: number | string;
+  };
   const { columnVisibility, onColumnVisibilityChange } =
     usePersistentColumnVisibility({
       storageKey: `cv_${user?.company_id}_${user?.id}_stocks`,
@@ -134,12 +191,19 @@ const StockList = () => {
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<StockListingFilters>({
     supplier: "",
     category: "",
     store: "",
   });
   const [tempFilters, setTempFilters] = useState(filters);
+  const stocksTableStateKey = useMemo(
+    () => getStocksTableStateKey(user?.id, user?.company_id),
+    [user?.id, user?.company_id],
+  );
+  const restoredTableStateKeyRef = useRef("");
+  const skipNextDependencyPageResetRef = useRef(false);
+  const [isTableStateReady, setIsTableStateReady] = useState(false);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
@@ -228,6 +292,7 @@ const StockList = () => {
 
   const handleStoreConfirm = (store: { id: number; name: string }) => {
     if (!user?.id) return;
+    skipNextDependencyPageResetRef.current = false;
 
     Cookies.set(
       `user_store_${user.id}_${user.company_id}`,
@@ -246,6 +311,7 @@ const StockList = () => {
     const selectedStore = stores.find((s) => s.id === storeId);
     if (!selectedStore || !user?.id) return;
     if (!searchParams) return;
+    skipNextDependencyPageResetRef.current = false;
 
     const productId = searchParams.get("product_id");
     Cookies.set(
@@ -288,6 +354,7 @@ const StockList = () => {
     restorePage?: number,
     productIdParam?: number,
   ) => {
+    if (!user?.company_id || !isTableStateReady) return;
     setFetchProduct(true);
 
     try {
@@ -1076,15 +1143,123 @@ const StockList = () => {
         );
       }
     },
-    debounceDependencies: [searchTerm, filters, storeId],
+    debounceDependencies: [
+      searchTerm,
+      filters.supplier,
+      filters.category,
+      storeId,
+      user?.company_id,
+      isTableStateReady,
+      suppliers.length,
+      categories.length,
+    ],
     state: { columnVisibility },
     onColumnVisibilityChange,
+    shouldResetPageOnDebounce: () => {
+      return !skipNextDependencyPageResetRef.current;
+    },
   });
+
+  useEffect(() => {
+    if (!stocksTableStateKey) {
+      setIsTableStateReady(false);
+      restoredTableStateKeyRef.current = "";
+      return;
+    }
+    if (restoredTableStateKeyRef.current === stocksTableStateKey) return;
+
+    const savedState = readStocksTableStateCookie(stocksTableStateKey);
+    const savedPagination = savedState.pagination;
+    const hasSavedState =
+      savedState.searchTerm !== undefined ||
+      savedState.filters !== undefined ||
+      savedState.pagination !== undefined;
+
+    skipNextDependencyPageResetRef.current = hasSavedState;
+    restoredTableStateKeyRef.current = stocksTableStateKey;
+
+    setSearchTerm(savedState.searchTerm ?? "");
+    const restoredFilters = normalizeStockListingFilters(savedState.filters);
+    setFilters((prev) => ({
+      ...restoredFilters,
+      store: prev.store,
+    }));
+    setTempFilters((prev) => ({
+      ...restoredFilters,
+      store: prev.store,
+    }));
+
+    if (
+      typeof savedPagination?.pageIndex === "number" &&
+      savedPagination.pageIndex >= 0 &&
+      typeof savedPagination?.pageSize === "number" &&
+      savedPagination.pageSize > 0
+    ) {
+      setPagination({
+        pageIndex: savedPagination.pageIndex,
+        pageSize: savedPagination.pageSize,
+      });
+    }
+
+    setIsTableStateReady(true);
+  }, [stocksTableStateKey, setPagination]);
+
+  useEffect(() => {
+    if (!stocksTableStateKey || !isTableStateReady) return;
+    if (restoredTableStateKeyRef.current !== stocksTableStateKey) return;
+
+    Cookies.set(
+      stocksTableStateKey,
+      JSON.stringify({
+        searchTerm,
+        filters: {
+          supplier: normalizeStockFilterValue(filters.supplier),
+          category: normalizeStockFilterValue(filters.category),
+        },
+        pagination: {
+          pageIndex: pagination.pageIndex,
+          pageSize: pagination.pageSize,
+        },
+      }),
+      COOKIE_OPTIONS,
+    );
+  }, [
+    stocksTableStateKey,
+    isTableStateReady,
+    searchTerm,
+    filters.supplier,
+    filters.category,
+    pagination.pageIndex,
+    pagination.pageSize,
+  ]);
 
   // Reset to first page when search term changes
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [searchTerm]);
+    if (skipNextDependencyPageResetRef.current) return;
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  }, [searchTerm, setPagination]);
+
+  const hasActiveFilters =
+    Boolean(filters.supplier && filters.supplier !== "All") ||
+    Boolean(filters.category && filters.category !== "All");
+
+  const handleClearAppliedFilters = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    skipNextDependencyPageResetRef.current = false;
+    setTempFilters((prev) => ({
+      ...prev,
+      ...DEFAULT_STOCK_LISTING_FILTERS,
+    }));
+    setFilters((prev) => ({
+      ...prev,
+      ...DEFAULT_STOCK_LISTING_FILTERS,
+    }));
+    setPagination((prev) =>
+      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+    );
+  };
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -1117,7 +1292,10 @@ const StockList = () => {
               variant="outlined"
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                skipNextDependencyPageResetRef.current = false;
+                setSearchTerm(e.target.value);
+              }}
               slotProps={{
                 input: {
                   endAdornment: (
@@ -1130,11 +1308,31 @@ const StockList = () => {
             />
             <Button
               variant="contained"
-              onClick={() => setOpen(true)}
+              onClick={() => {
+                setTempFilters(normalizeStockListingFilters(filters, filters.store));
+                setOpen(true);
+              }}
               sx={{ mt: { xs: 1, sm: 0 }, minWidth: "40px", px: 1 }}
             >
               <IconFilter width={18} />
             </Button>
+            {hasActiveFilters && (
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={handleClearAppliedFilters}
+                sx={{
+                  mt: { xs: 1, sm: 0 },
+                  minHeight: 34,
+                  height: 34,
+                  minWidth: 64,
+                  px: 1.5,
+                }}
+                aria-label="Clear filters"
+              >
+                <IconX size={18} />
+              </Button>
+            )}
             <>
               <Typography
                 color="primary"
@@ -1437,16 +1635,25 @@ const StockList = () => {
                   <TextField
                     select
                     label="Suppliers"
-                    value={tempFilters.supplier}
+                    value={tempFilters.supplier || "All"}
                     onChange={(e) => {
                       setTempFilters({
                         ...tempFilters,
-                        supplier: e.target.value,
+                        supplier: normalizeStockFilterValue(e.target.value),
                       });
                     }}
                     fullWidth
                   >
                     <MenuItem value="All">All</MenuItem>
+                    {tempFilters.supplier &&
+                      tempFilters.supplier !== "All" &&
+                      !suppliers.some(
+                        (item) => item.name === tempFilters.supplier,
+                      ) && (
+                        <MenuItem value={tempFilters.supplier}>
+                          {tempFilters.supplier}
+                        </MenuItem>
+                      )}
                     {suppliers.map((item, i) => (
                       <MenuItem key={i} value={item.name}>
                         {item.name}
@@ -1457,16 +1664,25 @@ const StockList = () => {
                   <TextField
                     select
                     label="Category"
-                    value={tempFilters.category}
+                    value={tempFilters.category || "All"}
                     onChange={(e) =>
                       setTempFilters({
                         ...tempFilters,
-                        category: e.target.value,
+                        category: normalizeStockFilterValue(e.target.value),
                       })
                     }
                     fullWidth
                   >
                     <MenuItem value="All">All</MenuItem>
+                    {tempFilters.category &&
+                      tempFilters.category !== "All" &&
+                      !categories.some(
+                        (item) => item.name === tempFilters.category,
+                      ) && (
+                        <MenuItem value={tempFilters.category}>
+                          {tempFilters.category}
+                        </MenuItem>
+                      )}
                     {categories.map((item, i) => (
                       <MenuItem key={i} value={item.name}>
                         {item.name}
@@ -1479,16 +1695,7 @@ const StockList = () => {
               <DialogActions>
                 <Button
                   onClick={() => {
-                    setTempFilters({
-                      supplier: "",
-                      category: "",
-                      store: "",
-                    });
-                    setFilters({
-                      supplier: "",
-                      category: "",
-                      store: "",
-                    });
+                    handleClearAppliedFilters();
                     setOpen(false);
                   }}
                   color="inherit"
@@ -1499,7 +1706,15 @@ const StockList = () => {
                 <Button
                   variant="contained"
                   onClick={() => {
-                    setFilters(tempFilters);
+                    skipNextDependencyPageResetRef.current = false;
+                    setFilters(
+                      normalizeStockListingFilters(tempFilters, filters.store),
+                    );
+                    setPagination((prev) =>
+                      prev.pageIndex === 0
+                        ? prev
+                        : { ...prev, pageIndex: 0 },
+                    );
                     setOpen(false);
                   }}
                 >
