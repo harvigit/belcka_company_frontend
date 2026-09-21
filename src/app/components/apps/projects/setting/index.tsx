@@ -19,10 +19,10 @@ const Index: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
   const isAdmin = Number(user?.user_role_id) === 1;
   const menuItems = useMemo(
     () => [
-      { icon: <IconSettings size={18} />, label: "General" },
       ...(isAdmin
         ? [{ icon: <IconUserCheck size={18} />, label: "Role" }]
         : []),
+      { icon: <IconSettings size={18} />, label: "General" },
     ],
     [isAdmin],
   );

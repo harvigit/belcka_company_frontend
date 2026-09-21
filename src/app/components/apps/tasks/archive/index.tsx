@@ -246,7 +246,7 @@ const ArchiveTasks: React.FC<ArchiveTasksProps> = ({
           color="primary"
           sx={{ borderRadius: 3 }}
           className="drawer_buttons"
-          startIcon={<IconArrowBackUp />}
+          startIcon={<IconArrowBackUp size={18}/>}
           disabled={selectedIds.length === 0}
           onClick={() => {
             setActionType("restore");
@@ -261,7 +261,7 @@ const ArchiveTasks: React.FC<ArchiveTasksProps> = ({
           color="error"
           sx={{ borderRadius: 3 }}
           className="drawer_buttons"
-          startIcon={<IconTrash />}
+          startIcon={<IconTrash size={18}/>}
           disabled={selectedIds.length === 0}
           onClick={() => {
             setActionType("delete");

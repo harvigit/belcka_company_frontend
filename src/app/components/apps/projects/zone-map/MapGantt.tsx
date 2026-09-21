@@ -1050,7 +1050,7 @@ export default function MapGantt({
             }}
           >
             <Tab label="Project" />
-            <Tab label="Address" />
+            <Tab label="Case" />
           </Tabs>
 
           <TextField

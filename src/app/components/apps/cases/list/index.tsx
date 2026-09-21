@@ -70,6 +70,7 @@ import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibi
 
 type CaseFilters = {
   status: string;
+  type: string;
   project_id: string;
   parent_address_id: string;
 };
@@ -85,6 +86,7 @@ type CasesTableCookieState = {
 
 const DEFAULT_CASE_FILTERS: CaseFilters = {
   status: "",
+  type: "",
   project_id: "",
   parent_address_id: "",
 };
@@ -106,6 +108,7 @@ const normalizeCaseFilters = (
   lockedProjectId?: string,
 ): CaseFilters => ({
   status: normalizeCaseFilterValue(filters?.status),
+  type: normalizeCaseFilterValue(filters?.type),
   project_id:
     lockedProjectId || normalizeCaseFilterValue(filters?.project_id),
   parent_address_id: normalizeCaseFilterValue(filters?.parent_address_id),
@@ -410,8 +413,8 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
 
   const hasActiveFilters = Boolean(
     (filters.status && filters.status !== "All") ||
-      filters.parent_address_id ||
-      (!projectId && filters.project_id),
+    // filters.parent_address_id ||
+    (!projectId && filters.project_id),
   );
 
   useEffect(() => {
@@ -544,8 +547,10 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
       if (filters.status && filters.status !== "All")
         url += `&status_text=${filters.status}`;
       if (filters.project_id) url += `&project_id=${filters.project_id}`;
-      if (filters.parent_address_id)
-        url += `&parent_address_id=${filters.parent_address_id}`;
+      // if (filters.parent_address_id)
+      //   url += `&parent_address_id=${filters.parent_address_id}`;
+      if (filters.type)
+        url += `&type=${filters.type}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
 
       if (sorting && sorting.length > 0) {
@@ -625,34 +630,37 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
     }
   };
 
-  const handleProgressSave = useCallback(async (rowId: number, clampedValue: number) => {
-    const res = await api.put("address/change-address-progress", {
-      id: rowId,
-      progress: clampedValue,
-    });
+  const handleProgressSave = useCallback(
+    async (rowId: number, clampedValue: number) => {
+      const res = await api.put("address/change-address-progress", {
+        id: rowId,
+        progress: clampedValue,
+      });
 
-    if (!res.data?.IsSuccess) {
-      throw new Error(res.data?.message || "Failed to update progress");
-    }
+      if (!res.data?.IsSuccess) {
+        throw new Error(res.data?.message || "Failed to update progress");
+      }
 
-    const info = res.data.info || {};
-    const derived = progressToStatus(clampedValue);
+      const info = res.data.info || {};
+      const derived = progressToStatus(clampedValue);
 
-    setData((prev: any[]) =>
-      prev.map((item) =>
-        item.id === rowId
-          ? {
-              ...item,
-              progress: info.progress ?? `${clampedValue}%`,
-              status_int: info.status ?? derived.status_int,
-              status_text: info.status_text ?? derived.status_text,
-            }
-          : item,
-      ),
-    );
+      setData((prev: any[]) =>
+        prev.map((item) =>
+          item.id === rowId
+            ? {
+                ...item,
+                progress: info.progress ?? `${clampedValue}%`,
+                status_int: info.status ?? derived.status_int,
+                status_text: info.status_text ?? derived.status_text,
+              }
+            : item,
+        ),
+      );
 
-    toast.success(res.data.message);
-  }, []);
+      toast.success(res.data.message);
+    },
+    [],
+  );
 
   const columns = useMemo(
     () => [
@@ -1403,7 +1411,7 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                     />
                   )}
 
-                  <Autocomplete
+                  {/* <Autocomplete
                     options={projectId ? parentFilterList : parentAddressList}
                     getOptionLabel={(option) => option.name || ""}
                     isOptionEqualToValue={(option, selected) =>
@@ -1427,7 +1435,20 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                     renderInput={(params) => (
                       <TextField {...params} label="Parent Address" fullWidth />
                     )}
-                  />
+                  /> */}
+
+                  <TextField
+                    select
+                    label="Type"
+                    value={tempFilters.type}
+                    onChange={(e) =>
+                      setTempFilters({ ...tempFilters, type: e.target.value })
+                    }
+                    fullWidth
+                  >
+                    <MenuItem value="address">Address</MenuItem>
+                    <MenuItem value="location">Location</MenuItem>
+                  </TextField>
                 </Stack>
               </DialogContent>
 

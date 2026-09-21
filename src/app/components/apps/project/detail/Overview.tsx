@@ -451,7 +451,8 @@ const Overview = ({
   const closeFullListView = () => setFullListView(null);
 
   const labourDateRange = (period: string) => {
-    if (period === "all") return { start: null as Date | null, end: null as Date | null };
+    if (period === "all")
+      return { start: null as Date | null, end: null as Date | null };
     const days = period === "7" ? 6 : 29;
     return {
       start: dayjs().subtract(days, "day").startOf("day").toDate(),
@@ -797,9 +798,7 @@ const Overview = ({
       select
       size="small"
       value={financialRange}
-      onChange={(e) =>
-        setFinancialRange(e.target.value as "6m" | "1y" | "2y")
-      }
+      onChange={(e) => setFinancialRange(e.target.value as "6m" | "1y" | "2y")}
       sx={{ minWidth: { xs: 140, sm: 160 } }}
     >
       <MenuItem value="6m">6 month</MenuItem>
@@ -969,8 +968,14 @@ const Overview = ({
                           {money(currency, row.to_approve)}
                         </TableCell>
                         <TableCell align="right">
-                          {currency}
-                          {row.to_approve + row.approved}
+                          {money(
+                            currency,
+                            Number(
+                              (
+                                (row.to_approve || 0) + (row.approved || 0)
+                              ).toFixed(2),
+                            ),
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -987,6 +992,18 @@ const Overview = ({
                           {money(
                             currency,
                             info?.financial_summary?.total_to_approve || 0,
+                          )}
+                        </TableCell>
+                        <TableCell align="right" sx={totalMoneyCellSx}>
+                          {money(
+                            currency,
+                            Number(
+                              (
+                                (info?.financial_summary?.total_to_approve ||
+                                  0) +
+                                (info?.financial_summary?.total_approved || 0)
+                              ).toFixed(2),
+                            ),
                           )}
                         </TableCell>
                       </TableRow>
@@ -1173,13 +1190,13 @@ const Overview = ({
                 >
                   Filters
                 </Button>
-                <Button
+                {/* <Button
                   variant="outlined"
                   onClick={() => setActivityOpen(true)}
                   sx={{ whiteSpace: "nowrap", minHeight: 40 }}
                 >
                   Activity
-                </Button>
+                </Button> */}
                 {hasActiveOverviewFilters && (
                   <Button
                     color="error"

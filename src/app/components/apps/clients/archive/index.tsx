@@ -203,7 +203,7 @@ const ArchiveClient: React.FC<ArchiveClientProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconArrowBackUp />
+                        <IconArrowBackUp size={18}/>
                       </IconButton>
                       {/* <IconButton
                         color="error"
@@ -213,7 +213,7 @@ const ArchiveClient: React.FC<ArchiveClientProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconTrash />
+                        <IconTrash size={18}/>
                       </IconButton> */}
                     </Box>
                   </Box>

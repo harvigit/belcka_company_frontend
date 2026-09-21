@@ -3,15 +3,23 @@
 import React, { useEffect, useState } from "react";
 import {
   Box,
-  Button,
   CircularProgress,
-  Drawer,
-  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
   Typography,
 } from "@mui/material";
-import { IconArrowLeft, IconX } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import api from "@/utils/axios";
+import {
+  EmptyState,
+  OverviewFullListView,
+  overviewTableSx,
+} from "./OverviewRecordsDrawer";
 
 type ProjectActivityItem = {
   id: number;
@@ -27,12 +35,21 @@ const formatActivityDate = (value?: string | null) => {
   if (!value) return "-";
   const parsed = dayjs(
     value,
-    ["DD/MM/YYYY HH:mm:ss", "DD/MM/YYYY", "DD-MM-YYYY HH:mm", "YYYY-MM-DD"],
+    [
+      "DD/MM/YYYY HH:mm:ss",
+      "DD/MM/YYYY HH:mm",
+      "DD/MM/YYYY",
+      "DD-MM-YYYY HH:mm",
+      "YYYY-MM-DD HH:mm:ss",
+      "YYYY-MM-DD",
+    ],
     true,
   );
-  if (parsed.isValid()) return parsed.format("DD/MM/YYYY");
-  const fallback = dayjs(value);
-  return fallback.isValid() ? fallback.format("DD/MM/YYYY") : String(value);
+  const source = parsed.isValid() ? parsed : dayjs(value);
+  if (!source.isValid()) return String(value);
+  return source.hour() || source.minute()
+    ? source.format("DD/MM/YYYY HH:mm")
+    : source.format("DD/MM/YYYY");
 };
 
 const activityLabel = (item: ProjectActivityItem) => {
@@ -62,20 +79,19 @@ const ProjectActivityDrawer = ({
 }) => {
   const [history, setHistory] = useState<ProjectActivityItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [totalItems, setTotalItems] = useState(0);
-  const limit = 20;
 
-  const fetchHistories = async (currentPage: number, append = false) => {
+  const fetchHistories = async (currentPage: number, currentLimit: number) => {
     if (!companyId || !projectId) return;
     try {
       setLoading(true);
       const res = await api.get(
-        `project/get-history?page=${currentPage}&limit=${limit}&company_id=${companyId}&project_id=${projectId}`,
+        `project/get-history?page=${currentPage}&limit=${currentLimit}&company_id=${companyId}&project_id=${projectId}`,
       );
-      const newData = res.data?.info || [];
-      setHistory((prev) => (append ? [...prev, ...newData] : newData));
-      setTotalItems(res.data?.data?.totalItems || 0);
+      setHistory(res.data?.info || []);
+      setTotalItems(Number(res.data?.data?.totalItems || 0));
     } catch (err) {
       console.error("Failed to fetch project activity", err);
     } finally {
@@ -84,134 +100,136 @@ const ProjectActivityDrawer = ({
   };
 
   useEffect(() => {
-    if (!open) return;
-    setPage(1);
-    setHistory([]);
-    fetchHistories(1, false);
+    if (open) {
+      setPage(0);
+      setRowsPerPage(50);
+    }
   }, [open, projectId, companyId]);
 
-  const handleSeeMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchHistories(nextPage, true);
-  };
+  useEffect(() => {
+    if (!open) return;
+    fetchHistories(page + 1, rowsPerPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, page, rowsPerPage, projectId, companyId]);
 
   return (
-    <Drawer
-      anchor="right"
+    <OverviewFullListView
       open={open}
+      title={projectName ? `${projectName} Activity` : "Project Activity"}
       onClose={onClose}
-      PaperProps={{
-        sx: {
-          width: 500,
-          maxWidth: "100%",
-        },
-      }}
     >
-      <Box sx={{ position: "relative", p: 2 }}>
-        <IconButton
-          aria-label="close"
-          onClick={onClose}
-          size="small"
+      {loading && history.length === 0 ? (
+        <Box display="flex" justifyContent="center" py={6}>
+          <CircularProgress size={28} />
+        </Box>
+      ) : history.length > 0 || totalItems > 0 ? (
+        <Box
           sx={{
-            position: "absolute",
-            right: 8,
-            top: 8,
-            color: (theme) => theme.palette.grey[900],
-            zIndex: 10,
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          <IconX size={18} />
-        </IconButton>
-
-        <Box display="flex" alignItems="center">
-          <IconButton onClick={onClose}>
-            <IconArrowLeft size={20} />
-          </IconButton>
-          <Typography variant="h6" fontWeight={700} noWrap>
-            {projectName ? `${projectName} Activity` : "Project Activity"}
-          </Typography>
+          <TableContainer
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              overflow: "auto",
+            }}
+          >
+            <Table
+              stickyHeader
+              size="small"
+              aria-label="sticky table"
+              sx={{
+                ...overviewTableSx,
+                minWidth: 640,
+                "& td:first-of-type": {
+                  whiteSpace: "normal",
+                  wordBreak: "break-word",
+                },
+              }}
+            >
+              <TableHead>
+                <TableRow>
+                  <TableCell>Message</TableCell>
+                  <TableCell sx={{ width: 160 }}>Type</TableCell>
+                  <TableCell sx={{ width: 170 }}>Date</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {history.map((item, index) => (
+                  <TableRow key={item.id ?? index}>
+                    <TableCell
+                      sx={{
+                        whiteSpace: "normal",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {item.user_name
+                        ? `${item.user_name}: ${item.message || "-"}`
+                        : item.message || "-"}
+                    </TableCell>
+                    <TableCell>
+                      {" "}
+                      <Box
+                        width={"60%"}
+                        top="-10px"
+                        left="15px"
+                        bgcolor={activityColor(item)}
+                        px={1.5}
+                        borderRadius="10px"
+                      >
+                        <Typography
+                          variant="caption"
+                          fontWeight={700}
+                          fontSize="12px !important"
+                          color="#fff"
+                        >
+                          {activityLabel(item)}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>{formatActivityDate(item.date_added)}</TableCell>
+                  </TableRow>
+                ))}
+                {!loading && history.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3}>No activities found</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div"
+            count={totalItems}
+            page={page}
+            onPageChange={(_, next) => setPage(next)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(event) => {
+              setRowsPerPage(parseInt(event.target.value, 10));
+              setPage(0);
+            }}
+            rowsPerPageOptions={[50, 100, 250, 500]}
+            sx={{
+              flexShrink: 0,
+              borderTop: "1px solid",
+              borderColor: "divider",
+              overflow: "visible",
+              bgcolor: "background.paper",
+              ".MuiTablePagination-toolbar": {
+                flexWrap: "wrap",
+                minHeight: 52,
+              },
+            }}
+          />
         </Box>
-
-        {loading && history.length === 0 ? (
-          <Box display="flex" justifyContent="center" mt={4}>
-            <CircularProgress />
-          </Box>
-        ) : history.length > 0 ? (
-          <Box mt={1}>
-            {history.map((item, index) => (
-              <Box
-                key={item.id ?? index}
-                mb={2}
-                pl={2}
-                pr={2}
-                mt={2}
-                position="relative"
-                display="flex"
-                alignItems="center"
-                sx={{
-                  width: "100%",
-                  minHeight: 100,
-                  borderRadius: "25px",
-                  boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
-                  border: "1px solid rgb(240 240 240)",
-                }}
-              >
-                <Box
-                  position="absolute"
-                  top="-10px"
-                  left="15px"
-                  bgcolor={activityColor(item)}
-                  px={1.5}
-                  borderRadius="10px"
-                  zIndex={1}
-                >
-                  <Typography
-                    variant="caption"
-                    fontWeight={700}
-                    fontSize="12px !important"
-                    color="#fff"
-                  >
-                    {activityLabel(item)}
-                  </Typography>
-                </Box>
-                <Box display="initial" width="100%" textAlign="start">
-                  <Typography fontSize="14px" className="multi-ellipsis">
-                    <b>{item.user_name}:</b> {item.message}
-                  </Typography>
-                  <p
-                    style={{
-                      fontSize: "12px",
-                      textAlign: "end",
-                      color: "GrayText",
-                      margin: 0,
-                    }}
-                  >
-                    {formatActivityDate(item.date_added)}
-                  </p>
-                </Box>
-              </Box>
-            ))}
-            {history.length < totalItems && (
-              <Box display="flex" justifyContent="center" my={2}>
-                <Button
-                  variant="outlined"
-                  disabled={loading}
-                  onClick={handleSeeMore}
-                  startIcon={loading && <CircularProgress size={16} />}
-                >
-                  See More
-                </Button>
-              </Box>
-            )}
-          </Box>
-        ) : (
-          <Typography mt={2} ml={1} variant="h6">
-            No activities are found for this project!!
-          </Typography>
-        )}
-      </Box>
-    </Drawer>
+      ) : (
+        <EmptyState message="No activities are found for this project!!" />
+      )}
+    </OverviewFullListView>
   );
 };
 

@@ -183,7 +183,7 @@ const ArchiveProject: React.FC<ArchiveProjectProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconArrowBackUp />
+                        <IconArrowBackUp size={18}/>
                       </IconButton>
                       <IconButton
                         color="error"
@@ -193,7 +193,7 @@ const ArchiveProject: React.FC<ArchiveProjectProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconTrash />
+                        <IconTrash size={18}/>
                       </IconButton>
                     </Box>
                   </Box>

@@ -201,7 +201,7 @@ const ArchiveLocation: React.FC<ArchiveLocationProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconArrowBackUp />
+                        <IconArrowBackUp size={18}/>
                       </IconButton>
                       <IconButton
                         color="error"
@@ -211,7 +211,7 @@ const ArchiveLocation: React.FC<ArchiveLocationProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconTrash />
+                        <IconTrash size={18}/>
                       </IconButton>
                     </Box>
                   </Box>

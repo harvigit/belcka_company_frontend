@@ -185,7 +185,7 @@ const ArchivePurchaseOrder: React.FC<ArchivePurchaseOrderProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconArrowBackUp />
+                        <IconArrowBackUp size={18}/>
                       </IconButton>
                       <IconButton
                         color="error"
@@ -195,7 +195,7 @@ const ArchivePurchaseOrder: React.FC<ArchivePurchaseOrderProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconTrash />
+                        <IconTrash size={18}/>
                       </IconButton>
                     </Box>
                   </Box>

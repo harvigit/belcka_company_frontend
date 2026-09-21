@@ -257,7 +257,7 @@ const ArchiveTask: React.FC<ArchiveTaskProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconArrowBackUp />
+                        <IconArrowBackUp size={18}/>
                       </IconButton>
                       <IconButton
                         color="error"
@@ -267,7 +267,7 @@ const ArchiveTask: React.FC<ArchiveTaskProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconTrash />
+                        <IconTrash size={18}/>
                       </IconButton>
                     </Box>
                   </Box>

@@ -203,7 +203,7 @@ const ArchiveTools: React.FC<ArchiveToolsProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconArrowBackUp />
+                        <IconArrowBackUp size={18}/>
                       </IconButton>
                       <IconButton
                         color="error"
@@ -213,7 +213,7 @@ const ArchiveTools: React.FC<ArchiveToolsProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconTrash />
+                        <IconTrash size={18}/>
                       </IconButton>
                     </Box>
                   </Box>

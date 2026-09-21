@@ -274,7 +274,7 @@ const ArchiveInvoice: React.FC<ArchiveInvoiceProps> = ({
           color="primary"
           sx={{ borderRadius: 3 }}
           className="drawer_buttons"
-          startIcon={<IconArrowBackUp />}
+          startIcon={<IconArrowBackUp size={18}/>}
           disabled={selectedIds.length === 0}
           onClick={() => {
             setActionType("restore");
@@ -289,7 +289,7 @@ const ArchiveInvoice: React.FC<ArchiveInvoiceProps> = ({
           color="error"
           sx={{ borderRadius: 3 }}
           className="drawer_buttons"
-          startIcon={<IconTrash />}
+          startIcon={<IconTrash size={18}/>}
           disabled={selectedIds.length === 0}
           onClick={() => {
             setActionType("delete");

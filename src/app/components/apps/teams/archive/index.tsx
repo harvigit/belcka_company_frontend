@@ -144,10 +144,10 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
       open={open}
       onClose={onClose}
       sx={{
-        width: 400,
+        width: 450,
         flexShrink: 0,
         "& .MuiDrawer-paper": {
-          width: 400,
+          width: 450,
           padding: 2,
           backgroundColor: "#f9f9f9",
           display: "flex",
@@ -270,7 +270,7 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconArrowBackUp />
+                        <IconArrowBackUp size={18} />
                       </IconButton>
                       <IconButton
                         color="error"
@@ -281,7 +281,7 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconTrash />
+                        <IconTrash size={18}/>
                       </IconButton>
                     </Box>
                   </Box>

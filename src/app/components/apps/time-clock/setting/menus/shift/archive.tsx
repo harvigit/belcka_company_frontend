@@ -182,7 +182,7 @@ const ArchiveShifts: React.FC<ArchiveShiftsProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconArrowBackUp />
+                        <IconArrowBackUp size={18}/>
                       </IconButton>
                       <IconButton
                         color="error"
@@ -192,7 +192,7 @@ const ArchiveShifts: React.FC<ArchiveShiftsProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconTrash />
+                        <IconTrash size={18}/>
                       </IconButton>
                     </Box>
                   </Box>
