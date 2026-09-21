@@ -1,7 +1,8 @@
 "use client";
 
 import { styled, Container, Box, useTheme } from "@mui/material";
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
+import { clearLegacyListingStateCookies } from "@/utils/listingTableStateStorage";
 import { useSession } from "next-auth/react";
 import Header from "./layout/vertical/header/Header";
 import Sidebar from "./layout/vertical/sidebar/Sidebar";
@@ -41,6 +42,10 @@ export default function DashboardLayout({ children }: Props) {
 
     const theme = useTheme();
     const { data: session, status } = useSession();
+
+    useEffect(() => {
+        clearLegacyListingStateCookies();
+    }, []);
 
     // Show loading state while checking authentication
     if (status === "loading") {

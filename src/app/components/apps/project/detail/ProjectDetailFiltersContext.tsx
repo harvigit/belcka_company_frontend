@@ -8,7 +8,11 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import Cookies from "js-cookie";
+import {
+  readListingTableState,
+  removeListingTableState,
+  writeListingTableState,
+} from "@/utils/listingTableStateStorage";
 import { useSession } from "next-auth/react";
 
 export type ProjectDetailSharedFilters = {
@@ -36,7 +40,6 @@ type ProjectDetailFiltersContextValue = {
 };
 
 const COOKIE_PREFIX = "project-detail-filters";
-const COOKIE_OPTIONS = { expires: 365, path: "/" };
 
 const ProjectDetailFiltersContext =
   createContext<ProjectDetailFiltersContextValue | null>(null);
@@ -90,7 +93,7 @@ export function ProjectDetailFiltersProvider({
     }
 
     try {
-      const stored = Cookies.get(cookieKey);
+      const stored = readListingTableState(cookieKey);
       if (stored) {
         const parsed = JSON.parse(stored) as StoredPayload;
         const parsedStart = parseStoredDate(parsed.startDate);
@@ -113,7 +116,7 @@ export function ProjectDetailFiltersProvider({
       }
     } catch (error) {
       console.error("Failed to load project detail filters cookie:", error);
-      Cookies.remove(cookieKey, { path: "/" });
+      removeListingTableState(cookieKey);
       setStartDate(null);
       setEndDate(null);
       setTeamId("");
@@ -132,7 +135,7 @@ export function ProjectDetailFiltersProvider({
       team_id: teamId || "",
       trade_id: tradeId || "",
     };
-    Cookies.set(cookieKey, JSON.stringify(payload), COOKIE_OPTIONS);
+    writeListingTableState(cookieKey, JSON.stringify(payload));
   }, [cookieKey, hydrated, startDate, endDate, teamId, tradeId]);
 
   const setDateRange = useCallback((from: Date | null, to: Date | null) => {

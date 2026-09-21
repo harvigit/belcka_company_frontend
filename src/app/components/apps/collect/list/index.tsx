@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useMemo, useRef } from "react";
-import Cookies from "js-cookie";
+import { readListingTableState, writeListingTableState } from "@/utils/listingTableStateStorage";
 import {
   TableContainer,
   Table,
@@ -89,8 +89,6 @@ const DEFAULT_COLLECT_FILTERS: CollectFilters = {
   createdById: "",
 };
 
-const COOKIE_OPTIONS = { expires: 365, path: "/" };
-
 const getCollectTableStateKey = (
   userId?: number | string,
   companyId?: number | string | null,
@@ -119,7 +117,7 @@ const readCollectTableStateCookie = (
   cookieKey: string,
 ): CollectTableCookieState => {
   try {
-    const stored = Cookies.get(cookieKey);
+    const stored = readListingTableState(cookieKey);
     if (!stored) return {};
     const parsed = JSON.parse(stored);
     return parsed && typeof parsed === "object" ? parsed : {};
@@ -767,7 +765,7 @@ const CollectList = () => {
     if (!collectTableStateKey || !isTableStateReady) return;
     if (restoredTableStateKeyRef.current !== collectTableStateKey) return;
 
-    Cookies.set(
+    writeListingTableState(
       collectTableStateKey,
       JSON.stringify({
         searchTerm,
@@ -778,7 +776,6 @@ const CollectList = () => {
           pageSize: pagination.pageSize,
         },
       }),
-      COOKIE_OPTIONS,
     );
   }, [
     collectTableStateKey,

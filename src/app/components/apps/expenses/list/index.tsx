@@ -58,7 +58,11 @@ import {
 } from '@tanstack/react-table';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
-import Cookies from 'js-cookie';
+import {
+    readListingTableState,
+    removeListingTableState,
+    writeListingTableState,
+} from '@/utils/listingTableStateStorage';
 import api from '@/utils/axios';
 import {tableFilterOptions} from '@/utils/uniqueFilterOptions';
 import {useServerTable} from '@/hooks/useServerTable';
@@ -109,10 +113,6 @@ const defaultFilters = {
 };
 
 const EXPENSE_FILTERS_COOKIE_PREFIX = 'expense-list-filters';
-const EXPENSE_FILTER_COOKIE_OPTIONS = {
-    expires: 365,
-    path: '/',
-};
 const EXPENSE_PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 const getDefaultExpenseSorting = (): SortingState => [
     {id: 'created_at', desc: true},
@@ -1038,7 +1038,7 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
         }
 
         try {
-            const stored = Cookies.get(expensePreferencesCookieKey);
+            const stored = readListingTableState(expensePreferencesCookieKey);
             if (stored) {
                 const parsed = JSON.parse(stored) as ExpenseStoredPreferences;
                 const nextFilters = {
@@ -1091,7 +1091,7 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
             }
         } catch (error) {
             console.error('Failed to load expense list preferences cookie:', error);
-            Cookies.remove(expensePreferencesCookieKey, {path: '/'});
+            removeListingTableState(expensePreferencesCookieKey);
         } finally {
             restoredPreferencesKeyRef.current = expensePreferencesCookieKey;
             setPreferencesHydrated(true);
@@ -1150,10 +1150,9 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
             },
         };
 
-        Cookies.set(
+        writeListingTableState(
             expensePreferencesCookieKey,
             JSON.stringify(payload),
-            EXPENSE_FILTER_COOKIE_OPTIONS,
         );
     }, [
         activeTab,

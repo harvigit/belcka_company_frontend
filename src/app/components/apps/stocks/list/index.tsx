@@ -57,6 +57,7 @@ import { IconEye } from "@tabler/icons-react";
 import ProductAddEdit from "../../products/create";
 import AdjustStock from "../adjust-stock";
 import Cookies from "js-cookie";
+import { readListingTableState, writeListingTableState } from "@/utils/listingTableStateStorage";
 import StoreModal from "../../modals/store-model";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -123,8 +124,6 @@ const DEFAULT_STOCK_LISTING_FILTERS = {
   category: "",
 };
 
-const COOKIE_OPTIONS = { expires: 365, path: "/" };
-
 const getStocksTableStateKey = (
   userId?: number | string,
   companyId?: number | string | null,
@@ -148,7 +147,7 @@ const readStocksTableStateCookie = (
   cookieKey: string,
 ): StocksTableCookieState => {
   try {
-    const stored = Cookies.get(cookieKey);
+    const stored = readListingTableState(cookieKey);
     if (!stored) return {};
     const parsed = JSON.parse(stored);
     return parsed && typeof parsed === "object" ? parsed : {};
@@ -1208,7 +1207,7 @@ const StockList = () => {
     if (!stocksTableStateKey || !isTableStateReady) return;
     if (restoredTableStateKeyRef.current !== stocksTableStateKey) return;
 
-    Cookies.set(
+    writeListingTableState(
       stocksTableStateKey,
       JSON.stringify({
         searchTerm,
@@ -1221,7 +1220,6 @@ const StockList = () => {
           pageSize: pagination.pageSize,
         },
       }),
-      COOKIE_OPTIONS,
     );
   }, [
     stocksTableStateKey,

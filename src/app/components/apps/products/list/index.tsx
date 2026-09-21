@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import Cookies from "js-cookie";
+import { readListingTableState, writeListingTableState } from "@/utils/listingTableStateStorage";
 import {
   TableContainer,
   Table,
@@ -170,8 +170,6 @@ const DEFAULT_PRODUCT_FILTERS: ProductFilters = {
   status: "",
 };
 
-const COOKIE_OPTIONS = { expires: 365, path: "/" };
-
 const getProductsTableStateKey = (
   userId?: number | string,
   companyId?: number | string | null,
@@ -209,7 +207,7 @@ const readProductsTableStateCookie = (
   cookieKey: string,
 ): ProductsTableCookieState => {
   try {
-    const stored = Cookies.get(cookieKey);
+    const stored = readListingTableState(cookieKey);
     if (!stored) return {};
     const parsed = JSON.parse(stored);
     return parsed && typeof parsed === "object" ? parsed : {};
@@ -2568,7 +2566,7 @@ const ProductList = () => {
     if (!productsTableStateKey || !isTableStateReady) return;
     if (restoredTableStateKeyRef.current !== productsTableStateKey) return;
 
-    Cookies.set(
+    writeListingTableState(
       productsTableStateKey,
       JSON.stringify({
         searchTerm,
@@ -2578,7 +2576,6 @@ const ProductList = () => {
           pageSize: pagination.pageSize,
         },
       }),
-      COOKIE_OPTIONS,
     );
   }, [
     productsTableStateKey,

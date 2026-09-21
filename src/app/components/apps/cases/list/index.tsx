@@ -6,7 +6,11 @@ import React, {
   useRef,
   useState,
 } from "react";
-import Cookies from "js-cookie";
+import {
+  readListingTableState,
+  removeListingTableState,
+  writeListingTableState,
+} from "@/utils/listingTableStateStorage";
 import {
   Typography,
   Box,
@@ -92,8 +96,6 @@ const DEFAULT_CASE_FILTERS: CaseFilters = {
   parent_address_id: "",
 };
 
-const COOKIE_OPTIONS = { expires: 365, path: "/" };
-
 const getCasesTableStateKey = (
   userId?: number | string,
   companyId?: number | string | null,
@@ -118,14 +120,14 @@ const normalizeCaseFilters = (
 const readCasesTableStateCookie = (key: string): CasesTableCookieState => {
   if (!key) return {};
 
-  const saved = Cookies.get(key);
+  const saved = readListingTableState(key);
   if (!saved) return {};
 
   try {
     return JSON.parse(saved);
   } catch (error) {
     console.error("Failed to parse cases table state cookie", error);
-    Cookies.remove(key, { path: "/" });
+    removeListingTableState(key);
     return {};
   }
 };
@@ -1118,7 +1120,7 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
     if (projectId || !casesTableStateKey || !isTableStateReady) return;
     if (restoredTableStateKeyRef.current !== casesTableStateKey) return;
 
-    Cookies.set(
+    writeListingTableState(
       casesTableStateKey,
       JSON.stringify({
         search,
@@ -1128,7 +1130,6 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
           pageSize: pagination.pageSize,
         },
       }),
-      COOKIE_OPTIONS,
     );
   }, [
     projectId,

@@ -45,8 +45,9 @@ interface BookkeeperProps {
 }
 
 const ACTIVITY_FILTER_OPTIONS = [
+  { value: "timesheet", label: "Timesheet", requestTypes: [101] },
   { value: "worklog", label: "Worklog", requestTypes: [102] },
-  { value: "penalty", label: "Penalty", requestTypes: [118, 123] },
+  { value: "penalty", label: "Penalty", requestTypes: [118, 124] },
   { value: "expense", label: "Expense", requestTypes: [111] },
   { value: "leave", label: "Leave", requestTypes: [110] },
   { value: "pricework", label: "Pricework", requestTypes: [121] },
@@ -332,6 +333,9 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
                   {history.map((addr, index) => {
                     let color = "";
                     switch (addr.request_type) {
+                      case 101:
+                        color = "#C62828";
+                        break;
                       case 126:
                         color = "#0066ff";
                         break;
@@ -340,6 +344,10 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
                         break;
                       case 102:
                         color = "#FF7F00";
+                        break;
+                      case 118:
+                      case 124:
+                        color = "#D84315";
                         break;
                       case 121:
                         color = "#32A852";

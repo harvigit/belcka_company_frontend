@@ -51,7 +51,11 @@ import {
 } from "@tanstack/react-table";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import Cookies from "js-cookie";
+import {
+  readListingTableState,
+  removeListingTableState,
+  writeListingTableState,
+} from "@/utils/listingTableStateStorage";
 import api from "@/utils/axios";
 import { tableFilterOptions } from "@/utils/uniqueFilterOptions";
 import { useServerTable } from "@/hooks/useServerTable";
@@ -104,10 +108,6 @@ const defaultFilters = {
 };
 
 const PRICEWORK_FILTERS_COOKIE_PREFIX = "pricework-list-filters";
-const PRICEWORK_FILTER_COOKIE_OPTIONS = {
-  expires: 365,
-  path: "/",
-};
 
 type PriceworkStoredPreferences = {
   filters?: Partial<typeof defaultFilters>;
@@ -372,7 +372,7 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
     }
 
     try {
-      const stored = Cookies.get(priceworkPreferencesCookieKey);
+      const stored = readListingTableState(priceworkPreferencesCookieKey);
       if (stored) {
         const parsed = JSON.parse(stored) as PriceworkStoredPreferences;
         setFilters(normalizeStoredFilters(parsed.filters));
@@ -388,7 +388,7 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
       }
     } catch (error) {
       console.error("Failed to load pricework list preferences cookie:", error);
-      Cookies.remove(priceworkPreferencesCookieKey, { path: "/" });
+      removeListingTableState(priceworkPreferencesCookieKey);
     } finally {
       setPreferencesHydrated(true);
     }
@@ -399,7 +399,7 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
       return;
     }
 
-    Cookies.set(
+    writeListingTableState(
       priceworkPreferencesCookieKey,
       JSON.stringify({
         filters,
@@ -408,7 +408,6 @@ const PriceworkList = ({ projectId }: { projectId?: number } = {}) => {
         startDate: startDate ? startDate.toISOString() : null,
         endDate: endDate ? endDate.toISOString() : null,
       } satisfies PriceworkStoredPreferences),
-      PRICEWORK_FILTER_COOKIE_OPTIONS,
     );
   }, [
     activeTab,

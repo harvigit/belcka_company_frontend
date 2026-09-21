@@ -1,7 +1,11 @@
 'use client';
 
 import React, {useState, useEffect, useMemo, useRef} from 'react';
-import Cookies from 'js-cookie';
+import {
+    readListingTableState,
+    removeListingTableState,
+    writeListingTableState,
+} from '@/utils/listingTableStateStorage';
 import {
     Box,
     Button,
@@ -141,8 +145,6 @@ const DEFAULT_TASK_FILTERS: TaskFilters = {
     subCategory: '',
 };
 
-const COOKIE_OPTIONS = {expires: 365, path: '/'};
-
 const getTasksTableStateKey = (
     userId?: number | string,
     companyId?: number | string | null,
@@ -166,14 +168,14 @@ const normalizeTaskFilters = (
 const readTasksTableStateCookie = (key: string): TasksTableCookieState => {
     if (!key) return {};
 
-    const saved = Cookies.get(key);
+    const saved = readListingTableState(key);
     if (!saved) return {};
 
     try {
         return JSON.parse(saved);
     } catch (error) {
         console.error('Failed to parse tasks table state cookie', error);
-        Cookies.remove(key, {path: '/'});
+        removeListingTableState(key);
         return {};
     }
 };
@@ -1160,7 +1162,7 @@ const TaskLists = () => {
         if (!tasksTableStateKey || !isTableStateReady) return;
         if (restoredTableStateKeyRef.current !== tasksTableStateKey) return;
 
-        Cookies.set(
+        writeListingTableState(
             tasksTableStateKey,
             JSON.stringify({
                 searchTerm,
@@ -1170,7 +1172,6 @@ const TaskLists = () => {
                     pageSize: pagination.pageSize,
                 },
             }),
-            COOKIE_OPTIONS,
         );
     }, [
         tasksTableStateKey,

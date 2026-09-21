@@ -43,7 +43,11 @@ import {
     flexRender,
     createColumnHelper,
 } from '@tanstack/react-table';
-import Cookies from 'js-cookie';
+import {
+    readListingTableState,
+    removeListingTableState,
+    writeListingTableState,
+} from '@/utils/listingTableStateStorage';
 import {
     IconArrowLeft,
     IconFilter,
@@ -170,8 +174,6 @@ const DEFAULT_USER_FILTERS: UserFilters = {
     trade: [],
 };
 
-const COOKIE_OPTIONS = {expires: 365, path: '/'};
-
 const getUsersTableStateKey = (
     userId?: number | string,
     companyId?: number | string | null,
@@ -195,14 +197,14 @@ const normalizeUserFilters = (
 const readUsersTableStateCookie = (key: string): UsersTableCookieState => {
     if (!key) return {};
 
-    const saved = Cookies.get(key);
+    const saved = readListingTableState(key);
     if (!saved) return {};
 
     try {
         return JSON.parse(saved);
     } catch (error) {
         console.error('Failed to parse users table state cookie', error);
-        Cookies.remove(key, {path: '/'});
+        removeListingTableState(key);
         return {};
     }
 };
@@ -1535,7 +1537,7 @@ const TablePagination = () => {
         if (!usersTableStateKey || !isTableStateReady) return;
         if (restoredTableStateKeyRef.current !== usersTableStateKey) return;
 
-        Cookies.set(
+        writeListingTableState(
             usersTableStateKey,
             JSON.stringify({
                 searchTerm,
@@ -1545,7 +1547,6 @@ const TablePagination = () => {
                     pageSize: pagination.pageSize,
                 },
             }),
-            COOKIE_OPTIONS,
         );
     }, [
         usersTableStateKey,

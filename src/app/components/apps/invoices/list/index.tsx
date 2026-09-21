@@ -53,7 +53,11 @@ import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import toast from "react-hot-toast";
-import Cookies from "js-cookie";
+import {
+  readListingTableState,
+  removeListingTableState,
+  writeListingTableState,
+} from "@/utils/listingTableStateStorage";
 import api from "@/utils/axios";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
@@ -96,7 +100,6 @@ type InvoicesTableCookieState = {
   };
 };
 
-const COOKIE_OPTIONS = { expires: 365, path: "/" };
 const PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 
 const getInvoicesTableStateKey = (
@@ -109,12 +112,12 @@ const readInvoicesTableStateCookie = (
   key: string,
 ): InvoicesTableCookieState => {
   if (!key) return {};
-  const saved = Cookies.get(key);
+  const saved = readListingTableState(key);
   if (!saved) return {};
   try {
     return JSON.parse(saved);
   } catch {
-    Cookies.remove(key, { path: "/" });
+    removeListingTableState(key);
     return {};
   }
 };
@@ -801,7 +804,7 @@ Team Belcka
     if (restoredTableStateKeyRef.current !== tableStateKey) return;
     if (!isTableStateReady) return;
 
-    Cookies.set(
+    writeListingTableState(
       tableStateKey,
       JSON.stringify({
         search,
@@ -811,7 +814,6 @@ Team Belcka
           pageSize: pagination.pageSize,
         },
       }),
-      COOKIE_OPTIONS,
     );
   }, [
     tableStateKey,
