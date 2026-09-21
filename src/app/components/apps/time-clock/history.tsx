@@ -45,15 +45,16 @@ interface BookkeeperProps {
 }
 
 const ACTIVITY_FILTER_OPTIONS = [
-  { value: "worklog", label: "Worklog", requestTypes: [102] },
-  { value: "penalty", label: "Penalty", requestTypes: [118, 123] },
-  { value: "expense", label: "Expense", requestTypes: [111] },
-  { value: "leave", label: "Leave", requestTypes: [110] },
-  { value: "pricework", label: "Pricework", requestTypes: [121] },
-  { value: "adjustment", label: "Adjustment", requestTypes: [126] },
-  { value: "billing_info", label: "Billing info", requestTypes: [103] },
-  { value: "rate", label: "Rate", requestTypes: [105] },
-  { value: "user", label: "Personal Info", requestTypes: [104] },
+  { value: "timesheet", label: "Timesheet" },
+  { value: "worklog", label: "Worklog" },
+  { value: "penalty", label: "Penalty" },
+  { value: "expense", label: "Expense" },
+  { value: "leave", label: "Leave" },
+  { value: "pricework", label: "Pricework" },
+  { value: "adjustment", label: "Adjustment" },
+  { value: "billing_info", label: "Billing info" },
+  { value: "rate", label: "Rate" },
+  { value: "user", label: "Personal Info" },
 ] as const;
 
 const BookkeeperHistory: React.FC<BookkeeperProps> = ({
@@ -332,6 +333,9 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
                   {history.map((addr, index) => {
                     let color = "";
                     switch (addr.request_type) {
+                      case 101:
+                        color = "#C62828";
+                        break;
                       case 126:
                         color = "#0066ff";
                         break;
@@ -340,6 +344,10 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({
                         break;
                       case 102:
                         color = "#FF7F00";
+                        break;
+                      case 118:
+                      case 124:
+                        color = "#D84315";
                         break;
                       case 121:
                         color = "#32A852";
