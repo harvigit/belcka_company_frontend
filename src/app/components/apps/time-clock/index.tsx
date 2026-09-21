@@ -1223,15 +1223,6 @@ const TimeClock = ({queryParams}: Props) => {
         setFilterAnchorEl(null);
     };
 
-    const handleClearAppliedFilters = (event: React.MouseEvent) => {
-        event.stopPropagation();
-        skipNextDependencyPageResetRef.current = false;
-        setTempFilters(EMPTY_TIME_CLOCK_FILTERS);
-        setFilters(EMPTY_TIME_CLOCK_FILTERS);
-        saveTimeClockFiltersCookie(EMPTY_TIME_CLOCK_FILTERS, typeFilter);
-        clearSelectedRows();
-    };
-
     const handleApplyFilters = () => {
         skipNextDependencyPageResetRef.current = false;
         setFilters(tempFilters);
@@ -1259,9 +1250,17 @@ const TimeClock = ({queryParams}: Props) => {
         setTypeFilterOpen(false);
     };
 
-    const handleClearAppliedTypeFilter = (event: React.MouseEvent) => {
+    const handleClearAppliedToolbarFilters = (event: React.MouseEvent) => {
         event.stopPropagation();
-        handleClearTypeFilter();
+        skipNextDependencyPageResetRef.current = false;
+        setTempFilters(EMPTY_TIME_CLOCK_FILTERS);
+        setFilters(EMPTY_TIME_CLOCK_FILTERS);
+        setTempTypeFilter('all_data');
+        setTypeFilter('all_data');
+        saveTimeClockFiltersCookie(EMPTY_TIME_CLOCK_FILTERS, 'all_data');
+        clearSelectedRows();
+        setFilterAnchorEl(null);
+        setTypeFilterOpen(false);
     };
 
     const handleApplyTypeFilter = () => {
@@ -2692,61 +2691,45 @@ const TimeClock = ({queryParams}: Props) => {
                                 }}
                             />
 
-                            <Button
-                                color="primary"
-                                variant="contained"
-                                size="small"
-                                onClick={handleFilterClick}
-                                sx={{
-                                    ...toolbarButtonSx,
-                                    minWidth: 40,
-                                    px: 1.5,
-                                    mt: { xs: 1, sm: 0 }
-                                }}
-                                aria-label={t('Open filters')}
-                            >
-                                <IconFilter size={18}/>
-                            </Button>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Button
+                                    color="primary"
+                                    variant="contained"
+                                    size="small"
+                                    onClick={handleFilterClick}
+                                    sx={{
+                                        ...toolbarButtonSx,
+                                        minWidth: 40,
+                                        px: 1.5,
+                                    }}
+                                    aria-label={t('Open filters')}
+                                >
+                                    <IconFilter size={18}/>
+                                </Button>
 
-                            {activeFilterCount > 0 && (
+                                <Button
+                                    color="primary"
+                                    variant={activeTypeFilter ? 'contained' : 'outlined'}
+                                    size="small"
+                                    onClick={handleTypeFilterOpen}
+                                    sx={toolbarButtonSx}
+                                >
+                                    {t('Types')}
+                                </Button>
+                            </Box>
+
+                            {(activeFilterCount > 0 || activeTypeFilter) && (
                                 <Button
                                     color="error"
                                     variant="outlined"
                                     size="small"
-                                    onClick={handleClearAppliedFilters}
+                                    onClick={handleClearAppliedToolbarFilters}
                                     sx={{
                                         ...toolbarButtonSx,
                                         minWidth: 64,
                                         px: 1.5,
                                     }}
                                     aria-label={t('Clear filters')}
-                                >
-                                    <IconX size={18}/>
-                                </Button>
-                            )}
-
-                            <Button
-                                color="primary"
-                                variant={activeTypeFilter ? 'contained' : 'outlined'}
-                                size="small"
-                                onClick={handleTypeFilterOpen}
-                                sx={toolbarButtonSx}
-                            >
-                                {t('Types')}
-                            </Button>
-
-                            {activeTypeFilter && (
-                                <Button
-                                    color="error"
-                                    variant="outlined"
-                                    size="small"
-                                    onClick={handleClearAppliedTypeFilter}
-                                    sx={{
-                                        ...toolbarButtonSx,
-                                        minWidth: 64,
-                                        px: 1.5,
-                                    }}
-                                    aria-label={t('Clear types')}
                                 >
                                     <IconX size={18}/>
                                 </Button>
