@@ -82,15 +82,15 @@ import Link from 'next/link';
 import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import Image from 'next/image';
-import Cookies from 'js-cookie';
+import {
+    readListingTableState,
+    removeListingTableState,
+    writeListingTableState,
+} from '@/utils/listingTableStateStorage';
 import ArchivedUserLeavesDrawer from '@/app/components/apps/leaves/archived-user-leaves';
 
 const LEAVE_STORAGE_KEY = 'leave-module-range';
 const LEAVE_LIST_PREFERENCES_COOKIE_PREFIX = 'leave-list-preferences';
-const LEAVE_LIST_COOKIE_OPTIONS = {
-    expires: 365,
-    path: '/',
-};
 const LEAVE_PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 
 type LeaveListStoredPreferences = {
@@ -770,7 +770,7 @@ const Leaves = () => {
         }
 
         try {
-            const stored = Cookies.get(leaveListPreferencesCookieKey);
+            const stored = readListingTableState(leaveListPreferencesCookieKey);
             if (stored) {
                 const parsed = JSON.parse(stored) as LeaveListStoredPreferences;
                 const nextPagination = normalizeStoredLeavePagination(parsed.pagination);
@@ -783,7 +783,7 @@ const Leaves = () => {
             }
         } catch (error) {
             console.error('Failed to load leave list preferences cookie:', error);
-            Cookies.remove(leaveListPreferencesCookieKey, { path: '/' });
+            removeListingTableState(leaveListPreferencesCookieKey);
         } finally {
             setPreferencesHydrated(true);
         }
@@ -792,7 +792,7 @@ const Leaves = () => {
     useEffect(() => {
         if (!leaveListPreferencesCookieKey || !preferencesHydrated) return;
 
-        Cookies.set(
+        writeListingTableState(
             leaveListPreferencesCookieKey,
             JSON.stringify({
                 search: searchTerm,
@@ -801,7 +801,6 @@ const Leaves = () => {
                     pageSize: pagination.pageSize,
                 },
             }),
-            LEAVE_LIST_COOKIE_OPTIONS,
         );
     }, [
         leaveListPreferencesCookieKey,

@@ -57,6 +57,11 @@ import { User } from "next-auth";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import Cookies from "js-cookie";
+import {
+  readListingTableState,
+  removeListingTableState,
+  writeListingTableState,
+} from "@/utils/listingTableStateStorage";
 import "react-day-picker/dist/style.css";
 import "../../../../global.css";
 import {
@@ -87,10 +92,6 @@ dayjs.extend(customParseFormat);
 const columnHelper = createColumnHelper<any>();
 
 const ADDRESS_LIST_PREFERENCES_COOKIE_PREFIX = "address-list-preferences";
-const ADDRESS_LIST_COOKIE_OPTIONS = {
-  expires: 365,
-  path: "/",
-};
 const ADDRESS_PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 const LONDON_CENTER = { lat: 51.5074, lng: -0.1278 };
 
@@ -1398,7 +1399,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     }
 
     try {
-      const stored = Cookies.get(addressListPreferencesCookieKey);
+      const stored = readListingTableState(addressListPreferencesCookieKey);
       if (stored) {
         const parsed = JSON.parse(stored) as AddressListStoredPreferences;
         const nextFilters = normalizeStoredAddressFilters(parsed.filters);
@@ -1424,7 +1425,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       }
     } catch (error) {
       console.error("Failed to load address list preferences cookie:", error);
-      Cookies.remove(addressListPreferencesCookieKey, { path: "/" });
+      removeListingTableState(addressListPreferencesCookieKey);
     } finally {
       setPreferencesHydrated(true);
     }
@@ -1433,7 +1434,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   useEffect(() => {
     if (!addressListPreferencesCookieKey || !preferencesHydrated) return;
 
-    Cookies.set(
+    writeListingTableState(
       addressListPreferencesCookieKey,
       JSON.stringify({
         searchTerm,
@@ -1444,7 +1445,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           pageSize: pagination.pageSize,
         },
       }),
-      ADDRESS_LIST_COOKIE_OPTIONS,
     );
   }, [
     addressListPreferencesCookieKey,

@@ -51,7 +51,11 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import Image from "next/image";
 import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
-import Cookies from "js-cookie";
+import {
+  readListingTableState,
+  removeListingTableState,
+  writeListingTableState,
+} from "@/utils/listingTableStateStorage";
 
 const columnHelper = createColumnHelper<any>();
 
@@ -76,8 +80,6 @@ const DEFAULT_CHECKIN_FILTERS: CheckinFilters = {
   user: "All",
 };
 
-const COOKIE_OPTIONS = { expires: 365, path: "/" };
-
 const getCheckinsTableStateKey = (
   userId?: number | string,
   companyId?: number | string | null,
@@ -101,14 +103,14 @@ const readCheckinsTableStateCookie = (
 ): CheckinsTableCookieState => {
   if (!key) return {};
 
-  const saved = Cookies.get(key);
+  const saved = readListingTableState(key);
   if (!saved) return {};
 
   try {
     return JSON.parse(saved);
   } catch (error) {
     console.error("Failed to parse checkins table state cookie", error);
-    Cookies.remove(key, { path: "/" });
+    removeListingTableState(key);
     return {};
   }
 };
@@ -787,7 +789,7 @@ const CheckinsList = () => {
     if (!checkinsTableStateKey || !isTableStateReady) return;
     if (restoredTableStateKeyRef.current !== checkinsTableStateKey) return;
 
-    Cookies.set(
+    writeListingTableState(
       checkinsTableStateKey,
       JSON.stringify({
         searchTerm,
@@ -797,7 +799,6 @@ const CheckinsList = () => {
           pageSize: pagination.pageSize,
         },
       }),
-      COOKIE_OPTIONS,
     );
   }, [
     checkinsTableStateKey,

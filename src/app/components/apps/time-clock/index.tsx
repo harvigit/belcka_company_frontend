@@ -64,7 +64,11 @@ import {
     startOfWeek,
 } from 'date-fns';
 import {AxiosResponse} from 'axios';
-import Cookies from 'js-cookie';
+import {
+    readListingTableState,
+    removeListingTableState,
+    writeListingTableState,
+} from '@/utils/listingTableStateStorage';
 
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
@@ -342,11 +346,6 @@ const TIME_CLOCK_TYPE_OPTIONS = [
 type TimeClockStoredFilters = {
     filters?: Partial<TimeClockFilterState>;
     typeFilter?: string;
-};
-
-const TIME_CLOCK_FILTER_COOKIE_OPTIONS = {
-    expires: 365,
-    path: '/',
 };
 
 type QueryParams = {
@@ -693,13 +692,12 @@ const TimeClock = ({queryParams}: Props) => {
     ) => {
         if (!timeClockFiltersCookieKey) return;
 
-        Cookies.set(
+        writeListingTableState(
             timeClockFiltersCookieKey,
             JSON.stringify({
                 filters: nextFilters,
                 typeFilter: nextTypeFilter,
             }),
-            TIME_CLOCK_FILTER_COOKIE_OPTIONS,
         );
     }, [timeClockFiltersCookieKey]);
 
@@ -707,7 +705,7 @@ const TimeClock = ({queryParams}: Props) => {
         if (!timeClockFiltersCookieKey) return;
 
         try {
-            const stored = Cookies.get(timeClockFiltersCookieKey);
+            const stored = readListingTableState(timeClockFiltersCookieKey);
             if (stored) {
                 const parsed = JSON.parse(stored) as TimeClockStoredFilters;
                 const nextFilters: TimeClockFilterState = {
@@ -727,7 +725,7 @@ const TimeClock = ({queryParams}: Props) => {
             }
         } catch (error) {
             console.error('Failed to load time-clock filters cookie:', error);
-            Cookies.remove(timeClockFiltersCookieKey, {path: '/'});
+            removeListingTableState(timeClockFiltersCookieKey);
         } finally {
             skipNextDependencyPageResetRef.current = true;
             setFiltersHydrated(true);

@@ -6,7 +6,11 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import Cookies from "js-cookie";
+import {
+  readListingTableState,
+  removeListingTableState,
+  writeListingTableState,
+} from "@/utils/listingTableStateStorage";
 import {
   TableContainer,
   Table,
@@ -127,8 +131,6 @@ const DEFAULT_TEAM_FILTERS: TeamFilters = {
   supervisor: "",
 };
 
-const COOKIE_OPTIONS = { expires: 365, path: "/" };
-
 const getTeamsTableStateKey = (
   userId?: number | string,
   companyId?: number | string | null,
@@ -149,14 +151,14 @@ const normalizeTeamFilters = (
 const readTeamsTableStateCookie = (key: string): TeamsTableCookieState => {
   if (!key) return {};
 
-  const saved = Cookies.get(key);
+  const saved = readListingTableState(key);
   if (!saved) return {};
 
   try {
     return JSON.parse(saved);
   } catch (error) {
     console.error("Failed to parse teams table state cookie", error);
-    Cookies.remove(key, { path: "/" });
+    removeListingTableState(key);
     return {};
   }
 };
@@ -688,7 +690,7 @@ const TablePagination = () => {
     if (!teamsTableStateKey || !isTableStateReady) return;
     if (restoredTableStateKeyRef.current !== teamsTableStateKey) return;
 
-    Cookies.set(
+    writeListingTableState(
       teamsTableStateKey,
       JSON.stringify({
         searchTerm,
@@ -698,7 +700,6 @@ const TablePagination = () => {
           pageSize: pagination.pageSize,
         },
       }),
-      COOKIE_OPTIONS,
     );
   }, [
     teamsTableStateKey,

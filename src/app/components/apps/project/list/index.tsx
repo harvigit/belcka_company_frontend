@@ -37,7 +37,11 @@ import { User } from "next-auth";
 import Image from "next/image";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import Cookies from "js-cookie";
+import {
+  readListingTableState,
+  removeListingTableState,
+  writeListingTableState,
+} from "@/utils/listingTableStateStorage";
 import api from "@/utils/axios";
 import { useServerTable } from "@/hooks/useServerTable";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
@@ -127,8 +131,6 @@ type ProjectDashboardCookieState = {
 
 const DEFAULT_PROJECT_FILTERS: ProjectDashboardFilters = { status: "all" };
 
-const COOKIE_OPTIONS = { expires: 365, path: "/" };
-
 const getProjectDashboardStateKey = (
   userId?: number | string,
   companyId?: number | string | null,
@@ -155,14 +157,14 @@ const readProjectDashboardCookie = (
 ): ProjectDashboardCookieState => {
   if (!key) return {};
 
-  const saved = Cookies.get(key);
+  const saved = readListingTableState(key);
   if (!saved) return {};
 
   try {
     return JSON.parse(saved);
   } catch (error) {
     console.error("Failed to parse project dashboard table state cookie", error);
-    Cookies.remove(key, { path: "/" });
+    removeListingTableState(key);
     return {};
   }
 };
@@ -859,7 +861,7 @@ const ProjectDashboard = () => {
     if (!projectDashboardStateKey || !isTableStateReady) return;
     if (restoredTableStateKeyRef.current !== projectDashboardStateKey) return;
 
-    Cookies.set(
+    writeListingTableState(
       projectDashboardStateKey,
       JSON.stringify({
         searchTerm,
@@ -869,7 +871,6 @@ const ProjectDashboard = () => {
           pageSize: pagination.pageSize,
         },
       }),
-      COOKIE_OPTIONS,
     );
   }, [
     projectDashboardStateKey,
