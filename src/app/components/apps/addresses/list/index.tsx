@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Typography,
   Box,
@@ -61,9 +61,6 @@ import "react-day-picker/dist/style.css";
 import "../../../../global.css";
 import {
   useJsApiLoader,
-  GoogleMap,
-  Marker,
-  Circle,
 } from "@react-google-maps/api";
 import Link from "next/link";
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
@@ -81,7 +78,7 @@ import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox
 import { IconExclamationCircle } from "@tabler/icons-react";
 import AddressesList from "./addresses-list";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
-import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRangeSlider";
+import ParentAddressAreaMap from "./parent-address-area-map";
 
 dayjs.extend(customParseFormat);
 const columnHelper = createColumnHelper<any>();
@@ -92,7 +89,6 @@ const ADDRESS_LIST_COOKIE_OPTIONS = {
   path: "/",
 };
 const ADDRESS_PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
-const LONDON_CENTER = { lat: 51.5074, lng: -0.1278 };
 
 type AddressListFilters = {
   status: string;
@@ -273,8 +269,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [parentAddressType, setParentAddressType] = useState("address");
   const [showLocationPin, setShowLocationPin] = useState(false);
   const [parentAddressRadius, setParentAddressRadius] = useState(0);
-  const circleRef = useRef<any>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
   const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
   const lastRadiusRef = useRef<number>(0);
   const [maxRadius, setMaxRadius] = useState<number>(200);
@@ -393,7 +387,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     });
   };
 
-  const applyLocationFromMap = (lat: number, lng: number) => {
+  const applyLocationFromMap = useCallback((lat: number, lng: number) => {
     setSelectedLocation({ lat, lng });
     lastCenterRef.current = { lat, lng };
 
@@ -419,24 +413,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
       toast.error("Address and Post Code are still required");
     });
-  };
+  }, []);
 
-  const onRadiusChanged = () => {
-    if (!circleRef.current) return;
-    const r = circleRef.current.getRadius();
-    let newRadius = Math.round(r);
-
-    if (newRadius > 10000) {
-      newRadius = 10000;
-      circleRef.current.setRadius(10000);
-    }
-
-    if (lastRadiusRef.current === newRadius) return;
-
-    lastRadiusRef.current = newRadius;
-    setRadius(newRadius);
-    setParentAddressRadius(newRadius);
-  };
+  const handleParentAddressRadiusCommit = useCallback((nextRadius: number) => {
+    lastRadiusRef.current = nextRadius;
+    setRadius(nextRadius);
+    setParentAddressRadius(nextRadius);
+  }, []);
 
   const selectPostcoderPrediction = (
     item: { source: "postcoder" } & PostcoderAddress,
@@ -473,12 +456,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     return () => clearTimeout(timer);
   }, [postcodeQuery]);
 
-  useEffect(() => {
-    if (!selectedLocation || !mapRef.current) return;
-    mapRef.current.panTo(selectedLocation);
-    mapRef.current.setZoom(15);
-  }, [selectedLocation]);
-
   const handleOpenParentAddressDrawer = (address?: any) => {
     if (address && address.id) {
       setEditingParentAddress(address);
@@ -492,8 +469,20 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       setParentAddressType(addrType);
       setShowLocationPin(addrType !== "location");
 
-      const rawLat = address.lat ?? address.latitude;
-      const rawLng = address.lng ?? address.longitude;
+      let boundaryData: any = null;
+      if (address.boundary) {
+        try {
+          boundaryData =
+            typeof address.boundary === "string"
+              ? JSON.parse(address.boundary)
+              : address.boundary;
+        } catch {
+          boundaryData = null;
+        }
+      }
+
+      const rawLat = address.lat ?? address.latitude ?? boundaryData?.lat;
+      const rawLng = address.lng ?? address.longitude ?? boundaryData?.lng;
       const lat = Number(rawLat);
       const lng = Number(rawLng);
       const hasCoords =
@@ -504,20 +493,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         Number.isFinite(lat) &&
         Number.isFinite(lng);
 
-      let radius = Number(address.radius);
-      if (!Number.isFinite(radius) && address.boundary) {
-        try {
-          const boundary =
-            typeof address.boundary === "string"
-              ? JSON.parse(address.boundary)
-              : address.boundary;
-          radius = Number(boundary?.radius);
-        } catch (e) {
-          radius = NaN;
-        }
-      }
+      let radius = Number(address.radius ?? boundaryData?.radius);
       if (!Number.isFinite(radius) || radius <= 0) {
         radius = maxRadius || 200;
+      } else {
+        radius = Math.round(radius);
       }
       setParentAddressRadius(radius);
       setRadius(radius);
@@ -527,6 +507,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         setSelectedLocation({ lat, lng });
         lastCenterRef.current = { lat, lng };
       } else if (window.google && (addrName || addrPincode)) {
+        setSelectedLocation(null);
         lastCenterRef.current = null;
         const geocoder = new google.maps.Geocoder();
         geocoder.geocode(
@@ -564,6 +545,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       lastCenterRef.current = null;
       setParentAddressRadius(maxRadius || 200);
       setRadius(maxRadius || 200);
+      lastRadiusRef.current = maxRadius || 200;
     }
     setAddressOptions([]);
     setParentAddressDrawerOpen(true);
@@ -588,7 +570,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         boundaryData = JSON.stringify({
           lat: selectedLocation.lat,
           lng: selectedLocation.lng,
-          radius: parentAddressRadius,
+          radius: Number.isFinite(lastRadiusRef.current)
+            ? lastRadiusRef.current
+            : parentAddressRadius,
         });
       }
 
@@ -2494,113 +2478,17 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     />
                   </Grid>
                   <Grid size={{ xs: 12 }}>
-                    <Box width={"100%"}>
-                      <Typography variant="subtitle2" mb={1}>
-                        Area size [{parentAddressRadius} Meter]
-                      </Typography>
-                      <CustomRangeSlider
-                        value={parentAddressRadius}
-                        onChange={(e: any, newValue: number | number[]) =>
-                          setParentAddressRadius(newValue as number)
-                        }
-                        min={0}
-                        max={maxRadius}
-                        step={1}
-                      />
-                    </Box>
+                    <ParentAddressAreaMap
+                      key={editingParentAddress?.id ?? "new"}
+                      isLoaded={isLoaded}
+                      selectedLocation={selectedLocation}
+                      radius={parentAddressRadius}
+                      maxRadius={maxRadius}
+                      onSelectLocation={applyLocationFromMap}
+                      onRadiusCommit={handleParentAddressRadiusCommit}
+                      lastRadiusRef={lastRadiusRef}
+                    />
                   </Grid>
-                  {isLoaded && (
-                    <Grid size={{ xs: 12 }}>
-                      <Box
-                        height={{ xs: 280, md: 380 }}
-                        width="100%"
-                        borderRadius={2}
-                        overflow="hidden"
-                      >
-                        <GoogleMap
-                          mapContainerStyle={{
-                            width: "100%",
-                            height: "100%",
-                          }}
-                          center={selectedLocation ?? LONDON_CENTER}
-                          zoom={selectedLocation ? 15 : 11}
-                          onLoad={(map) => {
-                            mapRef.current = map;
-                            if (selectedLocation) {
-                              map.panTo(selectedLocation);
-                              map.setZoom(15);
-                            } else {
-                              map.panTo(LONDON_CENTER);
-                              map.setZoom(11);
-                            }
-                          }}
-                          onClick={(e) => {
-                            const lat = e.latLng?.lat();
-                            const lng = e.latLng?.lng();
-                            if (lat && lng) applyLocationFromMap(lat, lng);
-                          }}
-                          options={{ clickableIcons: false }}
-                        >
-                          {selectedLocation && (
-                            <Marker
-                              position={selectedLocation}
-                              draggable={true}
-                              onDragEnd={(e) => {
-                                const lat = e.latLng?.lat();
-                                const lng = e.latLng?.lng();
-                                if (lat && lng) applyLocationFromMap(lat, lng);
-                              }}
-                            />
-                          )}
-                          {selectedLocation && parentAddressRadius > 0 && (
-                            <Circle
-                              center={selectedLocation}
-                              radius={parentAddressRadius}
-                              options={{
-                                draggable: true,
-                                editable: true,
-                                fillColor: "#FF0000",
-                                fillOpacity: 0.3,
-                                strokeColor: "#FF0000",
-                                strokeOpacity: 1,
-                                strokeWeight: 1,
-                              }}
-                              onLoad={(circle) => {
-                                circleRef.current = circle;
-                              }}
-                              onCenterChanged={() => {
-                                if (!circleRef.current) return;
-
-                                const center = circleRef.current.getCenter();
-                                if (!center) return;
-
-                                const lat = center.lat();
-                                const lng = center.lng();
-
-                                if (
-                                  lastCenterRef.current &&
-                                  lastCenterRef.current.lat === lat &&
-                                  lastCenterRef.current.lng === lng
-                                ) {
-                                  return;
-                                }
-
-                                lastCenterRef.current = { lat, lng };
-                                setSelectedLocation({ lat, lng });
-                              }}
-                              onDragEnd={() => {
-                                if (!circleRef.current) return;
-                                const center = circleRef.current.getCenter();
-                                if (!center) return;
-                                applyLocationFromMap(center.lat(), center.lng());
-                              }}
-                              onRadiusChanged={onRadiusChanged}
-                            />
-                          )}
-                        </GoogleMap>
-                      </Box>
-                    </Grid>
-                  )}
                 </Grid>
               </Box>
               <Box
