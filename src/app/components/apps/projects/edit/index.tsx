@@ -830,31 +830,31 @@ const EditProject: React.FC<EditProjectProps> = ({
                     />
                   </>
                 );
-                const budgetField = (
-                  <>
-                    <Typography
-                      variant="h5"
-                      mt={embedded ? 0 : 2}
-                      className="f-14"
-                    >
-                      Budget
-                    </Typography>
-                    <CustomTextField
-                      id="budget"
-                      name="budget"
-                      type="text"
-                      placeholder="Enter Budget.."
-                      value={formData.budget}
-                      onChange={handleChange}
-                      inputProps={{
-                        inputMode: "decimal",
-                        pattern: "^[0-9]+(\\.[0-9]{0,2})?$",
-                      }}
-                      variant="outlined"
-                      fullWidth
-                    />
-                  </>
-                );
+                // const budgetField = (
+                //   <>
+                //     <Typography
+                //       variant="h5"
+                //       mt={embedded ? 0 : 2}
+                //       className="f-14"
+                //     >
+                //       Budget
+                //     </Typography>
+                //     <CustomTextField
+                //       id="budget"
+                //       name="budget"
+                //       type="text"
+                //       placeholder="Enter Budget.."
+                //       value={formData.budget}
+                //       onChange={handleChange}
+                //       inputProps={{
+                //         inputMode: "decimal",
+                //         pattern: "^[0-9]+(\\.[0-9]{0,2})?$",
+                //       }}
+                //       variant="outlined"
+                //       fullWidth
+                //     />
+                //   </>
+                // );
                 const codeField = (
                   <>
                     <Typography
@@ -909,9 +909,9 @@ const EditProject: React.FC<EditProjectProps> = ({
                       {/* {showSettingsAccess && (
                         <Grid size={{ xs: 6 }}>{showSettingsField}</Grid>
                       )} */}
-                      <Grid size={{ xs: 12, md: 6 }}>{budgetField}</Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>{descriptionField}</Grid>
+                      {/* <Grid size={{ xs: 12, md: 6 }}>{budgetField}</Grid> */}
                       <Grid size={{ xs: 12, md: 6 }}>{assignRoleField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{descriptionField}</Grid>
                     </Grid>
                   );
                 }
@@ -924,7 +924,7 @@ const EditProject: React.FC<EditProjectProps> = ({
                     {assignRoleField}
                     {/* {geofenceField} */}
                     {addressField}
-                    {budgetField}
+                    {/* {budgetField} */}
                     {codeField}
                     {descriptionField}
                   </>

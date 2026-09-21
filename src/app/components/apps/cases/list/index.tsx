@@ -67,6 +67,7 @@ import ArchiveAddress from "../../addresses/list/archive-address-list";
 import CaseEditDrawer from "./case-edit-drawer";
 import CaseAddDrawer from "./case-add-drawer";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
+import { useRouter } from "next/navigation";
 
 type CaseFilters = {
   status: string;
@@ -308,6 +309,7 @@ const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
   return (
     <Box
       sx={{ display: "flex", alignItems: "center", position: "relative" }}
+      onClick={(e) => e.stopPropagation()}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => {
         if (!isEditing) setIsHovering(false);
@@ -380,7 +382,10 @@ const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
           sx={{ px: 1.5, cursor: "pointer" }}
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => !isEditing && setIsHovering(false)}
-          onClick={() => setIsEditing(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsEditing(true);
+          }}
         >
           {value}
         </Typography>
@@ -390,6 +395,7 @@ const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
 };
 
 const CasesList = ({ projectId }: { projectId?: number } = {}) => {
+  const router = useRouter();
   const [data, setData] = useState<CaseSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [search, setSearch] = useState("");
@@ -630,6 +636,15 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
     }
   };
 
+  const openCaseDetail = useCallback(
+    (id?: number) => {
+      if (!id) return;
+      const query = projectId ? `?project_id=${projectId}` : "";
+      router.push(`/apps/cases/list/${id}${query}`);
+    },
+    [projectId, router],
+  );
+
   const handleProgressSave = useCallback(
     async (rowId: number, clampedValue: number) => {
       const res = await api.put("address/change-address-progress", {
@@ -861,7 +876,8 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                   border: "1px solid transparent",
                   transition: "all 0.2s ease",
                 }}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (!case_id) {
                     toast.error("No case id to copy!");
                     return;
@@ -977,28 +993,12 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
         cell: ({ row }: any) => {
           const item = row.original;
           return (
-            <Box display="flex" gap={1}>
+            <Box display="flex" gap={1} onClick={(e) => e.stopPropagation()}>
               <IconButton
                 color="primary"
-                onClick={async (e) => {
+                onClick={(e) => {
                   e.stopPropagation();
-
-                  try {
-                    const res = await api.get(
-                      `address/address-detail?address_id=${item.id}`,
-                    );
-                    const fullAddress = res.data?.info;
-                    if (fullAddress) {
-                      setEditingCase(fullAddress);
-                    } else {
-                      setEditingCase(item);
-                    }
-                  } catch (err) {
-                    setEditingCase(item);
-                  }
-
-                  setIsViewOnly(true);
-                  setEditDialogOpen(true);
+                  openCaseDetail(item.id);
                 }}
               >
                 <IconEye size={18} />
@@ -1033,7 +1033,7 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
         },
       },
     ],
-    [data, selectedRowIds, hoveredRow, handleProgressSave],
+    [data, selectedRowIds, hoveredRow, handleProgressSave, openCaseDetail],
   );
   const simpleColumns = columns.map((column: any) => ({
     name: column.id ?? "Unnamed Column",
@@ -1652,7 +1652,12 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                 </TableRow>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
+                  <TableRow
+                    key={row.id}
+                    hover
+                    sx={{ cursor: "pointer" }}
+                    onClick={() => openCaseDetail(row.original.id)}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}

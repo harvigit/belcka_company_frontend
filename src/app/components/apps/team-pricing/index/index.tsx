@@ -104,9 +104,11 @@ const TeamPricing = () => {
   ): string | null => {
     if (!percentageStr || percentageStr === "") return null;
     const percentage = Number(percentageStr);
+    console.log(percentageStr, "percentageStr");
     let calculatedPrice = 0;
-
-    if (marketPrice <= buyingPrice) {
+    if (percentage == 0) {
+      calculatedPrice;
+    } else if (marketPrice <= buyingPrice) {
       calculatedPrice = buyingPrice + (buyingPrice * percentage) / 100;
     } else {
       calculatedPrice =
@@ -119,7 +121,7 @@ const TeamPricing = () => {
   const fetchDrawerData = async (
     team: any,
     currentPage: number,
-    targetSearch: string
+    targetSearch: string,
   ) => {
     try {
       setLoadingProducts(true);
@@ -192,7 +194,7 @@ const TeamPricing = () => {
       });
 
       setProducts((prev) =>
-        currentPage === 1 ? mergedProducts : [...prev, ...mergedProducts]
+        currentPage === 1 ? mergedProducts : [...prev, ...mergedProducts],
       );
     } catch (err) {
       console.error(err);
@@ -329,7 +331,6 @@ const TeamPricing = () => {
       console.error("Failed to update team pricing status", err);
     }
   };
-
 
   return (
     <Box
@@ -500,7 +501,9 @@ const TeamPricing = () => {
 
       {!loadingTeams && filteredTeams.length === 0 && (
         <Typography textAlign="center" mt={5} color="text.secondary">
-          {teamSearch.trim() ? "No teams match your search." : "No teams found."}
+          {teamSearch.trim()
+            ? "No teams match your search."
+            : "No teams found."}
         </Typography>
       )}
 
