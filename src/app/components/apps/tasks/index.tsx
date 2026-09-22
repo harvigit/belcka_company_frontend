@@ -360,6 +360,7 @@ const TaskLists = () => {
         project_ids: [],
         note: '',
         is_show: false,
+        unit_id: null,
     };
 
     const [formData, setFormData] = useState<any>(initialFormData);
@@ -551,6 +552,7 @@ const TaskLists = () => {
                     project_ids: [],
                     note: '',
                     is_show: false,
+                    unit_id: null,
                 });
                 setEditDrawerOpen(false);
                 fetchTasks();

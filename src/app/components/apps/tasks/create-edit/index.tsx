@@ -31,6 +31,7 @@ export interface TaskFormData {
   project_ids?: any[];
   note?: string;
   is_show?: boolean;
+  unit_id?: number | null;
 }
 
 interface TaskAddEditProps {
@@ -89,6 +90,8 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
   const [tradeError, setTradeError] = useState("");
   const [categoryError, setCategoryError] = useState("");
   const [shiftError, setShiftError] = useState("");
+  const [unitError, setUnitError] = useState("");
+  const [units, setUnits] = useState<any[]>([]);
 
   const isRequiredEmpty = (value: number | string | null | undefined) =>
     value === undefined ||
@@ -120,6 +123,13 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
 
         return isExistingId || isFreeTypedName ? "" : "Category not exists!";
     };
+
+  const getUnitValidationError = (value: TaskFormData["unit_id"]) => {
+    if (isRequiredEmpty(value)) return "Unit of measure is required";
+    return units.some((unit) => String(unit.id) === String(value))
+      ? ""
+      : "Unit of measure not exists!";
+  };
 
   const fetchTask = async () => {
     if (!taskId || fetching) return;
@@ -159,6 +169,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
         project_ids: [],
         note: "",
         is_show: false,
+        unit_id: null,
       });
 
       setGalleryFiles([]);
@@ -167,6 +178,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
       setTradeError("");
       setCategoryError("");
       setShiftError("");
+      setUnitError("");
     }
   }, [open]);
 
@@ -187,6 +199,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
       project_ids: task.project_ids ?? [],
       note: task.note ?? "",
       is_show: Boolean(task.is_show),
+      unit_id: task.unit_id ?? null,
     });
 
     setGalleryPreview(
@@ -226,6 +239,9 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
         setTrades(res.data.trades);
         setProjects(res.data.projects || []);
       }
+
+      const unitsRes = await api.get(`units/get?company_id=${companyId}`);
+      setUnits(unitsRes.data?.info || []);
     } catch (err) {
       console.error("Failed to fetch inventory resources", err);
     }
@@ -258,13 +274,18 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
       formData.category_id,
     );
     const shiftValidationError = getShiftValidationError(formData.shift_type);
+    const unitValidationError = getUnitValidationError(formData.unit_id);
 
     setTradeError(tradeValidationError);
     setCategoryError(categoryValidationError);
     setShiftError(shiftValidationError);
+    setUnitError(unitValidationError);
 
     const error =
-      tradeValidationError || categoryValidationError || shiftValidationError;
+      tradeValidationError ||
+      categoryValidationError ||
+      shiftValidationError ||
+      unitValidationError;
 
     if (error) {
       e.preventDefault();
@@ -580,6 +601,35 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                   </Grid>
                   <Grid size={{ xs: 3 }}>
                     <Typography variant="body2" gutterBottom>
+                      Unit of measure
+                    </Typography>
+                    <Autocomplete
+                      options={units}
+                      getOptionLabel={(option) => option.name}
+                      value={
+                        units.find((item) => item.id === formData.unit_id) ??
+                        null
+                      }
+                      onChange={(_, value) => {
+                        setUnitError("");
+                        setFormData((prev) => ({
+                          ...prev,
+                          unit_id: value?.id ?? null,
+                        }));
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="Select Unit of measure"
+                          required
+                          error={Boolean(unitError)}
+                          helperText={unitError}
+                        />
+                      )}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 3 }}>
+                    <Typography variant="body2" gutterBottom>
                       Duration (m)
                     </Typography>
 
@@ -601,7 +651,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                       }}
                     />
                   </Grid>
-                  <Grid size={{ xs: 6 }}>
+                  <Grid size={{ xs: 3 }}>
                     <Typography variant="body2" gutterBottom>
                       Note
                     </Typography>
