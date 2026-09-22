@@ -347,19 +347,7 @@ const PriceworkList = ({
     };
 
     const handleTabChange = (tab: PriceworkTabKey) => {
-        const nextFilters = projectId ? {...defaultFilters, project_id: projectId} : defaultFilters;
-
         setActiveTab(tab);
-        setSearch('');
-        setFilters(nextFilters);
-        setTempFilters(nextFilters);
-        setStartDate(null);
-        setEndDate(null);
-
-        if (projectId) {
-            sharedFilters?.clearSharedFilters();
-        }
-
         clearSelection();
         setPagination((prev: any) => ({...prev, pageIndex: 0}));
     };
