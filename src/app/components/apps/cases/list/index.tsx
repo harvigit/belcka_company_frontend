@@ -70,8 +70,8 @@ import toast from "react-hot-toast";
 import ArchiveAddress from "../../addresses/list/archive-address-list";
 import CaseEditDrawer from "./case-edit-drawer";
 import CaseAddDrawer from "./case-add-drawer";
+import CaseDetail from "@/app/components/apps/cases/detail";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
-import { useRouter } from "next/navigation";
 
 type CaseFilters = {
   status: string;
@@ -308,10 +308,17 @@ const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
     }
   };
 
+  const preventRowNav = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  };
+
   return (
     <Box
+      data-prevent-row-nav="true"
       sx={{ display: "flex", alignItems: "center", position: "relative" }}
-      onClick={(e) => e.stopPropagation()}
+      onClick={preventRowNav}
+      onMouseDown={preventRowNav}
+      onPointerDown={preventRowNav}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => {
         if (!isEditing) setIsHovering(false);
@@ -360,6 +367,8 @@ const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
           autoFocus={isEditing}
           disabled={loadingProgress}
           onChange={(e) => setLocalValue(Number(e.target.value) || 0)}
+          onClick={preventRowNav}
+          onMouseDown={preventRowNav}
           onFocus={() => setIsEditing(true)}
           onBlur={saveProgress}
           onKeyDown={(e) => e.key === "Enter" && saveProgress()}
@@ -384,6 +393,7 @@ const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
           sx={{ px: 1.5, cursor: "pointer" }}
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => !isEditing && setIsHovering(false)}
+          onMouseDown={preventRowNav}
           onClick={(e) => {
             e.stopPropagation();
             setIsEditing(true);
@@ -397,7 +407,6 @@ const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
 };
 
 const CasesList = ({ projectId }: { projectId?: number } = {}) => {
-  const router = useRouter();
   const [data, setData] = useState<CaseSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [search, setSearch] = useState("");
@@ -454,6 +463,7 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
   const [editingCase, setEditingCase] = useState<any>(null);
   const [editData, setEditData] = useState({ name: "", case_id: "", ref: "" });
   const [addCaseDrawerOpen, setAddCaseDrawerOpen] = useState(false);
+  const [detailCaseId, setDetailCaseId] = useState<number | null>(null);
   const [isViewOnly, setIsViewOnly] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -519,7 +529,7 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
       const [projRes, addrRes] = await Promise.all([
         api.get(`project/get?company_id=${user.company_id}`),
         api.get(
-          `address/get-parent?company_id=${user.company_id}&page=1&limit=1000`,
+          `address/get-parent?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`,
         ),
       ]);
       if (projRes.data?.info) setProjectList(projRes.data.info);
@@ -638,14 +648,10 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
     }
   };
 
-  const openCaseDetail = useCallback(
-    (id?: number) => {
-      if (!id) return;
-      const query = projectId ? `?project_id=${projectId}` : "";
-      router.push(`/apps/cases/list/${id}${query}`);
-    },
-    [projectId, router],
-  );
+  const openCaseDetail = useCallback((id?: number) => {
+    if (!id) return;
+    setDetailCaseId(id);
+  }, []);
 
   const handleProgressSave = useCallback(
     async (rowId: number, clampedValue: number) => {
@@ -1657,11 +1663,33 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                     key={row.id}
                     hover
                     sx={{ cursor: "pointer" }}
-                    onClick={() => openCaseDetail(row.original.id)}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.closest("[data-prevent-row-nav]")) return;
+                      openCaseDetail(row.original.id);
+                    }}
                   >
-                    {row.getVisibleCells().map((cell) => (
+                    {row.getVisibleCells().map((cell) => {
+                      const preventRowNav = [
+                        "select",
+                        "progress",
+                        "actions",
+                        "case_id",
+                      ].includes(cell.column.id);
+                      return (
                       <TableCell
                         key={cell.id}
+                        data-prevent-row-nav={preventRowNav ? "true" : undefined}
+                        onClick={
+                          preventRowNav
+                            ? (e) => e.stopPropagation()
+                            : undefined
+                        }
+                        onMouseDown={
+                          preventRowNav
+                            ? (e) => e.stopPropagation()
+                            : undefined
+                        }
                         sx={{
                           padding: "10px",
                           ...(cell.column.id === "actions" && {
@@ -1680,7 +1708,8 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                           cell.getContext(),
                         )}
                       </TableCell>
-                    ))}
+                    );
+                    })}
                   </TableRow>
                 ))
               )}
@@ -1700,6 +1729,13 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
           totalRows={totalRows}
         />
       </Box>
+      <CaseDetail
+        open={Boolean(detailCaseId)}
+        caseId={detailCaseId}
+        projectId={projectId}
+        onClose={() => setDetailCaseId(null)}
+        onUpdated={fetchCases}
+      />
       {/* Add Case Drawer */}
       <CaseAddDrawer
         open={addCaseDrawerOpen}

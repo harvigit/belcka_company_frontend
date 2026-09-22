@@ -94,7 +94,8 @@ const ProjectDetail = () => {
           ? res.data.info[0]
           : res.data?.info;
         const isAdmin = Number(user.user_role_id) === 1;
-        setProjectCode(res.data.info[0].code);
+        if (projectRow?.name) setProjectName(projectRow.name);
+        setProjectCode(projectRow?.code || "");
         setAssignedUsers(projectRow?.assigned_users || []);
         const assigned = (projectRow?.setting_users || []).some(
           (item: { id: number }) => Number(item.id) === Number(user.id),
@@ -232,7 +233,11 @@ const ProjectDetail = () => {
         <IconButton onClick={() => router.push("/apps/project/list")}>
           <IconArrowLeft size={20} />
         </IconButton>
-        <Typography fontWeight={700} noWrap sx={{ flexShrink: 0 }}>
+        <Typography
+          fontWeight={700}
+          noWrap
+          sx={{ flexShrink: 0, minWidth: 0, maxWidth: { xs: "100%", md: 480 } }}
+        >
           {projectName} {projectCode ? `(${projectCode})` : ""}
         </Typography>
         <AssigneeRoleChips

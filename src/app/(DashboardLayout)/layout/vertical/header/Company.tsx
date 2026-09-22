@@ -47,7 +47,6 @@ import { useTranslation } from "react-i18next";
 
 const STORAGE_KEY = "feed-date-range";
 const LEAVE_STORAGE_KEY = "leave-range";
-const REQUEST_KEY = "request-date-range";
 const FEED_MESSAGE_TRANSLATION_KEYS = [
   "Requested to add leave on",
   "Requested to change timesheet hours from",
@@ -99,26 +98,6 @@ const saveDateRangeToStorage = (
   }
 };
 
-const loadRequestDateRange = () => {
-  try {
-    const stored = localStorage.getItem(REQUEST_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return {
-        startDate: parsed.startDate
-          ? format(new Date(parsed.startDate), "dd/MM/yyyy")
-          : null,
-        endDate: parsed.endDate
-          ? format(new Date(parsed.endDate), "dd/MM/yyyy")
-          : null,
-      };
-    }
-  } catch (error) {
-    console.error("Error loading request date range:", error);
-  }
-  return null;
-};
-
 const Company = () => {
   const { t } = useTranslation();
   const [companies, setCompanies] = useState<any[]>([]);
@@ -137,6 +116,7 @@ const Company = () => {
   const [items, setItems] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
   const limit = 20;
+  const [totalFeedItems, setTotalFeedItems] = useState<number>(0);
   const [loadingFeeds, setLoadingFeeds] = useState(false);
   const translateFeedMessage = (value?: string | null) => {
     if (!value) return "";
@@ -244,52 +224,75 @@ const Company = () => {
     [trade],
   );
 
-  const fetchFeeds = async () => {
+  const fetchCounts = useCallback(async () => {
     if (!user?.company_id || !user?.id) return;
-    setLoadingFeeds(true);
     try {
-      const dateRange = loadRequestDateRange();
-
-      let url = `get-feeds?company_id=${user.company_id}&user_id=${user.id}`;
-
-      if (filters.team && filters.team !== "All") {
-        const teamsId = teams.find((c) => c.name === filters.team)?.id;
-        if (teamsId) {
-          url += `&team_ids=${teamsId}`;
-        }
-      }
-      if (filters.trade && filters.trade !== "All") {
-        const tradeId = trade.find((c) => c.name === filters.trade)?.id;
-        if (tradeId) {
-          url += `&trade_ids=${tradeId}`;
-        }
-      }
-      // if (dateRange?.startDate && dateRange?.endDate) {
-      //   url += `&start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`;
-      // }
-      const res = await api.get(url);
-
-      const feeds = res.data?.info ?? [];
-      setFeed(feeds);
-      setCount(feeds?.[0]?.unread_feeds);
-      setRequestCount(feeds?.[0]?.request_count);
-      setAnnouncemntCount(res.data?.announcement_count ?? 0);
-      const unreadIds = feeds
-        .filter((f: any) => !f.status)
-        .map((f: any) => f.id)
-        .join(",");
-
-      setUnreedFeed(unreadIds);
+      const res = await api.get(
+        `get-notification-count?company_id=${user.company_id}`,
+      );
+      setCount(Number(res.data?.feed_count || 0));
+      setRequestCount(Number(res.data?.request_count || 0));
+      setAnnouncemntCount(Number(res.data?.announcement_count || 0));
     } catch (e) {
       console.error(e);
     }
-    setLoadingFeeds(true);
-  };
+  }, [user?.company_id, user?.id]);
+
+  const fetchFeeds = useCallback(
+    async (currentPage = 1) => {
+      if (!user?.company_id || !user?.id) return;
+      setLoadingFeeds(true);
+      setPage(currentPage);
+      try {
+        let url = `get-feeds?company_id=${user.company_id}&user_id=${user.id}&page=${currentPage}&limit=${limit}`;
+
+        if (filters.team && filters.team !== "All") {
+          const teamsId = teams.find((c) => c.name === filters.team)?.id;
+          if (teamsId) {
+            url += `&team_ids=${teamsId}`;
+          }
+        }
+        if (filters.trade && filters.trade !== "All") {
+          const tradeId = trade.find((c) => c.name === filters.trade)?.id;
+          if (tradeId) {
+            url += `&trade_ids=${tradeId}`;
+          }
+        }
+        const res = await api.get(url);
+
+        const feeds = res.data?.info ?? [];
+        const pagination = res.data?.data;
+        setTotalFeedItems(Number(pagination?.totalItems || feeds.length || 0));
+        setFeed((prev) => (currentPage === 1 ? feeds : [...prev, ...feeds]));
+        const unreadIds = feeds
+          .filter((f: any) => !f.status)
+          .map((f: any) => f.id);
+
+        setUnreedFeed((prev: any) => {
+          if (currentPage === 1) return unreadIds.join(",");
+          const existing = String(prev || "")
+            .split(",")
+            .filter(Boolean);
+          return [...new Set([...existing, ...unreadIds])].join(",");
+        });
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingFeeds(false);
+      }
+    },
+    [user?.company_id, user?.id, filters, teams, trade],
+  );
 
   useEffect(() => {
     if (!user?.company_id || !user?.id) return;
-    fetchFeeds();
-  }, [user?.company_id, user?.id, filters]);
+    fetchCounts();
+  }, [user?.company_id, user?.id, fetchCounts]);
+
+  useEffect(() => {
+    if (!openDrawer) return;
+    fetchFeeds(1);
+  }, [openDrawer, fetchFeeds]);
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -353,7 +356,7 @@ const Company = () => {
           payload,
         );
         if (res.data) {
-          await fetchFeeds();
+          await fetchCounts();
         }
       } catch (err) {
         console.error(err);
@@ -366,7 +369,7 @@ const Company = () => {
     setOpenDrawer(false);
     setLoading(false);
     setPage(1);
-  }, [count, unreedFeed, loading]);
+  }, [count, unreedFeed, loading, fetchCounts]);
 
   const fetchList = useCallback(async () => {
     try {
@@ -394,8 +397,14 @@ const Company = () => {
     if (filterRequest === "all") return true;
     return item.request_name === filterRequest;
   });
+  const feedCountLabel =
+    filterRequest === "all" ? totalFeedItems : filteredFeeds.length;
+  const hasMoreFeeds = feed.length < totalFeedItems;
 
-  const paginatedFeeds = filteredFeeds?.slice(0, page * limit) || [];
+  const handleSeeMoreFeeds = () => {
+    if (loadingFeeds || !hasMoreFeeds) return;
+    fetchFeeds(page + 1);
+  };
 
   const REQUEST_ROUTE_MAP: Record<
     string,
@@ -494,15 +503,16 @@ const Company = () => {
         });
       }
       if (payload) {
-        fetchFeeds();
-        fetchList();
+        fetchCounts();
+        if (openDrawer) fetchFeeds(1);
+        if (openannouncementDrawer) fetchList();
       }
     });
 
     return () => {
       unsubscribe();
     };
-  }, [user?.id]);
+  }, [user?.id, fetchCounts, fetchFeeds, fetchList, openDrawer, openannouncementDrawer]);
 
   return (
     <Box display={"flex"} alignItems={"center"} gap={1}>
@@ -546,19 +556,17 @@ const Company = () => {
           </MenuItem>
         ))}
       </Menu>
-      {loadingFeeds && (
-        <Badge
-          badgeContent={count > 0 ? count : null}
-          color="error"
-          overlap="circular"
-        >
-          <IconBell
-            size={24}
-            onClick={() => setOpenDrawer(true)}
-            className="header-icons"
-          />
-        </Badge>
-      )}
+      <Badge
+        badgeContent={count > 0 ? count : null}
+        color="error"
+        overlap="circular"
+      >
+        <IconBell
+          size={24}
+          onClick={() => setOpenDrawer(true)}
+          className="header-icons"
+        />
+      </Badge>
 
       <Badge
         badgeContent={announcemntCount > 0 ? announcemntCount : null}
@@ -585,7 +593,10 @@ const Company = () => {
       <UserRequests
         open={requestDrawer}
         onRequestCountChange={(count: number) => setRequestCount(count || 0)}
-        onClose={() => setRequestDrawer(false)}
+        onClose={() => {
+          setRequestDrawer(false);
+          fetchCounts();
+        }}
       />
       <Drawer
         anchor="bottom"
@@ -636,7 +647,7 @@ const Company = () => {
                     </IconButton>
 
                     <Typography variant="h6" fontWeight={700}>
-                      {t("Feeds")} ({filteredFeeds ? filteredFeeds.length : 0})
+                      {t("Feeds")} ({feedCountLabel})
                     </Typography>
 
                     <TextField
@@ -783,9 +794,13 @@ const Company = () => {
                   </Box>
                 </Box>
 
-                {paginatedFeeds?.length > 0 ? (
+                {loadingFeeds && page === 1 ? (
+                  <Box display="flex" justifyContent="center" my={6}>
+                    <CircularProgress />
+                  </Box>
+                ) : filteredFeeds?.length > 0 ? (
                   <>
-                    {paginatedFeeds.map((item, index) => (
+                    {filteredFeeds.map((item, index) => (
                       <Box key={item.id}>
                         <Box
                           sx={{
@@ -974,16 +989,17 @@ const Company = () => {
                       </Box>
                     ))}
 
-                    {paginatedFeeds.length < filteredFeeds.length && (
+                    {hasMoreFeeds && (
                       <Box display="flex" justifyContent="center" my={2}>
                         <Button
                           variant="outlined"
                           startIcon={
-                            loading ? (
+                            loadingFeeds ? (
                               <CircularProgress size={16} color="inherit" />
                             ) : null
                           }
-                          onClick={() => setPage((prev) => prev + 1)}
+                          onClick={handleSeeMoreFeeds}
+                          disabled={loadingFeeds}
                         >
                           {t("See More")}
                         </Button>

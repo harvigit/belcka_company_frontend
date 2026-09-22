@@ -320,7 +320,21 @@ const CaseLocationMap = ({
   );
 };
 
-const CaseDetail = () => {
+interface Props {
+  open?: boolean;
+  onClose?: () => void;
+  caseId?: number | null;
+  projectId?: number | null;
+  onUpdated?: () => void;
+}
+
+const CaseDetail: React.FC<Props> = ({
+  open,
+  onClose,
+  caseId: caseIdProp,
+  projectId,
+  onUpdated,
+}) => {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -330,8 +344,9 @@ const CaseDetail = () => {
     user_role_id?: number | null;
   };
   const isAdmin = Number(user?.user_role_id) === 1;
-  const caseId = Number(params?.id || 0);
-  const fromProjectId = searchParams?.get("project_id");
+  const caseId = Number(caseIdProp ?? params?.id ?? 0);
+  const isOpen = open ?? true;
+  const fromProjectId = projectId ?? searchParams?.get("project_id");
 
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<CaseDetailData | null>(null);
@@ -349,7 +364,13 @@ const CaseDetail = () => {
   const [checkinRowsPerPage, setCheckinRowsPerPage] = useState(50);
   const [checkinTotal, setCheckinTotal] = useState(0);
 
-  const goBack = () => {
+  const handleClose = () => {
+    setActivityDrawerOpen(false);
+    setCheckinsDrawerOpen(false);
+    if (onClose) {
+      onClose();
+      return;
+    }
     if (fromProjectId) {
       router.push(`/apps/project/list/${fromProjectId}?tab=cases`);
       return;
@@ -447,6 +468,7 @@ const CaseDetail = () => {
           : prev,
       );
       toast.success(res.data.message || "Progress updated");
+      onUpdated?.();
       if (activityDrawerOpen) {
         fetchActivity(page + 1, rowsPerPage);
       }
@@ -469,8 +491,9 @@ const CaseDetail = () => {
   };
 
   useEffect(() => {
+    if (!isOpen) return;
     fetchDetail();
-  }, [caseId]);
+  }, [caseId, isOpen]);
 
   useEffect(() => {
     if (!activityDrawerOpen || !user?.company_id || !caseId) return;
@@ -484,37 +507,24 @@ const CaseDetail = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkinsDrawerOpen, caseId, checkinPage, checkinRowsPerPage]);
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" py={8}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (!detail) {
-    return (
-      <Box p={3}>
-        <IconButton onClick={goBack} aria-label="Back">
-          <IconArrowLeft size={20} />
-        </IconButton>
-        <EmptyState message="Case not found." />
-      </Box>
-    );
-  }
-
   const hasMap =
-    Number.isFinite(Number(detail.latitude)) &&
-    Number.isFinite(Number(detail.longitude));
+    Number.isFinite(Number(detail?.latitude)) &&
+    Number.isFinite(Number(detail?.longitude));
 
   return (
-    <Box
-      sx={{
-        height: "calc(100vh - 100px)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        p: { xs: 1.5, md: 2 },
+    <Drawer
+      anchor="bottom"
+      open={isOpen}
+      onClose={handleClose}
+      PaperProps={{
+        sx: {
+          height: "95vh",
+          borderTopLeftRadius: 12,
+          borderTopRightRadius: 12,
+          p: 2,
+          display: "flex",
+          flexDirection: "column",
+        },
       }}
     >
       <Stack
@@ -524,27 +534,45 @@ const CaseDetail = () => {
         mb={1}
         sx={{ flexShrink: 0 }}
       >
-        <IconButton onClick={goBack} aria-label="Back">
+        <IconButton onClick={handleClose} aria-label="Back">
           <IconArrowLeft size={20} />
         </IconButton>
         <Box minWidth={0} flex={1}>
           <Typography fontWeight={700} fontSize={18} noWrap>
-            {detail.name || "Case details"}
+            {detail?.name || "Case details"}
           </Typography>
           <Typography fontSize={13} color="text.secondary">
-            {detail.case_id || `Case #${detail.id}`}
+            {detail?.case_id || (detail?.id ? `Case #${detail.id}` : "")}
           </Typography>
         </Box>
-        <Button
-          variant="outlined"
-          startIcon={<IconHistory size={18} />}
-          onClick={openActivityDrawer}
-          sx={{ whiteSpace: "nowrap", minHeight: 36, flexShrink: 0 }}
-        >
-          Activity
-        </Button>
+        {detail ? (
+          <Button
+            variant="outlined"
+            startIcon={<IconHistory size={18} />}
+            onClick={openActivityDrawer}
+            sx={{ whiteSpace: "nowrap", minHeight: 36, flexShrink: 0 }}
+          >
+            Activity
+          </Button>
+        ) : null}
+        <IconButton onClick={handleClose} aria-label="Close">
+          <IconX size={18} />
+        </IconButton>
       </Stack>
 
+      {loading ? (
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          flex={1}
+          py={8}
+        >
+          <CircularProgress />
+        </Box>
+      ) : !detail ? (
+        <EmptyState message="Case not found." />
+      ) : (
       <Box
         sx={{
           flex: 1,
@@ -703,6 +731,7 @@ const CaseDetail = () => {
           </Box>
         </Paper>
       </Box>
+      )}
 
       <Drawer
         anchor="right"
@@ -736,7 +765,7 @@ const CaseDetail = () => {
                 Check ins
               </Typography>
               <Typography fontSize={13} color="text.secondary" noWrap>
-                {detail.name || detail.case_id || `Case #${detail.id}`}
+                {detail?.name || detail?.case_id || `Case #${detail?.id}`}
               </Typography>
             </Box>
           </Box>
@@ -863,7 +892,7 @@ const CaseDetail = () => {
                 Activity
               </Typography>
               <Typography fontSize={13} color="text.secondary" noWrap>
-                {detail.name || detail.case_id || `Case #${detail.id}`}
+                {detail?.name || detail?.case_id || `Case #${detail?.id}`}
               </Typography>
             </Box>
           </Box>
@@ -974,7 +1003,7 @@ const CaseDetail = () => {
           )}
         </Box>
       </Drawer>
-    </Box>
+    </Drawer>
   );
 };
 

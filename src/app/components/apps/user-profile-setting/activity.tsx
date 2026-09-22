@@ -419,6 +419,7 @@ const UserActivity: React.FC<UserActivityProps> = ({
       const res = await api.get("user/get-activity", {
         params: {
           user_id: Number(userId),
+          is_web: true,
           company_id: Number(companyId),
           page: page + 1,
           limit: rowsPerPage,
