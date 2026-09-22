@@ -242,6 +242,13 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
         id?: string | number | null;
     };
     const sharedFilters = useProjectDetailFilters();
+    const expensePreferencesKey = useMemo(
+        () =>
+            user?.id && user?.company_id
+                ? `expense-list-filters_${user.id}_${user.company_id}`
+                : '',
+        [user?.id, user?.company_id],
+    );
 
     const [data, setData] = useState<ExpenseRow[]>([]);
     const [loading, setLoading] = useState(false);
@@ -1021,29 +1028,79 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
 
     useEffect(() => {
         // Wait for shared project filters so Overview/Expenses/Pricework stay in sync.
-        if (projectId && sharedFilters && !sharedFilters.hydrated) {
+        if (projectId) {
+            if (sharedFilters && !sharedFilters.hydrated) {
+                return;
+            }
+
+            try {
+                if (sharedFilters) {
+                    const nextFilters = {
+                        ...defaultFilters,
+                        project_id: projectId,
+                        team_id: sharedFilters.teamId || '',
+                        trade_id: sharedFilters.tradeId || '',
+                    };
+                    setFilters(nextFilters);
+                    setTempFilters(nextFilters);
+                    setStartDate(sharedFilters.startDate);
+                    setEndDate(sharedFilters.endDate);
+                }
+            } finally {
+                setPreferencesHydrated(true);
+            }
+            return;
+        }
+
+        if (!user?.company_id) return;
+
+        if (!expensePreferencesKey) {
+            setPreferencesHydrated(true);
+            return;
+        }
+
+        if (restoredPreferencesKeyRef.current === expensePreferencesKey) {
+            setPreferencesHydrated(true);
             return;
         }
 
         try {
-            if (projectId && sharedFilters) {
-                const nextFilters = {
-                    ...defaultFilters,
-                    project_id: projectId,
-                    team_id: sharedFilters.teamId || '',
-                    trade_id: sharedFilters.tradeId || '',
-                };
+            const stored = readListingTableState(expensePreferencesKey);
+            if (stored) {
+                const parsed = JSON.parse(stored) as ExpenseStoredPreferences;
+                skipNextDependencyPageResetRef.current = true;
+                const nextFilters = normalizeStoredFilters(parsed.filters);
                 setFilters(nextFilters);
                 setTempFilters(nextFilters);
-                setStartDate(sharedFilters.startDate);
-                setEndDate(sharedFilters.endDate);
+                if (typeof parsed.search === 'string') {
+                    setSearch(parsed.search);
+                }
+                if (isExpenseTabKey(parsed.activeTab)) {
+                    setActiveTab(parsed.activeTab);
+                }
+                const from = parseStoredDate(parsed.startDate);
+                const to = parseStoredDate(parsed.endDate);
+                if (from && to) {
+                    setStartDate(from);
+                    setEndDate(to);
+                } else {
+                    setStartDate(null);
+                    setEndDate(null);
+                }
+                setPagination(normalizeStoredPagination(parsed.pagination));
+                setSorting(normalizeStoredSorting(parsed.sorting));
             }
+            restoredPreferencesKeyRef.current = expensePreferencesKey;
         } catch (error) {
+            console.error('Failed to load expense list preferences', error);
+            removeListingTableState(expensePreferencesKey);
         } finally {
             setPreferencesHydrated(true);
         }
     }, [
         projectId,
+        expensePreferencesKey,
+        user?.company_id,
         setPagination,
         sharedFilters?.hydrated,
     ]);
@@ -1080,14 +1137,15 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
     ]);
 
     const saveExpensePreferencesCookie = useCallback(() => {
-        if (!preferencesHydrated) return;
+        if (!preferencesHydrated || projectId || !expensePreferencesKey) return;
 
+        const hasCompleteRange = Boolean(startDate && endDate);
         const payload: ExpenseStoredPreferences = {
             filters,
             search,
             activeTab,
-            startDate: startDate ? startDate.toISOString() : null,
-            endDate: endDate ? endDate.toISOString() : null,
+            startDate: hasCompleteRange && startDate ? startDate.toISOString() : null,
+            endDate: hasCompleteRange && endDate ? endDate.toISOString() : null,
             sorting,
             pagination: {
                 pageIndex: pagination.pageIndex,
@@ -1095,13 +1153,16 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
             },
         };
 
+        writeListingTableState(expensePreferencesKey, JSON.stringify(payload));
     }, [
         activeTab,
         endDate,
+        expensePreferencesKey,
         filters,
         pagination.pageIndex,
         pagination.pageSize,
         preferencesHydrated,
+        projectId,
         search,
         sorting,
         startDate,
