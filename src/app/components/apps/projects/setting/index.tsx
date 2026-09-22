@@ -26,7 +26,7 @@ const Index: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
     ],
     [isAdmin],
   );
-  const [activeMenuItem, setActiveMenuItem] = useState<string>("General");
+  const [activeMenuItem, setActiveMenuItem] = useState<string>("Role");
   const [openSnackbar, setOpenSnackbar] = useState(false);
 
   const handleMenuItemClick = (label: string) => {

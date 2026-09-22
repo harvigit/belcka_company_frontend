@@ -59,7 +59,7 @@ export default function CompanyRegistration({ open, onClose }: Props) {
       }
     };
     fetchDropdownData();
-  }, []);
+  }, [open]);
 
   const handleCompanyImageChange = (e: any) => {
     const file = e.target.files[0];

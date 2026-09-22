@@ -158,7 +158,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       }
     };
     fetchDropdownData();
-  }, []);
+  }, [ step == 3]);
 
   // resend otp
   const resendOtp = async () => {

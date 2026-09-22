@@ -1159,10 +1159,7 @@ const TablePagination = () => {
                       setSelectedRowIds(new Set());
                       await fetchTeams();
                     } catch (error: any) {
-                      toast.error(
-                        error?.response?.data?.message ||
-                          "You can not archive a team while the team has members!!",
-                      );
+                     console.log(error)
                     } finally {
                       setConfirmOpen(false);
                     }

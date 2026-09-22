@@ -177,7 +177,6 @@ const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
       setIsHovering(false);
     } catch (error: any) {
       setLocalValue(numericValue);
-      toast.error(error?.message || "Failed to update progress");
     } finally {
       setLoading(false);
     }
@@ -695,11 +694,9 @@ const AddressesList = ({
           ),
         );
       } else {
-        toast.error(response.data.message || "Failed to update progress");
       }
     } catch (error) {
       console.error("Download failed", error);
-      toast.error("Failed to update progress");
     }
     setProgress(false);
   };
@@ -2813,7 +2810,6 @@ const AddressesList = ({
                 setSelectedRowIds(new Set());
               } catch (error) {
                 console.error(error);
-                toast.error("Error archiving addresses.");
               }
               setOpenDialog(false);
             }}
