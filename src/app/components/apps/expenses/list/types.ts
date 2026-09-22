@@ -37,6 +37,7 @@ export type ExpenseApiRow = {
     attachment_count?: number;
     status?: ExpenseStatus | string | number | null;
     status_value?: string | number | null;
+    timesheet_status?: string | number | null;
     can_edit?: boolean | null;
     can_reject?: boolean | null;
     status_updated_by?: number | null;

@@ -64,6 +64,7 @@ import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import PriceworkStatusBadge from './components/PriceworkStatusBadge';
+import BookkeeperStatusBadge from '@/app/components/common/BookkeeperStatusBadge';
 import PriceworkDetailsDrawer from './components/PriceworkDetailsDrawer';
 import PriceworkAttachmentsDrawer from './components/PriceworkAttachmentsDrawer';
 import AddPricework from '@/app/components/apps/time-clock/time-clock-details/pricework/add-pricework';
@@ -96,6 +97,7 @@ const COLUMN_LABELS: Record<string, string> = {
     note: 'Note',
     attachment_count: 'Attachments',
     status: 'Status',
+    timesheet_status: 'Bookkeeper Status',
     actions: 'Actions',
 };
 
@@ -1698,6 +1700,16 @@ const PriceworkList = ({
                     );
                 },
                 enableSorting: true,
+            }),
+            columnHelper.accessor('timesheet_status', {
+                id: 'timesheet_status',
+                header: () => 'Bookkeeper Status',
+                cell: (info) => (
+                    <Box sx={{display: 'flex', justifyContent: 'center'}}>
+                        <BookkeeperStatusBadge status={info.row.original.timesheet_status} />
+                    </Box>
+                ),
+                enableSorting: false,
             }),
             columnHelper.display({
                 id: 'actions',

@@ -78,13 +78,13 @@ export type PriceworkApiRow = {
     timesheet_date?: string | null;
     status?: PriceworkStatus | string | number | null;
     status_value?: string | number | null;
+    timesheet_status?: string | number | null;
     created_at?: string | null;
 };
 
 export type PriceworkDetail = PriceworkApiRow & {
     company_id?: number;
     status_text?: PriceworkStatus | string | null;
-    timesheet_status?: string | null;
     status_updated_by?: number | null;
     status_updated_by_name?: string | null;
     status_updated_at?: string | null;

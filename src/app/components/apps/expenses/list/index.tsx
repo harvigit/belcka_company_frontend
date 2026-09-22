@@ -84,6 +84,7 @@ import {
 } from './types';
 import ExpenseDetailsDrawer from './components/ExpenseDetailsDrawer';
 import ExpenseStatusBadge from './components/ExpenseStatusBadge';
+import BookkeeperStatusBadge from '@/app/components/common/BookkeeperStatusBadge';
 
 type ExpenseRow = ExpenseApiRow;
 
@@ -100,6 +101,7 @@ const COLUMN_LABELS: Record<string, string> = {
     total_amount: 'Amount',
     attachment_count: 'Receipt',
     status: 'Status',
+    timesheet_status: 'Bookkeeper Status',
     actions: 'Actions',
 };
 
@@ -834,6 +836,21 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
                             status={normalizeExpenseStatus(row.status) ?? 'pending'}
                             date={row.timesheet_date}
                         />
+                    </Box>
+                );
+            },
+            enableSorting: false,
+        }),
+
+        columnHelper.accessor('timesheet_status', {
+            id: 'timesheet_status',
+            header: 'Bookkeeper Status',
+            cell: (info: any) => {
+                const row = info.row.original as ExpenseRow;
+
+                return (
+                    <Box sx={{display: 'flex', justifyContent: 'center'}}>
+                        <BookkeeperStatusBadge status={row.timesheet_status} />
                     </Box>
                 );
             },
