@@ -39,9 +39,6 @@ import {
   Tooltip,
   TextField,
   InputAdornment,
-  Menu,
-  MenuItem,
-  ListItemIcon,
   Typography,
   Drawer,
   Dialog,
@@ -49,24 +46,13 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
-  FormControlLabel,
-  Checkbox,
-  Popover,
-  FormGroup,
-  Chip,
   Divider,
 } from "@mui/material";
 import {
   IconMapPin,
-  IconPlus,
   IconSearch,
-  IconDotsVertical,
-  IconNotes,
   IconTrash,
   IconX,
-  IconEdit,
-  IconEye,
-  IconBookmark,
 } from "@tabler/icons-react";
 import Autocomplete from "@mui/material/Autocomplete";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
@@ -80,18 +66,13 @@ import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
-import CreateProject from "../create";
-import EditProject from "../edit";
 
 // Drawers
 import DynamicGantt from "@/app/components/DynamicGantt";
 
-import Setting from "@/app/components/apps/projects/setting";
-import ArchiveProject from "../../addresses/list/archive-project-list";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import AddressesList from "../../addresses/list/addresses-list";
-import { IconSettings } from "@tabler/icons-react";
 import MapGantt from "../zone-map/MapGantt";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 dayjs.extend(customParseFormat);
@@ -102,17 +83,8 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const openMenu = Boolean(anchorEl);
   const [addressListDrawerOpen, setAddressListDrawerOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
-
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
 
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
@@ -145,17 +117,12 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   }, []);
 
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null } & { user_role_id : number };
+  const user = session.data?.user as User & { company_id?: number | null };
   const { columnVisibility, onColumnVisibilityChange } =
     usePersistentColumnVisibility({
       storageKey: `cv_${user?.company_id}_${user?.id}_projects`,
       enabled: !!user?.id,
     });
-
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<any>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const handleSelectAllRows = (checked: boolean) => {
@@ -168,9 +135,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   };
 
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [settingOpen, setSettingOpen] = useState(false);
   const [openDrawer, setOpenDrawer] = useState(false);
-  const [archiveListOpen, setArchiveListOpen] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
 
   const [history, setHistory] = useState<any[]>([]);
@@ -185,38 +150,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   );
   const [allProjects, setAllProjects] = useState<any[]>([]);
 
-  const [productDrawer, setProductDrawer] = useState(false);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
-  const [searchProduct, setSearchProduct] = useState("");
-  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
-  const [selectAll, setSelectAll] = useState(false);
-  const [products, setProducts] = useState<any[]>([]);
-  const [isFetchingFavorites, setIsFetchingFavorites] = useState(false);
-  const [productPage, setProductPage] = useState(1);
-  const productLimit = 50;
-
-  const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
-  const [search, setSearch] = useState("");
-
-  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl2(event.currentTarget);
-  };
-  const handlePopoverClose = () => setAnchorEl2(null);
-
-  const initialFormData = {
-    name: "",
-    address: "",
-    budget: "",
-    description: "",
-    code: 0,
-    // shift_ids: "",
-    team_ids: "",
-    user_ids: "",
-    company_id: user?.company_id || 0,
-    workzone_ids: "",
-  };
-
-  const [formData, setFormData] = useState<any>(initialFormData);
 
   const fetchProjects = async () => {
     if (!user?.company_id) return;
@@ -257,53 +191,6 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
       console.error("Failed to fetch projects", err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleEdit = (project: any) => {
-    setSelectedProject(project);
-    setEditDrawerOpen(true);
-  };
-
-  const handleCreate = () => {
-    handleClose();
-    setFormData({ ...initialFormData, company_id: user?.company_id || 0 });
-    setDrawerOpen(true);
-  };
-
-  const handleProjectSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const res = await api.post("project/create", formData);
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message || "Project created successfully");
-        setDrawerOpen(false);
-        fetchProjects();
-      } else {
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const res = await api.put("project/update", formData);
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message || "Project updated successfully");
-        setEditDrawerOpen(false);
-        fetchProjects();
-      } else {
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -355,115 +242,6 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
   const formatDate = (date: string | undefined) => {
     return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
   };
-
-  const fetchResources = async () => {
-    try {
-      const res = await api.get(
-        `get-inventory-resources?company_id=${user?.company_id}&is_web=true`,
-      );
-      if (res.data) {
-        setProducts(res.data.products || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch inventory resource", err);
-    }
-  };
-
-  const fetchFavoriteProducts = async () => {
-    if (!activeProjectId) return;
-    setIsFetchingFavorites(true);
-    try {
-      const response = await api.get(
-        `project/get-favorite?company_id=${user?.company_id}&project_id=${activeProjectId}`,
-      );
-      if (response.data?.IsSuccess) {
-        const savedIds =
-          response.data?.info[0]?.products?.map(
-            (item: any) => item.product_id,
-          ) || [];
-        setSelectedProducts(savedIds);
-      }
-    } catch (error) {
-      console.error("Failed to fetch favorite products:", error);
-    } finally {
-      setIsFetchingFavorites(false);
-    }
-  };
-
-  const handleSaveProducts = async () => {
-    try {
-      setIsSaving(true);
-      const productIdsString = selectedProducts.join(",");
-      const response = await api.post("project/favorite-products", {
-        id: activeProjectId,
-        product_ids: productIdsString,
-      });
-      if (response.data.IsSuccess) {
-        toast.success(response.data.message || "Favorites saved.");
-        setProductDrawer(false);
-      } else {
-        toast.error(response.data.message || "Failed to save favorites.");
-      }
-    } catch (error) {
-      console.error("Save failed:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleCloseProductDrawer = () => {
-    setSearchProduct("");
-    setSelectAll(false);
-    setProductPage(1);
-    setProductDrawer(false);
-  };
-
-  useEffect(() => {
-    if (user?.company_id) {
-      fetchResources();
-    }
-  }, [user?.company_id]);
-
-  useEffect(() => {
-    if (productDrawer && activeProjectId) {
-      fetchFavoriteProducts();
-    }
-  }, [productDrawer, activeProjectId]);
-
-  const handleProductToggle = (id: any) => {
-    setSelectedProducts((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-    );
-  };
-
-  const filteredData = useMemo(() => {
-    let result = products.filter((item) => {
-      const search = searchProduct.toLowerCase();
-      let matchesSearch = true;
-      if (search) {
-        matchesSearch =
-          item.short_name?.toLowerCase().includes(search) ||
-          item.supplier_code?.toLowerCase().includes(search) ||
-          item.supplier_name?.toLowerCase().includes(search) ||
-          item.uuid?.toLowerCase().includes(search) ||
-          item.name?.toLowerCase().includes(search);
-      }
-      return matchesSearch;
-    });
-
-    result.sort((a, b) => {
-      const aSelected = selectedProducts.includes(a.id);
-      const bSelected = selectedProducts.includes(b.id);
-      if (aSelected && !bSelected) return -1;
-      if (!aSelected && bSelected) return 1;
-      return 0;
-    });
-
-    return result;
-  }, [products, searchProduct, selectedProducts]);
-
-  const paginatedProduct =
-    filteredData?.slice(0, productPage * productLimit) || [];
 
   const columns = useMemo(
     () => [
@@ -627,29 +405,6 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
           const item = row.original;
           return (
             <Stack direction="row" spacing={1}>
-              <Tooltip title="Edit">
-                <IconButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEdit(item);
-                  }}
-                  color="primary"
-                >
-                  <IconEdit size={18} />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Favorite Products">
-                <IconButton
-                  color="success"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveProjectId(item.id);
-                    setProductDrawer(true);
-                  }}
-                >
-                  <IconBookmark size={18} />
-                </IconButton>
-              </Tooltip>
               <Tooltip title="Map">
                 <IconButton
                   color="error"
@@ -752,208 +507,6 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                 Archive
               </Button>
             )}
-          { user.user_role_id === 1 && (
-            <Tooltip title="Settings">
-              <IconButton
-                color="primary"
-                sx={{ ml: 1 }}
-                onClick={() => setSettingOpen(true)}
-              >
-                <IconSettings />
-              </IconButton>
-            </Tooltip>
-          )}
-            <IconButton
-              onClick={handlePopoverOpen}
-              sx={{ ml: 1 }}
-              color="primary"
-            >
-              <IconEye />
-            </IconButton>
-            <Popover
-              open={Boolean(anchorEl2)}
-              anchorEl={anchorEl2}
-              onClose={handlePopoverClose}
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-              PaperProps={{
-                sx: {
-                  width: 280,
-                  mt: 1,
-                  p: 1,
-                  borderRadius: 2,
-                  boxShadow: "0 12px 32px rgba(15, 23, 42, 0.14)",
-                  border: "1px solid #e5e7eb",
-                  maxHeight: "min(420px, calc(100vh - 140px))",
-                  overflow: "hidden",
-                },
-              }}
-            >
-              <TextField
-                size="small"
-                placeholder="Search columns..."
-                fullWidth
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                sx={{
-                  mb: 1,
-                  "& .MuiInputBase-root": {
-                    borderRadius: 1.5,
-                    backgroundColor: "#fff",
-                  },
-                }}
-              />
-              <Box
-                sx={{
-                  maxHeight: "calc(min(420px, calc(100vh - 140px)) - 64px)",
-                  overflowY: "auto",
-                  pr: 0.5,
-                }}
-              >
-                <FormGroup sx={{ gap: 0.25 }}>
-                  {(() => {
-                    const columnOptions = table
-                      .getAllLeafColumns()
-                      .filter((col: any) => {
-                        const excludedColumns = ["conflicts", "select"];
-                        if (excludedColumns.includes(col.id)) return false;
-
-                        return col.id
-                          .toLowerCase()
-                          .includes(search.toLowerCase());
-                      });
-                    const allSelected =
-                      columnOptions.length > 0 &&
-                      columnOptions.every((col: any) => col.getIsVisible());
-                    const someSelected = columnOptions.some((col: any) =>
-                      col.getIsVisible(),
-                    );
-
-                    return (
-                      <>
-                        <FormControlLabel
-                          control={
-                            <CustomCheckbox
-                              size="small"
-                              checked={allSelected}
-                              indeterminate={!allSelected && someSelected}
-                              disabled={columnOptions.length === 0}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                columnOptions.forEach((col: any) =>
-                                  col.toggleVisibility(e.target.checked),
-                                );
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              sx={{
-                                p: 0.5,
-                                mr: 1,
-                              }}
-                            />
-                          }
-                          sx={{
-                            m: 0,
-                            px: 0.75,
-                            py: 0.375,
-                            width: "100%",
-                            borderRadius: 1.5,
-                            alignItems: "center",
-                            textTransform: "none",
-                            borderBottom: "1px solid #eef2f7",
-                            mb: 0.25,
-                            "&:hover": {
-                              backgroundColor: "#f8fafc",
-                            },
-                            "& .MuiFormControlLabel-label": {
-                              fontSize: "14px",
-                              lineHeight: 1.35,
-                              whiteSpace: "nowrap",
-                              fontWeight: 600,
-                            },
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          label="Select All"
-                        />
-                        {columnOptions.map((col: any) => (
-                          <FormControlLabel
-                            key={col.id}
-                            control={
-                              <CustomCheckbox
-                                size="small"
-                                checked={col.getIsVisible()}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  col.getToggleVisibilityHandler()(e);
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                sx={{
-                                  p: 0.5,
-                                  mr: 1,
-                                }}
-                              />
-                            }
-                            sx={{
-                              m: 0,
-                              px: 0.75,
-                              py: 0.375,
-                              width: "100%",
-                              borderRadius: 1.5,
-                              alignItems: "center",
-                              textTransform: "none",
-                              "&:hover": {
-                                backgroundColor: "#f8fafc",
-                              },
-                              "& .MuiFormControlLabel-label": {
-                                fontSize: "14px",
-                                lineHeight: 1.35,
-                                whiteSpace: "nowrap",
-                              },
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            label={
-                              col.columnDef.meta?.label ||
-                              (typeof col.columnDef.header === "string" &&
-                              col.columnDef.header.trim() !== ""
-                                ? col.columnDef.header
-                                : col.id
-                                    .replace(/([A-Z])/g, " $1")
-                                    .replace(/^./, (str: string) =>
-                                      str.toUpperCase(),
-                                    )
-                                    .trim())
-                            }
-                          />
-                        ))}
-                      </>
-                    );
-                  })()}
-                </FormGroup>
-              </Box>
-            </Popover>
-
-            <IconButton onClick={handleClick} size="small">
-              <IconDotsVertical width={20} />
-            </IconButton>
-            <Menu anchorEl={anchorEl} open={openMenu} onClose={handleClose}>
-              <MenuItem onClick={handleCreate}>
-                <ListItemIcon>
-                  <IconPlus width={18} />
-                </ListItemIcon>
-                Add Project
-              </MenuItem>
-
-              <MenuItem
-                onClick={() => {
-                  handleClose();
-                  setArchiveListOpen(true);
-                }}
-              >
-                <ListItemIcon>
-                  <IconNotes width={18} />
-                </ListItemIcon>
-                Archived project list
-              </MenuItem>
-            </Menu>
           </Box>
         </Stack>
         <Divider />
@@ -1186,18 +739,6 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
           </DialogActions>
         </Dialog>
 
-        <ArchiveProject
-          open={archiveListOpen}
-          companyId={Number(user?.company_id)}
-          onClose={() => setArchiveListOpen(false)}
-          onWorkUpdated={fetchProjects}
-        />
-
-        <Setting
-          settingOpen={settingOpen}
-          onClose={() => setSettingOpen(false)}
-        />
-
         <Drawer
           anchor="bottom"
           open={detailsOpen}
@@ -1407,278 +948,6 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
             </Grid>
           </Box>
         </Drawer>
-
-        <Drawer
-          anchor="right"
-          open={productDrawer}
-          onClose={handleCloseProductDrawer}
-          PaperProps={{
-            sx: {
-              width: 550,
-              maxWidth: "100%",
-              "& .MuiDrawer-paper": {
-                width: 550,
-                padding: 2,
-                backgroundColor: "#f9f9f9",
-                display: "flex",
-                flexDirection: "column",
-              },
-            },
-          }}
-        >
-          <Box
-            display="flex"
-            alignContent="center"
-            alignItems="center"
-            flexWrap="wrap"
-            p={2}
-            pb={0}
-          >
-            <Box display="flex" alignContent="center" alignItems="center">
-              <IconButton onClick={handleCloseProductDrawer}>
-                <IconArrowLeft />
-              </IconButton>
-              <Typography variant="h6" fontWeight={700}>
-                Favorite products{" "}
-                {selectedProducts.length > 0
-                  ? `(${selectedProducts.length})`
-                  : ""}
-              </Typography>
-            </Box>
-            <IconButton
-              aria-label="close"
-              onClick={handleCloseProductDrawer}
-              size="small"
-              sx={{
-                position: "absolute",
-                right: 0,
-                top: 8,
-                color: (theme) => theme.palette.grey[900],
-                backgroundColor: "transparent",
-                zIndex: 10,
-                width: 50,
-                height: 50,
-              }}
-            >
-              <IconX size={18} />
-            </IconButton>
-          </Box>
-
-          <Grid display="flex" alignItems="center" mr={1}>
-            <TextField
-              id="search"
-              type="text"
-              size="small"
-              variant="outlined"
-              placeholder="Search..."
-              value={searchProduct}
-              fullWidth
-              sx={{ width: "90%", ml: 2 }}
-              onChange={(e) => setSearchProduct(e.target.value)}
-              slotProps={{
-                input: {
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconSearch size="16" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-            {products.length > 0 && (
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={
-                      filteredData.length > 0 &&
-                      filteredData.every((p) => selectedProducts.includes(p.id))
-                    }
-                    onChange={(e) => {
-                      const isChecked = e.target.checked;
-                      setSelectAll(isChecked);
-                      if (isChecked) {
-                        const newSelected = [...selectedProducts];
-                        filteredData.forEach((p) => {
-                          if (!newSelected.includes(p.id))
-                            newSelected.push(p.id);
-                        });
-                        setSelectedProducts(newSelected);
-                      } else {
-                        const visibleIds = filteredData.map((p) => p.id);
-                        setSelectedProducts(
-                          selectedProducts.filter(
-                            (id) => !visibleIds.includes(id),
-                          ),
-                        );
-                      }
-                    }}
-                  />
-                }
-                label="Select All"
-                sx={{ width: "30%", m: 0 }}
-              />
-            )}
-          </Grid>
-
-          <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
-            <Grid container spacing={2} display="block" mt={1}>
-              {isFetchingFavorites ? (
-                <Box
-                  display="flex"
-                  justifyContent="center"
-                  alignItems="center"
-                  my={5}
-                >
-                  <CircularProgress />
-                </Box>
-              ) : filteredData.length > 0 ? (
-                <Box>
-                  {paginatedProduct.map((product) => (
-                    <Box
-                      key={product.id}
-                      mt={1}
-                      p={1}
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      sx={{
-                        border: "1px solid #e7e3e3ff",
-                        borderRadius: "10px",
-                        background: "#fff",
-                      }}
-                    >
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <CustomCheckbox
-                          checked={selectedProducts.includes(product.id)}
-                          onChange={() => handleProductToggle(product.id)}
-                        />
-                        <Box
-                          sx={{
-                            border: "1px dashed #d1d5db",
-                            borderRadius: 2,
-                            p: 1,
-                            textAlign: "center",
-                          }}
-                        >
-                          <Image
-                            src={
-                              product.image_url ||
-                              "/images/products/product.svg"
-                            }
-                            alt="product"
-                            width={50}
-                            height={50}
-                            style={{ objectFit: "contain" }}
-                          />
-                        </Box>
-                        <Stack mt={2} spacing={1}>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              minWidth: "150px",
-                              width: "100%",
-                              maxWidth: "500px",
-                              display: "-webkit-box",
-                              WebkitBoxOrient: "vertical",
-                              WebkitLineClamp: 3,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              lineHeight: 1.25,
-
-                              wordBreak: "break-word",
-                            }}
-                          >
-                            {product.short_name ?? product.name}{" "}
-                            {product.uuid && (
-                              <Chip
-                                label={product.uuid}
-                                size="small"
-                                sx={{ ml: 1 }}
-                              />
-                            )}
-                            <br />
-                            Supplier Code: {product.supplier_code}
-                          </Typography>
-                        </Stack>
-                      </Box>
-                    </Box>
-                  ))}
-                  {paginatedProduct.length < filteredData.length && (
-                    <Box display="flex" justifyContent="center" my={2}>
-                      <Button
-                        variant="outlined"
-                        onClick={() => setProductPage((prev) => prev + 1)}
-                      >
-                        See More
-                      </Button>
-                    </Box>
-                  )}
-                </Box>
-              ) : (
-                <Typography mt={2} textAlign="center">
-                  No products found
-                </Typography>
-              )}
-            </Grid>
-          </Box>
-
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "start",
-              gap: 2,
-              m: 2,
-              pl: 2,
-            }}
-          >
-            <Button
-              color="primary"
-              onClick={handleSaveProducts}
-              variant="contained"
-              size="large"
-              disabled={isSaving}
-              sx={{ borderRadius: 3 }}
-            >
-              {isSaving ? "Saving..." : "Save"}
-            </Button>
-            <Button
-              color="inherit"
-              onClick={handleCloseProductDrawer}
-              variant="contained"
-              size="large"
-              sx={{
-                backgroundColor: "transparent",
-                borderRadius: 3,
-                color: "GrayText",
-              }}
-            >
-              Cancel
-            </Button>
-          </Box>
-        </Drawer>
-
-        {drawerOpen && (
-          <CreateProject
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            formData={formData}
-            setFormData={setFormData}
-            handleSubmit={handleProjectSubmit}
-            isSaving={isSaving}
-          />
-        )}
-
-        {editDrawerOpen && (
-          <EditProject
-            open={editDrawerOpen}
-            onClose={() => setEditDrawerOpen(false)}
-            formData={formData}
-            setFormData={setFormData}
-            handleSubmit={handleEditSubmit}
-            isSaving={isSaving}
-            project={selectedProject}
-          />
-        )}
 
         {/* Add Address Drawer */}
         <Drawer

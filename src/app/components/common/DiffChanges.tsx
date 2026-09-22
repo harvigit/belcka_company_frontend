@@ -5,9 +5,11 @@ import {
   Box,
   Chip,
   ClickAwayListener,
+  IconButton,
   Popper,
   Typography,
 } from "@mui/material";
+import { IconEye, IconEyeOff } from "@tabler/icons-react";
 import {
   prepareDisplayDiffs,
   type DiffEntry,
@@ -111,15 +113,72 @@ export function DiffChangeLines({ diffs }: { diffs?: DiffEntry[] | null }) {
 export default function DiffChanges({
   diffs,
   date,
+  variant = "text",
 }: {
   diffs?: DiffEntry[] | null;
-  date: any;
+  date?: any;
+  variant?: "text" | "icon";
 }) {
   const rows = prepareDisplayDiffs(diffs);
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   if (!rows.length) return null;
+
+  const toggle = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setOpen((prev) => !prev);
+  };
+
+  const popover = (
+    <Popper
+      open={open}
+      anchorEl={anchorEl}
+      placement="bottom-end"
+      sx={{ zIndex: 1400 }}
+    >
+      <Box
+        mt={0.5}
+        p={1}
+        minWidth={220}
+        maxWidth={320}
+        bgcolor="#fff"
+        borderRadius={2}
+        border="1px solid #e2e8f0"
+        boxShadow="0px 8px 24px rgba(15, 23, 42, 0.12)"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
+        <DiffChangeRows rows={rows} />
+      </Box>
+    </Popper>
+  );
+
+  if (variant === "icon") {
+    return (
+      <ClickAwayListener onClickAway={() => setOpen(false)}>
+        <Box
+          ref={setAnchorEl}
+          display="inline-flex"
+          position="relative"
+          data-diff-open={open ? "true" : "false"}
+        >
+          <IconButton
+            size="small"
+            aria-label={open ? "Hide changes" : "View changes"}
+            onClick={toggle}
+            sx={{ p: 0.5, color: open ? "text.secondary" : "primary.main" }}
+          >
+            {open ? <IconEyeOff size={18} /> : <IconEye size={18} />}
+          </IconButton>
+          {popover}
+        </Box>
+      </ClickAwayListener>
+    );
+  }
 
   return (
     <ClickAwayListener onClickAway={() => setOpen(false)}>
@@ -135,48 +194,23 @@ export default function DiffChanges({
           alignItems="center"
           justifyContent={"space-between"}
           sx={{ cursor: "pointer", width: "100%" }}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setOpen((prev) => !prev);
-          }}
+          onClick={toggle}
         >
           <Typography fontSize={12} color="primary" fontWeight={600}>
             {open ? "Hide Changes" : "View Changes"}
           </Typography>
-          <Typography
-            fontSize="12px"
-            color="text.secondary"
-            fontWeight={500}
-            sx={{ flexShrink: 0 }}
-          >
-            {date}
-          </Typography>
+          {date != null && date !== "" && (
+            <Typography
+              fontSize="12px"
+              color="text.secondary"
+              fontWeight={500}
+              sx={{ flexShrink: 0 }}
+            >
+              {date}
+            </Typography>
+          )}
         </Box>
-        <Popper
-          open={open}
-          anchorEl={anchorEl}
-          placement="bottom-start"
-          disablePortal
-          sx={{ zIndex: 21 }}
-        >
-          <Box
-            mt={0.5}
-            p={1}
-            minWidth={220}
-            maxWidth={320}
-            bgcolor="#fff"
-            borderRadius={2}
-            border="1px solid #e2e8f0"
-            boxShadow="0px 8px 24px rgba(15, 23, 42, 0.12)"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-          >
-            <DiffChangeRows rows={rows} />
-          </Box>
-        </Popper>
+        {popover}
       </Box>
     </ClickAwayListener>
   );

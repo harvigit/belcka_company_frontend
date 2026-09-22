@@ -88,13 +88,13 @@ const MenuItems: NavGroup[] = [
     icon: IconCurrencyDollar,
     href: "/apps/payments/index",
   },
-  {
-    id: uniqueId(),
-    title: "Projects",
-    slug: "projects",
-    icon: IconFiles,
-    href: "/apps/projects/list",
-  },
+  // {
+  //   id: uniqueId(),
+  //   title: "Projects",
+  //   slug: "projects",
+  //   icon: IconFiles,
+  //   href: "/apps/projects/list",
+  // },
   {
     id: uniqueId(),
     title: "Project",
@@ -286,7 +286,7 @@ const MenuItems: NavGroup[] = [
 
   {
     id: uniqueId(),
-    title: "Settings",
+    title: "Admin Panel",
     slug: "settings",
     icon: IconSettings,
     href: "/admin-settings",

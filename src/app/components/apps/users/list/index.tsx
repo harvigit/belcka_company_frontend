@@ -114,6 +114,7 @@ export interface UserList {
     phone: number;
     extension: string;
     team_name: string;
+    new_member?: boolean;
     shifts: string;
     status: number;
     is_invited: boolean;
@@ -943,6 +944,14 @@ const TablePagination = () => {
                                     >
                                         {user.name ?? '-'}
                                     </Typography>
+                                    {user?.new_member && (
+                                        <Chip
+                                            label={t('New')}
+                                            size="small"
+                                            color="primary"
+                                            variant="outlined"
+                                        />
+                                    )}
                                     <Tooltip title={user.trade_name ? t(user.trade_name) : '-'} placement="top" arrow>
                                         <Typography sx={{
                                             display: '-webkit-box',
@@ -961,6 +970,31 @@ const TablePagination = () => {
                     </Stack>
                 );
             },
+        }),
+
+          columnHelper.accessor((row) => row.user_code, {
+            id: 'companyCode',
+            header: () => (
+                <Typography variant="subtitle2" noWrap>
+                    {t('Company Code')}
+                </Typography>
+            ),
+            cell: (info) => (
+                <Tooltip title={info.getValue() ?? ''} placement="top" arrow>
+                    <Typography className="f-14" color="textPrimary" sx={{
+                        display: '-webkit-box',
+                        WebkitBoxOrient: 'vertical',
+                        WebkitLineClamp: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        wordBreak: 'break-word',
+                        width: 100,
+                        ml: 2
+                    }}>
+                        {info.getValue() ? info.getValue() : '-'}
+                    </Typography>
+                </Tooltip>
+            ),
         }),
 
         columnHelper.accessor((row) => row.team_name, {
@@ -1017,31 +1051,6 @@ const TablePagination = () => {
             ),
         }),
 
-        columnHelper.accessor((row) => row.user_code, {
-            id: 'companyCode',
-            header: () => (
-                <Typography variant="subtitle2" noWrap>
-                    {t('Company Code')}
-                </Typography>
-            ),
-            cell: (info) => (
-                <Tooltip title={info.getValue() ?? ''} placement="top" arrow>
-                    <Typography className="f-14" color="textPrimary" sx={{
-                        display: '-webkit-box',
-                        WebkitBoxOrient: 'vertical',
-                        WebkitLineClamp: 1,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        wordBreak: 'break-word',
-                        width: 100,
-                        ml: 2
-                    }}>
-                        {info.getValue() ? info.getValue() : '-'}
-                    </Typography>
-                </Tooltip>
-            ),
-        }),
-
         columnHelper.accessor((row) => row.account_id, {
             id: 'accountId',
             header: () => (
@@ -1080,6 +1089,22 @@ const TablePagination = () => {
                 return (
                     <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
                         {user.extension ?? '0'}
+                        {info.getValue() ?? '-'}
+                    </Typography>
+                );
+            },
+        }),
+
+        columnHelper.accessor((row) => row.date_of_birth, {
+            id: 'DOB',
+            header: () => (
+                <Typography variant="subtitle2" noWrap>
+                    {t('DOB')}
+                </Typography>
+            ),
+            cell: (info) => {
+                return (
+                    <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
                         {info.getValue() ?? '-'}
                     </Typography>
                 );

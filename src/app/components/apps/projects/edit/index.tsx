@@ -19,6 +19,7 @@ import { IconSettings, IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import ProjectUserMultiSelect from "@/app/components/apps/projects/UserMultiSelect";
+import IOSSwitch from "@/app/components/common/IOSSwitch";
 
 interface FormData {
   id?: number;
@@ -34,6 +35,8 @@ interface FormData {
   user_roles?: { user_id: number; project_role_id: number | null }[];
   company_id: number;
   workzone_ids?: string;
+  project_limit?: string | number;
+  allow_work?: boolean;
 }
 
 // interface Shift {
@@ -169,7 +172,10 @@ const EditProject: React.FC<EditProjectProps> = ({
   ) => {
     const { name, value } = e.target;
 
-    if (name === "budget" && !/^\d*$/.test(value)) {
+    if (
+      (name === "budget" || name === "project_limit") &&
+      !/^\d*$/.test(value)
+    ) {
       return;
     }
 
@@ -198,6 +204,11 @@ const EditProject: React.FC<EditProjectProps> = ({
         description: project.description || "",
         code: project.code || "",
         company_id: project.company_id || 0,
+        project_limit:
+          project.project_limit === 0 || project.project_limit
+            ? String(project.project_limit)
+            : "",
+        allow_work: project.allow_work !== false,
         // shift_ids: (project.shifts || []).map((s: any) => s.id).join(","),
         team_ids: (project.teams || []).map((t: any) => t.id).join(","),
         user_ids: (project.assigned_users || [])
@@ -482,10 +493,10 @@ const EditProject: React.FC<EditProjectProps> = ({
         name: row.name,
         role_id: isTarget
           ? roleId
-          : parentRow?.role_id ?? currentRoleOption?.id ?? null,
+          : (parentRow?.role_id ?? currentRoleOption?.id ?? null),
         role_name: isTarget
-          ? newRole?.name ?? null
-          : parentRow?.role_name ?? currentRoleOption?.name ?? null,
+          ? (newRole?.name ?? null)
+          : (parentRow?.role_name ?? currentRoleOption?.name ?? null),
       };
     });
     onAssigneeRoleChange?.(nextAssigned);
@@ -830,31 +841,31 @@ const EditProject: React.FC<EditProjectProps> = ({
                     />
                   </>
                 );
-                // const budgetField = (
-                //   <>
-                //     <Typography
-                //       variant="h5"
-                //       mt={embedded ? 0 : 2}
-                //       className="f-14"
-                //     >
-                //       Budget
-                //     </Typography>
-                //     <CustomTextField
-                //       id="budget"
-                //       name="budget"
-                //       type="text"
-                //       placeholder="Enter Budget.."
-                //       value={formData.budget}
-                //       onChange={handleChange}
-                //       inputProps={{
-                //         inputMode: "decimal",
-                //         pattern: "^[0-9]+(\\.[0-9]{0,2})?$",
-                //       }}
-                //       variant="outlined"
-                //       fullWidth
-                //     />
-                //   </>
-                // );
+                const budgetField = (
+                  <>
+                    <Typography
+                      variant="h5"
+                      mt={embedded ? 0 : 2}
+                      className="f-14"
+                    >
+                      Budget
+                    </Typography>
+                    <CustomTextField
+                      id="budget"
+                      name="budget"
+                      type="text"
+                      placeholder="Enter Budget.."
+                      value={formData.budget}
+                      onChange={handleChange}
+                      inputProps={{
+                        inputMode: "decimal",
+                        pattern: "^[0-9]+(\\.[0-9]{0,2})?$",
+                      }}
+                      variant="outlined"
+                      fullWidth
+                    />
+                  </>
+                );
                 const codeField = (
                   <>
                     <Typography
@@ -898,6 +909,45 @@ const EditProject: React.FC<EditProjectProps> = ({
                   </>
                 );
 
+                const projectLimitField = (
+                  <>
+                    <Typography
+                      variant="h5"
+                      mt={embedded ? 0 : 2}
+                      className="f-14"
+                    >
+                      Project Limit
+                    </Typography>
+                    <CustomTextField
+                      id="project_limit"
+                      name="project_limit"
+                      placeholder="Enter project limit..."
+                      value={formData.project_limit ?? ""}
+                      onChange={handleChange}
+                      inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                      variant="outlined"
+                      fullWidth
+                    />
+                  </>
+                );
+                const allowWorkField = (
+                  <>
+                    <Typography color="text.secondary" className="f-14">
+                      Allow to start work
+                    </Typography>
+                    <IOSSwitch
+                      color="primary"
+                      checked={formData.allow_work !== false}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          allow_work: e.target.checked,
+                        })
+                      }
+                    />
+                  </>
+                );
+
                 if (embedded) {
                   return (
                     <Grid container spacing={2.5}>
@@ -905,11 +955,9 @@ const EditProject: React.FC<EditProjectProps> = ({
                       <Grid size={{ xs: 12, md: 6 }}>{codeField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{teamsField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{usersField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{projectLimitField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{allowWorkField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{addressField}</Grid>
-                      {/* {showSettingsAccess && (
-                        <Grid size={{ xs: 6 }}>{showSettingsField}</Grid>
-                      )} */}
-                      {/* <Grid size={{ xs: 12, md: 6 }}>{budgetField}</Grid> */}
                       <Grid size={{ xs: 12, md: 6 }}>{assignRoleField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{descriptionField}</Grid>
                     </Grid>
@@ -921,12 +969,14 @@ const EditProject: React.FC<EditProjectProps> = ({
                     {nameField}
                     {teamsField}
                     {usersField}
-                    {assignRoleField}
+                    {/* {assignRoleField} */}
                     {/* {geofenceField} */}
                     {addressField}
-                    {/* {budgetField} */}
+                    {budgetField}
                     {codeField}
+                    {/* {projectLimitField} */}
                     {descriptionField}
+                    {/* {allowWorkField} */}
                   </>
                 );
               })()}

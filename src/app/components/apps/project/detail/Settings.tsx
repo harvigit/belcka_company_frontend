@@ -34,6 +34,8 @@ const emptyFormData = {
   user_roles: [],
   company_id: 0,
   workzone_ids: "",
+  project_limit: "",
+  allow_work: true,
 };
 
 const ProjectSettingsTab: React.FC<ProjectSettingsTabProps> = ({

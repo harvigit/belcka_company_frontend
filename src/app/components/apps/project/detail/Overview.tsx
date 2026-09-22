@@ -16,6 +16,8 @@ import {
   MenuItem,
   Paper,
   Stack,
+  ToggleButton,
+  ToggleButtonGroup,
   Table,
   TableBody,
   TableCell,
@@ -52,6 +54,8 @@ import {
   AddressActivityTable,
   AddressRow,
   CaseStatusItem,
+  PeopleActivityTable,
+  PeopleRow,
   EmptyState,
   LabourTeamRow,
   LabourTeamTable,
@@ -102,6 +106,7 @@ type OverviewData = {
     chart_total: number;
   };
   on_site_by_address?: AddressRow[];
+  on_site_by_people?: PeopleRow[];
   labour_teams?: LabourTeamRow[];
   labour_totals?: LabourTotals;
   labour_risk?: {
@@ -442,6 +447,7 @@ const Overview = ({
     "6m",
   );
   const [activityOpen, setActivityOpen] = useState(false);
+  const [onSiteMode, setOnSiteMode] = useState<"people" | "address">("address");
 
   const startDate = sharedFilters?.startDate ?? null;
   const endDate = sharedFilters?.endDate ?? null;
@@ -580,6 +586,8 @@ const Overview = ({
 
   const currency = info?.currency || "£";
   const addresses = info?.on_site_by_address || [];
+  const people = info?.on_site_by_people || [];
+  const onSiteRows = onSiteMode === "people" ? people : addresses;
   const labourTeams = info?.labour_teams || [];
   const monthlyRows = info?.monthly_financial || [];
   const ganttItems = info?.gantt || [];
@@ -1237,23 +1245,66 @@ const Overview = ({
           </Widget>
 
           <Widget
-            title="ON SITE BY ADDRESS"
+            title="ON SITE"
             action={
-              <Box display="flex" justifyContent="flex-end">
-                {addresses.length > 2 && (
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                flexWrap="wrap"
+                useFlexGap
+                justifyContent="flex-end"
+              >
+                <ToggleButtonGroup
+                  exclusive
+                  size="small"
+                  value={onSiteMode}
+                  onChange={(_, value: "people" | "address" | null) => {
+                    if (value) setOnSiteMode(value);
+                  }}
+                  sx={{
+                    "& .MuiToggleButton-root": {
+                      textTransform: "none",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      px: 1.25,
+                      py: 0.25,
+                      lineHeight: 1.4,
+                    },
+                  }}
+                >
+                  <ToggleButton value="people">People</ToggleButton>
+                  <ToggleButton value="address">Address</ToggleButton>
+                </ToggleButtonGroup>
+                {onSiteRows.length > OVERVIEW_PREVIEW_LIMIT && (
                   <ViewAllLink
-                    label="View all addresses"
-                    count={addresses.length}
-                    onClick={() => setFullListView("addresses")}
+                    label={
+                      onSiteMode === "people"
+                        ? "View all people"
+                        : "View all addresses"
+                    }
+                    count={onSiteRows.length}
+                    onClick={() =>
+                      setFullListView(
+                        onSiteMode === "people" ? "people" : "addresses",
+                      )
+                    }
                   />
                 )}
-              </Box>
+              </Stack>
             }
           >
-            <AddressActivityTable
-              rows={addresses}
-              limit={OVERVIEW_PREVIEW_LIMIT}
-            />
+            {onSiteMode === "people" ? (
+              <PeopleActivityTable
+                rows={people}
+                limit={OVERVIEW_PREVIEW_LIMIT}
+              />
+            ) : (
+              <AddressActivityTable
+                rows={addresses}
+                limit={OVERVIEW_PREVIEW_LIMIT}
+              />
+            )}
           </Widget>
 
           <Widget title="LABOUR RISK">
@@ -1434,6 +1485,18 @@ const Overview = ({
           <AddressActivityTable rows={addresses} paginate />
         ) : (
           <EmptyState message="No related address records for this project." />
+        )}
+      </OverviewFullListView>
+
+      <OverviewFullListView
+        open={fullListView === "people"}
+        title="On site by people"
+        onClose={closeFullListView}
+      >
+        {people.length ? (
+          <PeopleActivityTable rows={people} paginate />
+        ) : (
+          <EmptyState message="No related people records for this project." />
         )}
       </OverviewFullListView>
 

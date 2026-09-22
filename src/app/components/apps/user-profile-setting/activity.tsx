@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -16,31 +16,32 @@ import {
   Autocomplete,
   TextField,
   Checkbox,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
 } from "@mui/material";
 import {
   IconUsers,
   IconShoppingCart,
   IconClock,
-  IconCalendar,
   IconAlertCircle,
-  IconLogin,
-  IconTrash,
-  IconPencil,
-  IconPlus,
   IconEye,
   IconCoinRupee,
   IconUsersPlus,
+  IconFilter,
+  IconX,
+  IconReceipt,
 } from "@tabler/icons-react";
+import { Stack } from "@mui/system";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
-import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
-import { DiffChangeLines } from "@/app/components/common/DiffChanges";
+import DiffChanges from "@/app/components/common/DiffChanges";
 import { fallbackDiffsFromPayload } from "@/utils/diffDisplay";
 import { useTranslation } from "react-i18next";
-import { IconFilter } from "@tabler/icons-react";
-import { IconX } from "@tabler/icons-react";
-import { Stack } from "@mui/system";
-import { IconReceipt } from "@tabler/icons-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,7 @@ interface ActivityItem {
   new_data?: any;
   date_of_action: string;
   created_at: string;
+  date?: string;
   time: string;
   company: { id: number; name: string; image: string | null } | null;
   added_by: Actor | null;
@@ -132,9 +134,9 @@ interface ActivityGroup {
 
 interface ActivityInfo {
   total: number;
-  activities: ActivityGroup[];
-  start: string;
-  end: string;
+  activities: ActivityItem[] | ActivityGroup[];
+  start?: string | null;
+  end?: string | null;
 }
 
 interface UserActivityProps {
@@ -224,39 +226,7 @@ const FALLBACK_MODULE: ModuleCfg = {
   dotColor: "#475569",
 };
 
-// ─── Action config ────────────────────────────────────────────────────────────
-
-type ActionCfg = { bg: string; color: string; icon: React.ElementType };
-
-const ACTION_CONFIG: Record<string, ActionCfg> = {
-  "Logged In": { bg: "#EFF6FF", color: "#1D4ED8", icon: IconLogin },
-  Deleted: { bg: "#FEF2F2", color: "#B91C1C", icon: IconTrash },
-  Created: { bg: "#F0FDF4", color: "#15803D", icon: IconPlus },
-  Updated: { bg: "#FFFBEB", color: "#B45309", icon: IconPencil },
-  "Logged Out": { bg: "#F8FAFC", color: "#64748B", icon: IconLogin },
-};
-
-const FALLBACK_ACTION: ActionCfg = {
-  bg: "#F1F5F9",
-  color: "#475569",
-  icon: IconEye,
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const getDefaultWeekDates = (): { start: Date; end: Date } => {
-  const now = new Date();
-  const day = now.getDay();
-  const diffToMon = day === 0 ? -6 : 1 - day;
-  const mon = new Date(now);
-  mon.setDate(now.getDate() + diffToMon);
-  const sun = new Date(mon);
-  sun.setDate(mon.getDate() + 6);
-  return { start: mon, end: sun };
-};
-
-const toApiDate = (d: Date): string =>
-  `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+// ─── Helpers ──────────────────────────────────────────────────────────────
 
 const getInitials = (name: string): string =>
   name
@@ -266,9 +236,39 @@ const getInitials = (name: string): string =>
     .slice(0, 2)
     .toUpperCase();
 
-// ─── Actor Footer ─────────────────────────────────────────────────────────────
+const flattenActivities = (
+  activities?: ActivityItem[] | ActivityGroup[] | null,
+): ActivityItem[] => {
+  if (!Array.isArray(activities) || activities.length === 0) return [];
+  if ("items" in (activities[0] as ActivityGroup)) {
+    return (activities as ActivityGroup[]).flatMap(
+      (group) => group.items || [],
+    );
+  }
+  return activities as ActivityItem[];
+};
 
-const ActorRow: React.FC<{ actor: Actor; role: ActorRole }> = ({
+const activityTableSx = {
+  minWidth: 720,
+  "& .MuiTableCell-root": {
+    fontSize: 12,
+    py: 1,
+    px: { xs: 1, md: 1.25 },
+    borderColor: "#EEF2F7",
+    verticalAlign: "top",
+  },
+  "& .MuiTableCell-head": {
+    fontWeight: 700,
+    color: "text.secondary",
+    fontSize: 11,
+    letterSpacing: 0.3,
+    bgcolor: "#F8FAFC",
+    whiteSpace: "nowrap",
+    zIndex: 3,
+  },
+};
+
+const ActorCell: React.FC<{ actor: Actor; role: ActorRole }> = ({
   actor,
   role,
 }) => {
@@ -277,20 +277,14 @@ const ActorRow: React.FC<{ actor: Actor; role: ActorRole }> = ({
   const isApproved = role === "approved by";
   const isRejected = role === "rejected by";
   return (
-    <Box
-      display="flex"
-      alignItems="center"
-      gap={0.75}
-      mt={1}
-      pt={1}
-      sx={{ borderTop: "0.5px solid", borderColor: "divider" }}
-    >
+    <Box display="flex" alignItems="center" gap={0.75} minWidth={0}>
       <Avatar
         sx={{
-          width: 20,
-          height: 20,
+          width: 22,
+          height: 22,
           fontSize: 9,
           fontWeight: 600,
+          flexShrink: 0,
           bgcolor: isRejected
             ? "#FEE2E2"
             : isApproved
@@ -309,204 +303,47 @@ const ActorRow: React.FC<{ actor: Actor; role: ActorRole }> = ({
       >
         {getInitials(actor.name)}
       </Avatar>
-      <Typography fontSize={11} color="text.disabled">
-        {role}
-      </Typography>
-      <Typography fontSize={11} color="text.secondary" fontWeight={500}>
-        {actor.name}
-      </Typography>
+      <Box minWidth={0}>
+        <Typography fontSize={11} color="text.disabled" noWrap>
+          {role}
+        </Typography>
+        <Typography
+          fontSize={12}
+          color="text.secondary"
+          fontWeight={500}
+          noWrap
+        >
+          {actor.name}
+        </Typography>
+      </Box>
     </Box>
   );
 };
 
-// ─── Single Activity Card ─────────────────────────────────────────────────────
-
-const ActivityCard: React.FC<{ item: ActivityItem; isLast: boolean }> = ({
-  item,
-  isLast,
-}) => {
+const TypeChip: React.FC<{ module: string }> = ({ module }) => {
   const { t } = useTranslation();
-  const mc = MODULE_CONFIG[item.module] ?? FALLBACK_MODULE;
-  const ModuleIcon = mc.icon;
-  const { actor, role: actorRole } = getActivityActor(item);
-  const diffs = Array.isArray(item.diffs)
-    ? item.diffs
-    : fallbackDiffsFromPayload(item.old_data, item.new_data);
-
+  const mc = MODULE_CONFIG[module] ?? FALLBACK_MODULE;
   return (
-    <Box display="flex" gap={0}>
-      {/* Timeline axis */}
-      <Box
-        display="flex"
-        flexDirection="column"
-        alignItems="center"
-        sx={{ width: 36, flexShrink: 0, pt: 0.25 }}
-      >
-        <Box
-          sx={{
-            width: 28,
-            height: 28,
-            borderRadius: "50%",
-            bgcolor: mc.dotBg,
-            border: `1px solid ${mc.chipBorder}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            zIndex: 1,
-          }}
-        >
-          <ModuleIcon size={13} color={mc.dotColor} stroke={2} />
-        </Box>
-        {!isLast && (
-          <Box
-            sx={{
-              width: "1px",
-              flex: 1,
-              minHeight: 16,
-              bgcolor: "divider",
-              mt: "3px",
-            }}
-          />
-        )}
-      </Box>
-
-      {/* Card */}
-      <Box
-        sx={{
-          flex: 1,
-          ml: 1.25,
-          mb: isLast ? 0 : 1.25,
-          p: "10px 14px",
-          bgcolor: "background.paper",
-          border: "0.5px solid",
-          borderColor: "divider",
-          borderRadius: "10px",
-          transition: "border-color 0.15s, box-shadow 0.15s",
-          "&:hover": {
-            borderColor: "action.selected",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-          },
-        }}
-      >
-        {/* Top row */}
-        <Box
-          display="flex"
-          alignItems="flex-start"
-          justifyContent="space-between"
-          gap={1}
-        >
-          <Box flex={1} minWidth={0}>
-            {/* Chips */}
-            <Box
-              display="flex"
-              alignItems="center"
-              gap={0.75}
-              mb={0.75}
-              flexWrap="wrap"
-            >
-              <Chip
-                label={t(mc.label)}
-                size="small"
-                sx={{
-                  height: 18,
-                  fontSize: 10,
-                  fontWeight: 600,
-                  bgcolor: mc.chipBg,
-                  color: mc.chipColor,
-                  border: `0.5px solid ${mc.chipBorder}`,
-                  borderRadius: "4px",
-                  letterSpacing: 0.2,
-                  "& .MuiChip-label": { px: "6px" },
-                }}
-              />
-            </Box>
-
-            {/* Title */}
-            <Typography
-              fontSize={13}
-              color="text.primary"
-              lineHeight={1.5}
-              sx={{ wordBreak: "break-word" }}
-            >
-              {item.title}
-            </Typography>
-
-            {/* Note & Diffs */}
-            {item.note && (
-              <Typography
-                fontSize={12}
-                color="text.secondary"
-                mt={0.5}
-                fontWeight={500}
-              >
-                NOTE : {item.note}
-              </Typography>
-            )}
-
-            <DiffChangeLines diffs={diffs} />
-          </Box>
-
-          {/* Time */}
-          <Typography
-            fontSize={11}
-            color="text.disabled"
-            whiteSpace="nowrap"
-            flexShrink={0}
-            mt={0.25}
-          >
-            {item.time}
-          </Typography>
-        </Box>
-
-        {/* Actor */}
-        {actor && <ActorRow actor={actor} role={actorRole} />}
-      </Box>
-    </Box>
-  );
-};
-
-// ─── Day Group Header ─────────────────────────────────────────────────────────
-
-const DayHeader: React.FC<{ label: string; count: number }> = ({
-  label,
-  count,
-}) => (
-  <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
-    <Typography
-      fontSize={11}
-      fontWeight={700}
-      color="text.disabled"
-      letterSpacing={0.6}
-      textTransform="uppercase"
-      whiteSpace="nowrap"
-    >
-      {label}
-    </Typography>
-    <Box sx={{ flex: 1, height: "0.5px", bgcolor: "divider" }} />
     <Chip
-      label={count}
+      label={t(mc.label)}
       size="small"
       sx={{
         height: 18,
         fontSize: 10,
-        fontWeight: 700,
-        bgcolor: "action.hover",
-        color: "text.secondary",
+        fontWeight: 600,
+        bgcolor: mc.chipBg,
+        color: mc.chipColor,
+        border: `0.5px solid ${mc.chipBorder}`,
         borderRadius: "4px",
-        minWidth: 24,
-        "& .MuiChip-label": { px: "6px" },
+        letterSpacing: 0.2,
       }}
     />
-  </Box>
-);
+  );
+};
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
-const EmptyState: React.FC<{
-  dateRange?: { start: string; end: string };
-  onReset: () => void;
-}> = ({ dateRange, onReset }) => {
+const EmptyState: React.FC = () => {
   const { t } = useTranslation();
 
   return (
@@ -535,29 +372,6 @@ const EmptyState: React.FC<{
       <Typography fontWeight={600} fontSize={14} color="text.secondary">
         {t("No activity found")}
       </Typography>
-      <Typography
-        fontSize={12}
-        color="text.disabled"
-        textAlign="center"
-        maxWidth={240}
-      >
-        {t("No events recorded")}
-        {dateRange
-          ? ` ${t("from")} ${dateRange.start} ${t("to")} ${dateRange.end}`
-          : ` ${t("for this period")}`}
-      </Typography>
-      <Button
-        size="small"
-        onClick={onReset}
-        sx={{
-          textTransform: "none",
-          fontSize: 12,
-          color: "primary.main",
-          mt: 0.5,
-        }}
-      >
-        {t("Reset to current week")}
-      </Button>
     </Box>
   );
 };
@@ -577,16 +391,14 @@ const UserActivity: React.FC<UserActivityProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState<ActivityInfo | null>(null);
-
-  const defaultWeek = getDefaultWeekDates();
-  const [startDate, setStartDate] = useState<Date>(defaultWeek.start);
-  const [endDate, setEndDate] = useState<Date>(defaultWeek.end);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [totalItems, setTotalItems] = useState(0);
 
   const [filters, setFilters] = useState<UserFilters>(DEFAULT_USER_FILTERS);
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
-  const skipNextDependencyPageResetRef = useRef(false);
   const status = [
     { id: "Pending Approval", name: "Pending Approval" },
     { id: "Approved", name: "Approved" },
@@ -600,67 +412,55 @@ const UserActivity: React.FC<UserActivityProps> = ({
     // { id: "Penalty", name: "Penalty" }
   ];
 
-  const fetchActivity = useCallback(
-    async (start: Date, end: Date) => {
-      if (!userId || !companyId) return;
-      setLoading(true);
-      try {
-        const res = await api.get("user/get-activity", {
-          params: {
-            user_id: Number(userId),
-            company_id: Number(companyId),
-            start_date: toApiDate(start),
-            end_date: toApiDate(end),
-            get_diffs: 1,
-            ...(filters.type.length > 0
-              ? { types: filters.type.join(",") }
-              : {}),
-            ...(filters.status.length > 0
-              ? { statuses: filters.status.join(",") }
-              : {}),
-            ...(isRemoveUser ? { is_remove_user: 1 } : {}),
-            ...(isArchivedUser ? { is_archived_user: 1 } : {}),
-          },
-        });
-        if (res.data?.IsSuccess) {
-          setInfo(res.data.info ?? null);
-        } else {
-          toast.error(res.data?.message || "Failed to load activity");
-        }
-      } catch {
-        toast.error("Failed to load activity");
-      } finally {
-        setLoading(false);
+  const fetchActivity = useCallback(async () => {
+    if (!userId || !companyId) return;
+    setLoading(true);
+    try {
+      const res = await api.get("user/get-activity", {
+        params: {
+          user_id: Number(userId),
+          company_id: Number(companyId),
+          page: page + 1,
+          limit: rowsPerPage,
+          get_diffs: 1,
+          ...(filters.type.length > 0 ? { types: filters.type.join(",") } : {}),
+          ...(filters.status.length > 0
+            ? { statuses: filters.status.join(",") }
+            : {}),
+          ...(isRemoveUser ? { is_remove_user: 1 } : {}),
+          ...(isArchivedUser ? { is_archived_user: 1 } : {}),
+        },
+      });
+      if (res.data?.IsSuccess) {
+        setInfo(res.data.info ?? null);
+        setTotalItems(
+          Number(res.data?.data?.totalItems ?? res.data?.info?.total ?? 0),
+        );
+      } else {
+        toast.error(res.data?.message || "Failed to load activity");
       }
-    },
-    [userId, companyId, isRemoveUser, isArchivedUser, filters],
-  );
+    } catch {
+      toast.error("Failed to load activity");
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    userId,
+    companyId,
+    isRemoveUser,
+    isArchivedUser,
+    filters,
+    page,
+    rowsPerPage,
+  ]);
 
   useEffect(() => {
     if (!userId || !active) return;
-    fetchActivity(startDate, endDate);
-  }, [active, userId, fetchActivity, startDate, endDate]);
+    fetchActivity();
+  }, [active, userId, fetchActivity]);
 
-  const handleDateRangeChange = (range: {
-    from: Date | null;
-    to: Date | null;
-  }) => {
-    if (range.from && range.to) {
-      setStartDate(range.from);
-      setEndDate(range.to);
-      fetchActivity(range.from, range.to);
-    }
-  };
-
-  const handleReset = () => {
-    const w = getDefaultWeekDates();
-    setStartDate(w.start);
-    setEndDate(w.end);
-    fetchActivity(w.start, w.end);
-  };
-
-  const groups = info?.activities ?? [];
-  const total = info?.total ?? 0;
+  const rows = flattenActivities(info?.activities);
+  const total = totalItems || info?.total || 0;
 
   const handleFilterValueChange = (key: keyof UserFilters, value: string[]) => {
     setTempFilters((prev) => ({
@@ -912,7 +712,7 @@ const UserActivity: React.FC<UserActivityProps> = ({
       sx={{
         display: "flex",
         flexDirection: "column",
-        height: 750,
+        height: "80vh",
         overflow: "hidden",
       }}
     >
@@ -921,23 +721,18 @@ const UserActivity: React.FC<UserActivityProps> = ({
         sx={{
           px: 2.5,
           py: 1.5,
+          pt: 0,
           bgcolor: "background.paper",
           borderBottom: "0.5px solid",
           borderColor: "divider",
           flexShrink: 0,
           display: "flex",
+          justifyContent: "end",
           alignItems: "center",
           gap: 1,
           flexWrap: "wrap",
         }}
       >
-        <Box className="date_range_picker">
-          <DateRangePickerBox
-            from={startDate}
-            to={endDate}
-            onChange={handleDateRangeChange}
-          />
-        </Box>
         <Button
           variant="contained"
           onClick={() => {
@@ -996,9 +791,9 @@ const UserActivity: React.FC<UserActivityProps> = ({
         <DialogActions>
           <Button
             onClick={() => {
-              skipNextDependencyPageResetRef.current = false;
               setTempFilters(DEFAULT_USER_FILTERS);
               setFilters(DEFAULT_USER_FILTERS);
+              setPage(0);
               setOpen(false);
             }}
             color="inherit"
@@ -1008,8 +803,8 @@ const UserActivity: React.FC<UserActivityProps> = ({
           <Button
             variant="contained"
             onClick={() => {
-              skipNextDependencyPageResetRef.current = false;
               setFilters(normalizeUserFilters(tempFilters));
+              setPage(0);
               setOpen(false);
             }}
           >
@@ -1021,56 +816,139 @@ const UserActivity: React.FC<UserActivityProps> = ({
       {/* ── Body ── */}
       <Box
         sx={{
+          p: 2,
           flex: 1,
-          overflowY: "auto",
-          px: { xs: 2, sm: 3 },
-          py: 2.5,
-          minHeight: 0,
+          height: "80vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
         }}
       >
-        {loading ? (
+        {loading && rows.length === 0 ? (
           <Box
             display="flex"
             justifyContent="center"
             alignItems="center"
             minHeight={300}
+            flex={1}
           >
             <CircularProgress size={30} thickness={4} />
           </Box>
         ) : total === 0 ? (
-          <EmptyState
-            dateRange={info ? { start: info.start, end: info.end } : undefined}
-            onReset={handleReset}
-          />
+          <EmptyState />
         ) : (
-          <Box sx={{ maxWidth: 680, mx: "auto" }}>
-            {groups.map((group) => (
-              <Box key={group.date} mb={3}>
-                <DayHeader label={group.label} count={group.items.length} />
-                <Box pl={0.5}>
-                  {group.items.map((item, idx) => (
-                    <ActivityCard
-                      key={item.id}
-                      item={item}
-                      isLast={idx === group.items.length - 1}
-                    />
-                  ))}
-                </Box>
-              </Box>
-            ))}
-
-            {/* Date range footer */}
-            {info && (
-              <Typography
-                fontSize={11}
-                color="text.disabled"
-                textAlign="center"
-                mt={1}
-                pb={2}
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <TableContainer sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+              <Table
+                stickyHeader
+                size="small"
+                aria-label="user activity"
+                sx={activityTableSx}
               >
-                Showing activity from {info.start} to {info.end}
-              </Typography>
-            )}
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Message</TableCell>
+                    <TableCell sx={{ width: 130 }}>Type</TableCell>
+                    <TableCell sx={{ width: 180 }}>By</TableCell>
+                    <TableCell sx={{ width: 150 }}>Date</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rows.map((item) => {
+                    const { actor, role } = getActivityActor(item);
+                    const diffs = Array.isArray(item.diffs)
+                      ? item.diffs
+                      : fallbackDiffsFromPayload(item.old_data, item.new_data);
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell
+                          sx={{
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          <Box
+                            display="flex"
+                            alignItems="flex-start"
+                            justifyContent="space-between"
+                            gap={1}
+                          >
+                            <Box minWidth={0} flex={1}>
+                              <Typography
+                                fontSize={13}
+                                color="text.primary"
+                                lineHeight={1.5}
+                              >
+                                {item.title}
+                              </Typography>
+                              {item.note && (
+                                <Typography
+                                  fontSize={12}
+                                  color="text.secondary"
+                                  mt={0.5}
+                                  fontWeight={500}
+                                >
+                                  NOTE : {item.note}
+                                </Typography>
+                              )}
+                            </Box>
+                            <DiffChanges diffs={diffs} variant="icon" />
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <TypeChip module={item.module} />
+                        </TableCell>
+                        <TableCell>
+                          {actor ? (
+                            <ActorCell actor={actor} role={role} />
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: "nowrap" }}>
+                          {item.date ? `${item.date} ${item.time}` : item.time}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {!loading && rows.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4}>No activities found</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={total}
+              page={page}
+              onPageChange={(_, next) => setPage(next)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setRowsPerPage(parseInt(event.target.value, 10));
+                setPage(0);
+              }}
+              rowsPerPageOptions={[50, 100, 250, 500]}
+              sx={{
+                flexShrink: 0,
+                borderTop: "1px solid",
+                borderColor: "divider",
+                overflow: "visible",
+                bgcolor: "background.paper",
+                ".MuiTablePagination-toolbar": {
+                  flexWrap: "wrap",
+                  minHeight: 52,
+                },
+              }}
+            />
           </Box>
         )}
       </Box>

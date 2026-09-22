@@ -123,9 +123,8 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
           onClose();
         }
       }
-    } catch (err) {
-      console.error("Action failed", err);
-      // toast.error("Something went wrong");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Action failed");
     }
   };
   const filteredData = useMemo(() => {

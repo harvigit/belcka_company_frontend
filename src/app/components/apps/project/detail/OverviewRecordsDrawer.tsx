@@ -19,11 +19,18 @@ import { IconArrowLeft } from "@tabler/icons-react";
 
 export const OVERVIEW_PREVIEW_LIMIT = 5;
 
-export type OverviewFullListKey = "labour" | "monthly" | "addresses";
+export type OverviewFullListKey = "labour" | "monthly" | "addresses" | "people";
 
 export type AddressRow = {
   address_id?: number;
   address: string;
+  trade_count: number;
+  check_in: number;
+};
+
+export type PeopleRow = {
+  user_id?: number;
+  user: string;
   trade_count: number;
   check_in: number;
 };
@@ -295,10 +302,74 @@ export const AddressActivityTable = ({
   );
 };
 
+export const PeopleActivityTable = ({
+  rows,
+  limit,
+  paginate,
+}: {
+  rows: PeopleRow[];
+  limit?: number;
+  paginate?: boolean;
+}) => {
+  return (
+    <PagedList rows={rows} limit={limit} paginate={paginate}>
+      {(visible) => (
+        <TableContainer
+          sx={{
+            overflowX: "auto",
+            ...(paginate && {
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+            }),
+          }}
+        >
+          <Table
+            stickyHeader={!!paginate}
+            size="small"
+            aria-label={paginate ? "sticky table" : undefined}
+            sx={{ ...overviewTableSx, minWidth: 280 }}
+          >
+            <TableHead>
+              <TableRow>
+                <TableCell>User</TableCell>
+                <TableCell align="right">Trade</TableCell>
+                <TableCell align="right">Check in</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {visible.map((row, index) => (
+                <TableRow key={row.user_id ?? `${row.user}-${index}`}>
+                  <TableCell
+                    sx={{
+                      maxWidth: { xs: 100, md: 200 },
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {row.user}
+                  </TableCell>
+                  <TableCell align="right">{row.trade_count}</TableCell>
+                  <TableCell align="right">{row.check_in}</TableCell>
+                </TableRow>
+              ))}
+              {rows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={3}>No people on site</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+    </PagedList>
+  );
+};
+
 const LABOUR_COLUMNS = [
   "Team",
   "On site",
-  "Limit",
+  // "Limit",
   "Avg 7 days",
   "Avg 30 days",
   "Total Hours",
@@ -357,7 +428,7 @@ export const LabourTeamTable = ({
                   <TableCell align="right">
                     {row.on_site}
                   </TableCell>
-                  <TableCell align="right">{row.limit}</TableCell>
+                  {/* <TableCell align="right">{row.limit}</TableCell> */}
                   <TableCell align="right">{row.avg_7_days}</TableCell>
                   <TableCell align="right">{row.avg_30_days}</TableCell>
                   <TableCell align="right">
@@ -394,7 +465,7 @@ export const LabourTeamTable = ({
                   <TableCell align="right">
                     {totals?.on_site || 0}
                   </TableCell>
-                  <TableCell align="right">{totals?.limit || 0}</TableCell>
+                  {/* <TableCell align="right">{totals?.limit || 0}</TableCell> */}
                   <TableCell align="right">{totals?.avg_7_days || 0}</TableCell>
                   <TableCell align="right">
                     {totals?.avg_30_days || 0}

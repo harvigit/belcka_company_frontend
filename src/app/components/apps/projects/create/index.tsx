@@ -205,10 +205,10 @@ const CreateProject: React.FC<CreateProjectProps> = ({
       open={open}
       onClose={onClose}
       sx={{
-        width: 450,
+        width: 500,
         flexShrink: 0,
         "& .MuiDrawer-paper": {
-          width: 450,
+          width: 500,
           padding: 2,
           backgroundColor: "#f9f9f9",
         },

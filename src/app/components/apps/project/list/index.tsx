@@ -3,15 +3,20 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
+  Checkbox,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Drawer,
   FormControlLabel,
   FormGroup,
   IconButton,
   InputAdornment,
+  ListItemIcon,
+  Menu,
   MenuItem,
   Popover,
   Stack,
@@ -22,13 +27,18 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import {
+  IconBookmark,
+  IconDotsVertical,
   IconEye,
   IconFileExport,
   IconFilter,
+  IconPlus,
   IconSearch,
+  IconTrash,
   IconX,
 } from "@tabler/icons-react";
 import { createColumnHelper, flexRender } from "@tanstack/react-table";
@@ -53,6 +63,15 @@ import IOSSwitch from "@/app/components/common/IOSSwitch";
 import toast from "react-hot-toast";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { useRouter } from "next/navigation";
+import Setting from "@/app/components/apps/projects/setting";
+import { IconSettings } from "@tabler/icons-react";
+import { IconNotes } from "@tabler/icons-react";
+import CreateProject from "../../projects/create";
+import EditProject from "../../projects/edit";
+import ArchiveProject from "../../addresses/list/archive-project-list";
+import { IconEdit } from "@tabler/icons-react";
+import { Grid } from "@mui/system";
+import IconArrowLeft from "@mui/icons-material/ArrowBack";
 
 dayjs.extend(customParseFormat);
 
@@ -140,7 +159,12 @@ const getProjectDashboardStateKey = (
     : "";
 
 const normalizeProjectStatus = (value?: string | number | null) => {
-  if (value === undefined || value === null || value === "" || value === "All") {
+  if (
+    value === undefined ||
+    value === null ||
+    value === "" ||
+    value === "All"
+  ) {
     return "all";
   }
   return String(value);
@@ -276,8 +300,9 @@ const ProjectDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currency, setCurrency] = useState("£");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] =
-    useState<ProjectDashboardFilters>(DEFAULT_PROJECT_FILTERS);
+  const [filters, setFilters] = useState<ProjectDashboardFilters>(
+    DEFAULT_PROJECT_FILTERS,
+  );
   const [tempFilters, setTempFilters] = useState(filters);
   const restoredTableStateKeyRef = useRef("");
   const skipNextDependencyPageResetRef = useRef(false);
@@ -302,6 +327,77 @@ const ProjectDashboard = () => {
   const exportPreviewRequestId = useRef(0);
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
+
+  const [settingOpen, setSettingOpen] = useState(false);
+  const [archiveListOpen, setArchiveListOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+
+  const session = useSession();
+  const user = session.data?.user as User & { company_id?: number | null } & {
+    id: number;
+  } & { user_role_id: number };
+
+  const initialFormData = {
+    name: "",
+    address: "",
+    budget: "",
+    description: "",
+    code: 0,
+    // shift_ids: "",
+    team_ids: "",
+    user_ids: "",
+    company_id: user?.company_id || 0,
+    workzone_ids: "",
+    project_limit: "",
+    allow_work: true,
+  };
+
+  const [formData, setFormData] = useState<any>(initialFormData);
+  const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl2);
+  const [productDrawer, setProductDrawer] = useState(false);
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
+  const [searchProduct, setSearchProduct] = useState("");
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [isFetchingFavorites, setIsFetchingFavorites] = useState(false);
+  const [productPage, setProductPage] = useState(1);
+  const productLimit = 50;
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl2(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl2(null);
+  };
+
+  const handleEdit = async (project: any) => {
+    if (!user?.company_id || !project?.id) return;
+    try {
+      const res = await api.get(
+        `project/get?company_id=${user.company_id}&project_id=${project.id}`,
+      );
+      const projectRow = Array.isArray(res.data?.info)
+        ? res.data.info[0]
+        : res.data?.info;
+      setSelectedProject(projectRow || project);
+      setEditDrawerOpen(true);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load project");
+    }
+  };
+
+  const handleCreate = () => {
+    handleClose();
+    setFormData({ ...initialFormData, company_id: user?.company_id || 0 });
+    setDrawerOpen(true);
+  };
 
   React.useEffect(() => {
     const checkScroll = () => {
@@ -338,10 +434,6 @@ const ProjectDashboard = () => {
     }
   };
 
-  const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null } & {
-    id: number;
-  };
   const projectDashboardStateKey = useMemo(
     () => getProjectDashboardStateKey(user?.id, user?.company_id),
     [user?.id, user?.company_id],
@@ -498,6 +590,156 @@ const ProjectDashboard = () => {
     }
   };
 
+  const handleProjectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const res = await api.post("project/create", formData);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message || "Project created successfully");
+        setDrawerOpen(false);
+        fetchProjects();
+      } else {
+        toast.error(res.data.message || "Failed to create project");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create project");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const res = await api.put("project/update", formData);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message || "Project updated successfully");
+        setEditDrawerOpen(false);
+        fetchProjects();
+      } else {
+        toast.error(res.data.message || "Failed to update project");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update project");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const fetchResources = async () => {
+    try {
+      const res = await api.get(
+        `get-inventory-resources?company_id=${user?.company_id}&is_web=true`,
+      );
+      if (res.data) {
+        setProducts(res.data.products || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch inventory resource", err);
+    }
+  };
+
+  const fetchFavoriteProducts = async () => {
+    if (!activeProjectId) return;
+    setIsFetchingFavorites(true);
+    try {
+      const response = await api.get(
+        `project/get-favorite?company_id=${user?.company_id}&project_id=${activeProjectId}`,
+      );
+      if (response.data?.IsSuccess) {
+        const savedIds =
+          response.data?.info[0]?.products?.map(
+            (item: any) => item.product_id,
+          ) || [];
+        setSelectedProducts(savedIds);
+      }
+    } catch (error) {
+      console.error("Failed to fetch favorite products:", error);
+    } finally {
+      setIsFetchingFavorites(false);
+    }
+  };
+
+  const handleSaveProducts = async () => {
+    try {
+      setIsSaving(true);
+      const productIdsString = selectedProducts.join(",");
+      const response = await api.post("project/favorite-products", {
+        id: activeProjectId,
+        product_ids: productIdsString,
+      });
+      if (response.data.IsSuccess) {
+        toast.success(response.data.message || "Favorites saved.");
+        setProductDrawer(false);
+      } else {
+        toast.error(response.data.message || "Failed to save favorites.");
+      }
+    } catch (error) {
+      console.error("Save failed:", error);
+      toast.error("Failed to save favorites.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCloseProductDrawer = () => {
+    setSearchProduct("");
+    setSelectAll(false);
+    setProductPage(1);
+    setProductDrawer(false);
+  };
+
+  useEffect(() => {
+    if (user?.company_id) {
+      fetchResources();
+    }
+  }, [user?.company_id]);
+
+  useEffect(() => {
+    if (productDrawer && activeProjectId) {
+      fetchFavoriteProducts();
+    }
+  }, [productDrawer, activeProjectId]);
+
+  const handleProductToggle = (id: any) => {
+    setSelectedProducts((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const filteredData = useMemo(() => {
+    let result = products.filter((item) => {
+      const search = searchProduct.toLowerCase();
+      let matchesSearch = true;
+      if (search) {
+        matchesSearch =
+          item.short_name?.toLowerCase().includes(search) ||
+          item.supplier_code?.toLowerCase().includes(search) ||
+          item.supplier_name?.toLowerCase().includes(search) ||
+          item.uuid?.toLowerCase().includes(search) ||
+          item.name?.toLowerCase().includes(search);
+      }
+      return matchesSearch;
+    });
+
+    result.sort((a, b) => {
+      const aSelected = selectedProducts.includes(a.id);
+      const bSelected = selectedProducts.includes(b.id);
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return 0;
+    });
+
+    return result;
+  }, [products, searchProduct, selectedProducts]);
+
+  const paginatedProduct =
+    filteredData?.slice(0, productPage * productLimit) || [];
+
   const columns = useMemo(
     () => [
       {
@@ -594,9 +836,7 @@ const ProjectDashboard = () => {
         header: () => <HeaderLabel>On site</HeaderLabel>,
         meta: { label: "On site" },
         cell: ({ row }) => (
-          <NumberCell
-            value={`${row.original.total_working_users || 0}`}
-          />
+          <NumberCell value={`${row.original.total_working_users || 0}`} />
         ),
       }),
       columnHelper.accessor("limit", {
@@ -719,6 +959,29 @@ const ProjectDashboard = () => {
               onClick={(e) => e.stopPropagation()}
               sx={{ px: 1 }}
             >
+              <Tooltip title="Edit">
+                <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(item);
+                  }}
+                  color="primary"
+                >
+                  <IconEdit size={18} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Favorite Products">
+                <IconButton
+                  color="success"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveProjectId(item.id);
+                    setProductDrawer(true);
+                  }}
+                >
+                  <IconBookmark size={18} />
+                </IconButton>
+              </Tooltip>
               <IOSSwitch
                 checked={isActive}
                 disabled={isSaving}
@@ -973,13 +1236,35 @@ const ProjectDashboard = () => {
           </Box>
 
           <Box display="flex" alignItems="center">
+            {selectedRowIds.size > 0 && (
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<IconTrash width={18} />}
+                onClick={() => setOpenDialog(true)}
+              >
+                Archive
+              </Button>
+            )}
             <Button
               variant="contained"
               onClick={openExportPreview}
-              sx={{ mr: 1 }}
+              sx={{ ml: 1 }}
             >
               <IconFileExport width={18} /> Export
             </Button>
+
+            {user.user_role_id === 1 && (
+              <Tooltip title="Settings">
+                <IconButton
+                  color="primary"
+                  sx={{ ml: 1 }}
+                  onClick={() => setSettingOpen(true)}
+                >
+                  <IconSettings />
+                </IconButton>
+              </Tooltip>
+            )}
             <IconButton
               onClick={(e) => setAnchorEl(e.currentTarget)}
               sx={{ ml: 1 }}
@@ -987,6 +1272,31 @@ const ProjectDashboard = () => {
             >
               <IconEye />
             </IconButton>
+
+            <IconButton onClick={handleClick} size="small">
+              <IconDotsVertical width={20} />
+            </IconButton>
+            <Menu anchorEl={anchorEl2} open={openMenu} onClose={handleClose}>
+              <MenuItem onClick={handleCreate}>
+                <ListItemIcon>
+                  <IconPlus width={18} />
+                </ListItemIcon>
+                Add Project
+              </MenuItem>
+
+              <MenuItem
+                onClick={() => {
+                  handleClose();
+                  setArchiveListOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <IconNotes width={18} />
+                </ListItemIcon>
+                Archived project list
+              </MenuItem>
+            </Menu>
+
             <Popover
               open={Boolean(anchorEl)}
               anchorEl={anchorEl}
@@ -1084,9 +1394,15 @@ const ProjectDashboard = () => {
                             }
                             label={
                               col.columnDef.meta?.label ||
-                              (typeof col.columnDef.header === "string"
+                              (typeof col.columnDef.header === "string" &&
+                              col.columnDef.header.trim() !== ""
                                 ? col.columnDef.header
-                                : col.id)
+                                : col.id
+                                    .replace(/([A-Z])/g, " $1")
+                                    .replace(/^./, (str: string) =>
+                                      str.toUpperCase(),
+                                    )
+                                    .trim())
                             }
                             sx={{
                               m: 0,
@@ -1106,6 +1422,342 @@ const ProjectDashboard = () => {
             </Popover>
           </Box>
         </Stack>
+
+        <ArchiveProject
+          open={archiveListOpen}
+          companyId={Number(user?.company_id)}
+          onClose={() => setArchiveListOpen(false)}
+          onWorkUpdated={fetchProjects}
+        />
+
+        <Setting
+          settingOpen={settingOpen}
+          onClose={() => setSettingOpen(false)}
+        />
+
+        {drawerOpen && (
+          <CreateProject
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            formData={formData}
+            setFormData={setFormData}
+            handleSubmit={handleProjectSubmit}
+            isSaving={isSaving}
+          />
+        )}
+
+        {editDrawerOpen && (
+          <EditProject
+            open={editDrawerOpen}
+            onClose={() => setEditDrawerOpen(false)}
+            formData={formData}
+            setFormData={setFormData}
+            handleSubmit={handleEditSubmit}
+            isSaving={isSaving}
+            project={selectedProject}
+          />
+        )}
+
+        {/* Dialogs and Drawers */}
+        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+          <DialogTitle>Confirm Archive</DialogTitle>
+          <DialogContent>
+            <Typography color="textSecondary">
+              Are you sure you want to archive {selectedRowIds.size} project(s)?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setOpenDialog(false)}
+              variant="outlined"
+              color="primary"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  let allSuccess = true;
+                  for (const id of Array.from(selectedRowIds)) {
+                    const res = await api.post("project/archive", { id });
+                    if (
+                      !res.data.IsSuccess &&
+                      !res.data.isSuccess &&
+                      !res.data.success &&
+                      !(res.status >= 200 && res.status < 300)
+                    ) {
+                      allSuccess = false;
+                    }
+                  }
+                  if (allSuccess) {
+                    toast.success("Projects archived successfully.");
+                  } else {
+                    toast.error("Some projects failed to archive.");
+                  }
+                  fetchProjects();
+                  setSelectedRowIds(new Set());
+                } catch (error) {
+                  console.error(error);
+                  toast.error("Error archiving projects.");
+                }
+                setOpenDialog(false);
+              }}
+              variant="outlined"
+              color="error"
+            >
+              Archive
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Drawer
+          anchor="right"
+          open={productDrawer}
+          onClose={handleCloseProductDrawer}
+          PaperProps={{
+            sx: {
+              width: 550,
+              maxWidth: "100%",
+              "& .MuiDrawer-paper": {
+                width: 550,
+                padding: 2,
+                backgroundColor: "#f9f9f9",
+                display: "flex",
+                flexDirection: "column",
+              },
+            },
+          }}
+        >
+          <Box
+            display="flex"
+            alignContent="center"
+            alignItems="center"
+            flexWrap="wrap"
+            p={2}
+            pb={0}
+          >
+            <Box display="flex" alignContent="center" alignItems="center">
+              <IconButton onClick={handleCloseProductDrawer}>
+                <IconArrowLeft />
+              </IconButton>
+              <Typography variant="h6" fontWeight={700}>
+                Favorite products{" "}
+                {selectedProducts.length > 0
+                  ? `(${selectedProducts.length})`
+                  : ""}
+              </Typography>
+            </Box>
+            <IconButton
+              aria-label="close"
+              onClick={handleCloseProductDrawer}
+              size="small"
+              sx={{
+                position: "absolute",
+                right: 0,
+                top: 8,
+                color: (theme) => theme.palette.grey[900],
+                backgroundColor: "transparent",
+                zIndex: 10,
+                width: 50,
+                height: 50,
+              }}
+            >
+              <IconX size={18} />
+            </IconButton>
+          </Box>
+
+          <Grid display="flex" alignItems="center" mr={1}>
+            <TextField
+              id="search"
+              type="text"
+              size="small"
+              variant="outlined"
+              placeholder="Search..."
+              value={searchProduct}
+              fullWidth
+              sx={{ width: "90%", ml: 2 }}
+              onChange={(e) => setSearchProduct(e.target.value)}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconSearch size="16" />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
+            {products.length > 0 && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={
+                      filteredData.length > 0 &&
+                      filteredData.every((p) => selectedProducts.includes(p.id))
+                    }
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      setSelectAll(isChecked);
+                      if (isChecked) {
+                        const newSelected = [...selectedProducts];
+                        filteredData.forEach((p) => {
+                          if (!newSelected.includes(p.id))
+                            newSelected.push(p.id);
+                        });
+                        setSelectedProducts(newSelected);
+                      } else {
+                        const visibleIds = filteredData.map((p) => p.id);
+                        setSelectedProducts(
+                          selectedProducts.filter(
+                            (id) => !visibleIds.includes(id),
+                          ),
+                        );
+                      }
+                    }}
+                  />
+                }
+                label="Select All"
+                sx={{ width: "30%", m: 0 }}
+              />
+            )}
+          </Grid>
+
+          <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
+            <Grid container spacing={2} display="block" mt={1}>
+              {isFetchingFavorites ? (
+                <Box
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
+                  my={5}
+                >
+                  <CircularProgress />
+                </Box>
+              ) : filteredData.length > 0 ? (
+                <Box>
+                  {paginatedProduct.map((product) => (
+                    <Box
+                      key={product.id}
+                      mt={1}
+                      p={1}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      sx={{
+                        border: "1px solid #e7e3e3ff",
+                        borderRadius: "10px",
+                        background: "#fff",
+                      }}
+                    >
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <CustomCheckbox
+                          checked={selectedProducts.includes(product.id)}
+                          onChange={() => handleProductToggle(product.id)}
+                        />
+                        <Box
+                          sx={{
+                            border: "1px dashed #d1d5db",
+                            borderRadius: 2,
+                            p: 1,
+                            textAlign: "center",
+                          }}
+                        >
+                          <Image
+                            src={
+                              product.image_url ||
+                              "/images/products/product.svg"
+                            }
+                            alt="product"
+                            width={50}
+                            height={50}
+                            style={{ objectFit: "contain" }}
+                          />
+                        </Box>
+                        <Stack mt={2} spacing={1}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              minWidth: "150px",
+                              width: "100%",
+                              maxWidth: "500px",
+                              display: "-webkit-box",
+                              WebkitBoxOrient: "vertical",
+                              WebkitLineClamp: 3,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              lineHeight: 1.25,
+
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {product.short_name ?? product.name}{" "}
+                            {product.uuid && (
+                              <Chip
+                                label={product.uuid}
+                                size="small"
+                                sx={{ ml: 1 }}
+                              />
+                            )}
+                            <br />
+                            Supplier Code: {product.supplier_code}
+                          </Typography>
+                        </Stack>
+                      </Box>
+                    </Box>
+                  ))}
+                  {paginatedProduct.length < filteredData.length && (
+                    <Box display="flex" justifyContent="center" my={2}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => setProductPage((prev) => prev + 1)}
+                      >
+                        See More
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+              ) : (
+                <Typography mt={2} textAlign="center">
+                  No products found
+                </Typography>
+              )}
+            </Grid>
+          </Box>
+
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "start",
+              gap: 2,
+              m: 2,
+              pl: 2,
+            }}
+          >
+            <Button
+              color="primary"
+              onClick={handleSaveProducts}
+              variant="contained"
+              size="large"
+              disabled={isSaving}
+              sx={{ borderRadius: 3 }}
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+            <Button
+              color="inherit"
+              onClick={handleCloseProductDrawer}
+              variant="contained"
+              size="large"
+              sx={{
+                backgroundColor: "transparent",
+                borderRadius: 3,
+                color: "GrayText",
+              }}
+            >
+              Cancel
+            </Button>
+          </Box>
+        </Drawer>
 
         <Dialog
           open={filterOpen}
