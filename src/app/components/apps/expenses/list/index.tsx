@@ -113,6 +113,7 @@ const defaultFilters = {
 };
 
 const EXPENSE_PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
+const DEFAULT_EXPENSE_PAGE_SIZE = 500;
 const getDefaultExpenseSorting = (): SortingState => [
     {id: 'created_at', desc: true},
 ];
@@ -160,7 +161,7 @@ const normalizeStoredPagination = (
             : 0,
     pageSize: EXPENSE_PAGE_SIZE_OPTIONS.includes(Number(value?.pageSize))
         ? Number(value?.pageSize)
-        : 50,
+        : DEFAULT_EXPENSE_PAGE_SIZE,
 });
 
 const normalizeStoredSorting = (value?: SortingState): SortingState => {
@@ -1001,6 +1002,7 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
         data,
         columns,
         fetchData: fetchExpenses,
+        initialPagination: {pageIndex: 0, pageSize: DEFAULT_EXPENSE_PAGE_SIZE},
         debounceDependencies: [
             user?.company_id,
             preferencesHydrated,

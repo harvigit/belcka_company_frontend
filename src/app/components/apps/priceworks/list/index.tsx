@@ -128,6 +128,8 @@ const formatDuration = (duration: number | string | null | undefined) => {
     return /^\d+(\.\d+)?$/.test(value) ? `${value}m` : value;
 };
 
+const DEFAULT_PRICEWORK_PAGE_SIZE = 500;
+
 const BULK_BUTTON_SX = {
     px: 2.5,
     textTransform: 'none' as const,
@@ -1789,6 +1791,7 @@ const PriceworkList = ({
         data,
         columns,
         fetchData: fetchPriceworks,
+        initialPagination: {pageIndex: 0, pageSize: DEFAULT_PRICEWORK_PAGE_SIZE},
         debounceDependencies: [
             user?.company_id,
             sharedFiltersReady,
