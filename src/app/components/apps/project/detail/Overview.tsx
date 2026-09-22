@@ -1170,7 +1170,7 @@ const Overview = ({
             }
           >
             <GanttOverview
-              items={ganttItems.slice(0, OVERVIEW_PREVIEW_LIMIT)}
+              items={ganttItems.slice(0)}
             />
           </Widget>
         </Stack>
@@ -1245,7 +1245,7 @@ const Overview = ({
           </Widget>
 
           <Widget
-            title="ON SITE"
+            title="ON SITE BY ADDRESS"
             action={
               <Stack
                 direction="row"

@@ -1026,6 +1026,22 @@ const TablePagination = () => {
             ),
         }),
 
+        columnHelper.accessor((row) => row.date_of_birth, {
+            id: 'DOB',
+            header: () => (
+                <Typography variant="subtitle2" noWrap>
+                    {t('DOB')}
+                </Typography>
+            ),
+            cell: (info) => {
+                return (
+                    <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
+                        {info.getValue() ?? '-'}
+                    </Typography>
+                );
+            },
+        }),
+
         columnHelper.accessor((row) => row.email, {
             id: 'email',
             header: () => (
@@ -1089,22 +1105,6 @@ const TablePagination = () => {
                 return (
                     <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
                         {user.extension ?? '0'}
-                        {info.getValue() ?? '-'}
-                    </Typography>
-                );
-            },
-        }),
-
-        columnHelper.accessor((row) => row.date_of_birth, {
-            id: 'DOB',
-            header: () => (
-                <Typography variant="subtitle2" noWrap>
-                    {t('DOB')}
-                </Typography>
-            ),
-            cell: (info) => {
-                return (
-                    <Typography className="f-14" color="textPrimary" sx={{ px: 1.5}}>
                         {info.getValue() ?? '-'}
                     </Typography>
                 );
