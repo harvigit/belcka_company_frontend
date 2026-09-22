@@ -697,6 +697,9 @@ export default function MapGantt({
   const [userLocationsLoading, setUserLocationsLoading] = useState(false);
   const [totalUsers, setTotalUsers] = useState(0);
   const [usersOnMapVisible] = useState(true);
+  const [focusedUserId, setFocusedUserId] = useState<number | string | null>(
+    null,
+  );
   const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>(
     {},
   );
@@ -1015,6 +1018,23 @@ export default function MapGantt({
     () => userLocations.filter((u) => u.is_working ?? false).length,
     [userLocations],
   );
+
+  const focusStaffOnMap = (member: any) => {
+    if (!mainMapRef.current || !member.latitude || !member.longitude) return;
+    const mapped =
+      usersWithLocation.find((u) => String(u.id) === String(member.id)) ??
+      member;
+    setFocusedUserId(member.id);
+    handleCloseUsers();
+    setTimeout(() => {
+      if (!mainMapRef.current) return;
+      mainMapRef.current.panTo({
+        lat: Number(mapped.latitude),
+        lng: Number(mapped.longitude),
+      });
+      mainMapRef.current.setZoom(17);
+    }, 320);
+  };
 
   return (
     <Box p={{ xs: 1, sm: 2 }}>
@@ -1578,6 +1598,8 @@ export default function MapGantt({
               zones={visibleZones}
               isLoaded={isLoaded}
               userLocations={usersOnMapVisible ? usersWithLocation : []}
+              focusedUserId={focusedUserId}
+              onFocusedUserChange={setFocusedUserId}
               onMapLoad={(map) => {
                 mainMapRef.current = map;
               }}
@@ -1761,24 +1783,7 @@ export default function MapGantt({
                           key={member.id}
                           member={member}
                           isLast={idx === members.length - 1}
-                          onPinClick={() => {
-                            if (
-                              !mainMapRef.current ||
-                              !member.latitude ||
-                              !member.longitude
-                            )
-                              return;
-                            handleCloseUsers();
-                            setTimeout(() => {
-                              if (mainMapRef.current) {
-                                mainMapRef.current.panTo({
-                                  lat: Number(member.latitude),
-                                  lng: Number(member.longitude),
-                                });
-                                mainMapRef.current.setZoom(17);
-                              }
-                            }, 320);
-                          }}
+                          onPinClick={() => focusStaffOnMap(member)}
                         />
                       ))}
                     </Box>
@@ -1929,8 +1934,17 @@ const StaffMemberRow = ({
   );
 };
 
-const UserMarker = ({ user }: { user: any }) => {
+const UserMarker = ({
+  user,
+  isFocused,
+  onSelect,
+}: {
+  user: any;
+  isFocused?: boolean;
+  onSelect?: (id: number | string) => void;
+}) => {
   const [hovered, setHovered] = useState(false);
+  const showTooltip = hovered || Boolean(isFocused);
   const position = { lat: Number(user.latitude), lng: Number(user.longitude) };
   const initials =
     `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase();
@@ -1945,7 +1959,7 @@ const UserMarker = ({ user }: { user: any }) => {
       getPixelPositionOffset={() => ({ x: 0, y: 0 })}
     >
       <div style={{ position: "relative", width: 0, height: 0 }}>
-        {hovered && (
+        {showTooltip && (
           <Box
             sx={{
               position: "absolute",
@@ -2039,6 +2053,10 @@ const UserMarker = ({ user }: { user: any }) => {
         <Box
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect?.(user.id);
+          }}
           sx={{
             position: "absolute",
             width: 48,
@@ -2046,10 +2064,10 @@ const UserMarker = ({ user }: { user: any }) => {
             left: -24,
             top: -58,
             cursor: "pointer",
-            filter: hovered
+            filter: showTooltip
               ? "drop-shadow(0 6px 14px rgba(0,0,0,0.38))"
               : "drop-shadow(0 3px 6px rgba(0,0,0,0.26))",
-            transform: hovered ? "scale(1.12) translateY(-2px)" : "scale(1)",
+            transform: showTooltip ? "scale(1.12) translateY(-2px)" : "scale(1)",
             transition: "filter 0.15s ease, transform 0.15s ease",
           }}
         >
@@ -2130,14 +2148,19 @@ const AllZonesMap = ({
   zones,
   isLoaded,
   userLocations = [],
+  focusedUserId,
+  onFocusedUserChange,
   onMapLoad,
 }: {
   zones: any[];
   isLoaded: boolean;
   userLocations?: any[];
+  focusedUserId?: number | string | null;
+  onFocusedUserChange?: (id: number | string | null) => void;
   onMapLoad?: (map: google.maps.Map) => void;
 }) => {
   const mapRef = useRef<google.maps.Map | null>(null);
+  const ignoreNextMapClickRef = useRef(false);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -2175,6 +2198,13 @@ const AllZonesMap = ({
         zoom={12}
         center={LONDON_CENTER}
         onLoad={handleMapLoad}
+        onClick={() => {
+          if (ignoreNextMapClickRef.current) {
+            ignoreNextMapClickRef.current = false;
+            return;
+          }
+          onFocusedUserChange?.(null);
+        }}
       >
         {zones.map((zone) => {
           const color = zone.color || "#1976d2";
@@ -2348,7 +2378,15 @@ const AllZonesMap = ({
         })}
 
         {userLocations.map((u) => (
-          <UserMarker key={`user-${u.id}`} user={u} />
+          <UserMarker
+            key={`user-${u.id}`}
+            user={u}
+            isFocused={String(focusedUserId) === String(u.id)}
+            onSelect={(id) => {
+              ignoreNextMapClickRef.current = true;
+              onFocusedUserChange?.(id);
+            }}
+          />
         ))}
       </GoogleMap>
     </Paper>
