@@ -48,7 +48,6 @@ import {
   IconX,
   IconTrash,
   IconNote,
-  IconEdit,
   IconPointFilled,
   IconDotsVertical,
   IconNotes,
@@ -68,7 +67,6 @@ import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import toast from "react-hot-toast";
 import ArchiveAddress from "../../addresses/list/archive-address-list";
-import CaseEditDrawer from "./case-edit-drawer";
 import CaseAddDrawer from "./case-add-drawer";
 import CaseDetail from "@/app/components/apps/cases/detail";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
@@ -459,12 +457,8 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
   const [archiveList, setArchiveList] = useState(false);
   const [sorting, setSorting] = useState<any[]>([]);
 
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingCase, setEditingCase] = useState<any>(null);
-  const [editData, setEditData] = useState({ name: "", case_id: "", ref: "" });
   const [addCaseDrawerOpen, setAddCaseDrawerOpen] = useState(false);
   const [detailCaseId, setDetailCaseId] = useState<number | null>(null);
-  const [isViewOnly, setIsViewOnly] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -1010,31 +1004,6 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
                 }}
               >
                 <IconEye size={18} />
-              </IconButton>
-              <IconButton
-                color="primary"
-                onClick={async (e) => {
-                  e.stopPropagation();
-
-                  try {
-                    const res = await api.get(
-                      `address/address-detail?address_id=${item.id}`,
-                    );
-                    const fullAddress = res.data?.info;
-                    if (fullAddress) {
-                      setEditingCase(fullAddress);
-                    } else {
-                      setEditingCase(item);
-                    }
-                  } catch (err) {
-                    setEditingCase(item);
-                  }
-
-                  setIsViewOnly(false);
-                  setEditDialogOpen(true);
-                }}
-              >
-                <IconEdit size={18} />
               </IconButton>
             </Box>
           );
@@ -1745,17 +1714,6 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
         companyId={user?.company_id}
         cases={data}
         onSave={fetchCases}
-      />
-      {/* Edit Case Drawer */}
-      <CaseEditDrawer
-        open={editDialogOpen}
-        onClose={() => setEditDialogOpen(false)}
-        selectedCase={editingCase}
-        projects={projectList}
-        isViewOnly={isViewOnly}
-        onSave={() => {
-          fetchCases();
-        }}
       />
     </PermissionGuard>
   );

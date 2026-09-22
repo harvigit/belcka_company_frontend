@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -257,6 +257,8 @@ const CaseLocationMap = ({
   radius?: string | number | null;
   color?: string | null;
 }) => {
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const circleRef = useRef<google.maps.Circle | null>(null);
   const { isLoaded } = useJsApiLoader({
     ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
@@ -264,55 +266,87 @@ const CaseLocationMap = ({
 
   const lat = Number(latitude);
   const lng = Number(longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-
-  const center = { lat, lng };
+  const hasValidCenter = Number.isFinite(lat) && Number.isFinite(lng);
   const mapRadius = Number(radius) > 0 ? Number(radius) : 200;
   const zoneColor = color || "#FF0000";
 
+  const fitToCircle = () => {
+    const map = mapRef.current;
+    const circle = circleRef.current;
+    if (!map || !circle) return;
+    const bounds = circle.getBounds();
+    if (bounds) map.fitBounds(bounds, 48);
+  };
+
+  useEffect(() => {
+    if (!hasValidCenter || !isLoaded) return;
+    fitToCircle();
+  }, [hasValidCenter, isLoaded, lat, lng, mapRadius]);
+
+  if (!hasValidCenter) return null;
+
   if (!isLoaded) {
     return (
-      <Box display="flex" justifyContent="center" py={4}>
+      <Box display="flex" justifyContent="center" alignItems="center" height="100%" minHeight={360}>
         <CircularProgress size={24} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ width: "100%", height: "100%", minHeight: 260 }}>
+    <Box
+      sx={{
+        width: "100%",
+        height: "100%",
+        minHeight: { xs: 320, md: 420 },
+        borderRadius: 2,
+        overflow: "hidden",
+        border: "1px solid",
+        borderColor: "divider",
+      }}
+    >
       <GoogleMap
         zoom={15}
-        center={center}
+        center={{ lat, lng }}
+        onLoad={(map) => {
+          mapRef.current = map;
+          fitToCircle();
+        }}
         mapContainerStyle={{
           width: "100%",
           height: "100%",
-          minHeight: 260,
-          borderRadius: 8,
+          minHeight: 420,
         }}
         options={{
-          draggable: false,
-          scrollwheel: false,
-          disableDoubleClickZoom: true,
-          zoomControl: false,
+          gestureHandling: "greedy",
+          draggable: true,
+          scrollwheel: true,
+          disableDoubleClickZoom: false,
+          zoomControl: true,
+          mapTypeControl: true,
+          fullscreenControl: true,
           streetViewControl: false,
-          mapTypeControl: false,
-          fullscreenControl: false,
-          keyboardShortcuts: false,
+          keyboardShortcuts: true,
+          clickableIcons: false,
         }}
       >
-        <Marker position={center} draggable={false} />
+        <Marker position={{ lat, lng }} draggable={false} />
         <Circle
-          center={center}
+          center={{ lat, lng }}
           radius={mapRadius}
+          onLoad={(circle) => {
+            circleRef.current = circle;
+            fitToCircle();
+          }}
           options={{
             draggable: false,
             editable: false,
             clickable: false,
             fillColor: zoneColor,
-            fillOpacity: 0.3,
+            fillOpacity: 0.25,
             strokeColor: zoneColor,
-            strokeOpacity: 1,
-            strokeWeight: 1,
+            strokeOpacity: 0.9,
+            strokeWeight: 2,
           }}
         />
       </GoogleMap>
@@ -707,7 +741,7 @@ const CaseDetail: React.FC<Props> = ({
                 sx={{
                   display: "flex",
                   flexDirection: "column",
-                  minHeight: { xs: 280, md: "100%" },
+                  minHeight: { xs: 360, md: 480 },
                 }}
               >
                 <Typography
@@ -718,7 +752,7 @@ const CaseDetail: React.FC<Props> = ({
                 >
                   MAP
                 </Typography>
-                <Box sx={{ flex: 1, minHeight: 260 }}>
+                <Box sx={{ flex: 1, minHeight: { xs: 320, md: 420 } }}>
                   <CaseLocationMap
                     latitude={detail.latitude}
                     longitude={detail.longitude}
