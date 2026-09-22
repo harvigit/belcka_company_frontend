@@ -1205,18 +1205,7 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
 
     const handleTabChange = (tab: ExpenseTabKey) => {
         skipNextDependencyPageResetRef.current = false;
-        const nextFilters = projectId
-            ? {...defaultFilters, project_id: projectId}
-            : defaultFilters;
         setActiveTab(tab);
-        setSearch('');
-        setFilters(nextFilters);
-        setTempFilters(nextFilters);
-        setStartDate(null);
-        setEndDate(null);
-        if (projectId) {
-            sharedFilters?.clearSharedFilters();
-        }
         setIsSelectAll(false);
         setSelectedRowIds(new Set());
         setPagination((prev: any) => ({...prev, pageIndex: 0}));
