@@ -123,7 +123,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
 
     const fetchTimeClockResources = async (): Promise<void> => {
         try {
-            const response = await api.get("/time-clock/resources", {
+            const response = await api.get("/time-clock/get-resources", {
                 params: { companyId },
             });
             if (response.data.IsSuccess) {
