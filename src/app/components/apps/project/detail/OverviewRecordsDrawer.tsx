@@ -24,15 +24,19 @@ export type OverviewFullListKey = "labour" | "monthly" | "addresses" | "people";
 export type AddressRow = {
   address_id?: number;
   address: string;
-  trade_count: number;
+  trade?: string;
+  trade_count?: number;
   check_in: number;
 };
 
 export type PeopleRow = {
   user_id?: number;
   user: string;
-  trade_count: number;
-  check_in: number;
+  address_id?: number | null;
+  address?: string;
+  start_time?: string | null;
+  trade_count?: number;
+  check_in?: number;
 };
 
 export type LabourTeamRow = {
@@ -269,7 +273,7 @@ export const AddressActivityTable = ({
             <TableHead>
               <TableRow>
                 <TableCell>Address</TableCell>
-                <TableCell align="right">Trade</TableCell>
+                <TableCell>Trade</TableCell>
                 <TableCell align="right">Check in</TableCell>
               </TableRow>
             </TableHead>
@@ -285,7 +289,15 @@ export const AddressActivityTable = ({
                   >
                     {row.address}
                   </TableCell>
-                  <TableCell align="right">{row.trade_count}</TableCell>
+                  <TableCell
+                    sx={{
+                      maxWidth: { xs: 90, md: 160 },
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {row.trade || row.trade_count || "-"}
+                  </TableCell>
                   <TableCell align="right">{row.check_in}</TableCell>
                 </TableRow>
               ))}
@@ -333,24 +345,38 @@ export const PeopleActivityTable = ({
             <TableHead>
               <TableRow>
                 <TableCell>User</TableCell>
-                <TableCell align="right">Trade</TableCell>
-                <TableCell align="right">Check in</TableCell>
+                <TableCell>Address</TableCell>
+                <TableCell>Start time</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {visible.map((row, index) => (
-                <TableRow key={row.user_id ?? `${row.user}-${index}`}>
+                <TableRow
+                  key={
+                    row.user_id
+                      ? `${row.user_id}-${row.address_id ?? "work"}-${row.start_time ?? index}`
+                      : `${row.user}-${index}`
+                  }
+                >
                   <TableCell
                     sx={{
-                      maxWidth: { xs: 100, md: 200 },
+                      maxWidth: { xs: 100, md: 180 },
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                     }}
                   >
                     {row.user}
                   </TableCell>
-                  <TableCell align="right">{row.trade_count}</TableCell>
-                  <TableCell align="right">{row.check_in}</TableCell>
+                  <TableCell
+                    sx={{
+                      maxWidth: { xs: 100, md: 180 },
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {row.address || "-"}
+                  </TableCell>
+                  <TableCell>{row.start_time || "-"}</TableCell>
                 </TableRow>
               ))}
               {rows.length === 0 && (
