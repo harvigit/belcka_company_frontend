@@ -102,6 +102,8 @@ import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibili
 import PenaltyHistory from './penalty';
 import UserRequests from '../requests/list';
 import {useTranslation} from 'react-i18next';
+import ExpenseList from '@/app/components/apps/expenses/list';
+import PriceworkList from '@/app/components/apps/priceworks/list';
 
 const columnHelper = createColumnHelper<Index>();
 
@@ -336,6 +338,19 @@ const EMPTY_TIME_CLOCK_FILTERS: TimeClockFilterState = {
     projects: [],
 };
 
+const PENDING_STATUS_FILTER_OPTION: FilterOption = {
+    id: '0',
+    name: 'Pending',
+};
+
+const withPendingStatusFilterOption = (statuses: FilterOption[] = []) => {
+    const hasPendingStatus = statuses.some((status) => String(status.id) === '0');
+
+    return hasPendingStatus
+        ? statuses
+        : [PENDING_STATUS_FILTER_OPTION, ...statuses];
+};
+
 const TIME_CLOCK_TYPE_OPTIONS = [
     {value: 'day_work', label: 'Day Work'},
     {value: 'expense', label: 'Expense'},
@@ -358,6 +373,8 @@ type QueryParams = {
     type: string | null;
     recordId: string | null;
 };
+
+type RelatedListView = 'expense' | 'pricework' | null;
 
 const EMPTY_QUERY_PARAMS: QueryParams = {
     user_id: null,
@@ -548,6 +565,7 @@ const TimeClock = ({queryParams}: Props) => {
     const [fetchTimesheet, setFetchTimesheet] = useState<boolean>(false);
     const [openRecoverWorklogs, setOpenRecoverWorklogs] = useState(false);
     const [openPenaltyHistory, setOpenPenaltyHistory] = useState(false);
+    const [relatedListView, setRelatedListView] = useState<RelatedListView>(null);
 
     const [selectedConflictUserId, setSelectedConflictUserId] = useState<any>(null);
 
@@ -573,6 +591,7 @@ const TimeClock = ({queryParams}: Props) => {
         whiteSpace: 'nowrap',
         textTransform: 'none',
         fontWeight: 600,
+        flexShrink: 0,
     };
 
     useEffect(() => {
@@ -737,12 +756,12 @@ const TimeClock = ({queryParams}: Props) => {
 
         const fetchFilterOptions = async () => {
             try {
-                const response = await api.get('/time-clock/resources');
+                const response = await api.get('/time-clock/get-resources');
                 if (!response.data?.IsSuccess) return;
 
                 setFilterOptions({
                     teams: response.data.teams || [],
-                    statuses: response.data.statuses || [],
+                    statuses: withPendingStatusFilterOption(response.data.statuses || []),
                     users: response.data.users || [],
                     projects: response.data.projects || [],
                 });
@@ -2642,17 +2661,20 @@ const TimeClock = ({queryParams}: Props) => {
                     sx={{
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 1,
-                        p: 1,
+                        gap: {xs: 1.25, md: 1},
+                        p: {xs: 1.25, sm: 1.5},
+                        minWidth: 0,
                     }}
                 >
                     {/* Left controls */}
                     <Box
                         sx={{
                             display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            flexWrap: 'wrap',
+                            flexDirection: {xs: 'column', lg: 'row'},
+                            alignItems: {xs: 'stretch', lg: 'flex-start'},
+                            justifyContent: 'space-between',
+                            gap: {xs: 1.25, lg: 1},
+                            minWidth: 0,
                         }}
                     >
                         <Box sx={{
@@ -2660,16 +2682,35 @@ const TimeClock = ({queryParams}: Props) => {
                             alignItems: 'center',
                             gap: 1,
                             flexWrap: 'wrap',
-                            flex: 1,
-                            minWidth: 0
+                            flex: {xs: '0 1 auto', lg: '1 1 520px'},
+                            minWidth: 0,
+                            '& > *': {
+                                flexShrink: 0,
+                            },
+                            '& > .MuiTextField-root': {
+                                flex: {xs: '1 1 100%', sm: '1 1 220px', lg: '0 1 220px'},
+                                minWidth: {xs: '100%', sm: 180},
+                                maxWidth: {xs: '100%', sm: 260},
+                            },
                         }}>
                             {cycleReady && (
-                                <DateRangePickerBox
-                                    from={startDate}
-                                    to={endDate}
-                                    onChange={handleDateRangeChange}
-                                    payrollCycle={payrollCycle}
-                                />
+                                <Box
+                                    sx={{
+                                        flex: {xs: '1 1 100%', sm: '0 1 auto'},
+                                        minWidth: {xs: '100%', sm: 'auto'},
+                                        maxWidth: '100%',
+                                        '& .MuiButtonBase-root, & .MuiInputBase-root': {
+                                            maxWidth: '100%',
+                                        },
+                                    }}
+                                >
+                                    <DateRangePickerBox
+                                        from={startDate}
+                                        to={endDate}
+                                        onChange={handleDateRangeChange}
+                                        payrollCycle={payrollCycle}
+                                    />
+                                </Box>
                             )}
                             <TextField
                                 placeholder={t('Search...')}
@@ -2679,7 +2720,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     skipNextDependencyPageResetRef.current = false;
                                     setSearchTerm(e.target.value);
                                 }}
-                                sx={{width: 180}}
+                                sx={{width: {xs: '100%', sm: 220, lg: 180}}}
                                 InputProps={{
                                     endAdornment: (
                                         <InputAdornment position="end">
@@ -2752,9 +2793,42 @@ const TimeClock = ({queryParams}: Props) => {
                             >
                                 {t('Activity')}
                             </Button>
+
+                            <Button
+                                color="primary"
+                                variant="outlined"
+                                size="small"
+                                onClick={() => setRelatedListView('pricework')}
+                                sx={toolbarButtonSx}
+                            >
+                                {t('Pricework')}
+                            </Button>
+
+                            <Button
+                                color="primary"
+                                variant="outlined"
+                                size="small"
+                                onClick={() => setRelatedListView('expense')}
+                                sx={toolbarButtonSx}
+                            >
+                                {t('Expense')}
+                            </Button>
                         </Box>
 
-                        <Box sx={{display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0}}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: {xs: 'flex-start', lg: 'flex-end'},
+                                gap: 0.75,
+                                flexWrap: 'wrap',
+                                flex: {xs: '1 1 auto', lg: '0 1 auto'},
+                                minWidth: 0,
+                                '& .MuiIconButton-root': {
+                                    flexShrink: 0,
+                                },
+                            }}
+                        >
                             <Button
                                 color="primary"
                                 variant="outlined"
@@ -2765,6 +2839,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     textTransform: 'none',
                                     fontWeight: 600,
                                     whiteSpace: 'nowrap',
+                                    minWidth: {xs: 98, sm: 'auto'},
                                 }}
                             >
                                 <Badge
@@ -2782,7 +2857,10 @@ const TimeClock = ({queryParams}: Props) => {
                                         size="small"
                                         variant="outlined"
                                         color="primary"
-                                        sx={{textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap'}}
+                                        sx={{
+                                            ...toolbarButtonSx,
+                                            minWidth: {xs: 76, sm: 'auto'},
+                                        }}
                                         onClick={handleAddClick}
                                         endIcon={openAddleave ? <IconChevronUp size={18}/> :
                                             <IconChevronDown size={18}/>}
@@ -3743,6 +3821,49 @@ const TimeClock = ({queryParams}: Props) => {
                 open={openPenaltyHistory}
                 onClose={() => setOpenPenaltyHistory(false)}
             />
+
+            <Drawer
+                anchor="bottom"
+                open={Boolean(relatedListView)}
+                onClose={() => setRelatedListView(null)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        height: {xs: '92vh', md: '90vh'},
+                        boxShadow: 'none',
+                        borderTopLeftRadius: 12,
+                        borderTopRightRadius: 12,
+                        overflow: 'hidden',
+                    },
+                }}
+            >
+                <Box sx={{height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
+                    <Box
+                        sx={{
+                            px: {xs: 1.5, sm: 2},
+                            py: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            borderBottom: '1px solid #e0e0e0',
+                            flexShrink: 0,
+                        }}
+                    >
+                        <Typography sx={{fontSize: '1rem', fontWeight: 700}}>
+                            {relatedListView === 'expense' ? t('Expense') : t('Pricework')}
+                        </Typography>
+                        <Tooltip title={t('Close')}>
+                            <IconButton size="small" onClick={() => setRelatedListView(null)}>
+                                <IconX size={18}/>
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                    <Box sx={{flex: 1, minHeight: 0, overflow: 'hidden'}}>
+                        {relatedListView === 'expense' && <ExpenseList />}
+                        {relatedListView === 'pricework' && <PriceworkList />}
+                    </Box>
+                </Box>
+            </Drawer>
 
             {/* Conflicts */}
             <Drawer

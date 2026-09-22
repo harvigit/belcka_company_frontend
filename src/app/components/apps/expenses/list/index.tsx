@@ -112,7 +112,6 @@ const defaultFilters = {
     team_id: '' as string | number,
 };
 
-const EXPENSE_FILTERS_COOKIE_PREFIX = 'expense-list-filters';
 const EXPENSE_PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 const getDefaultExpenseSorting = (): SortingState => [
     {id: 'created_at', desc: true},
@@ -235,18 +234,13 @@ const mapApiRowToListItem = (row: ExpenseRow): ExpenseListItem => {
     };
 };
 
-const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
+const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
     const session = useSession();
     const user = session.data?.user as User & {
         company_id?: number | null;
         id?: string | number | null;
     };
     const sharedFilters = useProjectDetailFilters();
-    const expensePreferencesCookieKey = useMemo(() => {
-        if (!user?.company_id) return null;
-
-        return `${EXPENSE_FILTERS_COOKIE_PREFIX}_${user.id ?? 'user'}_${user.company_id}`;
-    }, [user?.id, user?.company_id]);
 
     const [data, setData] = useState<ExpenseRow[]>([]);
     const [loading, setLoading] = useState(false);
@@ -285,10 +279,10 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
     const [tabAmountCurrency, setTabAmountCurrency] = useState('£');
 
     const [startDate, setStartDate] = useState<Date | null>(
-        projectId ? null : subDays(new Date(), 6),
+        null,
     );
     const [endDate, setEndDate] = useState<Date | null>(
-        projectId ? null : new Date(),
+        null,
     );
 
     const [users, setUsers] = useState<any[]>([]);
@@ -329,10 +323,10 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
 
     useEffect(() => {
         if (!projectId) return;
-        if (expensePreferencesCookieKey && !preferencesHydrated) return;
+        if (!preferencesHydrated) return;
         setFilters((prev) => ({...prev, project_id: projectId}));
         setTempFilters((prev) => ({...prev, project_id: projectId}));
-    }, [projectId, preferencesHydrated, expensePreferencesCookieKey]);
+    }, [projectId, preferencesHydrated]);
     const [editingAmount, setEditingAmount] = useState<{ id: number | null }>({
         id: null,
     });
@@ -1024,60 +1018,13 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
     });
 
     useEffect(() => {
-        if (!expensePreferencesCookieKey) {
-            setPreferencesHydrated(false);
-            restoredPreferencesKeyRef.current = '';
-            return;
-        }
         // Wait for shared project filters so Overview/Expenses/Pricework stay in sync.
         if (projectId && sharedFilters && !sharedFilters.hydrated) {
             return;
         }
-        if (restoredPreferencesKeyRef.current === expensePreferencesCookieKey) {
-            return;
-        }
 
         try {
-            const stored = readListingTableState(expensePreferencesCookieKey);
-            if (stored) {
-                const parsed = JSON.parse(stored) as ExpenseStoredPreferences;
-                const nextFilters = {
-                    ...normalizeStoredFilters(parsed.filters),
-                    ...(projectId ? {project_id: projectId} : {}),
-                };
-                const nextPagination = normalizeStoredPagination(parsed.pagination);
-
-                if (projectId && sharedFilters) {
-                    nextFilters.team_id = sharedFilters.teamId || '';
-                    nextFilters.trade_id = sharedFilters.tradeId || '';
-                    setStartDate(sharedFilters.startDate);
-                    setEndDate(sharedFilters.endDate);
-                } else {
-                    setStartDate(
-                        'startDate' in parsed
-                            ? parseStoredDate(parsed.startDate)
-                            : subDays(new Date(), 6),
-                    );
-                    setEndDate(
-                        'endDate' in parsed
-                            ? parseStoredDate(parsed.endDate)
-                            : new Date(),
-                    );
-                }
-
-                setFilters(nextFilters);
-                setTempFilters(nextFilters);
-                setSearch(typeof parsed.search === 'string' ? parsed.search : '');
-                setActiveTab(
-                    isExpenseTabKey(parsed.activeTab) ? parsed.activeTab : 'all',
-                );
-                setSorting(normalizeStoredSorting(parsed.sorting));
-                skipNextDependencyPageResetRef.current = true;
-                setPagination({
-                    pageIndex: projectId ? 0 : nextPagination.pageIndex,
-                    pageSize: nextPagination.pageSize,
-                });
-            } else if (projectId && sharedFilters) {
+            if (projectId && sharedFilters) {
                 const nextFilters = {
                     ...defaultFilters,
                     project_id: projectId,
@@ -1090,14 +1037,10 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
                 setEndDate(sharedFilters.endDate);
             }
         } catch (error) {
-            console.error('Failed to load expense list preferences cookie:', error);
-            removeListingTableState(expensePreferencesCookieKey);
         } finally {
-            restoredPreferencesKeyRef.current = expensePreferencesCookieKey;
             setPreferencesHydrated(true);
         }
     }, [
-        expensePreferencesCookieKey,
         projectId,
         setPagination,
         sharedFilters?.hydrated,
@@ -1135,7 +1078,7 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
     ]);
 
     const saveExpensePreferencesCookie = useCallback(() => {
-        if (!expensePreferencesCookieKey || !preferencesHydrated) return;
+        if (!preferencesHydrated) return;
 
         const payload: ExpenseStoredPreferences = {
             filters,
@@ -1150,14 +1093,9 @@ const ExpenseList = ({projectId}: { projectId?: number } = {}) => {
             },
         };
 
-        writeListingTableState(
-            expensePreferencesCookieKey,
-            JSON.stringify(payload),
-        );
     }, [
         activeTab,
         endDate,
-        expensePreferencesCookieKey,
         filters,
         pagination.pageIndex,
         pagination.pageSize,

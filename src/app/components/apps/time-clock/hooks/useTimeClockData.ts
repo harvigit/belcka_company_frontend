@@ -123,7 +123,7 @@ export const useTimeClockData = (
 
     const fetchTimeClockResources = async (companyId: number): Promise<void> => {
         try {
-            const response = await api.get('/time-clock/resources', {params: {companyId}});
+            const response = await api.get('/time-clock/get-resources', {params: {companyId}});
             if (response.data.IsSuccess) {
                 setShifts(response.data.shifts || []);
                 setProjects(response.data.projects || []);
