@@ -11,7 +11,7 @@ export default withAuth(
 
         // Check if user is authenticated
         if (!token) {
-            return NextResponse.redirect(new URL("/auth/login", req.url));
+            return NextResponse.redirect(new URL("/auth", req.url));
         }
 
         return NextResponse.next();
