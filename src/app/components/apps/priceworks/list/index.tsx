@@ -1296,7 +1296,7 @@ const PriceworkList = ({
                 cell: (info) => (
                     <Typography className="f-14">{info.getValue() || '—'}</Typography>
                 ),
-                enableSorting: true,
+                enableSorting: false,
             }),
             columnHelper.accessor('category_name', {
                 id: 'category_name',
