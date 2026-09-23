@@ -557,11 +557,17 @@ const EditProject: React.FC<EditProjectProps> = ({
       return;
     }
 
+    const returnTo =
+      typeof window !== "undefined"
+        ? `${window.location.pathname}${window.location.search}`
+        : "/apps/project/list";
+
     sessionStorage.setItem(
       "shift_management_project",
       JSON.stringify({
         project_id: Number(projectId),
         project_name: formData.name || project?.name || "",
+        return_to: returnTo,
       }),
     );
 
