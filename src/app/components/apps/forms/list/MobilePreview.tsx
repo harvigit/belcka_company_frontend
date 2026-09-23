@@ -67,6 +67,7 @@ import {
 } from '../common/mobilePreviewConstants';
 
 import {FormField} from '../types';
+import {sanitizeDescriptionHtml} from '../common/sanitizeDescriptionHtml';
 
 const FieldShell = ({field, error, children}: {
     field: FormField;
@@ -1135,7 +1136,7 @@ const PreviewField = ({
                         },
                         '& a': {color: '#1976d2', textDecoration: 'underline'},
                     }}
-                    dangerouslySetInnerHTML={{__html: field.label}}
+                    dangerouslySetInnerHTML={{__html: sanitizeDescriptionHtml(field.label)}}
                 />
             );
 

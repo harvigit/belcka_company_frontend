@@ -10,6 +10,7 @@ import { FormField } from '../types';
 import { labelStyle, subLabelStyle } from '../common/mobilePreviewConstants';
 import { DetailsForm, FormEntry, SubmissionListItem } from './formDetailsTypes';
 import { getFieldValue, groupChildFields } from './formDetailsHelpers';
+import { sanitizeDescriptionHtml } from '../common/sanitizeDescriptionHtml';
 
 const descriptionHtmlSx = {
     width: '100%',
@@ -979,7 +980,7 @@ const PdfAnswer = ({value, field}: { value: any; field?: FormField }) => {
                     '& ul, & ol': {pl: 2.5, my: 0.5},
                     '& img': {maxWidth: '100%', height: 'auto', display: 'block', my: 1},
                 }}
-                dangerouslySetInnerHTML={{__html: field.label || field.description || ''}}
+                dangerouslySetInnerHTML={{__html: sanitizeDescriptionHtml(field.label || field.description || '')}}
             />
         );
     }
@@ -1392,7 +1393,7 @@ const ReadonlyField = ({field, entry}: { field: FormField; entry: FormEntry }) =
         return (
             <Box
                 sx={descriptionHtmlSx}
-                dangerouslySetInnerHTML={{__html: field.label || field.description || ''}}
+                dangerouslySetInnerHTML={{__html: sanitizeDescriptionHtml(field.label || field.description || '')}}
             />
         );
     }
