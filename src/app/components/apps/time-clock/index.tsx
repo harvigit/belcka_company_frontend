@@ -2846,27 +2846,6 @@ const TimeClock = ({queryParams}: Props) => {
                                 },
                             }}
                         >
-                            <Button
-                                color="primary"
-                                variant="outlined"
-                                size="small"
-                                onClick={() => setRequestList(true)}
-                                sx={{
-                                    ...toolbarButtonSx,
-                                    textTransform: 'none',
-                                    fontWeight: 600,
-                                    whiteSpace: 'nowrap',
-                                    minWidth: {xs: 98, sm: 'auto'},
-                                }}
-                            >
-                                <Badge
-                                    badgeContent={requestCount > 0 ? requestCount : null}
-                                    color="error"
-                                    overlap="rectangular"
-                                >
-                                    {t('Requests')}
-                                </Badge>
-                            </Button>
 
                             {!isReadOnlyUser && (
                                 <>
@@ -2940,6 +2919,16 @@ const TimeClock = ({queryParams}: Props) => {
                                 </Button>
                             )}
 
+                            <Badge
+                                badgeContent={requestCount > 0 ? requestCount : null}
+                                color="error"
+                                overlap="circular"
+                            >
+                                <IconButton onClick={() => setRequestList(true)} color="primary" size="small">
+                                    <IconNotes size={20} />
+                                </IconButton>
+                            </Badge>
+                            
                             <Tooltip title={t('Column visibility')}>
                                 <IconButton onClick={(e) => setAnchorEl2(e.currentTarget)} color="primary" size="small">
                                     <IconEye size={20}/>
