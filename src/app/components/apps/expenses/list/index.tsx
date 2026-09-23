@@ -1,7 +1,6 @@
 'use client';
 
 import React, {
-    useCallback,
     useEffect,
     useMemo,
     useRef,
@@ -58,11 +57,7 @@ import {
 } from '@tanstack/react-table';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
-import {
-    readListingTableState,
-    removeListingTableState,
-    writeListingTableState,
-} from '@/utils/listingTableStateStorage';
+import {removeListingTableState} from '@/utils/listingTableStateStorage';
 import api from '@/utils/axios';
 import {tableFilterOptions} from '@/utils/uniqueFilterOptions';
 import {useServerTable} from '@/hooks/useServerTable';
@@ -114,70 +109,10 @@ const defaultFilters = {
     team_id: '' as string | number,
 };
 
-const EXPENSE_PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 const DEFAULT_EXPENSE_PAGE_SIZE = 500;
 const getDefaultExpenseSorting = (): SortingState => [
     {id: 'created_at', desc: true},
 ];
-
-type ExpenseStoredPreferences = {
-    filters?: Partial<typeof defaultFilters>;
-    search?: string;
-    activeTab?: ExpenseTabKey;
-    startDate?: string | null;
-    endDate?: string | null;
-    sorting?: SortingState;
-    pagination?: {
-        pageIndex?: number;
-        pageSize?: number;
-    };
-};
-
-const isExpenseTabKey = (value: unknown): value is ExpenseTabKey =>
-    ['all', 'pending', 'approved', 'sent', 'rejected'].includes(String(value));
-
-const parseStoredDate = (value?: string | null) => {
-    if (!value) return null;
-
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-};
-
-const normalizeStoredFilters = (
-    value?: Partial<typeof defaultFilters>,
-): typeof defaultFilters => ({
-    user_id: value?.user_id ?? '',
-    project_id: value?.project_id ?? '',
-    address_id: value?.address_id ?? '',
-    category_id: value?.category_id ?? '',
-    trade_id: value?.trade_id ?? '',
-    team_id: value?.team_id ?? '',
-});
-
-const normalizeStoredPagination = (
-    value?: ExpenseStoredPreferences['pagination'],
-) => ({
-    pageIndex:
-        Number.isInteger(value?.pageIndex) && Number(value?.pageIndex) >= 0
-            ? Number(value?.pageIndex)
-            : 0,
-    pageSize: EXPENSE_PAGE_SIZE_OPTIONS.includes(Number(value?.pageSize))
-        ? Number(value?.pageSize)
-        : DEFAULT_EXPENSE_PAGE_SIZE,
-});
-
-const normalizeStoredSorting = (value?: SortingState): SortingState => {
-    if (!Array.isArray(value) || value.length === 0) {
-        return getDefaultExpenseSorting();
-    }
-
-    const first = value[0];
-    if (first?.id !== 'created_at' || first.desc !== true) {
-        return getDefaultExpenseSorting();
-    }
-
-    return getDefaultExpenseSorting();
-};
 
 const BULK_BUTTON_SX = {
     px: 2.5,
@@ -326,9 +261,8 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
     const [rejectExpenseIds, setRejectExpenseIds] = useState<number[]>([]);
     const [rejectNote, setRejectNote] = useState('');
     const [isRejecting, setIsRejecting] = useState(false);
-    const [preferencesHydrated, setPreferencesHydrated] = useState(false);
+    const [preferencesHydrated, setPreferencesHydrated] = useState(!projectId);
     const loadedFilterCompanyIdRef = useRef<number | null>(null);
-    const restoredPreferencesKeyRef = useRef('');
     const skipNextDependencyPageResetRef = useRef(false);
 
     useEffect(() => {
@@ -1069,58 +1003,18 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
             return;
         }
 
-        if (!user?.company_id) return;
-
-        if (!expensePreferencesKey) {
-            setPreferencesHydrated(true);
-            return;
-        }
-
-        if (restoredPreferencesKeyRef.current === expensePreferencesKey) {
-            setPreferencesHydrated(true);
-            return;
-        }
-
-        try {
-            const stored = readListingTableState(expensePreferencesKey);
-            if (stored) {
-                const parsed = JSON.parse(stored) as ExpenseStoredPreferences;
-                skipNextDependencyPageResetRef.current = true;
-                const nextFilters = normalizeStoredFilters(parsed.filters);
-                setFilters(nextFilters);
-                setTempFilters(nextFilters);
-                if (typeof parsed.search === 'string') {
-                    setSearch(parsed.search);
-                }
-                if (isExpenseTabKey(parsed.activeTab)) {
-                    setActiveTab(parsed.activeTab);
-                }
-                const from = parseStoredDate(parsed.startDate);
-                const to = parseStoredDate(parsed.endDate);
-                if (from && to) {
-                    setStartDate(from);
-                    setEndDate(to);
-                } else {
-                    setStartDate(null);
-                    setEndDate(null);
-                }
-                setPagination(normalizeStoredPagination(parsed.pagination));
-                setSorting(normalizeStoredSorting(parsed.sorting));
-            }
-            restoredPreferencesKeyRef.current = expensePreferencesKey;
-        } catch (error) {
-            console.error('Failed to load expense list preferences', error);
-            removeListingTableState(expensePreferencesKey);
-        } finally {
-            setPreferencesHydrated(true);
-        }
+        setPreferencesHydrated(true);
     }, [
         projectId,
-        expensePreferencesKey,
-        user?.company_id,
-        setPagination,
         sharedFilters?.hydrated,
     ]);
+
+    useEffect(() => {
+        if (projectId || !expensePreferencesKey) return;
+
+        removeListingTableState(expensePreferencesKey);
+        return () => removeListingTableState(expensePreferencesKey);
+    }, [projectId, expensePreferencesKey]);
 
     // Keep project Expenses in sync when shared Overview/Pricework filters change.
     useEffect(() => {
@@ -1152,42 +1046,6 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
         sharedFilters?.teamId,
         sharedFilters?.tradeId,
     ]);
-
-    const saveExpensePreferencesCookie = useCallback(() => {
-        if (!preferencesHydrated || projectId || !expensePreferencesKey) return;
-
-        const hasCompleteRange = Boolean(startDate && endDate);
-        const payload: ExpenseStoredPreferences = {
-            filters,
-            search,
-            activeTab,
-            startDate: hasCompleteRange && startDate ? startDate.toISOString() : null,
-            endDate: hasCompleteRange && endDate ? endDate.toISOString() : null,
-            sorting,
-            pagination: {
-                pageIndex: pagination.pageIndex,
-                pageSize: pagination.pageSize,
-            },
-        };
-
-        writeListingTableState(expensePreferencesKey, JSON.stringify(payload));
-    }, [
-        activeTab,
-        endDate,
-        expensePreferencesKey,
-        filters,
-        pagination.pageIndex,
-        pagination.pageSize,
-        preferencesHydrated,
-        projectId,
-        search,
-        sorting,
-        startDate,
-    ]);
-
-    useEffect(() => {
-        saveExpensePreferencesCookie();
-    }, [saveExpensePreferencesCookie]);
 
     const listItems = useMemo(() => {
         return data.map(mapApiRowToListItem);
@@ -1555,7 +1413,7 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
             const res = await api.post('expense/send-to-bookkeeper', {
                 ids,
                 send_date: sendDate,
-            });
+            }, {skipToast: true} as any);
             toast.success(
                 res.data?.message || 'Expense sent to bookkeeper successfully',
             );

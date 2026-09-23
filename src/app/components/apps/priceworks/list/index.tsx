@@ -52,11 +52,7 @@ import {
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
-import {
-    readListingTableState,
-    removeListingTableState,
-    writeListingTableState,
-} from '@/utils/listingTableStateStorage';
+import {removeListingTableState} from '@/utils/listingTableStateStorage';
 import {tableFilterOptions} from '@/utils/uniqueFilterOptions';
 import {useServerTable} from '@/hooks/useServerTable';
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
@@ -137,17 +133,6 @@ const formatDuration = (duration: number | string | null | undefined) => {
 
 const DEFAULT_PRICEWORK_PAGE_SIZE = 500;
 
-type PriceworkStoredPreferences = {
-    startDate?: string | null;
-    endDate?: string | null;
-};
-
-const parseStoredDate = (value?: string | null) => {
-    if (!value) return null;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-};
-
 const BULK_BUTTON_SX = {
     px: 2.5,
     textTransform: 'none' as const,
@@ -207,10 +192,6 @@ const PriceworkList = ({
                 : '',
         [user?.id, user?.company_id],
     );
-    const [preferencesHydrated, setPreferencesHydrated] = useState(
-        Boolean(projectId),
-    );
-
     const [data, setData] = useState<PriceworkRow[]>([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
@@ -235,7 +216,6 @@ const PriceworkList = ({
     const [filterOpen, setFilterOpen] = useState(false);
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
-    const restoredPreferencesKeyRef = useRef('');
 
     const [sharedFiltersReady, setSharedFiltersReady] = useState(!projectId);
 
@@ -264,7 +244,6 @@ const PriceworkList = ({
         setStartDate(sharedFilters.startDate);
         setEndDate(sharedFilters.endDate);
         setSharedFiltersReady(true);
-        setPreferencesHydrated(true);
     }, [
         projectId,
         sharedFilters?.hydrated,
@@ -275,64 +254,11 @@ const PriceworkList = ({
     ]);
 
     useEffect(() => {
-        if (projectId) return;
-        if (!user?.company_id) return;
+        if (projectId || !priceworkPreferencesKey) return;
 
-        if (!priceworkPreferencesKey) {
-            setPreferencesHydrated(true);
-            return;
-        }
-
-        if (restoredPreferencesKeyRef.current === priceworkPreferencesKey) {
-            setPreferencesHydrated(true);
-            return;
-        }
-
-        try {
-            const stored = readListingTableState(priceworkPreferencesKey);
-            if (stored) {
-                const parsed = JSON.parse(stored) as PriceworkStoredPreferences;
-                const from = parseStoredDate(parsed.startDate);
-                const to = parseStoredDate(parsed.endDate);
-                if (from && to) {
-                    setStartDate(from);
-                    setEndDate(to);
-                } else {
-                    setStartDate(null);
-                    setEndDate(null);
-                }
-            }
-            restoredPreferencesKeyRef.current = priceworkPreferencesKey;
-        } catch (error) {
-            console.error('Failed to load pricework list preferences', error);
-            removeListingTableState(priceworkPreferencesKey);
-        } finally {
-            setPreferencesHydrated(true);
-        }
-    }, [projectId, priceworkPreferencesKey, user?.company_id]);
-
-    useEffect(() => {
-        if (projectId || !priceworkPreferencesKey || !preferencesHydrated) return;
-
-        const hasCompleteRange = Boolean(startDate && endDate);
-        writeListingTableState(
-            priceworkPreferencesKey,
-            JSON.stringify({
-                startDate:
-                    hasCompleteRange && startDate
-                        ? startDate.toISOString()
-                        : null,
-                endDate:
-                    hasCompleteRange && endDate ? endDate.toISOString() : null,
-            }),
-        );
-    }, [
-        projectId,
-        priceworkPreferencesKey,
-        preferencesHydrated,
-        startDate,
-        endDate,
-    ]);
+        removeListingTableState(priceworkPreferencesKey);
+        return () => removeListingTableState(priceworkPreferencesKey);
+    }, [projectId, priceworkPreferencesKey]);
 
     const [sorting, setSorting] = useState<SortingState>([
         {id: 'pricework_date', desc: true},
@@ -1020,7 +946,7 @@ const PriceworkList = ({
                 user_checklog_ids: userChecklogIds,
                 sources: getActionSources(),
                 send_date: sendDate,
-            });
+            }, {skipToast: true} as any);
             toast.success(
                 res.data?.message || 'Pricework sent to bookkeeper successfully',
             );
@@ -1743,7 +1669,6 @@ const PriceworkList = ({
         if (!user?.company_id) return;
         // Wait for shared project filters so we don't fetch with the wrong date range.
         if (projectId && !sharedFiltersReady) return;
-        if (!projectId && !preferencesHydrated) return;
         setLoading(true);
         try {
             let url = `pricework/list-web?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -1896,7 +1821,6 @@ const PriceworkList = ({
         debounceDependencies: [
             user?.company_id,
             sharedFiltersReady,
-            preferencesHydrated,
             search,
             startDate ? format(startDate, 'yyyy-MM-dd') : '',
             endDate ? format(endDate, 'yyyy-MM-dd') : '',

@@ -11,6 +11,9 @@ import AuthProvider from "./context/AuthContext";
 import { Toaster } from "react-hot-toast";
 import Providers from "./providers";
 import AutoTranslate from "@/app/components/common/AutoTranslate";
+import { installToastErrorDedupe } from "@/utils/dedupeToastErrors";
+
+installToastErrorDedupe();
 
 const MyApp = ({ children }: { children: React.ReactNode }) => {
   const theme = ThemeSettings();
