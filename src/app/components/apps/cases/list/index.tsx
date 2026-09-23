@@ -40,6 +40,9 @@ import {
   Menu,
   ListItemIcon,
   Tooltip,
+  Modal,
+  LinearProgress,
+  CircularProgress,
 } from "@mui/material";
 import {
   IconSearch,
@@ -52,7 +55,12 @@ import {
   IconDotsVertical,
   IconNotes,
   IconPlus,
+  IconFileExport,
+  IconFileImport,
 } from "@tabler/icons-react";
+import { FileDownload } from "@mui/icons-material";
+import { useDropzone } from "react-dropzone";
+import Link from "next/link";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import dayjs from "dayjs";
 import { useSession } from "next-auth/react";
@@ -462,6 +470,12 @@ const CasesList = ({
   const [openDialog, setOpenDialog] = useState(false);
   const [archiveList, setArchiveList] = useState(false);
   const [sorting, setSorting] = useState<any[]>([]);
+  const [openModel, setOpenModel] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [isImport, setIsImport] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const [addCaseDrawerOpen, setAddCaseDrawerOpen] = useState(false);
   const [detailCaseId, setDetailCaseId] = useState<number | null>(null);
@@ -684,6 +698,124 @@ const CasesList = ({
     },
     [],
   );
+
+  const handleModelOpen = () => {
+    setPreview(null);
+    setFile(null);
+    setUploadProgress(0);
+    setIsProcessing(false);
+    setOpenModel(true);
+  };
+
+  const handleModelClose = () => {
+    setOpenModel(false);
+    setPreview(null);
+    setFile(null);
+    setUploadProgress(0);
+    setIsProcessing(false);
+  };
+
+  const handleFileChange = (acceptedFiles: File[]) => {
+    const selectedFile = acceptedFiles[0];
+    if (!selectedFile) return;
+    setFile(selectedFile);
+    setPreview(selectedFile.name);
+  };
+
+  const { getRootProps: getExcelRootProps, getInputProps: getExcelInputProps } =
+    useDropzone({
+      accept: {
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+          ".xlsx",
+        ],
+        "application/vnd.ms-excel": [".xls"],
+      },
+      onDrop: handleFileChange,
+    });
+
+  const downloadSampleFile = () => {
+    const link = document.createElement("a");
+    link.href = "/files/cases_import.xlsx";
+    link.download = "sample-file.xlsx";
+    link.click();
+  };
+
+  const exportCases = async () => {
+    try {
+      const selectedIds = Array.from(selectedRowIds);
+      const payload: Record<string, any> = {
+        company_id: user.company_id,
+        ids: selectedIds.join(","),
+      };
+      if (projectId) payload.project_id = projectId;
+
+      const res = await api.post("address/export-cases", payload, {
+        responseType: "blob",
+      });
+
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "cases_export.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      setSelectedRowIds(new Set());
+    } catch (err) {
+      console.error("Failed to export cases", err);
+      toast.error("Failed to export cases");
+    }
+  };
+
+  const importCases = async () => {
+    if (!file) {
+      toast.error("Please select a file");
+      return;
+    }
+
+    setIsImport(true);
+    setUploadProgress(0);
+    setIsProcessing(false);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (projectId) formData.append("project_id", String(projectId));
+
+      const res = await api.post("address/import-cases", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent: any) => {
+          if (progressEvent.total) {
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total,
+            );
+            setUploadProgress(percent);
+            if (percent === 100) setIsProcessing(true);
+          }
+        },
+      });
+
+      toast.success(res.data.message);
+      fetchCases();
+      setTimeout(() => {
+        setOpenModel(false);
+        setFile(null);
+        setPreview(null);
+        setUploadProgress(0);
+        setIsProcessing(false);
+      }, 1000);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Import failed");
+    } finally {
+      setIsImport(false);
+    }
+  };
 
   const columns = useMemo(
     () => [
@@ -1211,6 +1343,21 @@ const CasesList = ({
                   <IconX size={18} />
                 </Button>
               )}
+              <Button
+                variant="contained"
+                onClick={exportCases}
+                sx={{ mt: { xs: 1, sm: 0 }, ml: 1 }}
+              >
+                <IconFileExport width={18} /> Export
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<IconFileImport width={18} />}
+                onClick={handleModelOpen}
+                sx={{ mt: { xs: 1, sm: 0 }, ml: 1 }}
+              >
+                Import
+              </Button>
             </Box>
           </Grid>
 
@@ -1317,6 +1464,133 @@ const CasesList = ({
                 </MenuItem>
               </Menu>
             </Box>
+            <Modal
+              open={openModel}
+              onClose={handleModelClose}
+              disableEscapeKeyDown
+            >
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  bgcolor: "background.paper",
+                  p: 3,
+                  borderRadius: 2,
+                  boxShadow: 24,
+                  width: 400,
+                }}
+              >
+                <DialogTitle sx={{ p: 0 }}>
+                  <Typography color="GrayText" fontWeight={700}>
+                    Upload Your File
+                  </Typography>
+                  <IconButton
+                    onClick={handleModelClose}
+                    sx={{
+                      position: "absolute",
+                      right: 8,
+                      top: 10,
+                      backgroundColor: "transparent",
+                    }}
+                  >
+                    <IconX size={40} />
+                  </IconButton>
+                </DialogTitle>
+                <Box
+                  {...getExcelRootProps()}
+                  sx={{
+                    width: 350,
+                    height: 100,
+                    mt: 2,
+                    border: "2px dashed",
+                    borderColor: "primary.main",
+                    borderRadius: 1,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                    overflow: "hidden",
+                    "&:hover": {
+                      backgroundColor: "primary.light",
+                    },
+                  }}
+                >
+                  <input {...getExcelInputProps()} accept=".xls,.xlsx" />
+                  {preview ? (
+                    preview
+                  ) : (
+                    <Typography fontSize="12px" color="primary.main">
+                      Click or Drag File
+                    </Typography>
+                  )}
+                </Box>
+                <Typography fontSize="12px" color="text.secondary">
+                  Upload Excel Files
+                </Typography>
+                {isImport && (
+                  <Box sx={{ mt: 2 }}>
+                    {!isProcessing ? (
+                      <>
+                        <Typography variant="body2" mb={1}>
+                          Uploading... {uploadProgress}%
+                        </Typography>
+                        <LinearProgress
+                          variant="determinate"
+                          value={uploadProgress}
+                          sx={{ height: 8, borderRadius: 5 }}
+                        />
+                      </>
+                    ) : (
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <CircularProgress size={18} />
+                        <Typography variant="body2">
+                          Processing file...
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+                <Box sx={{ mt: 2, display: "flex", justifyContent: "end" }}>
+                  <Link
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      downloadSampleFile();
+                    }}
+                    style={{
+                      width: "100%",
+                      color: "#1e4db7",
+                      textTransform: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyItems: "center",
+                    }}
+                  >
+                    <FileDownload />
+                    Download Sample File
+                  </Link>
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                    <Button
+                      variant="contained"
+                      disabled={isImport}
+                      onClick={importCases}
+                    >
+                      {isImport ? "Importing..." : "Save"}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={handleModelClose}
+                      color="error"
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
+                </Box>
+              </Box>
+            </Modal>
             {/* Filter Dialog */}
             <Dialog
               open={open}

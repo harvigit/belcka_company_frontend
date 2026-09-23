@@ -491,6 +491,7 @@ const TimeClock = ({queryParams}: Props) => {
     const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
     const hasDataChangedRef = useRef(false);
     const settingsSavedRef = useRef(false);
+    const settingsReturnToRef = useRef<string | null>(null);
     const conflictsMutatedRef = useRef(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -1088,13 +1089,24 @@ const TimeClock = ({queryParams}: Props) => {
         setSettingsInitialMenu(null);
         setSettingsInitialProjectId(null);
         settingsSavedRef.current = false;
+        settingsReturnToRef.current = null;
         setSettingOpen(true);
     };
 
     const handleSettingClose = async () => {
         setSettingOpen(false);
+        const returnTo = settingsReturnToRef.current;
+        settingsReturnToRef.current = null;
+        setSettingsInitialMenu(null);
+        setSettingsInitialProjectId(null);
         const didSave = settingsSavedRef.current;
         settingsSavedRef.current = false;
+
+        if (returnTo) {
+            router.push(returnTo);
+            return;
+        }
+
         if (!didSave) return;
 
         try {
@@ -1129,6 +1141,11 @@ const TimeClock = ({queryParams}: Props) => {
             const projectId = Number(parsed?.project_id);
 
             if (projectId) {
+                const returnTo =
+                    typeof parsed?.return_to === 'string' && parsed.return_to
+                        ? parsed.return_to
+                        : null;
+                settingsReturnToRef.current = returnTo;
                 setSettingsInitialMenu('Shift Management');
                 setSettingsInitialProjectId(projectId);
                 setSettingOpen(true);

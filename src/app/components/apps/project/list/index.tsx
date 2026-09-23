@@ -1590,7 +1590,7 @@ const ProjectDashboard = () => {
             {products.length > 0 && (
               <FormControlLabel
                 control={
-                  <Checkbox
+                  <CustomCheckbox
                     checked={
                       filteredData.length > 0 &&
                       filteredData.every((p) => selectedProducts.includes(p.id))
