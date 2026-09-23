@@ -350,9 +350,9 @@ const Company = () => {
     setLoading(true);
     if (unreedFeed) {
       try {
-        const payload = { feed_ids: unreedFeed };
+        const payload = { user_id: user.id, company_id: user.company_id };
         const res: AxiosResponse<any> = await api.post(
-          "feed/mark-as-read",
+          "feed/read-all",
           payload,
         );
         if (res.data) {
@@ -512,7 +512,14 @@ const Company = () => {
     return () => {
       unsubscribe();
     };
-  }, [user?.id, fetchCounts, fetchFeeds, fetchList, openDrawer, openannouncementDrawer]);
+  }, [
+    user?.id,
+    fetchCounts,
+    fetchFeeds,
+    fetchList,
+    openDrawer,
+    openannouncementDrawer,
+  ]);
 
   return (
     <Box display={"flex"} alignItems={"center"} gap={1}>
@@ -660,7 +667,9 @@ const Company = () => {
                       <MenuItem value="all">{t("All")}</MenuItem>
                       <MenuItem value="Timesheet">{t("Timesheet")}</MenuItem>
                       <MenuItem value="Shift">{t("Worklog")}</MenuItem>
-                      <MenuItem value="Billing Info">{t("Billing Info")}</MenuItem>
+                      <MenuItem value="Billing Info">
+                        {t("Billing Info")}
+                      </MenuItem>
                       <MenuItem value="User">{t("User")}</MenuItem>
                       <MenuItem value="Comapny">{t("Company")}</MenuItem>
                       <MenuItem value="Project">{t("Project")}</MenuItem>
@@ -950,7 +959,8 @@ const Company = () => {
                                 // fontWeight={400}
                                 className="multi-ellipsis"
                               >
-                                <b>{item.user_name}</b>: {translateFeedMessage(item.message)}
+                                <b>{item.user_name}</b>:{" "}
+                                {translateFeedMessage(item.message)}
                               </Typography>
                               <Box
                                 display={"flex"}
@@ -966,7 +976,11 @@ const Company = () => {
                                   gap={0.5}
                                 >
                                   {item?.note ? t("Note:") : ""}
-                                  <Typography className="f-14" color="textSecondary" fontWeight={500}>
+                                  <Typography
+                                    className="f-14"
+                                    color="textSecondary"
+                                    fontWeight={500}
+                                  >
                                     {item?.note}
                                   </Typography>
                                 </Typography>
