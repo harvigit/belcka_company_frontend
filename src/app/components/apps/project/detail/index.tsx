@@ -166,7 +166,7 @@ const ProjectDetail = () => {
           />
         );
       case "cases":
-        return <CasesList projectId={projectId} />;
+        return <CasesList projectId={projectId} isUserProfile={true} />;
       case "expenses":
         return <ExpenseList projectId={projectId} />;
       case "pricework":

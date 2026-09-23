@@ -404,7 +404,13 @@ const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
   );
 };
 
-const CasesList = ({ projectId }: { projectId?: number } = {}) => {
+const CasesList = ({
+  projectId,
+  isUserProfile = false,
+}: {
+  projectId?: number;
+  isUserProfile?: boolean;
+} = {}) => {
   const [data, setData] = useState<CaseSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [search, setSearch] = useState("");
@@ -1128,7 +1134,7 @@ const CasesList = ({ projectId }: { projectId?: number } = {}) => {
   };
 
   return (
-    <PermissionGuard permission="Cases">
+    <PermissionGuard permission="Cases" isUserProfile={isUserProfile}>
       <Box
         sx={{
           height: projectId ? "100%" : "calc(100vh - 100px)",

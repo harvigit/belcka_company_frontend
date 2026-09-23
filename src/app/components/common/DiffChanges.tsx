@@ -210,7 +210,30 @@ export default function DiffChanges({
             </Typography>
           )}
         </Box>
-        {popover}
+         <Popper
+          open={open}
+          anchorEl={anchorEl}
+          placement="bottom-start"
+          disablePortal
+          sx={{ zIndex: 21 }}
+        >
+          <Box
+            mt={0.5}
+            p={1}
+            minWidth={220}
+            maxWidth={320}
+            bgcolor="#fff"
+            borderRadius={2}
+            border="1px solid #e2e8f0"
+            boxShadow="0px 8px 24px rgba(15, 23, 42, 0.12)"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <DiffChangeRows rows={rows} />
+          </Box>
+        </Popper>
       </Box>
     </ClickAwayListener>
   );
