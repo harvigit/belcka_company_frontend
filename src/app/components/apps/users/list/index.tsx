@@ -1536,7 +1536,7 @@ const TablePagination = () => {
         skipNextDependencyPageResetRef.current = hasSavedState;
         restoredTableStateKeyRef.current = usersTableStateKey;
 
-        setSearchTerm(savedState.searchTerm ?? '');
+        // setSearchTerm(savedState.searchTerm ?? '');
         const restoredFilters = normalizeUserFilters(savedState.filters);
         setFilters(restoredFilters);
         setTempFilters(restoredFilters);

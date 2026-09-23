@@ -88,6 +88,7 @@ import {
     writeListingTableState,
 } from '@/utils/listingTableStateStorage';
 import ArchivedUserLeavesDrawer from '@/app/components/apps/leaves/archived-user-leaves';
+import PermissionGuard from '@/app/auth/PermissionGuard';
 
 const LEAVE_STORAGE_KEY = 'leave-module-range';
 const LEAVE_LIST_PREFERENCES_COOKIE_PREFIX = 'leave-list-preferences';
@@ -1383,7 +1384,8 @@ const Leaves = () => {
     }));
 
     return (
-        <Box sx={{
+       <PermissionGuard permission="Leaves">
+         <Box sx={{
             // Keep scrolling inside the table, matching the Time Clock screen.
             // This lets MUI's sticky table header remain anchored while rows scroll.
             height: 'calc(100vh - 100px)',
@@ -2008,6 +2010,7 @@ const Leaves = () => {
                 onWorkUpdated={refreshLeaves}
             />
         </Box>
+       </PermissionGuard>
     );
 };
 

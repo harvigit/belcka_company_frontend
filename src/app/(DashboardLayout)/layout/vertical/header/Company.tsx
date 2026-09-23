@@ -56,6 +56,8 @@ const FEED_MESSAGE_TRANSLATION_KEYS = [
   "User requested to create billing info",
   "Requested to update billing information",
   "Profile information changed by",
+  "User profile picture is updated by",
+  "User profile picture is updated",
   "Expense",
   "added by",
   "Store",
