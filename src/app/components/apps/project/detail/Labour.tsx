@@ -128,6 +128,25 @@ const formatNumber = (value: number | string | null | undefined) => {
         : numberValue.toFixed(2);
 };
 
+const formatAmount = (
+    currency: string | null | undefined,
+    amount: number | string | null | undefined,
+) => `${currency || '£'}${Number(amount || 0).toFixed(2)}`;
+
+const getNumericResponseValue = (
+    response: any,
+    keys: string[],
+    fallback = 0,
+) => {
+    for (const key of keys) {
+        const value = response?.[key] ?? response?.data?.[key];
+        const amount = Number(value);
+        if (Number.isFinite(amount)) return amount;
+    }
+
+    return fallback;
+};
+
 const formatMinutesFromHours = (value: number | string | null | undefined) =>
     String(Math.round(Number(value || 0) * 60));
 
@@ -165,6 +184,7 @@ const Labour = ({projectId}: { projectId: number }) => {
     };
     const [data, setData] = useState<LabourRow[]>([]);
     const [currency, setCurrency] = useState('£');
+    const [totalAmount, setTotalAmount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [sorting, setSorting] = useState<SortingState>([
@@ -555,6 +575,17 @@ const Labour = ({projectId}: { projectId: number }) => {
 
             setData(responseData);
             setCurrency(res.data?.currency || '£');
+            setTotalAmount(
+                getNumericResponseValue(
+                    res.data,
+                    ['total_amount', 'total_labour_amount', 'amount_total'],
+                    responseData.reduce(
+                        (sum: number, item: LabourRow) =>
+                            sum + Number(item.total || 0),
+                        0,
+                    ),
+                ),
+            );
             setFilterOptions((prev) => ({
                 teams: tableFilterOptions(
                     apiFilterOptions.teams,
@@ -609,6 +640,7 @@ const Labour = ({projectId}: { projectId: number }) => {
         } catch (err) {
             console.error('Failed to fetch project labour details', err);
             setData([]);
+            setTotalAmount(0);
             setTotalRows(0);
             setPageCount(0);
         }
@@ -822,6 +854,27 @@ const Labour = ({projectId}: { projectId: number }) => {
                         
                     </Box>
                     <Box display="flex" justifyContent="flex-end" alignItems="center" gap={0.75}>
+                        <Box
+                            sx={{
+                                flexShrink: 0,
+                                display: 'flex',
+                                alignItems: 'baseline',
+                                gap: 0.75,
+                                py: 0.75,
+                                px: 1.25,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                borderRadius: 1,
+                                bgcolor: 'background.paper',
+                            }}
+                        >
+                            <Typography variant="caption" color="text.secondary" noWrap>
+                                Total
+                            </Typography>
+                            <Typography variant="subtitle2" fontWeight={700} noWrap>
+                                {formatAmount(currency, totalAmount)}
+                            </Typography>
+                        </Box>
                         <Tooltip title="Column visibility">
                             <IconButton
                                 onClick={(e) => setColumnMenuAnchor(e.currentTarget)}

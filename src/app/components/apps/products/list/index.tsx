@@ -1,6 +1,15 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { readListingTableState, writeListingTableState } from "@/utils/listingTableStateStorage";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
+import {
+  readListingTableState,
+  writeListingTableState,
+} from "@/utils/listingTableStateStorage";
 import {
   TableContainer,
   Table,
@@ -18,21 +27,10 @@ import {
   TextField,
   InputAdornment,
   MenuItem,
-  DialogActions,
-  DialogTitle,
-  DialogContent,
-  Dialog,
   Menu,
   ListItemIcon,
   Tooltip,
-  Popover,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-  Modal,
-  LinearProgress,
   CircularProgress,
-  Autocomplete,
 } from "@mui/material";
 import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import {
@@ -59,21 +57,28 @@ import { User } from "next-auth";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
 import PermissionGuard from "@/app/auth/PermissionGuard";
-import ProductAddEdit from "../create";
+import ProductAddEdit, { ProductFormData } from "../create";
 import ArchiveProduct from "../archive";
 import { IconEye } from "@tabler/icons-react";
-import { FileDownload } from "@mui/icons-material";
-import { useDropzone } from "react-dropzone";
 import ProductView from "../view";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import ProductHistory from "../history";
 import { IconLayersIntersect } from "@tabler/icons-react";
 import SetList from "../sets/list";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import ManagePriceDrawer from "../manage-price";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import HireOrderHistory from "../hire-history";
 import Settings from "../settings";
+import ColumnVisibilityPopover from "@/app/components/common/ColumnVisibilityPopover";
+import ExcelImportModal from "@/app/components/common/ExcelImportModal";
+import ListConfirmDialog from "@/app/components/common/ListConfirmDialog";
+import SelectItemsDialog from "./select-items-dialog";
+import ProductImageManagerDialog from "./image-manager-dialog";
+import ImagePreviewDialog from "./image-preview-dialog";
+import AssignCategoryDialog from "./assign-category-dialog";
+import AssignProjectDialog from "./assign-project-dialog";
+import ImportConflictDialog from "./import-conflict-dialog";
+import ProductFiltersDialog from "./filters-dialog";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -82,43 +87,6 @@ interface TableRow {
   images?: string[];
   [key: string]: any;
 }
-export interface ProductFormData {
-  id: number;
-  company_id: any;
-  uuid: string;
-  short_name: string;
-  display_name?: string;
-  name?: string;
-  status?: boolean;
-  description?: string;
-  image?: File | null;
-  supplier_code?: string;
-  supplier_id?: number | null;
-  barcode_text?: string;
-  category_ids?: string;
-  model_id?: number | null;
-  manufacturer_id?: number | null;
-  pack_off_qty?: string;
-  pack_off_unit?: number | null;
-  weight?: string;
-  weight_unit?: number | null;
-  length?: string;
-  width?: string;
-  height?: string;
-  length_unit?: number | null;
-  tax?: string;
-  price?: string;
-  sort_id?: number | null;
-  cutoff?: number;
-  is_sub_qty?: boolean;
-  store_ids?: string;
-  remove_image?: boolean;
-  max_stock?: number | null;
-  manufacture?: number | null;
-  model?: number | null;
-  qty?: number | null;
-}
-
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
@@ -282,16 +250,16 @@ const ProductList = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [isImport, setIsImport] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [archiveProductList, setArchiveProductList] = useState<boolean>(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
-  const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
-  const [filters, setFilters] = useState<ProductFilters>(DEFAULT_PRODUCT_FILTERS);
+  const [filters, setFilters] = useState<ProductFilters>(
+    DEFAULT_PRODUCT_FILTERS,
+  );
   const [tempFilters, setTempFilters] = useState(filters);
   const productsTableStateKey = useMemo(
     () => getProductsTableStateKey(user?.id, user?.company_id),
@@ -305,16 +273,9 @@ const ProductList = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [assignCategoryOpen, setAssignCategoryOpen] = useState(false);
   const [assignProjectOpen, setAssignProjectOpen] = useState(false);
-  const [selectedCategoryToAssign, setSelectedCategoryToAssign] =
-    useState<any>(null);
-  const [selectedProjectToAssign, setSelectedProjectToAssign] = useState<any[]>(
-    [],
-  );
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [currency, setCurrency] = useState("");
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [settingOpen, setSettingOpen] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
     id: 0,
@@ -330,19 +291,8 @@ const ProductList = () => {
   const [productSetOpen, setProductSetOpen] = useState(false);
   const [hireHistoryDrawer, setHireHistoryDrawer] = useState(false);
   const [openModel, setOpenModel] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [file, setFile] = useState<any | null>(null);
   const [openImageManager, setOpenImageManager] = useState(false);
   const [selectedRow, setSelectedRow] = useState<TableRow | null>(null);
-  const [uploadedImages, setUploadedImages] = useState<
-    { id: number; url: string; isMain: boolean }[]
-  >([]);
-
-  const [newMainImage, setNewMainImage] = useState<File | null>(null);
-  const [newOtherImages, setNewOtherImages] = useState<File[]>([]);
-  const [newImages, setNewImages] = useState<File[]>([]);
-  const [mainImageId, setMainImageId] = useState<number | null>(null);
-  const [originalUploadedImages, setOriginalUploadedImages] = useState([]);
   const [openDrawer, setOpenDrawer] = useState(false);
   const [editing, setEditing] = useState<{
     id: number | null;
@@ -380,7 +330,6 @@ const ProductList = () => {
   );
   const [openProjectModal, setOpenProjectModal] = useState(false);
   const [isProjectSaving, setIsProjectSaving] = useState(false);
-  const [isBulkAssignSaving, setIsBulkAssignSaving] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
 
   const isCellSaving = (
@@ -391,7 +340,6 @@ const ProductList = () => {
   const [conflictOpen, setConflictOpen] = useState(false);
   const [conflictProducts, setConflictProducts] = useState<any[]>([]);
   const [isConflictLoading, setIsConflictLoading] = useState(false);
-  const [selectedConflictIds, setSelectedConflictIds] = useState<number[]>([]);
   const [priceDrawerOpen, setPriceDrawerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
@@ -404,98 +352,6 @@ const ProductList = () => {
     setPriceDrawerOpen(false);
     setSelectedProduct(null);
   };
-  useEffect(() => {
-    if (selectedRow) {
-      setUploadedImages(selectedRow.product_images || []);
-      setOriginalUploadedImages(selectedRow.product_images || []);
-    }
-  }, [selectedRow]);
-  // Load images when row is selected
-  useEffect(() => {
-    if (!selectedRow) return;
-
-    const existingImages = [
-      selectedRow.image_url
-        ? { id: 0, image_url: selectedRow.image_url }
-        : null,
-      ...(selectedRow.product_images || []),
-    ]
-      .filter((img): img is { id: number; image_url: string } => !!img)
-      .map((img) => ({
-        id: img.id,
-        url: img.image_url,
-        isMain: img.image_url === selectedRow.image_url,
-      }));
-
-    setUploadedImages(existingImages);
-
-    const mainIdx = existingImages.findIndex((img) => img.isMain);
-    setMainImageId(mainIdx >= 0 ? mainIdx : null);
-
-    setNewImages([]);
-    setNewOtherImages([]);
-    setNewMainImage(null);
-  }, [selectedRow]);
-
-  const handleSetMainExisting = (id: number) => {
-    setUploadedImages((prev) =>
-      prev.map((img) => ({
-        ...img,
-        isMain: img.id === id,
-      })),
-    );
-    setMainImageId(id);
-    setNewMainImage(null); // deselect new images if any
-  };
-
-  const handleSetMainNew = (file: File) => {
-    setNewMainImage(file);
-    setMainImageId(null); // clear existing main
-    setUploadedImages((prev) => prev.map((img) => ({ ...img, isMain: false })));
-  };
-
-  const onDrop = (acceptedFiles: File[]) => {
-    setNewImages((prev) => [...prev, ...acceptedFiles]);
-    setNewOtherImages((prev) => [...prev, ...acceptedFiles]);
-  };
-
-  const handleModelOpen = () => {
-    setPreview(null);
-    setOpenModel(true);
-  };
-  const handleModelClose = () => setOpenModel(false);
-
-  const handleFileChange = (acceptedFiles: File[]) => {
-    const selectedFile = acceptedFiles[0];
-    setFile(selectedFile);
-    setPreview(selectedFile.name);
-  };
-
-  const downloadSampleFile = () => {
-    const link = document.createElement("a");
-    link.href = "/files/products_import.xlsx";
-    link.download = "sample-file.xlsx";
-    link.click();
-  };
-
-  const { getRootProps: getExcelRootProps, getInputProps: getExcelInputProps } =
-    useDropzone({
-      accept: {
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
-          ".xlsx",
-        ],
-        "application/vnd.ms-excel": [".xls"],
-      },
-      onDrop: handleFileChange,
-    });
-
-  const { getRootProps: getImageRootProps, getInputProps: getImageInputProps } =
-    useDropzone({
-      accept: {
-        "image/*": [".jpg", ".jpeg", ".png", ".webp"],
-      },
-      onDrop: onDrop,
-    });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -507,134 +363,6 @@ const ProductList = () => {
   const closeDrawer = () => {
     setViewDrawerOpen(false);
     fetchProducts();
-  };
-
-  useEffect(() => {
-    if (!openImageManager) return;
-
-    const handlePaste = (event: ClipboardEvent) => {
-      const items = event.clipboardData?.items;
-      if (!items) return;
-
-      const imageFiles: File[] = [];
-
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-
-        if (item.type.startsWith("image")) {
-          const file = item.getAsFile();
-          if (file) {
-            imageFiles.push(file);
-          }
-        }
-      }
-
-      if (imageFiles.length > 0) {
-        setNewImages((prev) => [...prev, ...imageFiles]);
-      }
-    };
-
-    window.addEventListener("paste", handlePaste);
-
-    return () => {
-      window.removeEventListener("paste", handlePaste);
-    };
-  }, [openImageManager]);
-
-  const handleSaveImages = async () => {
-    if (!selectedRow) return;
-
-    setIsSaving(true);
-
-    const formData = new FormData();
-    formData.append("id", String(selectedRow.id));
-
-    const originalMainImage = selectedRow.image_url;
-
-    const removedIds = originalUploadedImages
-      .filter((orig: any) => !uploadedImages.some((u) => u.id === orig.id))
-      .map((img: any) => img.id);
-
-    removedIds.forEach((id) => {
-      formData.append("removed_image_ids[]", String(id));
-    });
-
-    if (newMainImage) {
-      formData.append("image", newMainImage);
-
-      newImages
-        .filter((file) => file !== newMainImage)
-        .forEach((file) => {
-          formData.append("files", file);
-        });
-    } else {
-      if (mainImageId !== null) {
-        formData.append("main_image_id", String(mainImageId));
-      }
-
-      // Upload normal new images
-      newImages.forEach((file) => {
-        formData.append("files", file);
-      });
-
-      // If main image was deleted
-      const mainStillExists = uploadedImages.some(
-        (img) => img.url === originalMainImage,
-      );
-
-      if (!mainStillExists && originalMainImage) {
-        formData.append("remove_image", "1");
-      }
-    }
-
-    try {
-      const currentPage = table.getState().pagination.pageIndex;
-
-      const res = await api.post(`products/new-images`, formData, {
-        headers: { "Content-Type": undefined },
-      });
-
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message);
-
-        setData((prev: any[]) =>
-          prev.map((p) => {
-            if (p.id === selectedRow.id) {
-              let newImageUrl = p.image_url;
-              if (res.data.data?.image_url) {
-                newImageUrl = res.data.data.image_url;
-              } else if (res.data.image_url) {
-                newImageUrl = res.data.image_url;
-              } else if (newMainImage) {
-                newImageUrl = URL.createObjectURL(newMainImage);
-              } else if (mainImageId !== null) {
-                const selectedImg = uploadedImages.find(
-                  (img) => img.id === mainImageId,
-                );
-                if (selectedImg) newImageUrl = selectedImg.url;
-              } else {
-                const mainStillExists = uploadedImages.some(
-                  (img) => img.url === originalMainImage,
-                );
-                if (!mainStillExists && originalMainImage) {
-                  newImageUrl = null;
-                }
-              }
-              return { ...p, image_url: newImageUrl };
-            }
-            return p;
-          }),
-        );
-
-        setOpenImageManager(false);
-      } else {
-        toast.error(res.data.message);
-      }
-    } catch (err) {
-      console.error("Upload failed:", err);
-    }
-
-    setIsSaving(false);
   };
 
   const fetchResources = async () => {
@@ -770,65 +498,6 @@ const ProductList = () => {
     }
   };
 
-  const importProducts = async () => {
-    if (!file) {
-      toast.error("Please select a file");
-      return;
-    }
-
-    setIsImport(true);
-    setUploadProgress(0);
-    setIsProcessing(false);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("with_stock_import", "true");
-      formData.append("selected_type", "addEditRecord");
-      // formData.append("store_id", "1");
-
-      const res = await api.post("products/import", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        onUploadProgress: (progressEvent: any) => {
-          if (progressEvent.total) {
-            const percent = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total,
-            );
-
-            setUploadProgress(percent);
-
-            if (percent === 100) {
-              setIsProcessing(true);
-            }
-          }
-        },
-      });
-
-      if (res.data.conflicts?.length > 0) {
-        setConflictProducts(res.data.conflicts || []);
-        setConflictOpen(true);
-
-        return;
-      }
-
-      toast.success(res.data.message);
-
-      fetchProducts();
-
-      setTimeout(() => {
-        handleModelClose();
-        setUploadProgress(0);
-        setIsProcessing(false);
-      }, 1000);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Import failed");
-    } finally {
-      setIsImport(false);
-    }
-  };
-
   const handleDeleteConflictProduct = async (
     productId: number,
     type: "original" | "imported",
@@ -892,9 +561,8 @@ const ProductList = () => {
 
   const handleKeepAll = () => {
     fetchProducts();
-    setSelectedConflictIds([]);
     setConflictOpen(false);
-    handleModelClose();
+    setOpenModel(false);
   };
 
   const handleOpenCreateDrawer = () => {
@@ -1288,9 +956,11 @@ const ProductList = () => {
           ),
         );
       } else {
+        toast.error(res.data?.message || "Failed to update status");
       }
     } catch (err: any) {
       console.error(err);
+      toast.error(err?.response?.data?.message || "Failed to update status");
     } finally {
       setSavingCell({ id: null, field: null });
     }
@@ -2485,12 +2155,6 @@ const ProductList = () => {
     // }),
   ];
 
-  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl2(event.currentTarget);
-  };
-
-  const handlePopoverClose = () => setAnchorEl2(null);
-
   const {
     table,
     pagination,
@@ -2624,331 +2288,68 @@ const ProductList = () => {
           flexDirection: "column",
         }}
       >
-        {/* for handling categories update */}
-        <Dialog
+        <SelectItemsDialog
           open={openCategoryModal}
+          title="Select Categories"
+          className="product_selection"
+          options={categories || []}
+          value={draftCategories}
+          onChange={setDraftCategories}
+          loading={isCategorySaving}
+          placeholder="Select categories"
           onClose={() => {
-            if (!isCategorySaving) setOpenCategoryModal(false);
+            setOpenCategoryModal(false);
+            setDraftCategories([]);
           }}
-        >
-          <DialogTitle>Select Categories</DialogTitle>
-          <DialogContent>
-            <Autocomplete
-              multiple
-              className="product_selection"
-              options={categories || []}
-              getOptionLabel={(option) => option.name}
-              value={Array.isArray(draftCategories) ? draftCategories : []}
-              onChange={(_, newValue) => {
-                setDraftCategories(newValue);
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder={
-                    draftCategories.length === 0 ? "Select categories" : ""
-                  }
-                />
-              )}
-              size="small"
-              sx={{ width: 400 }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => {
-                if (isCategorySaving) return;
-                setOpenCategoryModal(false);
-                setDraftCategories([]);
-              }}
-              color="error"
-              disabled={isCategorySaving}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!editingRowId || isCategorySaving) return;
-                setRowCategories((prev) => ({
-                  ...prev,
-                  [editingRowId]: draftCategories,
-                }));
-                await updateCategories(editingRowId, draftCategories);
-              }}
-              variant="contained"
-              color="primary"
-              disabled={isCategorySaving}
-              startIcon={
-                isCategorySaving ? (
-                  <CircularProgress size={14} color="inherit" />
-                ) : null
-              }
-            >
-              {isCategorySaving ? "Saving..." : "Submit"}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* for handling projects update */}
-        <Dialog
+          onSubmit={async () => {
+            if (!editingRowId || isCategorySaving) return;
+            setRowCategories((prev) => ({
+              ...prev,
+              [editingRowId]: draftCategories,
+            }));
+            await updateCategories(editingRowId, draftCategories);
+          }}
+        />
+        <SelectItemsDialog
           open={openProjectModal}
+          title="Select Projects"
+          className="project_selection"
+          options={projects || []}
+          value={draftProjects}
+          onChange={setDraftProjects}
+          loading={isProjectSaving}
+          placeholder="Select projects"
           onClose={() => {
-            if (!isProjectSaving) setOpenProjectModal(false);
+            setOpenProjectModal(false);
+            setDraftProjects([]);
           }}
-        >
-          <DialogTitle>Select Projects</DialogTitle>
-          <DialogContent>
-            <Autocomplete
-              multiple
-              className="project_selection"
-              options={projects || []}
-              getOptionLabel={(option) => option.name}
-              value={Array.isArray(draftProjects) ? draftProjects : []}
-              onChange={(_, newValue) => {
-                setDraftProjects(newValue);
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder={
-                    draftProjects.length === 0 ? "Select projects" : ""
-                  }
-                />
-              )}
-              size="small"
-              sx={{ width: 400 }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => {
-                if (isProjectSaving) return;
-                setOpenProjectModal(false);
-                setDraftProjects([]);
-              }}
-              color="error"
-              disabled={isProjectSaving}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!editingProjectRowId || isProjectSaving) return;
-                setRowProjects((prev) => ({
-                  ...prev,
-                  [editingProjectRowId]: draftProjects,
-                }));
-                await updateProjects(editingProjectRowId, draftProjects);
-              }}
-              variant="contained"
-              color="primary"
-              disabled={isProjectSaving}
-              startIcon={
-                isProjectSaving ? (
-                  <CircularProgress size={14} color="inherit" />
-                ) : null
-              }
-            >
-              {isProjectSaving ? "Saving..." : "Submit"}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* for handling image upload */}
-        <Dialog
+          onSubmit={async () => {
+            if (!editingProjectRowId || isProjectSaving) return;
+            setRowProjects((prev) => ({
+              ...prev,
+              [editingProjectRowId]: draftProjects,
+            }));
+            await updateProjects(editingProjectRowId, draftProjects);
+          }}
+        />
+        <ProductImageManagerDialog
           open={openImageManager}
           onClose={() => setOpenImageManager(false)}
-          fullWidth
-          maxWidth="sm"
-        >
-          <DialogTitle>Image</DialogTitle>
-          <DialogContent>
-            <div
-              {...getImageRootProps()}
-              style={{
-                border: "2px dashed #1976d2",
-                borderRadius: 8,
-                padding: 40,
-                textAlign: "center",
-                cursor: "pointer",
-                marginBottom: 20,
-              }}
-            >
-              <input {...getImageInputProps()} />
-              <Typography>Drag & drop or paste images</Typography>
-            </div>
-
-            <Grid container spacing={2}>
-              {uploadedImages.map((img) => (
-                <Grid key={img.id} style={{ position: "relative" }}>
-                  <img
-                    src={img.url}
-                    width={80}
-                    height={80}
-                    style={{ objectFit: "cover", borderRadius: 4 }}
-                  />
-
-                  {/* Main image selector */}
-                  <button
-                    style={{
-                      position: "absolute",
-                      bottom: 0,
-                      left: 0,
-                      background: img.isMain ? "#1976d2" : "rgba(0,0,0,0.4)",
-                      color: "white",
-                      fontSize: 12,
-                      border: "none",
-                      borderRadius: "0 4px 0 0",
-                      padding: "2px 4px",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => handleSetMainExisting(img.id)}
-                  >
-                    {img.isMain ? "Primary" : "Images"}
-                  </button>
-
-                  {/* Delete button */}
-                  <IconButton
-                    color="error"
-                    size="small"
-                    sx={{
-                      position: "absolute",
-                      top: -10,
-                      right: -10,
-                      backgroundColor: "#fff",
-                      zIndex: 2,
-                      "&:hover": {
-                        backgroundColor: "#fff",
-                        color: "red",
-                      },
-                    }}
-                    onClick={() =>
-                      setUploadedImages(
-                        uploadedImages.filter((i) => i.id !== img.id),
-                      )
-                    }
-                  >
-                    <IconTrash size={16} />
-                  </IconButton>
-                </Grid>
-              ))}
-
-              {newImages.map((file, index) => (
-                <Grid key={index} style={{ position: "relative" }}>
-                  <img
-                    src={URL.createObjectURL(file)}
-                    width={80}
-                    height={80}
-                    style={{ objectFit: "cover", borderRadius: 4 }}
-                  />
-
-                  {/* Main selector for new files */}
-                  <button
-                    style={{
-                      position: "absolute",
-                      bottom: 0,
-                      left: 0,
-                      background:
-                        newMainImage === file ? "#1976d2" : "rgba(0,0,0,0.4)",
-                      color: "white",
-                      fontSize: 12,
-                      border: "none",
-                      borderRadius: "0 4px 0 0",
-                      padding: "2px 4px",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => handleSetMainNew(file)}
-                  >
-                    Primary
-                  </button>
-
-                  <IconButton
-                    size="small"
-                    color="error"
-                    sx={{
-                      position: "absolute",
-                      top: -10,
-                      right: -10,
-                      backgroundColor: "#fff",
-                      zIndex: 2,
-                      "&:hover": {
-                        backgroundColor: "#fff",
-                        color: "red",
-                      },
-                    }}
-                    onClick={() =>
-                      setNewImages(newImages.filter((_, i) => i !== index))
-                    }
-                  >
-                    <IconTrash size={16} />
-                  </IconButton>
-                </Grid>
-              ))}
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenImageManager(false)}>Cancel</Button>
-            <Button
-              variant="contained"
-              onClick={handleSaveImages}
-              disabled={isSaving}
-            >
-              {isSaving ? "Saving..." : "Save"}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Dialog
-          open={openPreview}
-          onClose={() => setOpenPreview(false)}
-          fullScreen
-          PaperProps={{
-            sx: {
-              backgroundColor: "transparent",
-              boxShadow: "none",
-            },
+          product={selectedRow}
+          onUpdated={(productId, imageUrl) => {
+            setData((prev: any[]) =>
+              prev.map((item) =>
+                item.id === productId ? { ...item, image_url: imageUrl } : item,
+              ),
+            );
           }}
-        >
-          <IconButton
-            onClick={() => setOpenPreview(false)}
-            color="primary"
-            sx={{
-              position: "fixed",
-              top: 16,
-              right: 16,
-              zIndex: 1301,
-              backgroundColor: "#fff",
-              "&:hover": {
-                backgroundColor: "#eee",
-                color: "#1e4db7",
-              },
-            }}
-          >
-            <IconX />
-          </IconButton>
+        />
+        <ImagePreviewDialog
+          open={openPreview}
+          src={previewImage}
+          onClose={() => setOpenPreview(false)}
+        />
 
-          <Box
-            sx={{
-              width: "100vw",
-              height: "100vh",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            onClick={() => setOpenPreview(false)}
-          >
-            <img
-              src={previewImage || ""}
-              alt="Preview"
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: "90% !important",
-                height: "50%",
-                objectFit: "contain",
-              }}
-            />
-          </Box>
-        </Dialog>
         {/* Render the search and table */}
         <Stack
           mr={2}
@@ -3018,145 +2419,31 @@ const ProductList = () => {
               <Button
                 variant="contained"
                 startIcon={<IconFileImport width={18} />}
-                onClick={handleModelOpen}
+                onClick={() => setOpenModel(true)}
               >
                 Import
               </Button>
             )}
           </Grid>
-          {/* file Import model */}
-
-          {/* Modal for File Upload */}
-          <Modal
+          <ExcelImportModal
             open={openModel}
-            onClose={handleModelClose}
-            disableEscapeKeyDown
-          >
-            <Box
-              sx={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                bgcolor: "background.paper",
-                p: 3,
-                borderRadius: 2,
-                boxShadow: 24,
-                width: 400,
-              }}
-            >
-              <DialogTitle sx={{ p: 0 }}>
-                <Typography color="GrayText" fontWeight={700}>
-                  Upload Your File
-                </Typography>
-                <IconButton
-                  onClick={() => handleModelClose()}
-                  sx={{
-                    position: "absolute",
-                    right: 8,
-                    top: 10,
-                    backgroundColor: "transparent",
-                  }}
-                >
-                  <IconX size={40} />
-                </IconButton>
-              </DialogTitle>
-              <Box
-                {...getExcelRootProps()}
-                sx={{
-                  width: 350,
-                  height: 100,
-                  mt: 2,
-                  border: "2px dashed",
-                  borderColor: "primary.main",
-                  borderRadius: 1,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  position: "relative",
-                  overflow: "hidden",
-                  "&:hover": {
-                    backgroundColor: "primary.light",
-                  },
-                }}
-              >
-                <input {...getExcelInputProps()} accept=".xls,.xlsx" />
-                {preview ? (
-                  preview
-                ) : (
-                  <Typography fontSize="12px" color="primary.main">
-                    Click or Drag File
-                  </Typography>
-                )}
-              </Box>
-              <Typography fontSize="12px" color="text.secondary">
-                Upload Excel Files
-              </Typography>
-              {isImport && (
-                <Box sx={{ mt: 2 }}>
-                  {!isProcessing ? (
-                    <>
-                      <Typography variant="body2" mb={1}>
-                        Uploading... {uploadProgress}%
-                      </Typography>
-                      <LinearProgress
-                        variant="determinate"
-                        value={uploadProgress}
-                        sx={{ height: 8, borderRadius: 5 }}
-                      />
-                    </>
-                  ) : (
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <CircularProgress size={18} />
-                      <Typography variant="body2">
-                        Processing file...
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              )}
-              {/* Action buttons */}
-              <Box sx={{ mt: 2, display: "flex", justifyContent: "end" }}>
-                <Link
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    downloadSampleFile();
-                  }}
-                  style={{
-                    width: "100%",
-                    color: "#1e4db7",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyItems: "center",
-                  }}
-                >
-                  <FileDownload />
-                  Download Sample File
-                </Link>
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <Button
-                    variant="contained"
-                    disabled={isImport}
-                    onClick={(e: any) => {
-                      importProducts();
-                    }}
-                  >
-                    {isImport ? "Importing..." : "Save"}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={handleModelClose}
-                    color="error"
-                  >
-                    Cancel
-                  </Button>
-                </Box>
-              </Box>
-            </Box>
-          </Modal>
+            onClose={() => setOpenModel(false)}
+            importUrl="products/import"
+            sampleHref="/files/products_import.xlsx"
+            extraFormData={{
+              with_stock_import: "true",
+              selected_type: "addEditRecord",
+            }}
+            onImported={(data) => {
+              if (data?.conflicts?.length > 0) {
+                setConflictProducts(data.conflicts || []);
+                setConflictOpen(true);
+                return true;
+              }
+              return false;
+            }}
+            onSuccess={fetchProducts}
+          />
 
           <Stack
             mb={2}
@@ -3202,7 +2489,7 @@ const ProductList = () => {
               </IconButton>
             </Tooltip>
             <IconButton
-              onClick={handlePopoverOpen}
+              onClick={(event) => setAnchorEl2(event.currentTarget)}
               sx={{ ml: 1 }}
               color="primary"
             >
@@ -3219,579 +2506,66 @@ const ProductList = () => {
                 </IconButton>
               </Tooltip>
             )}
-            <Popover
+            <ColumnVisibilityPopover
               open={Boolean(anchorEl2)}
               anchorEl={anchorEl2}
-              onClose={handlePopoverClose}
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-              PaperProps={{
-                sx: {
-                  width: 280,
-                  mt: 1,
-                  p: 1,
-                  borderRadius: 2,
-                  boxShadow: "0 12px 32px rgba(15, 23, 42, 0.14)",
-                  border: "1px solid #e5e7eb",
-                  maxHeight: "min(420px, calc(100vh - 140px))",
-                  overflow: "hidden",
-                },
-              }}
-            >
-              <TextField
-                size="small"
-                placeholder="Search columns..."
-                fullWidth
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                sx={{
-                  mb: 1,
-                  "& .MuiInputBase-root": {
-                    borderRadius: 1.5,
-                    backgroundColor: "#fff",
-                  },
-                }}
-              />
-              <Box
-                sx={{
-                  maxHeight: "calc(min(420px, calc(100vh - 140px)) - 64px)",
-                  overflowY: "auto",
-                  pr: 0.5,
-                }}
-              >
-                <FormGroup sx={{ gap: 0.25 }}>
-                  {(() => {
-                    const columnOptions = table
-                      .getAllLeafColumns()
-                      .filter((col: any) => {
-                        const excludedColumns = ["conflicts", "select"];
-                        if (excludedColumns.includes(col.id)) return false;
-
-                        return col.id
-                          .toLowerCase()
-                          .includes(search.toLowerCase());
-                      });
-                    const allSelected =
-                      columnOptions.length > 0 &&
-                      columnOptions.every((col: any) => col.getIsVisible());
-                    const someSelected = columnOptions.some((col: any) =>
-                      col.getIsVisible(),
-                    );
-
-                    return (
-                      <>
-                        <FormControlLabel
-                          control={
-                            <CustomCheckbox
-                              size="small"
-                              checked={allSelected}
-                              indeterminate={!allSelected && someSelected}
-                              disabled={columnOptions.length === 0}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                columnOptions.forEach((col: any) =>
-                                  col.toggleVisibility(e.target.checked),
-                                );
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              sx={{
-                                p: 0.5,
-                                mr: 1,
-                              }}
-                            />
-                          }
-                          sx={{
-                            m: 0,
-                            px: 0.75,
-                            py: 0.375,
-                            width: "100%",
-                            borderRadius: 1.5,
-                            alignItems: "center",
-                            textTransform: "none",
-                            borderBottom: "1px solid #eef2f7",
-                            mb: 0.25,
-                            "&:hover": {
-                              backgroundColor: "#f8fafc",
-                            },
-                            "& .MuiFormControlLabel-label": {
-                              fontSize: "14px",
-                              lineHeight: 1.35,
-                              whiteSpace: "nowrap",
-                              fontWeight: 600,
-                            },
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          label="Select All"
-                        />
-                        {columnOptions.map((col: any) => (
-                          <FormControlLabel
-                            key={col.id}
-                            control={
-                              <CustomCheckbox
-                                size="small"
-                                checked={col.getIsVisible()}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  col.getToggleVisibilityHandler()(e);
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                sx={{
-                                  p: 0.5,
-                                  mr: 1,
-                                }}
-                              />
-                            }
-                            sx={{
-                              m: 0,
-                              px: 0.75,
-                              py: 0.375,
-                              width: "100%",
-                              borderRadius: 1.5,
-                              alignItems: "center",
-                              textTransform: "none",
-                              "&:hover": {
-                                backgroundColor: "#f8fafc",
-                              },
-                              "& .MuiFormControlLabel-label": {
-                                fontSize: "14px",
-                                lineHeight: 1.35,
-                                whiteSpace: "nowrap",
-                              },
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            label={
-                              col.columnDef.meta?.label ||
-                              (typeof col.columnDef.header === "string" &&
-                              col.columnDef.header.trim() !== ""
-                                ? col.columnDef.header
-                                : col.id
-                                    .replace(/([A-Z])/g, " $1")
-                                    .replace(/^./, (str: string) =>
-                                      str.toUpperCase(),
-                                    )
-                                    .trim())
-                            }
-                          />
-                        ))}
-                      </>
-                    );
-                  })()}
-                </FormGroup>
-              </Box>
-            </Popover>
-            <Dialog
+              onClose={() => setAnchorEl2(null)}
+              table={table}
+              excludedColumns={["conflicts", "select"]}
+            />
+            <AssignCategoryDialog
               open={assignCategoryOpen}
-              onClose={() => {
-                if (!isBulkAssignSaving) setAssignCategoryOpen(false);
+              onClose={() => setAssignCategoryOpen(false)}
+              categories={categories}
+              productIds={Array.from(selectedRowIds)}
+              onAssigned={() => {
+                setSelectedRowIds(new Set());
+                fetchProducts();
               }}
-              maxWidth="sm"
-              fullWidth
-            >
-              <DialogTitle>Assign Category</DialogTitle>
-              <DialogContent>
-                <Autocomplete
-                  options={categories || []}
-                  getOptionLabel={(option: any) => option.name || ""}
-                  value={selectedCategoryToAssign}
-                  onChange={(event, newValue) =>
-                    setSelectedCategoryToAssign(newValue)
-                  }
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Select Category"
-                      variant="outlined"
-                      fullWidth
-                      margin="normal"
-                    />
-                  )}
-                />
-              </DialogContent>
-              <DialogActions>
-                <Button
-                  onClick={() => setAssignCategoryOpen(false)}
-                  variant="outlined"
-                  color="error"
-                  disabled={isBulkAssignSaving}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={async () => {
-                    if (!selectedCategoryToAssign) {
-                      toast.error("Please select a category");
-                      return;
-                    }
-                    setIsBulkAssignSaving(true);
-                    try {
-                      const payload = {
-                        product_ids: Array.from(selectedRowIds),
-                        category_id: selectedCategoryToAssign.id,
-                      };
-                      const response = await api.post(
-                        "products/bulk-assign-categories",
-                        payload,
-                      );
-                      if (response.data.IsSuccess) {
-                        toast.success(
-                          response.data.message || "Assigned Successfully",
-                        );
-                        setAssignCategoryOpen(false);
-                        setSelectedRowIds(new Set());
-                        fetchProducts();
-                      } else {
-                        toast.error(
-                          response.data.message || "Failed to assign category",
-                        );
-                      }
-                    } catch (error) {
-                      toast.error("Failed to assign category");
-                    } finally {
-                      setIsBulkAssignSaving(false);
-                    }
-                  }}
-                  variant="contained"
-                  color="primary"
-                  disabled={isBulkAssignSaving}
-                  startIcon={
-                    isBulkAssignSaving ? (
-                      <CircularProgress size={14} color="inherit" />
-                    ) : null
-                  }
-                >
-                  {isBulkAssignSaving ? "Assigning..." : "Assign"}
-                </Button>
-              </DialogActions>
-            </Dialog>
-
-            <Dialog
+            />
+            <AssignProjectDialog
               open={assignProjectOpen}
-              onClose={() => {
-                if (!isBulkAssignSaving) setAssignProjectOpen(false);
+              onClose={() => setAssignProjectOpen(false)}
+              projects={projects}
+              productIds={Array.from(selectedRowIds)}
+              onAssigned={() => {
+                setSelectedRowIds(new Set());
+                fetchProducts();
               }}
-              maxWidth="sm"
-              fullWidth
-            >
-              <DialogTitle>Assign Project</DialogTitle>
-              <DialogContent>
-                <Autocomplete
-                  multiple
-                  options={projects || []}
-                  getOptionLabel={(option: any) => option.name || ""}
-                  value={selectedProjectToAssign}
-                  onChange={(event, newValue) =>
-                    setSelectedProjectToAssign(newValue)
-                  }
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Select Projects"
-                      variant="outlined"
-                      fullWidth
-                      margin="normal"
-                    />
-                  )}
-                />
-              </DialogContent>
-              <DialogActions>
-                <Button
-                  onClick={() => setAssignProjectOpen(false)}
-                  variant="outlined"
-                  color="error"
-                  disabled={isBulkAssignSaving}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={async () => {
-                    if (
-                      !selectedProjectToAssign ||
-                      selectedProjectToAssign.length === 0
-                    ) {
-                      toast.error("Please select at least one project");
-                      return;
-                    }
-                    setIsBulkAssignSaving(true);
-                    try {
-                      const payload = {
-                        product_ids: Array.from(selectedRowIds),
-                        project_ids: selectedProjectToAssign.map(
-                          (p: any) => p.id,
-                        ),
-                      };
-                      const response = await api.post(
-                        "products/bulk-assign-projects",
-                        payload,
-                      );
-                      if (response.data.IsSuccess) {
-                        toast.success(
-                          response.data.message || "Assigned Successfully",
-                        );
-                        setAssignProjectOpen(false);
-                        setSelectedRowIds(new Set());
-                        setSelectedProjectToAssign([]);
-                        fetchProducts();
-                      } else {
-                        toast.error(
-                          response.data.message || "Failed to assign project",
-                        );
-                      }
-                    } catch (error) {
-                      toast.error("Failed to assign project");
-                    } finally {
-                      setIsBulkAssignSaving(false);
-                    }
-                  }}
-                  variant="contained"
-                  color="primary"
-                  disabled={isBulkAssignSaving}
-                  startIcon={
-                    isBulkAssignSaving ? (
-                      <CircularProgress size={14} color="inherit" />
-                    ) : null
-                  }
-                >
-                  {isBulkAssignSaving ? "Assigning..." : "Assign"}
-                </Button>
-              </DialogActions>
-            </Dialog>
-            <Dialog
+            />
+            <ListConfirmDialog
               open={confirmOpen}
-              onClose={() => {
-                if (!isArchiving) setConfirmOpen(false);
+              title="Confirm Archive"
+              message={`Are you sure you want to archive ${usersToDelete.length} product${usersToDelete.length > 1 ? "s" : ""} from the products?`}
+              confirmLabel="Archive"
+              loadingLabel="Archiving..."
+              loading={isArchiving}
+              onClose={() => setConfirmOpen(false)}
+              onConfirm={async () => {
+                setIsArchiving(true);
+                try {
+                  const response = await api.post("products/archive", {
+                    product_ids: usersToDelete.join(","),
+                  });
+                  toast.success(response.data.message);
+                  setSelectedRowIds(new Set());
+                  await fetchProducts();
+                  setConfirmOpen(false);
+                } catch (error) {
+                  toast.error("Failed to archive products");
+                } finally {
+                  setIsArchiving(false);
+                }
               }}
-            >
-              <DialogTitle>Confirm Archive</DialogTitle>
-              <DialogContent>
-                <Typography color="textSecondary">
-                  Are you sure you want to archive {usersToDelete.length}{" "}
-                  product
-                  {usersToDelete.length > 1 ? "s" : ""} from the products?
-                </Typography>
-              </DialogContent>
-              <DialogActions>
-                <Button
-                  onClick={() => setConfirmOpen(false)}
-                  variant="outlined"
-                  color="primary"
-                  disabled={isArchiving}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={async () => {
-                    setIsArchiving(true);
-                    try {
-                      const payload = {
-                        product_ids: usersToDelete.join(","),
-                      };
-                      const response = await api.post(
-                        "products/archive",
-                        payload,
-                      );
-                      toast.success(response.data.message);
-                      setSelectedRowIds(new Set());
-                      await fetchProducts();
-                      setConfirmOpen(false);
-                    } catch (error) {
-                      toast.error("Failed to archive products");
-                    } finally {
-                      setIsArchiving(false);
-                    }
-                  }}
-                  variant="outlined"
-                  color="error"
-                  disabled={isArchiving}
-                  startIcon={
-                    isArchiving ? (
-                      <CircularProgress size={14} color="inherit" />
-                    ) : null
-                  }
-                >
-                  {isArchiving ? "Archiving..." : "Archive"}
-                </Button>
-              </DialogActions>
-            </Dialog>
-            {/* conflict dialog */}
-            <Dialog
+            />
+            <ImportConflictDialog
               open={conflictOpen}
-              maxWidth="md"
-              fullWidth
-              onClose={(event, reason) => {
-                if (reason === "backdropClick" || reason === "escapeKeyDown")
-                  return;
-                setConflictOpen(false);
-              }}
-              disableEscapeKeyDown
-            >
-              <DialogTitle>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <WarningAmberIcon color="warning" />
-                  <Typography variant="h6" fontWeight={700}>
-                    Duplicate product found
-                  </Typography>
-                </Stack>
-              </DialogTitle>
-
-              <DialogContent dividers>
-                <Stack spacing={2}>
-                  {conflictProducts.map((item: any, index: number) => (
-                    <Box
-                      key={index}
-                      sx={{
-                        border: "1px solid #e0e0e0",
-                        borderRadius: 2,
-                        p: 2,
-                        backgroundColor: "#fff",
-                      }}
-                    >
-                      <Stack spacing={2}>
-                        {/* Existing Product */}
-                        {item.original_product && (
-                          <Box
-                            sx={{
-                              border: "1px solid #f1f1f1",
-                              borderRadius: 2,
-                              p: 2,
-                              backgroundColor: "#fafafa",
-                            }}
-                          >
-                            <Typography
-                              fontWeight={700}
-                              color="primary"
-                              mb={1}
-                              fontSize="14px"
-                            >
-                              Existing Product
-                            </Typography>
-
-                            <Stack
-                              direction="row"
-                              spacing={2}
-                              alignItems="center"
-                            >
-                              <Image
-                                src={
-                                  item.original_product.image ||
-                                  "/images/products/product.svg"
-                                }
-                                alt="Existing Product"
-                                width={60}
-                                height={60}
-                              />
-
-                              <Box flex={1}>
-                                <Typography fontWeight={700}>
-                                  {item.original_product.short_name ||
-                                    item.original_product.name}
-                                </Typography>
-
-                                <Typography variant="body2">
-                                  ID: {item.original_product.id}
-                                </Typography>
-
-                                <Typography variant="body2">
-                                  UUID: {item.original_product.uuid || "-"}
-                                </Typography>
-                              </Box>
-
-                              <IconButton
-                                color="error"
-                                disabled={isConflictLoading}
-                                onClick={() =>
-                                  handleDeleteConflictProduct(
-                                    item.original_product.id,
-                                    "original",
-                                  )
-                                }
-                              >
-                                <IconTrash size={20} />
-                              </IconButton>
-                            </Stack>
-                          </Box>
-                        )}
-
-                        {/* Imported Product */}
-                        {item.imported_product && (
-                          <Box
-                            sx={{
-                              border: "1px solid #f1f1f1",
-                              borderRadius: 2,
-                              p: 2,
-                              backgroundColor: "#fff8f0",
-                            }}
-                          >
-                            <Typography
-                              fontWeight={700}
-                              color="warning.main"
-                              mb={1}
-                              fontSize="14px"
-                            >
-                              Imported Product
-                            </Typography>
-
-                            <Stack
-                              direction="row"
-                              spacing={2}
-                              alignItems="center"
-                            >
-                              <Image
-                                src={
-                                  item.imported_product.image ||
-                                  "/images/products/product.svg"
-                                }
-                                alt="Imported Product"
-                                width={60}
-                                height={60}
-                              />
-
-                              <Box flex={1}>
-                                <Typography fontWeight={700}>
-                                  {item.imported_product.short_name ||
-                                    item.imported_product.name}
-                                </Typography>
-
-                                <Typography variant="body2">
-                                  ID: {item.imported_product.id}
-                                </Typography>
-
-                                <Typography variant="body2">
-                                  UUID: {item.imported_product.uuid || "-"}
-                                </Typography>
-                              </Box>
-
-                              <IconButton
-                                color="error"
-                                disabled={isConflictLoading}
-                                onClick={() =>
-                                  handleDeleteConflictProduct(
-                                    item.imported_product.id,
-                                    "imported",
-                                  )
-                                }
-                              >
-                                <IconTrash size={20} />
-                              </IconButton>
-                            </Stack>
-                          </Box>
-                        )}
-                      </Stack>
-                    </Box>
-                  ))}
-                </Stack>
-              </DialogContent>
-
-              <DialogActions sx={{ p: 2 }}>
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  onClick={handleKeepAll}
-                  disabled={isConflictLoading}
-                >
-                  Keep All
-                </Button>
-              </DialogActions>
-            </Dialog>
+              products={conflictProducts}
+              loading={isConflictLoading}
+              onClose={() => setConflictOpen(false)}
+              onKeepAll={handleKeepAll}
+              onDelete={handleDeleteConflictProduct}
+            />
             {canView && (
               <IconButton
                 sx={{ margin: "0px" }}
@@ -3945,176 +2719,29 @@ const ProductList = () => {
               )}
             </Menu>
 
-            {/* Filter Dialog */}
-            <Dialog
+            <ProductFiltersDialog
               open={open}
               onClose={() => setOpen(false)}
-              fullWidth
-              maxWidth="sm"
-            >
-              <DialogTitle
-                sx={{ m: 0, position: "relative", overflow: "visible" }}
-              >
-                Filters
-                <IconButton
-                  aria-label="close"
-                  onClick={() => setOpen(false)}
-                  size="large"
-                  sx={{
-                    position: "absolute",
-                    right: 12,
-                    top: 8,
-                    color: (theme) => theme.palette.grey[900],
-                    backgroundColor: "transparent",
-                    zIndex: 10,
-                    width: 50,
-                    height: 50,
-                  }}
-                >
-                  <IconX size={40} style={{ width: 40, height: 40 }} />
-                </IconButton>
-              </DialogTitle>
-              <DialogContent>
-                <Stack spacing={2} mt={1}>
-                  <TextField
-                    select
-                    label="Suppliers"
-                    value={tempFilters.supplier || "All"}
-                    onChange={(e) => {
-                      setTempFilters({
-                        ...tempFilters,
-                        supplier: normalizeProductFilterValue(e.target.value),
-                      });
-                    }}
-                    fullWidth
-                  >
-                    <MenuItem value="All">All</MenuItem>
-                    {tempFilters.supplier &&
-                      tempFilters.supplier !== "All" &&
-                      !suppliers.some(
-                        (item) => item.name === tempFilters.supplier,
-                      ) && (
-                        <MenuItem value={tempFilters.supplier}>
-                          {tempFilters.supplier}
-                        </MenuItem>
-                      )}
-                    {suppliers.map((item, i) => (
-                      <MenuItem key={i} value={item.name}>
-                        {item.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-
-                  <TextField
-                    select
-                    label="Category"
-                    value={tempFilters.category || "All"}
-                    onChange={(e) =>
-                      setTempFilters({
-                        ...tempFilters,
-                        category: normalizeProductFilterValue(e.target.value),
-                      })
-                    }
-                    fullWidth
-                  >
-                    <MenuItem value="All">All</MenuItem>
-                    {tempFilters.category &&
-                      tempFilters.category !== "All" &&
-                      !categories.some(
-                        (item) => item.name === tempFilters.category,
-                      ) && (
-                        <MenuItem value={tempFilters.category}>
-                          {tempFilters.category}
-                        </MenuItem>
-                      )}
-                    {categories.map((item, i) => (
-                      <MenuItem key={i} value={item.name}>
-                        {item.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-
-                  <Autocomplete
-                    multiple
-                    options={projects || []}
-                    getOptionLabel={(option) => option.name || ""}
-                    isOptionEqualToValue={(option, selected) =>
-                      String(option.id) === String(selected.id)
-                    }
-                    value={(tempFilters.projects || []).map(
-                      (stored) =>
-                        (projects || []).find(
-                          (project) =>
-                            String(project.id) === String(stored.id),
-                        ) || stored,
-                    )}
-                    onChange={(_, newValue) => {
-                      setTempFilters({
-                        ...tempFilters,
-                        projects: normalizeProductProjects(newValue),
-                      });
-                    }}
-                    renderInput={(params) => (
-                      <TextField {...params} label="Projects" />
-                    )}
-                  />
-
-                  <TextField
-                    select
-                    label="Status"
-                    value={tempFilters.status || "All"}
-                    onChange={(e) =>
-                      setTempFilters({
-                        ...tempFilters,
-                        status: normalizeProductFilterValue(e.target.value),
-                      })
-                    }
-                    fullWidth
-                  >
-                    <MenuItem value="All">All</MenuItem>
-                    {tempFilters.status &&
-                      tempFilters.status !== "All" &&
-                      !["1", "2", "4", "5"].includes(tempFilters.status) && (
-                        <MenuItem value={tempFilters.status}>
-                          {tempFilters.status}
-                        </MenuItem>
-                      )}
-                    <MenuItem value="5">In Stock</MenuItem>
-                    <MenuItem value="4">Out of Stock</MenuItem>
-                    <MenuItem value="2">Minus Stock</MenuItem>
-                    <MenuItem value="1">Low Stock</MenuItem>
-                  </TextField>
-                </Stack>
-              </DialogContent>
-
-              <DialogActions>
-                <Button
-                  onClick={() => {
-                    handleClearAppliedFilters();
-                    setOpen(false);
-                  }}
-                  color="inherit"
-                >
-                  Clear
-                </Button>
-
-                <Button
-                  variant="contained"
-                  onClick={() => {
-                    skipNextDependencyPageResetRef.current = false;
-                    setFilters(normalizeProductFilters(tempFilters));
-                    setPagination((prev) =>
-                      prev.pageIndex === 0
-                        ? prev
-                        : { ...prev, pageIndex: 0 },
-                    );
-                    setOpen(false);
-                  }}
-                >
-                  Apply
-                </Button>
-              </DialogActions>
-            </Dialog>
+              tempFilters={tempFilters}
+              setTempFilters={setTempFilters}
+              suppliers={suppliers}
+              categories={categories}
+              projects={projects}
+              normalizeFilterValue={normalizeProductFilterValue}
+              normalizeProjects={normalizeProductProjects}
+              onClear={() => {
+                handleClearAppliedFilters();
+                setOpen(false);
+              }}
+              onApply={() => {
+                skipNextDependencyPageResetRef.current = false;
+                setFilters(normalizeProductFilters(tempFilters));
+                setPagination((prev) =>
+                  prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                );
+                setOpen(false);
+              }}
+            />
           </Stack>
         </Stack>
         <Divider />

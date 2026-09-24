@@ -140,7 +140,7 @@ export const DocumentsTab = ({
       const res = await api.get(
         `address/address-document?address_id=${addressId}&company_id=${companyId}`,
       );
-      if (res.data?.isSuccess) setTabData(res.data.info || []);
+      if (res.data?.IsSuccess) setTabData(res.data.info || []);
       else setTabData([]);
     } catch (error) {
       console.error("Document fetch failed:", error);
@@ -291,7 +291,7 @@ export const DocumentsTab = ({
       const res = await api.post("address/add-attachments", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      if (res.data?.IsSuccess || res.data?.isSuccess) {
+      if (res.data?.IsSuccess || res.data?.IsSuccess) {
         toast.success(res.data.message);
         await fetchDocumentTabData();
         setAttachmentsPayload({ add: {}, delete: {} });

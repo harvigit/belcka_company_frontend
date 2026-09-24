@@ -47,14 +47,18 @@ import {
     createColumnHelper,
     flexRender,
     SortingState,
-    VisibilityState,
 } from '@tanstack/react-table';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
-import {removeListingTableState} from '@/utils/listingTableStateStorage';
+import {
+    readListingTableState,
+    removeListingTableState,
+    writeListingTableState,
+} from '@/utils/listingTableStateStorage';
 import {tableFilterOptions} from '@/utils/uniqueFilterOptions';
 import {useServerTable} from '@/hooks/useServerTable';
+import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
@@ -103,6 +107,17 @@ const defaultFilters = {
     address_id: '' as string | number,
     trade_id: '' as string | number,
     team_id: '' as string | number,
+};
+
+type PriceworkStoredPreferences = {
+    startDate?: string | null;
+    endDate?: string | null;
+};
+
+const parseStoredDate = (value?: string | null) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
 };
 
 const formatAmount = (
@@ -253,20 +268,67 @@ const PriceworkList = ({
         sharedFilters?.tradeId,
     ]);
 
-    useEffect(() => {
-        if (projectId || !priceworkPreferencesKey) return;
+    // Standalone listing restores its saved date range before the first fetch.
+    // Project detail uses the shared ProjectDetailFilters state instead.
+    const [preferencesHydrated, setPreferencesHydrated] = useState(
+        Boolean(projectId),
+    );
+    const restoredPreferencesKeyRef = useRef('');
 
-        removeListingTableState(priceworkPreferencesKey);
-        return () => removeListingTableState(priceworkPreferencesKey);
-    }, [projectId, priceworkPreferencesKey]);
+    useEffect(() => {
+        if (projectId) return;
+        if (!user?.company_id) return;
+
+        if (!priceworkPreferencesKey) {
+            setPreferencesHydrated(true);
+            return;
+        }
+
+        if (restoredPreferencesKeyRef.current === priceworkPreferencesKey) {
+            setPreferencesHydrated(true);
+            return;
+        }
+
+        try {
+            const stored = readListingTableState(priceworkPreferencesKey);
+            if (stored) {
+                const parsed = JSON.parse(stored) as PriceworkStoredPreferences;
+                const from = parseStoredDate(parsed.startDate);
+                const to = parseStoredDate(parsed.endDate);
+                setStartDate(from && to ? from : null);
+                setEndDate(from && to ? to : null);
+            }
+        } catch (error) {
+            console.error('Failed to load pricework list preferences', error);
+            removeListingTableState(priceworkPreferencesKey);
+        } finally {
+            restoredPreferencesKeyRef.current = priceworkPreferencesKey;
+            setPreferencesHydrated(true);
+        }
+    }, [projectId, priceworkPreferencesKey, user?.company_id]);
+
+    useEffect(() => {
+        if (projectId || !priceworkPreferencesKey || !preferencesHydrated) return;
+        if (restoredPreferencesKeyRef.current !== priceworkPreferencesKey) return;
+
+        const hasCompleteRange = Boolean(startDate && endDate);
+        const payload: PriceworkStoredPreferences = {
+            startDate: hasCompleteRange && startDate ? startDate.toISOString() : null,
+            endDate: hasCompleteRange && endDate ? endDate.toISOString() : null,
+        };
+        writeListingTableState(priceworkPreferencesKey, JSON.stringify(payload));
+    }, [projectId, priceworkPreferencesKey, preferencesHydrated, startDate, endDate]);
 
     const [sorting, setSorting] = useState<SortingState>([
         {id: 'pricework_date', desc: true},
     ]);
 
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-        Object.fromEntries(Object.keys(COLUMN_LABELS).map((id) => [id, true])),
-    );
+    const {columnVisibility, onColumnVisibilityChange: setColumnVisibility} =
+        usePersistentColumnVisibility({
+            storageKey: `cv_${user?.company_id}_${user?.id ?? 'user'}_priceworks`,
+            enabled: Boolean(user?.company_id),
+            alwaysVisibleColumns: ['select', 'actions'],
+        });
 
     const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(null);
     const [columnSearch, setColumnSearch] = useState('');
@@ -1669,6 +1731,8 @@ const PriceworkList = ({
         if (!user?.company_id) return;
         // Wait for shared project filters so we don't fetch with the wrong date range.
         if (projectId && !sharedFiltersReady) return;
+        // Wait for the saved date range so the first list matches the restored filter.
+        if (!projectId && !preferencesHydrated) return;
         setLoading(true);
         try {
             let url = `pricework/list-web?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -1821,6 +1885,7 @@ const PriceworkList = ({
         debounceDependencies: [
             user?.company_id,
             sharedFiltersReady,
+            preferencesHydrated,
             search,
             startDate ? format(startDate, 'yyyy-MM-dd') : '',
             endDate ? format(endDate, 'yyyy-MM-dd') : '',
@@ -2127,7 +2192,7 @@ const PriceworkList = ({
                                             size="small"
                                             checked={columnVisibility[id] !== false}
                                             onChange={() =>
-                                                setColumnVisibility((prev) => ({
+                                                setColumnVisibility((prev: Record<string, boolean>) => ({
                                                     ...prev,
                                                     [id]: !(prev[id] !== false),
                                                 }))

@@ -711,7 +711,7 @@ const ProjectList = ({ projectId }: { projectId?: number | null }) => {
                     const res = await api.post("project/archive", { id });
                     if (
                       !res.data.IsSuccess &&
-                      !res.data.isSuccess &&
+                      !res.data.IsSuccess &&
                       !res.data.success &&
                       !(res.status >= 200 && res.status < 300)
                     ) {

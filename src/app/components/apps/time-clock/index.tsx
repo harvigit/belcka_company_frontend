@@ -3865,8 +3865,8 @@ const TimeClock = ({queryParams}: Props) => {
                         </Tooltip>
                     </Box>
                     <Box sx={{flex: 1, minHeight: 0, overflow: 'hidden'}}>
-                        {relatedListView === 'expense' && <ExpenseList />}
-                        {relatedListView === 'pricework' && <PriceworkList />}
+                        {relatedListView === 'expense' && <ExpenseList embedded />}
+                        {relatedListView === 'pricework' && <PriceworkList embedded />}
                     </Box>
                 </Box>
             </Drawer>

@@ -258,12 +258,12 @@ const RequestCard = React.memo<{
         const timeKey = `${startTime}-${endTime}`;
         if (timeKey === savedTimeKeyRef.current) return;
 
-        const isSuccess = await onAutoUpdate(request.id, {
+        const IsSuccess = await onAutoUpdate(request.id, {
             start_time: startTime,
             end_time: endTime,
         });
 
-        if (isSuccess) {
+        if (IsSuccess) {
             savedTimeKeyRef.current = timeKey;
         }
     }, [canAction, onAutoUpdate, request.id, request.status]);

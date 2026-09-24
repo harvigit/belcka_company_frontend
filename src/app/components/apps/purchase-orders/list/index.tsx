@@ -1,6 +1,15 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { readListingTableState, writeListingTableState } from "@/utils/listingTableStateStorage";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
+import {
+  readListingTableState,
+  writeListingTableState,
+} from "@/utils/listingTableStateStorage";
 import {
   TableContainer,
   Table,
@@ -18,19 +27,9 @@ import {
   TextField,
   InputAdornment,
   MenuItem,
-  DialogActions,
-  DialogTitle,
-  DialogContent,
-  Dialog,
   Menu,
   ListItemIcon,
   Tooltip,
-  Popover,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-  CircularProgress,
-  Paper,
 } from "@mui/material";
 import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import { useServerTable } from "@/hooks/useServerTable";
@@ -63,8 +62,6 @@ import Image from "next/image";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import PurchaseProductList from "../products";
 import PurchaseOrder from "../create";
-import { DayPicker } from "react-day-picker";
-import { styled } from "@mui/material/styles";
 import ArchivePurchaseOrder from "../archive";
 import DraftPurchaseOrder from "../drafts";
 import PurchaseOrderHistory from "../history";
@@ -74,32 +71,13 @@ import CancelOrder from "../cancel-orders";
 import OtherProductsDrawer from "../other-products";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
+import ColumnVisibilityPopover from "@/app/components/common/ColumnVisibilityPopover";
+import ListConfirmDialog from "@/app/components/common/ListConfirmDialog";
+import PurchaseOrderFiltersDialog from "./filters-dialog";
+import DeliveryDateDialog from "./delivery-date-dialog";
+import InvoicePreviewDialog from "./invoice-preview-dialog";
 
 dayjs.extend(customParseFormat);
-
-const StyledDayPicker = styled(Box)(({ theme }) => ({
-  "& .rdp": {
-    "--rdp-cell-size": "36px",
-    "--rdp-accent-color": "#50ABFF",
-    "--rdp-background-color": "#e6f3ff",
-    "--rdp-selected-color": "#fff",
-    "--rdp-selected-background": "#50ABFF",
-    "--rdp-today-background": "#f0f0f0",
-    fontSize: "14px",
-    padding: theme.spacing(1),
-    backgroundColor: "#fff",
-  },
-  "& .rdp-day": {
-    borderRadius: "4px",
-  },
-  "& .rdp-day_selected": {
-    backgroundColor: "#50ABFF",
-    color: "#fff",
-  },
-  "& .rdp-day:hover": {
-    backgroundColor: "#e6f3ff",
-  },
-}));
 
 interface TableRow {
   id: number;
@@ -192,7 +170,6 @@ const PurchaseOrderList = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
-  const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [productDrawerOpen, setProductDrawerOpen] = useState(false);
@@ -229,7 +206,6 @@ const PurchaseOrderList = () => {
     setMenuPos(null);
     setSelectedRow2(null);
   };
-  const [anchorEl3, setAnchorEl3] = useState<null | HTMLElement>(null);
 
   function formatDateLocal(date: Date): string {
     const year = date.getFullYear();
@@ -376,7 +352,8 @@ const PurchaseOrderList = () => {
       restoredTableStateKeyRef.current = "";
       return;
     }
-    if (restoredTableStateKeyRef.current === purchaseOrdersTableStateKey) return;
+    if (restoredTableStateKeyRef.current === purchaseOrdersTableStateKey)
+      return;
 
     const savedState = readPurchaseOrdersTableStateCookie(
       purchaseOrdersTableStateKey,
@@ -412,7 +389,8 @@ const PurchaseOrderList = () => {
 
   useEffect(() => {
     if (!purchaseOrdersTableStateKey || !isTableStateReady) return;
-    if (restoredTableStateKeyRef.current !== purchaseOrdersTableStateKey) return;
+    if (restoredTableStateKeyRef.current !== purchaseOrdersTableStateKey)
+      return;
 
     writeListingTableState(
       purchaseOrdersTableStateKey,
@@ -564,287 +542,6 @@ const PurchaseOrderList = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handlePrint = () => {
-    if (!purchaseOrder) return;
-
-    const divContents = document.getElementById("purchase-order-preview");
-    if (!divContents) return;
-
-    const printWindow = window.open("", "_blank", "height=800,width=800");
-    if (!printWindow) return;
-
-    printWindow.document.write(
-      "<html lang='en'><head><title>Purchase Order</title>",
-    );
-
-    printWindow.document.write(`
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        color: #000;
-        margin: 20px;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 10px;
-      }
-      th, td {
-        border: 1px solid #ddd;
-        padding: 8px;
-      }
-      th {
-        background-color: #f2f2f2;
-        text-align: left;
-      }
-      .company-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-      }
-
-      .company-logo {
-        width: 100px;
-        height: auto;
-      }
-
-      .amount-section {
-        width: 30%;
-        margin-left: auto;
-        border: 1px solid #e9e9e9;
-        padding: 10px;
-      }
-      .amount-section div {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 5px;
-      }
-      @media print {
-        @page { size: A4; margin: 0.5in; }
-      }
-      .purchase-order {
-        padding: 2rem !important;
-      }
-      .print-order .card-body{
-        padding: 0 !important;
-        color: #000;
-      }
-
-      .company-info {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
-      }
-
-      .company-logo {
-        max-width: 100px;
-        height: auto;
-      }
-
-      .company-details {
-        text-align: right;
-      }
-
-      .company-details h1 {
-        margin: 0;
-        font-size: 20px;
-      }
-
-      .company-details p {
-        margin: 5px 0 0;
-        font-size: 14px;
-      }
-
-      .purchase-order {
-        font-family: Arial, sans-serif;
-        max-width: 800px;
-        margin: 0 auto;
-      }
-
-      h4 {
-        font-size: 27px;
-        text-align: center;
-        margin-bottom: 10px;
-        color: #000;
-        margin-top: 0;
-      }
-
-      .sub-header {
-        color: #000;
-        text-align: center;
-        font-size: 13px;
-        margin-bottom: 10px;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 10px;
-        border: 1px solid #ddd;
-      }
-
-      th, td {
-        padding: 8px;
-        text-align: left;
-      }
-      .order-table{
-          .font-14 {
-            font-size: 14px !important;
-            margin: 2px !important;
-          }
-
-          .font-12 {
-            color: #777e89;
-            font-size: 12px !important;
-          }
-      }
-      .order-table thead th{
-        padding: 5px !important;
-      }
-
-      .order-table tbody td{
-        padding: 5px !important;
-      }
-
-      th {
-        background-color: #f2f2f2;
-      }
-
-      .to-address {
-        width: 48%;
-        margin-left: 32px;
-
-        h5{
-          margin: 0px !important;
-          margin-bottom: 5px !important;
-        }
-      }
-      .delivery-address {
-        width: 48%;
-        h5{
-          margin: 0px !important;
-          margin-bottom: 5px !important;
-        }
-      }
-
-      .company-details h5{
-        margin: 0.5rem 0;    
-      }
-
-      h5{
-        color: #000;
-        font-weight: 400;
-      }
-      .address_wrapper {
-        border: 1px solid #ddd;
-        display: flex;
-        justify-content: space-between;
-        margin-top: 10px;
-        margin-bottom: 10px;
-        padding-top: 16px;
-        padding-bottom : 16px;
-      }
-
-      .info_wrapper {
-        border: 1px solid #ddd;
-      }
-
-      .info-table {
-        width: 33.33%;
-        display: flex;
-        gap: 6px;
-        padding: 2px 5px !important;
-
-        p {
-          margin: 3px !important;
-        }
-      }
-
-      .address-table  {
-        width: 50%;
-        vertical-align: top;
-      }
-
-      .font-size-13{
-        font-size: 13px;
-        margin: 0;
-      }
-
-      .text-right {
-        text-align: right;
-      }
-
-      .alert-text{
-        color: crimson;
-        margin-bottom: 10px;
-      }
-
-      .description-col{
-        width: 50%;
-      }
-
-      .qty-col{
-        text-align: center;
-        width: 10%;
-      }
-
-      .rate-col{
-        text-align: right;
-        width: 15%;
-      }
-
-      .line-total-col{
-        text-align: right;
-        width: 15%;
-      }
-
-      .sub-total-col{
-        text-align: right;
-        border: 1px solid #ddd;
-      }
-
-      .tbody-qty-col{
-        text-align: center;
-      }
-
-      .amount-col{
-        text-align: right;
-      }
-
-      .amount-section{
-        width: 30%;
-        float: right;
-      }
-
-      .amount-section-label{
-        text-align: left !important;
-        p {
-          margin: 2px !important;
-          font-size: 14px !important;
-        }
-
-        .bold {
-          font-weight: bold;
-        }
-      }
-
-      .amount-section td{
-        text-align: right;
-      }
-    </style>
-  `);
-
-    printWindow.document.write("</head><body>");
-    printWindow.document.write(divContents.innerHTML);
-    printWindow.document.write("</body></html>");
-    printWindow.document.close();
-
-    printWindow.focus();
-    setTimeout(() => printWindow.print(), 500);
   };
 
   const handleEdit = useCallback((item: any) => {
@@ -1546,10 +1243,6 @@ Team Belcka
     }),
   ];
 
-  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl2(event.currentTarget);
-  };
-  const handlePopoverClose = () => setAnchorEl2(null);
   table.setOptions((prev: any) => ({
     ...prev,
     columns,
@@ -1569,340 +1262,12 @@ Team Belcka
           flexDirection: "column",
         }}
       >
-        {/* Invoice model */}
-        <Dialog
+        <InvoicePreviewDialog
           open={open}
           onClose={() => setOpen(false)}
-          fullWidth
-          maxWidth="md"
-        >
-          <DialogTitle>
-            <Typography>Preview</Typography>
-            <IconButton
-              onClick={() => setOpen(false)}
-              sx={{ position: "absolute", right: 8, top: 8 }}
-            >
-              <IconX />
-            </IconButton>
-          </DialogTitle>
-
-          <DialogContent
-            dividers
-            sx={{ height: "100vh", overflowY: "auto" }}
-            className="print-order"
-          >
-            {loading ? (
-              <Box display="flex" justifyContent="center" alignItems="center">
-                <CircularProgress />
-              </Box>
-            ) : purchaseOrder ? (
-              <Paper id="purchase-order-preview" sx={{ p: 2 }}>
-                {/* Company Info */}
-                <Box
-                  display="flex"
-                  justifyContent={"space-between"}
-                  alignItems="center"
-                  mb={2}
-                  className="company-info"
-                >
-                  {purchaseOrder?.company_image && (
-                    <img
-                      src={purchaseOrder?.company_image}
-                      alt="Company Logo"
-                      style={{ width: 90, marginRight: 16 }}
-                      className="company-logo"
-                    />
-                  )}
-                  <Box justifyItems={"end"} className="company-details">
-                    <Typography variant="h1" fontSize={18}>
-                      {purchaseOrder?.company_name}
-                    </Typography>
-                    {purchaseOrder?.company.address && (
-                      <Typography>{purchaseOrder?.company.address}</Typography>
-                    )}
-                  </Box>
-                </Box>
-
-                <Typography
-                  variant="h4"
-                  fontSize={24}
-                  fontWeight={500}
-                  align="center"
-                  mb={1}
-                >
-                  Purchase Order
-                </Typography>
-                <Typography
-                  variant="body2"
-                  align="center"
-                  mb={2}
-                  className="sub-header"
-                >
-                  SUPPLY THE MATERIAL/EQUIPMENT/GOODS TO THE REQUIRED
-                  SPECIFICATION AS SET OUT BELOW. THIS ORDER IS PLACED SUBJECT
-                  TO OUR TERMS AND CONDITIONS.
-                </Typography>
-
-                {/* Info Table */}
-                <Box
-                  display="flex"
-                  flexDirection="column"
-                  mb={2}
-                  border="1px solid #e9e9e9"
-                  borderRadius={0}
-                  p={2}
-                  className="info_wrapper"
-                  gap={1}
-                >
-                  <Box display="flex" gap={2} className="info-table">
-                    <Typography variant="body2" fontWeight="bold">
-                      PO:
-                    </Typography>
-                    <Typography variant="body2">
-                      {purchaseOrder?.order_id}
-                    </Typography>
-                  </Box>
-
-                  <Box display="flex" gap={2} className="info-table">
-                    <Typography variant="body2" fontWeight="bold">
-                      Date:
-                    </Typography>
-                    <Typography variant="body2">
-                      {purchaseOrder?.date}
-                    </Typography>
-                  </Box>
-
-                  <Box display="flex" gap={2} className="info-table">
-                    <Typography variant="body2" fontWeight="bold">
-                      Account No:
-                    </Typography>
-                    <Typography variant="body2" fontWeight="bold">
-                      {purchaseOrder?.supplier?.account_number}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                {/* Address Table */}
-                <Box
-                  display="flex"
-                  justifyContent="space-between"
-                  mb={2}
-                  border="1px solid #e9e9e9"
-                  borderRadius={0}
-                  className="address_wrapper"
-                  py={2}
-                >
-                  {/* Supplier */}
-                  <Box width="48%" ml={4} className="to-address">
-                    <Typography variant="h5">To</Typography>
-                    <Typography variant="h5">
-                      <b>Name:</b> {purchaseOrder?.supplier?.name}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Street:</b> {purchaseOrder?.supplier?.street}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Location:</b> {purchaseOrder?.supplier?.location}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Town:</b> {purchaseOrder?.supplier?.town}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Postcode:</b> {purchaseOrder?.supplier?.postcode}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Contact:</b> {purchaseOrder?.supplier?.company_name}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Tel:</b>{" "}
-                      {purchaseOrder?.supplier?.phone_with_extension}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Email:</b> {purchaseOrder?.supplier?.email}
-                    </Typography>
-                  </Box>
-
-                  {/* Store */}
-                  <Box width="48%" className="delivery-address">
-                    <Typography variant="h5">Deliver To</Typography>
-                    <Typography variant="h5">
-                      <b>Name:</b> {purchaseOrder?.store?.name}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Street:</b> {purchaseOrder?.store?.street}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Location:</b> {purchaseOrder?.store?.location}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Town:</b> {purchaseOrder?.store?.town}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Postcode:</b> {purchaseOrder?.store?.postcode}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Contact:</b> {purchaseOrder?.user_name}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Tel:</b> {purchaseOrder?.store?.phone_with_extension}
-                    </Typography>
-                    <Typography variant="h5">
-                      <b>Email:</b> {purchaseOrder?.store?.email}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Box mt={2}>
-                  {/* Products Table - Full Width */}
-                  <TableContainer>
-                    <Table className="order-table">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell className="item-col">Item</TableCell>
-                          <TableCell className="description-col">
-                            Products
-                          </TableCell>
-                          <TableCell className="qty-col">Qty</TableCell>
-                          <TableCell className="rate-col">Rate</TableCell>
-                          <TableCell className="line-total-col" width={100}>
-                            Line Total
-                          </TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {purchaseOrder?.purchase_orders.map(
-                          (product: any, index: number) => (
-                            <TableRow key={index}>
-                              <TableCell className="font-14">
-                                {product.product.supplier_code}
-                              </TableCell>
-                              <TableCell>
-                                <Typography
-                                  variant="h6"
-                                  className="font-14"
-                                  fontWeight={500}
-                                >
-                                  {product.product.name ||
-                                    product.product.short_name}
-                                </Typography>
-                                <Typography
-                                  className="font-12"
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  {product.product.description
-                                    ? product.product.description
-                                    : ""}
-                                </Typography>
-                              </TableCell>
-                              <TableCell className="font-14">
-                                {product.qty}
-                              </TableCell>
-                              <TableCell className="font-14">
-                                {purchaseOrder.currency}
-                                {product.price}
-                              </TableCell>
-                              <TableCell className="font-14">
-                                {purchaseOrder.currency}
-                                {product.price}
-                              </TableCell>
-                            </TableRow>
-                          ),
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-
-                  {/* Totals Box - Right Aligned Below Table */}
-                  <Box display="flex" justifyContent="flex-end" mt={2}>
-                    <Box
-                      display="flex"
-                      flexDirection="column"
-                      width="30%"
-                      border="1px solid #e9e9e9"
-                      borderRadius={0}
-                      p={2}
-                      gap={1}
-                      className="amount-section"
-                    >
-                      <Box
-                        display="flex"
-                        justifyContent="space-between"
-                        className="amount-section-label"
-                      >
-                        <Typography
-                          variant="body2"
-                          fontWeight="bold"
-                          className="bold"
-                        >
-                          Sub Total
-                        </Typography>
-                        <Typography variant="body2">
-                          {purchaseOrder?.currency}
-                          {purchaseOrder?.total_amount}
-                        </Typography>
-                      </Box>
-
-                      <Box
-                        display="flex"
-                        justifyContent="space-between"
-                        className="amount-section-label"
-                      >
-                        <Typography
-                          variant="body2"
-                          fontWeight="bold"
-                          className="bold"
-                        >
-                          Add VAT @20%
-                        </Typography>
-                        <Typography variant="body2">
-                          {purchaseOrder?.currency}
-                          {purchaseOrder?.tax}
-                        </Typography>
-                      </Box>
-
-                      <Box
-                        display="flex"
-                        justifyContent="space-between"
-                        className="amount-section-label"
-                      >
-                        <Typography
-                          variant="body2"
-                          fontWeight="bold"
-                          className="bold"
-                        >
-                          Total
-                        </Typography>
-                        <Typography variant="body2" fontWeight="bold">
-                          {purchaseOrder?.currency}
-                          {(
-                            (Number(purchaseOrder?.total_amount) || 0) +
-                            (Number(purchaseOrder?.tax) || 0)
-                          ).toFixed(2)}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Box>
-                </Box>
-              </Paper>
-            ) : (
-              <Typography>No data found</Typography>
-            )}
-          </DialogContent>
-
-          <DialogActions>
-            <Button variant="contained" onClick={handlePrint}>
-              Print
-            </Button>
-            <Button
-              variant="outlined"
-              color="error"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-          </DialogActions>
-        </Dialog>
+          loading={loading}
+          purchaseOrder={purchaseOrder}
+        />
 
         {/* Render the search and table */}
         <Stack
@@ -1963,95 +1328,25 @@ Team Belcka
               </Button>
             )}
 
-            <Dialog
+            <PurchaseOrderFiltersDialog
               open={filterOpen}
               onClose={() => setFilterOpen(false)}
-              fullWidth
-              maxWidth="sm"
-            >
-              <DialogTitle
-                sx={{ m: 0, position: "relative", overflow: "visible" }}
-              >
-                Filters
-                <IconButton
-                  aria-label="close"
-                  onClick={() => setFilterOpen(false)}
-                  size="large"
-                  sx={{
-                    position: "absolute",
-                    right: 12,
-                    top: 8,
-                    color: (theme) => theme.palette.grey[900],
-                    backgroundColor: "transparent",
-                    zIndex: 10,
-                    width: 50,
-                    height: 50,
-                  }}
-                >
-                  <IconX size={40} style={{ width: 40, height: 40 }} />
-                </IconButton>
-              </DialogTitle>
-              <DialogContent>
-                <Stack spacing={2} mt={1}>
-                  <TextField
-                    select
-                    label="Status"
-                    value={tempFilters.status || "all"}
-                    onChange={(e) =>
-                      setTempFilters({
-                        ...tempFilters,
-                        status: normalizePurchaseOrderStatus(e.target.value),
-                      })
-                    }
-                    fullWidth
-                  >
-                    <MenuItem value="all">All</MenuItem>
-                    {tempFilters.status &&
-                      tempFilters.status !== "all" &&
-                      !["1", "2", "3", "4", "5"].includes(
-                        tempFilters.status,
-                      ) && (
-                        <MenuItem value={tempFilters.status}>
-                          {tempFilters.status}
-                        </MenuItem>
-                      )}
-                    <MenuItem value="1">Partially Delivered</MenuItem>
-                    <MenuItem value="2">Upcoming</MenuItem>
-                    <MenuItem value="3">Processing</MenuItem>
-                    <MenuItem value="4">Cancelled</MenuItem>
-                    <MenuItem value="5">On stock</MenuItem>
-                  </TextField>
-                </Stack>
-              </DialogContent>
-
-              <DialogActions>
-                <Button
-                  onClick={() => {
-                    handleClearAppliedFilters();
-                    setFilterOpen(false);
-                  }}
-                  color="inherit"
-                >
-                  Clear
-                </Button>
-
-                <Button
-                  variant="contained"
-                  onClick={() => {
-                    skipNextDependencyPageResetRef.current = false;
-                    setFilters(normalizePurchaseOrderFilters(tempFilters));
-                    setPagination((prev) =>
-                      prev.pageIndex === 0
-                        ? prev
-                        : { ...prev, pageIndex: 0 },
-                    );
-                    setFilterOpen(false);
-                  }}
-                >
-                  Apply
-                </Button>
-              </DialogActions>
-            </Dialog>
+              tempFilters={tempFilters}
+              setTempFilters={setTempFilters}
+              normalizeStatus={normalizePurchaseOrderStatus}
+              onClear={() => {
+                handleClearAppliedFilters();
+                setFilterOpen(false);
+              }}
+              onApply={() => {
+                skipNextDependencyPageResetRef.current = false;
+                setFilters(normalizePurchaseOrderFilters(tempFilters));
+                setPagination((prev) =>
+                  prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                );
+                setFilterOpen(false);
+              }}
+            />
           </Grid>
           <Stack
             mb={2}
@@ -2091,214 +1386,43 @@ Team Belcka
             )}
 
             <IconButton
-              onClick={handlePopoverOpen}
+              onClick={(event) => setAnchorEl2(event.currentTarget)}
               sx={{ ml: 1 }}
               color="primary"
             >
               <IconEye />
             </IconButton>
-            <Popover
+            <ColumnVisibilityPopover
               open={Boolean(anchorEl2)}
               anchorEl={anchorEl2}
-              onClose={handlePopoverClose}
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-              PaperProps={{
-                sx: {
-                  width: 280,
-                  mt: 1,
-                  p: 1,
-                  borderRadius: 2,
-                  boxShadow: "0 12px 32px rgba(15, 23, 42, 0.14)",
-                  border: "1px solid #e5e7eb",
-                  maxHeight: "min(420px, calc(100vh - 140px))",
-                  overflow: "hidden",
-                },
+              onClose={() => setAnchorEl2(null)}
+              table={table}
+              excludedColumns={["conflicts", "select"]}
+            />
+            <ListConfirmDialog
+              open={confirmOpen}
+              title="Confirm Deletion"
+              message={`Are you sure you want to archive ${usersToDelete.length} order product${usersToDelete.length > 1 ? "s" : ""} from the orders?`}
+              confirmLabel="Archive"
+              onClose={() => setConfirmOpen(false)}
+              onConfirm={async () => {
+                try {
+                  const payload = {
+                    order_ids: usersToDelete.join(","),
+                  };
+                  const response = await api.post(
+                    "purchase-orders/archive",
+                    payload,
+                  );
+                  toast.success(response.data.message);
+                  setSelectedRowIds(new Set());
+                  await fetchOrders();
+                } catch (error) {
+                } finally {
+                  setConfirmOpen(false);
+                }
               }}
-            >
-              <TextField
-                size="small"
-                placeholder="Search columns..."
-                fullWidth
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                sx={{
-                  mb: 1,
-                  "& .MuiInputBase-root": {
-                    borderRadius: 1.5,
-                    backgroundColor: "#fff",
-                  },
-                }}
-              />
-              <Box
-                sx={{
-                  maxHeight: "calc(min(420px, calc(100vh - 140px)) - 64px)",
-                  overflowY: "auto",
-                  pr: 0.5,
-                }}
-              >
-                <FormGroup sx={{ gap: 0.25 }}>
-                  {(() => {
-                    const columnOptions = table
-                      .getAllLeafColumns()
-                      .filter((col: any) => {
-                        const excludedColumns = ["conflicts", "select"];
-                        if (excludedColumns.includes(col.id)) return false;
-
-                        return col.id
-                          .toLowerCase()
-                          .includes(search.toLowerCase());
-                      });
-                    const allSelected =
-                      columnOptions.length > 0 &&
-                      columnOptions.every((col: any) => col.getIsVisible());
-                    const someSelected = columnOptions.some((col: any) =>
-                      col.getIsVisible(),
-                    );
-
-                    return (
-                      <>
-                        <FormControlLabel
-                          control={
-                            <CustomCheckbox
-                              size="small"
-                              checked={allSelected}
-                              indeterminate={!allSelected && someSelected}
-                              disabled={columnOptions.length === 0}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                columnOptions.forEach((col: any) =>
-                                  col.toggleVisibility(e.target.checked),
-                                );
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              sx={{
-                                p: 0.5,
-                                mr: 1,
-                              }}
-                            />
-                          }
-                          sx={{
-                            m: 0,
-                            px: 0.75,
-                            py: 0.375,
-                            width: "100%",
-                            borderRadius: 1.5,
-                            alignItems: "center",
-                            textTransform: "none",
-                            borderBottom: "1px solid #eef2f7",
-                            mb: 0.25,
-                            "&:hover": {
-                              backgroundColor: "#f8fafc",
-                            },
-                            "& .MuiFormControlLabel-label": {
-                              fontSize: "14px",
-                              lineHeight: 1.35,
-                              whiteSpace: "nowrap",
-                              fontWeight: 600,
-                            },
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          label="Select All"
-                        />
-                        {columnOptions.map((col: any) => (
-                          <FormControlLabel
-                            key={col.id}
-                            control={
-                              <CustomCheckbox
-                                size="small"
-                                checked={col.getIsVisible()}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  col.getToggleVisibilityHandler()(e);
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                sx={{
-                                  p: 0.5,
-                                  mr: 1,
-                                }}
-                              />
-                            }
-                            sx={{
-                              m: 0,
-                              px: 0.75,
-                              py: 0.375,
-                              width: "100%",
-                              borderRadius: 1.5,
-                              alignItems: "center",
-                              textTransform: "none",
-                              "&:hover": {
-                                backgroundColor: "#f8fafc",
-                              },
-                              "& .MuiFormControlLabel-label": {
-                                fontSize: "14px",
-                                lineHeight: 1.35,
-                                whiteSpace: "nowrap",
-                              },
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            label={
-                              col.columnDef.meta?.label ||
-                              (typeof col.columnDef.header === "string" &&
-                              col.columnDef.header.trim() !== ""
-                                ? col.columnDef.header
-                                : col.id
-                                    .replace(/([A-Z])/g, " $1")
-                                    .replace(/^./, (str: string) =>
-                                      str.toUpperCase(),
-                                    )
-                                    .trim())
-                            }
-                          />
-                        ))}
-                      </>
-                    );
-                  })()}
-                </FormGroup>
-              </Box>
-            </Popover>
-            <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-              <DialogTitle>Confirm Deletion</DialogTitle>
-              <DialogContent>
-                <Typography color="textSecondary">
-                  Are you sure you want to archive {usersToDelete.length} order
-                  product
-                  {usersToDelete.length > 1 ? "s" : ""} from the orders?
-                </Typography>
-              </DialogContent>
-              <DialogActions>
-                <Button
-                  onClick={() => setConfirmOpen(false)}
-                  variant="outlined"
-                  color="primary"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={async () => {
-                    try {
-                      const payload = {
-                        order_ids: usersToDelete.join(","),
-                      };
-                      const response = await api.post(
-                        "purchase-orders/archive",
-                        payload,
-                      );
-                      toast.success(response.data.message);
-                      setSelectedRowIds(new Set());
-                      await fetchOrders();
-                    } catch (error) {
-                    } finally {
-                      setConfirmOpen(false);
-                    }
-                  }}
-                  variant="outlined"
-                  color="error"
-                >
-                  Archive
-                </Button>
-              </DialogActions>
-            </Dialog>
+            />
             <IconButton
               sx={{ margin: "0px" }}
               id="basic-button"
@@ -2698,38 +1822,18 @@ Team Belcka
           totalRows={totalRows}
         />
 
-        <Dialog open={modalOpen} onClose={handleCloseModal}>
-          <DialogTitle>Select Delivery Date</DialogTitle>
-          <DialogContent>
-            <StyledDayPicker>
-              <DayPicker
-                mode="single"
-                selected={singleDate}
-                onSelect={setSingleDate}
-                showOutsideDays
-                defaultMonth={singleDate || new Date()}
-                modifiersClassNames={{
-                  selected: "rdp-day_selected",
-                }}
-              />
-            </StyledDayPicker>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseModal}>Cancel</Button>
-            <Button
-              variant="contained"
-              onClick={async () => {
-                if (selectedRow && singleDate) {
-                  const formattedDate = formatDateLocal(singleDate);
-                  await updateExpectedDate(selectedRow.id, formattedDate);
-                  handleCloseModal();
-                }
-              }}
-            >
-              Save
-            </Button>
-          </DialogActions>
-        </Dialog>
+        <DeliveryDateDialog
+          open={modalOpen}
+          selectedDate={singleDate}
+          onClose={handleCloseModal}
+          onSave={async (date) => {
+            if (selectedRow) {
+              const formattedDate = formatDateLocal(date);
+              await updateExpectedDate(selectedRow.id, formattedDate);
+              handleCloseModal();
+            }
+          }}
+        />
       </Box>
     </PermissionGuard>
   );

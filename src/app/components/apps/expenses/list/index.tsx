@@ -57,7 +57,11 @@ import {
 } from '@tanstack/react-table';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
-import {removeListingTableState} from '@/utils/listingTableStateStorage';
+import {
+    readListingTableState,
+    removeListingTableState,
+    writeListingTableState,
+} from '@/utils/listingTableStateStorage';
 import api from '@/utils/axios';
 import {tableFilterOptions} from '@/utils/uniqueFilterOptions';
 import {useServerTable} from '@/hooks/useServerTable';
@@ -121,6 +125,17 @@ const BULK_BUTTON_SX = {
     borderRadius: '8px',
 };
 
+type ExpenseStoredPreferences = {
+    startDate?: string | null;
+    endDate?: string | null;
+};
+
+const parseStoredDate = (value?: string | null) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const formatAmount = (currency: string, amount: number) =>
     `${currency}${Number(amount || 0).toFixed(2)}`;
 
@@ -172,7 +187,13 @@ const mapApiRowToListItem = (row: ExpenseRow): ExpenseListItem => {
     };
 };
 
-const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
+const ExpenseList = ({
+    projectId,
+    embedded = false,
+}: {
+    projectId?: number;
+    embedded?: boolean;
+} = {}) => {
     const session = useSession();
     const user = session.data?.user as User & {
         company_id?: number | null;
@@ -261,7 +282,8 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
     const [rejectExpenseIds, setRejectExpenseIds] = useState<number[]>([]);
     const [rejectNote, setRejectNote] = useState('');
     const [isRejecting, setIsRejecting] = useState(false);
-    const [preferencesHydrated, setPreferencesHydrated] = useState(!projectId);
+    const [preferencesHydrated, setPreferencesHydrated] = useState(false);
+    const restoredPreferencesKeyRef = useRef('');
     const loadedFilterCompanyIdRef = useRef<number | null>(null);
     const skipNextDependencyPageResetRef = useRef(false);
 
@@ -1003,18 +1025,53 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
             return;
         }
 
-        setPreferencesHydrated(true);
+        // Standalone listing restores its saved date range before the first fetch.
+        if (!user?.company_id) return;
+
+        if (!expensePreferencesKey) {
+            setPreferencesHydrated(true);
+            return;
+        }
+
+        if (restoredPreferencesKeyRef.current === expensePreferencesKey) {
+            setPreferencesHydrated(true);
+            return;
+        }
+
+        try {
+            const stored = readListingTableState(expensePreferencesKey);
+            if (stored) {
+                const parsed = JSON.parse(stored) as ExpenseStoredPreferences;
+                const from = parseStoredDate(parsed.startDate);
+                const to = parseStoredDate(parsed.endDate);
+                setStartDate(from && to ? from : null);
+                setEndDate(from && to ? to : null);
+            }
+        } catch (error) {
+            console.error('Failed to load expense list preferences', error);
+            removeListingTableState(expensePreferencesKey);
+        } finally {
+            restoredPreferencesKeyRef.current = expensePreferencesKey;
+            setPreferencesHydrated(true);
+        }
     }, [
         projectId,
         sharedFilters?.hydrated,
+        expensePreferencesKey,
+        user?.company_id,
     ]);
 
     useEffect(() => {
-        if (projectId || !expensePreferencesKey) return;
+        if (projectId || !expensePreferencesKey || !preferencesHydrated) return;
+        if (restoredPreferencesKeyRef.current !== expensePreferencesKey) return;
 
-        removeListingTableState(expensePreferencesKey);
-        return () => removeListingTableState(expensePreferencesKey);
-    }, [projectId, expensePreferencesKey]);
+        const hasCompleteRange = Boolean(startDate && endDate);
+        const payload: ExpenseStoredPreferences = {
+            startDate: hasCompleteRange && startDate ? startDate.toISOString() : null,
+            endDate: hasCompleteRange && endDate ? endDate.toISOString() : null,
+        };
+        writeListingTableState(expensePreferencesKey, JSON.stringify(payload));
+    }, [projectId, expensePreferencesKey, preferencesHydrated, startDate, endDate]);
 
     // Keep project Expenses in sync when shared Overview/Pricework filters change.
     useEffect(() => {
@@ -1570,7 +1627,7 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
     return (
         <Box
             sx={{
-                height: projectId ? '100%' : 'calc(100vh - 100px)',
+                height: projectId || embedded ? '100%' : 'calc(100vh - 100px)',
                 display: 'flex',
                 flexDirection: 'column',
                 position: 'relative',
