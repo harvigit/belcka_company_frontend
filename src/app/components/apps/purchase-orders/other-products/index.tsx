@@ -30,9 +30,6 @@ import {
   Select,
   MenuItem,
   FormControl,
-  Modal,
-  CircularProgress,
-  LinearProgress,
 } from "@mui/material";
 import {
   IconX,
@@ -48,13 +45,11 @@ import {
 import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
-import { useDropzone } from "react-dropzone";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import OtherProductForm from "./form";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
-import { FileDownload } from "@mui/icons-material";
-import Link from "next/link";
+import ExcelImportModal from "@/app/components/common/ExcelImportModal";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
@@ -102,11 +97,6 @@ const OtherProductsDrawer = ({
   const [tempProject, setTempProject] = useState("");
   const [projects, setProjects] = useState<any[]>([]);
   const [openModel, setOpenModel] = useState(false);
-  const [file, setFile] = useState<any | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isImport, setIsImport] = useState(false);
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl2(event.currentTarget);
@@ -215,75 +205,6 @@ const OtherProductsDrawer = ({
       setSelectedRowIds(new Set());
     } catch (err) {
       console.error("Failed to export products", err);
-    }
-  };
-
-  const handleFileChange = (acceptedFiles: File[]) => {
-    const selectedFile = acceptedFiles[0];
-    setFile(selectedFile);
-    setPreview(selectedFile.name);
-  };
-
-  const { getRootProps: getExcelRootProps, getInputProps: getExcelInputProps } =
-    useDropzone({
-      accept: {
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
-          ".xlsx",
-        ],
-        "application/vnd.ms-excel": [".xls"],
-      },
-      onDrop: handleFileChange,
-    });
-
-  const importProducts = async () => {
-    if (!file) {
-      toast.error("Please select a file");
-      return;
-    }
-
-    setIsImport(true);
-    setUploadProgress(0);
-    setIsProcessing(false);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("company_id", String(companyId));
-
-      const res = await api.post("other-products/import", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        onUploadProgress: (progressEvent: any) => {
-          if (progressEvent.total) {
-            const percent = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total,
-            );
-            setUploadProgress(percent);
-            if (percent === 100) {
-              setIsProcessing(true);
-            }
-          }
-        },
-      });
-
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message);
-        fetchData();
-        setTimeout(() => {
-          setOpenModel(false);
-          setUploadProgress(0);
-          setIsProcessing(false);
-          setFile(null);
-          setPreview(null);
-        }, 1000);
-      } else {
-        toast.error(res.data.message || "Import failed");
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Import failed");
-    } finally {
-      setIsImport(false);
     }
   };
 
@@ -613,11 +534,7 @@ const OtherProductsDrawer = ({
               <Button
                 variant="contained"
                 startIcon={<IconFileImport width={18} />}
-                onClick={() => {
-                  setFile(null);
-                  setPreview(null);
-                  setOpenModel(true);
-                }}
+                onClick={() => setOpenModel(true)}
               >
                 Import
               </Button>
@@ -969,138 +886,16 @@ const OtherProductsDrawer = ({
         </Dialog>
       </Drawer>
 
-      <Modal
+      <ExcelImportModal
         open={openModel}
         onClose={() => setOpenModel(false)}
-        disableEscapeKeyDown
-      >
-        <Box
-          sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            bgcolor: "background.paper",
-            p: 3,
-            borderRadius: 2,
-            boxShadow: 24,
-            width: 400,
-          }}
-        >
-          <DialogTitle sx={{ p: 0 }}>
-            <Typography color="GrayText" fontWeight={700}>
-              Upload Your File
-            </Typography>
-            <IconButton
-              onClick={() => setOpenModel(false)}
-              sx={{
-                position: "absolute",
-                right: 8,
-                top: 10,
-                backgroundColor: "transparent",
-              }}
-            >
-              <IconX size={40} />
-            </IconButton>
-          </DialogTitle>
-          <Box
-            {...getExcelRootProps()}
-            sx={{
-              width: 350,
-              height: 100,
-              mt: 2,
-              border: "2px dashed",
-              borderColor: "primary.main",
-              borderRadius: 1,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              position: "relative",
-              overflow: "hidden",
-              "&:hover": {
-                backgroundColor: "primary.light",
-              },
-            }}
-          >
-            <input {...getExcelInputProps()} accept=".xls,.xlsx" />
-            {preview ? (
-              preview
-            ) : (
-              <Typography fontSize="12px" color="primary.main">
-                Click or Drag File
-              </Typography>
-            )}
-          </Box>
-          <Stack
-            direction="row"
-            justifyContent={"space-between"}
-            alignItems="center"
-          >
-            {isImport && (
-              <Box sx={{ mt: 2 }}>
-                {!isProcessing ? (
-                  <>
-                    <Typography variant="body2" mb={1}>
-                      Uploading... {uploadProgress}%
-                    </Typography>
-                    <LinearProgress
-                      variant="determinate"
-                      value={uploadProgress}
-                      sx={{ height: 8, borderRadius: 5 }}
-                    />
-                  </>
-                ) : (
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <CircularProgress size={18} />
-                    <Typography variant="body2">Processing file...</Typography>
-                  </Box>
-                )}
-              </Box>
-            )}
-            <Box sx={{ mt: 2, display: "flex", justifyContent: "end" }}>
-              <Link
-                href="#"
-                onClick={() => {
-                  const link = document.createElement("a");
-                  link.href = "/files/other_products_import.xlsx";
-                  link.download = "sample-file.xlsx";
-                  link.click();
-                }}
-                style={{
-                  width: "100%",
-                  color: "#1e4db7",
-                  textTransform: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyItems: "center",
-                }}
-              >
-                <FileDownload />
-                Download Sample File
-              </Link>
-            </Box>
-            <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-              <Button
-                variant="contained"
-                disabled={isImport}
-                onClick={(e: any) => {
-                  importProducts();
-                }}
-              >
-                Save
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => setOpenModel(false)}
-                color="error"
-              >
-                Cancel
-              </Button>
-            </Box>
-          </Stack>
-        </Box>
-      </Modal>
+        importUrl="other-products/import"
+        sampleHref="/files/other_products_import.xlsx"
+        extraFormData={{ company_id: companyId }}
+        saveLabel="Save"
+        savingLabel="Save"
+        onSuccess={fetchData}
+      />
 
       <OtherProductForm
         open={createOpen}

@@ -50,6 +50,7 @@ import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
+import ColumnVisibilityPopover from "@/app/components/common/ColumnVisibilityPopover";
 
 type InternalOrderRow = {
   id: number;
@@ -491,80 +492,15 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
             </Tooltip>
           </Box>
         </Stack>
-
-        <Popover
+        <ColumnVisibilityPopover
           open={Boolean(columnMenuAnchor)}
           anchorEl={columnMenuAnchor}
           onClose={() => {
             setColumnMenuAnchor(null);
             setColumnSearch("");
           }}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
-          PaperProps={{
-            sx: {
-              p: 1.25,
-              width: 280,
-              borderRadius: 2,
-              boxShadow: "0 12px 32px rgba(15, 23, 42, 0.14)",
-              border: "1px solid #e5e7eb",
-              maxHeight: "min(420px, calc(100vh - 140px))",
-              overflow: "hidden",
-            },
-          }}
-        >
-          <TextField
-            size="small"
-            placeholder="Search columns..."
-            fullWidth
-            value={columnSearch}
-            onChange={(e) => setColumnSearch(e.target.value)}
-            sx={{ mb: 1 }}
-          />
-          <Box
-            sx={{
-              maxHeight: "calc(min(420px, calc(100vh - 140px)) - 64px)",
-              overflowY: "auto",
-              pr: 0.5,
-            }}
-          >
-            <FormGroup sx={{ gap: 0.25 }}>
-              <FormControlLabel
-                control={
-                  <CustomCheckbox
-                    size="small"
-                    checked={allColumnsSelected}
-                    indeterminate={!allColumnsSelected && someColumnsSelected}
-                    disabled={filteredColumnToggles.length === 0}
-                    onChange={(e) => {
-                      filteredColumnToggles.forEach((column) => {
-                        column.toggleVisibility(e.target.checked);
-                      });
-                    }}
-                    sx={{ p: 0.5, mr: 1 }}
-                  />
-                }
-                sx={{ m: 0, px: 0.75, py: 0.375 }}
-                label="Select All"
-              />
-              {filteredColumnToggles.map((column) => (
-                <FormControlLabel
-                  key={column.id}
-                  control={
-                    <CustomCheckbox
-                      size="small"
-                      checked={column.visible}
-                      onChange={() => column.toggleVisibility(!column.visible)}
-                      sx={{ p: 0.5, mr: 1 }}
-                    />
-                  }
-                  sx={{ m: 0, px: 0.75, py: 0.375 }}
-                  label={column.label}
-                />
-              ))}
-            </FormGroup>
-          </Box>
-        </Popover>
+          table={table}
+        />
 
         <TableContainer
           sx={{

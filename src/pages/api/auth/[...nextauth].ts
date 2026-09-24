@@ -29,7 +29,7 @@ export const authOptions: NextAuthOptions = {
           if (!res.ok || !data?.info) {
             const error = Object.entries(data);
             throw new Error(
-              data?.isSuccess === false ? data.message : error?.[1]?.[1] || "Login failed"
+              data?.IsSuccess === false ? data.message : error?.[1]?.[1] || "Login failed"
             );
           }
 

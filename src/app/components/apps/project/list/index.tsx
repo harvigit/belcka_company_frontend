@@ -72,6 +72,11 @@ import ArchiveProject from "../../addresses/list/archive-project-list";
 import { IconEdit } from "@tabler/icons-react";
 import { Grid } from "@mui/system";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
+import { usePermissions } from "@/hooks/usePermissions";
+import { hasPermission } from "@/lib/permissions";
+import AddressList from "@/app/components/apps/addresses/list";
+import CasesList from "@/app/components/apps/cases/list";
+import CheckinsList from "@/app/components/apps/checkins";
 
 dayjs.extend(customParseFormat);
 
@@ -150,6 +155,18 @@ type ProjectDashboardCookieState = {
 
 const DEFAULT_PROJECT_FILTERS: ProjectDashboardFilters = { status: "all" };
 
+type ProjectModuleKey = "addresses" | "cases" | "checkins";
+
+const PROJECT_MODULE_BUTTONS: {
+  key: ProjectModuleKey;
+  label: string;
+  permission: string;
+}[] = [
+  { key: "addresses", label: "Addresses", permission: "Addresses" },
+  { key: "cases", label: "Cases", permission: "Cases" },
+  { key: "checkins", label: "Check ins", permission: "Check ins" },
+];
+
 const getProjectDashboardStateKey = (
   userId?: number | string,
   companyId?: number | string | null,
@@ -187,7 +204,10 @@ const readProjectDashboardCookie = (
   try {
     return JSON.parse(saved);
   } catch (error) {
-    console.error("Failed to parse project dashboard table state cookie", error);
+    console.error(
+      "Failed to parse project dashboard table state cookie",
+      error,
+    );
     removeListingTableState(key);
     return {};
   }
@@ -335,11 +355,22 @@ const ProjectDashboard = () => {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
+  const [moduleDrawer, setModuleDrawer] = useState<ProjectModuleKey | null>(
+    null,
+  );
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null } & {
     id: number;
   } & { user_role_id: number };
+  const { permissions } = usePermissions();
+  const isAdmin = Number(user?.user_role_id) === 1;
+  const moduleButtons = PROJECT_MODULE_BUTTONS.filter(
+    (item) => isAdmin || hasPermission(permissions, item.permission),
+  );
+  const activeModule = PROJECT_MODULE_BUTTONS.find(
+    (item) => item.key === moduleDrawer,
+  );
 
   const initialFormData = {
     name: "",
@@ -1233,6 +1264,23 @@ const ProjectDashboard = () => {
                 <IconX size={18} />
               </Button>
             )}
+
+            {moduleButtons.map((item) => (
+              <Button
+                key={item.key}
+                variant="outlined"
+                onClick={() => setModuleDrawer(item.key)}
+                sx={{
+                  ml: 1,
+                  minHeight: 34,
+                  height: 34,
+                  textTransform: "none",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {item.label}
+              </Button>
+            ))}
           </Box>
 
           <Box display="flex" alignItems="center">
@@ -1434,6 +1482,66 @@ const ProjectDashboard = () => {
           settingOpen={settingOpen}
           onClose={() => setSettingOpen(false)}
         />
+
+        <Drawer
+          anchor="bottom"
+          open={Boolean(moduleDrawer)}
+          onClose={() => setModuleDrawer(null)}
+          PaperProps={{
+            sx: {
+              height: "95vh",
+              boxShadow: "none",
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            },
+          }}
+        >
+          <Box
+            display={"flex"}
+            alignContent={"space-between"}
+            gap={1}
+            px={2}
+            py={1.25}
+          >
+            <Box  width={"100%"} display={"flex"} alignItems={"center"}>
+              <IconButton
+                onClick={() => setModuleDrawer(null)}
+                size="small"
+                aria-label="Back"
+              >
+                <IconArrowLeft />
+              </IconButton>
+              <Typography fontWeight={700} fontSize={16} noWrap>
+                {activeModule?.label || ""}
+              </Typography>
+            </Box>
+            <IconButton
+              onClick={() => setModuleDrawer(null)}
+              size="small"
+              aria-label="Back"
+            >
+              <IconX />
+            </IconButton>
+          </Box>
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            {moduleDrawer === "addresses" ? (
+              <AddressList projectId={null} embedded />
+            ) : null}
+            {moduleDrawer === "cases" ? <CasesList embedded /> : null}
+            {moduleDrawer === "checkins" ? <CheckinsList embedded /> : null}
+          </Box>
+        </Drawer>
 
         {drawerOpen && (
           <CreateProject
