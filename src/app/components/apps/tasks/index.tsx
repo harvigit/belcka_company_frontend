@@ -28,13 +28,10 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    CircularProgress,
     FormControlLabel,
     Popover,
     FormGroup,
     Divider,
-    Modal,
-    LinearProgress,
     Drawer,
     Grid,
 } from '@mui/material';
@@ -68,7 +65,6 @@ import {flexRender, createColumnHelper} from '@tanstack/react-table';
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import Image from 'next/image';
-import {useDropzone} from 'react-dropzone';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import PermissionGuard from '@/app/auth/PermissionGuard';
@@ -76,7 +72,7 @@ import {IconSettings} from '@tabler/icons-react';
 import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
 import Settings from './settings';
 import Link from 'next/link';
-import {FileDownload} from '@mui/icons-material';
+import ExcelImportModal from '@/app/components/common/ExcelImportModal';
 import TaskAddEdit from './create-edit';
 import IOSSwitch from '../../common/IOSSwitch';
 import ArchiveTasks from './archive';
@@ -215,11 +211,6 @@ const TaskLists = () => {
     const [settingOpen, setSettingOpen] = useState(false);
     const [openDialog, setOpenDialog] = useState(false);
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-    const [isImport, setIsImport] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [file, setFile] = useState<any | null>(null);
-    const [preview, setPreview] = useState<string | null>(null);
     const [openModel, setOpenModel] = useState(false);
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
@@ -564,77 +555,6 @@ const TaskLists = () => {
         }
     };
 
-    const handleModelOpen = () => {
-        setPreview(null);
-        setOpenModel(true);
-    };
-
-    const handleModelClose = () => setOpenModel(false);
-
-    const importAddresses = async () => {
-        if (!file) {
-            toast.error('Please select a file');
-            return;
-        }
-
-        setIsImport(true);
-        setUploadProgress(0);
-        setIsProcessing(false);
-
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const res = await api.post('tasks/import', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-                onUploadProgress: (progressEvent: any) => {
-                    if (progressEvent.total) {
-                        const percent = Math.round(
-                            (progressEvent.loaded * 100) / progressEvent.total,
-                        );
-
-                        setUploadProgress(percent);
-
-                        if (percent === 100) {
-                            setIsProcessing(true);
-                        }
-                    }
-                },
-            });
-
-            toast.success(res.data.message);
-
-            fetchTasks();
-
-            setTimeout(() => {
-                handleModelClose();
-                setUploadProgress(0);
-                setIsProcessing(false);
-            }, 1000);
-        } catch (err: any) {
-        } finally {
-            setIsImport(false);
-        }
-    };
-    const handleFileChange = (acceptedFiles: File[]) => {
-        const selectedFile = acceptedFiles[0];
-        setFile(selectedFile);
-        setPreview(selectedFile.name);
-    };
-
-    const {getRootProps: getExcelRootProps, getInputProps: getExcelInputProps} =
-        useDropzone({
-            accept: {
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [
-                    '.xlsx',
-                ],
-                'application/vnd.ms-excel': ['.xls'],
-            },
-            onDrop: handleFileChange,
-        });
-
     const exportTasks = async () => {
         try {
             const selectedIds = Array.from(selectedRowIds);
@@ -666,13 +586,6 @@ const TaskLists = () => {
         } catch (err) {
             console.error('Failed to export task', err);
         }
-    };
-
-    const downloadSampleFile = () => {
-        const link = document.createElement('a');
-        link.href = '/files/task_import.xlsx';
-        link.download = 'sample-file.xlsx';
-        link.click();
     };
 
     const changeIsShow = async (id: string, is_show: boolean) => {
@@ -1513,7 +1426,7 @@ const TaskLists = () => {
                                     href="#"
                                     onClick={(e) => {
                                         e.preventDefault();
-                                        handleModelOpen();
+                                        setOpenModel(true);
                                     }}
                                     style={{
                                         width: '100%',
@@ -1724,131 +1637,15 @@ const TaskLists = () => {
                     table={table}
                     totalRows={totalRows}
                 />
-                {/* Modal for File Upload */}
-                <Modal open={openModel} onClose={handleModelClose} disableEscapeKeyDown>
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            bgcolor: 'background.paper',
-                            p: 3,
-                            borderRadius: 2,
-                            boxShadow: 24,
-                            width: 400,
-                        }}
-                    >
-                        <DialogTitle sx={{p: 0}}>
-                            <Typography color="GrayText" fontWeight={700}>
-                                Upload Your File
-                            </Typography>
-                            <IconButton
-                                onClick={() => handleModelClose()}
-                                sx={{
-                                    position: 'absolute',
-                                    right: 8,
-                                    top: 10,
-                                    backgroundColor: 'transparent',
-                                }}
-                            >
-                                <IconX size={40}/>
-                            </IconButton>
-                        </DialogTitle>
-                        <Box
-                            {...getExcelRootProps()}
-                            sx={{
-                                width: 350,
-                                height: 100,
-                                mt: 2,
-                                border: '2px dashed',
-                                borderColor: 'primary.main',
-                                borderRadius: 1,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                '&:hover': {
-                                    backgroundColor: 'primary.light',
-                                },
-                            }}
-                        >
-                            <input {...getExcelInputProps()} accept=".xls,.xlsx"/>
-                            {preview ? (
-                                preview
-                            ) : (
-                                <Typography fontSize="12px" color="primary.main">
-                                    Click or Drag File
-                                </Typography>
-                            )}
-                        </Box>
-                        <Typography fontSize="12px" color="text.secondary">
-                            Upload Excel Files
-                        </Typography>
-                        {isImport && (
-                            <Box sx={{mt: 2}}>
-                                {!isProcessing ? (
-                                    <>
-                                        <Typography variant="body2" mb={1}>
-                                            Uploading... {uploadProgress}%
-                                        </Typography>
-                                        <LinearProgress
-                                            variant="determinate"
-                                            value={uploadProgress}
-                                            sx={{height: 8, borderRadius: 5}}
-                                        />
-                                    </>
-                                ) : (
-                                    <Box display="flex" alignItems="center" gap={1}>
-                                        <CircularProgress size={18}/>
-                                        <Typography variant="body2">Processing file...</Typography>
-                                    </Box>
-                                )}
-                            </Box>
-                        )}
-                        {/* Action buttons */}
-                        <Box sx={{mt: 2, display: 'flex', justifyContent: 'end'}}>
-                            <Link
-                                href="#"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    downloadSampleFile();
-                                }}
-                                style={{
-                                    width: '100%',
-                                    color: '#1e4db7',
-                                    textTransform: 'none',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyItems: 'center',
-                                }}
-                            >
-                                <FileDownload/>
-                                Download Sample File
-                            </Link>
-                            <Box sx={{display: 'flex', gap: 1}}>
-                                <Button
-                                    variant="contained"
-                                    disabled={isImport}
-                                    onClick={(e: any) => {
-                                        importAddresses();
-                                    }}
-                                >
-                                    {isImport ? 'Saving' : 'Save'}
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    onClick={handleModelClose}
-                                    color="error"
-                                >
-                                    Cancel
-                                </Button>
-                            </Box>
-                        </Box>
-                    </Box>
-                </Modal>
+                <ExcelImportModal
+                    open={openModel}
+                    onClose={() => setOpenModel(false)}
+                    importUrl="tasks/import"
+                    sampleHref="/files/task_import.xlsx"
+                    saveLabel="Save"
+                    savingLabel="Saving"
+                    onSuccess={fetchTasks}
+                />
 
                 {/* Dialogs and Drawers */}
                 <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
