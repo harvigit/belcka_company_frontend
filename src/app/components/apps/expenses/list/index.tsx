@@ -172,7 +172,13 @@ const mapApiRowToListItem = (row: ExpenseRow): ExpenseListItem => {
     };
 };
 
-const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
+const ExpenseList = ({
+    projectId,
+    embedded = false,
+}: {
+    projectId?: number;
+    embedded?: boolean;
+} = {}) => {
     const session = useSession();
     const user = session.data?.user as User & {
         company_id?: number | null;
@@ -1570,7 +1576,7 @@ const ExpenseList = ({projectId,}: { projectId?: number; } = {}) => {
     return (
         <Box
             sx={{
-                height: projectId ? '100%' : 'calc(100vh - 100px)',
+                height: projectId || embedded ? '100%' : 'calc(100vh - 100px)',
                 display: 'flex',
                 flexDirection: 'column',
                 position: 'relative',

@@ -89,6 +89,8 @@ interface ChecklogTask {
     pricework_amount?: string | number | null;
     before_attachments?: Attachment[];
     after_attachments?: Attachment[];
+    task_before_attachments?: Attachment[];
+    task_after_attachments?: Attachment[];
     tasks?: KnowledgeTask[];
 }
 
@@ -162,6 +164,12 @@ const shouldShowStatus = (checklog: ChecklogTask, data: any) => {
     return ['6', '7', '9'].includes(status);
 };
 
+const asAttachmentList = (value?: Attachment[] | null) =>
+    Array.isArray(value) ? value : [];
+
+const firstAttachmentList = (...lists: (Attachment[] | null | undefined)[]) =>
+    lists.map(asAttachmentList).find((list) => list.length > 0) ?? [];
+
 export default function ChecklogDetailPage({checklogId, open, onClose, onUpdated}: ChecklogDetailPageProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const [checklogTasks, setChecklogTasks] = useState<ChecklogTask[]>([]);
@@ -231,7 +239,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose, onUpdated
         setLoading(true);
         try {
             const res = await api.get(
-                `user-checklog/details?checklog_id=${checklogId}`,
+                `checklog/details?checklog_id=${checklogId}`,
             );
             const detail = res.data?.info;
             if (res.data?.IsSuccess && detail) {
@@ -599,8 +607,18 @@ export default function ChecklogDetailPage({checklogId, open, onClose, onUpdated
                 ) : (
                     checklogTasks.map((checklog: any, index) => {
                         const taskId = getTaskId(checklog, index);
-                        const beforeAttachments = checklog.before_attachments ?? [];
-                        const afterAttachments = checklog.after_attachments ?? [];
+                        const beforeAttachments = firstAttachmentList(
+                            checklog.before_attachments,
+                            checklog.task_before_attachments,
+                            data?.before_attachments,
+                            data?.task_before_attachments,
+                        );
+                        const afterAttachments = firstAttachmentList(
+                            checklog.after_attachments,
+                            checklog.task_after_attachments,
+                            data?.after_attachments,
+                            data?.task_after_attachments,
+                        );
 
                         return (
                             <Box key={taskId} mb={3}>

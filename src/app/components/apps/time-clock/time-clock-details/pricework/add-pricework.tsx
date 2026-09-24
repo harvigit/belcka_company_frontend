@@ -127,6 +127,7 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     const [priceworkDate, setPriceworkDate] = useState(
         normalizeDateDisplayValue(pricework?.pricework_date || pricework?.date_added) || formatDisplayDate(new Date()),
     );
+
     const [amountPerUnit, setAmountPerUnit] = useState(pricework?.amount_per_unit != null ? String(pricework.amount_per_unit) : '');
     const [workComplete, setWorkComplete] = useState(pricework?.work_complete != null ? String(pricework.work_complete) : '');
     const [note, setNote] = useState(pricework?.note || '');
@@ -138,6 +139,7 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dateInputRef = useRef<HTMLInputElement>(null);
     const hasFetchedResources = useRef(false);
+    const shouldSkipInitialEditPriceResolve = useRef(isEditMode);
 
     const addAttachments = (files: FileList | null) => {
         if (!files) return;
@@ -249,6 +251,18 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     }, [pricework?.pricework_id, pricework?.pricework_date, pricework?.date_added]);
 
     useEffect(() => {
+        setAmountPerUnit(pricework?.amount_per_unit != null ? String(pricework.amount_per_unit) : '');
+        setWorkComplete(pricework?.work_complete != null ? String(pricework.work_complete) : '');
+        shouldSkipInitialEditPriceResolve.current = isEditMode;
+    }, [
+        isEditMode,
+        pricework?.pricework_id,
+        pricework?.user_checklog_id,
+        pricework?.amount_per_unit,
+        pricework?.work_complete,
+    ]);
+
+    useEffect(() => {
         if (pricework?.category_id) {
             setCategoryId(String(pricework.category_id));
             setSubCategoryId(pricework?.sub_category_id ? String(pricework.sub_category_id) : '');
@@ -301,6 +315,11 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
             return;
         }
 
+        if (isEditMode && shouldSkipInitialEditPriceResolve.current) {
+            shouldSkipInitialEditPriceResolve.current = false;
+            return;
+        }
+
         const resolvePrice = async () => {
             setResolvingPrice(true);
             try {
@@ -322,7 +341,7 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
         };
 
         resolvePrice();
-    }, [projectId, categoryId, subCategoryId]);
+    }, [isEditMode, projectId, categoryId, subCategoryId]);
 
     const totalAmount = useMemo(() => {
         const amount = Number(amountPerUnit);
