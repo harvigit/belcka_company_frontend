@@ -47,7 +47,6 @@ import {
   IconNotes,
   IconRotate,
   IconSearch,
-  IconSettings,
   IconTrash,
   IconUsersGroup,
 } from "@tabler/icons-react";
@@ -72,7 +71,6 @@ import PermissionGuard from "@/app/auth/PermissionGuard";
 import CreateTeam from "../create";
 import TeamMembersLimit from "../team-members-limit";
 import EditTeam from "../edit";
-import Setting from "../setting";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
 
@@ -222,7 +220,6 @@ const TablePagination = () => {
   const [editDrawer, setEditDrawer] = useState(false);
   const [editTeamId, setEditTeamId] = useState<number | null>(null);
   const [teamMembersLimit, setTeamMembersLimit] = useState(false);
-  const [settingOpen, setSettingOpen] = useState(false);
 
   const handleEditClick = (teamId: number) => {
     setEditTeamId(teamId);
@@ -953,15 +950,6 @@ const TablePagination = () => {
               </Button>
             )}
 
-            <Tooltip title="Settings">
-              <IconButton
-                color="primary"
-                sx={{ ml: 1 }}
-                onClick={() => setSettingOpen(true)}
-              >
-                <IconSettings />
-              </IconButton>
-            </Tooltip>
             <IconButton
               onClick={handlePopoverOpen}
               sx={{ ml: 1 }}
@@ -1336,11 +1324,6 @@ const TablePagination = () => {
             onWorkUpdated={fetchTeams}
           />
         )}
-
-        <Setting
-          settingOpen={settingOpen}
-          onClose={() => setSettingOpen(false)}
-        />
 
         <TableContainer
           ref={tableContainerRef}

@@ -20,13 +20,28 @@ import {
     ListItemAvatar,
     ListItemText,
     ListItemSecondaryAction,
+    TextField,
+    CircularProgress,
 } from "@mui/material";
 import { IconPlus, IconX, IconTrash } from "@tabler/icons-react";
 import { User } from "next-auth";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import IOSSwitch from '@/app/components/common/IOSSwitch';
+
+const parseVisibilityDays = (value?: string | number | null): string => {
+    if (value === null || value === undefined || value === "") return "";
+    const raw = String(value).trim().toLowerCase();
+    const legacy: Record<string, number> = {
+        "1_day": 1,
+        "1_week": 7,
+        "1_month": 30,
+        "1_year": 365,
+    };
+    if (legacy[raw]) return String(legacy[raw]);
+    const match = raw.match(/^(\d+)(?:_days?)?$/);
+    return match ? match[1] : "";
+};
 
 const UserSettings = () => {
     const [users, setUsers] = useState<any[]>([]);
@@ -35,6 +50,9 @@ const UserSettings = () => {
     const [selectedUser, setSelectedUser] = useState<string | null>(null);
     const [permission, setPermission] = useState<string>("view");
     const [loading, setLoading] = useState<boolean>(false);
+    const [visibilityDays, setVisibilityDays] = useState("");
+    const [loadingVisibility, setLoadingVisibility] = useState(false);
+    const [savingVisibility, setSavingVisibility] = useState(false);
     const { data: session } = useSession();
     const user = session?.user as User & { company_id?: string | null } & {
         currency_id?: number | null;
@@ -81,6 +99,53 @@ const UserSettings = () => {
             fetchUsers();
         }
     }, [user?.company_id]);
+
+    const fetchLastWorkingDateVisibility = async () => {
+        setLoadingVisibility(true);
+        try {
+            const res = await api.get("setting/general-settings");
+            if (res.data?.IsSuccess) {
+                setVisibilityDays(
+                    parseVisibilityDays(res.data.data?.last_working_date_visibility),
+                );
+            }
+        } catch (err) {
+            console.error("Failed to fetch last working date visibility", err);
+        } finally {
+            setLoadingVisibility(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLastWorkingDateVisibility();
+    }, []);
+
+    const handleSaveVisibility = async () => {
+        const days = visibilityDays.trim();
+        if (days && (!/^\d+$/.test(days) || Number(days) < 1)) {
+            toast.error("Enter a valid number of days");
+            return;
+        }
+
+        setSavingVisibility(true);
+        try {
+            const res = await api.post("/team/update-last-working-date-visibility", {
+                last_working_date_visibility: days ? Number(days) : null,
+            });
+            if (res.data?.IsSuccess) {
+                toast.success(
+                    res.data.message || "Last worked as of updated",
+                );
+            } else {
+                toast.error(res.data?.message || "Failed to update visibility");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update last worked as of");
+        } finally {
+            setSavingVisibility(false);
+        }
+    };
 
     useEffect(() => {
         if (openModal) {
@@ -169,6 +234,39 @@ const UserSettings = () => {
                     flexDirection="column"
                     justifyContent="space-between"
                 >
+                    <Typography variant="h1" fontSize={"20px !important"} mb={1}>
+                        Last worked as of
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" mb={2}>
+                        Show a user&apos;s last worked date after this many days.
+                        Leave empty to show all dates.
+                    </Typography>
+                    {loadingVisibility ? (
+                        <CircularProgress size={24} />
+                    ) : (
+                        <Box display="flex" alignItems="center" gap={2} mb={3} maxWidth={360}>
+                            <TextField
+                                type="number"
+                                size="small"
+                                fullWidth
+                                label="Days"
+                                placeholder="e.g. 2"
+                                value={visibilityDays}
+                                inputProps={{ min: 1, step: 1 }}
+                                onChange={(event) => setVisibilityDays(event.target.value)}
+                            />
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={handleSaveVisibility}
+                                disabled={savingVisibility}
+                                sx={{ borderRadius: 3, whiteSpace: "nowrap" }}
+                            >
+                                {savingVisibility ? "Saving..." : "Save"}
+                            </Button>
+                        </Box>
+                    )}
+                    <Divider sx={{ borderWidth: 1, mb: 3 }} />
                     <Box
                         display="flex"
                         alignItems="center"
