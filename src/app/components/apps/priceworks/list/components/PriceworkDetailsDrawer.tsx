@@ -158,17 +158,20 @@ const PriceworkDetailsDrawer = ({
         if (!pricework?.id) return;
         setLoading(true);
         try {
-            const isTimesheetLight =
-                pricework.record_type === 'timesheet_light'
-                || pricework.source_type === 'user_checklog'
-                || Boolean(pricework.user_checklog_id);
-            const params = isTimesheetLight
-                ? {
-                    pricework_id: pricework.timesheet_light_id ?? pricework.timesheet_id ?? pricework.id,
-                    record_type: 'timesheet_light',
-                    checklog_id: pricework.user_checklog_id ?? pricework.id,
-                }
-                : {pricework_id: pricework.pricework_id ?? pricework.id};
+            console.log(pricework, 'priceworkpriceworkpricework')
+            // const isTimesheetLight =
+            //     pricework.record_type === 'timesheet_light'
+            //     || pricework.source_type === 'user_checklog'
+            //     || Boolean(pricework.user_checklog_id);
+
+            // const params = isTimesheetLight
+                // ? {
+                //     pricework_id: pricework.timesheet_light_id ?? pricework.timesheet_id ?? pricework.id,
+                //     record_type: 'timesheet_light',
+                //     checklog_id: pricework.user_checklog_id ?? pricework.id,
+                // }
+                // : {pricework_id: pricework.pricework_id ?? pricework.id};
+            const params = {pricework_id: pricework.pricework_id ?? pricework.id};
             const res = await api.get('pricework/detail', {params});
             setDetail(res.data?.info || null);
         } catch (error: any) {
