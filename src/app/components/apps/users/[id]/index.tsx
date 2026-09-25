@@ -195,7 +195,7 @@ const TablePagination = () => {
     setValue(newValue);
   };
 
-  const [formData, setFormData] = useState({
+  const emptyPersonalDetails = {
     first_name: "",
     last_name: "",
     email: "",
@@ -203,9 +203,12 @@ const TablePagination = () => {
     phone: "",
     user_code: "",
     expired_at: "",
-    account_id: 0,
+    account_id: 0 as string | number,
     date_of_birth: "",
-  });
+  };
+
+  const [formData, setFormData] = useState(emptyPersonalDetails);
+  const [originalFormData, setOriginalFormData] = useState(emptyPersonalDetails);
 
   const [enabled, setEnabled] = useState<boolean>(false);
 
@@ -301,13 +304,13 @@ const TablePagination = () => {
         extension: userInfo.extension || "",
       });
 
-      setFormData({
+      const nextFormData = {
         first_name: userInfo.first_name || "",
         last_name: userInfo.last_name || "",
         email: userInfo.email || "",
         extension: ext,
         phone: number,
-        user_code: userInfo.user_code,
+        user_code: userInfo.user_code || "",
         expired_at: userInfo.expired_at
           ? userInfo.expired_at.split("T")[0]
           : "",
@@ -317,7 +320,9 @@ const TablePagination = () => {
             "YYYY-MM-DD",
           )
           : "",
-      });
+      };
+      setFormData(nextFormData);
+      setOriginalFormData(nextFormData);
 
       setRegisteredOn(userInfo.registered_on ?? "");
       if (ext && number) {
@@ -394,8 +399,16 @@ const TablePagination = () => {
     });
   };
 
+  const hasPersonalDetailsChanged = (
+    Object.keys(formData) as (keyof typeof formData)[]
+  ).some(
+    (key) =>
+      String(formData[key] ?? "") !== String(originalFormData[key] ?? ""),
+  );
+
   const handleUpdatePersonalDetails = async () => {
     if (!userId || !canModifyUserDetails) return;
+    if (!hasPersonalDetailsChanged) return;
 
     const phoneChanged =
       formData.phone !== originalPhone.phone ||
@@ -1111,7 +1124,7 @@ const TablePagination = () => {
                     <Button
                       variant="contained"
                       color="primary"
-                      disabled={isPhoneUpdate}
+                      disabled={isPhoneUpdate || !hasPersonalDetailsChanged}
                       onClick={handleUpdatePersonalDetails}
                     >
                       {isPhoneUpdate

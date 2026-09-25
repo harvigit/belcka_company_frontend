@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import api from '@/utils/axios';
 import toast from 'react-hot-toast';
 import {
@@ -152,6 +152,69 @@ function pixelDistance(a: { x: number; y: number }, b: { x: number; y: number })
     return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
+function viewportToPolygonPath(
+    viewport: google.maps.LatLngBounds,
+): { lat: number; lng: number }[] {
+    const ne = viewport.getNorthEast();
+    const sw = viewport.getSouthWest();
+    return [
+        { lat: ne.lat(), lng: sw.lng() },
+        { lat: ne.lat(), lng: ne.lng() },
+        { lat: sw.lat(), lng: ne.lng() },
+        { lat: sw.lat(), lng: sw.lng() },
+    ];
+}
+
+function geoJsonToLatLngPath(geometry: any): { lat: number; lng: number }[] {
+    if (!geometry) return [];
+
+    let ring: number[][] | null = null;
+    if (geometry.type === 'Polygon') {
+        ring = geometry.coordinates?.[0] ?? null;
+    } else if (geometry.type === 'MultiPolygon') {
+        ring = (geometry.coordinates ?? []).reduce(
+            (best: number[][] | null, polygon: number[][][]) => {
+                const outer = polygon?.[0];
+                if (!outer) return best;
+                if (!best || outer.length > best.length) return outer;
+                return best;
+            },
+            null,
+        );
+    }
+
+    if (!ring?.length) return [];
+
+    const path = ring
+        .map(([lng, lat]) => ({ lat: Number(lat), lng: Number(lng) }))
+        .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+
+    if (path.length > 1) {
+        const first = path[0];
+        const last = path[path.length - 1];
+        if (first.lat === last.lat && first.lng === last.lng) path.pop();
+    }
+
+    return path;
+}
+
+async function fetchOsmBoundaryPath(query: string): Promise<{ lat: number; lng: number }[]> {
+    if (!query.trim()) return [];
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&polygon_geojson=1&limit=1&q=${encodeURIComponent(query)}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const first = Array.isArray(data) ? data[0] : null;
+    return geoJsonToLatLngPath(first?.geojson);
+}
+
+function boundsFromPath(path: { lat: number; lng: number }[]): google.maps.LatLngBounds | null {
+    if (!path.length || typeof google === 'undefined') return null;
+    const bounds = new google.maps.LatLngBounds();
+    path.forEach((point) => bounds.extend(point));
+    return bounds;
+}
+
 const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, activeTab }: EditZoneProps) => {
     const [name, setName] = useState(zone.name);
     const [color, setColor] = useState(zone.color || '#1976d2');
@@ -169,20 +232,15 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
     const [cursorLatLng, setCursorLatLng] = useState<{ lat: number; lng: number } | null>(null);
     const [nearStart, setNearStart] = useState(false);
     const [typedAddress, setTypedAddress] = useState(false);
-    type PostcoderAddress = {
-        summaryline: string;
-        postcode: string;
-    };
-
-    type UnifiedPrediction =
-        | ({ source: 'google' } & google.maps.places.AutocompletePrediction)
-        | ({ source: 'postcoder' } & PostcoderAddress);
-
-    const [predictions, setPredictions] = useState<UnifiedPrediction[]>([]);
+    const [boundaryFromSearch, setBoundaryFromSearch] = useState(false);
+    const [predictions, setPredictions] = useState<
+        google.maps.places.AutocompletePrediction[]
+    >([]);
 
     const mapRef = useRef<google.maps.Map | null>(null);
     const circleRef = useRef<google.maps.Circle | null>(null);
     const polygonRef = useRef<google.maps.Polygon | null>(null);
+    const pendingFitBoundsRef = useRef<google.maps.LatLngBounds | null>(null);
 
     const stateRef = useRef({
         drawMode: (initType === 'circle' ? 'circle' : 'pan') as DrawMode,
@@ -195,6 +253,13 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
     stateRef.current.isClosed = isClosed;
 
     const isDrawingActive = drawMode === 'polygon';
+
+    useEffect(() => {
+        if (!pendingFitBoundsRef.current || !mapRef.current) return;
+        const bounds = pendingFitBoundsRef.current;
+        pendingFitBoundsRef.current = null;
+        mapRef.current.fitBounds(bounds);
+    }, [drawPath, location]);
 
     const getCenter = (pts: { lat: number; lng: number }[]) =>
         pts.length
@@ -227,78 +292,135 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
     };
 
     // ── Search helpers ───────────────────────────────────────────────────────
-    const isIEPostcode = (value: string) =>
-        /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
-    const isAUPostcode = (value: string) => /^\d{4}$/.test(value.trim());
-    const isNZPostcode = (value: string) => /^\d{4}$/.test(value.trim());
-
-    const fetchPredictions = async (input: string) => {
-        if (!input) {
-            setPredictions([]);
-            return;
-        }
-
-        try {
-            let country = "UK";
-            if (isIEPostcode(input)) country = "IE";
-            else if (isAUPostcode(input)) country = "AU";
-            else if (isNZPostcode(input)) country = "NZ";
-
-            const res = await fetch(
-                `https://ws.postcoder.com/pcw/${process.env.NEXT_PUBLIC_POSTCODER_KEY
-                }/address/${country}/${encodeURIComponent(input)}?format=json`
-            );
-
-            const data = await res.json();
-            if (data && data.length > 0) {
-                setPredictions(data.map((item: any) => ({ ...item, source: "postcoder" })));
-                return;
-            } else {
-                setPredictions([]);
-            }
-        } catch (err) {
-            console.error("Postcoder search failed", err);
-            setPredictions([]);
-        }
-    };
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setAddress(e.target.value);
-        setTypedAddress(true);
-        fetchPredictions(e.target.value);
-    };
-
-    const selectPostcoderPrediction = (item: { source: "postcoder" } & PostcoderAddress) => {
-        setAddress(item.summaryline);
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode(
-            { address: `${item.summaryline}, ${item.postcode}` },
-            (results, status) => {
-                if (status === "OK" && results?.[0]?.geometry?.location) {
-                    const loc = {
-                        lat: results[0].geometry.location.lat(),
-                        lng: results[0].geometry.location.lng(),
-                    };
-                    setLocation(loc);
-                    mapRef.current?.panTo(loc);
-                    mapRef.current?.setZoom(15);
-                }
-                setTypedAddress(false);
-                setPredictions([]);
-            }
+    const fetchPredictions = (input: string) => {
+        if (!input) return setPredictions([]);
+        new google.maps.places.AutocompleteService().getPlacePredictions(
+            { input },
+            (p) => setPredictions(p || []),
         );
     };
 
-    const selectPrediction = (p: UnifiedPrediction) => {
-        selectPostcoderPrediction(p as { source: "postcoder" } & PostcoderAddress);
+    const resetMapFromClearedSearch = () => {
+        pendingFitBoundsRef.current = null;
+        setPredictions([]);
+        setTypedAddress(false);
+        setDrawPath(zone.coordinates || []);
+        const originalClosed = initType === 'polygon' && (zone.coordinates?.length ?? 0) >= 3;
+        setIsClosed(originalClosed);
+        setCursorLatLng(null);
+        setNearStart(false);
+        setBoundaryFromSearch(false);
+        stateRef.current.drawPath = zone.coordinates || [];
+        stateRef.current.isClosed = originalClosed;
+        if (stateRef.current.drawMode !== 'polygon') {
+            setZoneType(initType);
+        }
+        const loc = { lat: Number(zone.latitude), lng: Number(zone.longitude) };
+        setLocation(loc);
+        mapRef.current?.panTo(loc);
+        mapRef.current?.setZoom(17);
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setAddress(value);
+        if (!value.trim()) {
+            resetMapFromClearedSearch();
+            return;
+        }
+        setTypedAddress(true);
+        fetchPredictions(value);
+    };
+
+    const selectPrediction = (placeId: string) => {
+        new google.maps.places.PlacesService(
+            document.createElement('div'),
+        ).getDetails({ placeId, fields: ['formatted_address', 'name', 'geometry'] }, (place, status) => {
+            if (status !== google.maps.places.PlacesServiceStatus.OK || !place) {
+                setTypedAddress(false);
+                setPredictions([]);
+                return;
+            }
+
+            void (async () => {
+                const label = place.formatted_address || place.name || '';
+                setAddress(label);
+                const loc = place.geometry?.location
+                    ? {
+                        lat: place.geometry.location.lat(),
+                        lng: place.geometry.location.lng(),
+                    }
+                    : null;
+                if (loc) setLocation(loc);
+
+                const viewport = place.geometry?.viewport;
+                const keepCircleTool = stateRef.current.drawMode === 'circle';
+
+                if (!keepCircleTool) {
+                    let path: { lat: number; lng: number }[] = [];
+                    try {
+                        path = await fetchOsmBoundaryPath(place.name || label);
+                    } catch (error) {
+                        console.error('OSM boundary lookup failed', error);
+                    }
+                    if (path.length < 3 && viewport) {
+                        path = viewportToPolygonPath(viewport);
+                    }
+
+                    if (path.length >= 3) {
+                        const bounds = boundsFromPath(path) ?? viewport ?? null;
+                        setZoneType('polygon');
+                        setDrawPath(path);
+                        setIsClosed(true);
+                        setCursorLatLng(null);
+                        setNearStart(false);
+                        setBoundaryFromSearch(true);
+                        stateRef.current.drawPath = path;
+                        stateRef.current.isClosed = true;
+                        pendingFitBoundsRef.current = bounds;
+                        if (bounds) mapRef.current?.fitBounds(bounds);
+                    } else if (loc) {
+                        mapRef.current?.panTo(loc);
+                        mapRef.current?.setZoom(15);
+                    }
+                } else if (loc) {
+                    mapRef.current?.panTo(loc);
+                    mapRef.current?.setZoom(15);
+                }
+
+                setTypedAddress(false);
+                setPredictions([]);
+            })();
+        });
     };
 
     // ── Mode switch ──────────────────────────────────────────────────────────
     const handleModeChange = (mode: DrawMode) => {
+        const hasSearchPolygon =
+            boundaryFromSearch &&
+            zoneType === 'polygon' &&
+            isClosed &&
+            drawPath.length >= 3;
+
+        if (hasSearchPolygon && (mode === 'polygon' || mode === 'pan')) {
+            setDrawMode(mode);
+            setZoneType('polygon');
+            setCursorLatLng(null);
+            setNearStart(false);
+            stateRef.current.drawMode = mode;
+            stateRef.current.isClosed = true;
+            stateRef.current.drawPath = drawPath;
+            mapRef.current?.setOptions({
+                draggableCursor: mode === 'polygon' ? 'crosshair' : '',
+            });
+            return;
+        }
+
         setDrawMode(mode);
         setCursorLatLng(null);
         setNearStart(false);
         setIsClosed(false);
+        setBoundaryFromSearch(false);
         stateRef.current.drawMode = mode;
         stateRef.current.isClosed = false;
         stateRef.current.drawPath = [];
@@ -501,10 +623,10 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                                 overflow: 'auto',
                             }}>
-                                {predictions.map((p, idx) => (
-                                    <ListItem key={idx} disablePadding>
-                                        <ListItemButton onClick={() => selectPrediction(p)}>
-                                            {p.source === 'google' ? p.description : p.summaryline}
+                                {predictions.map((p) => (
+                                    <ListItem key={p.place_id} disablePadding>
+                                        <ListItemButton onClick={() => selectPrediction(p.place_id)}>
+                                            {p.description}
                                         </ListItemButton>
                                     </ListItem>
                                 ))}
@@ -608,8 +730,8 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
                                     fillColor: color + '33',
                                     strokeColor: color,
                                     strokeWeight: 2,
-                                    editable: true,
-                                    draggable: true
+                                    editable: !boundaryFromSearch || drawMode === 'polygon',
+                                    draggable: !boundaryFromSearch || drawMode === 'polygon',
                                 }}
                                 onLoad={(p) => {
                                     polygonRef.current = p;
@@ -632,7 +754,9 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
                             />
                         )}
 
-                        {isDrawingActive && drawPath.map((pt, i) => {
+                        {isDrawingActive &&
+                            !(boundaryFromSearch && isClosed) &&
+                            drawPath.map((pt, i) => {
                             const isFirst = i === 0;
                             const canClose = isFirst && drawPath.length >= 3 && !isClosed;
                             return (

@@ -200,9 +200,12 @@ const ParentAddressFormDrawer: React.FC<ParentAddressFormDrawerProps> = ({
           process.env.NEXT_PUBLIC_POSTCODER_KEY
         }/address/${country}/${encodeURIComponent(query)}?format=json`,
       );
-      const data = await res.json();
-      setPredictions(data || []);
-      return;
+      const contentType = res.headers.get("content-type") || "";
+      if (res.ok && contentType.includes("json")) {
+        const data = await res.json();
+        setPredictions(data || []);
+        return;
+      }
     } catch (err) {
       console.error("Postcoder failed, falling back to Google", err);
     }
