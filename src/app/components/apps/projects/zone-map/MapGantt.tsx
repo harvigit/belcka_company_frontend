@@ -932,9 +932,9 @@ export default function MapGantt({
   useEffect(() => {
     if (open) {
       setActiveProjectId(projectId);
-      if (!projectId) {
+      // if (!projectId) {
         fetchResources();
-      }
+      // }
     }
   }, [open, projectId]);
 
