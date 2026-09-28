@@ -508,7 +508,7 @@ const ExpenseList = ({
                     </Stack>
                 );
             },
-            enableSorting: false,
+            enableSorting: true,
         }),
 
         columnHelper.accessor('project_name', {
@@ -537,7 +537,7 @@ const ExpenseList = ({
                     </Typography>
                 </Tooltip>
             ),
-            enableSorting: false,
+            enableSorting: true,
         }),
 
         columnHelper.accessor('address_name', {
@@ -566,7 +566,7 @@ const ExpenseList = ({
                     </Typography>
                 </Tooltip>
             ),
-            enableSorting: false,
+            enableSorting: true,
         }),
 
         columnHelper.accessor('category_name', {
@@ -605,7 +605,7 @@ const ExpenseList = ({
                     </Box>
                 );
             },
-            enableSorting: false,
+            enableSorting: true,
         }),
 
         columnHelper.accessor('receipt_date', {
@@ -642,7 +642,7 @@ const ExpenseList = ({
                     </Typography>
                 </Tooltip>
             ),
-            enableSorting: false,
+            enableSorting: true,
         }),
 
         columnHelper.accessor('total_amount', {
@@ -781,7 +781,7 @@ const ExpenseList = ({
                     </Box>
                 );
             },
-            enableSorting: false,
+            enableSorting: true,
         }),
 
         columnHelper.accessor('status', {
@@ -799,7 +799,7 @@ const ExpenseList = ({
                     </Box>
                 );
             },
-            enableSorting: false,
+            enableSorting: true,
         }),
 
         columnHelper.accessor('timesheet_status', {
@@ -814,7 +814,7 @@ const ExpenseList = ({
                     </Box>
                 );
             },
-            enableSorting: false,
+            enableSorting: true,
         }),
 
         columnHelper.display({
@@ -1006,6 +1006,7 @@ const ExpenseList = ({
         onSortingChange: setSorting,
         onColumnVisibilityChange: setColumnVisibility,
         manualSorting: true,
+        forceServerSorting: true,
         shouldResetPageOnDebounce: () => !skipNextDependencyPageResetRef.current,
     });
 
