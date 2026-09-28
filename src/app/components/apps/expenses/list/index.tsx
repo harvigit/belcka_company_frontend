@@ -128,6 +128,8 @@ const BULK_BUTTON_SX = {
 type ExpenseStoredPreferences = {
     startDate?: string | null;
     endDate?: string | null;
+    sentStartDate?: string | null;
+    sentEndDate?: string | null;
 };
 
 const parseStoredDate = (value?: string | null) => {
@@ -250,6 +252,8 @@ const ExpenseList = ({
     const [endDate, setEndDate] = useState<Date | null>(
         null,
     );
+    const [sentStartDate, setSentStartDate] = useState<Date | null>(null);
+    const [sentEndDate, setSentEndDate] = useState<Date | null>(null);
 
     const [users, setUsers] = useState<any[]>([]);
     const [projects, setProjects] = useState<any[]>([]);
@@ -852,6 +856,10 @@ const ExpenseList = ({
                 url += `&start_date=${format(startDate, 'dd/MM/yyyy')}`;
                 url += `&end_date=${format(endDate, 'dd/MM/yyyy')}`;
             }
+            if (sentStartDate && sentEndDate) {
+                url += `&sent_start_date=${format(sentStartDate, 'dd/MM/yyyy')}`;
+                url += `&sent_end_date=${format(sentEndDate, 'dd/MM/yyyy')}`;
+            }
             if (filters.user_id) url += `&user_id=${filters.user_id}`;
             if (filters.project_id) url += `&project_id=${filters.project_id}`;
             if (filters.address_id) url += `&address_id=${filters.address_id}`;
@@ -989,6 +997,8 @@ const ExpenseList = ({
             search,
             startDate ? format(startDate, 'yyyy-MM-dd') : '',
             endDate ? format(endDate, 'yyyy-MM-dd') : '',
+            sentStartDate ? format(sentStartDate, 'yyyy-MM-dd') : '',
+            sentEndDate ? format(sentEndDate, 'yyyy-MM-dd') : '',
             JSON.stringify(filters),
             activeTab,
         ],
@@ -1044,8 +1054,12 @@ const ExpenseList = ({
                 const parsed = JSON.parse(stored) as ExpenseStoredPreferences;
                 const from = parseStoredDate(parsed.startDate);
                 const to = parseStoredDate(parsed.endDate);
+                const sentFrom = parseStoredDate(parsed.sentStartDate);
+                const sentTo = parseStoredDate(parsed.sentEndDate);
                 setStartDate(from && to ? from : null);
                 setEndDate(from && to ? to : null);
+                setSentStartDate(sentFrom && sentTo ? sentFrom : null);
+                setSentEndDate(sentFrom && sentTo ? sentTo : null);
             }
         } catch (error) {
             console.error('Failed to load expense list preferences', error);
@@ -1066,12 +1080,15 @@ const ExpenseList = ({
         if (restoredPreferencesKeyRef.current !== expensePreferencesKey) return;
 
         const hasCompleteRange = Boolean(startDate && endDate);
+        const hasSentRange = Boolean(sentStartDate && sentEndDate);
         const payload: ExpenseStoredPreferences = {
             startDate: hasCompleteRange && startDate ? startDate.toISOString() : null,
             endDate: hasCompleteRange && endDate ? endDate.toISOString() : null,
+            sentStartDate: hasSentRange && sentStartDate ? sentStartDate.toISOString() : null,
+            sentEndDate: hasSentRange && sentEndDate ? sentEndDate.toISOString() : null,
         };
         writeListingTableState(expensePreferencesKey, JSON.stringify(payload));
-    }, [projectId, expensePreferencesKey, preferencesHydrated, startDate, endDate]);
+    }, [projectId, expensePreferencesKey, preferencesHydrated, startDate, endDate, sentStartDate, sentEndDate]);
 
     // Keep project Expenses in sync when shared Overview/Pricework filters change.
     useEffect(() => {
@@ -1138,7 +1155,9 @@ const ExpenseList = ({
         ([key, value]) => Boolean(value) && !(projectId && key === 'project_id'),
     ).length;
     const hasActiveFilters =
-        activeFilterCount > 0 || Boolean(startDate || endDate);
+        activeFilterCount > 0 ||
+        Boolean(startDate || endDate) ||
+        Boolean(sentStartDate || sentEndDate);
 
     const handleDateRangeChange = (range: {
         from: Date | null;
@@ -1150,6 +1169,16 @@ const ExpenseList = ({
         if (projectId) {
             sharedFilters?.setDateRange(range.from, range.to);
         }
+        setPagination((prev: any) => ({...prev, pageIndex: 0}));
+    };
+
+    const handleSentDateRangeChange = (range: {
+        from: Date | null;
+        to: Date | null;
+    }) => {
+        skipNextDependencyPageResetRef.current = false;
+        setSentStartDate(range.from);
+        setSentEndDate(range.to);
         setPagination((prev: any) => ({...prev, pageIndex: 0}));
     };
 
@@ -1169,6 +1198,8 @@ const ExpenseList = ({
         setFilters(nextFilters);
         setStartDate(null);
         setEndDate(null);
+        setSentStartDate(null);
+        setSentEndDate(null);
         if (projectId) {
             sharedFilters?.clearSharedFilters();
         }
@@ -1512,6 +1543,8 @@ const ExpenseList = ({
                 if (search) payload.search = search;
                 if (startDate) payload.start_date = format(startDate, 'dd/MM/yyyy');
                 if (endDate) payload.end_date = format(endDate, 'dd/MM/yyyy');
+                if (sentStartDate) payload.sent_start_date = format(sentStartDate, 'dd/MM/yyyy');
+                if (sentEndDate) payload.sent_end_date = format(sentEndDate, 'dd/MM/yyyy');
                 if (filters.user_id) payload.user_id = filters.user_id;
                 if (filters.project_id) payload.project_id = filters.project_id;
                 if (filters.address_id) payload.address_id = filters.address_id;
@@ -1717,7 +1750,14 @@ const ExpenseList = ({
                         )}
                     </Box>
 
-                    <Box display="flex" justifyContent="flex-end" alignItems="center">
+                    <Box display="flex" justifyContent="flex-end" alignItems="center" gap={1} flexWrap="wrap">
+                        <DateRangePickerBox
+                            from={sentStartDate}
+                            to={sentEndDate}
+                            onChange={handleSentDateRangeChange}
+                            placeholder="Sent Date"
+                            buttonMinWidth={210}
+                        />
                         <Tooltip title="Column visibility">
                             <IconButton
                                 onClick={(e) => setColumnMenuAnchor(e.currentTarget)}

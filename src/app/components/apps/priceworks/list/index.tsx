@@ -112,6 +112,8 @@ const defaultFilters = {
 type PriceworkStoredPreferences = {
     startDate?: string | null;
     endDate?: string | null;
+    sentStartDate?: string | null;
+    sentEndDate?: string | null;
 };
 
 const parseStoredDate = (value?: string | null) => {
@@ -231,6 +233,8 @@ const PriceworkList = ({
     const [filterOpen, setFilterOpen] = useState(false);
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
+    const [sentStartDate, setSentStartDate] = useState<Date | null>(null);
+    const [sentEndDate, setSentEndDate] = useState<Date | null>(null);
 
     const [sharedFiltersReady, setSharedFiltersReady] = useState(!projectId);
 
@@ -295,8 +299,12 @@ const PriceworkList = ({
                 const parsed = JSON.parse(stored) as PriceworkStoredPreferences;
                 const from = parseStoredDate(parsed.startDate);
                 const to = parseStoredDate(parsed.endDate);
+                const sentFrom = parseStoredDate(parsed.sentStartDate);
+                const sentTo = parseStoredDate(parsed.sentEndDate);
                 setStartDate(from && to ? from : null);
                 setEndDate(from && to ? to : null);
+                setSentStartDate(sentFrom && sentTo ? sentFrom : null);
+                setSentEndDate(sentFrom && sentTo ? sentTo : null);
             }
         } catch (error) {
             console.error('Failed to load pricework list preferences', error);
@@ -312,12 +320,15 @@ const PriceworkList = ({
         if (restoredPreferencesKeyRef.current !== priceworkPreferencesKey) return;
 
         const hasCompleteRange = Boolean(startDate && endDate);
+        const hasSentRange = Boolean(sentStartDate && sentEndDate);
         const payload: PriceworkStoredPreferences = {
             startDate: hasCompleteRange && startDate ? startDate.toISOString() : null,
             endDate: hasCompleteRange && endDate ? endDate.toISOString() : null,
+            sentStartDate: hasSentRange && sentStartDate ? sentStartDate.toISOString() : null,
+            sentEndDate: hasSentRange && sentEndDate ? sentEndDate.toISOString() : null,
         };
         writeListingTableState(priceworkPreferencesKey, JSON.stringify(payload));
-    }, [projectId, priceworkPreferencesKey, preferencesHydrated, startDate, endDate]);
+    }, [projectId, priceworkPreferencesKey, preferencesHydrated, startDate, endDate, sentStartDate, sentEndDate]);
 
     const [sorting, setSorting] = useState<SortingState>([
         {id: 'pricework_date', desc: true},
@@ -1743,6 +1754,10 @@ const PriceworkList = ({
                 url += `&start_date=${format(startDate, 'dd/MM/yyyy')}`;
                 url += `&end_date=${format(endDate, 'dd/MM/yyyy')}`;
             }
+            if (sentStartDate && sentEndDate) {
+                url += `&sent_start_date=${format(sentStartDate, 'dd/MM/yyyy')}`;
+                url += `&sent_end_date=${format(sentEndDate, 'dd/MM/yyyy')}`;
+            }
             if (filters.user_id) url += `&user_id=${filters.user_id}`;
             if (filters.project_id) url += `&project_id=${filters.project_id}`;
             if (filters.address_id) url += `&address_id=${filters.address_id}`;
@@ -1887,6 +1902,8 @@ const PriceworkList = ({
             search,
             startDate ? format(startDate, 'yyyy-MM-dd') : '',
             endDate ? format(endDate, 'yyyy-MM-dd') : '',
+            sentStartDate ? format(sentStartDate, 'yyyy-MM-dd') : '',
+            sentEndDate ? format(sentEndDate, 'yyyy-MM-dd') : '',
             JSON.stringify(filters),
             activeTab,
         ],
@@ -1912,7 +1929,9 @@ const PriceworkList = ({
         ([key, value]) => Boolean(value) && !(projectId && key === 'project_id'),
     ).length;
     const hasActiveFilters =
-        activeFilterCount > 0 || Boolean(startDate || endDate);
+        activeFilterCount > 0 ||
+        Boolean(startDate || endDate) ||
+        Boolean(sentStartDate || sentEndDate);
 
     const handleDateRangeChange = (range: {
         from: Date | null;
@@ -1923,6 +1942,16 @@ const PriceworkList = ({
         if (projectId) {
             sharedFilters?.setDateRange(range.from, range.to);
         }
+        clearSelection();
+        setPagination((prev: any) => ({...prev, pageIndex: 0}));
+    };
+
+    const handleSentDateRangeChange = (range: {
+        from: Date | null;
+        to: Date | null;
+    }) => {
+        setSentStartDate(range.from);
+        setSentEndDate(range.to);
         clearSelection();
         setPagination((prev: any) => ({...prev, pageIndex: 0}));
     };
@@ -1942,6 +1971,8 @@ const PriceworkList = ({
         setFilters(nextFilters);
         setStartDate(null);
         setEndDate(null);
+        setSentStartDate(null);
+        setSentEndDate(null);
         if (projectId) {
             sharedFilters?.clearSharedFilters();
         }
@@ -2095,7 +2126,14 @@ const PriceworkList = ({
                         )}
                     </Box>
 
-                    <Box display="flex" justifyContent="flex-end" alignItems="center">
+                    <Box display="flex" justifyContent="flex-end" alignItems="center" gap={1} flexWrap="wrap">
+                        <DateRangePickerBox
+                            from={sentStartDate}
+                            to={sentEndDate}
+                            onChange={handleSentDateRangeChange}
+                            placeholder="Sent Date"
+                            buttonMinWidth={210}
+                        />
                         <Tooltip title="Column visibility">
                             <IconButton
                                 onClick={(e) => setColumnMenuAnchor(e.currentTarget)}

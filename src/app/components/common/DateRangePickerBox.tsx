@@ -28,6 +28,7 @@ type Props = {
     payrollCycle?: PayrollCycle;
     buttonLabelAlign?: 'left' | 'space-between';
     buttonMinWidth?: number | string;
+    placeholder?: string;
 };
 
 const generatePayrollRanges = (cycle: PayrollCycle, count = 10): { from: Date; to: Date }[] => {
@@ -73,6 +74,7 @@ const DateRangePickerBox: React.FC<Props> = ({
     payrollCycle,
     buttonLabelAlign = 'space-between',
     buttonMinWidth = 230,
+    placeholder = 'Select Date Range',
 }) => {
     const { t } = useTranslation();
     const today = new Date();
@@ -120,8 +122,8 @@ const DateRangePickerBox: React.FC<Props> = ({
         setCalendarMonth(range.from);
     };
 
-    const formatRangeLabel = () => from && to ? 
-        `${format(from, "dd MMM yyyy")} ~ ${format(to, "dd MMM yyyy")}` : "Select Date Range";
+    const formatRangeLabel = () => from && to ?
+        `${format(from, "dd MMM yyyy")} ~ ${format(to, "dd MMM yyyy")}` : placeholder;
 
     const formatPresetLabel = (range: { from: Date; to: Date }) =>
         `${format(range.from, "dd/MM/yyyy")} - ${format(range.to, "dd/MM/yyyy")}`;
