@@ -104,13 +104,15 @@ const PriceworkAttachmentsDrawer = ({open, pricework, onClose}: Props) => {
         if (!pricework?.id) return;
         setLoading(true);
         try {
-            const params = isTimesheetLightRow(pricework)
-                    ? {
-                        pricework_id: pricework.timesheet_light_id ?? pricework.timesheet_id ?? pricework.id,
-                        record_type: 'timesheet_light',
-                        checklog_id: pricework.user_checklog_id ?? pricework.id,
-                    }
-                    : {pricework_id: pricework.pricework_id ?? pricework.id};
+            // const params = isTimesheetLightRow(pricework)
+            //         ? {
+            //             pricework_id: pricework.timesheet_light_id ?? pricework.timesheet_id ?? pricework.id,
+            //             record_type: 'timesheet_light',
+            //             checklog_id: pricework.user_checklog_id ?? pricework.id,
+            //         }
+            //         : {pricework_id: pricework.pricework_id ?? pricework.id};
+            const params = {pricework_id: pricework.pricework_id ?? pricework.id};
+
             const res = await api.get('pricework/detail', {params});
             setDetail(res.data?.info || null);
         } catch (error: any) {

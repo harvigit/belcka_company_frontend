@@ -126,6 +126,11 @@ const EditStore: React.FC<EditStoreProps> = ({
           query,
         )}?format=json`,
       );
+      const contentType = res.headers.get("content-type") || "";
+      if (!res.ok || !contentType.includes("json")) {
+        setAddressOptions([]);
+        return;
+      }
       const data = await res.json();
       setAddressOptions(data || []);
     } catch {

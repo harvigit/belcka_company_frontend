@@ -38,6 +38,7 @@ import dayjs from 'dayjs';
 import Image from 'next/image';
 import api from '@/utils/axios';
 import {useServerTable} from '@/hooks/useServerTable';
+import {getTableSortQuery} from '@/utils/tableSort';
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
@@ -47,6 +48,9 @@ import {tableFilterOptions} from '@/utils/uniqueFilterOptions';
 
 type LabourRow = {
     row_id?: number;
+    row_key?: string;
+    worklog_id?: number;
+    checklog_id?: number | null;
     id?: string | null;
     display_id?: string | null;
     team_id?: number | null;
@@ -299,60 +303,60 @@ const Labour = ({projectId}: { projectId: number }) => {
 
     const columns = useMemo(
         () => [
-            {
-                id: 'select',
-                enableSorting: false,
-                enableHiding: false,
-                header: () => (
-                    <Stack direction="row" alignItems="center">
-                        <CustomCheckbox
-                            className="header-checkbox"
-                            checked={
-                                isSelectAll ||
-                                (data.length > 0 &&
-                                    data.every((row) => selectedRowIds.has(row.row_id || 0)))
-                            }
-                            indeterminate={
-                                !isSelectAll &&
-                                selectedRowIds.size > 0 &&
-                                selectedRowIds.size < data.length
-                            }
-                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                handleToggleSelectAll(e.target.checked);
-                            }}
-                        />
-                    </Stack>
-                ),
-                cell: ({row}: { row: { original: LabourRow } }) => {
-                    const item = row.original;
-                    const rowId = item.row_id || 0;
-                    const isChecked = isSelectAll || selectedRowIds.has(rowId);
-                    const showCheckbox = isChecked || hoveredRow === rowId;
-
-                    return (
-                        <Stack direction="row" alignItems="center">
-                            <CustomCheckbox
-                                className="row-checkbox"
-                                checked={isChecked}
-                                onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    handleToggleSelect(rowId);
-                                }}
-                                sx={{
-                                    opacity: showCheckbox ? 1 : 0,
-                                    pointerEvents: showCheckbox ? 'auto' : 'none',
-                                    transition: 'opacity 0.2s ease',
-                                }}
-                            />
-                        </Stack>
-                    );
-                },
-            },
+            // {
+            //     id: 'select',
+            //     enableSorting: false,
+            //     enableHiding: false,
+            //     header: () => (
+            //         <Stack direction="row" alignItems="center">
+            //             <CustomCheckbox
+            //                 className="header-checkbox"
+            //                 checked={
+            //                     isSelectAll ||
+            //                     (data.length > 0 &&
+            //                         data.every((row) => selectedRowIds.has(row.row_id || 0)))
+            //                 }
+            //                 indeterminate={
+            //                     !isSelectAll &&
+            //                     selectedRowIds.size > 0 &&
+            //                     selectedRowIds.size < data.length
+            //                 }
+            //                 onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            //                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            //                     e.stopPropagation();
+            //                     e.preventDefault();
+            //                     handleToggleSelectAll(e.target.checked);
+            //                 }}
+            //             />
+            //         </Stack>
+            //     ),
+            //     cell: ({row}: { row: { original: LabourRow } }) => {
+            //         const item = row.original;
+            //         const rowId = item.row_id || 0;
+            //         const isChecked = isSelectAll || selectedRowIds.has(rowId);
+            //         const showCheckbox = isChecked || hoveredRow === rowId;
+            //
+            //         return (
+            //             <Stack direction="row" alignItems="center">
+            //                 <CustomCheckbox
+            //                     className="row-checkbox"
+            //                     checked={isChecked}
+            //                     onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            //                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            //                         e.stopPropagation();
+            //                         e.preventDefault();
+            //                         handleToggleSelect(rowId);
+            //                     }}
+            //                     sx={{
+            //                         opacity: showCheckbox ? 1 : 0,
+            //                         pointerEvents: showCheckbox ? 'auto' : 'none',
+            //                         transition: 'opacity 0.2s ease',
+            //                     }}
+            //                 />
+            //             </Stack>
+            //         );
+            //     },
+            // },
             
             columnHelper.accessor('display_id', {
                 id: 'id',
@@ -451,14 +455,13 @@ const Labour = ({projectId}: { projectId: number }) => {
                 id: 'payable',
                 header: () => <Typography variant="subtitle2">Payable Hr</Typography>,
                 cell: ({row, getValue}) => {
-                    const isDaywork = String(row.original.type || '').toLowerCase() === 'daywork';
                     const payableHours = row.original.payable_work_minutes != null
                         ? Number(row.original.payable_work_minutes) / 60
                         : getValue();
 
                     return (
                         <Typography className="f-14" color="textPrimary" noWrap>
-                            {isDaywork ? formatPayableHour(payableHours) : '--'}
+                            {formatPayableHour(payableHours)}
                         </Typography>
                     );
                 },
@@ -566,6 +569,11 @@ const Labour = ({projectId}: { projectId: number }) => {
             if (filters.users.length) params.set('user_ids', filters.users.join(','));
             if (filters.types.length) params.set('types', filters.types.join(','));
             if (filters.trades.length) params.set('trade_ids', filters.trades.join(','));
+            const sortQuery = getTableSortQuery(sorting);
+            if (sortQuery) {
+                params.set('sort_by', sortQuery.sort_by);
+                params.set('sort_order', sortQuery.sort_order);
+            }
 
             const res = await api.get(
                 `project-analytics/web-labors?${params.toString()}`,
@@ -667,7 +675,7 @@ const Labour = ({projectId}: { projectId: number }) => {
             onSortingChange: setSorting,
             onColumnVisibilityChange,
             manualSorting: true,
-            getRowId: (row) => String(row.row_id || row.id),
+            getRowId: (row) => String(row.row_key || row.row_id || row.id),
         });
 
     const visibleColCount =

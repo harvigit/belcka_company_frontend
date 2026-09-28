@@ -24,6 +24,7 @@ import CutDeleteCase from '../resolution/cut-delete-conflicts';
 import SplitDeleteCase from '../resolution/split-delete-conflicts';
 import DeleteOnlyCase from '../resolution/delete-conflicts';
 import UserProfileLink from '@/app/components/common/UserProfileLink';
+import CheckoutLocationConflict, {isCheckoutLocationConflict} from './checkout-location-conflict';
 
 export interface Conflict {
     user_thumb_image: string;
@@ -49,6 +50,11 @@ export interface ConflictItem {
     message?: string;
     old_data?: Record<string, any>;
     new_data?: Record<string, any>;
+    checklog_id?: number;
+    checkout_at?: string;
+    checkout_location?: any;
+    expected_zones?: any[];
+    map?: any;
 }
 
 export interface TimesheetConflict {
@@ -60,7 +66,7 @@ export interface TimesheetConflict {
     items: ConflictItem[];
 }
 
-export type ShiftConflictType = 'cut-delete' | 'split-delete' | 'delete-only' | 'pricework-timesheet';
+export type ShiftConflictType = 'cut-delete' | 'split-delete' | 'delete-only' | 'pricework-timesheet' | 'checkout-location';
 
 export const parseDT = (() => {
     const cache = new Map<string, DateTime>();
@@ -107,6 +113,10 @@ const sortConflictItems = (items: ConflictItem[]): ConflictItem[] => {
 };
 
 const getShiftConflictType = (items: ConflictItem[]): ShiftConflictType => {
+    if (isCheckoutLocationConflict(items)) {
+        return 'checkout-location';
+    }
+
     if (isPriceworkTimesheetConflict(items)) {
         return 'pricework-timesheet';
     }
@@ -145,6 +155,7 @@ const SHIFT_TYPE_CFG: Record<ShiftConflictType, { label: string; color: string; 
     'split-delete':  { label: 'Split & Delete', color: '#7C3AED', bg: '#EDE9FE', border: '#DDD6FE' },
     'delete-only':   { label: 'Delete Only',    color: '#DC2626', bg: '#FEE2E2', border: '#FECACA' },
     'pricework-timesheet': { label: 'Daywork-Pricework', color: '#92400E', bg: '#FEF3C7', border: '#FDE68A' },
+    'checkout-location': { label: 'Checkout Location', color: '#991B1B', bg: '#FEE2E2', border: '#FECACA' },
 };
 
 // Shared Atoms
@@ -268,6 +279,9 @@ export const TimesheetConflictRow = React.memo(({ conflict, onClick }: {
 }) => {
     const type = getShiftConflictType(conflict.items);
     const cfg = SHIFT_TYPE_CFG[type];
+    const checkoutItem = type === 'checkout-location'
+        ? conflict.items.find((item) => item.conflict_type === 'checklog_checkout_location') ?? conflict.items[0]
+        : null;
 
     return (
         <Box onClick={onClick} sx={{
@@ -295,14 +309,23 @@ export const TimesheetConflictRow = React.memo(({ conflict, onClick }: {
                 <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap">
                     <IconCalendarEvent size={11} color="#9CA3AF" />
                     <Typography sx={{ fontSize: '0.72rem', color: '#6B7280' }}>{conflict.formatted_date}</Typography>
-                    {sortConflictItems(conflict.items).map((item, i) => (
-                        <React.Fragment key={i}>
+                    {checkoutItem ? (
+                        <>
                             <Typography sx={{ fontSize: '0.72rem', color: '#D1D5DB' }}>·</Typography>
                             <Typography sx={{ fontSize: '0.72rem', color: '#6B7280', fontFamily: 'monospace' }}>
-                                {item.start}–{item.end}
+                                Checkout {checkoutItem.end || checkoutItem.checkout_at || ''}
                             </Typography>
-                        </React.Fragment>
-                    ))}
+                        </>
+                    ) : (
+                        sortConflictItems(conflict.items).map((item, i) => (
+                            <React.Fragment key={i}>
+                                <Typography sx={{ fontSize: '0.72rem', color: '#D1D5DB' }}>·</Typography>
+                                <Typography sx={{ fontSize: '0.72rem', color: '#6B7280', fontFamily: 'monospace' }}>
+                                    {item.start}–{item.end}
+                                </Typography>
+                            </React.Fragment>
+                        ))
+                    )}
                 </Stack>
             </Box>
             <IconChevronRight size={16} color="#D1D5DB" style={{ flexShrink: 0 }} />
@@ -321,10 +344,12 @@ const TimesheetDetailPanel = React.memo(({ conflict, startDate, endDate, onClose
 }) => {
     const conflictType = getShiftConflictType(conflict.items);
     const isPriceworkTimesheet = conflictType === 'pricework-timesheet';
+    const isCheckoutLocation = conflictType === 'checkout-location';
     const displayConflict = {...conflict, items: sortConflictItems(conflict.items)};
     const commonProps = { conflict: displayConflict as any, index: 0, startDate, endDate, onClose: onResolved };
 
     const renderActions = () => {
+        if (isCheckoutLocation) return <CheckoutLocationConflict conflict={conflict as any} onResolved={onResolved} />;
         if (isPriceworkTimesheet) return <Box mt={2}><CutDeleteCase {...commonProps} showResolveConflict /></Box>;
         if (conflictType === 'cut-delete') return <Box mt={2}><CutDeleteCase {...commonProps} /></Box>;
         if (conflictType === 'split-delete') return <Box mt={2}><SplitDeleteCase {...commonProps} /></Box>;
@@ -358,39 +383,43 @@ const TimesheetDetailPanel = React.memo(({ conflict, startDate, endDate, onClose
                     fontSize: '0.7rem', fontWeight: 700, color: '#6B7280',
                     textTransform: 'uppercase', letterSpacing: '0.06em', mb: 1.25,
                 }}>
-                    {isPriceworkTimesheet ? 'Daywork-Pricework Conflict' : 'Overlapping Shifts'}
+                    {isCheckoutLocation ? 'Checkout Location Conflict' : isPriceworkTimesheet ? 'Daywork-Pricework Conflict' : 'Overlapping Shifts'}
                 </Typography>
 
-                <Box>
-                    {conflict.items.length === 2 && (
-                        <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 1.25 }}>
-                            <Box sx={{ flex: 1, height: '1px', bgcolor: '#E5E7EB' }} />
-                            <Box sx={{
-                                display: 'flex', alignItems: 'center', gap: 0.5,
-                                px: 1, py: 0.3, borderRadius: '12px',
-                                bgcolor: '#FEF3C7', border: '1px solid #FDE68A',
-                            }}>
-                                <IconAlertTriangle size={10} color="#D97706" />
-                                <Typography sx={{
-                                    fontSize: '0.62rem', fontWeight: 700, color: '#92400E',
-                                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                {!isCheckoutLocation && (
+                    <Box>
+                        {conflict.items.length === 2 && (
+                            <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 1.25 }}>
+                                <Box sx={{ flex: 1, height: '1px', bgcolor: '#E5E7EB' }} />
+                                <Box sx={{
+                                    display: 'flex', alignItems: 'center', gap: 0.5,
+                                    px: 1, py: 0.3, borderRadius: '12px',
+                                    bgcolor: '#FEF3C7', border: '1px solid #FDE68A',
                                 }}>
-                                    {isPriceworkTimesheet ? 'Conflict' : 'Overlap'}
-                                </Typography>
-                            </Box>
-                            <Box sx={{ flex: 1, height: '1px', bgcolor: '#E5E7EB' }} />
-                        </Stack>
-                    )}
-                    {displayConflict.items.map((item, i) => <ShiftBar key={i} item={item} />)}
-                </Box>
+                                    <IconAlertTriangle size={10} color="#D97706" />
+                                    <Typography sx={{
+                                        fontSize: '0.62rem', fontWeight: 700, color: '#92400E',
+                                        textTransform: 'uppercase', letterSpacing: '0.05em',
+                                    }}>
+                                        {isPriceworkTimesheet ? 'Conflict' : 'Overlap'}
+                                    </Typography>
+                                </Box>
+                                <Box sx={{ flex: 1, height: '1px', bgcolor: '#E5E7EB' }} />
+                            </Stack>
+                        )}
+                        {displayConflict.items.map((item, i) => <ShiftBar key={i} item={item} />)}
+                    </Box>
+                )}
 
-                <Divider sx={{ my: 2 }} />
-                <Typography sx={{
-                    fontSize: '0.7rem', fontWeight: 700, color: '#6B7280',
-                    textTransform: 'uppercase', letterSpacing: '0.06em', mb: 1,
-                }}>
-                    Resolution
-                </Typography>
+                {!isCheckoutLocation && <Divider sx={{ my: 2 }} />}
+                {!isCheckoutLocation && (
+                    <Typography sx={{
+                        fontSize: '0.7rem', fontWeight: 700, color: '#6B7280',
+                        textTransform: 'uppercase', letterSpacing: '0.06em', mb: 1,
+                    }}>
+                        Resolution
+                    </Typography>
+                )}
                 {renderActions()}
             </Box>
         </Box>

@@ -932,9 +932,9 @@ export default function MapGantt({
   useEffect(() => {
     if (open) {
       setActiveProjectId(projectId);
-      if (!projectId) {
+      // if (!projectId) {
         fetchResources();
-      }
+      // }
     }
   }, [open, projectId]);
 
@@ -1613,21 +1613,37 @@ export default function MapGantt({
               isLoaded={isLoaded}
             />
           )}
-
-          {selected?.mode === "edit" && (
-            <EditZone
-              key={selected.id}
-              zone={selected}
-              activeTab={activeTab}
-              onSaved={() => fetchProjectDetail(activeProjectId!)}
-              onCancel={() => setSelected(null)}
-              projectId={activeProjectId}
-              companyId={user.company_id ?? null}
-              addresses={addresses}
-            />
-          )}
         </Box>
       </Box>
+
+      <Drawer
+        anchor="bottom"
+        open={selected?.mode === "edit"}
+        onClose={() => setSelected(null)}
+        sx={{
+          "& .MuiDrawer-paper": {
+            height: "95vh",
+            width: { xs: "100%" },
+            display: "flex",
+            flexDirection: "column",
+            backgroundColor: "#fff",
+          },
+        }}
+      >
+        {selected?.mode === "edit" && (
+          <EditZone
+            key={selected.id}
+            zone={selected}
+            activeTab={activeTab}
+            onSaved={() => fetchProjectDetail(activeProjectId!)}
+            onCancel={() => setSelected(null)}
+            projectId={activeProjectId}
+            companyId={user.company_id ?? null}
+            addresses={addresses}
+            projects={resources.projects}
+          />
+        )}
+      </Drawer>
 
       <Drawer
         anchor="bottom"
