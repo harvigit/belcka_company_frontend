@@ -27,6 +27,7 @@ interface UseServerTableOptions<TData> {
   manualFiltering?: boolean;
   shouldResetPageOnDebounce?: () => boolean;
   enableSorting?: boolean;
+  forceServerSorting?: boolean;
   state?: any;
   getRowId?: (originalRow: TData, index: number, parent?: any) => string;
 }
@@ -45,6 +46,7 @@ export function useServerTable<TData>({
   manualFiltering = true,
   shouldResetPageOnDebounce,
   enableSorting = true,
+  forceServerSorting = false,
   state: controlledState,
   getRowId,
 }: UseServerTableOptions<TData>) {
@@ -71,6 +73,7 @@ export function useServerTable<TData>({
   const paginationRef = useRef(pagination);
   const injectingSortRef = useRef(false);
   const sortingRef = useRef(sorting);
+  const forceServerSortingRef = useRef(forceServerSorting);
   const dataLenRef = useRef(Array.isArray(data) ? data.length : 0);
   const totalRowsRef = useRef(totalRows);
   const clientFullSortRef = useRef(false);
@@ -79,7 +82,9 @@ export function useServerTable<TData>({
   const dataLen = Array.isArray(data) ? data.length : 0;
   const hasFullDataset = totalRows > 0 && dataLen >= totalRows;
   const useClientFullSort =
-    sorting.length > 0 && (hasFullDataset || fetchAllUsedRef.current);
+    !forceServerSorting &&
+    sorting.length > 0 &&
+    (hasFullDataset || fetchAllUsedRef.current);
 
   useEffect(() => {
     fetchRef.current = fetchData;
@@ -93,6 +98,9 @@ export function useServerTable<TData>({
   useEffect(() => {
     sortingRef.current = sorting;
   }, [sorting]);
+  useEffect(() => {
+    forceServerSortingRef.current = forceServerSorting;
+  }, [forceServerSorting]);
   useEffect(() => {
     dataLenRef.current = dataLen;
   }, [dataLen]);
@@ -167,7 +175,11 @@ export function useServerTable<TData>({
     const alreadyHasAllRows =
       dataLenRef.current >= totalRowsRef.current && totalRowsRef.current > 0;
     // Full dataset is already loaded — sort client-side without refetching.
-    if (sorting.length > 0 && (alreadyHasAllRows || fetchAllUsedRef.current)) {
+    if (
+      !forceServerSortingRef.current &&
+      sorting.length > 0 &&
+      (alreadyHasAllRows || fetchAllUsedRef.current)
+    ) {
       if (paginationRef.current.pageIndex !== 0) {
         skipNextPaginationFetchRef.current = true;
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));

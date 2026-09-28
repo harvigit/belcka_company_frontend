@@ -1238,7 +1238,7 @@ const PriceworkList = ({
                         </Stack>
                     );
                 },
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('project_name', {
                 id: 'project_name',
@@ -1266,7 +1266,7 @@ const PriceworkList = ({
                         </Typography>
                     </Tooltip>
                 ),
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('address_name', {
                 id: 'address_name',
@@ -1294,7 +1294,7 @@ const PriceworkList = ({
                         </Typography>
                     </Tooltip>
                 ),
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('team_name', {
                 id: 'team_name',
@@ -1322,7 +1322,7 @@ const PriceworkList = ({
                         </Typography>
                     </Tooltip>
                 ),
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('work_type', {
                 id: 'work_type',
@@ -1350,7 +1350,7 @@ const PriceworkList = ({
                         </Typography>
                     </Tooltip>
                 ),
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('pricework_date', {
                 id: 'pricework_date',
@@ -1358,7 +1358,7 @@ const PriceworkList = ({
                 cell: (info) => (
                     <Typography className="f-14">{info.getValue() || '—'}</Typography>
                 ),
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('category_name', {
                 id: 'category_name',
@@ -1378,7 +1378,7 @@ const PriceworkList = ({
                         </Typography>
                     </Tooltip>
                 ),
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('sub_category_name', {
                 id: 'sub_category_name',
@@ -1398,7 +1398,7 @@ const PriceworkList = ({
                         </Typography>
                     </Tooltip>
                 ),
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('unit_name', {
                 id: 'unit_name',
@@ -1406,7 +1406,7 @@ const PriceworkList = ({
                 cell: (info) => (
                     <Typography className="f-14">{info.getValue() || '—'}</Typography>
                 ),
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('duration', {
                 id: 'duration',
@@ -1416,7 +1416,7 @@ const PriceworkList = ({
                         {formatDuration(info.getValue())}
                     </Typography>
                 ),
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('amount_per_unit', {
                 id: 'amount_per_unit',
@@ -1519,7 +1519,7 @@ const PriceworkList = ({
                         </Stack>
                     );
                 },
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('work_complete', {
                 id: 'work_complete',
@@ -1614,7 +1614,7 @@ const PriceworkList = ({
                         </Stack>
                     );
                 },
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('pricework_amount', {
                 id: 'pricework_amount',
@@ -1643,7 +1643,7 @@ const PriceworkList = ({
                         {info.getValue() || '—'}
                     </Typography>
                 ),
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('attachment_count', {
                 id: 'attachment_count',
@@ -1670,7 +1670,7 @@ const PriceworkList = ({
                         </Typography>
                     );
                 },
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.accessor('status', {
                 id: 'status',
@@ -1697,7 +1697,7 @@ const PriceworkList = ({
                         <BookkeeperStatusBadge status={info.row.original.timesheet_status} />
                     </Box>
                 ),
-                enableSorting: false,
+                enableSorting: true,
             }),
             columnHelper.display({
                 id: 'actions',
@@ -1751,9 +1751,7 @@ const PriceworkList = ({
             if (activeTab !== 'all') url += `&status=${activeTab}`;
 
             if (sorting.length > 0) {
-                const sortId =
-                    sorting[0].id === 'status' ? 'approval_status' : sorting[0].id;
-                url += `&sort_by=${sortId}&sort_order=${sorting[0].desc ? 'desc' : 'asc'}`;
+                url += `&sort_by=${encodeURIComponent(sorting[0].id)}&sort_order=${sorting[0].desc ? 'desc' : 'asc'}`;
             }
 
             const res = await api.get(url);
@@ -1896,6 +1894,7 @@ const PriceworkList = ({
         onSortingChange: setSorting,
         onColumnVisibilityChange: setColumnVisibility,
         manualSorting: true,
+        forceServerSorting: true,
     });
 
     const tabs: PriceworkTabItem[] = useMemo(
