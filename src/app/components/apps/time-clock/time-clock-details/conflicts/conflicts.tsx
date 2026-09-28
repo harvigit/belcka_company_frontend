@@ -22,6 +22,9 @@ import {User} from 'next-auth';
 import {useSession} from 'next-auth/react';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import UserProfileLink from '@/app/components/common/UserProfileLink';
+import CheckoutLocationConflict, {
+    isCheckoutLocationConflict,
+} from '@/app/components/apps/conflicts/sections/checkout-location-conflict';
 
 export interface ConflictItem {
     user_id: number;
@@ -43,6 +46,11 @@ export interface ConflictItem {
     old_data?: any;
     new_data?: any;
     account_id?: any;
+    checklog_id?: number;
+    checkout_at?: string;
+    checkout_location?: any;
+    expected_zones?: any[];
+    map?: any;
 }
 
 export interface Conflict {
@@ -59,7 +67,8 @@ export type ConflictType =
     | 'delete-only'
     | 'pricework-timesheet'
     | 'billing_info'
-    | 'duplicate_account_id';
+    | 'duplicate_account_id'
+    | 'checkout-location';
 
 const formatFieldLabel = (key: string): string => {
     return key
@@ -99,6 +108,10 @@ export const calcDiffHM = (start: DateTime, end: DateTime): string => {
 };
 
 export const getConflictType = (items: ConflictItem[]): ConflictType => {
+    if (isCheckoutLocationConflict(items)) {
+        return 'checkout-location';
+    }
+
     if (items.some((item) => item.conflict_type === 'pricework_timesheet')) {
         return 'pricework-timesheet';
     }
@@ -195,6 +208,13 @@ const ConflictCaseRenderer = React.memo(({conflict, index, startDate, endDate, o
                         isLoading={isLoading}
                     />
                 );
+            case 'checkout-location':
+                return (
+                    <CheckoutLocationConflict
+                        conflict={conflict as any}
+                        onResolved={onClose}
+                    />
+                );
             case 'cut-delete':
                 return <CutDeleteCase {...commonProps} />;
             case 'split-delete':
@@ -214,6 +234,33 @@ const ConflictItemDisplay = React.memo(
     ({items}: { items: ConflictItem[] }) => (
         <Box sx={{mb: 2}}>
             {items.map((item, i) => {
+                if (item.conflict_type === 'checklog_checkout_location') {
+                    return (
+                        <Box
+                            key={i}
+                            sx={{
+                                mb: 1,
+                                p: 1.25,
+                                borderRadius: 1,
+                                bgcolor: '#FEF2F2',
+                                border: '1px solid #FECACA',
+                            }}
+                        >
+                            <Typography sx={{fontSize: '0.78rem', fontWeight: 700, color: '#991B1B'}}>
+                                Checkout outside assigned work zone
+                            </Typography>
+                            <Typography sx={{fontSize: '0.75rem', color: '#7F1D1D', mt: 0.35}}>
+                                {item.date} {item.end ? `at ${item.end}` : ''}
+                            </Typography>
+                            {item.checkout_location?.location && (
+                                <Typography sx={{fontSize: '0.75rem', color: '#374151', mt: 0.5}}>
+                                    {item.checkout_location.location}
+                                </Typography>
+                            )}
+                        </Box>
+                    );
+                }
+
                 const isDataConflict = items.some(
                     (i) => i.conflict_type === 'billing_info' || i.conflict_type === 'duplicate_account_id',
                 );
