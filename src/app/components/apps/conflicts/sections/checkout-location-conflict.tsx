@@ -214,6 +214,7 @@ const CheckoutPinOverlay = ({
 
 const CheckoutLocationConflict = ({conflict, onResolved}: CheckoutLocationConflictProps) => {
     const [isResolving, setIsResolving] = useState(false);
+    const [isReporting, setIsReporting] = useState(false);
     const mapRef = useRef<google.maps.Map | null>(null);
     const item = conflict.items.find((entry) => entry.conflict_type === CONFLICT_TYPE) ?? conflict.items[0];
     const checkoutLocation = item.map?.checkout_location ?? item.checkout_location ?? null;
@@ -291,6 +292,31 @@ const CheckoutLocationConflict = ({conflict, onResolved}: CheckoutLocationConfli
             toast.error('Something went wrong while resolving conflict');
         } finally {
             setIsResolving(false);
+        }
+    };
+
+    const reportConflict = async () => {
+        if (!item.checklog_id) {
+            toast.error('Checklog ID missing for this conflict');
+            return;
+        }
+
+        setIsReporting(true);
+        try {
+            const res = await api.post('/time-clock/report-checkout-outside-zone', {
+                checklog_id: item.checklog_id,
+            });
+
+            if (res.data?.IsSuccess) {
+                toast.success(res.data.message || 'Checkout outside zone reported successfully');
+                await onResolved?.();
+            } else {
+                toast.error(res.data?.message || 'Failed to report conflict');
+            }
+        } catch (error) {
+            toast.error('Something went wrong while reporting conflict');
+        } finally {
+            setIsReporting(false);
         }
     };
 
@@ -425,15 +451,24 @@ const CheckoutLocationConflict = ({conflict, onResolved}: CheckoutLocationConfli
                     )}
                 </Box>
 
-                <Button
-                    variant="contained"
-                    color="primary"
-                    disabled={isResolving}
-                    onClick={resolveConflict}
-                    sx={{alignSelf: 'flex-start'}}
-                >
-                    {isResolving ? 'Resolving...' : 'Resolve Conflict'}
-                </Button>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                    <Button
+                        variant="outlined"
+                        color="error"
+                        disabled={isReporting}
+                        onClick={reportConflict}
+                    >
+                        {isReporting ? 'Reporting...' : 'Report'}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        disabled={isResolving}
+                        onClick={resolveConflict}
+                    >
+                        {isResolving ? 'Resolving...' : 'Resolve Conflict'}
+                    </Button>
+                </Stack>
             </Stack>
         </Box>
     );
