@@ -457,16 +457,34 @@ const CheckoutLocationConflict = ({conflict, onResolved}: CheckoutLocationConfli
                         color="error"
                         disabled={isReporting}
                         onClick={reportConflict}
+                        sx={{
+                            textTransform: "none",
+                            fontSize: "0.74rem",
+                            fontWeight: 500,
+                            borderRadius: "6px",
+                            px: 1,
+                            py: 0.5,
+                        }}
                     >
                         {isReporting ? 'Reporting...' : 'Report'}
                     </Button>
+
                     <Button
-                        variant="contained"
+                        size="small"
+                        variant="outlined"
                         color="primary"
                         disabled={isResolving}
                         onClick={resolveConflict}
+                        sx={{
+                            textTransform: "none",
+                            fontSize: "0.74rem",
+                            fontWeight: 500,
+                            borderRadius: "6px",
+                            px: 1,
+                            py: 0.5,
+                        }}
                     >
-                        {isResolving ? 'Resolving...' : 'Resolve Conflict'}
+                        {isResolving ? 'Resolving...' : 'Resolve'}
                     </Button>
                 </Stack>
             </Stack>
