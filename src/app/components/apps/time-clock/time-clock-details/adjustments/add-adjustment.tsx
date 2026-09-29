@@ -129,6 +129,11 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
             return;
         }
 
+        if (!note.trim()) {
+            setError('Note is required.');
+            return;
+        }
+
         try {
             setSaving(true);
             const response = await api.post('/time-clock/adjustment-amount', {
@@ -250,7 +255,7 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
 
                 <FormControl fullWidth>
                     <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                        Note
+                        Note <Box component="span" sx={{ color: 'error.main' }}>*</Box>
                     </Typography>
                     <CustomTextField
                         value={note}
@@ -276,7 +281,7 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
                 <Button onClick={onClose} disabled={saving}>
                     Cancel
                 </Button>
-                <Button variant="contained" onClick={handleSubmit} disabled={saving}>
+                <Button variant="contained" onClick={handleSubmit} disabled={saving || !note.trim()}>
                     Save
                 </Button>
             </Box>

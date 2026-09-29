@@ -252,6 +252,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [pendingWorklogEdit, setPendingWorklogEdit] = useState<PendingWorklogEdit | null>(null);
     const [worklogEditNote, setWorklogEditNote] = useState('');
     const [worklogEditNoteError, setWorklogEditNoteError] = useState(false);
+    const [pendingAdjustment, setPendingAdjustment] = useState<{ date: string; amount: number } | null>(null);
+    const [adjustmentNote, setAdjustmentNote] = useState('');
+    const [savingAdjustment, setSavingAdjustment] = useState(false);
     const [canDirectEditWorklog, setCanDirectEditWorklog] = useState(false);
     const [isLockActionPending, setIsLockActionPending] = useState(false);
     const isLockActionPendingRef = useRef(false);
@@ -832,9 +835,24 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setRequestListOpen(false);
     };
 
+    // Inline adjustment edits ask for a note before saving, same as the add adjustment sidebar.
     const handleAdjustmentSave = async (date: string, amount: number) => {
+        setAdjustmentNote('');
+        setPendingAdjustment({ date, amount });
+    };
+
+    const closeAdjustmentNoteDialog = () => {
+        if (savingAdjustment) return;
+        setPendingAdjustment(null);
+        setAdjustmentNote('');
+    };
+
+    const submitAdjustment = async () => {
+        if (!pendingAdjustment || !adjustmentNote.trim()) return;
+
+        setSavingAdjustment(true);
         try {
-            const parsedDate = parse(date, 'dd/MM/yyyy', new Date());
+            const parsedDate = parse(pendingAdjustment.date, 'dd/MM/yyyy', new Date());
             const weekStart = startOfWeek(parsedDate, { weekStartsOn: 1 });
             const weekEnd = endOfWeek(parsedDate, { weekStartsOn: 1 });
 
@@ -842,16 +860,24 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 user_id,
                 start_date: format(weekStart, 'dd/MM/yyyy'),
                 end_date: format(weekEnd, 'dd/MM/yyyy'),
-                adjustment_amount: amount,
+                adjustment_amount: pendingAdjustment.amount,
+                note: adjustmentNote.trim(),
             });
             if (response.data.IsSuccess) {
+                setPendingAdjustment(null);
+                setAdjustmentNote('');
                 const defaultStartDate = startDate || defaultStart;
                 const defaultEndDate = endDate || defaultEnd;
                 onDataChange?.();
                 await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            } else {
+                toast.error(response.data?.message || 'Failed to save adjustment.');
             }
         } catch (error) {
             console.error('Error saving adjustment:', error);
+            toast.error('Failed to save adjustment.');
+        } finally {
+            setSavingAdjustment(false);
         }
     };
 
@@ -2302,6 +2328,49 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                             <CircularProgress size={20} sx={{color: 'white'}} />
                         ) : (
                             'Submit'
+                        )}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={Boolean(pendingAdjustment)}
+                onClose={closeAdjustmentNoteDialog}
+                fullWidth
+                maxWidth="xs"
+            >
+                <DialogTitle>Add adjustment</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
+                        {pendingAdjustment
+                            ? `Adjustment of ${pendingAdjustment.amount < 0 ? '-' : ''}${currency}${Math.abs(pendingAdjustment.amount)} for this week.`
+                            : ''}
+                    </Typography>
+                    <TextField
+                        label="Note"
+                        placeholder="Enter note"
+                        value={adjustmentNote}
+                        onChange={(event) => setAdjustmentNote(event.target.value)}
+                        required
+                        multiline
+                        minRows={3}
+                        fullWidth
+                        autoFocus
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeAdjustmentNoteDialog} disabled={savingAdjustment}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={submitAdjustment}
+                        disabled={savingAdjustment || !adjustmentNote.trim()}
+                    >
+                        {savingAdjustment ? (
+                            <CircularProgress size={20} sx={{color: 'white'}} />
+                        ) : (
+                            'Save'
                         )}
                     </Button>
                 </DialogActions>
