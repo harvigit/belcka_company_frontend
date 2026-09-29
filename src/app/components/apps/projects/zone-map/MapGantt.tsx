@@ -569,7 +569,9 @@ const uniqueZonesWithProjectCount = (zones: any[]) => {
     if (!existing) {
       const projectIds = [
         ...new Set(
-          incomingIds.map(Number).filter((id: any) => Number.isFinite(id) && id > 0),
+          incomingIds
+            .map(Number)
+            .filter((id: any) => Number.isFinite(id) && id > 0),
         ),
       ];
       const projectNames = [...new Set(incomingNames.filter(Boolean))];
@@ -663,7 +665,11 @@ export default function MapGantt({
     trades: [] as number[],
     projects: [] as number[],
   });
-  const emptyMapFilters = { teams: [] as number[], trades: [] as number[], projects: [] as number[] };
+  const emptyMapFilters = {
+    teams: [] as number[],
+    trades: [] as number[],
+    projects: [] as number[],
+  };
   const activeFilterCount =
     filters.teams.length +
     filters.trades.length +
@@ -890,7 +896,11 @@ export default function MapGantt({
     try {
       let res;
       if (activeTab === 0) {
-        res = await api.delete(`work-zone/delete?id=${deleteId}`);
+        const query = projectId
+          ? `?id=${deleteId}&projectId=${projectId}`
+          : `?id=${deleteId}`;
+
+        res = await api.delete(`work-zone/delete${query}`);
       } else {
         res = await api.post("address/parent-delete", {
           address_ids: deleteId.toString(),
@@ -933,7 +943,7 @@ export default function MapGantt({
     if (open) {
       setActiveProjectId(projectId);
       // if (!projectId) {
-        fetchResources();
+      fetchResources();
       // }
     }
   }, [open, projectId]);
@@ -1306,10 +1316,7 @@ export default function MapGantt({
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={handleClearAppliedFilters}
-            color="inherit"
-          >
+          <Button onClick={handleClearAppliedFilters} color="inherit">
             Clear All
           </Button>
 
@@ -2083,7 +2090,9 @@ const UserMarker = ({
             filter: showTooltip
               ? "drop-shadow(0 6px 14px rgba(0,0,0,0.38))"
               : "drop-shadow(0 3px 6px rgba(0,0,0,0.26))",
-            transform: showTooltip ? "scale(1.12) translateY(-2px)" : "scale(1)",
+            transform: showTooltip
+              ? "scale(1.12) translateY(-2px)"
+              : "scale(1)",
             transition: "filter 0.15s ease, transform 0.15s ease",
           }}
         >

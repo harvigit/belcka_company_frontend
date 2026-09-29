@@ -329,7 +329,6 @@ const EditZone = ({
     initialProjectIds(zone, projectId),
   );
   const [projectSearch, setProjectSearch] = useState("");
-
   const initType: ZoneType =
     activeTab === 1
       ? "circle"
@@ -713,108 +712,119 @@ const EditZone = ({
 
       <Box sx={{ p: { xs: 1.5, sm: 3 }, flex: 1, overflowY: "auto" }}>
         <Grid container spacing={3} sx={{ height: "100%" }}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card
-              sx={{
-                p: 0,
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                minHeight: 400,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-              }}
-            >
-              <Tabs value={0} sx={{ borderBottom: 1, borderColor: "divider" }}>
-                <Tab label="PROJECTS" sx={{ fontWeight: 600 }} />
-              </Tabs>
-              <Box sx={{ p: 2, pb: 1 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Search..."
-                  value={projectSearch}
-                  onChange={(e) => setProjectSearch(e.target.value)}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1,
-                      backgroundColor: "#f9f9f9",
-                    },
-                    "& input": { textAlign: "start" },
-                  }}
-                />
-              </Box>
-              <List sx={{ flex: 1, overflowY: "auto", p: 0 }}>
-                {projects
-                  .filter((p) =>
-                    String(p.name || "")
-                      .toLowerCase()
-                      .includes(projectSearch.toLowerCase()),
-                  )
-                  .map((p: any) => {
-                    const checked = selectedProjectIds.includes(p.id);
-                    return (
-                      <ListItem key={p.id} disablePadding divider>
-                        <ListItemButton
-                          onClick={() => {
-                            if (activeTab === 0) {
-                              if (checked) {
-                                setSelectedProjectIds(
-                                  selectedProjectIds.filter((id) => id !== p.id),
-                                );
-                              } else {
-                                setSelectedProjectIds([
-                                  ...selectedProjectIds,
-                                  p.id,
-                                ]);
-                              }
-                            } else {
-                              setSelectedProjectIds([p.id]);
-                            }
-                          }}
-                          sx={{ display: "flex", alignItems: "center", py: 1 }}
-                        >
-                          <Checkbox
-                            checked={checked}
-                            size="small"
-                            disableRipple
-                            sx={{
-                              p: 0.5,
-                              mr: 1,
-                              "&.Mui-checked": { color: "primary.main" },
-                            }}
-                          />
-                          <Typography
-                            sx={{ flex: 1, fontWeight: 500, fontSize: 14 }}
-                          >
-                            {p.name}
-                          </Typography>
-                          <Box
-                            component="span"
-                            sx={{ color: "text.secondary", display: "flex" }}
-                          >
-                            <svg
-                              width="18"
-                              height="18"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                              <circle cx="12" cy="10" r="3"></circle>
-                            </svg>
-                          </Box>
-                        </ListItemButton>
-                      </ListItem>
-                    );
-                  })}
-              </List>
-            </Card>
-          </Grid>
+          {activeTab == 0 && (
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Card
+                sx={{
+                  p: 0,
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  minHeight: 400,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                }}
+              >
+                <Tabs
+                  value={0}
+                  sx={{ borderBottom: 1, borderColor: "divider" }}
+                >
+                  <Tab label="PROJECTS" sx={{ fontWeight: 600 }} />
+                </Tabs>
 
-          <Grid size={{ xs: 12, md: 8 }}>
+                <Box sx={{ p: 2, pb: 1 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Search..."
+                    value={projectSearch}
+                    onChange={(e) => setProjectSearch(e.target.value)}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 1,
+                        backgroundColor: "#f9f9f9",
+                      },
+                      "& input": { textAlign: "start" },
+                    }}
+                  />
+                </Box>
+                <List sx={{ flex: 1, overflowY: "auto", p: 0 }}>
+                  {projects
+                    .filter((p) =>
+                      String(p.name || "")
+                        .toLowerCase()
+                        .includes(projectSearch.toLowerCase()),
+                    )
+                    .map((p: any) => {
+                      const checked = selectedProjectIds.includes(p.id);
+                      return (
+                        <ListItem key={p.id} disablePadding divider>
+                          <ListItemButton
+                            onClick={() => {
+                              if (activeTab === 0) {
+                                if (checked) {
+                                  setSelectedProjectIds(
+                                    selectedProjectIds.filter(
+                                      (id) => id !== p.id,
+                                    ),
+                                  );
+                                } else {
+                                  setSelectedProjectIds([
+                                    ...selectedProjectIds,
+                                    p.id,
+                                  ]);
+                                }
+                              } else {
+                                setSelectedProjectIds([p.id]);
+                              }
+                            }}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              py: 1,
+                            }}
+                          >
+                            <Checkbox
+                              checked={checked}
+                              size="small"
+                              disableRipple
+                              sx={{
+                                p: 0.5,
+                                mr: 1,
+                                "&.Mui-checked": { color: "primary.main" },
+                              }}
+                            />
+                            <Typography
+                              sx={{ flex: 1, fontWeight: 500, fontSize: 14 }}
+                            >
+                              {p.name}
+                            </Typography>
+                            <Box
+                              component="span"
+                              sx={{ color: "text.secondary", display: "flex" }}
+                            >
+                              <svg
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                              </svg>
+                            </Box>
+                          </ListItemButton>
+                        </ListItem>
+                      );
+                    })}
+                </List>
+              </Card>
+            </Grid>
+          )}
+          <Grid size={{ xs:12, md:activeTab == 1 ? 12 : 8 }}>
             <Card
               sx={{
                 p: { xs: 1.5, sm: 2.5 },
@@ -851,7 +861,7 @@ const EditZone = ({
                     }
                     sx={{
                       "& .MuiOutlinedInput-root": { borderRadius: 1 },
-                      "& input": { textAlign: "start" },
+                      "& input": { textAlign: "center" },
                     }}
                   />
                 </Box>
@@ -1066,8 +1076,10 @@ const EditZone = ({
                             fillColor: color + "33",
                             strokeColor: color,
                             strokeWeight: 2,
-                            editable: !boundaryFromSearch || drawMode === "polygon",
-                            draggable: !boundaryFromSearch || drawMode === "polygon",
+                            editable:
+                              !boundaryFromSearch || drawMode === "polygon",
+                            draggable:
+                              !boundaryFromSearch || drawMode === "polygon",
                           }}
                           onLoad={(p) => {
                             polygonRef.current = p;
