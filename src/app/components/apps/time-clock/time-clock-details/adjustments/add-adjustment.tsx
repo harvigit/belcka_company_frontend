@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Alert,
     Box,
     Button,
+    CircularProgress,
     FormControl,
     IconButton,
     InputAdornment,
@@ -23,6 +24,8 @@ interface AddAdjustmentProps {
     initialFrom?: Date | null;
     initialTo?: Date | null;
     onDataRefresh?: () => Promise<void> | void;
+    // 'edit' loads the week's current adjustment and saves the entered amount as the new total.
+    mode?: 'add' | 'edit';
 }
 
 const normalizeWeekRange = (date: Date) => ({
@@ -36,7 +39,9 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
                                                          initialFrom,
                                                          initialTo,
                                                          onDataRefresh,
+                                                         mode = 'add',
                                                      }) => {
+    const isEditMode = mode === 'edit';
     const defaultWeek = useMemo(() => {
         const baseDate = initialFrom ?? new Date();
         return normalizeWeekRange(baseDate);
@@ -53,6 +58,43 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
     const [isNegative, setIsNegative] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isWeekPaid, setIsWeekPaid] = useState(false);
+    const [loadingCurrent, setLoadingCurrent] = useState(false);
+
+    useEffect(() => {
+        if (!isEditMode || !range.from) return;
+
+        let cancelled = false;
+        const loadCurrentAdjustment = async () => {
+            setLoadingCurrent(true);
+            try {
+                const response = await api.get('/time-clock/adjustment-details', {
+                    params: { user_id: userId, date: format(range.from!, 'dd/MM/yyyy') },
+                });
+                if (cancelled) return;
+
+                const info = response.data?.info;
+                const currentAmount = Number(info?.amount) || 0;
+                setAmount(currentAmount !== 0 ? String(currentAmount) : '');
+                setIsNegative(currentAmount < 0);
+                setNote(info?.note ?? '');
+                setIsWeekPaid(Boolean(info?.is_paid));
+            } catch (loadError: any) {
+                if (!cancelled) {
+                    setError(loadError?.response?.data?.message || 'Failed to load current adjustment.');
+                }
+            } finally {
+                if (!cancelled) setLoadingCurrent(false);
+            }
+        };
+
+        loadCurrentAdjustment();
+        return () => {
+            cancelled = true;
+        };
+    }, [isEditMode, range.from, userId]);
+
+    const isFormDisabled = saving || loadingCurrent || isWeekPaid;
 
     const rangeLabel = useMemo(() => {
         if (!range.from || !range.to) return '';
@@ -123,7 +165,13 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
             return;
         }
 
-        const parsedAmount = parseFloat(amount);
+        if (isWeekPaid) {
+            setError('This week is paid and its adjustment cannot be edited.');
+            return;
+        }
+
+        // In edit mode an empty amount clears the week's adjustment.
+        const parsedAmount = isEditMode && (amount === '' || amount === '-') ? 0 : parseFloat(amount);
         if (Number.isNaN(parsedAmount)) {
             setError('Adjustment amount is required.');
             return;
@@ -142,6 +190,7 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
                 end_date: format(range.to!, 'dd/MM/yyyy'),
                 adjustment_amount: parsedAmount,
                 note: note.trim(),
+                ...(isEditMode ? { set_total: true } : {}),
             });
 
             if (response.data?.IsSuccess) {
@@ -177,7 +226,7 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
             >
                 <Box>
                     <Typography variant="h6" fontWeight={600}>
-                        Add Adjustment
+                        {isEditMode ? 'Edit Adjustment' : 'Add Adjustment'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                         Weekly adjustment
@@ -190,6 +239,9 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
 
             <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {error && <Alert severity="error">{error}</Alert>}
+                {isWeekPaid && (
+                    <Alert severity="warning">This week is paid and its adjustment cannot be edited.</Alert>
+                )}
 
                 <FormControl>
                     <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
@@ -229,18 +281,25 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
 
                 <FormControl fullWidth>
                     <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                        Adjustment Amount
+                        {isEditMode ? 'Adjustment Total' : 'Adjustment Amount'}
                     </Typography>
                     <CustomTextField
                         value={amount}
                         placeholder="Enter plus or minus amount"
                         onChange={handleAmountChange}
+                        disabled={isFormDisabled}
                         InputProps={{
+                            endAdornment: loadingCurrent ? (
+                                <InputAdornment position="end">
+                                    <CircularProgress size={16} />
+                                </InputAdornment>
+                            ) : undefined,
                             startAdornment: (
                                 <InputAdornment position="start">
                                     <IconButton
                                         size="small"
                                         onClick={handleToggleSign}
+                                        disabled={isFormDisabled}
                                         aria-label={isNegative ? 'Switch to positive amount' : 'Switch to negative amount'}
                                         edge="start"
                                         sx={{ p: 0.5 }}
@@ -261,6 +320,7 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
                         value={note}
                         placeholder="Enter note"
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNote(e.target.value)}
+                        disabled={isWeekPaid}
                         multiline
                         minRows={3}
                     />
@@ -281,7 +341,7 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
                 <Button onClick={onClose} disabled={saving}>
                     Cancel
                 </Button>
-                <Button variant="contained" onClick={handleSubmit} disabled={saving || !note.trim()}>
+                <Button variant="contained" onClick={handleSubmit} disabled={isFormDisabled || !note.trim()}>
                     Save
                 </Button>
             </Box>

@@ -104,6 +104,7 @@ import UserRequests from '../requests/list';
 import {useTranslation} from 'react-i18next';
 import ExpenseList from '@/app/components/apps/expenses/list';
 import PriceworkList from '@/app/components/apps/priceworks/list';
+import AddAdjustment from './time-clock-details/adjustments/add-adjustment';
 
 const columnHelper = createColumnHelper<Index>();
 
@@ -279,6 +280,7 @@ export type Index = {
     check_in?: number | string;
     net_payable_amount: number;
     total_adjustment_amount: number;
+    adjustment_notes?: Array<{ week_start: string; amount: number; note: string }>;
     total_payable_amount: number;
     status_text: string;
     status_color?: string;
@@ -445,6 +447,7 @@ const TimeClock = ({queryParams}: Props) => {
 
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
+    const [adjustmentUserId, setAdjustmentUserId] = useState<number | null>(null);
     const [cycleReady, setCycleReady] = useState<boolean>(false);
 
     // State management
@@ -2146,9 +2149,51 @@ const TimeClock = ({queryParams}: Props) => {
 
                 const numericValue = Number(value);
                 if (!Number.isFinite(numericValue)) return '-';
-                if (Object.is(numericValue, -0) || numericValue === 0) return `${currency}0`;
+                const displayValue = Object.is(numericValue, -0) || numericValue === 0
+                    ? `${currency}0`
+                    : numericValue > 0 ? `${currency}${Math.abs(numericValue)}` : `-${currency}${Math.abs(numericValue)}`;
 
-                return numericValue > 0 ? `${currency}${Math.abs(numericValue)}` : `-${currency}${Math.abs(numericValue)}`;
+                const isPaid = String((info.row.original as any).status ?? '') === '9';
+                const notes = info.row.original.adjustment_notes ?? [];
+                const tooltipContent = (
+                    <Box>
+                        {notes.map((item: { week_start: string; amount: number; note: string }) => (
+                            <Typography key={item.week_start} variant="body2" sx={{fontSize: '0.75rem', mb: 0.5}}>
+                                {notes.length > 1 && (
+                                    <strong>
+                                        {`${item.week_start.split('-').reverse().join('/')} (${item.amount < 0 ? '-' : ''}${currency}${Math.abs(item.amount)}): `}
+                                    </strong>
+                                )}
+                                {item.note}
+                            </Typography>
+                        ))}
+                        <Typography variant="caption" sx={{opacity: 0.75}}>
+                            {isPaid ? t('Timesheet is paid and cannot be edited') : t('Click to edit adjustment')}
+                        </Typography>
+                    </Box>
+                );
+
+                return (
+                    <Tooltip title={tooltipContent} arrow>
+                        <Box
+                            component="span"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (isPaid) return;
+                                setAdjustmentUserId(Number(info.row.original.user_id));
+                            }}
+                            sx={{
+                                cursor: isPaid ? 'not-allowed' : 'pointer',
+                                px: 1,
+                                py: 0.5,
+                                borderRadius: '4px',
+                                '&:hover': isPaid ? {} : {boxShadow: '0 0 0 1px #1976d2'},
+                            }}
+                        >
+                            {displayValue}
+                        </Box>
+                    </Tooltip>
+                );
             },
         }),
 
@@ -3869,6 +3914,36 @@ const TimeClock = ({queryParams}: Props) => {
                         {relatedListView === 'pricework' && <PriceworkList embedded />}
                     </Box>
                 </Box>
+            </Drawer>
+
+            {/* Adjustment */}
+            <Drawer
+                anchor="right"
+                open={adjustmentUserId !== null}
+                onClose={() => setAdjustmentUserId(null)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '504px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                {adjustmentUserId !== null && (
+                    <AddAdjustment
+                        onClose={() => setAdjustmentUserId(null)}
+                        userId={adjustmentUserId}
+                        mode="edit"
+                        initialFrom={startDate || defaultStart}
+                        initialTo={endDate || defaultEnd}
+                        onDataRefresh={async () => {
+                            await fetchData(startDate || defaultStart, endDate || defaultEnd);
+                        }}
+                    />
+                )}
             </Drawer>
 
             {/* Conflicts */}
