@@ -57,6 +57,18 @@ const IGNORED_KEYS = new Set([
   "status_text",
   "status_value",
   "message",
+  "project_id",
+  "user_id",
+  "checklog_id",
+  "user_worklog_id",
+  "address_id",
+  "team_id",
+  "trade_id",
+  "expected_zones",
+  "task_id",
+  "is_archive",
+  "pricework_id",
+  "record_type",
 ]);
 
 const ID_TO_NAME: Record<string, string> = {
@@ -134,6 +146,15 @@ const LABEL_OVERRIDES: Record<string, string> = {
   last_name: "Last Name",
   date_of_birth: "Date of Birth",
   expired_at: "Expiry Date",
+  checkin_date_time: "Checking Date Time",
+  checkout_date_time: "Checkout Date Time",
+  checkout_location: "Checkout Location",
+  work_complete: "Work Complete",
+  amount_per_unit: "Amount Per Unit",
+  pricework_total_amount: "Pricework Total Amount",
+  reported_by: "Report By",
+  reported_by_name: "Report By",
+  reported_at: "Report At",
   account_id: "Account Id",
   phone: "Phone",
   email: "Email",
@@ -152,7 +173,14 @@ export function isBlankDiffValue(value: any, key?: string): boolean {
   ) {
     return true;
   }
-  const keepZeroKeys = new Set(["status", "approval_status", "lock_status"]);
+  const keepZeroKeys = new Set([
+    "status",
+    "approval_status",
+    "lock_status",
+    "work_complete",
+    "amount_per_unit",
+    "pricework_total_amount",
+  ]);
   if (keepZeroKeys.has(key || "")) return false;
   if (text === "0" || value === 0) return true;
   return false;
