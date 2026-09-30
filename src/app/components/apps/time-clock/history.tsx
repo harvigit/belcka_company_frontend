@@ -55,6 +55,7 @@ const ACTIVITY_FILTER_OPTIONS = [
   { value: "billing_info", label: "Billing info" },
   { value: "rate", label: "Rate" },
   { value: "user", label: "Personal Info" },
+  { value: "checklog", label: "User checklog" },
 ] as const;
 
 const BookkeeperHistory: React.FC<BookkeeperProps> = ({

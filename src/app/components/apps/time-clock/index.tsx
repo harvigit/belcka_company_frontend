@@ -698,9 +698,8 @@ const TimeClock = ({queryParams}: Props) => {
         if (!user?.company_id || !user?.id) return;
 
         try {
-            const response = await api.get(`get-feeds?company_id=${user.company_id}&user_id=${user.id}`);
-            const feeds = response.data?.info ?? [];
-            setRequestCount(Number(feeds?.[0]?.request_count || 0));
+            const response = await api.get(`get-notification-count?company_id=${user.company_id}`);
+            setRequestCount(Number(response.data?.request_count || 0));
         } catch (error) {
             console.error('Failed to fetch pending request count:', error);
         }
