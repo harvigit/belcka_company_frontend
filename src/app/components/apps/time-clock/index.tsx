@@ -357,6 +357,7 @@ const TIME_CLOCK_TYPE_OPTIONS = [
     {value: 'day_work', label: 'Day Work'},
     {value: 'expense', label: 'Expense'},
     {value: 'pricework', label: 'Pricework'},
+    {value: 'penalty', label: 'Penalty'},
     {value: 'all_data', label: 'All Data'},
 ];
 

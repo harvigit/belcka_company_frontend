@@ -113,7 +113,7 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
     const [archiveInactiveEnabled, setArchiveInactiveEnabled] = useState(false);
     const [archiveAfterDays, setArchiveAfterDays] = useState(60);
     const [deleteArchivedEnabled, setDeleteArchivedEnabled] = useState(false);
-    const [deleteAfterDays, setDeleteAfterDays] = useState(60);
+    const [deleteAfterDays, setDeleteAfterDays] = useState(180);
     const [activeTab, setActiveTab] = useState<'permissions' | 'archive' | 'ip'>('permissions');
     const [ipFilterUser, setIpFilterUser] = useState<CompanyUser | null>(null);
     const [dialogIpUser, setDialogIpUser] = useState<CompanyUser | null>(null);
@@ -180,7 +180,7 @@ const UserSettingDrawer: React.FC<UserSettingDrawerProps> = ({
                 setArchiveInactiveEnabled(!!archiveSettings?.auto_archive_inactive_users);
                 setArchiveAfterDays(Number(archiveSettings?.inactive_archive_after_days) || 60);
                 setDeleteArchivedEnabled(!!archiveSettings?.auto_delete_archived_users);
-                setDeleteAfterDays(Number(archiveSettings?.archive_delete_after_days) || 60);
+                setDeleteAfterDays(Number(archiveSettings?.archive_delete_after_days) || 180);
             } else {
                 toast.error(response.data?.message || t('Failed to load permissions'));
             }
