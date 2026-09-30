@@ -325,8 +325,8 @@ const ExpenseList = ({
         setDetailsExpense(null);
     };
 
+    // Inline amount edit is blocked only for sent records, not by timesheet lock (can_edit).
     const canInlineEditAmount = (row: ExpenseRow) => {
-        if (row.can_edit === false) return false;
         const status = normalizeExpenseStatus(row.status);
         return status !== 'sent';
     };
@@ -368,14 +368,15 @@ const ExpenseList = ({
                 total_amount: nextAmount,
             });
             toast.success(res.data?.message || 'Expense amount updated successfully');
+            const savedAmount = Number(res.data?.info?.total_amount ?? nextAmount) || 0;
+            // Shift the header total by this row's change, since the total spans all pages.
+            setTabAmountTotal((prev) => prev + (savedAmount - currentAmount));
             setData((prev) =>
                 prev.map((item) =>
                     item.id === row.id
                         ? {
                             ...item,
-                            total_amount: Number(
-                                res.data?.info?.total_amount ?? nextAmount,
-                            ),
+                            total_amount: savedAmount,
                         }
                         : item,
                 ),
@@ -810,7 +811,14 @@ const ExpenseList = ({
 
                 return (
                     <Box sx={{display: 'flex', justifyContent: 'center'}}>
-                        <BookkeeperStatusBadge status={row.timesheet_status} />
+                        {/* Bookkeeper status only applies once the record is sent. */}
+                        <BookkeeperStatusBadge
+                            status={
+                                normalizeExpenseStatus(row.status) === 'sent'
+                                    ? row.timesheet_status
+                                    : null
+                            }
+                        />
                     </Box>
                 );
             },

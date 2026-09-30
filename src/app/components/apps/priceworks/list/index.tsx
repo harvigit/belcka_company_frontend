@@ -555,6 +555,15 @@ const PriceworkList = ({
                 res.data?.message || 'Pricework amount updated successfully',
             );
             const rowKey = getPriceworkRowKey(row);
+            const previousPriceworkAmount = Number(
+                row.pricework_amount ?? currentAmountPerUnit * currentWorkComplete,
+            ) || 0;
+            const nextPriceworkAmount = Number(
+                info.pricework_amount ?? nextAmountPerUnit * nextWorkComplete,
+            ) || 0;
+            setTabAmountTotal(
+                (prev) => prev + (nextPriceworkAmount - previousPriceworkAmount),
+            );
             setData((prev) =>
                 prev.map((item) => {
                     if (getPriceworkRowKey(item) !== rowKey) return item;
@@ -1705,7 +1714,14 @@ const PriceworkList = ({
                 header: () => 'Bookkeeper Status',
                 cell: (info) => (
                     <Box sx={{display: 'flex', justifyContent: 'center'}}>
-                        <BookkeeperStatusBadge status={info.row.original.timesheet_status} />
+                        {/* Bookkeeper status only applies once the record is sent. */}
+                        <BookkeeperStatusBadge
+                            status={
+                                normalizePriceworkStatus(info.row.original.status) === 'sent'
+                                    ? info.row.original.timesheet_status
+                                    : null
+                            }
+                        />
                     </Box>
                 ),
                 enableSorting: true,
