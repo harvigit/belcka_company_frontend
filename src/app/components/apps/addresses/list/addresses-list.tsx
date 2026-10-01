@@ -2619,14 +2619,15 @@ const AddressesList = ({
                         onChange={handleInputChange}
                         variant="outlined"
                         fullWidth
+                        disabled
                       />
-                      <Button
+                      {/* <Button
                         variant="contained"
                         color="primary"
                         onClick={handleSearchClick}
                       >
                         Search
-                      </Button>
+                      </Button> */}
                     </Box>
                   )}
 

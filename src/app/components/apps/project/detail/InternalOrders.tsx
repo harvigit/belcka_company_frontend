@@ -51,13 +51,30 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import ColumnVisibilityPopover from "@/app/components/common/ColumnVisibilityPopover";
+import InternalOrderDetailDrawer from "./InternalOrderDetailDrawer";
+
+type OrderItem = {
+  product_name?: string | null;
+  product_image?: string | null;
+  uuid?: string | null;
+  qty?: string | null;
+  remaining_qty?: string | null;
+  amount?: string | null;
+  adjusted_stock?: string | null;
+  stock_in_hand?: string | null;
+};
 
 type InternalOrderRow = {
   id: number;
   source: "store" | "collect" | "po";
   order_id?: string | null;
   user_name?: string | null;
+  user_image?: string | null;
+  ordered_by_name?: string | null;
+  ordered_by_image?: string | null;
   address_name?: string | null;
+  project_name?: string | null;
+  company_name?: string | null;
   date?: string | null;
   status_text?: string | null;
   status_color?: string | null;
@@ -67,6 +84,7 @@ type InternalOrderRow = {
   total_formatted?: string | null;
   currency?: string | null;
   file?: string | null;
+  items?: OrderItem[];
 };
 
 const COLUMN_LABELS: Record<string, string> = {
@@ -116,6 +134,9 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
     null,
   );
   const [columnSearch, setColumnSearch] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState<InternalOrderRow | null>(
+    null,
+  );
 
   const { columnVisibility, onColumnVisibilityChange } =
     usePersistentColumnVisibility({
@@ -594,7 +615,12 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
                 </TableRow>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} hover>
+                  <TableRow
+                    key={row.id}
+                    hover
+                    onClick={() => setSelectedOrder(row.original)}
+                    sx={{ cursor: "pointer" }}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         {flexRender(
@@ -610,6 +636,12 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
           </Table>
         </TableContainer>
       </Box>
+
+      <InternalOrderDetailDrawer
+        open={Boolean(selectedOrder)}
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+      />
 
       <Dialog
         open={filterOpen}
