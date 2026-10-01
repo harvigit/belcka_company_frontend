@@ -1,0 +1,114 @@
+name: Deploy Frontend (develop)
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+# Never run two deploys against the server at once; queue the newer one.
+concurrency:
+  group: deploy-frontend-develop
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+      SSH_USER: ${{ secrets.DEV_SSH_USER }}
+      SSH_PORT: ${{ secrets.DEV_SSH_PORT || '22' }}
+      DEPLOY_PATH: ${{ vars.DEV_DEPLOY_PATH }}
+      PM2_NAME: ${{ vars.DEV_PM2_NAME }}
+    steps:
+      - name: Check configuration
+        run: |
+          for name in SSH_HOST SSH_USER DEPLOY_PATH PM2_NAME; do
+            if [ -z "${!name}" ]; then
+              echo "::error::DEV_${name} is not set in repository secrets/variables"
+              exit 1
+            fi
+          done
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Keep in sync with `node -v` on the dev server.
+          node-version: 20.20.2
+          cache: npm
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host deploy
+            HostName $SSH_HOST
+            User $SSH_USER
+            Port $SSH_PORT
+            IdentityFile ~/.ssh/id_deploy
+            IdentitiesOnly yes
+          EOF
+
+      # NEXT_PUBLIC_* values are baked in at build time, so build with the server's own .env.
+      - name: Fetch .env from server
+        run: scp "deploy:$DEPLOY_PATH/.env" .env
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm run build
+
+      - name: Upload build
+        run: rsync -az --delete --exclude 'cache/' .next/ "deploy:$DEPLOY_PATH/.next.new/"
+
+      - name: Activate on server
+        run: |
+          ssh deploy "DEPLOY_PATH='$DEPLOY_PATH' PM2_NAME='$PM2_NAME' bash -s" <<'EOF'
+          set -eo pipefail
+
+          # Non-interactive SSH shells don't load nvm, so node/npm/pm2 may be missing from PATH.
+          export NVM_DIR="$HOME/.nvm"
+          if [ -s "$NVM_DIR/nvm.sh" ]; then . "$NVM_DIR/nvm.sh"; fi
+          set -u
+
+          cd "$DEPLOY_PATH"
+
+          echo "==> Updating code"
+          # Fast-forward only: fails instead of overwriting changes made directly on the server.
+          git pull --ff-only origin develop
+
+          # Reinstall only when package-lock.json differs from the one node_modules was built from.
+          lock_hash="$(git hash-object package-lock.json)"
+          if [ "$(cat node_modules/.deploy-lock-hash 2>/dev/null || true)" != "$lock_hash" ]; then
+            echo "==> Installing dependencies"
+            npm ci
+            echo "$lock_hash" > node_modules/.deploy-lock-hash
+          else
+            echo "==> Dependencies unchanged, skipping install"
+          fi
+
+          echo "==> Activating new build"
+          rm -rf .next.old
+          if [ -d .next ]; then mv .next .next.old; fi
+          mv .next.new .next
+
+          echo "==> Restarting $PM2_NAME"
+          pm2 reload "$PM2_NAME" --update-env
+
+          echo "==> Deployed $(git rev-parse --short HEAD)"
+          EOF
+
+      - name: Remove SSH key and .env
+        if: always()
+        run: rm -f ~/.ssh/id_deploy .env

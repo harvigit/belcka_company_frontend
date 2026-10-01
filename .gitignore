@@ -37,3 +37,7 @@ next-env.d.ts
 .env
 
 .idea
+
+# deploy staging
+/.next.new/
+/.next.old/
