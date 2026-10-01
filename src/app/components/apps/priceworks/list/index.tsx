@@ -97,7 +97,7 @@ const COLUMN_LABELS: Record<string, string> = {
     note: 'Note',
     attachment_count: 'Attachments',
     status: 'Status',
-    timesheet_status: 'Bookkeeper Status',
+    payment_status: 'Bookkeeper Status',
     actions: 'Actions',
 };
 
@@ -1449,8 +1449,8 @@ const PriceworkList = ({
                 },
                 enableSorting: true,
             }),
-            columnHelper.accessor('timesheet_status', {
-                id: 'timesheet_status',
+            columnHelper.accessor('payment_status', {
+                id: 'payment_status',
                 header: () => 'Bookkeeper Status',
                 cell: (info) => (
                     <Box sx={{display: 'flex', justifyContent: 'center'}}>
@@ -1458,7 +1458,7 @@ const PriceworkList = ({
                         <BookkeeperStatusBadge
                             status={
                                 normalizePriceworkStatus(info.row.original.status) === 'sent'
-                                    ? info.row.original.timesheet_status
+                                    ? info.row.original.payment_status
                                     : null
                             }
                         />
