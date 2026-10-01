@@ -157,35 +157,11 @@ const BULK_BUTTON_SX = {
     borderRadius: '8px',
 };
 
-const isStandalonePriceworkRow = (row: PriceworkRow) =>
-    row.record_type !== 'timesheet_light';
+const canInlineEditPriceworkAmounts = (row: PriceworkRow) =>
+    normalizePriceworkStatus(row.status) !== 'sent';
 
-const isChecklogPriceworkRow = (row: PriceworkRow) =>
-    row.record_type === 'timesheet_light' && Boolean(row.user_checklog_id);
-
-const isActionableTimesheetLightRow = (row: PriceworkRow) =>
-    row.record_type === 'timesheet_light' &&
-    Boolean(row.timesheet_light_id) &&
-    !row.user_checklog_id;
-
-const isOrphanedTimesheetLightRow = (row: PriceworkRow) =>
-    row.record_type === 'timesheet_light' && !row.timesheet_light_id;
-
-const canInlineEditPriceworkAmounts = (row: PriceworkRow) => {
-    if (normalizePriceworkStatus(row.status) === 'sent') return false;
-    if (row.record_type === 'timesheet_light') {
-        return Boolean(row.user_checklog_id);
-    }
-    return true;
-};
-
-const getPriceworkRowKey = (row: PriceworkRow) => {
-    if (row.record_type === 'timesheet_light') {
-        return `timesheet_light:${row.timesheet_light_id ?? row.id}:checklog:${row.user_checklog_id ?? row.user_worklog_id ?? 'summary'}`;
-    }
-
-    return `pricework:${row.pricework_id ?? row.id}`;
-};
+const getPriceworkRowKey = (row: PriceworkRow) =>
+    `pricework:${row.pricework_id ?? row.id}`;
 
 const PriceworkList = ({
     projectId,
@@ -381,8 +357,6 @@ const PriceworkList = ({
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
 
     const [rejectPriceworkIds, setRejectPriceworkIds] = useState<number[]>([]);
-    const [rejectTimesheetLightIds, setRejectTimesheetLightIds] = useState<number[]>([]);
-    const [rejectUserChecklogIds, setRejectUserChecklogIds] = useState<number[]>([]);
 
     const [rejectNote, setRejectNote] = useState('');
     const [isRejecting, setIsRejecting] = useState(false);
@@ -533,20 +507,12 @@ const PriceworkList = ({
         setSavingCellKeys((prev) => new Set(prev).add(savingKey));
         setEditingCell({rowKey: null, field: null});
 
-        const isChecklogRow = isChecklogPriceworkRow(row);
-        const payload = isChecklogRow
-            ? {
-                record_type: 'timesheet_light',
-                user_checklog_id: row.user_checklog_id,
-                amount_per_unit: nextAmountPerUnit,
-                work_complete: nextWorkComplete,
-            }
-            : {
-                record_type: 'pricework',
-                pricework_id: row.pricework_id ?? row.id,
-                amount_per_unit: nextAmountPerUnit,
-                work_complete: nextWorkComplete,
-            };
+        const payload = {
+            record_type: 'pricework',
+            pricework_id: row.pricework_id ?? row.id,
+            amount_per_unit: nextAmountPerUnit,
+            work_complete: nextWorkComplete,
+        };
 
         try {
             const res = await api.post('/pricework/update-amounts', payload);
@@ -667,106 +633,19 @@ const PriceworkList = ({
         return data.filter((item) => selectedRowIds.has(getPriceworkRowKey(item)));
     };
 
-    const getActionPriceworkIds = () =>
-        getSelectedRows().filter(isStandalonePriceworkRow).map((item) => item.id);
-
-    const getActionTimesheetLightIds = () => {
-        const selectedRows = getSelectedRows();
-
-        const orphanedRows = selectedRows.filter(isOrphanedTimesheetLightRow);
-        if (orphanedRows.length > 0) {
-            console.warn(
-                '[Pricework] Selected timesheet_light row(s) missing timesheet_light_id — they will be skipped from bulk actions:',
-                orphanedRows,
-            );
-        }
-
-        return [
-            ...new Set(
-                selectedRows
-                    .filter(isActionableTimesheetLightRow)
-                    .map((item) => Number(item.timesheet_light_id)),
-            ),
-        ];
-    };
-
-    const getActionUserChecklogIds = () => [
-        ...new Set(
-            getSelectedRows()
-                .filter(isChecklogPriceworkRow)
-                .map((item) => Number(item.user_checklog_id)),
-        ),
-    ];
+    const getActionPriceworkIds = () => getSelectedRows().map((item) => item.id);
 
     const getActionSources = () =>
-        getSelectedRows()
-            .map((item) => {
-                if (isStandalonePriceworkRow(item)) {
-                    return {
-                        source_type: 'pricework',
-                        source_id: Number(item.pricework_id ?? item.id),
-                        timesheet_id:
-                            item.timesheet_id != null ? Number(item.timesheet_id) : null,
-                    };
-                }
+        getSelectedRows().map((item) => ({
+            source_type: 'pricework',
+            source_id: Number(item.pricework_id ?? item.id),
+            timesheet_id: item.timesheet_id != null ? Number(item.timesheet_id) : null,
+        }));
 
-                if (isChecklogPriceworkRow(item)) {
-                    return {
-                        source_type: 'user_checklog',
-                        source_id: Number(item.user_checklog_id),
-                        timesheet_id:
-                            item.timesheet_id != null ? Number(item.timesheet_id) : null,
-                    };
-                }
+    const guardEmptySelection = (ids: number[]) => {
+        if (ids.length > 0) return true;
 
-                if (isActionableTimesheetLightRow(item)) {
-                    return {
-                        source_type: 'timesheet_light',
-                        source_id: Number(item.timesheet_light_id),
-                        timesheet_id:
-                            item.timesheet_id != null
-                                ? Number(item.timesheet_id)
-                                : Number(item.timesheet_light_id),
-                    };
-                }
-
-                return null;
-            })
-            .filter(Boolean);
-
-    const hasOnlyUnactionableSelection = () => {
-        const selectedRows = getSelectedRows();
-
-        if (selectedRows.length === 0) return false;
-        const actionableCount = selectedRows.filter(
-            (item) =>
-                isStandalonePriceworkRow(item) ||
-                isActionableTimesheetLightRow(item) ||
-                isChecklogPriceworkRow(item),
-        ).length;
-
-        return actionableCount === 0;
-    };
-
-    const guardEmptySelection = (
-        ids: number[],
-        timesheetLightIds: number[],
-        userChecklogIds: number[] = [],
-    ) => {
-        if (
-            ids.length > 0 ||
-            timesheetLightIds.length > 0 ||
-            userChecklogIds.length > 0
-        )
-            return true;
-
-        if (hasOnlyUnactionableSelection()) {
-            toast.error(
-                'Selected record is missing data required to perform this action. Please refresh and try again.',
-            );
-        } else {
-            toast.error('Please select at least one pricework');
-        }
+        toast.error('Please select at least one pricework');
         return false;
     };
 
@@ -777,29 +656,10 @@ const PriceworkList = ({
             .filter(
                 (item) =>
                     selectedIdSet.has(item.id) &&
-                    isStandalonePriceworkRow(item) &&
                     normalizePriceworkStatus(item.status) === 'approved',
             )
             .map((item) => item.id);
     };
-
-    const getApprovedActionTimesheetLightIds = () =>
-        getSelectedRows()
-            .filter(
-                (item) =>
-                    isActionableTimesheetLightRow(item) &&
-                    normalizePriceworkStatus(item.status) === 'approved',
-            )
-            .map((item) => Number(item.timesheet_light_id));
-
-    const getApprovedActionUserChecklogIds = () =>
-        getSelectedRows()
-            .filter(
-                (item) =>
-                    isChecklogPriceworkRow(item) &&
-                    normalizePriceworkStatus(item.status) === 'approved',
-            )
-            .map((item) => Number(item.user_checklog_id));
 
     const isUnapprovablePriceworkRow = (row: PriceworkRow) => {
         const status = normalizePriceworkStatus(row.status);
@@ -813,78 +673,26 @@ const PriceworkList = ({
 
     const getUnapproveActionPriceworkIds = () =>
         getSelectedRows()
-            .filter(
-                (item) =>
-                    isStandalonePriceworkRow(item) && isUnapprovablePriceworkRow(item),
-            )
+            .filter(isUnapprovablePriceworkRow)
             .map((item) => item.id);
-
-    const getUnapproveActionTimesheetLightIds = () =>
-        getSelectedRows()
-            .filter(
-                (item) =>
-                    isActionableTimesheetLightRow(item) &&
-                    isUnapprovablePriceworkRow(item),
-            )
-            .map((item) => Number(item.timesheet_light_id));
-
-    const getUnapproveActionUserChecklogIds = () =>
-        getSelectedRows()
-            .filter(
-                (item) =>
-                    isChecklogPriceworkRow(item) && isUnapprovablePriceworkRow(item),
-            )
-            .map((item) => Number(item.user_checklog_id));
 
     const getBackToPendingActionPriceworkIds = () =>
         getSelectedRows()
-            .filter(
-                (item) =>
-                    isStandalonePriceworkRow(item) && isBackToPendingPriceworkRow(item),
-            )
+            .filter(isBackToPendingPriceworkRow)
             .map((item) => item.id);
-
-    const getBackToPendingActionTimesheetLightIds = () =>
-        getSelectedRows()
-            .filter(
-                (item) =>
-                    isActionableTimesheetLightRow(item) &&
-                    isBackToPendingPriceworkRow(item),
-            )
-            .map((item) => Number(item.timesheet_light_id));
-
-    const getBackToPendingActionUserChecklogIds = () =>
-        getSelectedRows()
-            .filter(
-                (item) =>
-                    isChecklogPriceworkRow(item) && isBackToPendingPriceworkRow(item),
-            )
-            .map((item) => Number(item.user_checklog_id));
 
     const canUnapproveSelected = useMemo(() => {
         const selectedRows = getSelectedRows();
         if (selectedRows.length === 0) return false;
 
-        return selectedRows.every(
-            (item) =>
-                (isStandalonePriceworkRow(item) ||
-                    isActionableTimesheetLightRow(item) ||
-                    isChecklogPriceworkRow(item)) &&
-                isUnapprovablePriceworkRow(item),
-        );
+        return selectedRows.every(isUnapprovablePriceworkRow);
     }, [data, isSelectAll, selectedRowIds]);
 
     const canBackToPendingSelected = useMemo(() => {
         const selectedRows = getSelectedRows();
         if (selectedRows.length === 0) return false;
 
-        return selectedRows.every(
-            (item) =>
-                (isStandalonePriceworkRow(item) ||
-                    isActionableTimesheetLightRow(item) ||
-                    isChecklogPriceworkRow(item)) &&
-                isBackToPendingPriceworkRow(item),
-        );
+        return selectedRows.every(isBackToPendingPriceworkRow);
     }, [data, isSelectAll, selectedRowIds]);
 
     const showApproveAction = activeTab === 'all' || activeTab === 'pending';
@@ -900,19 +708,11 @@ const PriceworkList = ({
         await fetchPriceworks();
     };
 
-    const handleApprovePriceworks = async (
-        ids: number[],
-        timesheetLightIds: number[] = [],
-        userChecklogIds: number[] = [],
-    ) => {
-        if (!guardEmptySelection(ids, timesheetLightIds, userChecklogIds)) return;
+    const handleApprovePriceworks = async (ids: number[]) => {
+        if (!guardEmptySelection(ids)) return;
 
         try {
-            const res = await api.post('pricework/approve', {
-                ids,
-                timesheet_light_ids: timesheetLightIds,
-                user_checklog_ids: userChecklogIds,
-            });
+            const res = await api.post('pricework/approve', {ids});
             toast.success(res.data?.message || 'Pricework approved successfully');
             await refreshAfterAction();
         } catch (error: any) {
@@ -922,27 +722,18 @@ const PriceworkList = ({
         }
     };
 
-    const handleRejectPriceworks = async (
-        ids: number[],
-        timesheetLightIds: number[] = [],
-        userChecklogIds: number[] = [],
-        note?: string,
-    ) => {
-        if (!guardEmptySelection(ids, timesheetLightIds, userChecklogIds)) return;
+    const handleRejectPriceworks = async (ids: number[], note?: string) => {
+        if (!guardEmptySelection(ids)) return;
 
         setIsRejecting(true);
         try {
             const res = await api.post('pricework/reject', {
                 ids,
-                timesheet_light_ids: timesheetLightIds,
-                user_checklog_ids: userChecklogIds,
                 reject_note: note,
             });
             toast.success(res.data?.message || 'Pricework rejected successfully');
             setRejectDialogOpen(false);
             setRejectPriceworkIds([]);
-            setRejectTimesheetLightIds([]);
-            setRejectUserChecklogIds([]);
             setRejectNote('');
             await refreshAfterAction();
         } catch (error: any) {
@@ -954,22 +745,12 @@ const PriceworkList = ({
         }
     };
 
-    const openRejectDialog = (
-        ids: number[],
-        timesheetLightIds: number[] = [],
-        userChecklogIds: number[] = [],
-    ) => {
-        if (
-            ids.length === 0 &&
-            timesheetLightIds.length === 0 &&
-            userChecklogIds.length === 0
-        ) {
+    const openRejectDialog = (ids: number[]) => {
+        if (ids.length === 0) {
             toast.error('Please select at least one pricework');
             return;
         }
         setRejectPriceworkIds(ids);
-        setRejectTimesheetLightIds(timesheetLightIds);
-        setRejectUserChecklogIds(userChecklogIds);
         setRejectNote('');
         setRejectDialogOpen(true);
     };
@@ -978,29 +759,16 @@ const PriceworkList = ({
         if (isRejecting) return;
         setRejectDialogOpen(false);
         setRejectPriceworkIds([]);
-        setRejectTimesheetLightIds([]);
-        setRejectUserChecklogIds([]);
         setRejectNote('');
     };
 
     const confirmRejectPriceworks = () => {
-        void handleRejectPriceworks(
-            rejectPriceworkIds,
-            rejectTimesheetLightIds,
-            rejectUserChecklogIds,
-            rejectNote,
-        );
+        void handleRejectPriceworks(rejectPriceworkIds, rejectNote);
     };
 
     const openSendDateDialog = () => {
         const ids = getApprovedActionPriceworkIds();
-        const timesheetLightIds = getApprovedActionTimesheetLightIds();
-        const userChecklogIds = getApprovedActionUserChecklogIds();
-        if (
-            ids.length === 0 &&
-            timesheetLightIds.length === 0 &&
-            userChecklogIds.length === 0
-        ) {
+        if (ids.length === 0) {
             toast.error('Please select at least one approved pricework');
             return;
         }
@@ -1010,13 +778,7 @@ const PriceworkList = ({
 
     const handleSendToBookkeeper = async () => {
         const ids = getApprovedActionPriceworkIds();
-        const timesheetLightIds = getApprovedActionTimesheetLightIds();
-        const userChecklogIds = getApprovedActionUserChecklogIds();
-        if (
-            ids.length === 0 &&
-            timesheetLightIds.length === 0 &&
-            userChecklogIds.length === 0
-        ) {
+        if (ids.length === 0) {
             toast.error('Please select at least one approved pricework');
             return;
         }
@@ -1024,8 +786,6 @@ const PriceworkList = ({
         try {
             const res = await api.post('pricework/send-to-bookkeeper', {
                 ids,
-                timesheet_light_ids: timesheetLightIds,
-                user_checklog_ids: userChecklogIds,
                 sources: getActionSources(),
                 send_date: sendDate,
             }, {skipToast: true} as any);
@@ -1069,21 +829,10 @@ const PriceworkList = ({
         const ids = isBackToPending
             ? getBackToPendingActionPriceworkIds()
             : getUnapproveActionPriceworkIds();
-        const timesheetLightIds = isBackToPending
-            ? getBackToPendingActionTimesheetLightIds()
-            : getUnapproveActionTimesheetLightIds();
-        const userChecklogIds = isBackToPending
-            ? getBackToPendingActionUserChecklogIds()
-            : getUnapproveActionUserChecklogIds();
         const canSubmit = isBackToPending
             ? canBackToPendingSelected
             : canUnapproveSelected;
-        if (
-            (ids.length === 0 &&
-                timesheetLightIds.length === 0 &&
-                userChecklogIds.length === 0) ||
-            !canSubmit
-        ) {
+        if (ids.length === 0 || !canSubmit) {
             toast.error(
                 isBackToPending
                     ? 'Please select only Sent or Rejected priceworks to move back to pending'
@@ -1095,11 +844,7 @@ const PriceworkList = ({
 
         setIsUnapproving(true);
         try {
-            const res = await api.post('pricework/unapprove', {
-                ids,
-                timesheet_light_ids: timesheetLightIds,
-                user_checklog_ids: userChecklogIds,
-            });
+            const res = await api.post('pricework/unapprove', {ids});
             if (res.data?.IsSuccess === false) {
                 toast.error(res.data?.message || 'Failed to unapprove priceworks');
                 return;
@@ -1123,19 +868,14 @@ const PriceworkList = ({
 
     const openDeleteDialog = () => {
         const ids = getActionPriceworkIds();
-        const timesheetLightIds = getActionTimesheetLightIds();
-        if (!guardEmptySelection(ids, timesheetLightIds)) return;
+        if (!guardEmptySelection(ids)) return;
         setDeleteDialogOpen(true);
     };
 
     const handleDeletePriceworks = async () => {
         const ids = getActionPriceworkIds();
         if (ids.length === 0) {
-            toast.error(
-                hasOnlyUnactionableSelection()
-                    ? 'Selected record is missing data required to perform this action. Please refresh and try again.'
-                    : 'Please select at least one pricework',
-            );
+            toast.error('Please select at least one pricework');
             setDeleteDialogOpen(false);
             return;
         }
@@ -1788,20 +1528,6 @@ const PriceworkList = ({
             const res = await api.get(url);
             if (res.data) {
                 const responseData = Array.isArray(res.data.info) ? res.data.info : [];
-
-                // Dev-time sanity check: flag rows that will be unselectable
-                // for bulk actions (timesheet_light rows missing an id) as
-                // soon as they arrive, instead of only discovering it when a
-                // user clicks a bulk-action button.
-                if (process.env.NODE_ENV !== 'production') {
-                    const orphaned = responseData.filter(isOrphanedTimesheetLightRow);
-                    if (orphaned.length > 0) {
-                        console.warn(
-                            '[Pricework] API returned timesheet_light row(s) without timesheet_light_id — these rows cannot be bulk actioned:',
-                            orphaned,
-                        );
-                    }
-                }
 
                 setData(responseData);
                 clearSelection();
@@ -2599,11 +2325,7 @@ const PriceworkList = ({
                                         color="success"
                                         size="small"
                                         onClick={() =>
-                                            handleApprovePriceworks(
-                                                getActionPriceworkIds(),
-                                                getActionTimesheetLightIds(),
-                                                getActionUserChecklogIds(),
-                                            )
+                                            handleApprovePriceworks(getActionPriceworkIds())
                                         }
                                         sx={BULK_BUTTON_SX}
                                     >
@@ -2618,11 +2340,7 @@ const PriceworkList = ({
                                         color="error"
                                         size="small"
                                         onClick={() =>
-                                            openRejectDialog(
-                                                getActionPriceworkIds(),
-                                                getActionTimesheetLightIds(),
-                                                getActionUserChecklogIds(),
-                                            )
+                                            openRejectDialog(getActionPriceworkIds())
                                         }
                                         sx={BULK_BUTTON_SX}
                                     >
@@ -2794,7 +2512,7 @@ const PriceworkList = ({
             >
                 <DialogTitle sx={{m: 0, position: 'relative'}}>
                     Reject Pricework
-                    {rejectPriceworkIds.length + rejectTimesheetLightIds.length === 1
+                    {rejectPriceworkIds.length === 1
                         ? ''
                         : 's'}
                     <IconButton
@@ -2810,9 +2528,9 @@ const PriceworkList = ({
                     <Stack spacing={2} mt={1}>
                         <Typography>
                             Add a note for rejecting{' '}
-                            {rejectPriceworkIds.length + rejectTimesheetLightIds.length}{' '}
+                            {rejectPriceworkIds.length}{' '}
                             pricework
-                            {rejectPriceworkIds.length + rejectTimesheetLightIds.length === 1
+                            {rejectPriceworkIds.length === 1
                                 ? ''
                                 : 's'}
                             .
@@ -3077,37 +2795,9 @@ const PriceworkList = ({
                 onEdit={openEditPricework}
                 onSaved={refreshAfterEditPricework}
                 onApprove={(id) => {
-                    const row = detailsPricework;
-                    if (row?.record_type === 'timesheet_light' && row.user_checklog_id) {
-                        void handleApprovePriceworks(
-                            [],
-                            [],
-                            [Number(row.user_checklog_id)],
-                        );
-                        return;
-                    }
-                    if (
-                        row?.record_type === 'timesheet_light' &&
-                        row.timesheet_light_id
-                    ) {
-                        void handleApprovePriceworks([], [Number(row.timesheet_light_id)]);
-                        return;
-                    }
                     void handleApprovePriceworks([id]);
                 }}
                 onReject={(id) => {
-                    const row = detailsPricework;
-                    if (row?.record_type === 'timesheet_light' && row.user_checklog_id) {
-                        openRejectDialog([], [], [Number(row.user_checklog_id)]);
-                        return;
-                    }
-                    if (
-                        row?.record_type === 'timesheet_light' &&
-                        row.timesheet_light_id
-                    ) {
-                        openRejectDialog([], [Number(row.timesheet_light_id)]);
-                        return;
-                    }
                     openRejectDialog([id]);
                 }}
             />

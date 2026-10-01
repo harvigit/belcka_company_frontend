@@ -26,14 +26,6 @@ type Props = {
 const asAttachmentList = (value?: PriceworkAttachment[] | null) =>
     Array.isArray(value) ? value : [];
 
-const isTimesheetLightRow = (row?: PriceworkDetail | null) => {
-    if (!row) return false;
-    const recordType = row.record_type || (row as {recordType?: string}).recordType;
-    return recordType === 'timesheet_light'
-        || row.source_type === 'user_checklog'
-        || Boolean(row.user_checklog_id);
-};
-
 const isBeforeAttachment = (attachment: PriceworkAttachment) => {
     const value = attachment.is_before;
     return value === true || value === 1 || value === '1';
@@ -104,13 +96,6 @@ const PriceworkAttachmentsDrawer = ({open, pricework, onClose}: Props) => {
         if (!pricework?.id) return;
         setLoading(true);
         try {
-            // const params = isTimesheetLightRow(pricework)
-            //         ? {
-            //             pricework_id: pricework.timesheet_light_id ?? pricework.timesheet_id ?? pricework.id,
-            //             record_type: 'timesheet_light',
-            //             checklog_id: pricework.user_checklog_id ?? pricework.id,
-            //         }
-            //         : {pricework_id: pricework.pricework_id ?? pricework.id};
             const params = {pricework_id: pricework.pricework_id ?? pricework.id};
 
             const res = await api.get('pricework/detail', {params});
@@ -133,7 +118,7 @@ const PriceworkAttachmentsDrawer = ({open, pricework, onClose}: Props) => {
         }
         void loadDetail();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, pricework?.id, pricework?.timesheet_light_id, pricework?.user_checklog_id, pricework?.record_type]);
+    }, [open, pricework?.id]);
 
     const openAttachment = (items: PriceworkAttachment[], attachment: PriceworkAttachment) => {
         const slides = toLightboxSlides(items);

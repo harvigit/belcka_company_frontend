@@ -158,19 +158,6 @@ const PriceworkDetailsDrawer = ({
         if (!pricework?.id) return;
         setLoading(true);
         try {
-            console.log(pricework, 'priceworkpriceworkpricework')
-            // const isTimesheetLight =
-            //     pricework.record_type === 'timesheet_light'
-            //     || pricework.source_type === 'user_checklog'
-            //     || Boolean(pricework.user_checklog_id);
-
-            // const params = isTimesheetLight
-                // ? {
-                //     pricework_id: pricework.timesheet_light_id ?? pricework.timesheet_id ?? pricework.id,
-                //     record_type: 'timesheet_light',
-                //     checklog_id: pricework.user_checklog_id ?? pricework.id,
-                // }
-                // : {pricework_id: pricework.pricework_id ?? pricework.id};
             const params = {pricework_id: pricework.pricework_id ?? pricework.id};
             const res = await api.get('pricework/detail', {params});
             setDetail(res.data?.info || null);
@@ -190,7 +177,7 @@ const PriceworkDetailsDrawer = ({
         }
         void loadDetail();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, pricework?.id, pricework?.user_checklog_id]);
+    }, [open, pricework?.id]);
 
     const status = normalizePriceworkStatus(
         detail?.status_text || detail?.status || pricework?.status,
@@ -206,13 +193,7 @@ const PriceworkDetailsDrawer = ({
     const amount = Number(
         detail?.pricework_amount ?? pricework?.pricework_amount ?? amountPerUnit * workComplete,
     );
-    const isTimesheetLightRow =
-        pricework?.record_type === 'timesheet_light'
-        || pricework?.source_type === 'user_checklog'
-        || Boolean(pricework?.user_checklog_id);
-    const canEditAmounts =
-        status !== 'sent' &&
-        (isTimesheetLightRow ? Boolean(pricework?.user_checklog_id) : Boolean(pricework?.id));
+    const canEditAmounts = status !== 'sent' && Boolean(pricework?.id);
     const detailAttachmentCount = Number(
         (detail?.before_attachments?.length || 0)
         + (detail?.after_attachments?.length || 0)
@@ -276,21 +257,12 @@ const PriceworkDetailsDrawer = ({
             return;
         }
 
-        const isChecklogRow =
-            pricework.record_type === 'timesheet_light' && Boolean(pricework.user_checklog_id);
-        const payload = isChecklogRow
-            ? {
-                record_type: 'timesheet_light',
-                user_checklog_id: pricework.user_checklog_id,
-                amount_per_unit: nextAmountPerUnit,
-                work_complete: nextWorkComplete,
-            }
-            : {
-                record_type: 'pricework',
-                pricework_id: pricework.pricework_id ?? pricework.id,
-                amount_per_unit: nextAmountPerUnit,
-                work_complete: nextWorkComplete,
-            };
+        const payload = {
+            record_type: 'pricework',
+            pricework_id: pricework.pricework_id ?? pricework.id,
+            amount_per_unit: nextAmountPerUnit,
+            work_complete: nextWorkComplete,
+        };
 
         setSavingField(true);
         try {
