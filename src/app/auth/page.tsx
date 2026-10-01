@@ -21,7 +21,6 @@ export default function Login() {
     if (isAuthenticated) {
       router.replace("/");
     }
-    console.log("auto deployment checking");
   }, [isAuthenticated, router]);
 
   if (isAuthenticated) return null;
