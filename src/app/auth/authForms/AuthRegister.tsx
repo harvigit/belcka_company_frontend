@@ -28,6 +28,37 @@ import { loginType } from "@/app/(DashboardLayout)/types/auth/auth";
 import { Grid } from "@mui/system";
 import Cookies from "js-cookie";
 
+const OTP_RESPONSE_SECRET =
+  process.env.NEXT_PUBLIC_OTP_RESPONSE_SECRET || "belcka-otp-response";
+
+async function decryptLoginOtp(payload: string): Promise<string> {
+  const raw = Uint8Array.from(atob(payload), (char) => char.charCodeAt(0));
+  const iv = raw.slice(0, 12);
+  const tag = raw.slice(12, 28);
+  const data = raw.slice(28);
+  const cipherBytes = new Uint8Array(data.length + tag.length);
+  cipherBytes.set(data);
+  cipherBytes.set(tag, data.length);
+
+  const keyBytes = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(OTP_RESPONSE_SECRET),
+  );
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyBytes,
+    { name: "AES-GCM" },
+    false,
+    ["decrypt"],
+  );
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key,
+    cipherBytes,
+  );
+  return new TextDecoder().decode(decrypted);
+}
+
 async function redirectAfterSuccessfulLogin() {
   const session = await getSession();
   const path = await resolvePostLoginPath(
@@ -208,6 +239,23 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     }
     if (!nationalPhone) return toast.error("Please enter your phone number.");
 
+    if (date_of_birth) {
+      const [year, month, day] = date_of_birth.split("-").map(Number);
+      const birthDate = new Date(year, month - 1, day);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < birthDate.getDate())
+      ) {
+        age -= 1;
+      }
+      if (!year || !month || !day || age < 18) {
+        return toast.error("You must be 18 years or older.");
+      }
+    }
+
     const payload = {
       extension,
       email,
@@ -384,13 +432,14 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const sendLoginOtp = async () => {
     const payload = {
       is_web: "false",
+      include_otp: true,
       extension: registerData.extension,
       phone: registerData.nationalPhone,
     };
     const res = await api.post("send-otp-login", payload);
 
-    if (res.data.IsSuccess) {
-      return res.data.otp;
+    if (res.data.IsSuccess && res.data.otp) {
+      return decryptLoginOtp(String(res.data.otp));
     }
     setToken("");
     return false;
@@ -537,6 +586,15 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
               }
               label="Date of Birth"
               InputLabelProps={{ shrink: true }}
+              inputProps={{
+                max: (() => {
+                  const latestBirthDate = new Date();
+                  latestBirthDate.setFullYear(latestBirthDate.getFullYear() - 18);
+                  const month = String(latestBirthDate.getMonth() + 1).padStart(2, "0");
+                  const day = String(latestBirthDate.getDate()).padStart(2, "0");
+                  return `${latestBirthDate.getFullYear()}-${month}-${day}`;
+                })(),
+              }}
             />
           </Box>
         </Box>
