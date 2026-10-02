@@ -112,6 +112,7 @@ const LABEL_OVERRIDES: Record<string, string> = {
   leave_id: "Leave Type",
   leave_name: "Leave Type",
   utr_number: "UTR Number",
+  name_on_utr: "Name on UTR",
   net_rate_perday: "Rate",
   net_rate_perDay: "Rate",
   rate: "Rate",

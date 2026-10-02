@@ -307,6 +307,28 @@ function boundsFromPath(
   return bounds;
 }
 
+function boundsFromCircle(
+  center: { lat: number; lng: number },
+  radiusMeters: number,
+): google.maps.LatLngBounds | null {
+  if (
+    typeof google === "undefined" ||
+    !Number.isFinite(center.lat) ||
+    !Number.isFinite(center.lng)
+  ) {
+    return null;
+  }
+
+  const radius = Math.max(Number(radiusMeters) || 0, 1);
+  const latDelta = radius / 111320;
+  const lngScale = Math.cos((center.lat * Math.PI) / 180);
+  const lngDelta = radius / (111320 * (Math.abs(lngScale) < 0.01 ? 0.01 : lngScale));
+  const bounds = new google.maps.LatLngBounds();
+  bounds.extend({ lat: center.lat + latDelta, lng: center.lng + lngDelta });
+  bounds.extend({ lat: center.lat - latDelta, lng: center.lng - lngDelta });
+  return bounds;
+}
+
 const EditZone = ({
   zone,
   onSaved,
@@ -361,6 +383,7 @@ const EditZone = ({
   >([]);
 
   const mapRef = useRef<google.maps.Map | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   const circleRef = useRef<google.maps.Circle | null>(null);
   const polygonRef = useRef<google.maps.Polygon | null>(null);
   const pendingFitBoundsRef = useRef<google.maps.LatLngBounds | null>(null);
@@ -383,6 +406,17 @@ const EditZone = ({
     pendingFitBoundsRef.current = null;
     mapRef.current.fitBounds(bounds);
   }, [drawPath, location]);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    const showingCircle =
+      drawMode === "circle" || (drawMode === "pan" && zoneType === "circle");
+    if (!showingCircle) return;
+
+    const bounds = boundsFromCircle(location, radius);
+    if (!bounds) return;
+    mapRef.current.fitBounds(bounds, 48);
+  }, [mapReady, radius, location.lat, location.lng, drawMode, zoneType]);
 
   const getCenter = (pts: { lat: number; lng: number }[]) =>
     pts.length
@@ -1034,6 +1068,7 @@ const EditZone = ({
                     onClick={handleMapClick}
                     onLoad={(map) => {
                       mapRef.current = map;
+                      setMapReady(true);
                     }}
                     options={{
                       clickableIcons: false,
