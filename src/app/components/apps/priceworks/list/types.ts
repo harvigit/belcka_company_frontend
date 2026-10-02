@@ -75,7 +75,7 @@ export type PriceworkApiRow = {
     timesheet_date?: string | null;
     status?: PriceworkStatus | string | number | null;
     status_value?: string | number | null;
-    timesheet_status?: string | number | null;
+    payment_status?: string | number | null;
     created_at?: string | null;
 };
 

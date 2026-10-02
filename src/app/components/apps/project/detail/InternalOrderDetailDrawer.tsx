@@ -4,6 +4,7 @@ import React from "react";
 import {
   Avatar,
   Box,
+  Chip,
   Drawer,
   Grid,
   IconButton,
@@ -39,6 +40,8 @@ export type InternalOrderDetail = {
   ordered_by_image?: string | null;
   type_key?: string | null;
   file?: string | null;
+  status_text?: string | null;
+  status_color?: string | null;
   items?: OrderItem[];
 };
 
@@ -121,6 +124,19 @@ export default function InternalOrderDetailDrawer({
               <Typography fontWeight={800} fontSize={{ xs: 16, sm: 18 }} noWrap>
                 {order?.order_id || "Order"}
               </Typography>
+              <Chip
+                size="medium"
+                sx={{
+                  ml: 1,
+                  bgcolor: order?.status_color
+                    ? `${order?.status_color}20`
+                    : "#F5F5F5",
+                  color: order?.status_color || "#0e1df3ff",
+                  fontWeight: 600,
+                  fontSize: "0.75rem",
+                }}
+                label={order?.status_text}
+              />
             </Box>
             <Typography fontSize={12} color="text.secondary" ml={5}>
               {order?.type || "Internal order"}
