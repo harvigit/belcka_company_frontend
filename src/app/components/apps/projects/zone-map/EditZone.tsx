@@ -1052,7 +1052,7 @@ const EditZone = ({
 
                 <Box
                   sx={{
-                    height: { xs: 320, sm: 400, md: 480 },
+                    height: activeTab === 0 ? "45vh" : { xs: 320, sm: 400, md: 480 },
                     position: "relative",
                     borderRadius: 1.5,
                     overflow: "hidden",
