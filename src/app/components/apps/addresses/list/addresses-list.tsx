@@ -803,7 +803,7 @@ const AddressesList = ({
         ...formData,
         type: "circle",
       };
-      
+
       if (!payload.boundary && selectedLocation) {
         payload.boundary = JSON.stringify({
           lat: selectedLocation.lat,
@@ -1347,7 +1347,14 @@ const AddressesList = ({
         },
       }),
     ],
-    [data, selectedRowIds, hoveredRow, showAllCheckboxes, processedIds, handleProgressSave],
+    [
+      data,
+      selectedRowIds,
+      hoveredRow,
+      showAllCheckboxes,
+      processedIds,
+      handleProgressSave,
+    ],
   );
 
   const {
@@ -1484,6 +1491,10 @@ const AddressesList = ({
             open={openMenu}
             onClose={handleClose}
           >
+            {!parentAddresses.some(
+              (item: any) =>
+                item.id === Number(parentAddressId) && item.is_conflict,
+            ) && (
             <MenuItem
               onClick={async () => {
                 handleClose();
@@ -1581,6 +1592,7 @@ const AddressesList = ({
               </ListItemIcon>
               Add Case
             </MenuItem>
+            )}
             <MenuItem
               onClick={() => {
                 handleClose();
@@ -2178,7 +2190,7 @@ const AddressesList = ({
                       <IconArrowLeft />
                     </IconButton>
                     <Typography variant="h6" color="inherit" fontWeight={700}>
-                     {isViewOnly? "Case Detail" : "Edit Case"} 
+                      {isViewOnly ? "Case Detail" : "Edit Case"}
                     </Typography>
                   </Box>
 
