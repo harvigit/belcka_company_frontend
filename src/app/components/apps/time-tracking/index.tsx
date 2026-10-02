@@ -1189,6 +1189,8 @@ const TimeTracking: React.FC<Props> = () => {
     const session = useSession();
     const user = session.data?.user as User & { company_id?: number };
     const userId: string = (user as any)?.user_id ?? (user as any)?.id ?? '';
+    // Admins add/edit worklogs directly, every other role creates a request
+    const isAdmin = Number((user as any)?.user_role_id) === 1;
 
     const [lastKnownLocation, setLastKnownLocation] = useState<LocationCoords | null>(null);
 
@@ -1772,6 +1774,36 @@ const TimeTracking: React.FC<Props> = () => {
     });
 
     // ── Handlers ──
+    const submitWorklogEdit = useCallback(async (edit: PendingWorklogEdit, note?: string) => {
+        const {worklogId, originalLog, startTime, endTime} = edit;
+
+        setSavingWorklogs((p) => new Set(p).add(worklogId));
+        try {
+            const res: AxiosResponse<ApiResponse> = await api.post('/time-clock/edit-worklog', {
+                user_worklog_id: originalLog.worklog_id,
+                date: originalLog.date_added,
+                start_time: startTime,
+                end_time: endTime,
+                source_screen: 'time-tracking',
+                ...(note ? {note} : {}),
+            });
+            await fetchTimeClockData(startDate, endDate);
+            showToast(res.data?.message || 'Worklog updated successfully!', 'success');
+            setPendingWorklogEdit(null);
+            setWorklogEditNote('');
+            setWorklogEditNoteError(false);
+        } catch (error: any) {
+            showToast(error?.response?.data?.message || 'Failed to save changes', 'error');
+        } finally {
+            setSavingWorklogs((p) => {
+                const s = new Set(p);
+                s.delete(worklogId);
+                return s;
+            });
+            cancelEditingField(worklogId);
+        }
+    }, [setSavingWorklogs, fetchTimeClockData, startDate, endDate, showToast, cancelEditingField]);
+
     const saveFieldChanges = useCallback((worklogId: string, originalLog: any) => {
         const editedData = editingWorklogs[worklogId];
         if (!editedData || isRecordLocked(originalLog)) {
@@ -1787,15 +1819,22 @@ const TimeTracking: React.FC<Props> = () => {
             return;
         }
 
-        setPendingWorklogEdit({
+        const edit: PendingWorklogEdit = {
             worklogId,
             originalLog,
             startTime: newStart,
             endTime: newEnd,
-        });
+        };
+
+        if (isAdmin) {
+            if (!savingWorklogs.has(worklogId)) submitWorklogEdit(edit);
+            return;
+        }
+
+        setPendingWorklogEdit(edit);
         setWorklogEditNote('');
         setWorklogEditNoteError(false);
-    }, [editingWorklogs, isRecordLocked, cancelEditingField, validateAndFormatTime, sanitizeDateTime]);
+    }, [editingWorklogs, isRecordLocked, cancelEditingField, validateAndFormatTime, sanitizeDateTime, isAdmin, savingWorklogs, submitWorklogEdit]);
 
     const closeWorklogEditNoteDialog = useCallback(() => {
         if (pendingWorklogEdit) {
@@ -1816,33 +1855,8 @@ const TimeTracking: React.FC<Props> = () => {
             return;
         }
 
-        const {worklogId, originalLog, startTime, endTime} = pendingWorklogEdit;
-
-        setSavingWorklogs((p) => new Set(p).add(worklogId));
-        try {
-            await api.post('/time-clock/edit-worklog', {
-                user_worklog_id: originalLog.worklog_id,
-                date: originalLog.date_added,
-                start_time: startTime,
-                end_time: endTime,
-                note,
-            });
-            await fetchTimeClockData(startDate, endDate);
-            showToast('Worklog change request created successfully!', 'success');
-            setPendingWorklogEdit(null);
-            setWorklogEditNote('');
-            setWorklogEditNoteError(false);
-        } catch (error: any) {
-            showToast(error?.response?.data?.message || 'Failed to save changes', 'error');
-        } finally {
-            setSavingWorklogs((p) => {
-                const s = new Set(p);
-                s.delete(worklogId);
-                return s;
-            });
-            cancelEditingField(worklogId);
-        }
-    }, [pendingWorklogEdit, worklogEditNote, setSavingWorklogs, fetchTimeClockData, startDate, endDate, showToast, cancelEditingField]);
+        await submitWorklogEdit(pendingWorklogEdit, note);
+    }, [pendingWorklogEdit, worklogEditNote, submitWorklogEdit]);
 
     const handleDeleteRecord = useCallback(async (id: string, type: string) => {
         const endpoints: Record<string, string> = {
@@ -2542,6 +2556,7 @@ const TimeTracking: React.FC<Props> = () => {
                         onClose={closeAddWorklogSidebar}
                         userId={Number(userId)}
                         selectUser={false}
+                        sourceScreen="time-tracking"
                         companyId={Number(user.company_id)}
                         onDataRefresh={() => Promise.all([
                             fetchTimeClockData(startDate, endDate),

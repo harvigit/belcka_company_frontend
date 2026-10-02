@@ -24,6 +24,7 @@ import { User } from 'next-auth';
 
 import api from '@/utils/axios';
 import UserProfileLink from '@/app/components/common/UserProfileLink';
+import RejectReasonDialog from '@/app/components/common/RejectReasonDialog';
 
 // Types 
 export interface ConflictItem {
@@ -322,6 +323,7 @@ interface BillingConflictsProps {
 export default function BillingConflicts({ data, searchTerm = '', onResolved }: BillingConflictsProps) {
     const [openConflict, setOpenConflict] = useState<BillingConflict | null>(null);
     const [isActionLoading, setIsActionLoading] = useState(false);
+    const [rejectTarget, setRejectTarget] = useState<{ userId: number; logId: number } | null>(null);
 
     const session = useSession();
     const user = session?.data?.user as User & { company_id: number };
@@ -354,7 +356,12 @@ export default function BillingConflicts({ data, searchTerm = '', onResolved }: 
         }
     }, [handleResolved]);
 
-    const handleReject = useCallback(async (userId: number, logId?: number | null) => {
+    const handleReject = useCallback(async (userId: number, logId?: number | null, reason?: string) => {
+        // Rejecting a billing info request requires a rejection note.
+        if (logId && !reason?.trim()) {
+            setRejectTarget({ userId, logId });
+            return;
+        }
         setIsActionLoading(true);
         try {
             if (!logId) {
@@ -368,13 +375,18 @@ export default function BillingConflicts({ data, searchTerm = '', onResolved }: 
                 }
                 return;
             }
-            const res = await api.post('/requests/reject-request', { log_id: logId, user_id: userId });
+            const res = await api.post('/requests/reject-request', {
+                log_id: logId,
+                user_id: userId,
+                reason: reason?.trim(),
+            });
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
+                setRejectTarget(null);
                 await handleResolved();
             }
-        } catch {
-            toast.error('Something went wrong');
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Something went wrong');
         } finally {
             setIsActionLoading(false);
         }
@@ -407,6 +419,18 @@ export default function BillingConflicts({ data, searchTerm = '', onResolved }: 
                     />
                 )}
             </Drawer>
+
+            <RejectReasonDialog
+                open={!!rejectTarget}
+                onClose={() => setRejectTarget(null)}
+                onConfirm={(reason) =>
+                    rejectTarget
+                        ? handleReject(rejectTarget.userId, rejectTarget.logId, reason)
+                        : undefined
+                }
+                title="Reject Billing Info Request"
+                loading={isActionLoading}
+            />
         </>
     );
 }

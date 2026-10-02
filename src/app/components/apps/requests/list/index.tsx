@@ -35,6 +35,7 @@ import {
 import { format, parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import DiffChanges from "@/app/components/common/DiffChanges";
+import RejectReasonDialog from "@/app/components/common/RejectReasonDialog";
 import { useRouter } from "next/navigation";
 import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 import Link from "next/link";
@@ -198,6 +199,7 @@ export default function UserRequests({
   const [actioningType, setActioningType] = useState<
     "approve" | "reject" | null
   >(null);
+  const [rejectTarget, setRejectTarget] = useState<any | null>(null);
   const session = useSession();
   const user = session.data?.user as User & {
     company_id?: string | null;
@@ -346,18 +348,28 @@ export default function UserRequests({
     return type === "penalty appeal" || message.includes("appeal");
   };
 
+  // Billing info requests cannot be rejected without a rejection note.
+  const isBillingInfoRequest = (work: any) =>
+    getRequestTableName(work) === "billing_infos" ||
+    getRequestTypeKey(work) === "billing info";
+
   const postGenericRequestAction = (
     work: any,
     action: "approve" | "reject",
+    reason?: string,
   ) => {
     const endpoint =
       action === "approve"
         ? "/requests/approve-request"
         : "/requests/reject-request";
-    return api.post(endpoint, {
+    const payload: { log_id: number; user_id: number; reason?: string } = {
       log_id: Number(work?.id),
       user_id: Number(work?.user_id),
-    });
+    };
+    if (action === "reject" && reason) {
+      payload.reason = reason;
+    }
+    return api.post(endpoint, payload);
   };
 
   const postTimesheetRequestAction = (
@@ -408,7 +420,11 @@ export default function UserRequests({
     });
   };
 
-  const postRequestAction = async (work: any, action: "approve" | "reject") => {
+  const postRequestAction = async (
+    work: any,
+    action: "approve" | "reject",
+    reason?: string,
+  ) => {
     const type = getRequestTypeKey(work);
     const table = getRequestTableName(work);
 
@@ -438,22 +454,29 @@ export default function UserRequests({
 
     // Billing info, rate, trade, company, timesheet, and any other
     // pending request types use the generic request approve/reject APIs.
-    return postGenericRequestAction(work, action);
+    return postGenericRequestAction(work, action, reason);
   };
 
   const handleRequestAction = async (
     work: any,
     action: "approve" | "reject",
+    reason?: string,
   ) => {
     const logId = Number(work?.id);
     if (!logId || actioningId) return;
 
+    if (action === "reject" && isBillingInfoRequest(work) && !reason?.trim()) {
+      setRejectTarget(work);
+      return;
+    }
+
     setActioningId(logId);
     setActioningType(action);
     try {
-      const res = await postRequestAction(work, action);
+      const res = await postRequestAction(work, action, reason?.trim());
       if (res.data?.IsSuccess) {
         toast.success(res.data.message);
+        setRejectTarget(null);
         if (startDate && endDate) {
           await fetchRequests(startDate, endDate, filters, debouncedSearch);
         }
@@ -461,6 +484,8 @@ export default function UserRequests({
       }
     } catch (err: any) {
       console.error(err, "error while approving or rejecting this request!");
+      const message = err?.response?.data?.message;
+      if (message) toast.error(message);
     } finally {
       setActioningId(null);
       setActioningType(null);
@@ -918,6 +943,40 @@ export default function UserRequests({
                             </Box>
                           )}
                         </Link>
+                        {work.reject_reason &&
+                          String(work.status_text || "").toLowerCase() ===
+                            "rejected" && (
+                            <Box
+                              ml={5.5}
+                              mt={1}
+                              px={1.25}
+                              py={0.75}
+                              sx={{
+                                borderRadius: "8px",
+                                borderLeft: `3px solid ${STATUS_COLOR.rejected}`,
+                                bgcolor: `${STATUS_COLOR.rejected}0D`,
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
+                                fontWeight={700}
+                                color={STATUS_COLOR.rejected}
+                                display="block"
+                              >
+                                {t("Rejection note")}
+                                {work.action_by ? ` · ${work.action_by}` : ""}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  whiteSpace: "pre-wrap",
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {work.reject_reason}
+                              </Typography>
+                            </Box>
+                          )}
                         {showRequestActions && isPendingRequest(work) && (
                           <Box display="flex" justifyContent="flex-end" gap={1}>
                             <Button
@@ -984,6 +1043,16 @@ export default function UserRequests({
           </Box>
         </Box>
       </Drawer>
+
+      <RejectReasonDialog
+        open={Boolean(rejectTarget)}
+        onClose={() => setRejectTarget(null)}
+        onConfirm={(reason) =>
+          handleRequestAction(rejectTarget, "reject", reason)
+        }
+        title={t("Reject Billing Info Request")}
+        loading={Boolean(actioningId) && actioningType === "reject"}
+      />
 
       <Dialog
         open={filterOpen}
