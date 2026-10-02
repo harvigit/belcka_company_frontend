@@ -34,6 +34,7 @@ import {
     Divider,
     Drawer,
     Grid,
+    Autocomplete,
 } from '@mui/material';
 import {
     IconPlus,
@@ -92,6 +93,7 @@ const TASKS_TABLE_SORT_MAP: Record<string, string> = {
     shift: 'shift_type',
     category: 'category_name',
     'sub-cat': 'sub_category_name',
+    unit: 'unit_name',
     show: 'is_show',
     file: 'file_count',
 };
@@ -221,6 +223,10 @@ const TaskLists = () => {
     const [subCategories, setSubCategories] = useState<any[]>([]);
     const [trades, setTrades] = useState<any[]>([]);
     const [shifts, setShifts] = useState<any[]>([]);
+    const [units, setUnits] = useState<any[]>([]);
+    const [editingUnitTaskId, setEditingUnitTaskId] = useState<number | null>(
+        null,
+    );
 
     const [drawerImages, setDrawerImages] = useState<any[]>([]);
     const [imagesDrawerOpen, setImagesDrawerOpen] = useState(false);
@@ -337,6 +343,20 @@ const TaskLists = () => {
 
     useEffect(() => {
         fetchResources();
+    }, [user?.company_id]);
+
+    const fetchUnits = async () => {
+        if (!user?.company_id) return;
+        try {
+            const res = await api.get(`units/get?company_id=${user.company_id}`);
+            setUnits(res.data?.info || []);
+        } catch (err) {
+            console.error('Failed to fetch units', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchUnits();
     }, [user?.company_id]);
 
     const initialFormData = {
@@ -618,6 +638,36 @@ const TaskLists = () => {
         }
     };
 
+    const changeUnit = async (id: number, unit: any) => {
+        if (!unit?.id) return;
+        try {
+            const res = await api.post('tasks/update-unit', {
+                id: Number(id),
+                unit_id: unit.id,
+            });
+
+            if (res.data?.IsSuccess) {
+                toast.success(res.data.message);
+                setData((prev: any[]) =>
+                    prev.map((p) =>
+                        p.id === Number(id)
+                            ? {
+                                ...p,
+                                unit_id: unit.id,
+                                unit_name: unit.name,
+                            }
+                            : p,
+                    ),
+                );
+            } else {
+                toast.error(res.data?.message || 'Failed to update unit');
+            }
+        } catch (err: any) {
+            console.error(err);
+            toast.error(err?.response?.data?.message || 'Failed to update unit');
+        }
+    };
+
     const columns = useMemo(
         () => [
             {
@@ -819,6 +869,87 @@ const TaskLists = () => {
                 },
             }),
 
+            columnHelper.accessor((row) => row?.unit_name, {
+                id: 'unit',
+                header: () => 'Unit',
+                cell: ({row}) => {
+                    const item = row.original;
+
+                    if (editingUnitTaskId === item.id) {
+                        return (
+                            <Box
+                                onClick={(e) => e.stopPropagation()}
+                                sx={{minWidth: '140px', maxWidth: '200px'}}
+                            >
+                                <Autocomplete
+                                    size="small"
+                                    fullWidth
+                                    openOnFocus
+                                    disableClearable
+                                    options={units}
+                                    getOptionLabel={(option: any) => option?.name ?? ''}
+                                    isOptionEqualToValue={(option: any, value: any) =>
+                                        option.id === value.id
+                                    }
+                                    value={
+                                        units.find((u) => u.id === item.unit_id) ??
+                                        (null as any)
+                                    }
+                                    onChange={async (_, value: any) => {
+                                        setEditingUnitTaskId(null);
+                                        if (value?.id && value.id !== item.unit_id) {
+                                            await changeUnit(item.id, value);
+                                        }
+                                    }}
+                                    onBlur={() => setEditingUnitTaskId(null)}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            autoFocus
+                                            placeholder="Select unit"
+                                        />
+                                    )}
+                                />
+                            </Box>
+                        );
+                    }
+
+                    return (
+                        <Tooltip title="Click to edit">
+                            <Typography
+                                className="f-14"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingUnitTaskId(item.id);
+                                }}
+                                sx={{
+                                    display: '-webkit-box',
+                                    WebkitBoxOrient: 'vertical',
+                                    WebkitLineClamp: 1,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    wordBreak: 'break-word',
+                                    minWidth: '80px',
+                                    width: '100%',
+                                    maxWidth: '200px',
+                                    borderRadius: 1,
+                                    border: '1px solid transparent',
+                                    transition: 'all 0.2s ease',
+                                    px: 0.5,
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                        borderColor: 'divider',
+                                        backgroundColor: 'action.hover',
+                                    },
+                                }}
+                            >
+                                {item.unit_name ?? '-'}
+                            </Typography>
+                        </Tooltip>
+                    );
+                },
+            }),
+
             columnHelper.accessor('note', {
                 header: 'Note',
                 cell: ({row}: any) => {
@@ -1002,7 +1133,7 @@ const TaskLists = () => {
                 },
             }),
         ],
-        [data, selectedRowIds, hoveredRow],
+        [data, selectedRowIds, hoveredRow, units, editingUnitTaskId],
     );
 
     const {
