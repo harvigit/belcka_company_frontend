@@ -340,6 +340,8 @@ const EMPTY_TIME_CLOCK_FILTERS: TimeClockFilterState = {
     projects: [],
 };
 
+const PENDING_REQUEST_COLOR = '#eab308';
+
 const PENDING_STATUS_FILTER_OPTION: FilterOption = {
     id: '0',
     name: 'Pending',
@@ -1994,7 +1996,7 @@ const TimeClock = ({queryParams}: Props) => {
                 const row = info.row.original;
                 const value = info.getValue();
                 const formatted = formatHour(value) || '-';
-                const color = hasPendingRequest(row) ? '#f97316' : row.has_edited_worklog_time ? '#ff0000' : 'inherit';
+                const color = hasPendingRequest(row) ? PENDING_REQUEST_COLOR : row.has_edited_worklog_time ? '#ff0000' : 'inherit';
 
                 return (
                     <Typography
@@ -2014,7 +2016,7 @@ const TimeClock = ({queryParams}: Props) => {
             header: 'Payable',
             cell: (info: any) => {
                 const row = info.row.original;
-                const color = hasPendingRequest(row) ? '#f97316' : row.has_edited_worklog_time ? '#ff0000' : 'inherit';
+                const color = hasPendingRequest(row) ? PENDING_REQUEST_COLOR : row.has_edited_worklog_time ? '#ff0000' : 'inherit';
 
                 return (
                     <Typography variant="h6" sx={{color}}>
@@ -2055,7 +2057,7 @@ const TimeClock = ({queryParams}: Props) => {
                     <Typography
                         variant="h6"
                         sx={{
-                            color: hasPendingRequest(row) ? '#f97316' : 'inherit',
+                            color: hasPendingRequest(row) ? PENDING_REQUEST_COLOR : 'inherit',
                         }}
                     >
                         {displayValue}
@@ -2078,7 +2080,7 @@ const TimeClock = ({queryParams}: Props) => {
                         <Typography
                             variant="h6"
                             sx={{
-                                color: hasPendingRequest(row) ? '#f97316' : 'inherit',
+                                color: hasPendingRequest(row) ? PENDING_REQUEST_COLOR : 'inherit',
                             }}
                         >
                             {displayValue}
