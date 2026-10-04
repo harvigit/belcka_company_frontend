@@ -490,21 +490,28 @@ const PurchaseProductList: React.FC<Props> = ({
     const selectedProductsWithQty = useMemo(() => {
       if (selectedRowIds.size === 0) return [];
       const visibleById = new Map(data.map((item) => [item.id, item]));
+      const rows: {
+        id: number;
+        qty: number;
+        price: any;
+        supplier_id: number;
+        supplier_name: string;
+      }[] = [];
 
-      return Array.from(selectedRowIds)
-        .map((id) => {
-          const item =
-            visibleById.get(id) || selectedProductSnapshotsRef.current.get(id);
-          if (!item) return null;
-          return {
-            id,
-            qty: Number(item.total_qty ?? item.qty) || 0,
-            price: item.price,
-            supplier_id: Number(item.supplier_id),
-            supplier_name: item.supplier_name,
-          };
-        })
-        .filter(Boolean);
+      selectedRowIds.forEach((id) => {
+        const item =
+          visibleById.get(id) || selectedProductSnapshotsRef.current.get(id);
+        if (!item) return;
+        rows.push({
+          id,
+          qty: Number(item.total_qty ?? item.qty) || 0,
+          price: item.price,
+          supplier_id: Number(item.supplier_id),
+          supplier_name: item.supplier_name || "",
+        });
+      });
+
+      return rows;
     }, [data, selectedRowIds]);
 
     const supplierNames = [
