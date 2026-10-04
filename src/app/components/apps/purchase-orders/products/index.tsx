@@ -103,6 +103,8 @@ const PurchaseProductList: React.FC<Props> = ({
   };
 
   const selectedRowIdsRef = useRef<Set<number>>(selectedRowIds);
+  const selectedProductSnapshotsRef = useRef<Map<number, any>>(new Map());
+  const fetchSeqRef = useRef(0);
   useEffect(() => {
     selectedRowIdsRef.current = selectedRowIds;
   }, [selectedRowIds]);
@@ -268,6 +270,8 @@ const PurchaseProductList: React.FC<Props> = ({
 
   // Fetch data
   const fetchOrders = async () => {
+    if (!open) return;
+    const seq = ++fetchSeqRef.current;
     setFetchStore(true);
 
     try {
@@ -305,11 +309,24 @@ const PurchaseProductList: React.FC<Props> = ({
         params.is_all_product = true;
       }
       const response = await api.get("purchase-orders/orders", { params });
+      if (seq !== fetchSeqRef.current) return;
 
       if (response.data) {
         const fetchedItems = response.data.info || [];
         const deselected = manuallyDeselectedRef.current;
+        const nameFilterActive =
+          (filters.supplier && filters.supplier !== "All") ||
+          (filters.project && filters.project !== "All") ||
+          (filters.address && filters.address !== "All");
+        const listFilterActive =
+          !isSearching && (nameFilterActive || filters.lowStock);
         setData((prevData) => {
+          if (listFilterActive) {
+            const prevById = new Map(prevData.map((item) => [item.id, item]));
+            return fetchedItems.map(
+              (item: any) => prevById.get(item.id) ?? item,
+            );
+          }
           const currentSelected = selectedRowIdsRef.current;
           const pinnedItems = prevData.filter(
             (item) =>
@@ -360,13 +377,16 @@ const PurchaseProductList: React.FC<Props> = ({
       console.error("Failed to fetch supplier", err);
     }
 
-    setFetchStore(false);
+    if (seq === fetchSeqRef.current) {
+      setFetchStore(false);
+    }
   };
 
   useEffect(() => {
     if (open == true) {
       setData([]);
       setSelectedRowIds(new Set());
+      selectedProductSnapshotsRef.current.clear();
       setManuallyDeselected(new Set());
       setDrawerOpen(false);
       setEditDrawerOpen(false);
@@ -374,6 +394,16 @@ const PurchaseProductList: React.FC<Props> = ({
       fetchResources();
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const hasNameFilter =
+      (filters.supplier && filters.supplier !== "All") ||
+      (filters.project && filters.project !== "All") ||
+      (filters.address && filters.address !== "All");
+    if (!hasNameFilter) return;
+    fetchOrders();
+  }, [suppliers, projects, addresses]);
 
   const handleOpenCreateDrawer = () => {
     setFormData({
@@ -440,18 +470,41 @@ const PurchaseProductList: React.FC<Props> = ({
     });
   }, [filteredData, selectedRowIds, searchTerm, latestFetchedIds]);
 
+  data.forEach((item) => {
+    if (!selectedRowIds.has(item.id)) return;
+    selectedProductSnapshotsRef.current.set(item.id, {
+      id: item.id,
+      qty: Number(item.total_qty) || 0,
+      price: item.price,
+      supplier_id: Number(item.supplier_id),
+      supplier_name: item.supplier_name,
+    });
+  });
+  Array.from(selectedProductSnapshotsRef.current.keys()).forEach((id) => {
+    if (!selectedRowIds.has(id)) {
+      selectedProductSnapshotsRef.current.delete(id);
+    }
+  });
+
   const useSelectedProducts = (data: any[], selectedRowIds: Set<number>) => {
     const selectedProductsWithQty = useMemo(() => {
-      if (!data?.length || selectedRowIds.size === 0) return [];
+      if (selectedRowIds.size === 0) return [];
+      const visibleById = new Map(data.map((item) => [item.id, item]));
 
-      return data
-        .filter((item) => selectedRowIds.has(item.id))
-        .map((item) => ({
-          id: item.id,
-          qty: Number(item.total_qty) || 0,
-          supplier_id: Number(item.supplier_id),
-          supplier_name: item.supplier_name,
-        }));
+      return Array.from(selectedRowIds)
+        .map((id) => {
+          const item =
+            visibleById.get(id) || selectedProductSnapshotsRef.current.get(id);
+          if (!item) return null;
+          return {
+            id,
+            qty: Number(item.total_qty ?? item.qty) || 0,
+            price: item.price,
+            supplier_id: Number(item.supplier_id),
+            supplier_name: item.supplier_name,
+          };
+        })
+        .filter(Boolean);
     }, [data, selectedRowIds]);
 
     const supplierNames = [
@@ -475,10 +528,10 @@ const PurchaseProductList: React.FC<Props> = ({
 
   const selectedRowCount = selectedRowIds.size;
 
-  const selectedTotalQty = Array.from(selectedRowIds).reduce((sum, id) => {
-    const row = data.find((item) => item.id === id);
-    return sum + (row?.total_qty ? Number(row.total_qty) : 0);
-  }, 0);
+  const selectedTotalQty = selectedProductsWithQty.reduce(
+    (sum, item) => sum + (Number(item?.qty) || 0),
+    0,
+  );
 
   const formatDate = (date?: Date | string | null) => {
     if (!date) return "-";
@@ -508,7 +561,7 @@ const PurchaseProductList: React.FC<Props> = ({
       return {
         product_id: sp.id,
         qty: sp.qty,
-        price: product?.price || 0,
+        price: product?.price || sp.price || 0,
       };
     });
     const order_id = manualOrderId || generateOrderId();
