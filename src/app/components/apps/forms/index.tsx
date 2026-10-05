@@ -28,15 +28,14 @@ import {
 } from '@mui/material';
 import {
     createColumnHelper,
-    flexRender,
     getCoreRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
     ColumnFiltersState,
     SortingState,
-    useReactTable,
-} from '@tanstack/react-table';
+    useReactTable} from '@tanstack/react-table';
+import {flexRender} from '@/utils/flexRender';
 import {IconArchive, IconDotsVertical, IconPlus, IconSearch, IconTrash, IconX} from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';

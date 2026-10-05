@@ -29,7 +29,8 @@ import {
   FormControlLabel,
   Checkbox,
 } from "@mui/material";
-import { flexRender, createColumnHelper } from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import { IconSearch, IconTrash, IconX } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";

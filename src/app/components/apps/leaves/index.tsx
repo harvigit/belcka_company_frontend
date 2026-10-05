@@ -64,11 +64,10 @@ import { useSession } from 'next-auth/react';
 import { User } from 'next-auth';
 import {
     createColumnHelper,
-    flexRender,
     getCoreRowModel,
     useReactTable,
-    VisibilityState,
-} from '@tanstack/react-table';
+    VisibilityState} from '@tanstack/react-table';
+import {flexRender} from '@/utils/flexRender';
 
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import api from '@/utils/axios';

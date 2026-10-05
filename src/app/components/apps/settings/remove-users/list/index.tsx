@@ -29,7 +29,8 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { createColumnHelper, flexRender } from "@tanstack/react-table";
+import { createColumnHelper} from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import { IconEye, IconSearch, IconUserPlus } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
@@ -43,7 +44,10 @@ import { format } from "date-fns";
 import "react-phone-input-2/lib/material.css";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { AxiosResponse } from "axios";
-import Cookies from "js-cookie";
+import {
+  readListingTableState,
+  writeListingTableState,
+} from "@/utils/listingTableStateStorage";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import toast from "react-hot-toast";
@@ -208,6 +212,15 @@ const RemoveUsersList = () => {
       ? `columnVisibility_removeUsers_${userId}`
       : "columnVisibility_removeUsers";
   const columnVisibilityKey = getColumnVisibilityKey(userId);
+
+  const loadSavedVisibility = () => {
+    try {
+      const raw = readListingTableState(columnVisibilityKey);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
 
   const columnHelper = createColumnHelper<UserList>();
 
@@ -478,9 +491,7 @@ const RemoveUsersList = () => {
 
   useEffect(() => {
     if (!userId) return;
-    const savedVisibility = Cookies.get(columnVisibilityKey)
-      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
-      : {};
+    const savedVisibility = loadSavedVisibility();
     table.setColumnVisibility(savedVisibility);
   }, [table, userId]);
 
@@ -502,30 +513,23 @@ const RemoveUsersList = () => {
     table.getAllLeafColumns().forEach((col) => {
       if (col.id !== "conflicts") newVisibility[col.id] = checked;
     });
-    Cookies.set(
+    writeListingTableState(
       columnVisibilityKey,
       JSON.stringify({ ...newVisibility, selectAll: checked }),
-      { expires: 365 },
     );
     table.setColumnVisibility(newVisibility);
   };
 
   const handleColumnVisibilityChange = (colId: string, value: boolean) => {
-    const currentVisibility = Cookies.get(columnVisibilityKey)
-      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
-      : {};
+    const currentVisibility = loadSavedVisibility();
     const updatedVisibility = { ...currentVisibility, [colId]: value };
-    Cookies.set(columnVisibilityKey, JSON.stringify(updatedVisibility), {
-      expires: 365,
-    });
+    writeListingTableState(columnVisibilityKey, JSON.stringify(updatedVisibility));
     table.setColumnVisibility((prev: any) => ({ ...prev, [colId]: value }));
   };
 
   useEffect(() => {
     if (!userId) return;
-    const saved = Cookies.get(columnVisibilityKey)
-      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
-      : {};
+    const saved = loadSavedVisibility();
     if (saved.selectAll !== undefined) setSelectAll(saved.selectAll);
     table.setColumnVisibility(saved);
   }, [userId, table]);

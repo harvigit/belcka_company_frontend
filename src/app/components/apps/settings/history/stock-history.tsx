@@ -28,14 +28,13 @@ import {
   Drawer,
 } from "@mui/material";
 import {
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   createColumnHelper,
-  SortingState,
-} from "@tanstack/react-table";
+  SortingState} from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import {

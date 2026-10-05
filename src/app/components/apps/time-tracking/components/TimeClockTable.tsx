@@ -12,7 +12,7 @@ import {
     Tooltip,
     Chip
 } from '@mui/material';
-import {flexRender} from '@tanstack/react-table';
+import {flexRender} from '@/utils/flexRender';
 import {
     IconTrash,
     IconPointFilled,

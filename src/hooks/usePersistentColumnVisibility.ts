@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import Cookies from 'js-cookie';
+import {
+  readListingTableState,
+  writeListingTableState,
+} from '@/utils/listingTableStateStorage';
 
 interface PersistentColumnVisibilityOptions {
   storageKey: string;
@@ -8,8 +11,6 @@ interface PersistentColumnVisibilityOptions {
   /** Column ids that must always stay visible (never hidden via cookie/UI state). */
   alwaysVisibleColumns?: string[];
 }
-
-const COOKIE_OPTIONS = { expires: 365, path: '/' };
 
 const applyAlwaysVisible = (
   visibility: Record<string, boolean>,
@@ -29,7 +30,7 @@ const readSavedVisibility = (
   defaultVisibility: Record<string, boolean>,
   alwaysVisibleColumns: string[],
 ) => {
-  const saved = Cookies.get(storageKey);
+  const saved = readListingTableState(storageKey);
   if (saved) {
     try {
       return applyAlwaysVisible(
@@ -64,7 +65,7 @@ export function usePersistentColumnVisibility({
           alwaysVisibleColumns,
         );
         if (enabled) {
-          Cookies.set(storageKey, JSON.stringify(newVisibility), COOKIE_OPTIONS);
+          writeListingTableState(storageKey, JSON.stringify(newVisibility));
         }
         return newVisibility;
       });

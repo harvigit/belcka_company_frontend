@@ -47,14 +47,13 @@ import { useParams } from "next/navigation";
 import toast from "react-hot-toast";
 import {
   createColumnHelper,
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   SortingState,
-  useReactTable,
-} from "@tanstack/react-table";
+  useReactTable} from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import { styled } from "@mui/system";
 import { DayPicker } from "react-day-picker";
