@@ -943,14 +943,14 @@ const TablePagination = () => {
                                     >
                                         {user.name ?? '-'}
                                     </Typography>
-                                    {user?.new_member && (
+                                    {/* {user?.new_member && (
                                         <Chip
                                             label={t('New')}
                                             size="small"
                                             color="primary"
                                             variant="outlined"
                                         />
-                                    )}
+                                    )} */}
                                     <Tooltip title={user.trade_name ? t(user.trade_name) : '-'} placement="top" arrow>
                                         <Typography sx={{
                                             display: '-webkit-box',
