@@ -125,10 +125,10 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
     };
 
   const getUnitValidationError = (value: TaskFormData["unit_id"]) => {
-    if (isRequiredEmpty(value)) return "Unit of measure is required";
-    return units.some((unit) => String(unit.id) === String(value))
-      ? ""
-      : "Unit of measure not exists!";
+    // if (isRequiredEmpty(value)) return "Unit of measure is required";
+    // return units.some((unit) => String(unit.id) === String(value))
+    //   ? ""
+    //   : "Unit of measure not exists!";
   };
 
   const fetchTask = async () => {
@@ -279,7 +279,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
     setTradeError(tradeValidationError);
     setCategoryError(categoryValidationError);
     setShiftError(shiftValidationError);
-    setUnitError(unitValidationError);
+    // setUnitError(unitValidationError);
 
     const error =
       tradeValidationError ||
