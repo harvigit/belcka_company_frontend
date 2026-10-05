@@ -1,26 +1,20 @@
-import Cookies from 'js-cookie';
 import type { VisibilityState } from '@tanstack/react-table';
+import {
+  readListingTableState,
+  writeListingTableState,
+} from '@/utils/listingTableStateStorage';
 
-const COOKIE_OPTIONS = {
-  expires: 365,
-  sameSite: 'lax' as const,
-  path: '/',
-};
-
+// Stored in localStorage (legacy cookies are migrated and removed on read).
 export const loadColumnVisibilityCookie = (key: string): VisibilityState | null => {
   try {
-    const stored = Cookies.get(key);
+    const stored = readListingTableState(key);
     return stored ? JSON.parse(stored) as VisibilityState : null;
   } catch (error) {
-    console.error(`Error loading column visibility cookie ${key}:`, error);
+    console.error(`Error loading column visibility ${key}:`, error);
     return null;
   }
 };
 
 export const saveColumnVisibilityCookie = (key: string, visibility: VisibilityState) => {
-  try {
-    Cookies.set(key, JSON.stringify(visibility), COOKIE_OPTIONS);
-  } catch (error) {
-    console.error(`Error saving column visibility cookie ${key}:`, error);
-  }
+  writeListingTableState(key, JSON.stringify(visibility));
 };

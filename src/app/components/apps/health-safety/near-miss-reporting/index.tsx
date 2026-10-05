@@ -13,8 +13,7 @@ import {
     IconCloudUpload, IconPaperclip, IconDownload, IconExternalLink,
 } from '@tabler/icons-react';
 import Image from 'next/image';
-import { flexRender,
-} from '@tanstack/react-table';
+import {flexRender} from '@/utils/flexRender';
 import api from '@/utils/axios';
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import SkeletonLoader from '@/app/components/SkeletonLoader';

@@ -20,6 +20,13 @@ export const LISTING_STATE_COOKIE_PREFIXES = [
   "leave-list-preferences",
   "po_invoices_table_state_",
   "project-detail-filters",
+  // Column visibility preferences (previously 1-year cookies; too many of them
+  // overflow the server's request header size limit -> 400 Bad Request)
+  "cv_",
+  "columnVisibility_",
+  "time-clock-column-visibility",
+  "time-clock-details-column-visibility",
+  "time-tracking-column-visibility",
 ] as const;
 
 const isListingStateCookieName = (name: string) =>

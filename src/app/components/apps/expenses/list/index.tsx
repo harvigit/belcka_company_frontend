@@ -51,10 +51,9 @@ import {User} from 'next-auth';
 import {format, subDays} from 'date-fns';
 import {
     createColumnHelper,
-    flexRender,
     SortingState,
-    VisibilityState,
-} from '@tanstack/react-table';
+    VisibilityState} from '@tanstack/react-table';
+import {flexRender} from '@/utils/flexRender';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import {

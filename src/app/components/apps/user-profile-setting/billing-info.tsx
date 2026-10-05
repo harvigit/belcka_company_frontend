@@ -28,6 +28,7 @@ import {
   IconArrowLeft,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import RejectReasonDialog from "@/app/components/common/RejectReasonDialog";
 
 interface ProjectListingProps {
   companyId: number | null;
@@ -127,6 +128,8 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
   const [addressOptions, setAddressOptions] = useState<any[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   const session = useSession();
   const user = session.data?.user as User & { user_role_id?: number | null } & {
     id: number;
@@ -302,23 +305,35 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
   };
 
   /*  Reject request */
-  const handleReject = async (requestLogId?: number | null) => {
-    if (!requestLogId) {
+  const handleReject = async (
+    requestLogId: number | null | undefined,
+    reason: string,
+  ) => {
+    // A rejection note is mandatory for billing info requests.
+    if (!requestLogId || !reason.trim()) {
       return;
     }
     const payload = {
       log_id: requestLogId,
       user_id: user.id,
+      reason: reason.trim(),
     };
+    setIsRejecting(true);
     try {
       const res = await api.post("/requests/reject-request", payload);
       if (res.data.IsSuccess == true) {
         toast.success(res.data.message);
+        setRejectDialogOpen(false);
+        setDrawerOpen(false);
         fetchBillingInfo();
         onUpdate?.();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Rejection failed:", err);
+      const message = err?.response?.data?.message;
+      if (message) toast.error(message);
+    } finally {
+      setIsRejecting(false);
     }
   };
 
@@ -574,10 +589,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 </Button>
                 <Button
                   color="error"
-                  onClick={() => {
-                    handleReject(billingInfo?.request_log_id);
-                    setDrawerOpen(false);
-                  }}
+                  onClick={() => setRejectDialogOpen(true)}
                   variant="contained"
                   className="drawer_buttons"
                   sx={{
@@ -746,6 +758,16 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
           )}
         </Box>
       </Drawer>
+
+      <RejectReasonDialog
+        open={rejectDialogOpen}
+        onClose={() => setRejectDialogOpen(false)}
+        onConfirm={(reason) =>
+          handleReject(billingInfo?.request_log_id, reason)
+        }
+        title={t("Reject Billing Info Request")}
+        loading={isRejecting}
+      />
       <Grid container spacing={2} mb={2}>
         {["first_name", "middle_name", "last_name", "email"].map((key) => (
           <Grid size={{ xs: 12, sm: 6 }} key={key}>

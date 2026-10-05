@@ -31,7 +31,8 @@ import {
   ListItemIcon,
   Tooltip,
 } from "@mui/material";
-import { flexRender, createColumnHelper } from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import { useServerTable } from "@/hooks/useServerTable";
 import {
   IconDownload,

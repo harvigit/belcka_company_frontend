@@ -42,7 +42,8 @@ import {
   IconFileImport,
   IconFilter,
 } from "@tabler/icons-react";
-import { flexRender, createColumnHelper } from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";

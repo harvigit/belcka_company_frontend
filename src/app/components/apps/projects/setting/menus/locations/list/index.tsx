@@ -30,10 +30,9 @@ import {
   Checkbox,
 } from "@mui/material";
 import {
-  flexRender,
   createColumnHelper,
-  SortingState,
-} from "@tanstack/react-table";
+  SortingState} from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import { IconEye, IconNotes, IconSearch, IconTrash } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";

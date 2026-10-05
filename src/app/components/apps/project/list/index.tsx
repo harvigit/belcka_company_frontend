@@ -41,7 +41,8 @@ import {
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
-import { createColumnHelper, flexRender } from "@tanstack/react-table";
+import { createColumnHelper} from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import Image from "next/image";

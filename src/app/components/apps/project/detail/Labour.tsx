@@ -28,9 +28,8 @@ import {
 } from '@mui/material';
 import {
     createColumnHelper,
-    flexRender,
-    SortingState,
-} from '@tanstack/react-table';
+    SortingState} from '@tanstack/react-table';
+import {flexRender} from '@/utils/flexRender';
 import {IconEye, IconFilter, IconSearch, IconX} from '@tabler/icons-react';
 import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';

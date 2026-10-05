@@ -31,15 +31,14 @@ import {
     Chip,
 } from "@mui/material";
 import {
-    flexRender,
     getCoreRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
     createColumnHelper,
-    SortingState,
-} from "@tanstack/react-table";
+    SortingState} from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { Grid, Stack } from "@mui/system";

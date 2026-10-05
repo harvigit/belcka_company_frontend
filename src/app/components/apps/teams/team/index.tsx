@@ -37,11 +37,10 @@ import {
   Alert,
 } from "@mui/material";
 import {
-  flexRender,
   getCoreRowModel,
   createColumnHelper,
-  SortingState,
-} from "@tanstack/react-table";
+  SortingState} from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import { useServerTable } from "@/hooks/useServerTable";
 import {
   IconDotsVertical,

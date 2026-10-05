@@ -22,7 +22,8 @@ import {
     Typography,
 } from '@mui/material';
 import {IconArrowLeft, IconLock, IconSearch, IconX} from '@tabler/icons-react';
-import {createColumnHelper, flexRender} from '@tanstack/react-table';
+import {createColumnHelper} from '@tanstack/react-table';
+import {flexRender} from '@/utils/flexRender';
 import Image from 'next/image';
 import Link from 'next/link';
 import {User} from 'next-auth';

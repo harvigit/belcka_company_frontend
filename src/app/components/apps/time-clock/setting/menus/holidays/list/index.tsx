@@ -30,9 +30,8 @@ import {
   Checkbox,
 } from "@mui/material";
 import {
-  flexRender,
-  createColumnHelper,
-} from "@tanstack/react-table";
+  createColumnHelper} from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import {
   IconDotsVertical,
   IconEdit,
