@@ -189,7 +189,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       setLoading(true);
     }
     try {
-      const res = await api.get(`company/active-company?user_id=${userId}`);
+      const res = await api.get(`company/active-company?company_id=${user.company_id}&user_id=${userId}`);
       if (res.data.info) {
         const companyData = res.data.info;
         setActionUsers(res.data.users || []);
@@ -221,7 +221,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
   const fetchTrades = async () => {
     try {
       const res = await api.get(
-        `get-company-resources?flag=tradeList&company_id=${comapny?.id}`,
+        `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
       );
       if (res.data) setTrade(res.data.info);
     } catch (err) {
@@ -284,10 +284,10 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
   }, [userId, active]);
 
   useEffect(() => {
-    if (comapny?.id) {
+    if (userId) {
       fetchTrades();
     }
-  }, [comapny]);
+  }, [userId,active]);
 
   const hasTradeChange = hasPendingTradeChange(comapny);
   const hasRateChange = hasPendingRateChange(comapny);

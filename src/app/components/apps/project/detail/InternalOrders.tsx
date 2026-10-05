@@ -146,7 +146,7 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
   const columns = useMemo(
     () => [
       columnHelper.accessor("order_id", {
-        id: "order_id",
+        id: "orderId",
         enableSorting: true,
         header: () => <Typography variant="subtitle2">Order ID</Typography>,
         cell: ({ getValue }) => (
@@ -156,7 +156,7 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
         ),
       }),
       columnHelper.accessor("user_name", {
-        id: "user_name",
+        id: "userName",
         enableSorting: true,
         header: () => <Typography variant="subtitle2">By</Typography>,
         cell: ({ getValue }) => (
@@ -166,7 +166,7 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
         ),
       }),
       columnHelper.accessor("address_name", {
-        id: "address_name",
+        id: "addressName",
         enableSorting: true,
         header: () => <Typography variant="subtitle2">Address</Typography>,
         cell: ({ getValue }) => (
@@ -197,7 +197,7 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
         ),
       }),
       columnHelper.accessor("status_text", {
-        id: "status_text",
+        id: "statusText",
         enableSorting: true,
         header: () => <Typography variant="subtitle2">Status</Typography>,
         cell: ({ getValue, row }) => (

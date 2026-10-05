@@ -220,7 +220,8 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
   const handleSubmit = useCallback(async () => {
     if (!billingInfo || !userId || !companyId) return;
 
-    const payload = { ...billingInfo, user_id: userId, company_id: companyId };
+    const { account_id: _accountId, ...billingFields } = billingInfo;
+    const payload = { ...billingFields, user_id: userId, company_id: companyId };
 
     try {
       const res = hasBillingInfo

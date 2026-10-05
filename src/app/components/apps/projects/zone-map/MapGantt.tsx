@@ -1630,9 +1630,11 @@ export default function MapGantt({
         sx={{
           "& .MuiDrawer-paper": {
             height: "95vh",
-            width: { xs: "100%" },
+            width: "100%",
+            maxWidth: "100vw",
             display: "flex",
             flexDirection: "column",
+            overflow: "hidden",
             backgroundColor: "#fff",
           },
         }}

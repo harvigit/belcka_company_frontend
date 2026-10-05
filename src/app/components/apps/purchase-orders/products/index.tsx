@@ -333,9 +333,7 @@ const PurchaseProductList: React.FC<Props> = ({
             (item) =>
               currentSelected.has(item.id) || Number(item.total_qty) > 0,
           );
-          const fetchedIds = new Set(
-            fetchedItems.map((item: any) => item.id),
-          );
+          const fetchedIds = new Set(fetchedItems.map((item: any) => item.id));
           const pinnedNotInFetch = pinnedItems.filter(
             (item) => !fetchedIds.has(item.id),
           );
@@ -350,10 +348,7 @@ const PurchaseProductList: React.FC<Props> = ({
         });
         setLatestFetchedIds(new Set(fetchedItems.map((item: any) => item.id)));
         const autoSelectedIds = fetchedItems
-          .filter(
-            (p: any) =>
-              Number(p.total_qty) > 0 && !deselected.has(p.id),
-          )
+          .filter((p: any) => Number(p.total_qty) > 0 && !deselected.has(p.id))
           .map((p: any) => p.id);
         if (autoSelectedIds.length > 0) {
           setSelectedRowIds((prev) => {
@@ -460,10 +455,8 @@ const PurchaseProductList: React.FC<Props> = ({
       if (aSearched && !bSearched) return -1;
       if (!aSearched && bSearched) return 1;
 
-      const aPinned =
-        selectedRowIds.has(a.id) || Number(a.total_qty) > 0;
-      const bPinned =
-        selectedRowIds.has(b.id) || Number(b.total_qty) > 0;
+      const aPinned = selectedRowIds.has(a.id) || Number(a.total_qty) > 0;
+      const bPinned = selectedRowIds.has(b.id) || Number(b.total_qty) > 0;
       if (aPinned && !bPinned) return -1;
       if (!aPinned && bPinned) return 1;
 
@@ -914,9 +907,25 @@ const PurchaseProductList: React.FC<Props> = ({
 
         return (
           <Stack direction="row" alignItems="center" spacing={4} sx={{ ml: 1 }}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.order_users ? item.order_users : "-"}
-            </Typography>
+            <Tooltip title={item.order_users ?? ""}>
+              <Typography
+                textTransform="capitalize"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.25,
+                  maxWidth: 350,
+                  width: 350,
+                  wordBreak: "break-word",
+                }}
+              >
+                {item.order_users ? item.order_users : "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },

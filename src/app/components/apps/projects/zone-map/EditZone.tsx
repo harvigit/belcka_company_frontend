@@ -21,7 +21,6 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Grid } from "@mui/system";
 import {
   Circle as GCircle,
   GoogleMap,
@@ -322,7 +321,8 @@ function boundsFromCircle(
   const radius = Math.max(Number(radiusMeters) || 0, 1);
   const latDelta = radius / 111320;
   const lngScale = Math.cos((center.lat * Math.PI) / 180);
-  const lngDelta = radius / (111320 * (Math.abs(lngScale) < 0.01 ? 0.01 : lngScale));
+  const lngDelta =
+    radius / (111320 * (Math.abs(lngScale) < 0.01 ? 0.01 : lngScale));
   const bounds = new google.maps.LatLngBounds();
   bounds.extend({ lat: center.lat + latDelta, lng: center.lng + lngDelta });
   bounds.extend({ lat: center.lat - latDelta, lng: center.lng - lngDelta });
@@ -720,10 +720,12 @@ const EditZone = ({
   return (
     <Box
       sx={{
-        minHeight: "100vh",
+        height: "100%",
+        minHeight: 0,
         display: "flex",
         flexDirection: "column",
         bgcolor: "#f5f5f5",
+        overflow: "hidden",
       }}
     >
       <Box
@@ -734,6 +736,7 @@ const EditZone = ({
           py: 2,
           bgcolor: "white",
           borderBottom: "1px solid #e0e0e0",
+          flexShrink: 0,
         }}
       >
         <IconButton onClick={onCancel}>
@@ -744,18 +747,46 @@ const EditZone = ({
         </Typography>
       </Box>
 
-      <Box sx={{ p: { xs: 1.5, sm: 3 }, flex: 1, overflowY: "auto" }}>
-        <Grid container spacing={3} sx={{ height: "100%" }}>
+      <Box
+        sx={{
+          p: { xs: 1, sm: 1.5, md: 2 },
+          flex: 1,
+          minHeight: 0,
+          overflow: "hidden",
+          display: "flex",
+          containerType: "inline-size",
+        }}
+      >
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            minHeight: 0,
+            display: "grid",
+            gap: { xs: 1.5, sm: 2 },
+            alignItems: "stretch",
+            gridTemplateColumns:
+              activeTab === 0 ? "minmax(220px, 34%) minmax(0, 1fr)" : "minmax(0, 1fr)",
+            "@container (max-width: 860px)":
+              activeTab === 0
+                ? {
+                    gridTemplateColumns: "minmax(0, 1fr)",
+                    gridTemplateRows: "minmax(180px, 34%) minmax(0, 1fr)",
+                  }
+                : {},
+          }}
+        >
           {activeTab == 0 && (
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Box sx={{ minWidth: 0, minHeight: 0, overflow: "hidden" }}>
               <Card
                 sx={{
                   p: 0,
                   height: "100%",
+                  minHeight: 0,
                   display: "flex",
                   flexDirection: "column",
-                  minHeight: 400,
                   boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                  overflow: "hidden",
                 }}
               >
                 <Tabs
@@ -856,27 +887,50 @@ const EditZone = ({
                     })}
                 </List>
               </Card>
-            </Grid>
+            </Box>
           )}
-          <Grid size={{ xs:12, md:activeTab == 1 ? 12 : 8 }}>
+          <Box
+            sx={{
+              minWidth: 0,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              gap: 1.5,
+            }}
+          >
             <Card
               sx={{
-                p: { xs: 1.5, sm: 2.5 },
-                mb: 3,
+                p: { xs: 1.25, sm: 2 },
                 boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                flex: 1,
+                minHeight: 0,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
               }}
             >
               <Box
                 sx={{
                   display: "flex",
-                  gap: 2,
+                  width: "100%",
+                  gap: { xs: 1.5, sm: 2 },
                   mb: 2,
-                  alignItems: "flex-start",
+                  alignItems: { xs: "stretch", sm: "flex-end" },
+                  flexDirection: { xs: "column", sm: "row" },
                   flexWrap: "wrap",
                   textAlign: "start",
+                  flexShrink: 0,
                 }}
               >
-                <Box sx={{ flex: 1, minWidth: 200, textAlign: "start" }}>
+                <Box
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    width: "100%",
+                    textAlign: "start",
+                  }}
+                >
                   <Typography
                     variant="caption"
                     color="text.secondary"
@@ -905,7 +959,7 @@ const EditZone = ({
                   onClick={handleSave}
                   disabled={isSaving}
                   sx={{
-                    mt: 2.5,
+                    mt: { xs: 0, sm: 0 },
                     px: 4,
                     borderRadius: 1.5,
                     fontWeight: 600,
@@ -916,7 +970,8 @@ const EditZone = ({
                 </Button>
               </Box>
 
-              <Box sx={{ position: "relative", mb: 2 }}>
+              <Box sx={{ position: "relative", mb: 0, flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+                <Box sx={{ flexShrink: 0, width: "100%" }}>
                 {activeTab === 1 && (
                   <Box sx={{ mb: 2 }}>
                     <Typography
@@ -1050,9 +1105,12 @@ const EditZone = ({
                   </Box>
                 )}
 
+                </Box>
+
                 <Box
                   sx={{
-                    height: activeTab === 0 ? "45vh" : { xs: 320, sm: 400, md: 480 },
+                    flex: "1 1 auto",
+                    minHeight: { xs: 220, sm: 280 },
                     position: "relative",
                     borderRadius: 1.5,
                     overflow: "hidden",
@@ -1203,6 +1261,7 @@ const EditZone = ({
             </Card>
 
             {activeTab === 0 && (
+              <Box sx={{ flexShrink: 0, width: "100%" }}>
               <Card sx={{ p: 2, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
                 <Typography
                   variant="caption"
@@ -1260,9 +1319,10 @@ const EditZone = ({
                   />
                 </Box>
               </Card>
+              </Box>
             )}
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Box>
     </Box>
   );
