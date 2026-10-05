@@ -33,7 +33,6 @@ import { IconTicket } from "@tabler/icons-react";
 import { IconSettings } from "@tabler/icons-react";
 import { IconBox } from "@tabler/icons-react";
 import { IconPoint } from "@tabler/icons-react";
-import { IconChartBar } from "@tabler/icons-react";
 
 const MenuItems: NavGroup[] = [
   {
@@ -173,13 +172,6 @@ const MenuItems: NavGroup[] = [
     icon: IconArrowsShuffle,
     href: "/apps/conflicts/index",
   },
-    {
-        id: uniqueId(),
-        title: "API Timing",
-        slug: "api_timing",
-        icon: IconChartBar,
-        href: "/apps/api-timing",
-    },
   // {
   //   id: uniqueId(),
   //   title: "Clients",

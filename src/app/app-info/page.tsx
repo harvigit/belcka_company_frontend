@@ -54,7 +54,7 @@ export default function AppInfo() {
                             <b>Version:</b> 1.0.0
                         </Typography>
                         <Typography variant="body1" mt={3}>
-                            <b>Developer:</b> Belcka Technologies Pvt. Ltd.
+                            <b>Developer:</b> DCK Construction Ltd.
                         </Typography>
                     </CardContent>
                     </Paper>

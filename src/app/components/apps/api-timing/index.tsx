@@ -17,6 +17,7 @@ import {
   Paper,
   Stack,
   Switch,
+  Tab,
   Table,
   TableBody,
   TableCell,
@@ -24,6 +25,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tabs,
   Tooltip,
   Typography,
   useTheme,
@@ -32,6 +34,17 @@ import { IconChevronDown, IconChevronRight, IconRefresh, IconTrash } from "@tabl
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+
+type DateRange = { from: Date | null; to: Date | null };
+
+// The selected local days, sent to the API as exact instants (start of the first day, end of the last day).
+const toRangeParams = (range: DateRange) => {
+  const params = new URLSearchParams();
+  if (range.from) params.set("from", dayjs(range.from).startOf("day").toISOString());
+  if (range.to) params.set("to", dayjs(range.to).endOf("day").toISOString());
+  return params;
+};
 
 type DbQuery = { model: string; operation: string; caller: string; count: number; ms: number };
 type TimingRequest = {
@@ -39,6 +52,7 @@ type TimingRequest = {
   timestamp: string;
   method: string;
   endpoint: string;
+  route: string;
   query: string;
   status: number | null;
   totalMs: number;
@@ -311,7 +325,15 @@ const TimingRow = ({ row, maxTotal, colors }: { row: Row; maxTotal: number; colo
   );
 };
 
-const ApiTimingLogs = () => {
+const DetailsTab = ({
+  endpoint,
+  setEndpoint,
+  range,
+}: {
+  endpoint: string;
+  setEndpoint: (value: string) => void;
+  range: DateRange;
+}) => {
   const theme = useTheme();
   const colors = SEGMENT_COLORS[theme.palette.mode === "dark" ? "dark" : "light"];
 
@@ -320,7 +342,6 @@ const ApiTimingLogs = () => {
   const [logFile, setLogFile] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [endpoint, setEndpoint] = useState("all");
   const [limit, setLimit] = useState(200);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -328,7 +349,9 @@ const ApiTimingLogs = () => {
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(`api-timing/logs?limit=${limit}`);
+      const params = toRangeParams(range);
+      params.set("limit", String(limit));
+      const res = await api.get(`api-timing/logs?${params.toString()}`);
       setRequests(res.data?.info?.requests ?? []);
       setEndpoints(res.data?.info?.endpoints ?? []);
       setLogFile(res.data?.info?.file ?? "");
@@ -338,7 +361,7 @@ const ApiTimingLogs = () => {
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [limit, range]);
 
   useEffect(() => {
     fetchLogs();
@@ -362,7 +385,7 @@ const ApiTimingLogs = () => {
   };
 
   const rows = useMemo(
-    () => requests.filter((request) => endpoint === "all" || request.endpoint === endpoint).map(toRow),
+    () => requests.filter((request) => endpoint === "all" || (request.route ?? request.endpoint) === endpoint).map(toRow),
     [requests, endpoint],
   );
 
@@ -377,14 +400,11 @@ const ApiTimingLogs = () => {
   const share = (value: number | null) => (avgTotal && value != null ? `${Math.round((value / avgTotal) * 100)}% of total` : undefined);
 
   return (
-    <Box p={3}>
+    <Box>
       <Stack gap={2} mb={3}>
-        <Box>
-          <Typography variant="h5">API timing</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Where each request spends its time: upload, DB queries and server code. Source: {logFile || "-"}
-          </Typography>
-        </Box>
+        <Typography variant="body2" color="text.secondary">
+          Where each request spends its time: upload, DB queries and server code. Source: {logFile || "-"}
+        </Typography>
         <Stack direction="row" gap={1.5} alignItems="center" flexWrap="wrap">
           <TextField select size="small" label="Endpoint" value={endpoint} onChange={(e) => setEndpoint(e.target.value)} sx={{ minWidth: 260 }}>
             <MenuItem value="all">All endpoints</MenuItem>
@@ -495,6 +515,190 @@ const ApiTimingLogs = () => {
           </Button>
         </DialogActions>
       </Dialog>
+    </Box>
+  );
+};
+
+type SummaryRow = {
+  key: string;
+  method: string;
+  route: string;
+  calls: number;
+  failures: number;
+  failureRate: number;
+  avgMs: number | null;
+  p50Ms: number | null;
+  p95Ms: number | null;
+  maxMs: number | null;
+  avgUploadMs: number | null;
+  avgServerMs: number | null;
+  avgDbMs: number | null;
+  avgQueries: number | null;
+  lastAt: string;
+};
+
+const SummaryTab = ({ range, onOpenRoute }: { range: DateRange; onOpenRoute: (route: string) => void }) => {
+  const [rows, setRows] = useState<SummaryRow[]>([]);
+  const [totals, setTotals] = useState({ calls: 0, failures: 0 });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSummary = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`api-timing/summary?${toRangeParams(range).toString()}`);
+      setRows(res.data?.info?.rows ?? []);
+      setTotals({ calls: res.data?.info?.totalCalls ?? 0, failures: res.data?.info?.totalFailures ?? 0 });
+      setError(null);
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? "Failed to load timing summary.");
+    } finally {
+      setLoading(false);
+    }
+  }, [range]);
+
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
+
+  const slowest = rows[0];
+
+  return (
+    <Box>
+      <Stack direction="row" gap={1.5} alignItems="center" flexWrap="wrap" mb={3}>
+        <Button variant="outlined" startIcon={<IconRefresh size={18} />} onClick={fetchSummary} disabled={loading}>
+          Refresh
+        </Button>
+      </Stack>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Stack direction="row" gap={2} flexWrap="wrap" mb={3}>
+        <StatTile label="APIs" value={String(rows.length)} />
+        <StatTile label="Calls" value={String(totals.calls)} />
+        <StatTile
+          label="Failures"
+          value={String(totals.failures)}
+          hint={totals.calls ? `${Math.round((totals.failures / totals.calls) * 1000) / 10}% of calls` : undefined}
+        />
+        <StatTile label="Slowest avg" value={formatMs(slowest?.avgMs)} hint={slowest ? shortEndpoint(slowest.route) : undefined} />
+      </Stack>
+
+      <TableContainer component={Paper} variant="outlined">
+        <Table size="small" sx={{ "& th, & td": { px: 1.5 }, "& th": { whiteSpace: "nowrap" } }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>API URL</TableCell>
+              <TableCell align="right">Calls</TableCell>
+              <TableCell align="right">Failure</TableCell>
+              <TableCell align="right">Average loading time</TableCell>
+              <TableCell align="right">P95</TableCell>
+              <TableCell align="right">Max</TableCell>
+              <TableCell align="right">Avg upload</TableCell>
+              <TableCell align="right">Avg server</TableCell>
+              <TableCell align="right">Avg DB (sum)</TableCell>
+              <TableCell>Last call</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
+                  <Typography color="text.secondary">{loading ? "Loading…" : "No requests in this period."}</Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((row) => (
+                <TableRow key={row.key} hover sx={{ cursor: "pointer" }} onClick={() => onOpenRoute(row.route)}>
+                  <TableCell>
+                    <Tooltip title="Show requests in Details">
+                      <Chip size="small" variant="outlined" label={`${row.method} ${shortEndpoint(row.route)}`} />
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell align="right">{row.calls}</TableCell>
+                  <TableCell align="right">
+                    <Typography variant="body2" color={row.failures > 0 ? "error.main" : "text.secondary"}>
+                      {row.failures}
+                      {row.failures > 0 ? ` (${row.failureRate}%)` : ""}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>{formatMs(row.avgMs)}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>{formatMs(row.p95Ms)}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>{formatMs(row.maxMs)}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>{formatMs(row.avgUploadMs)}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>{formatMs(row.avgServerMs)}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                    {row.avgDbMs != null ? `${formatMs(row.avgDbMs)} / ${row.avgQueries}q` : "-"}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>{dayjs(row.lastAt).format("DD/MM HH:mm")}</TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      <Typography variant="caption" color="text.secondary" display="block" mt={1}>
+        Failure = HTTP status 400 or higher, or the API returned IsSuccess false. Times include the client upload.
+      </Typography>
+    </Box>
+  );
+};
+
+const ApiTimingLogs = () => {
+  const [tab, setTab] = useState<"summary" | "details">("summary");
+  const [endpoint, setEndpoint] = useState("all");
+  const [range, setRange] = useState<DateRange>(() => ({
+    from: dayjs().subtract(6, "day").startOf("day").toDate(),
+    to: dayjs().endOf("day").toDate(),
+  }));
+  const [payrollCycle, setPayrollCycle] = useState<string>("");
+
+  // Same picker and payroll-cycle presets as the Bookkeeper screen.
+  useEffect(() => {
+    (async () => {
+      try {
+        const response = await api.get("/setting/get-payroll-settings");
+        setPayrollCycle(response.data?.IsSuccess ? response.data.data?.payroll_cycle || "" : "");
+      } catch {
+        setPayrollCycle("");
+      }
+    })();
+  }, []);
+
+  const handleRangeChange = (value: DateRange) => {
+    if (value.from && value.to) setRange(value);
+  };
+
+  return (
+    <Box p={3}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2} flexWrap="wrap" mb={1}>
+        <Typography variant="h5">API timing</Typography>
+        <DateRangePickerBox
+          from={range.from}
+          to={range.to}
+          onChange={handleRangeChange}
+          payrollCycle={payrollCycle}
+        />
+      </Stack>
+      <Tabs value={tab} onChange={(_, value) => setTab(value)} sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}>
+        <Tab value="summary" label="Summary" />
+        <Tab value="details" label="Details" />
+      </Tabs>
+      {tab === "summary" ? (
+        <SummaryTab
+          range={range}
+          onOpenRoute={(route) => {
+            setEndpoint(route);
+            setTab("details");
+          }}
+        />
+      ) : (
+        <DetailsTab endpoint={endpoint} setEndpoint={setEndpoint} range={range} />
+      )}
     </Box>
   );
 };
