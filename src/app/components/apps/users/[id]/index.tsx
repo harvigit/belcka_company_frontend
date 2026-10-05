@@ -364,6 +364,7 @@ const TablePagination = () => {
     if (!canModifyUserDetails) return;
     const payload = {
       user_id: userId,
+      company_id: user.company_id,
       ...formData,
       date_of_birth: formData.date_of_birth
         ? dayjs(formData.date_of_birth, "YYYY-MM-DD").format("DD/MM/YYYY")
