@@ -21,6 +21,7 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
+import { flexRender } from "@/utils/flexRender";
 import { Grid, Stack } from "@mui/system";
 import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";

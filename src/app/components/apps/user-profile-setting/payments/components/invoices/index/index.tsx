@@ -32,10 +32,9 @@ import {
     Badge,
 } from '@mui/material';
 import {
-    flexRender,
     getCoreRowModel,
-    createColumnHelper,
-} from '@tanstack/react-table';
+    createColumnHelper} from '@tanstack/react-table';
+import {flexRender} from '@/utils/flexRender';
 import { useServerTable } from "@/hooks/useServerTable";
 import {
     IconChevronLeft,

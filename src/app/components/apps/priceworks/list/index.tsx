@@ -45,9 +45,8 @@ import {User} from 'next-auth';
 import {format} from 'date-fns';
 import {
     createColumnHelper,
-    flexRender,
-    SortingState,
-} from '@tanstack/react-table';
+    SortingState} from '@tanstack/react-table';
+import {flexRender} from '@/utils/flexRender';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';

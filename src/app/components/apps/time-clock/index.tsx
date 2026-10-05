@@ -52,9 +52,9 @@ import {
 } from '@tabler/icons-react';
 import {
     createColumnHelper,
-    flexRender,
     VisibilityState
 } from '@tanstack/react-table';
+import {flexRender} from '@/utils/flexRender';
 import {
     addDays,
     endOfMonth,
@@ -457,7 +457,6 @@ const TimeClock = ({queryParams}: Props) => {
     const [data, setData] = useState<Index[]>([]);
     const [currency, setCurrency] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState<string>('');
-    const [hoveredRow, setHoveredRow] = useState<number | null>(null);
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     // Keep timesheet IDs for selected users across pages (export/lock use this, not only current page data).
     const [selectedTimesheetIdsByUser, setSelectedTimesheetIdsByUser] = useState<Map<number, string>>(new Map());
@@ -1640,8 +1639,6 @@ const TimeClock = ({queryParams}: Props) => {
                     <Stack
                         direction="row"
                         alignItems="center"
-                        onMouseEnter={() => setHoveredRow(item.user_id)}
-                        onMouseLeave={() => setHoveredRow(null)}
                     >
                         <CustomCheckbox
                             checked={isChecked}
@@ -3640,10 +3637,6 @@ const TimeClock = ({queryParams}: Props) => {
                                     <TableRow
                                         hover
                                         key={row.id}
-                                        onMouseEnter={() => {
-                                            setHoveredRow(Number(row.original.user_id));
-                                        }}
-                                        onMouseLeave={() => setHoveredRow(null)}
                                         onClick={() => handleRowClick(row.original)}
                                         sx={{
                                             cursor: 'pointer',

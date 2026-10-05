@@ -31,14 +31,13 @@ import Image from "next/image";
 import { AxiosResponse } from "axios";
 import {
   createColumnHelper,
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   SortingState,
-  useReactTable,
-} from "@tanstack/react-table";
+  useReactTable} from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 
 interface SupplierFormData {

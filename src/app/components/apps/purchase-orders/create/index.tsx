@@ -19,11 +19,10 @@ import {
   Typography,
 } from "@mui/material";
 import {
-  flexRender,
   getCoreRowModel,
   useReactTable,
-  createColumnHelper,
-} from "@tanstack/react-table";
+  createColumnHelper} from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { IconX } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";

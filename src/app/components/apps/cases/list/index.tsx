@@ -63,7 +63,7 @@ import api from "@/utils/axios";
 import { tableFilterOptions } from "@/utils/uniqueFilterOptions";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
-import { flexRender } from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import { useServerTable } from "@/hooks/useServerTable";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";

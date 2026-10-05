@@ -34,9 +34,8 @@ import {
 } from "@mui/material";
 import {
   createColumnHelper,
-  flexRender,
-  SortingState,
-} from "@tanstack/react-table";
+  SortingState} from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import {
   IconDotsVertical,
   IconDownload,

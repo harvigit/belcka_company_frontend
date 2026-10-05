@@ -20,7 +20,7 @@ import {
     Chip,
     CircularProgress
 } from '@mui/material';
-import { flexRender } from '@tanstack/react-table';
+import {flexRender} from '@/utils/flexRender';
 import {
     IconExclamationMark,
     IconExclamationCircle,

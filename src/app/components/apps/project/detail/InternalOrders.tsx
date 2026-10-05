@@ -28,9 +28,8 @@ import {
 import { endOfWeek, startOfWeek } from "date-fns";
 import {
   createColumnHelper,
-  flexRender,
-  SortingState,
-} from "@tanstack/react-table";
+  SortingState} from "@tanstack/react-table";
+import {flexRender} from "@/utils/flexRender";
 import {
   IconEye,
   IconFilter,
