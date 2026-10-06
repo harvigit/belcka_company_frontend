@@ -106,6 +106,8 @@ const PurchaseProductList: React.FC<Props> = ({
   const selectedRowIdsRef = useRef<Set<number>>(selectedRowIds);
   const selectedProductSnapshotsRef = useRef<Map<number, any>>(new Map());
   const fetchSeqRef = useRef(0);
+  const listFilterKeyRef = useRef("");
+  const selectionResetRef = useRef(false);
   useEffect(() => {
     selectedRowIdsRef.current = selectedRowIds;
   }, [selectedRowIds]);
@@ -346,17 +348,40 @@ const PurchaseProductList: React.FC<Props> = ({
           );
           return [...pinnedItems, ...newItems];
         });
-        setLatestFetchedIds(new Set(fetchedItems.map((item: any) => item.id)));
+        const fetchedIdSet = new Set<number>(
+          fetchedItems.map((item: any) => item.id),
+        );
+        setLatestFetchedIds(fetchedIdSet);
+        const listFilterKey = [
+          filters.supplier || "",
+          filters.project || "",
+          filters.address || "",
+          filters.lowStock ? "1" : "0",
+          String(searchTerm).trim(),
+        ].join("|");
+        const filterChanged = listFilterKey !== listFilterKeyRef.current;
+        const resetSelection = selectionResetRef.current;
+        listFilterKeyRef.current = listFilterKey;
+        selectionResetRef.current = false;
         const autoSelectedIds = fetchedItems
           .filter((p: any) => Number(p.total_qty) > 0 && !deselected.has(p.id))
           .map((p: any) => p.id);
-        if (autoSelectedIds.length > 0) {
-          setSelectedRowIds((prev) => {
-            const next = new Set(prev);
-            autoSelectedIds.forEach((id: number) => next.add(id));
-            return next;
-          });
-        }
+        const previousSelected = resetSelection
+          ? new Set<number>()
+          : selectedRowIdsRef.current;
+        const nextSelected = new Set<number>();
+        previousSelected.forEach((id) => {
+          if (!listFilterActive || !filterChanged || fetchedIdSet.has(id)) {
+            nextSelected.add(id);
+          }
+        });
+        autoSelectedIds.forEach((id: number) => nextSelected.add(id));
+        selectedProductSnapshotsRef.current.forEach((_, id) => {
+          if (!nextSelected.has(id)) {
+            selectedProductSnapshotsRef.current.delete(id);
+          }
+        });
+        setSelectedRowIds(nextSelected);
         const pagMeta = (response.data as any).data || response.data.info;
         if (pagMeta && pagMeta.totalProducts !== undefined) {
           setTotalRows(pagMeta.totalProducts);
@@ -380,10 +405,14 @@ const PurchaseProductList: React.FC<Props> = ({
 
   useEffect(() => {
     if (open == true) {
+      selectionResetRef.current = true;
+      listFilterKeyRef.current = "";
       setData([]);
+      setTotalRows(0);
       setSelectedRowIds(new Set());
       selectedProductSnapshotsRef.current.clear();
       setManuallyDeselected(new Set());
+      setLatestFetchedIds(new Set());
       setDrawerOpen(false);
       setEditDrawerOpen(false);
       fetchOrders();
@@ -527,7 +556,7 @@ const PurchaseProductList: React.FC<Props> = ({
     hasMultipleSuppliers,
   } = useSelectedProducts(data, selectedRowIds);
 
-  const selectedRowCount = selectedRowIds.size;
+  const selectedRowCount = selectedProductsWithQty.length;
 
   const selectedTotalQty = selectedProductsWithQty.reduce(
     (sum, item) => sum + (Number(item?.qty) || 0),
@@ -1159,6 +1188,7 @@ const PurchaseProductList: React.FC<Props> = ({
     onColumnVisibilityChange,
     getRowId: (row: any) => row.id.toString(),
   });
+  const listedRowCount = totalRows || finalFilteredData.length;
   // Reset to first page when search term changes
   useEffect(() => {
     table.setPageIndex(0);
@@ -1923,9 +1953,8 @@ const PurchaseProductList: React.FC<Props> = ({
         >
           <Box display="flex" alignItems="center" gap={1}>
             <Typography color="textSecondary" className="f-14">
-              Selected Items: {selectedRowCount} from{" "}
-              {table.getPrePaginationRowModel().rows.length} Rows | Total Qty:{" "}
-              {selectedTotalQty}
+              Selected Items: {selectedRowCount} from {listedRowCount} Rows |
+              Total Qty: {selectedTotalQty}
             </Typography>
           </Box>
           <Stack
