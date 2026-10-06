@@ -117,30 +117,27 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
     }
     
     export default function Conflicts({ onClose }: ConflictsProps) {
-        const today = new Date();
-        const defaultStart = new Date(today);
-        defaultStart.setDate(today.getDate() - today.getDay() + 1);
-        const defaultEnd = new Date(today);
-        defaultEnd.setDate(today.getDate() - today.getDay() + 7);
-    
         const [isFetching, setIsFetching] = useState(false);
         const [data, setData] = useState<ConflictsApiResponse | null>(null);
-        const [startDate, setStartDate] = useState<Date>(defaultStart);
-        const [endDate, setEndDate] = useState<Date>(defaultEnd);
+        const [startDate, setStartDate] = useState<Date | null>(null);
+        const [endDate, setEndDate] = useState<Date | null>(null);
         const [searchTerm, setSearchTerm] = useState('');
         const [activeTab, setActiveTab] = useState(0);
     
-        const startStr = format(startDate, 'yyyy-MM-dd');
-        const endStr = format(endDate, 'yyyy-MM-dd');
+        const startStr = startDate ? format(startDate, 'yyyy-MM-dd') : '';
+        const endStr = endDate ? format(endDate, 'yyyy-MM-dd') : '';
     
-        const fetchConflicts = useCallback(async (from?: Date, to?: Date) => {
+        const fetchConflicts = useCallback(async (from?: Date | null, to?: Date | null) => {
             setIsFetching(true);
             try {
-                const s = from ?? startDate;
-                const e = to ?? endDate;
-                const res = await api.get('/company/conflicts', {
-                    params: { start_date: format(s, 'dd/MM/yyyy'), end_date: format(e, 'dd/MM/yyyy') },
-                });
+                const s = from === undefined ? startDate : from;
+                const e = to === undefined ? endDate : to;
+                const params: Record<string, string> = {};
+                if (s && e) {
+                    params.start_date = format(s, 'dd/MM/yyyy');
+                    params.end_date = format(e, 'dd/MM/yyyy');
+                }
+                const res = await api.get('/company/conflicts', { params });
                 if (res.data.IsSuccess) setData(res.data.info);
             } catch (err) {
                 console.error('Failed to fetch conflicts', err);
