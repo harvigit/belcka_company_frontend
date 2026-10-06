@@ -234,10 +234,11 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       !nameValidate.test(last_name.trim())
     ) {
       return toast.error(
-        "Must contain alphabets only"
+        "Must contain alphabets only!"
       );
     }
-    if (!nationalPhone) return toast.error("Please enter your phone number.");
+    if (!nationalPhone) return toast.error("Please enter your phone number!");
+    if (!date_of_birth) return toast.error("Please enter your date of birth!");
 
     if (date_of_birth) {
       const [year, month, day] = date_of_birth.split("-").map(Number);

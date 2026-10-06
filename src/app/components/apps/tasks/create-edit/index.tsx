@@ -105,6 +105,9 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
   const getTradeValidationError = (value: TaskFormData["trade_id"]) =>
     isRequiredEmpty(value) ? "Trade is required" : "";
 
+  const isPriceworkShift = (value: TaskFormData["shift_type"]) =>
+    value === "pricework" || value === "both";
+
   const getShiftValidationError = (value: TaskFormData["shift_type"]) => {
     if (!value) return "Shift is required";
     return SHIFT_TYPE_OPTIONS.some((option) => option.id === value)
@@ -124,11 +127,15 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
         return isExistingId || isFreeTypedName ? "" : "Category not exists!";
     };
 
-  const getUnitValidationError = (value: TaskFormData["unit_id"]) => {
-    // if (isRequiredEmpty(value)) return "Unit of measure is required";
-    // return units.some((unit) => String(unit.id) === String(value))
-    //   ? ""
-    //   : "Unit of measure not exists!";
+  const getUnitValidationError = (
+    value: TaskFormData["unit_id"],
+    shiftType: TaskFormData["shift_type"],
+  ) => {
+    if (!isPriceworkShift(shiftType)) return "";
+    if (isRequiredEmpty(value)) return "Unit of measure is required";
+    return units.some((unit) => String(unit.id) === String(value))
+      ? ""
+      : "Unit of measure not exists!";
   };
 
   const fetchTask = async () => {
@@ -274,12 +281,15 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
       formData.category_id,
     );
     const shiftValidationError = getShiftValidationError(formData.shift_type);
-    const unitValidationError = getUnitValidationError(formData.unit_id);
+    const unitValidationError = getUnitValidationError(
+      formData.unit_id,
+      formData.shift_type,
+    );
 
     setTradeError(tradeValidationError);
     setCategoryError(categoryValidationError);
     setShiftError(shiftValidationError);
-    // setUnitError(unitValidationError);
+    setUnitError(unitValidationError);
 
     const error =
       tradeValidationError ||
@@ -526,6 +536,9 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                       onChange={(_, value) => {
                         setShiftError("");
                         const shiftType = value?.id ?? null;
+                        if (!isPriceworkShift(shiftType)) {
+                          setUnitError("");
+                        }
                         setFormData((prev) => ({
                           ...prev,
                           shift_type: shiftType,
@@ -602,6 +615,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                   <Grid size={{ xs: 3 }}>
                     <Typography variant="body2" gutterBottom>
                       Unit of measure
+                      {isPriceworkShift(formData.shift_type) ? " *" : ""}
                     </Typography>
                     <Autocomplete
                       options={units}
@@ -621,7 +635,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
                         <TextField
                           {...params}
                           placeholder="Select Unit of measure"
-                          required
+                          required={isPriceworkShift(formData.shift_type)}
                           error={Boolean(unitError)}
                           helperText={unitError}
                         />
