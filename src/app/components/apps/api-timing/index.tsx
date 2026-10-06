@@ -3,8 +3,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
   Collapse,
   Dialog,
@@ -390,6 +392,12 @@ const DetailsTab = ({
     [requests, endpoint],
   );
 
+  // The selected endpoint stays an option while the list is (re)loading, e.g. when opened from Summary.
+  const endpointOptions = useMemo(
+    () => ["all", ...endpoints.filter((value) => value !== "all"), ...(endpoint !== "all" && !endpoints.includes(endpoint) ? [endpoint] : [])],
+    [endpoints, endpoint],
+  );
+
   const maxTotal = Math.max(...rows.map((row) => row.totalMs), 0);
   const avgTotal = average(rows.map((row) => row.totalMs));
   const avgUpload = average(rows.map((row) => row.upload));
@@ -407,15 +415,32 @@ const DetailsTab = ({
           Where each request spends its time: upload, DB queries and server code. Source: {logFile || "-"}
         </Typography>
         <Stack direction="row" gap={1.5} alignItems="center" flexWrap="wrap">
-          <TextField select size="small" label="Endpoint" value={endpoint} onChange={(e) => setEndpoint(e.target.value)} sx={{ minWidth: 260 }}>
-            <MenuItem value="all">All endpoints</MenuItem>
-            {endpoints.map((value) => (
-              <MenuItem key={value} value={value}>
-                {shortEndpoint(value)}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField select size="small" label="Last" value={limit} onChange={(e) => setLimit(Number(e.target.value))} sx={{ width: 100 }}>
+          <Autocomplete
+            size="small"
+            disableClearable
+            options={endpointOptions}
+            value={endpoint}
+            onChange={(_e, value) => setEndpoint(value ?? "all")}
+            getOptionLabel={(value) => (value === "all" ? "All endpoints" : shortEndpoint(value))}
+            noOptionsText="No matching endpoint"
+            ListboxProps={{ style: { maxHeight: 360 } }}
+            sx={{ width: 320 }}
+            renderInput={(params) => <TextField {...params} label="Endpoint" placeholder="Search endpoint" />}
+          />
+          <TextField
+            select
+            size="small"
+            label="Last"
+            value={limit}
+            onChange={(e) => setLimit(Number(e.target.value))}
+            sx={{ width: 100 }}
+            SelectProps={{
+              MenuProps: {
+                anchorOrigin: { vertical: "bottom", horizontal: "left" },
+                transformOrigin: { vertical: "top", horizontal: "left" },
+              },
+            }}
+          >
             {[50, 200, 500, 2000].map((value) => (
               <MenuItem key={value} value={value}>
                 {value}
@@ -543,12 +568,17 @@ const SummaryTab = ({ range, onOpenRoute }: { range: DateRange; onOpenRoute: (ro
   const [totals, setTotals] = useState({ calls: 0, failures: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const fetchSummary = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(`api-timing/summary?${toRangeParams(range).toString()}`);
-      setRows(res.data?.info?.rows ?? []);
+      const nextRows: SummaryRow[] = res.data?.info?.rows ?? [];
+      setRows(nextRows);
+      setSelected((prev) => prev.filter((key) => nextRows.some((row) => row.key === key)));
       setTotals({ calls: res.data?.info?.totalCalls ?? 0, failures: res.data?.info?.totalFailures ?? 0 });
       setError(null);
     } catch (err: any) {
@@ -563,12 +593,42 @@ const SummaryTab = ({ range, onOpenRoute }: { range: DateRange; onOpenRoute: (ro
   }, [fetchSummary]);
 
   const slowest = rows[0];
+  const allSelected = rows.length > 0 && selected.length === rows.length;
+
+  const toggleRow = (key: string) =>
+    setSelected((prev) => (prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]));
+
+  const toggleAll = () => setSelected(allSelected ? [] : rows.map((row) => row.key));
+
+  const handleClearSelected = async () => {
+    setClearing(true);
+    try {
+      const res = await api.post("api-timing/logs/clear", { keys: selected });
+      toast.success(res.data?.message ?? "Timing logs cleared.");
+      setConfirmClear(false);
+      setSelected([]);
+      fetchSummary();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Failed to clear timing logs.");
+    } finally {
+      setClearing(false);
+    }
+  };
 
   return (
     <Box>
       <Stack direction="row" gap={1.5} alignItems="center" flexWrap="wrap" mb={3}>
         <Button variant="outlined" startIcon={<IconRefresh size={18} />} onClick={fetchSummary} disabled={loading}>
           Refresh
+        </Button>
+        <Button
+          variant="outlined"
+          color="error"
+          startIcon={<IconTrash size={18} />}
+          onClick={() => setConfirmClear(true)}
+          disabled={selected.length === 0}
+        >
+          Clear selected{selected.length > 0 ? ` (${selected.length})` : ""}
         </Button>
       </Stack>
 
@@ -593,6 +653,16 @@ const SummaryTab = ({ range, onOpenRoute }: { range: DateRange; onOpenRoute: (ro
         <Table size="small" sx={{ "& th, & td": { px: 1.5 }, "& th": { whiteSpace: "nowrap" } }}>
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  size="small"
+                  checked={allSelected}
+                  indeterminate={selected.length > 0 && !allSelected}
+                  onChange={toggleAll}
+                  disabled={rows.length === 0}
+                  inputProps={{ "aria-label": "Select all APIs" }}
+                />
+              </TableCell>
               <TableCell>API URL</TableCell>
               <TableCell align="right">Calls</TableCell>
               <TableCell align="right">Failure</TableCell>
@@ -608,13 +678,27 @@ const SummaryTab = ({ range, onOpenRoute }: { range: DateRange; onOpenRoute: (ro
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
+                <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
                   <Typography color="text.secondary">{loading ? "Loading…" : "No requests in this period."}</Typography>
                 </TableCell>
               </TableRow>
             ) : (
               rows.map((row) => (
-                <TableRow key={row.key} hover sx={{ cursor: "pointer" }} onClick={() => onOpenRoute(row.route)}>
+                <TableRow
+                  key={row.key}
+                  hover
+                  selected={selected.includes(row.key)}
+                  sx={{ cursor: "pointer" }}
+                  onClick={() => onOpenRoute(row.route)}
+                >
+                  <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      size="small"
+                      checked={selected.includes(row.key)}
+                      onChange={() => toggleRow(row.key)}
+                      inputProps={{ "aria-label": `Select ${row.key}` }}
+                    />
+                  </TableCell>
                   <TableCell>
                     <Tooltip title="Show requests in Details">
                       <Chip size="small" variant="outlined" label={`${row.method} ${shortEndpoint(row.route)}`} />
@@ -645,6 +729,29 @@ const SummaryTab = ({ range, onOpenRoute }: { range: DateRange; onOpenRoute: (ro
       <Typography variant="caption" color="text.secondary" display="block" mt={1}>
         Failure = HTTP status 400 or higher, or the API returned IsSuccess false. Times include the client upload.
       </Typography>
+
+      <Dialog open={confirmClear} onClose={() => !clearing && setConfirmClear(false)}>
+        <DialogTitle>Clear logs for {selected.length} API{selected.length === 1 ? "" : "s"}?</DialogTitle>
+        <DialogContent>
+          <Typography mb={1.5}>
+            All logged requests of these APIs are removed from the log file, not only the selected period. It cannot be
+            undone.
+          </Typography>
+          <Stack direction="row" gap={0.75} flexWrap="wrap">
+            {selected.map((key) => (
+              <Chip key={key} size="small" variant="outlined" label={key} />
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmClear(false)} disabled={clearing}>
+            Cancel
+          </Button>
+          <Button color="error" variant="contained" onClick={handleClearSelected} disabled={clearing}>
+            Clear
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
