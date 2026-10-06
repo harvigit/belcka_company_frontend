@@ -351,6 +351,7 @@ const DetailsTab = ({
     try {
       const params = toRangeParams(range);
       params.set("limit", String(limit));
+      if (endpoint !== "all") params.set("endpoint", endpoint);
       const res = await api.get(`api-timing/logs?${params.toString()}`);
       setRequests(res.data?.info?.requests ?? []);
       setEndpoints(res.data?.info?.endpoints ?? []);
@@ -361,7 +362,7 @@ const DetailsTab = ({
     } finally {
       setLoading(false);
     }
-  }, [limit, range]);
+  }, [limit, range, endpoint]);
 
   useEffect(() => {
     fetchLogs();
