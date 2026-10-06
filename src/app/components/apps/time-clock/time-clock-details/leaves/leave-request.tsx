@@ -422,9 +422,10 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({open, startDate, endDate, on
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '504px',
-                        borderTopLeftRadius: 18,
-                        borderBottomLeftRadius: 18,
+                        width: {xs: '100%', sm: '504px'},
+                        maxWidth: '100%',
+                        borderTopLeftRadius: {xs: 0, sm: 18},
+                        borderBottomLeftRadius: {xs: 0, sm: 18},
                     },
                 }}
             >

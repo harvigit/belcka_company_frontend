@@ -195,13 +195,17 @@ export default function Checklogs({worklogId, onClose, onMutated}: ChecklogsPage
     }
 
     return (
-        <Box p={2}>
+        <Box
+            p={2}
+            sx={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}
+        >
             <Box
                 display={"flex"}
                 alignContent={"center"}
                 alignItems={"center"}
                 flexWrap={"wrap"}
                 mb={2}
+                flexShrink={0}
             >
                 <IconButton onClick={() => onClose()}>
                     <IconArrowLeft />
@@ -216,7 +220,7 @@ export default function Checklogs({worklogId, onClose, onMutated}: ChecklogsPage
                 alignItems="center"
                 justifyContent="space-between"
                 mb={2}
-                sx={{ flexWrap: "wrap" }}
+                sx={{ flexWrap: "wrap", flexShrink: 0 }}
             >
                 <TextField
                     placeholder="Search..."
@@ -334,6 +338,16 @@ export default function Checklogs({worklogId, onClose, onMutated}: ChecklogsPage
             )}
 
             {/* List of works */}
+            <Box
+                sx={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: "auto",
+                    overflowX: "hidden",
+                    pt: 1.5,
+                    pr: 0.5,
+                }}
+            >
             {filteredData.length > 0 ? (
                 filteredData.map((record, idx) => (
                     <Box
@@ -401,9 +415,9 @@ export default function Checklogs({worklogId, onClose, onMutated}: ChecklogsPage
                                 direction="row"
                                 alignItems="center"
                                 justifyContent="space-between"
-                                sx={{ width: "100%", mt: 1 }}
+                                sx={{ width: "100%", mt: 1, gap: 1 }}
                             >
-                                <Box sx={{ width:"100%"}}>
+                                <Box sx={{ flex: 1, minWidth: 0, wordBreak: "break-word" }}>
                                     <Typography
                                         fontWeight="bold"
                                         sx={{ fontSize: { xs: "1rem", sm: "1.125rem" } }}
@@ -418,7 +432,7 @@ export default function Checklogs({worklogId, onClose, onMutated}: ChecklogsPage
                                         {record.task_count || 0} Tasks
                                     </Typography>
                                 </Box>
-                                <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 1, width:"35%" }}>
+                                <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 1, flexShrink: 0 }}>
                                     <Box width={"100%"} alignContent={"center"}>
                                         {record?.checkout_time &&(
                                             <Box width={"100%"} alignContent={"center"}>
@@ -461,6 +475,7 @@ export default function Checklogs({worklogId, onClose, onMutated}: ChecklogsPage
                     </Typography>
                 </Box>
             )}
+            </Box>
 
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
                 <DialogTitle>Confirm Deletion</DialogTitle>

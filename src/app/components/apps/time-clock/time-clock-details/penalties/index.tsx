@@ -617,7 +617,7 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
     }
 
     return (
-        <Box p={2}>
+        <Box p={2} sx={{height: '100%', overflowY: 'auto', overflowX: 'hidden'}}>
             {/* Header */}
             <Box display="flex" alignItems="center" mb={3}>
                 <IconButton onClick={onClose}>

@@ -2396,9 +2396,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '504px',
-                        borderTopLeftRadius: 18,
-                        borderBottomLeftRadius: 18,
+                        width: {xs: '100%', sm: '504px'},
+                        maxWidth: '100%',
+                        borderTopLeftRadius: {xs: 0, sm: 18},
+                        borderBottomLeftRadius: {xs: 0, sm: 18},
                     },
                 }}
             >
@@ -2421,9 +2422,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '504px',
-                        borderTopLeftRadius: 18,
-                        borderBottomLeftRadius: 18,
+                        width: {xs: '100%', sm: '504px'},
+                        maxWidth: '100%',
+                        borderTopLeftRadius: {xs: 0, sm: 18},
+                        borderBottomLeftRadius: {xs: 0, sm: 18},
                     },
                 }}
             >
@@ -2447,9 +2449,13 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '500px',
-                        borderTopLeftRadius: 18,
-                        borderBottomLeftRadius: 18,
+                        width: {xs: '100%', sm: '500px'},
+                        maxWidth: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        borderTopLeftRadius: {xs: 0, sm: 18},
+                        borderBottomLeftRadius: {xs: 0, sm: 18},
                     },
                 }}
             >
@@ -2469,9 +2475,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '500px',
-                        borderTopLeftRadius: 18,
-                        borderBottomLeftRadius: 18,
+                        width: {xs: '100%', sm: '500px'},
+                        maxWidth: '100%',
+                        borderTopLeftRadius: {xs: 0, sm: 18},
+                        borderBottomLeftRadius: {xs: 0, sm: 18},
                     },
                 }}
             >
@@ -2491,9 +2498,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '500px',
-                        borderTopLeftRadius: 18,
-                        borderBottomLeftRadius: 18,
+                        width: {xs: '100%', sm: '500px'},
+                        maxWidth: '100%',
+                        borderTopLeftRadius: {xs: 0, sm: 18},
+                        borderBottomLeftRadius: {xs: 0, sm: 18},
                     },
                 }}
             >
@@ -2515,9 +2523,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '500px',
-                        borderTopLeftRadius: 18,
-                        borderBottomLeftRadius: 18,
+                        width: {xs: '100%', sm: '500px'},
+                        maxWidth: '100%',
+                        borderTopLeftRadius: {xs: 0, sm: 18},
+                        borderBottomLeftRadius: {xs: 0, sm: 18},
                     },
                 }}
             >
@@ -2537,9 +2546,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '504px',
-                        borderTopLeftRadius: 18,
-                        borderBottomLeftRadius: 18,
+                        width: {xs: '100%', sm: '504px'},
+                        maxWidth: '100%',
+                        borderTopLeftRadius: {xs: 0, sm: 18},
+                        borderBottomLeftRadius: {xs: 0, sm: 18},
                     },
                 }}
             >
@@ -2560,9 +2570,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '504px',
-                        borderTopLeftRadius: 18,
-                        borderBottomLeftRadius: 18,
+                        width: {xs: '100%', sm: '504px'},
+                        maxWidth: '100%',
+                        borderTopLeftRadius: {xs: 0, sm: 18},
+                        borderBottomLeftRadius: {xs: 0, sm: 18},
                     },
                 }}
             >
@@ -2584,9 +2595,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '504px',
-                        borderTopLeftRadius: 18,
-                        borderBottomLeftRadius: 18,
+                        width: {xs: '100%', sm: '504px'},
+                        maxWidth: '100%',
+                        borderTopLeftRadius: {xs: 0, sm: 18},
+                        borderBottomLeftRadius: {xs: 0, sm: 18},
                     },
                 }}
             >
@@ -2608,9 +2620,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '504px',
-                        borderTopLeftRadius: 18,
-                        borderBottomLeftRadius: 18,
+                        width: {xs: '100%', sm: '504px'},
+                        maxWidth: '100%',
+                        borderTopLeftRadius: {xs: 0, sm: 18},
+                        borderBottomLeftRadius: {xs: 0, sm: 18},
                     },
                 }}
             >
@@ -2632,9 +2645,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '504px',
-                        borderTopLeftRadius: 18,
-                        borderBottomLeftRadius: 18,
+                        width: {xs: '100%', sm: '504px'},
+                        maxWidth: '100%',
+                        borderTopLeftRadius: {xs: 0, sm: 18},
+                        borderBottomLeftRadius: {xs: 0, sm: 18},
                     },
                 }}
             >
