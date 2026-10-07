@@ -57,6 +57,7 @@ type TimingRequest = {
   route: string;
   query: string;
   status: number | null;
+  error: string | null;
   totalMs: number;
   uploadMs: number | null;
   serverMs: number | null;
@@ -76,6 +77,9 @@ const SEGMENT_COLORS = {
 type SegmentColors = typeof SEGMENT_COLORS.light;
 
 const AUTO_REFRESH_MS = 10000;
+
+// Handled outcomes, not failed APIs: 401 = not authenticated, 500 = validation error. Same rule as the server summary.
+const HANDLED_STATUSES = [401, 500];
 
 const formatMs = (ms: number | null | undefined) => {
   if (ms == null) return "-";
@@ -99,9 +103,14 @@ const toRow = (request: TimingRequest) => {
   // Parallel queries can add up to more than the wall-clock server time.
   const db = request.db ? Math.min(request.db.ms, server) : null;
   const code = db != null ? Math.max(0, server - db) : server;
-  const isError = (request.status != null && request.status >= 400) || request.service?.meta?.success === "false" || request.service?.meta?.success === false;
+  const success = request.service?.meta?.success;
+  const isError =
+    request.status != null
+      ? request.status >= 400 && !HANDLED_STATUSES.includes(request.status)
+      : success === "false" || success === false;
+  const isHandled = request.status != null && HANDLED_STATUSES.includes(request.status);
 
-  return { ...request, upload, server, dbShown: db, code, isError, device: deviceLabel(request.ua) };
+  return { ...request, upload, server, dbShown: db, code, isError, isHandled, device: deviceLabel(request.ua) };
 };
 
 type Row = ReturnType<typeof toRow>;
@@ -244,6 +253,14 @@ const TimingRow = ({ row, maxTotal, colors }: { row: Row; maxTotal: number; colo
 
   const details: [string, React.ReactNode][] = [
     ["Endpoint", `${row.method} ${row.endpoint}`],
+    ...(row.error
+      ? [[
+          "Error message",
+          <Box component="span" sx={{ color: row.isError ? "error.main" : "warning.main" }}>
+            {row.error}
+          </Box>,
+        ] as [string, React.ReactNode]]
+      : []),
     ["Query string", row.query || "-"],
     ["DB queries", row.db ? `${row.db.count} queries · ${formatMs(row.db.ms)} total` : "-"],
     ["Response", row.responseKB ? `${row.responseKB} KB` : "-"],
@@ -267,9 +284,26 @@ const TimingRow = ({ row, maxTotal, colors }: { row: Row; maxTotal: number; colo
           <Chip size="small" variant="outlined" label={`${row.method} ${shortEndpoint(row.endpoint)}`} />
         </TableCell>
         <TableCell>
-          <Typography variant="body2" color={row.isError ? "error.main" : "text.primary"}>
-            {row.status ?? (row.isError ? "Error" : "OK")}
-          </Typography>
+          <Tooltip title={row.error ?? ""}>
+            <Typography variant="body2" color={row.isError ? "error.main" : row.isHandled ? "warning.main" : "text.primary"}>
+              {row.status ?? (row.isError ? "Error" : "OK")}
+            </Typography>
+          </Tooltip>
+        </TableCell>
+        <TableCell sx={{ maxWidth: 220 }}>
+          {row.error ? (
+            <Tooltip title={row.error}>
+              <Typography
+                variant="body2"
+                noWrap
+                color={row.isError ? "error.main" : "warning.main"}
+              >
+                {row.error}
+              </Typography>
+            </Tooltip>
+          ) : (
+            "-"
+          )}
         </TableCell>
         <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>{formatMs(row.totalMs)}</TableCell>
         <TableCell>
@@ -286,7 +320,7 @@ const TimingRow = ({ row, maxTotal, colors }: { row: Row; maxTotal: number; colo
         </TableCell>
       </TableRow>
       <TableRow>
-        <TableCell colSpan={11} sx={{ py: 0 }}>
+        <TableCell colSpan={12} sx={{ py: 0 }}>
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box py={2} display="grid" gridTemplateColumns={{ xs: "1fr", lg: "2fr 1fr" }} gap={3}>
               <Stack spacing={3} minWidth={0}>
@@ -341,6 +375,8 @@ const DetailsTab = ({
 
   const [requests, setRequests] = useState<TimingRequest[]>([]);
   const [endpoints, setEndpoints] = useState<string[]>([]);
+  const [statuses, setStatuses] = useState<number[]>([]);
+  const [status, setStatus] = useState<string>("all");
   const [logFile, setLogFile] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -354,9 +390,11 @@ const DetailsTab = ({
       const params = toRangeParams(range);
       params.set("limit", String(limit));
       if (endpoint !== "all") params.set("endpoint", endpoint);
+      if (status !== "all") params.set("status", status);
       const res = await api.get(`api-timing/logs?${params.toString()}`);
       setRequests(res.data?.info?.requests ?? []);
       setEndpoints(res.data?.info?.endpoints ?? []);
+      setStatuses(res.data?.info?.statuses ?? []);
       setLogFile(res.data?.info?.file ?? "");
       setError(null);
     } catch (err: any) {
@@ -364,7 +402,7 @@ const DetailsTab = ({
     } finally {
       setLoading(false);
     }
-  }, [limit, range, endpoint]);
+  }, [limit, range, endpoint, status]);
 
   useEffect(() => {
     fetchLogs();
@@ -388,8 +426,18 @@ const DetailsTab = ({
   };
 
   const rows = useMemo(
-    () => requests.filter((request) => endpoint === "all" || (request.route ?? request.endpoint) === endpoint).map(toRow),
-    [requests, endpoint],
+    () =>
+      requests
+        .filter((request) => endpoint === "all" || (request.route ?? request.endpoint) === endpoint)
+        .filter((request) => status === "all" || String(request.status) === status)
+        .map(toRow),
+    [requests, endpoint, status],
+  );
+
+  // The selected status stays an option even when no request of the current endpoint has it.
+  const statusOptions = useMemo(
+    () => [...new Set([...statuses.map(String), ...(status !== "all" ? [status] : [])])].sort(),
+    [statuses, status],
   );
 
   // The selected endpoint stays an option while the list is (re)loading, e.g. when opened from Summary.
@@ -427,6 +475,21 @@ const DetailsTab = ({
             sx={{ width: 320 }}
             renderInput={(params) => <TextField {...params} label="Endpoint" placeholder="Search endpoint" />}
           />
+          <TextField
+            select
+            size="small"
+            label="Status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            sx={{ width: 120 }}
+          >
+            <MenuItem value="all">All</MenuItem>
+            {statusOptions.map((value) => (
+              <MenuItem key={value} value={value}>
+                {value}
+              </MenuItem>
+            ))}
+          </TextField>
           <TextField
             select
             size="small"
@@ -506,6 +569,7 @@ const DetailsTab = ({
               <TableCell>Time</TableCell>
               <TableCell>Endpoint</TableCell>
               <TableCell>Status</TableCell>
+              <TableCell>Error message</TableCell>
               <TableCell>Total</TableCell>
               <TableCell>Breakdown</TableCell>
               <TableCell>Upload</TableCell>
@@ -518,7 +582,7 @@ const DetailsTab = ({
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
+                <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
                   <Typography color="text.secondary">{loading ? "Loading…" : "No timing logs yet."}</Typography>
                 </TableCell>
               </TableRow>
@@ -727,7 +791,8 @@ const SummaryTab = ({ range, onOpenRoute }: { range: DateRange; onOpenRoute: (ro
         </Table>
       </TableContainer>
       <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-        Failure = HTTP status 400 or higher, or the API returned IsSuccess false. Times include the client upload.
+        Failure = HTTP status 400 or higher, except 401 (authentication) and 500 (validation error), which count as
+        success. Times include the client upload.
       </Typography>
 
       <Dialog open={confirmClear} onClose={() => !clearing && setConfirmClear(false)}>
