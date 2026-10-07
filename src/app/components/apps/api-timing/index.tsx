@@ -256,7 +256,7 @@ const TimingRow = ({ row, maxTotal, colors }: { row: Row; maxTotal: number; colo
     ...(row.error
       ? [[
           "Error message",
-          <Box component="span" sx={{ color: row.isError ? "error.main" : "warning.main" }}>
+          <Box key="error-message" component="span" sx={{ color: row.isError ? "error.main" : "warning.main" }}>
             {row.error}
           </Box>,
         ] as [string, React.ReactNode]]
