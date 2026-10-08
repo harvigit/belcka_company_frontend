@@ -5,8 +5,10 @@ import {
   Box,
   Button,
   CircularProgress,
+  Dialog,
   Divider,
   Drawer,
+  Grid,
   IconButton,
   Paper,
   Stack,
@@ -21,7 +23,17 @@ import {
   Typography,
 } from "@mui/material";
 import toast from "react-hot-toast";
-import { IconArrowLeft, IconHistory, IconX } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconChevronLeft,
+  IconChevronRight,
+  IconDownload,
+  IconHistory,
+  IconX,
+  IconZoomIn,
+  IconZoomOut,
+} from "@tabler/icons-react";
+import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
@@ -75,16 +87,28 @@ type CaseActivityItem = {
   request_type?: number | null;
 };
 
+type CheckinAttachment = {
+  id?: number;
+  image?: string | null;
+};
+
 type CaseCheckinItem = {
   id: number;
   user_name?: string | null;
   trade_name?: string | null;
   type?: string | null;
+  task_name?: string | null;
+  pricework_amount?: string | number | null;
+  currency?: string | null;
   date_added?: string | null;
   formatted_check_in_time?: string | null;
   formatted_check_out_time?: string | null;
   duration?: number | null;
   project_name?: string | null;
+  before_attachments_count?: number | null;
+  after_attachments_count?: number | null;
+  before_attachments?: CheckinAttachment[] | null;
+  after_attachments?: CheckinAttachment[] | null;
 };
 
 const ADDRESS_PROGRESS_STATUS = {
@@ -103,6 +127,14 @@ const progressToStatus = (progress: number) => {
   if (progress <= 0) return ADDRESS_PROGRESS_STATUS.TODO;
   if (progress >= 100) return ADDRESS_PROGRESS_STATUS.COMPLETED;
   return ADDRESS_PROGRESS_STATUS.IN_PROGRESS;
+};
+
+const formatCheckinAmount = (item: CaseCheckinItem) => {
+  const amount = item.pricework_amount;
+  if (item.type === "Pricework" && amount) {
+    return `${item.currency || "$"}${Number(amount).toFixed(2)}`;
+  }
+  return "-";
 };
 
 const formatDuration = (secs?: number | null) => {
@@ -397,10 +429,27 @@ const CaseDetail: React.FC<Props> = ({
   const [checkinPage, setCheckinPage] = useState(0);
   const [checkinRowsPerPage, setCheckinRowsPerPage] = useState(50);
   const [checkinTotal, setCheckinTotal] = useState(0);
+  const [imageDrawerOpen, setImageDrawerOpen] = useState(false);
+  const [drawerImages, setDrawerImages] = useState<CheckinAttachment[]>([]);
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [zoomScale, setZoomScale] = useState(1);
+
+  const closeCheckinImages = () => {
+    setImageDrawerOpen(false);
+    setOpenPreview(false);
+  };
+
+  const openAttachmentDrawer = (images?: CheckinAttachment[] | null) => {
+    setDrawerImages(images || []);
+    setImageDrawerOpen(true);
+  };
 
   const handleClose = () => {
     setActivityDrawerOpen(false);
     setCheckinsDrawerOpen(false);
+    closeCheckinImages();
     if (onClose) {
       onClose();
       return;
@@ -770,10 +819,13 @@ const CaseDetail: React.FC<Props> = ({
       <Drawer
         anchor="right"
         open={checkinsDrawerOpen}
-        onClose={() => setCheckinsDrawerOpen(false)}
+        onClose={() => {
+          setCheckinsDrawerOpen(false);
+          closeCheckinImages();
+        }}
         PaperProps={{
           sx: {
-            width: { xs: "100%", sm: 720, md: 860 },
+            width: { xs: "100%", sm: 720, md: 1080 },
             display: "flex",
             flexDirection: "column",
             boxShadow: "none",
@@ -789,7 +841,10 @@ const CaseDetail: React.FC<Props> = ({
         >
           <Box display="flex" alignItems="center" gap={1} minWidth={0}>
             <IconButton
-              onClick={() => setCheckinsDrawerOpen(false)}
+              onClick={() => {
+                setCheckinsDrawerOpen(false);
+                closeCheckinImages();
+              }}
               aria-label="Back"
             >
               <IconArrowLeft size={20} />
@@ -804,7 +859,10 @@ const CaseDetail: React.FC<Props> = ({
             </Box>
           </Box>
           <IconButton
-            onClick={() => setCheckinsDrawerOpen(false)}
+            onClick={() => {
+              setCheckinsDrawerOpen(false);
+              closeCheckinImages();
+            }}
             aria-label="Close"
           >
             <IconX size={20} />
@@ -838,25 +896,38 @@ const CaseDetail: React.FC<Props> = ({
                   stickyHeader
                   size="small"
                   aria-label="case check-ins"
-                  sx={{ ...overviewTableSx, minWidth: 640 }}
+                  sx={{ ...overviewTableSx, minWidth: 1080 }}
                 >
                   <TableHead>
                     <TableRow>
                       <TableCell>User</TableCell>
                       <TableCell>Trade</TableCell>
                       <TableCell>Type</TableCell>
+                      <TableCell>Task</TableCell>
+                      <TableCell>Amount</TableCell>
                       <TableCell>Date</TableCell>
                       <TableCell>Start</TableCell>
                       <TableCell>End</TableCell>
                       <TableCell>Duration</TableCell>
+                      <TableCell>Photo Before</TableCell>
+                      <TableCell>Photo After</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {checkins.map((item) => (
+                    {checkins.map((item) => {
+                      const beforeCount = item.before_attachments_count || 0;
+                      const afterCount = item.after_attachments_count || 0;
+                      return (
                       <TableRow key={item.id}>
                         <TableCell>{item.user_name || "-"}</TableCell>
                         <TableCell>{item.trade_name || "-"}</TableCell>
                         <TableCell>{item.type || "-"}</TableCell>
+                        <TableCell sx={{ whiteSpace: "nowrap" }}>
+                          {item.task_name || "-"}
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: "nowrap" }}>
+                          {formatCheckinAmount(item)}
+                        </TableCell>
                         <TableCell>{formatDate(item.date_added)}</TableCell>
                         <TableCell>
                           {item.formatted_check_in_time || "-"}
@@ -865,8 +936,51 @@ const CaseDetail: React.FC<Props> = ({
                           {item.formatted_check_out_time || "-"}
                         </TableCell>
                         <TableCell>{formatDuration(item.duration)}</TableCell>
+                        <TableCell>
+                          <Typography
+                            fontSize={14}
+                            sx={{
+                              width: "fit-content",
+                              cursor: beforeCount > 0 ? "pointer" : "default",
+                              "&:hover": {
+                                color:
+                                  beforeCount > 0 ? "primary.main" : "inherit",
+                              },
+                            }}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (beforeCount > 0) {
+                                openAttachmentDrawer(item.before_attachments);
+                              }
+                            }}
+                          >
+                            {beforeCount || 0}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography
+                            fontSize={14}
+                            sx={{
+                              width: "fit-content",
+                              cursor: afterCount > 0 ? "pointer" : "default",
+                              "&:hover": {
+                                color:
+                                  afterCount > 0 ? "primary.main" : "inherit",
+                              },
+                            }}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (afterCount > 0) {
+                                openAttachmentDrawer(item.after_attachments);
+                              }
+                            }}
+                          >
+                            {afterCount || 0}
+                          </Typography>
+                        </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -893,6 +1007,243 @@ const CaseDetail: React.FC<Props> = ({
           )}
         </Box>
       </Drawer>
+
+      <Drawer
+        anchor="right"
+        open={imageDrawerOpen}
+        onClose={() => setImageDrawerOpen(false)}
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 2 }}
+        PaperProps={{
+          sx: {
+            width: { xs: "100%", sm: 450 },
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+      >
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          px={2}
+          py={1.5}
+        >
+          <Box display="flex" alignItems="center" gap={1}>
+            <IconButton
+              onClick={() => setImageDrawerOpen(false)}
+              aria-label="Back"
+            >
+              <IconArrowLeft size={20} />
+            </IconButton>
+            <Typography variant="h6" fontWeight={600}>
+              Images
+            </Typography>
+          </Box>
+          <IconButton
+            onClick={() => setImageDrawerOpen(false)}
+            aria-label="Close"
+          >
+            <IconX size={20} />
+          </IconButton>
+        </Box>
+        <Divider />
+        <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
+          <Grid container spacing={2}>
+            {drawerImages.map((item, index) => (
+              <Grid size={{ xs: 6 }} key={item.id ?? index}>
+                <Box
+                  sx={{
+                    position: "relative",
+                    width: "100%",
+                    aspectRatio: "1 / 1",
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    cursor: "pointer",
+                    bgcolor: "grey.100",
+                    transition: "0.2s",
+                    "&:hover": { transform: "scale(1.03)" },
+                  }}
+                >
+                  <Image
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setPreviewImage(
+                        item.image || "/images/products/product.svg",
+                      );
+                      setPreviewIndex(index);
+                      setZoomScale(1);
+                      setOpenPreview(true);
+                    }}
+                    src={item.image || "/images/products/product.svg"}
+                    alt={`Image ${index + 1}`}
+                    fill
+                    style={{ objectFit: "cover" }}
+                  />
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+          {drawerImages.length === 0 && (
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              height={250}
+            >
+              <Typography color="text.secondary">No images available</Typography>
+            </Box>
+          )}
+        </Box>
+      </Drawer>
+
+      <Dialog
+        open={openPreview}
+        onClose={() => setOpenPreview(false)}
+        fullScreen
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 3 }}
+        PaperProps={{
+          sx: {
+            backgroundColor: "rgba(0,0,0,0.9)",
+            boxShadow: "none",
+          },
+        }}
+      >
+        <IconButton
+          onClick={() => setOpenPreview(false)}
+          sx={{
+            position: "fixed",
+            top: 16,
+            right: 16,
+            zIndex: 1301,
+            backgroundColor: "#fff",
+            "&:hover": { backgroundColor: "#eee", color: "#1e4db7" },
+          }}
+        >
+          <IconX />
+        </IconButton>
+        <Box
+          sx={{
+            width: "100vw",
+            height: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+          }}
+          onClick={() => setOpenPreview(false)}
+        >
+          {drawerImages.length > 1 && (
+            <IconButton
+              onClick={(event) => {
+                event.stopPropagation();
+                setPreviewIndex((prev) =>
+                  prev > 0 ? prev - 1 : drawerImages.length - 1,
+                );
+                setZoomScale(1);
+              }}
+              sx={{
+                position: "absolute",
+                left: 20,
+                zIndex: 1301,
+                backgroundColor: "rgba(255,255,255,0.7)",
+                "&:hover": { backgroundColor: "#fff" },
+              }}
+            >
+              <IconChevronLeft size={30} />
+            </IconButton>
+          )}
+          <Box
+            sx={{
+              width: "80%",
+              height: "80%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img
+              src={drawerImages[previewIndex]?.image || previewImage || ""}
+              alt="Preview"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+                transform: `scale(${zoomScale})`,
+                transition: "transform 0.2s",
+              }}
+            />
+          </Box>
+          {drawerImages.length > 1 && (
+            <IconButton
+              onClick={(event) => {
+                event.stopPropagation();
+                setPreviewIndex((prev) =>
+                  prev < drawerImages.length - 1 ? prev + 1 : 0,
+                );
+                setZoomScale(1);
+              }}
+              sx={{
+                position: "absolute",
+                right: 20,
+                zIndex: 1301,
+                backgroundColor: "rgba(255,255,255,0.7)",
+                "&:hover": { backgroundColor: "#fff" },
+              }}
+            >
+              <IconChevronRight size={30} />
+            </IconButton>
+          )}
+          <Stack
+            direction="row"
+            spacing={2}
+            onClick={(event) => event.stopPropagation()}
+            sx={{
+              position: "absolute",
+              bottom: 20,
+              backgroundColor: "rgba(255,255,255,0.8)",
+              padding: "8px 16px",
+              borderRadius: "30px",
+              zIndex: 1301,
+            }}
+          >
+            <IconButton
+              onClick={() => setZoomScale((prev) => Math.min(prev + 0.5, 5))}
+            >
+              <IconZoomIn />
+            </IconButton>
+            <IconButton
+              onClick={() => setZoomScale((prev) => Math.max(prev - 0.5, 0.5))}
+            >
+              <IconZoomOut />
+            </IconButton>
+            <IconButton
+              onClick={async () => {
+                const url =
+                  drawerImages[previewIndex]?.image || previewImage || "";
+                if (!url) return;
+                try {
+                  const response = await fetch(url);
+                  const blob = await response.blob();
+                  const blobUrl = window.URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.href = blobUrl;
+                  link.download = `checkin_image_${previewIndex + 1}.jpg`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(blobUrl);
+                } catch (error) {
+                  console.error("Failed to download image", error);
+                }
+              }}
+            >
+              <IconDownload />
+            </IconButton>
+          </Stack>
+        </Box>
+      </Dialog>
 
       <Drawer
         anchor="right"
