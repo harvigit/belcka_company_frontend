@@ -188,6 +188,8 @@ const Labour = ({projectId}: { projectId: number }) => {
     const [data, setData] = useState<LabourRow[]>([]);
     const [currency, setCurrency] = useState('£');
     const [totalAmount, setTotalAmount] = useState(0);
+    const [grossAmount, setGrossAmount] = useState(0);
+    const [netAmount, setNetAmount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [sorting, setSorting] = useState<SortingState>([
@@ -582,16 +584,19 @@ const Labour = ({projectId}: { projectId: number }) => {
 
             setData(responseData);
             setCurrency(res.data?.currency || '£');
-            setTotalAmount(
-                getNumericResponseValue(
-                    res.data,
-                    ['total_amount', 'total_labour_amount', 'amount_total'],
-                    responseData.reduce(
-                        (sum: number, item: LabourRow) =>
-                            sum + Number(item.total || 0),
-                        0,
-                    ),
+            const total = getNumericResponseValue(
+                res.data,
+                ['total_amount', 'total_labour_amount', 'amount_total'],
+                responseData.reduce(
+                    (sum: number, item: LabourRow) =>
+                        sum + Number(item.total || 0),
+                    0,
                 ),
+            );
+            setTotalAmount(total);
+            setNetAmount(getNumericResponseValue(res.data, ['total_net_amount'], total));
+            setGrossAmount(
+                getNumericResponseValue(res.data, ['total_gross_amount'], total * 1.25),
             );
             setFilterOptions((prev) => ({
                 teams: tableFilterOptions(
@@ -648,6 +653,8 @@ const Labour = ({projectId}: { projectId: number }) => {
             console.error('Failed to fetch project labour details', err);
             setData([]);
             setTotalAmount(0);
+            setGrossAmount(0);
+            setNetAmount(0);
             setTotalRows(0);
             setPageCount(0);
         }
@@ -860,28 +867,35 @@ const Labour = ({projectId}: { projectId: number }) => {
                         )}
                         
                     </Box>
-                    <Box display="flex" justifyContent="flex-end" alignItems="center" gap={0.75}>
-                        <Box
-                            sx={{
-                                flexShrink: 0,
-                                display: 'flex',
-                                alignItems: 'baseline',
-                                gap: 0.75,
-                                py: 0.75,
-                                px: 1.25,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                borderRadius: 1,
-                                bgcolor: 'background.paper',
-                            }}
-                        >
-                            <Typography variant="caption" color="text.secondary" noWrap>
-                                Total
-                            </Typography>
-                            <Typography variant="subtitle2" fontWeight={700} noWrap>
-                                {formatAmount(currency, totalAmount)}
-                            </Typography>
-                        </Box>
+                    <Box display="flex" justifyContent="flex-end" alignItems="center" gap={0.75} flexWrap="wrap">
+                        {[
+                            {label: 'Gross', amount: grossAmount},
+                            {label: 'Net', amount: netAmount},
+                            {label: 'Total', amount: totalAmount},
+                        ].map(({label, amount}) => (
+                            <Box
+                                key={label}
+                                sx={{
+                                    flexShrink: 0,
+                                    display: 'flex',
+                                    alignItems: 'baseline',
+                                    gap: 0.75,
+                                    py: 0.75,
+                                    px: 1.25,
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1,
+                                    bgcolor: 'background.paper',
+                                }}
+                            >
+                                <Typography variant="caption" color="text.secondary" noWrap>
+                                    {label}
+                                </Typography>
+                                <Typography variant="subtitle2" fontWeight={700} noWrap>
+                                    {formatAmount(currency, amount)}
+                                </Typography>
+                            </Box>
+                        ))}
                         <Tooltip title="Column visibility">
                             <IconButton
                                 onClick={(e) => setColumnMenuAnchor(e.currentTarget)}
