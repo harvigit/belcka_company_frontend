@@ -445,6 +445,8 @@ const Overview = ({
   );
   const [fullLabourTeamId, setFullLabourTeamId] = useState("all");
   const [fullLabourPeriod, setFullLabourPeriod] = useState("all");
+  const [fullLabourStart, setFullLabourStart] = useState<Date | null>(null);
+  const [fullLabourEnd, setFullLabourEnd] = useState<Date | null>(null);
   const [fullLabourTeams, setFullLabourTeams] = useState<LabourTeamRow[]>([]);
   const [fullLabourTotals, setFullLabourTotals] = useState<LabourTotals | null>(
     null,
@@ -481,10 +483,24 @@ const Overview = ({
         project_id: String(projectId),
         company_id: String(user.company_id),
       });
-      const range = labourDateRange(fullLabourPeriod);
-      if (range.start && range.end) {
-        params.set("start_date", dayjs(range.start).format("DD/MM/YYYY"));
-        params.set("end_date", dayjs(range.end).format("DD/MM/YYYY"));
+      const customStart = dayjs(fullLabourStart || undefined);
+      const customEnd = dayjs(fullLabourEnd || undefined);
+      const hasCustomRange =
+        Boolean(fullLabourStart && fullLabourEnd) &&
+        customStart.isValid() &&
+        customEnd.isValid();
+      const range = hasCustomRange
+        ? { start: customStart.toDate(), end: customEnd.toDate() }
+        : labourDateRange(fullLabourPeriod);
+      const formattedStart = range.start
+        ? dayjs(range.start).format("DD/MM/YYYY")
+        : "";
+      const formattedEnd = range.end
+        ? dayjs(range.end).format("DD/MM/YYYY")
+        : "";
+      if (formattedStart && formattedEnd && formattedStart !== "Invalid Date") {
+        params.set("start_date", formattedStart);
+        params.set("end_date", formattedEnd);
       }
       if (fullLabourTeamId !== "all") {
         params.set("team_id", fullLabourTeamId);
@@ -555,6 +571,8 @@ const Overview = ({
     fullListView,
     fullLabourTeamId,
     fullLabourPeriod,
+    fullLabourStart ? dayjs(fullLabourStart).format("DD/MM/YYYY") : "",
+    fullLabourEnd ? dayjs(fullLabourEnd).format("DD/MM/YYYY") : "",
     projectId,
     user?.company_id,
   ]);
@@ -798,13 +816,52 @@ const Overview = ({
         size="small"
         label="Dates"
         value={fullLabourPeriod}
-        onChange={(e) => setFullLabourPeriod(e.target.value)}
+        onChange={(e) => {
+          setFullLabourPeriod(e.target.value);
+          setFullLabourStart(null);
+          setFullLabourEnd(null);
+        }}
         sx={{ minWidth: { xs: 180, sm: 220 } }}
       >
         <MenuItem value="all">All dates</MenuItem>
         <MenuItem value="7">Last 7 days</MenuItem>
         <MenuItem value="30">Last 30 days</MenuItem>
       </TextField>
+      <DateRangePickerBox
+        from={fullLabourStart}
+        to={fullLabourEnd}
+        onChange={({ from, to }) => {
+          setFullLabourStart(from);
+          setFullLabourEnd(to);
+        }}
+        buttonMinWidth={220}
+        buttonLabelAlign="left"
+      />
+      {(fullLabourTeamId !== "all" ||
+        fullLabourPeriod !== "all" ||
+        fullLabourStart ||
+        fullLabourEnd) && (
+        <Button
+          color="error"
+          variant="outlined"
+          onClick={(event) => {
+            event.stopPropagation();
+            setFullLabourTeamId("all");
+            setFullLabourPeriod("all");
+            setFullLabourStart(null);
+            setFullLabourEnd(null);
+          }}
+          sx={{
+            whiteSpace: "nowrap",
+            minHeight: 40,
+            minWidth: 40,
+            px: 1.5,
+          }}
+          aria-label="Clear filters"
+        >
+          <IconX size={18} />
+        </Button>
+      )}
     </Stack>
   );
 
@@ -1141,6 +1198,8 @@ const Overview = ({
                 onClick={() => {
                   setFullLabourTeamId("all");
                   setFullLabourPeriod("all");
+                  setFullLabourStart(null);
+                  setFullLabourEnd(null);
                   setFullListView("labour");
                 }}
               />
