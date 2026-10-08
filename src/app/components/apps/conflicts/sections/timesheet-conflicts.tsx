@@ -19,6 +19,7 @@ import {
     IconX,
 } from '@tabler/icons-react';
 import { DateTime } from 'luxon';
+import api from '@/utils/axios';
 
 import CutDeleteCase from '../resolution/cut-delete-conflicts';
 import SplitDeleteCase from '../resolution/split-delete-conflicts';
@@ -112,6 +113,28 @@ const sortConflictItems = (items: ConflictItem[]): ConflictItem[] => {
     return [...items].sort((a, b) => getSortTime(a) - getSortTime(b));
 };
 
+// Leave vs worklog: the leave stays as-is and the worklog is split/cut around it.
+const getLeaveConflictType = (items: ConflictItem[]): ShiftConflictType => {
+    const leave = items.find((i) => i.is_leave);
+    const worklog = items.find((i) => !i.is_leave && i.worklog_id);
+
+    if (items.length !== 2 || !leave || !worklog) {
+        return 'delete-only';
+    }
+
+    const ls = parseDT(leave.start), le = parseDT(leave.end), ws = parseDT(worklog.start), we = parseDT(worklog.end);
+
+    if (![ls, le, ws, we].every((d) => d.isValid)) {
+        return 'delete-only';
+    }
+
+    if (ws < ls && we > le) {
+        return 'split-delete';
+    }
+
+    return ws < ls || we > le ? 'cut-delete' : 'delete-only';
+};
+
 const getShiftConflictType = (items: ConflictItem[]): ShiftConflictType => {
     if (isCheckoutLocationConflict(items)) {
         return 'checkout-location';
@@ -122,7 +145,7 @@ const getShiftConflictType = (items: ConflictItem[]): ShiftConflictType => {
     }
 
     if (items.some((i) => i.is_leave)){
-        return 'delete-only';   
+        return getLeaveConflictType(items);
     }
     
     if (items.length !== 2){
@@ -145,6 +168,19 @@ const getShiftConflictType = (items: ConflictItem[]): ShiftConflictType => {
     }
     
     return (s1 <= s2 && e1 >= e2) || (s2 <= s1 && e2 >= e1) ? 'split-delete' : 'delete-only';
+};
+
+export const getItemLabel = (item: ConflictItem): string =>
+    item.is_leave ? (item.leave_name || 'Leave') : item.shift_name;
+
+export const canDeleteItem = (item: ConflictItem): boolean =>
+    item.is_leave ? Boolean(item.user_leave_id) : Boolean(item.worklog_id);
+
+export const deleteConflictItem = (item: ConflictItem) => {
+    if (item.is_leave) {
+        return api.post('/user-leaves/delete-leave', {user_leave_id: item.user_leave_id});
+    }
+    return api.post('/time-clock/delete-worklog', {worklog_id: item.worklog_id});
 };
 
 const mkInitials = (name: string) =>

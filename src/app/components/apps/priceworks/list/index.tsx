@@ -2042,26 +2042,35 @@ const PriceworkList = ({
                             />
                         ))}
                     </Tabs>
-                    <Box
-                        sx={{
-                            flexShrink: 0,
-                            display: 'flex',
-                            alignItems: 'baseline',
-                            gap: 0.75,
-                            py: 0.75,
-                            px: 1.25,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            borderRadius: 1,
-                            bgcolor: 'background.paper',
-                        }}
-                    >
-                        <Typography variant="caption" color="text.secondary" noWrap>
-                            Total
-                        </Typography>
-                        <Typography variant="subtitle2" fontWeight={700} noWrap>
-                            {formatAmount(tabAmountCurrency, tabAmountTotal)}
-                        </Typography>
+                    <Box display="flex" alignItems="center" gap={0.75} flexShrink={0}>
+                        {/* Pricework amounts are net of CIS; gross adds it back. */}
+                        {[
+                            {label: 'Gross', amount: tabAmountTotal * 1.25},
+                            {label: 'Net', amount: tabAmountTotal},
+                        ].map(({label, amount}) => (
+                            <Box
+                                key={label}
+                                sx={{
+                                    flexShrink: 0,
+                                    display: 'flex',
+                                    alignItems: 'baseline',
+                                    gap: 0.75,
+                                    py: 0.75,
+                                    px: 1.25,
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1,
+                                    bgcolor: 'background.paper',
+                                }}
+                            >
+                                <Typography variant="caption" color="text.secondary" noWrap>
+                                    {label}
+                                </Typography>
+                                <Typography variant="subtitle2" fontWeight={700} noWrap>
+                                    {formatAmount(tabAmountCurrency, amount)}
+                                </Typography>
+                            </Box>
+                        ))}
                     </Box>
                 </Box>
 

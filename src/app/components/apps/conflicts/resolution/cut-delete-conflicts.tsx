@@ -20,6 +20,9 @@ import {
     parseDT,
     formatHM,
     calcDiffHM,
+    getItemLabel,
+    canDeleteItem,
+    deleteConflictItem,
 } from "../sections/timesheet-conflicts";
 
 interface CutDeleteConflictsProps {
@@ -138,12 +141,34 @@ const CutDeleteCase: React.FC<CutDeleteConflictsProps> = ({
                 const item1 = conflict.items[i];
                 const item2 = conflict.items[j];
 
-                if (!item1.worklog_id || !item2.worklog_id) continue;
+                if (item1.is_leave && item2.is_leave) continue;
 
                 const range1 = getItemRange(item1);
                 const range2 = getItemRange(item2);
 
                 if (!range1 || !range2) continue;
+
+                // Leave vs worklog: always cut the worklog, keep the leave untouched
+                if (item1.is_leave || item2.is_leave) {
+                    const leaveItem = item1.is_leave ? item1 : item2;
+                    const worklogItem = item1.is_leave ? item2 : item1;
+                    const leaveRange = item1.is_leave ? range1 : range2;
+                    const worklogRange = item1.is_leave ? range2 : range1;
+
+                    if (!worklogItem.worklog_id) continue;
+
+                    const hasOverlap = worklogRange.start < leaveRange.end && leaveRange.start < worklogRange.end;
+                    const extendsBeyond = worklogRange.start < leaveRange.start || worklogRange.end > leaveRange.end;
+                    const key = `${worklogItem.worklog_id}-leave-${leaveItem.user_leave_id}`;
+
+                    if (hasOverlap && extendsBeyond && !seen.has(key)) {
+                        seen.add(key);
+                        candidates.push({cutItem: worklogItem, overlapItem: leaveItem});
+                    }
+                    continue;
+                }
+
+                if (!item1.worklog_id || !item2.worklog_id) continue;
 
                 const {start: start1, end: end1} = range1;
                 const {start: start2, end: end2} = range2;
@@ -233,9 +258,9 @@ const CutDeleteCase: React.FC<CutDeleteConflictsProps> = ({
             });
         }
 
-        // Add shorter item
+        // Add shorter item (a leave has no worklog_id, so it is kept out of the cut payload)
         rows.push({
-            shift_name: selectedOverlapItem.shift_name,
+            shift_name: getItemLabel(selectedOverlapItem),
             start: formatHM(shorterStart),
             end: formatHM(shorterEnd),
             total: calcDiffHM(shorterStart, shorterEnd),
@@ -270,7 +295,7 @@ const CutDeleteCase: React.FC<CutDeleteConflictsProps> = ({
         }
         return [
             {
-                shift_name: selectedItem.shift_name,
+                shift_name: getItemLabel(selectedItem),
                 start: formatHM(startDT),
                 end: formatHM(endDT),
                 total: calcDiffHM(startDT, endDT),
@@ -307,18 +332,11 @@ const CutDeleteCase: React.FC<CutDeleteConflictsProps> = ({
     );
 
     const handleDeletePreview = useCallback(
-        (worklogId: number) => {
-            const itemToDelete = conflict.items.find(
-                (item) => item.worklog_id === worklogId
-            );
-            if (itemToDelete) {
-                setSelectedItem(itemToDelete);
-                handleOpenDeletePreview();
-            } else {
-                console.error("No conflict item found for delete worklog_id:", worklogId);
-            }
+        (itemToDelete: ConflictItem) => {
+            setSelectedItem(itemToDelete);
+            handleOpenDeletePreview();
         },
-        [conflict.items, handleOpenDeletePreview]
+        [handleOpenDeletePreview]
     );
 
     const handleConfirmCut = useCallback(async () => {
@@ -367,15 +385,13 @@ const CutDeleteCase: React.FC<CutDeleteConflictsProps> = ({
     }, [setCutPreviewOpen]);
 
     const handleConfirmDelete = useCallback(async () => {
-        if (!selectedItem?.worklog_id || isLoading) {
-            console.error("No selected worklog_id for delete");
+        if (!selectedItem || !canDeleteItem(selectedItem) || isLoading) {
+            console.error("No selected item for delete");
             return;
         }
         setIsLoading(true);
         try {
-            await api.post("/time-clock/delete-worklog", {
-                worklog_id: selectedItem.worklog_id,
-            });
+            await deleteConflictItem(selectedItem);
 
             setDeletePreviewOpen(false);
             setSelectedItem(null);
@@ -551,7 +567,7 @@ const CutDeleteCase: React.FC<CutDeleteConflictsProps> = ({
                         <Box sx={{display: "flex", flexDirection: "column", gap: 1}}>
                             {cutCandidates.map((candidate) => (
                                 <Box
-                                    key={`${candidate.cutItem.worklog_id}-${candidate.overlapItem?.worklog_id ?? "mixed"}`}
+                                    key={`${candidate.cutItem.worklog_id}-${candidate.overlapItem?.worklog_id || `leave-${candidate.overlapItem?.user_leave_id}`}`}
                                     sx={{
                                         display: "flex",
                                         alignItems: "center",
@@ -683,18 +699,18 @@ const CutDeleteCase: React.FC<CutDeleteConflictsProps> = ({
                                         textTransform: "capitalize",
                                     }}
                                 >
-                                    {item.shift_name}
+                                    {getItemLabel(item)}
                                 </Typography>
                                 <Typography sx={{ fontSize: "0.7rem", color: "#666" }}>
                                     {item.start} → {item.end}
                                 </Typography>
                             </Box>
-                            {item.worklog_id && (
+                            {canDeleteItem(item) && (
                                 <Button
                                     size="small"
                                     variant="outlined"
                                     color="error"
-                                    onClick={() => handleDeletePreview(item.worklog_id!)}
+                                    onClick={() => handleDeletePreview(item)}
                                     sx={{
                                         textTransform: "none",
                                         fontSize: "0.75rem",
