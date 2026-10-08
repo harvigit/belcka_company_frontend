@@ -99,6 +99,7 @@ export type TeamList = {
   is_active?: boolean;
   trade_id?: number;
   trade_name?: string;
+  projects?: { id: number; name: string }[];
   users: any;
 };
 
@@ -114,6 +115,7 @@ import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibi
 type TeamFilters = {
   team: string;
   supervisor: string;
+  project: string;
 };
 
 type TeamsTableCookieState = {
@@ -128,6 +130,7 @@ type TeamsTableCookieState = {
 const DEFAULT_TEAM_FILTERS: TeamFilters = {
   team: "",
   supervisor: "",
+  project: "",
 };
 
 const getTeamsTableStateKey = (
@@ -145,6 +148,7 @@ const normalizeTeamFilters = (
 ): TeamFilters => ({
   team: normalizeTeamFilterValue(filters?.team),
   supervisor: normalizeTeamFilterValue(filters?.supervisor),
+  project: normalizeTeamFilterValue(filters?.project),
 });
 
 const readTeamsTableStateCookie = (key: string): TeamsTableCookieState => {
@@ -241,8 +245,8 @@ const TablePagination = () => {
     try {
       let url = `team/get-team-member-list?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
 
-      if (projectId) {
-        url += `&project_id=${projectId}`;
+      if (filters.project && filters.project !== "All") {
+        url += `&project_id=${filters.project}`;
       }
       if (searchTerm) {
         url += `&search=${encodeURIComponent(searchTerm)}`;
@@ -374,6 +378,19 @@ const TablePagination = () => {
       if (item.supervisor_name && item.supervisor_id) {
         map.set(item.supervisor_id, item.supervisor_name);
       }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [data]);
+
+  const projects = useMemo(() => {
+    const map = new Map<number, string>();
+    data.forEach((item) => {
+      (item.projects ?? []).forEach((project) => {
+        const projectId = Number(project?.id);
+        const name = String(project?.name || "").trim();
+        if (!Number.isFinite(projectId) || projectId <= 0 || !name) return;
+        map.set(projectId, name);
+      });
     });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [data]);
@@ -652,7 +669,19 @@ const TablePagination = () => {
       restoredTableStateKeyRef.current = "";
       return;
     }
-    if (restoredTableStateKeyRef.current === teamsTableStateKey) return;
+    if (restoredTableStateKeyRef.current === teamsTableStateKey) {
+      if (!projectId) return;
+      const urlProjectId = String(projectId);
+      setFilters((prev) =>
+        prev.project === urlProjectId ? prev : { ...prev, project: urlProjectId },
+      );
+      setTempFilters((prev) =>
+        prev.project === urlProjectId
+          ? prev
+          : { ...prev, project: urlProjectId },
+      );
+      return;
+    }
 
     const savedState = readTeamsTableStateCookie(teamsTableStateKey);
     const savedPagination = savedState.pagination;
@@ -666,6 +695,9 @@ const TablePagination = () => {
 
     setSearchTerm(savedState.searchTerm ?? "");
     const restoredFilters = normalizeTeamFilters(savedState.filters);
+    if (projectId) {
+      restoredFilters.project = String(projectId);
+    }
     setFilters(restoredFilters);
     setTempFilters(restoredFilters);
 
@@ -682,7 +714,7 @@ const TablePagination = () => {
     }
 
     setIsTableStateReady(true);
-  }, [teamsTableStateKey, setPagination]);
+  }, [teamsTableStateKey, setPagination, projectId]);
 
   useEffect(() => {
     if (!teamsTableStateKey || !isTableStateReady) return;
@@ -710,13 +742,27 @@ const TablePagination = () => {
 
   const hasActiveFilters =
     Boolean(filters.team && filters.team !== "All") ||
-    Boolean(filters.supervisor && filters.supervisor !== "All");
+    Boolean(filters.supervisor && filters.supervisor !== "All") ||
+    Boolean(filters.project && filters.project !== "All");
+
+  const syncProjectQuery = (project: string) => {
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    if (project && project !== "All") {
+      params.set("project_id", project);
+    } else {
+      params.delete("project_id");
+    }
+    const next = params.toString();
+    if (next === (searchParams?.toString() ?? "")) return;
+    router.replace(next ? `/apps/teams/list?${next}` : "/apps/teams/list");
+  };
 
   const handleClearAppliedFilters = (event: React.MouseEvent) => {
     event.stopPropagation();
     skipNextDependencyPageResetRef.current = false;
     setTempFilters(DEFAULT_TEAM_FILTERS);
     setFilters(DEFAULT_TEAM_FILTERS);
+    syncProjectQuery("");
     setPagination((prev) =>
       prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
     );
@@ -832,6 +878,36 @@ const TablePagination = () => {
                 <Stack spacing={2} mt={1}>
                   <TextField
                     select
+                    label="Project"
+                    value={tempFilters.project || "All"}
+                    onChange={(e) =>
+                      setTempFilters({
+                        ...tempFilters,
+                        project: normalizeTeamFilterValue(e.target.value),
+                      })
+                    }
+                    fullWidth
+                  >
+                    <MenuItem value="All">All</MenuItem>
+                    {tempFilters.project &&
+                      tempFilters.project !== "All" &&
+                      !projects.some(
+                        (project) =>
+                          String(project.id) === String(tempFilters.project),
+                      ) && (
+                        <MenuItem value={tempFilters.project}>
+                          {tempFilters.project}
+                        </MenuItem>
+                      )}
+                    {projects.map((project) => (
+                      <MenuItem key={project.id} value={String(project.id)}>
+                        {project.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  <TextField
+                    select
                     label="Team"
                     value={tempFilters.team || "All"}
                     onChange={(e) =>
@@ -901,6 +977,7 @@ const TablePagination = () => {
                     skipNextDependencyPageResetRef.current = false;
                     setTempFilters(DEFAULT_TEAM_FILTERS);
                     setFilters(DEFAULT_TEAM_FILTERS);
+                    syncProjectQuery("");
                     setPagination((prev) =>
                       prev.pageIndex === 0
                         ? prev
@@ -916,8 +993,10 @@ const TablePagination = () => {
                 <Button
                   variant="contained"
                   onClick={() => {
+                    const nextFilters = normalizeTeamFilters(tempFilters);
                     skipNextDependencyPageResetRef.current = false;
-                    setFilters(normalizeTeamFilters(tempFilters));
+                    setFilters(nextFilters);
+                    syncProjectQuery(nextFilters.project);
                     setPagination((prev) =>
                       prev.pageIndex === 0
                         ? prev
