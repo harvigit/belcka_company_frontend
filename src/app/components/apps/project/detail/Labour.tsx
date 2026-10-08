@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useMemo, useRef, useState} from 'react';
 import {
     Autocomplete,
     Box,
@@ -194,6 +194,9 @@ const Labour = ({projectId}: { projectId: number }) => {
     const [sorting, setSorting] = useState<SortingState>([
         {id: 'date', desc: true},
     ]);
+    const sortingRef = useRef(sorting);
+    sortingRef.current = sorting;
+    const labourRequestSeq = useRef(0);
     
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
@@ -554,6 +557,8 @@ const Labour = ({projectId}: { projectId: number }) => {
 
     const fetchLabour = async () => {
         if (!user?.company_id || !projectId) return;
+        const requestedSort = sortingRef.current;
+        const requestSeq = ++labourRequestSeq.current;
         setLoading(true);
         try {
             const params = new URLSearchParams({
@@ -569,7 +574,7 @@ const Labour = ({projectId}: { projectId: number }) => {
             if (filters.users.length) params.set('user_ids', filters.users.join(','));
             if (filters.types.length) params.set('types', filters.types.join(','));
             if (filters.trades.length) params.set('trade_ids', filters.trades.join(','));
-            const sortQuery = getTableSortQuery(sorting);
+            const sortQuery = getTableSortQuery(requestedSort);
             if (sortQuery) {
                 params.set('sort_by', sortQuery.sort_by);
                 params.set('sort_order', sortQuery.sort_order);
@@ -578,6 +583,12 @@ const Labour = ({projectId}: { projectId: number }) => {
             const res = await api.get(
                 `project-analytics/web-labors?${params.toString()}`,
             );
+            if (
+                requestSeq !== labourRequestSeq.current ||
+                JSON.stringify(sortingRef.current) !== JSON.stringify(requestedSort)
+            ) {
+                return;
+            }
             const responseData = Array.isArray(res.data?.info) ? res.data.info : [];
             const apiFilterOptions = res.data?.filter_options || {};
 
@@ -648,6 +659,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                 setPageCount(pagMeta.last_page);
             }
         } catch (err) {
+            if (requestSeq !== labourRequestSeq.current) return;
             console.error('Failed to fetch project labour details', err);
             setData([]);
             setGrossAmount(0);
@@ -655,7 +667,9 @@ const Labour = ({projectId}: { projectId: number }) => {
             setTotalRows(0);
             setPageCount(0);
         }
-        setLoading(false);
+        if (requestSeq === labourRequestSeq.current) {
+            setLoading(false);
+        }
     };
 
     const {table, pagination, totalRows, setTotalRows, setPageCount} =
@@ -678,6 +692,8 @@ const Labour = ({projectId}: { projectId: number }) => {
             onSortingChange: setSorting,
             onColumnVisibilityChange,
             manualSorting: true,
+            forceServerSorting: true,
+            enableSortingRemoval: false,
             getRowId: (row) => String(row.row_key || row.row_id || row.id),
         });
 
@@ -1112,7 +1128,22 @@ const Labour = ({projectId}: { projectId: number }) => {
                                                 }}
                                             >
                                                 <Box
-                                                    onClick={header.column.getToggleSortingHandler()}
+                                                    onClick={
+                                                        isSortable
+                                                            ? () => {
+                                                                  const columnId = header.column.id;
+                                                                  setSorting((current) => {
+                                                                      const active = current[0];
+                                                                      const next =
+                                                                          !active || active.id !== columnId
+                                                                              ? [{id: columnId, desc: false}]
+                                                                              : [{id: columnId, desc: !active.desc}];
+                                                                      sortingRef.current = next;
+                                                                      return next;
+                                                                  });
+                                                              }
+                                                            : undefined
+                                                    }
                                                     sx={{
                                                         cursor: isSortable ? 'pointer' : 'default',
                                                         border: '2px solid transparent',
