@@ -206,10 +206,17 @@ const HistoryList = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get("user/get-user-lists");
-      if (res.data) {
-        setUsers(res.data.info);
-      }
+      if (!startDate || !endDate) return;
+      const res = await api.get("history/get-filters", {
+        params: {
+          start_date: dayjs(startDate).format("DD/MM/YYYY"),
+          end_date: dayjs(endDate).format("DD/MM/YYYY"),
+        },
+      });
+      const usersFilter = (res.data?.info || []).find(
+        (item: { key?: string }) => item.key === "users",
+      );
+      setUsers(usersFilter?.data || []);
     } catch (err) {
       console.error("Failed to fetch location", err);
     }
@@ -227,10 +234,10 @@ const HistoryList = () => {
     }
   };
   useEffect(() => {
-    if (user?.company_id) {
+    if (user?.company_id && startDate && endDate) {
       fetchUsers();
     }
-  }, [user?.company_id]);
+  }, [user?.company_id, startDate, endDate]);
 
   const uniqueUsers = useMemo(
     () =>
