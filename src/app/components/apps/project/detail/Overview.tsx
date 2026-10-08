@@ -79,6 +79,13 @@ dayjs.extend(customParseFormat);
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
+const FINANCIAL_TYPE_TOOLTIPS: Record<string, string> = {
+  Pricework:
+    "Gross amount (net × 1.25). Approved includes sent and approved pricework; To Approve is pending pricework.",
+  "Direct Labour":
+    "Gross amount (net × 1.25). Daywork only; all daywork is counted as approved.",
+};
+
 type OverviewData = {
   currency?: string;
   project?: {
@@ -967,13 +974,31 @@ const Overview = ({
                               bgcolor={row.color}
                             />
                             <Typography fontSize={13}>{row.type}</Typography>
+                            {FINANCIAL_TYPE_TOOLTIPS[row.type] && (
+                              <Tooltip
+                                title={FINANCIAL_TYPE_TOOLTIPS[row.type]}
+                                arrow
+                                placement="top"
+                              >
+                                <Box
+                                  component="span"
+                                  display="inline-flex"
+                                  color="text.secondary"
+                                  sx={{ cursor: "help" }}
+                                >
+                                  <IconInfoCircle size={14} />
+                                </Box>
+                              </Tooltip>
+                            )}
                           </Stack>
                         </TableCell>
                         <TableCell align="right">
                           {money(currency, row.approved)}
                         </TableCell>
                         <TableCell align="right">
-                          {money(currency, row.to_approve)}
+                          {row.type === "Direct Labour"
+                            ? "-"
+                            : money(currency, row.to_approve)}
                         </TableCell>
                         <TableCell align="right">
                           {money(

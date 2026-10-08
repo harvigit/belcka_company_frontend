@@ -2,7 +2,7 @@ import React, {useState, useMemo, useCallback} from 'react';
 import {Box, Typography, Card, Button, Menu} from '@mui/material';
 import {IconArrowsSplit, IconTrash, IconChevronDown, IconChevronUp} from '@tabler/icons-react';
 import api from '@/utils/axios';
-import {Conflict, ConflictItem, parseDT} from '../sections/timesheet-conflicts';
+import {Conflict, ConflictItem, parseDT, getItemLabel, canDeleteItem, deleteConflictItem} from '../sections/timesheet-conflicts';
 import {DateTime} from 'luxon';
 
 interface SplitDeleteCaseProps {
@@ -23,6 +23,7 @@ interface SplitRow {
     start: string;
     end: string;
     total: string;
+    is_leave?: boolean;
 }
 
 interface DeletePreviewRow {
@@ -72,8 +73,9 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({conflict, onClose}) =>
 
         if (!s1.isValid || !e1.isValid || !s2.isValid || !e2.isValid) return null;
 
-        if (s1 <= s2 && e1 >= e2) return {outerItem: item1, innerItem: item2};
-        if (s2 <= s1 && e2 >= e1) return {outerItem: item2, innerItem: item1};
+        // A leave is never split — only a worklog can be the outer item
+        if (s1 <= s2 && e1 >= e2 && !item1.is_leave) return {outerItem: item1, innerItem: item2};
+        if (s2 <= s1 && e2 >= e1 && !item2.is_leave) return {outerItem: item2, innerItem: item1};
 
         return null; // partial overlap — not a split-delete case
     }, [conflict.items]);
@@ -118,13 +120,14 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({conflict, onClose}) =>
         rows.push({
             user_id: innerUserId,
             worklog_id: innerWorklogId,
-            shift_name: innerItem.shift_name,
+            shift_name: getItemLabel(innerItem),
             shift_id: Number(innerItem.shift_id) || 0,
             date: innerItem.date,
             formatted_date: conflict.formatted_date,
             start: formatHM(is),
             end: formatHM(ie),
             total: calcDiffHM(is, ie),
+            is_leave: Boolean(innerItem.is_leave),
         });
 
         // Segment after inner ends
@@ -151,7 +154,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({conflict, onClose}) =>
         const s = parseDT(selectedItem.start);
         const e = parseDT(selectedItem.end);
         if (!s.isValid || !e.isValid) return null;
-        return [{type: selectedItem.shift_name, start: formatHM(s), end: formatHM(e), total: calcDiffHM(s, e)}];
+        return [{type: getItemLabel(selectedItem), start: formatHM(s), end: formatHM(e), total: calcDiffHM(s, e)}];
     }, [selectedItem]);
 
     // ── Confirm split ─────────────────────────────────────────────────────────
@@ -159,7 +162,9 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({conflict, onClose}) =>
         if (!splitPreview || isLoading) return;
         setIsLoading(true);
         try {
-            const res = await api.post('/time-clock/split-worklog', {split_data: splitPreview});
+            // Leave rows are preview-only; sending them would create a new worklog (worklog_id 0)
+            const splitData = splitPreview.filter((r) => !r.is_leave).map(({is_leave, ...r}) => r);
+            const res = await api.post('/time-clock/split-worklog', {split_data: splitData});
             if (!res.data.IsSuccess) {
                 console.error('Split failed:', res.data.message);
             }
@@ -181,20 +186,18 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({conflict, onClose}) =>
     }, []);
 
     // ── Open delete preview ───────────────────────────────────────────────────
-    const handleOpenDeletePreview = useCallback((worklogId: number) => {
-        const item = conflict.items.find((i) => i.worklog_id === worklogId);
-        if (!item) return;
+    const handleOpenDeletePreview = useCallback((item: ConflictItem) => {
         setSelectedItem(item);
         setDeletePreviewOpen(true);
         closeMenu();
-    }, [conflict.items, closeMenu]);
+    }, [closeMenu]);
 
     // ── Confirm delete ────────────────────────────────────────────────────────
     const handleConfirmDelete = useCallback(async () => {
-        if (!selectedItem?.worklog_id || isLoading) return;
+        if (!selectedItem || !canDeleteItem(selectedItem) || isLoading) return;
         setIsLoading(true);
         try {
-            await api.post('/time-clock/delete-worklog', {worklog_id: selectedItem.worklog_id});
+            await deleteConflictItem(selectedItem);
             setDeletePreviewOpen(false);
             setSelectedItem(null);
             onClose(); // ← notify parent: conflict resolved
@@ -296,18 +299,18 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({conflict, onClose}) =>
                             <Box sx={{flex: 1}}>
                                 <Typography
                                     sx={{fontSize: '0.8rem', fontWeight: 500, mb: 0.5, textTransform: 'capitalize'}}>
-                                    {item.shift_name}
+                                    {getItemLabel(item)}
                                 </Typography>
                                 <Typography sx={{fontSize: '0.7rem', color: '#666'}}>
                                     {item.start} → {item.end}
                                 </Typography>
                             </Box>
-                            {item.worklog_id && (
+                            {canDeleteItem(item) && (
                                 <Button
                                     size="small"
                                     variant="outlined"
                                     color="error"
-                                    onClick={() => handleOpenDeletePreview(item.worklog_id!)}
+                                    onClick={() => handleOpenDeletePreview(item)}
                                     sx={{
                                         textTransform: 'none',
                                         fontSize: '0.75rem',

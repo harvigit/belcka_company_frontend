@@ -187,7 +187,6 @@ const Labour = ({projectId}: { projectId: number }) => {
     };
     const [data, setData] = useState<LabourRow[]>([]);
     const [currency, setCurrency] = useState('£');
-    const [totalAmount, setTotalAmount] = useState(0);
     const [grossAmount, setGrossAmount] = useState(0);
     const [netAmount, setNetAmount] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -593,7 +592,6 @@ const Labour = ({projectId}: { projectId: number }) => {
                     0,
                 ),
             );
-            setTotalAmount(total);
             setNetAmount(getNumericResponseValue(res.data, ['total_net_amount'], total));
             setGrossAmount(
                 getNumericResponseValue(res.data, ['total_gross_amount'], total * 1.25),
@@ -652,7 +650,6 @@ const Labour = ({projectId}: { projectId: number }) => {
         } catch (err) {
             console.error('Failed to fetch project labour details', err);
             setData([]);
-            setTotalAmount(0);
             setGrossAmount(0);
             setNetAmount(0);
             setTotalRows(0);
@@ -871,7 +868,6 @@ const Labour = ({projectId}: { projectId: number }) => {
                         {[
                             {label: 'Gross', amount: grossAmount},
                             {label: 'Net', amount: netAmount},
-                            {label: 'Total', amount: totalAmount},
                         ].map(({label, amount}) => (
                             <Box
                                 key={label}
