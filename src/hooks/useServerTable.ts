@@ -27,6 +27,8 @@ interface UseServerTableOptions<TData> {
   manualFiltering?: boolean;
   shouldResetPageOnDebounce?: () => boolean;
   enableSorting?: boolean;
+  /** When false, a column click only flips asc/desc and never clears the sort. */
+  enableSortingRemoval?: boolean;
   forceServerSorting?: boolean;
   state?: any;
   getRowId?: (originalRow: TData, index: number, parent?: any) => string;
@@ -46,6 +48,7 @@ export function useServerTable<TData>({
   manualFiltering = true,
   shouldResetPageOnDebounce,
   enableSorting = true,
+  enableSortingRemoval = true,
   forceServerSorting = false,
   state: controlledState,
   getRowId,
@@ -192,8 +195,14 @@ export function useServerTable<TData>({
       currentPageIndex !== 0 &&
       (shouldResetPageOnDebounceRef.current?.() ?? true)
     ) {
-      skipNextPaginationFetchRef.current = true;
-      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+      // Reset first. The page effect then loads page 1 with this sort.
+      // Fetching here would still use the old page, and skipping that
+      // page effect would drop every other sort change.
+      skipNextPaginationFetchRef.current = false;
+      setPagination((prev) =>
+        prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+      );
+      return;
     }
     runFetch();
   }, [JSON.stringify(sorting)]);
@@ -225,6 +234,7 @@ export function useServerTable<TData>({
     manualSorting: useClientFullSort ? false : manualSorting,
     autoResetPageIndex: false,
     enableSorting,
+    enableSortingRemoval,
     enableRowSelection: true,
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
