@@ -1602,6 +1602,7 @@ const TablePagination = () => {
                           const payload = {
                             team_id: Number(teamId),
                             user_ids: usersToDelete.join(","),
+                            company_id: id.company_id
                           };
                           const response = await api.post(
                             "team/remove-users-to-team",
