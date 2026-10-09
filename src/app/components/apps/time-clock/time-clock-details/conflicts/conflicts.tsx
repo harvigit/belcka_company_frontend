@@ -16,6 +16,7 @@ import {DateTime} from 'luxon';
 import CutDeleteCase from './cut-delete-conflicts';
 import SplitDeleteCase from './split-delete-conflicts';
 import DeleteOnlyCase from './delete-conflicts';
+import LeaveWorklogCase from '@/app/components/apps/conflicts/resolution/leave-worklog-conflicts';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import {User} from 'next-auth';
@@ -68,7 +69,8 @@ export type ConflictType =
     | 'pricework-timesheet'
     | 'billing_info'
     | 'duplicate_account_id'
-    | 'checkout-location';
+    | 'checkout-location'
+    | 'leave-worklog';
 
 const formatFieldLabel = (key: string): string => {
     return key
@@ -132,7 +134,7 @@ export const getConflictType = (items: ConflictItem[]): ConflictType => {
     }
 
     if (items.some((item) => item.is_leave)) {
-        return 'delete-only';
+        return 'leave-worklog';
     }
 
     if (items.length !== 2) return 'delete-only';
@@ -219,6 +221,8 @@ const ConflictCaseRenderer = React.memo(({conflict, index, startDate, endDate, o
                 return <CutDeleteCase {...commonProps} />;
             case 'split-delete':
                 return <SplitDeleteCase {...commonProps} />;
+            case 'leave-worklog':
+                return <LeaveWorklogCase conflict={conflict} onClose={onClose} />;
             case 'pricework-timesheet':
                 return <CutDeleteCase {...commonProps} showResolveConflict />;
             case 'delete-only':
