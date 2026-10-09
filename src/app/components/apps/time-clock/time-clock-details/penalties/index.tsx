@@ -25,7 +25,7 @@ import {
     Polyline,
     useJsApiLoader,
 } from "@react-google-maps/api";
-import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
+import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS, findZoneForPoint, getDistanceToZone } from "@/utils/googleMaps";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 
@@ -62,6 +62,7 @@ interface PenaltyItem {
         [key: string]: unknown;
     } | null;
     geofences?: PenaltyGeofenceApi[] | null;
+    project_geofences?: PenaltyGeofenceApi[] | null;
     start_work_location?: PenaltyLocation | null;
     stop_work_location?: PenaltyLocation | null;
 }
@@ -272,6 +273,30 @@ const GeofenceOverlay = ({zone}: { zone: PenaltyGeofence }) => {
     );
 };
 
+const ZoneLabel = ({zone, color}: { zone: PenaltyGeofence; color?: string }) => (
+    <OverlayView position={zone.center} mapPaneName={OverlayView.OVERLAY_LAYER}>
+        <Box
+            sx={{
+                position: 'absolute',
+                transform: 'translate(-50%, 6px)',
+                width: 'max-content',
+                maxWidth: 200,
+                px: 0.75,
+                py: 0.25,
+                borderRadius: 1,
+                bgcolor: '#fff',
+                border: `1.5px solid ${color ?? zone.color}`,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+            }}
+        >
+            <Typography noWrap sx={{fontSize: 10, fontWeight: 700, color: '#222'}}>{zone.name}</Typography>
+        </Box>
+    </OverlayView>
+);
+
+const START_COLOR = '#22a447';
+const STOP_COLOR = '#e53935';
+
 const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
     const mapRef = useRef<google.maps.Map | null>(null);
     const {isLoaded} = useJsApiLoader({
@@ -279,16 +304,47 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
     });
 
-    const points = useMemo(
-        () =>
-            [
-                normalizeLocationPoint('Start', '#1976d2', penalty.start_work_location, penalty.formatted_start_time),
-                normalizeLocationPoint('Stop', '#fc4b6c', penalty.stop_work_location, penalty.formatted_end_time),
-            ].filter((point): point is PenaltyMapPoint => point !== null),
-        [penalty.start_work_location, penalty.stop_work_location, penalty.formatted_start_time, penalty.formatted_end_time],
+    const startPoint = useMemo(
+        () => normalizeLocationPoint('Start', START_COLOR, penalty.start_work_location, penalty.formatted_start_time),
+        [penalty.start_work_location, penalty.formatted_start_time],
     );
-    const geofences = useMemo(() => normalizeGeofences(penalty.geofences), [penalty.geofences]);
-    const hasMapData = points.length > 0 || geofences.length > 0;
+    const stopPoint = useMemo(
+        () => normalizeLocationPoint('Stop', STOP_COLOR, penalty.stop_work_location, penalty.formatted_end_time),
+        [penalty.stop_work_location, penalty.formatted_end_time],
+    );
+    const points = useMemo(
+        () => [startPoint, stopPoint].filter((point): point is PenaltyMapPoint => point !== null),
+        [startPoint, stopPoint],
+    );
+
+    const allGeofences = useMemo(() => normalizeGeofences(penalty.geofences), [penalty.geofences]);
+    // Penalty is applied when the stop location is outside every work zone of the worklog's project
+    const projectGeofences = useMemo(() => normalizeGeofences(penalty.project_geofences), [penalty.project_geofences]);
+
+    // Project zones sorted by distance from the stop location
+    const projectZoneDistances = useMemo(() => {
+        if (!stopPoint) return [];
+        return projectGeofences
+            .map((zone) => ({zone, ...getDistanceToZone(stopPoint.position, zone)}))
+            .sort((a, b) => a.distance - b.distance);
+    }, [projectGeofences, stopPoint]);
+
+    const stopInsideProjectZone = useMemo(
+        () => (isLoaded && stopPoint ? findZoneForPoint(stopPoint.position, projectGeofences) : null),
+        [isLoaded, stopPoint, projectGeofences],
+    );
+    const nearestZone = !stopInsideProjectZone ? projectZoneDistances[0] ?? null : null;
+
+    // Zones where work started / stopped
+    const pointZones = useMemo(() => {
+        if (!isLoaded) return [];
+        const zones = points
+            .map((point) => findZoneForPoint(point.position, allGeofences))
+            .filter((zone): zone is PenaltyGeofence => zone !== null);
+        return zones.filter((zone, index) => zones.findIndex((z) => z.id === zone.id) === index);
+    }, [allGeofences, points, isLoaded]);
+
+    const hasMapData = points.length > 0;
 
     const fitMap = useCallback((map: google.maps.Map) => {
         const bounds = new google.maps.LatLngBounds();
@@ -298,7 +354,7 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
             bounds.extend(point.position);
             hasBounds = true;
         });
-        geofences.forEach((zone) => {
+        [...pointZones, ...(nearestZone ? [nearestZone.zone] : [])].forEach((zone) => {
             extendBoundsWithGeofence(bounds, zone);
             hasBounds = true;
         });
@@ -309,14 +365,15 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
             return;
         }
 
-        if (points.length === 1 && geofences.length === 0) {
+        // Single spot (one point, or start & stop at same place) with no zone → fitBounds would zoom in too far
+        if (bounds.getNorthEast().equals(bounds.getSouthWest())) {
             map.panTo(points[0].position);
             map.setZoom(DEFAULT_ZOOM);
             return;
         }
 
         map.fitBounds(bounds, {top: 50, right: 50, bottom: 50, left: 50});
-    }, [geofences, points]);
+    }, [pointZones, nearestZone, points]);
 
     useEffect(() => {
         if (mapRef.current && isLoaded) {
@@ -327,7 +384,7 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
     if (!hasMapData) {
         return (
             <Typography variant="body2" color="text.secondary">
-                No start/stop location or work-zone boundary data available.
+                No start/stop location data available.
             </Typography>
         );
     }
@@ -345,7 +402,7 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
             <Box sx={{height: 260, borderRadius: 1.5, overflow: 'hidden', border: '1px solid #e5e7eb'}}>
                 <GoogleMap
                     mapContainerStyle={{width: '100%', height: '100%'}}
-                    center={points[0]?.position ?? geofences[0]?.center ?? DEFAULT_CENTER}
+                    center={points[0]?.position ?? DEFAULT_CENTER}
                     zoom={DEFAULT_ZOOM}
                     onLoad={(map) => {
                         mapRef.current = map;
@@ -357,9 +414,31 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
                         fullscreenControl: true,
                     }}
                 >
-                    {geofences.map((zone) => (
-                        <GeofenceOverlay key={zone.id} zone={zone}/>
+                    {pointZones.map((zone) => (
+                        <React.Fragment key={zone.id}>
+                            <GeofenceOverlay zone={zone}/>
+                            <ZoneLabel zone={zone}/>
+                        </React.Fragment>
                     ))}
+                    {nearestZone && stopPoint && !pointZones.some((zone) => zone.id === nearestZone.zone.id) && (
+                        <>
+                            <GeofenceOverlay zone={{...nearestZone.zone, color: STOP_COLOR}}/>
+                            <ZoneLabel zone={nearestZone.zone} color={STOP_COLOR}/>
+                        </>
+                    )}
+                    {nearestZone && stopPoint && (
+                        <Polyline
+                            path={[stopPoint.position, nearestZone.nearest]}
+                            options={{
+                                strokeOpacity: 0,
+                                icons: [{
+                                    icon: {path: 'M 0,-1 0,1', strokeOpacity: 1, strokeColor: STOP_COLOR, scale: 2},
+                                    offset: '0',
+                                    repeat: '10px',
+                                }],
+                            }}
+                        />
+                    )}
                     {points.map((point) => (
                         <MapPinOverlay key={point.label} point={point}/>
                     ))}
