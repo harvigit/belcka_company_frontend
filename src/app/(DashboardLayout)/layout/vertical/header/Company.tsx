@@ -25,6 +25,7 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
 import { clearUserPermissionsCache } from "@/lib/userPermissionsCache";
+import { storeApiToken } from "@/lib/apiSession";
 import toast from "react-hot-toast";
 import {
   IconArrowLeft,
@@ -319,6 +320,7 @@ const Company = () => {
 
         const updatedInfo = response.data.info;
         if (updatedInfo && updatedInfo.authToken) {
+          await storeApiToken(updatedInfo.authToken);
           await session.update({
             user: {
               ...session.data?.user,

@@ -19,6 +19,7 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
 import { getSession, signIn, signOut } from "next-auth/react";
 import { resolvePostLoginPath } from "@/lib/permissions";
+import { clearStoredApiToken, storeApiToken } from "@/lib/apiSession";
 import { clearUserPermissionsCache } from "@/lib/userPermissionsCache";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
@@ -81,7 +82,6 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const [user, setUser] = useState<any>({});
   const [id, setId] = useState(0);
   const [companyId, setCompanyId] = useState(0);
-  const [token, setToken] = useState("");
   const [isCodeVerified, setIsCodeVerified] = useState(false);
   const [businessFields, setBusinessFields] = useState([]);
   const [teamSizes, setTeamSizes] = useState([]);
@@ -302,9 +302,12 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       });
 
       if (res.data.IsSuccess) {
-        setUser(res.data.info);
-        setId(res.data.info.id);
-        setToken(res.data.info.authToken);
+        const info = { ...(res.data.info || {}) };
+        await storeApiToken(info.authToken);
+        delete info.authToken;
+        delete info.token;
+        setUser(info);
+        setId(info.id);
         setOpenCompanyModal(true);
         toast.success(res.data.message);
       }
@@ -319,11 +322,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const validateCompanyCode = async (code: string) => {
     try {
       setLoading(true);
-      const res = await api.get(`company/validate-team-otp?otp=${code}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await api.get(`company/validate-team-otp?otp=${code}`);
 
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
@@ -352,7 +351,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       };
 
       const res = await api.post("company/join-company", payload, {
-        headers: { Authorization: `Bearer ${token}`, is_web: "true" },
+        headers: { is_web: "true" },
       });
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
@@ -400,7 +399,6 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       const res = await api.post("company/company-app-registration", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
           is_web: "true",
         },
       });
@@ -442,7 +440,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     if (res.data.IsSuccess && res.data.otp) {
       return decryptLoginOtp(String(res.data.otp));
     }
-    setToken("");
+    await clearStoredApiToken();
     return false;
   };
 
@@ -465,7 +463,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     });
 
     if (response?.ok) {
-      setToken("");
+      await clearStoredApiToken();
       await redirectAfterSuccessfulLogin();
     } else {
       toast.error(response?.error || "Login failed after registration");
@@ -482,6 +480,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     toast.success("Logged out successfully!!");
     Cookies.remove(`user_store_${user.id}_${user.company_id}`);
     clearUserPermissionsCache();
+    await clearStoredApiToken();
     await signOut({ callbackUrl: "/auth" });
     return loading;
   };

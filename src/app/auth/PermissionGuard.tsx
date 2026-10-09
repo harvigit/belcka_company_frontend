@@ -13,6 +13,7 @@ import api from "@/utils/axios";
 import { usePermissions } from "@/hooks/usePermissions";
 import { hasPermission, hasAnyPermission, isWebPermissionGranted } from "@/lib/permissions";
 import { clearUserPermissionsCache } from "@/lib/userPermissionsCache";
+import { clearStoredApiToken } from "@/lib/apiSession";
 import CreateTrade from "../components/apps/settings/company-trades/create";
 import { User } from "next-auth";
 import Cookies from "js-cookie";
@@ -179,6 +180,7 @@ export default function PermissionGuard({
         toast.success(res.data.message);
         Cookies.remove(`user_store_${user.id}_${user.company_id}`);
         clearUserPermissionsCache();
+        await clearStoredApiToken();
         await signOut({ callbackUrl: "/auth" });
       } else {
         toast.error(res.data.message);

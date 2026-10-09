@@ -1,5 +1,4 @@
 import api from "@/utils/axios";
-import { setAccessToken } from "@/lib/authToken";
 import MenuItems from "@/app/(DashboardLayout)/layout/vertical/sidebar/MenuItems";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import {
@@ -181,11 +180,6 @@ export async function resolvePostLoginPath(user?: {
     token?: string | null;
 } | null, accessToken?: string | null): Promise<string> {
     if (!user) return "/dashboard";
-
-    const token = accessToken || user.token || null;
-    if (token) {
-        setAccessToken(token);
-    }
 
     if (Number(user.user_role_id) === 1) {
         return "/apps/users/list";

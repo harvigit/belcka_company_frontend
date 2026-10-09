@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { User } from "next-auth";
 import Cookies from "js-cookie";
 import { clearUserPermissionsCache } from "@/lib/userPermissionsCache";
+import { clearStoredApiToken } from "@/lib/apiSession";
 import Link from "next/link";
 import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 import { useTranslation } from "react-i18next";
@@ -34,6 +35,7 @@ const Profile = () => {
     toast.success(t("Logged out successfully!!"));
     Cookies.remove(`user_store_${user.id}_${user.company_id}`);
     clearUserPermissionsCache();
+    await clearStoredApiToken();
     await signOut({ callbackUrl: "/auth" });
     return loading;
   };
