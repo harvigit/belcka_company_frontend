@@ -122,18 +122,6 @@ export const authOptions: NextAuthOptions = {
             },
           });
 
-          if (res.status === 401) {
-            const { token: _droppedToken, authToken: _droppedAuthToken, ...publicUser } =
-              user || {};
-            delete publicUser.token;
-            delete publicUser.authToken;
-            return {
-              ...session,
-              error: "SessionRevoked",
-              user: publicUser,
-            };
-          }
-
           const data = await res.json();
           if (res.ok && data?.info) {
             companyData = {
@@ -158,17 +146,13 @@ export const authOptions: NextAuthOptions = {
         console.error("Error fetching active company in session:", err);
       }
 
-      const { token: _token, authToken: _authToken, ...publicUser } = user || {};
-      const sessionUser = {
-        ...publicUser,
-        ...companyData,
-      };
-      delete sessionUser.token;
-      delete sessionUser.authToken;
-
       return {
         ...session,
-        user: sessionUser,
+        user: {
+          ...user,
+          ...companyData,
+        },
+        accessToken: token.accessToken,
       };
     },
 

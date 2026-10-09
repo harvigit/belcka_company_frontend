@@ -16,7 +16,7 @@ import "react-phone-input-2/lib/material.css";
 import { getSession, signIn, signOut, useSession } from "next-auth/react";
 import { resolvePostLoginPath } from "@/lib/permissions";
 import { clearUserPermissionsCache } from "@/lib/userPermissionsCache";
-import { clearStoredApiToken, storeApiToken } from "@/lib/apiSession";
+import { setAccessToken } from "@/lib/authToken";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import CustomFormLabel from "@/app/components/forms/theme-elements/CustomFormLabel";
@@ -266,7 +266,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
 
       if (res.data.IsSuccess && Object.keys(res.data.info).length > 0) {
         const updated = res.data.info;
-        await storeApiToken(updated.authToken);
+        setAccessToken(updated.authToken);
 
         await update({
           user: {
@@ -312,7 +312,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
     toast.success("Logged out successfully!!");
     Cookies.remove(`user_store_${user.id}_${user.company_id}`);
     clearUserPermissionsCache();
-    await clearStoredApiToken();
+    setAccessToken(null);
     await signOut({ callbackUrl: "/auth" });
     return loading;
   };
