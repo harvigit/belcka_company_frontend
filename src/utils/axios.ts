@@ -1,5 +1,5 @@
 // axios.ts
-import { clearStoredApiToken, hasSession } from "@/lib/apiSession";
+import { getAccessToken } from "@/lib/authToken";
 import { clearUserPermissionsCache } from "@/lib/userPermissionsCache";
 import axios from "axios";
 import { User } from "next-auth";
@@ -7,7 +7,7 @@ import { getSession, signOut } from "next-auth/react";
 import toast from "react-hot-toast";
 
 const api = axios.create({
-  baseURL: "/api/proxy/",
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
 });
 
 let isLoggingOut = false;
@@ -20,7 +20,6 @@ const userLogout = async () => {
 
   isLoggingOut = true;
   clearUserPermissionsCache();
-  await clearStoredApiToken();
 
   toast.error(
     "Your session has ended. Please sign in again to continue.",
@@ -44,8 +43,11 @@ api.interceptors.request.use(
       return config;
     }
 
-    if (hasSession()) {
+    const token = getAccessToken();
+
+    if (token) {
       config.headers = config.headers || {};
+      config.headers.authorization = `Bearer ${token}`;
       config.headers.is_web = "true";
     }
 
@@ -97,7 +99,7 @@ api.interceptors.response.use(
 
         const now = Date.now();
         const isRecentSwitch = now - lastSwitchTime < 5000;
-        const hasToken = hasSession();
+        const hasToken = !!getAccessToken();
 
         if (numericActiveId === 0) {
           if (!isSwitchingURL && !isRecentSwitch && hasToken) {
@@ -130,7 +132,7 @@ api.interceptors.response.use(
 
     const now = Date.now();
     const isRecentSwitch = now - lastSwitchTime < 5000;
-    const hasToken = hasSession();
+    const hasToken = !!getAccessToken();
 
     const activeCompanyId =
       error.response?.data?.context?.active_company_id ??

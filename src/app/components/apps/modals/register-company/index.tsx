@@ -113,6 +113,7 @@ export default function CompanyRegistration({ open, onClose }: Props) {
 
       const res = await api.post("company/company-app-registration", formData, {
         headers: {
+          Authorization: `Bearer ${user.token}`,
           "Content-Type": "multipart/form-data",
           is_web: "true",
         },
