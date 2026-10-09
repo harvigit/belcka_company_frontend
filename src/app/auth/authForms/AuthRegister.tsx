@@ -19,6 +19,7 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
 import { getSession, signIn, signOut } from "next-auth/react";
 import { resolvePostLoginPath } from "@/lib/permissions";
+import { setAccessToken } from "@/lib/authToken";
 import { clearUserPermissionsCache } from "@/lib/userPermissionsCache";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
@@ -305,6 +306,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
         setUser(res.data.info);
         setId(res.data.info.id);
         setToken(res.data.info.authToken);
+        setAccessToken(res.data.info.authToken);
         setOpenCompanyModal(true);
         toast.success(res.data.message);
       }
@@ -443,6 +445,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       return decryptLoginOtp(String(res.data.otp));
     }
     setToken("");
+    setAccessToken(null);
     return false;
   };
 
@@ -482,6 +485,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     toast.success("Logged out successfully!!");
     Cookies.remove(`user_store_${user.id}_${user.company_id}`);
     clearUserPermissionsCache();
+    setAccessToken(null);
     await signOut({ callbackUrl: "/auth" });
     return loading;
   };

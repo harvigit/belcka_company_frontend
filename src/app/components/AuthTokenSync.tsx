@@ -8,7 +8,7 @@ export function AuthTokenSync() {
   const { data: session } = useSession();
 
   useEffect(() => {
-    setAccessToken((session as any)?.accessToken ?? null);
+    setAccessToken((session as { accessToken?: string } | null)?.accessToken ?? null);
   }, [session]);
 
   return null;

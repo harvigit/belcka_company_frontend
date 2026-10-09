@@ -9,9 +9,16 @@ import {
   Grid,
   IconButton,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Typography,
 } from "@mui/material";
 import { IconArrowLeft, IconX } from "@tabler/icons-react";
+import { overviewTableSx } from "./OverviewRecordsDrawer";
 
 type OrderItem = {
   product_name?: string | null;
@@ -232,76 +239,80 @@ export default function InternalOrderDetailDrawer({
                   </Box>
                 )}
 
-              <Grid container spacing={1.5}>
-                {(order.items || []).map((item, index) => (
-                  <Grid
-                    key={`${item.uuid || item.product_name}-${index}`}
-                    size={{ xs: 12, sm: 6 }}
-                  >
-                    <Box
-                      sx={{
-                        height: "100%",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: 2,
-                        p: { xs: 1.5, sm: 2 },
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={1.5}
-                        alignItems="center"
-                        mb={1}
-                      >
-                        <Avatar
-                          variant="rounded"
-                          src={item.product_image || undefined}
-                          sx={{ width: 52, height: 52, bgcolor: "#f3f4f6" }}
-                        />
-                        <Box minWidth={0}>
-                          <Typography
-                            fontWeight={700}
-                            sx={{ wordBreak: "break-word" }}
-                          >
-                            {item.product_name || "-"}
+              <TableContainer
+                sx={{
+                  border: "1px solid #EEF2F7",
+                  borderRadius: 2,
+                  overflow: "auto",
+                }}
+              >
+                <Table
+                  size="small"
+                  stickyHeader
+                  aria-label="internal order items"
+                  sx={{ ...overviewTableSx, minWidth: 760 }}
+                >
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Product</TableCell>
+                      <TableCell>UUID</TableCell>
+                      <TableCell align="right">Qty</TableCell>
+                      <TableCell align="right">Amount</TableCell>
+                      <TableCell align="right">Adjusted stock</TableCell>
+                      <TableCell align="right">Stock in hand</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {(order.items || []).length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6}>
+                          <Typography color="text.secondary" fontSize={13}>
+                            No product history for this order.
                           </Typography>
-                          <Typography fontSize={12} color="text.secondary">
-                            {item.uuid && <>UUID: {item.uuid || "-"}</>}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                      <Grid container spacing={1.5}>
-                        <Grid size={{ xs: 3 }}>
-                          <Meta label="Qty" value={item.qty} />
-                        </Grid>
-                        <Grid size={{ xs: 3 }}>
-                          <Meta label="Amount" value={item.amount} />
-                        </Grid>
-                        <Grid size={{ xs: 3 }}>
-                          <Meta
-                            label="Adjusted stock"
-                            value={item.adjusted_stock}
-                          />
-                        </Grid>
-                        {item.stock_in_hand && (
-                          <Grid size={{ xs: 3 }}>
-                            <Meta
-                              label="Stock in hand"
-                              value={item.stock_in_hand || "-"}
-                            />
-                          </Grid>
-                        )}
-                      </Grid>
-                    </Box>
-                  </Grid>
-                ))}
-                {(order.items || []).length === 0 && (
-                  <Grid size={{ xs: 12 }}>
-                    <Typography color="text.secondary">
-                      No product history for this order.
-                    </Typography>
-                  </Grid>
-                )}
-              </Grid>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      (order.items || []).map((item, index) => (
+                        <TableRow
+                          key={`${item.uuid || item.product_name}-${index}`}
+                          hover
+                        >
+                          <TableCell>
+                            <Stack
+                              direction="row"
+                              spacing={1.25}
+                              alignItems="center"
+                              minWidth={0}
+                            >
+                              <Avatar
+                                variant="rounded"
+                                src={item.product_image || undefined}
+                                sx={{ width: 36, height: 36, bgcolor: "#f3f4f6" }}
+                              />
+                              <Typography
+                                fontSize={13}
+                                fontWeight={700}
+                                sx={{ wordBreak: "break-word", whiteSpace: "normal" }}
+                              >
+                                {item.product_name || "-"}
+                              </Typography>
+                            </Stack>
+                          </TableCell>
+                          <TableCell>{item.uuid || "-"}</TableCell>
+                          <TableCell align="right">{item.qty || "-"}</TableCell>
+                          <TableCell align="right">{item.amount || "-"}</TableCell>
+                          <TableCell align="right">
+                            {item.adjusted_stock || "-"}
+                          </TableCell>
+                          <TableCell align="right">
+                            {item.stock_in_hand || "-"}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </>
           )}
         </Box>

@@ -47,6 +47,8 @@
     import type { UserConflict } from './sections/user-conflicts';
     import type { AccountIdConflict } from './sections/account-id-conflicts';
 import PermissionGuard from '@/app/auth/PermissionGuard';
+import { useSession } from 'next-auth/react';
+import { User } from 'next-auth';
     
     export interface ConflictsApiResponse {
         total_conflicts: number;
@@ -126,13 +128,20 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
     
         const startStr = startDate ? format(startDate, 'yyyy-MM-dd') : '';
         const endStr = endDate ? format(endDate, 'yyyy-MM-dd') : '';
-    
+        
+        const session = useSession();
+
+        const user = session.data?.user as User & {
+            company_id: number;
+        };
+
         const fetchConflicts = useCallback(async (from?: Date | null, to?: Date | null) => {
             setIsFetching(true);
             try {
                 const s = from === undefined ? startDate : from;
                 const e = to === undefined ? endDate : to;
                 const params: Record<string, string> = {};
+                params.company_id = String(user.company_id);
                 if (s && e) {
                     params.start_date = format(s, 'dd/MM/yyyy');
                     params.end_date = format(e, 'dd/MM/yyyy');

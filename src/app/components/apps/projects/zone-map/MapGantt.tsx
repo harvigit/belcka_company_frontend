@@ -721,8 +721,13 @@ export default function MapGantt({
 
   const fetchResources = async () => {
     try {
+      const day = `${String(filterDateTime.getDate()).padStart(2, "0")}/${String(filterDateTime.getMonth() + 1).padStart(2, "0")}/${filterDateTime.getFullYear()}`;
       const { data } = await api.get("work-zone/get-resources", {
-        params: { company_id: user.company_id },
+        params: {
+          company_id: user.company_id,
+          start_date: day,
+          end_date: day,
+        },
       });
 
       const mapped = Object.fromEntries(
@@ -939,14 +944,14 @@ export default function MapGantt({
     if (addZoneOpen || selected?.mode === "edit") loadAddressList();
   }, [addZoneOpen, selected]);
 
+  const resourceDay = `${filterDateTime.getFullYear()}-${filterDateTime.getMonth()}-${filterDateTime.getDate()}`;
+
   useEffect(() => {
     if (open) {
       setActiveProjectId(projectId);
-      // if (!projectId) {
       fetchResources();
-      // }
     }
-  }, [open, projectId]);
+  }, [open, projectId, resourceDay]);
 
   useEffect(() => {
     if (open && activeProjectId === projectId) {

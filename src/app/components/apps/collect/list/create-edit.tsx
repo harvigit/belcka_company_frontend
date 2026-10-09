@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Drawer,
   Box,
@@ -127,6 +127,45 @@ const collectItemsSum = (rows: any[]) =>
     return sum + line;
   }, 0);
 
+const RECEIPT_MAX_EDGE = 1600;
+const RECEIPT_JPEG_QUALITY = 0.72;
+
+async function prepareReceiptFile(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type === "image/gif") return file;
+  if (file.size < 350 * 1024) return file;
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const longest = Math.max(bitmap.width, bitmap.height);
+    const scale = longest > RECEIPT_MAX_EDGE ? RECEIPT_MAX_EDGE / longest : 1;
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bitmap.close();
+      return file;
+    }
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", RECEIPT_JPEG_QUALITY);
+    });
+    if (!blob || blob.size >= file.size) return file;
+
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "receipt";
+    return new File([blob], `${baseName}.jpg`, {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  } catch {
+    return file;
+  }
+}
+
 const mapCollectItem = (row: any) => ({
   ...row,
   qty: row.qty ?? "",
@@ -171,6 +210,26 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
   const [fetching, setFetching] = useState(false);
   const [scannedData, setScannedData] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
+  const scanRequestId = useRef(0);
+  const previewUrlRef = useRef<string | null>(null);
+
+  const clearLocalPreview = () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+  };
+
+  const showLocalPreview = (selectedFile: File) => {
+    clearLocalPreview();
+    const src = URL.createObjectURL(selectedFile);
+    previewUrlRef.current = src;
+    setFilePreview({
+      src,
+      isExisting: false,
+      type: selectedFile.type,
+    });
+  };
 
   useEffect(() => {
     if (open) {
@@ -196,12 +255,15 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
         receipt_date: null,
         invoice_number: null,
       });
+      clearLocalPreview();
       setFile(null);
       setFilePreview(null);
       setScannedData(null);
       setItems([]);
     }
   }, [open, isEdit, collectId]);
+
+  useEffect(() => () => clearLocalPreview(), []);
 
   const fetchResources = async () => {
     try {
@@ -249,6 +311,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
         } else {
           setItems([]);
         }
+        clearLocalPreview();
         if (item.image) {
           setFilePreview({
             src: item.image,
@@ -276,13 +339,12 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
     maxFiles: 1,
     onDrop: async (files) => {
       if (files && files.length > 0) {
-        const selectedFile = files[0];
+        const requestId = ++scanRequestId.current;
+        const selectedFile = await prepareReceiptFile(files[0]);
+        if (requestId !== scanRequestId.current) return;
+
         setFile(selectedFile);
-        setFilePreview({
-          src: URL.createObjectURL(selectedFile),
-          isExisting: false,
-          type: selectedFile.type,
-        });
+        showLocalPreview(selectedFile);
 
         const toastId = toast.loading("Scanning document...");
         try {
@@ -291,9 +353,12 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
           if (companyId) {
             fd.append("company_id", String(companyId));
           }
-          const res = await api.post("po-collect/ocr-scan", fd, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
+          const res = await api.post("po-collect/ocr-scan", fd);
+
+          if (requestId !== scanRequestId.current) {
+            toast.dismiss(toastId);
+            return;
+          }
 
           if (res.data) {
             toast.success("Document scanned successfully", { id: toastId });
@@ -342,6 +407,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
             toast.dismiss(toastId);
           }
         } catch (e) {
+          if (requestId !== scanRequestId.current) return;
           toast.dismiss(toastId);
           console.error("OCR Scan failed", e);
         }
@@ -443,9 +509,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
       payload.append("items", JSON.stringify(payloadItems));
 
       const endpoint = isEdit ? "po-collect/update" : "po-collect/create";
-      const result = await api.post(endpoint, payload, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const result = await api.post(endpoint, payload);
 
       if (result.data?.IsSuccess) {
         toast.success(result.data.message);
@@ -810,6 +874,8 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
+                            scanRequestId.current += 1;
+                            clearLocalPreview();
                             setFile(null);
                             setFilePreview(null);
                           }}
