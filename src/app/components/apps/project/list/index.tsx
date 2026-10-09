@@ -895,7 +895,7 @@ const ProjectDashboard = () => {
         header: () => <HeaderLabel>Check in Hours</HeaderLabel>,
         meta: { label: "Check in Hours" },
         cell: ({ getValue }) => (
-          <NumberCell value={Number(getValue() || 0).toFixed(2)} />
+          <NumberCell value={Math.round(Number(getValue() || 0))} />
         ),
       }),
       columnHelper.accessor("shift_hour", {
