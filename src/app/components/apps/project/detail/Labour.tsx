@@ -105,7 +105,6 @@ const NUMERIC_COLUMNS = new Set([
 ]);
 
 const COLUMN_LABELS: Record<string, string> = {
-    id: 'ID',
     team: 'Team',
     user: 'User',
     type: 'Type',
@@ -361,16 +360,6 @@ const Labour = ({projectId}: { projectId: number }) => {
             //     },
             // },
             
-            columnHelper.accessor('display_id', {
-                id: 'id',
-                header: () => <Typography variant="subtitle2">ID</Typography>,
-                cell: ({getValue}) => (
-                    <Typography className="f-14" color="textPrimary" noWrap>
-                        {getValue() || '-'}
-                    </Typography>
-                ),
-            }),
-            
             columnHelper.accessor('team_name', {
                 id: 'team',
                 header: () => <Typography variant="subtitle2">Team</Typography>,
@@ -441,14 +430,19 @@ const Labour = ({projectId}: { projectId: number }) => {
                 cell: ({row, getValue}) => {
                     const isDaywork = String(row.original.type || '').toLowerCase() === 'daywork';
                     const isPricework = String(row.original.type || '').toLowerCase() === 'pricework';
-                    const rateValue = isPricework
-                        ? row.original.amount_per_unit ?? getValue()
-                        : getValue();
+
+                    if (isPricework) {
+                        return (
+                            <Typography className="f-14" color="textPrimary" noWrap>
+                                -
+                            </Typography>
+                        );
+                    }
 
                     return (
                         <Typography className="f-14" color="textPrimary" noWrap>
-                            {currency} {Number(rateValue || 0).toFixed(2)}
-                            {isDaywork ? '/hr' : isPricework ? '/unit' : ''}
+                            {currency} {Number(getValue() || 0).toFixed(2)}
+                            {isDaywork ? '/hr' : ''}
                         </Typography>
                     );
                 },

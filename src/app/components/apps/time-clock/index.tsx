@@ -563,6 +563,8 @@ const TimeClock = ({queryParams}: Props) => {
     // Conflict sidebar
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
     const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);
+    // All conflicts regardless of date range, used by the header Conflicts button
+    const [allConflictDetails, setAllConflictDetails] = useState<ConflictDetail[]>([]);
     const [settingOpen, setSettingOpen] = useState(false);
     const [settingsInitialMenu, setSettingsInitialMenu] = useState<string | null>(null);
     const [settingsInitialProjectId, setSettingsInitialProjectId] = useState<number | null>(null);
@@ -909,13 +911,23 @@ const TimeClock = ({queryParams}: Props) => {
         if (pendingRequest) return pendingRequest;
 
         const request = (async () => {
-            try {
-                const response = await api.get('/time-clock/conflicts', {params});
-                if (response.data.IsSuccess) {
-                    setConflictDetails(response.data.conflicts || []);
+            const [rangeResult, allResult] = await Promise.allSettled([
+                api.get('/time-clock/conflicts', {params}),
+                api.get('/time-clock/conflicts', {params: {skipDefaultDateFilter: 'true'}}),
+            ]);
+            if (rangeResult.status === 'fulfilled') {
+                if (rangeResult.value.data.IsSuccess) {
+                    setConflictDetails(rangeResult.value.data.conflicts || []);
                 }
-            } catch (error) {
+            } else {
                 setConflictDetails([]);
+            }
+            if (allResult.status === 'fulfilled') {
+                if (allResult.value.data.IsSuccess) {
+                    setAllConflictDetails(allResult.value.data.conflicts || []);
+                }
+            } else {
+                setAllConflictDetails([]);
             }
         })();
 
@@ -1058,10 +1070,10 @@ const TimeClock = ({queryParams}: Props) => {
 
     // Conflicts count
     const totalConflictsCount = useMemo(() => {
-        return conflictDetails.reduce((count, item) => {
+        return allConflictDetails.reduce((count, item) => {
             return item ? count + 1 : count;
         }, 0);
-    }, [conflictDetails]);
+    }, [allConflictDetails]);
 
 
     const hasAnyConflicts = totalConflictsCount > 0;
@@ -3963,7 +3975,7 @@ const TimeClock = ({queryParams}: Props) => {
                             ? conflictDetails.filter(
                                 (conflict: any) => conflict.user_id === selectedConflictUserId
                             )
-                            : conflictDetails
+                            : allConflictDetails
                     }
                     totalConflicts={
                         selectedConflictUserId
