@@ -902,6 +902,7 @@ const TimeClock = ({queryParams}: Props) => {
         const s = rangeStart || startDate;
         const e = rangeEnd || endDate;
         const params: Record<string, string> = {};
+        params.company_id= String(user.company_id);
         if (s && e) {
             params.start_date = format(s, 'dd/MM/yyyy');
             params.end_date = format(e, 'dd/MM/yyyy');
