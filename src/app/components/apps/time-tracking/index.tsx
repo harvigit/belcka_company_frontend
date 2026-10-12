@@ -68,6 +68,7 @@ import {
 import {useSession} from 'next-auth/react';
 
 import api from '@/utils/axios';
+import {startWorkRestrictionMessage} from './startWorkWindow';
 import TimeClockTable from './components/TimeClockTable';
 import TimeClockStats from './components/TimeClockStats';
 import {useTimeClockData} from './hooks/useTimeClockData';
@@ -127,6 +128,7 @@ type ShiftOption = {
     name: string;
     start_time: string;
     end_time: string;
+    start_work_before_minutes: number | null;
     is_pricework: boolean;
     week_days: WeekDay[];
 };
@@ -136,6 +138,7 @@ interface ShiftApiResponse {
     name: string;
     start_time: string | null;
     end_time: string | null;
+    start_work_before_minutes?: number | null;
     is_pricework: boolean;
     week_days: WeekDay[] | null;
 }
@@ -804,6 +807,8 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
     const [locationDialogOpen, setLocationDialogOpen] = useState(false);
     const [allowedIpAddresses, setAllowedIpAddresses] = useState<string[]>([]);
     const [ipRestrictionLoading, setIpRestrictionLoading] = useState(false);
+    const [serverClock, setServerClock] = useState<{nowMs: number; receivedAt: number; timeZone: string} | null>(null);
+    const [clockTick, setClockTick] = useState(0);
     const resourcesRequestInProgressRef = useRef(false);
     const resourcesLoadedForOpenRef = useRef(false);
     const locationRequestInProgressRef = useRef(false);
@@ -829,6 +834,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
             resourcesRequestInProgressRef.current = false;
             resourcesLoadedForOpenRef.current = false;
             setAllowedIpAddresses([]);
+            setServerClock(null);
             return;
         }
         if (resourcesRequestInProgressRef.current || resourcesLoadedForOpenRef.current) return;
@@ -854,6 +860,14 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
                     shifts: Array.isArray(p.shifts) ? p.shifts : [],
                 }));
                 setProjects(mapped);
+                const serverNowMs = Date.parse(res.data?.server_now);
+                if (Number.isFinite(serverNowMs) && res.data?.timezone) {
+                    setServerClock({
+                        nowMs: serverNowMs,
+                        receivedAt: Date.now(),
+                        timeZone: res.data.timezone,
+                    });
+                }
                 if (mapped.length === 1) setSelectedProject(mapped[0].id);
             })
             .catch(() => setProjects([]))
@@ -914,6 +928,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
             name: s.name,
             start_time: s.start_time ?? '',
             end_time: s.end_time ?? '',
+            start_work_before_minutes: s.start_work_before_minutes ?? null,
             is_pricework: s.is_pricework ?? false,
             week_days: s.week_days ?? [],
         }));
@@ -939,8 +954,21 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
         }
     }, [getLocation, onConfirm, selectedShift, selectedProject]);
 
+    const startWindowMessage = useMemo(() => {
+        if (!selectedShift || !serverClock) return null;
+        const shift = shifts.find((item) => item.id === selectedShift);
+        if (!shift) return null;
+        return startWorkRestrictionMessage({
+            startTime: shift.start_time,
+            endTime: shift.end_time,
+            beforeMinutes: shift.start_work_before_minutes,
+            nowMs: serverClock.nowMs + (Date.now() - serverClock.receivedAt),
+            timeZone: serverClock.timeZone,
+        });
+    }, [selectedShift, shifts, serverClock, clockTick]);
+
     const handleConfirm = () => {
-        if (!selectedShift || shiftDayError) return;
+        if (!selectedShift || shiftDayError || startWindowMessage) return;
         requestLocationAndConfirm();
     };
 
@@ -955,7 +983,13 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
         return !shift.week_days.find((d) => d.name.toLowerCase() === todayName)?.status;
     };
 
-    const isConfirmDisabled = !selectedProject || !selectedShift || !!shiftDayError || loading || loadingShifts || locationLoading;
+    useEffect(() => {
+        if (!open) return;
+        const timerId = window.setInterval(() => setClockTick((tick) => tick + 1), 30000);
+        return () => window.clearInterval(timerId);
+    }, [open]);
+
+    const isConfirmDisabled = !selectedProject || !selectedShift || !!shiftDayError || !!startWindowMessage || loading || loadingShifts || locationLoading;
 
     return (
         <>
@@ -1070,7 +1104,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
                     </Stack>
                 </DialogContent>
 
-                <DialogActions sx={{px: 3, pb: 2.5, gap: 1}}>
+                <DialogActions sx={{px: 3, pb: 2.5, gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end'}}>
                     <Button onClick={onClose} variant="outlined" size="small"
                             sx={{textTransform: 'none', fontWeight: 600}}>Cancel</Button>
                     <Button
@@ -1087,6 +1121,11 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
                     >
                         {locationLoading ? 'Getting location…' : loading ? 'Starting…' : 'Start Work'}
                     </Button>
+                    {startWindowMessage && (
+                        <Typography fontSize={12} color="error" sx={{width: '100%', textAlign: 'right'}}>
+                            {startWindowMessage}
+                        </Typography>
+                    )}
                 </DialogActions>
             </Dialog>
 
