@@ -20,6 +20,7 @@ import api from '@/utils/axios';
 import { IconHelp, IconX } from '@tabler/icons-react';
 import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
+import {normalizeStartWorkAllowedFrom} from '@/app/components/apps/time-tracking/startWorkWindow';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
@@ -39,7 +40,7 @@ interface ShiftDetails {
     dayLength: number[];
     start_time: string;
     end_time: string;
-    start_work_before_minutes: string;
+    start_work_allowed_from: string;
     is_archive: boolean;
     status: boolean;
     shift_breaks: ShiftBreak[];
@@ -72,7 +73,7 @@ interface ShiftPayload {
     days: any;
     start_time: string;
     end_time: string;
-    start_work_before_minutes: number | null;
+    start_work_allowed_from: string | null;
     shift_breaks: any;
     is_archive: boolean;
     status: boolean;
@@ -175,7 +176,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
         dayLength: Array(7).fill(8),
         start_time: '09:00',
         end_time: '17:00',
-        start_work_before_minutes: '',
+        start_work_allowed_from: '',
         is_archive: false,
         status: true,
         shift_breaks: [],
@@ -187,6 +188,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
     const [priceworkEnabled, setPriceworkEnabled] = useState<boolean>(false);
 
     const [breaksEnabled, setBreaksEnabled] = useState<boolean>(false);
+    const [startWorkAllowedFromEnabled, setStartWorkAllowedFromEnabled] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [deletedBreakIds, setDeletedBreakIds] = useState<number[]>([]);
 
@@ -226,6 +228,8 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                             }))
                             : [];
 
+                        const startWorkAllowedFrom = normalizeStartWorkAllowedFrom(data.start_work_allowed_from);
+
                         setShiftDetail({
                             id: data.id,
                             company_id: data.company_id,
@@ -235,9 +239,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                             dayLength,
                             start_time: data.start_time || '09:00',
                             end_time: data.end_time || '17:00',
-                            start_work_before_minutes: data.start_work_before_minutes == null
-                                ? ''
-                                : String(data.start_work_before_minutes),
+                            start_work_allowed_from: startWorkAllowedFrom ?? '',
                             is_archive: data.is_archive || false,
                             status: data.status || true,
                             shift_breaks: shiftBreaks,
@@ -248,6 +250,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         // Sync the switch when editing
                         setPriceworkEnabled(data.is_pricework || false);
                         setBreaksEnabled(shiftBreaks.length > 0);
+                        setStartWorkAllowedFromEnabled(startWorkAllowedFrom != null);
                     } else {
                         setErrorMessage('Failed to load shift settings');
                     }
@@ -356,6 +359,15 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
         });
     };
 
+    const handleStartWorkAllowedFromToggle = () => {
+        setStartWorkAllowedFromEnabled((prev) => {
+            updateShiftSettings({
+                start_work_allowed_from: prev ? '' : (normalizeStartWorkAllowedFrom(shiftDetail.start_time) ?? '07:00'),
+            });
+            return !prev;
+        });
+    };
+
     const handleSave = async () => {
         try {
             if (breaksEnabled && shiftDetail.shift_breaks.length > 0) {
@@ -407,19 +419,20 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                 day_length: shiftDetail.dayLength[idx],
             }));
 
-            const rawMinutes = shiftDetail.start_work_before_minutes.trim();
-            let startWorkBeforeMinutes: number | null = null;
-            if (rawMinutes !== '') {
-                if (!/^\d+$/.test(rawMinutes)) {
-                    setErrorMessage('Minutes before start must be a whole number from 1 to 720.');
+            let startWorkAllowedFrom: string | null = null;
+            if (startWorkAllowedFromEnabled) {
+                startWorkAllowedFrom = normalizeStartWorkAllowedFrom(shiftDetail.start_work_allowed_from);
+                if (startWorkAllowedFrom == null) {
+                    setErrorMessage('Start Work Allowed From must be a time in HH:mm (24-hour) format.');
                     return;
                 }
-                const parsedMinutes = Number(rawMinutes);
-                if (parsedMinutes < 1 || parsedMinutes > 720) {
-                    setErrorMessage('Minutes before start must be a whole number from 1 to 720.');
+                const shiftStart = normalizeStartWorkAllowedFrom(shiftDetail.start_time);
+                const shiftEnd = normalizeStartWorkAllowedFrom(shiftDetail.end_time);
+                // Same-day shift: the allowed time must leave room to start before the shift ends.
+                if (shiftStart && shiftEnd && shiftEnd > shiftStart && startWorkAllowedFrom >= shiftEnd) {
+                    setErrorMessage('Start Work Allowed From must be before the shift end time.');
                     return;
                 }
-                startWorkBeforeMinutes = parsedMinutes;
             }
 
             const shift_breaks = shiftDetail.shift_breaks.map((b) => ({
@@ -436,7 +449,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                 days,
                 start_time: shiftDetail.start_time,
                 end_time: shiftDetail.end_time,
-                start_work_before_minutes: startWorkBeforeMinutes,
+                start_work_allowed_from: startWorkAllowedFrom,
                 shift_breaks,
                 is_archive: shiftDetail.is_archive,
                 status: shiftDetail.status,
@@ -582,12 +595,8 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                             borderRadius: 2,
                             boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
                             mb: 2,
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 2,
                         }}
                     >
-                        <Box sx={{ flex: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
                             <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">{t('Start Shift')}</Typography>
                             <TimePicker
@@ -646,18 +655,60 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                                 }}
                             />
                         </Box>
+                    </Box>
+
+                    <Box
+                        sx={{
+                            p: 2,
+                            bgcolor: '#fff',
+                            borderRadius: 2,
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                            mb: 2,
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Typography variant="body2">{t('Start Work Allowed From')}</Typography>
+                            <IOSSwitch
+                                checked={startWorkAllowedFromEnabled}
+                                onChange={handleStartWorkAllowedFromToggle}
+                                color="primary"
+                            />
                         </Box>
-                        <TextField
-                            label={t('Minutes before start')}
-                            value={shiftDetail.start_work_before_minutes}
-                            onChange={(e) => updateShiftSettings({
-                                start_work_before_minutes: e.target.value.replace(/\D/g, '').slice(0, 3),
-                            })}
-                            placeholder={t('Optional')}
-                            size="small"
-                            inputProps={{inputMode: 'numeric', maxLength: 3}}
-                            sx={{width: 180, flexShrink: 0}}
-                        />
+                        {startWorkAllowedFromEnabled && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                                <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">{t('Time')}</Typography>
+                                <TimePicker
+                                    value={shiftDetail.start_work_allowed_from
+                                        ? dayjs(shiftDetail.start_work_allowed_from, 'HH:mm')
+                                        : null}
+                                    onChange={(newValue: Dayjs | null) => updateShiftSettings({
+                                        start_work_allowed_from: newValue && newValue.isValid() ? newValue.format('HH:mm') : '',
+                                    })}
+                                    ampm={false}
+                                    format="HH:mm"
+                                    viewRenderers={{
+                                        hours: renderTimeViewClock,
+                                        minutes: renderTimeViewClock,
+                                        seconds: renderTimeViewClock,
+                                    }}
+                                    slotProps={{
+                                        textField: {
+                                            size: 'small',
+                                            sx: {
+                                                width: '150px',
+                                                '& .MuiSvgIcon-root': {
+                                                    width: '18px',
+                                                    height: '18px',
+                                                },
+                                                '& .MuiFormHelperText-root': {
+                                                    display: 'none',
+                                                },
+                                            },
+                                        },
+                                    }}
+                                />
+                            </Box>
+                        )}
                     </Box>
 
                     {/* Breaks section - unchanged */}

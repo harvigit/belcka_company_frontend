@@ -128,7 +128,7 @@ type ShiftOption = {
     name: string;
     start_time: string;
     end_time: string;
-    start_work_before_minutes: number | null;
+    start_work_allowed_from: string | null;
     is_pricework: boolean;
     week_days: WeekDay[];
 };
@@ -138,7 +138,7 @@ interface ShiftApiResponse {
     name: string;
     start_time: string | null;
     end_time: string | null;
-    start_work_before_minutes?: number | null;
+    start_work_allowed_from?: string | null;
     is_pricework: boolean;
     week_days: WeekDay[] | null;
 }
@@ -807,7 +807,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
     const [locationDialogOpen, setLocationDialogOpen] = useState(false);
     const [allowedIpAddresses, setAllowedIpAddresses] = useState<string[]>([]);
     const [ipRestrictionLoading, setIpRestrictionLoading] = useState(false);
-    const [serverClock, setServerClock] = useState<{nowMs: number; receivedAt: number; timeZone: string} | null>(null);
+    const [serverClock, setServerClock] = useState<{nowMs: number; receivedAt: number; timeZone: string; companyAllowedFrom: string | null; exempt: boolean} | null>(null);
     const [clockTick, setClockTick] = useState(0);
     const resourcesRequestInProgressRef = useRef(false);
     const resourcesLoadedForOpenRef = useRef(false);
@@ -866,6 +866,8 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
                         nowMs: serverNowMs,
                         receivedAt: Date.now(),
                         timeZone: res.data.timezone,
+                        companyAllowedFrom: res.data.company_start_work_allowed_from ?? null,
+                        exempt: res.data.start_work_restriction_exempt === true,
                     });
                 }
                 if (mapped.length === 1) setSelectedProject(mapped[0].id);
@@ -928,7 +930,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
             name: s.name,
             start_time: s.start_time ?? '',
             end_time: s.end_time ?? '',
-            start_work_before_minutes: s.start_work_before_minutes ?? null,
+            start_work_allowed_from: s.start_work_allowed_from ?? null,
             is_pricework: s.is_pricework ?? false,
             week_days: s.week_days ?? [],
         }));
@@ -955,13 +957,14 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
     }, [getLocation, onConfirm, selectedShift, selectedProject]);
 
     const startWindowMessage = useMemo(() => {
-        if (!selectedShift || !serverClock) return null;
+        if (!selectedShift || !serverClock || serverClock.exempt) return null;
         const shift = shifts.find((item) => item.id === selectedShift);
         if (!shift) return null;
         return startWorkRestrictionMessage({
             startTime: shift.start_time,
             endTime: shift.end_time,
-            beforeMinutes: shift.start_work_before_minutes,
+            allowedFrom: shift.start_work_allowed_from,
+            companyAllowedFrom: serverClock.companyAllowedFrom,
             nowMs: serverClock.nowMs + (Date.now() - serverClock.receivedAt),
             timeZone: serverClock.timeZone,
         });
