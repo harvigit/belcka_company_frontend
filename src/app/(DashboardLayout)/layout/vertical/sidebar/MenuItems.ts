@@ -27,6 +27,7 @@ import {
   IconUserPin,
   IconReceipt,
   IconChartPie,
+  IconCertificate,
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
@@ -157,6 +158,13 @@ const MenuItems: NavGroup[] = [
     slug: "health_safety",
     icon: IconReportMedical,
     href: "/apps/health-safety/index",
+  },
+  {
+    id: uniqueId(),
+    title: "Certificates",
+    slug: "certificates",
+    icon: IconCertificate,
+    href: "/apps/certificates",
   },
   {
     id: uniqueId(),
