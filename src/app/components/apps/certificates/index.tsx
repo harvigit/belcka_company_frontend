@@ -74,6 +74,7 @@ type CertificateRow = {
   status: string;
   file_url: string | null;
   uploaded_date: string;
+  user_id?: number | null;
   user_name: string;
   user_image: string | null;
   expires_in_days?: number | null;
@@ -224,6 +225,7 @@ const Certificates = () => {
   const user = session.data?.user as User & {
     company_id?: number | null;
     id?: number;
+    user_role_id?: number | null;
   };
   const companyId = Number(user?.company_id || 0);
   const week = currentWeek();
@@ -252,6 +254,9 @@ const Certificates = () => {
   const [detail, setDetail] = useState<CertificateRow | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const canReplaceDocument =
+    Number(user?.user_role_id) === 1 ||
+    Number(user?.id) === Number(detail?.user_id);
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1192,26 +1197,30 @@ const Certificates = () => {
                     {isPdf(detail.file_url) ? "View PDF" : "View file"}
                   </Button>
                 )}
-                <Button
-                  variant="outlined"
-                  startIcon={<IconCloudUpload size={18} />}
-                  onClick={() => replaceInputRef.current?.click()}
-                  disabled={saving}
-                  sx={{ textTransform: "none", borderRadius: "8px" }}
-                >
-                  Replace document
-                </Button>
-                <input
-                  ref={replaceInputRef}
-                  hidden
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={(event) => {
-                    const next = event.target.files?.[0];
-                    event.target.value = "";
-                    if (next) replaceDocument(next);
-                  }}
-                />
+                {canReplaceDocument && (
+                  <>
+                    <Button
+                      variant="outlined"
+                      startIcon={<IconCloudUpload size={18} />}
+                      onClick={() => replaceInputRef.current?.click()}
+                      disabled={saving}
+                      sx={{ textTransform: "none", borderRadius: "8px" }}
+                    >
+                      Replace document
+                    </Button>
+                    <input
+                      ref={replaceInputRef}
+                      hidden
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(event) => {
+                        const next = event.target.files?.[0];
+                        event.target.value = "";
+                        if (next) replaceDocument(next);
+                      }}
+                    />
+                  </>
+                )}
                 <Button
                   color="error"
                   startIcon={<IconTrash size={18} />}
