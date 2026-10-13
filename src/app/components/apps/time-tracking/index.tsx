@@ -807,7 +807,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
     const [locationDialogOpen, setLocationDialogOpen] = useState(false);
     const [allowedIpAddresses, setAllowedIpAddresses] = useState<string[]>([]);
     const [ipRestrictionLoading, setIpRestrictionLoading] = useState(false);
-    const [serverClock, setServerClock] = useState<{nowMs: number; receivedAt: number; timeZone: string; companyAllowedFrom: string | null; exempt: boolean} | null>(null);
+    const [serverClock, setServerClock] = useState<{nowMs: number; receivedAt: number; timeZone: string} | null>(null);
     const [clockTick, setClockTick] = useState(0);
     const resourcesRequestInProgressRef = useRef(false);
     const resourcesLoadedForOpenRef = useRef(false);
@@ -866,8 +866,6 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
                         nowMs: serverNowMs,
                         receivedAt: Date.now(),
                         timeZone: res.data.timezone,
-                        companyAllowedFrom: res.data.company_start_work_allowed_from ?? null,
-                        exempt: res.data.start_work_restriction_exempt === true,
                     });
                 }
                 if (mapped.length === 1) setSelectedProject(mapped[0].id);
@@ -957,14 +955,13 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
     }, [getLocation, onConfirm, selectedShift, selectedProject]);
 
     const startWindowMessage = useMemo(() => {
-        if (!selectedShift || !serverClock || serverClock.exempt) return null;
+        if (!selectedShift || !serverClock) return null;
         const shift = shifts.find((item) => item.id === selectedShift);
         if (!shift) return null;
         return startWorkRestrictionMessage({
             startTime: shift.start_time,
             endTime: shift.end_time,
             allowedFrom: shift.start_work_allowed_from,
-            companyAllowedFrom: serverClock.companyAllowedFrom,
             nowMs: serverClock.nowMs + (Date.now() - serverClock.receivedAt),
             timeZone: serverClock.timeZone,
         });

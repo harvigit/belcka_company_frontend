@@ -90,19 +90,9 @@ export function startWorkRestrictionMessage(input: {
     startTime?: string | null;
     endTime?: string | null;
     allowedFrom?: string | null;
-    companyAllowedFrom?: string | null;
     nowMs: number;
     timeZone: string;
 }): string | null {
-    const companyAllowedFrom = normalizeStartWorkAllowedFrom(input.companyAllowedFrom);
-    const companyClock = companyAllowedFrom ? parseClock(companyAllowedFrom) : null;
-    if (companyClock) {
-        const parts = zonedParts(input.nowMs, input.timeZone);
-        if (parts && parts.hour * 60 + parts.minute < companyClock.hour * 60 + companyClock.minute) {
-            return `You can start work from ${formatHm(Date.UTC(1970, 0, 1, companyClock.hour, companyClock.minute))}.`;
-        }
-    }
-
     const allowedFrom = normalizeStartWorkAllowedFrom(input.allowedFrom);
     if (allowedFrom == null) return null;
     if (!input.startTime || !input.endTime) return null;

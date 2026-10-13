@@ -15,23 +15,17 @@ import {
     Button,
     SelectChangeEvent,
     CircularProgress,
-    Tooltip,
-    Avatar,
-    ListItemText,
 } from '@mui/material';
 import { IconHelp } from '@tabler/icons-react';
 import SearchIcon from '@mui/icons-material/Search';
 import api from '@/utils/axios';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
-import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import dayjs, { Dayjs } from 'dayjs';
 import toast from 'react-hot-toast';
 import { User } from 'next-auth';
 import { useSession } from 'next-auth/react';
 import { useTranslation } from 'react-i18next';
-import { normalizeStartWorkAllowedFrom } from '@/app/components/apps/time-tracking/startWorkWindow';
 
 interface Timezone {
     id: string | number;
@@ -63,9 +57,6 @@ interface CompanySettings {
     payRatePermission: boolean;
     exportFormat: string;
     leave_limit: number;
-    isStartWorkAllowedFrom: boolean;
-    startWorkAllowedFrom: string;
-    startWorkExemptUserIds: string[];
 }
 
 interface GeneralSettingProps {
@@ -110,14 +101,8 @@ const getDefaultSettings = (): Omit<SettingsState, 'isSaving'> => ({
     isAutoClock: false,
     payRatePermission: true,
     exportFormat: 'time',
-    leave_limit: 0,
-    isStartWorkAllowedFrom: false,
-    startWorkAllowedFrom: '07:00',
-    startWorkExemptUserIds: [],
+    leave_limit: 0
 });
-
-const toUserIdStrings = (value: unknown): string[] =>
-    Array.isArray(value) ? value.map((id) => String(id)) : [];
 
 const useSettingsState = (defaultSettings: Partial<CompanySettings> = {}): [SettingsState, (updates: Partial<SettingsState>) => void] => {
     const [state, setState] = useState<SettingsState>({
@@ -211,11 +196,7 @@ const useCompanySettings = (): { settings: CompanySettings | null; loading: bool
                     isAutoClock: response.data.isAutoClock ?? getDefaultSettings().isAutoClock,
                     payRatePermission: response.data.pay_rate_permission || 'view',
                     exportFormat: response.data.export_format || 'time',
-                    leave_limit: response.data?.data?.leave_limit ?? 0,
-                    isStartWorkAllowedFrom: normalizeStartWorkAllowedFrom(response.data?.data?.start_work_allowed_from) != null,
-                    startWorkAllowedFrom: normalizeStartWorkAllowedFrom(response.data?.data?.start_work_allowed_from)
-                        ?? getDefaultSettings().startWorkAllowedFrom,
-                    startWorkExemptUserIds: toUserIdStrings(response.data?.data?.start_work_exempt_user_ids),
+                    leave_limit: response.data?.data?.leave_limit ?? 0
                 };
                 setSettings(apiSettings);
             } else {
@@ -304,11 +285,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                         payRatePermission: true,
                         exportFormat: fetchedSettings.export_format || 'time',
                         isSaving: false,
-                        leave_limit: fetchedSettings.leave_limit ?? 0,
-                        isStartWorkAllowedFrom: normalizeStartWorkAllowedFrom(fetchedSettings.start_work_allowed_from) != null,
-                        startWorkAllowedFrom: normalizeStartWorkAllowedFrom(fetchedSettings.start_work_allowed_from)
-                            ?? defaults.startWorkAllowedFrom,
-                        startWorkExemptUserIds: toUserIdStrings(fetchedSettings.start_work_exempt_user_ids),
+                        leave_limit: fetchedSettings.leave_limit ?? 0
                     });
                 } else {
                     updateSettings(getDefaultSettings());
@@ -325,12 +302,6 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
     const isLoading = settingsLoading || resourcesLoading;
 
     const timeOptions = useMemo(() => generateTimeOptions(), []);
-
-    const filteredExemptUsers = useMemo(() => {
-        const search = userDropdown.searchText.toLowerCase();
-        if (!search) return companyUsers;
-        return companyUsers.filter(user => user.name.toLowerCase().includes(search));
-    }, [companyUsers, userDropdown.searchText]);
 
     const filteredTimezones = useMemo(() => {
         if (!timezoneDropdown.searchText) return allTimezones;
@@ -489,11 +460,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                 users: settings.users,
                 pay_rate_permission: true,
                 export_format: settings.exportFormat,
-                leave_limit: settings.leave_limit,
-                start_work_allowed_from: settings.isStartWorkAllowedFrom
-                    ? normalizeStartWorkAllowedFrom(settings.startWorkAllowedFrom)
-                    : null,
-                start_work_exempt_user_ids: settings.startWorkExemptUserIds.map(Number),
+                leave_limit: settings.leave_limit
             };
 
             const response = await api.post('/setting/save-general-setting', payload);
@@ -502,9 +469,8 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                 toast.success(response.data.message);
                 onSaveSuccess();
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error saving settings:', error);
-            if (error?.response?.data?.message) toast.error(error.response.data.message);
         } finally {
             updateSettings({ isSaving: false });
         }
@@ -671,115 +637,6 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                     </Box>
                                 </Box>
                             )}
-
-                            <Box display="flex" alignItems="center" justifyContent="space-between" mt={3}>
-                                <Box display="flex" alignItems="center">
-                                    <Checkbox
-                                        checked={settings.isStartWorkAllowedFrom}
-                                        onChange={createCheckboxHandler('isStartWorkAllowedFrom')}
-                                        sx={{ p: 0, mr: 1 }}
-                                        size="small"
-                                    />
-                                    <Box>
-                                        <Typography variant="body2">{t('Start Work Allowed From')}</Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {t('Employees in this company cannot start work before this time.')}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                                <TimePicker
-                                    value={dayjs(settings.startWorkAllowedFrom, 'HH:mm')}
-                                    onChange={(newValue: Dayjs | null) => {
-                                        if (newValue && newValue.isValid()) {
-                                            updateSettings({ startWorkAllowedFrom: newValue.format('HH:mm') });
-                                        }
-                                    }}
-                                    disabled={!settings.isStartWorkAllowedFrom}
-                                    ampm={false}
-                                    format="HH:mm"
-                                    viewRenderers={{
-                                        hours: renderTimeViewClock,
-                                        minutes: renderTimeViewClock,
-                                        seconds: renderTimeViewClock,
-                                    }}
-                                    slotProps={{
-                                        textField: {
-                                            size: 'small',
-                                            sx: { width: 150 },
-                                        },
-                                    }}
-                                />
-                            </Box>
-
-                            <Box display="flex" alignItems="center" justifyContent="space-between" mt={3}>
-                                <Box>
-                                    <Box display="flex" alignItems="center" gap={0.5}>
-                                        <Typography variant="body2">{t('Start work time exceptions')}</Typography>
-                                        <Tooltip
-                                            arrow
-                                            title={t('Selected users can press Start Work at any time. Both the company Start Work Allowed From time and the shift Start Work Allowed From time are skipped for them.')}
-                                        >
-                                            <Box component="span" display="flex"><IconHelp size={16} color="#9e9e9e" /></Box>
-                                        </Tooltip>
-                                    </Box>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {t('Start Work time limits are not checked for these users.')}
-                                    </Typography>
-                                </Box>
-                                <Select<string[]>
-                                    multiple
-                                    value={settings.startWorkExemptUserIds}
-                                    onChange={(event: SelectChangeEvent<string[]>) => {
-                                        const value = event.target.value;
-                                        updateSettings({ startWorkExemptUserIds: typeof value === 'string' ? value.split(',') : value });
-                                    }}
-                                    open={userDropdown.isOpen}
-                                    onOpen={userDropdown.handleOpen}
-                                    onClose={userDropdown.handleClose}
-                                    size="small"
-                                    displayEmpty
-                                    renderValue={(selected) => selected.length === 0
-                                        ? <Typography variant="body2" color="text.secondary">{t('Select users')}</Typography>
-                                        : `${selected.length} ${t(selected.length === 1 ? 'user selected' : 'users selected')}`}
-                                    sx={{ width: 200, '& .MuiSelect-select': { padding: '8px 12px', fontSize: '0.875rem' } }}
-                                    MenuProps={styles.selectMenuProps}
-                                >
-                                    <ListSubheader sx={{ bgcolor: 'background.paper', padding: '8px 16px', borderBottom: '1px solid #e0e0e0' }}>
-                                        <TextField
-                                            size="small"
-                                            placeholder={t('Search users...')}
-                                            fullWidth
-                                            value={userDropdown.searchText}
-                                            onChange={userDropdown.handleSearchChange}
-                                            InputProps={{
-                                                startAdornment: (
-                                                    <InputAdornment position="start">
-                                                        <SearchIcon sx={{ color: 'action.active', fontSize: 20 }} />
-                                                    </InputAdornment>
-                                                ),
-                                            }}
-                                            onKeyDown={(e) => e.stopPropagation()}
-                                        />
-                                    </ListSubheader>
-                                    {filteredExemptUsers.length > 0 ? (
-                                        filteredExemptUsers.map((user) => (
-                                            <MenuItem key={user.id} value={user.id} sx={{ fontSize: '0.875rem' }}>
-                                                <Checkbox
-                                                    size="small"
-                                                    checked={settings.startWorkExemptUserIds.includes(user.id)}
-                                                    sx={{ p: 0, mr: 1 }}
-                                                />
-                                                <Avatar src={user.user_image || undefined} sx={{ width: 24, height: 24, mr: 1, fontSize: 12 }}>
-                                                    {user.name.charAt(0)}
-                                                </Avatar>
-                                                <ListItemText primary={user.name} primaryTypographyProps={{ fontSize: '0.875rem' }} />
-                                            </MenuItem>
-                                        ))
-                                    ) : (
-                                        <MenuItem disabled sx={{ fontSize: '0.875rem' }}>{t('No users found')}</MenuItem>
-                                    )}
-                                </Select>
-                            </Box>
                         </Box>
 
                         <Divider sx={{ my: 1 }} />
