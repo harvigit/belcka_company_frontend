@@ -63,7 +63,7 @@ import api from "@/utils/axios";
 import { tableFilterOptions } from "@/utils/uniqueFilterOptions";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
-import {flexRender} from "@/utils/flexRender";
+import { flexRender } from "@/utils/flexRender";
 import { useServerTable } from "@/hooks/useServerTable";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
@@ -113,8 +113,7 @@ const normalizeCaseFilters = (
 ): CaseFilters => ({
   status: normalizeCaseFilterValue(filters?.status),
   type: normalizeCaseFilterValue(filters?.type),
-  project_id:
-    lockedProjectId || normalizeCaseFilterValue(filters?.project_id),
+  project_id: lockedProjectId || normalizeCaseFilterValue(filters?.project_id),
   parent_address_id: normalizeCaseFilterValue(filters?.parent_address_id),
 });
 
@@ -430,7 +429,9 @@ const CasesList = ({
   const [parentFilterList, setParentFilterList] = useState<any[]>([]);
   const restoredTableStateKeyRef = useRef("");
   const skipNextDependencyPageResetRef = useRef(false);
-  const [isTableStateReady, setIsTableStateReady] = useState(Boolean(projectId));
+  const [isTableStateReady, setIsTableStateReady] = useState(
+    Boolean(projectId),
+  );
 
   const getClearedFilters = () => ({
     ...DEFAULT_CASE_FILTERS,
@@ -492,8 +493,7 @@ const CasesList = ({
     id?: number | string;
   };
   const casesTableStateKey = useMemo(
-    () =>
-      projectId ? "" : getCasesTableStateKey(user?.id, user?.company_id),
+    () => (projectId ? "" : getCasesTableStateKey(user?.id, user?.company_id)),
     [projectId, user?.id, user?.company_id],
   );
   const { columnVisibility, onColumnVisibilityChange } =
@@ -573,8 +573,7 @@ const CasesList = ({
       if (filters.project_id) url += `&project_id=${filters.project_id}`;
       // if (filters.parent_address_id)
       //   url += `&parent_address_id=${filters.parent_address_id}`;
-      if (filters.type)
-        url += `&type=${filters.type}`;
+      if (filters.type) url += `&type=${filters.type}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
 
       if (sorting && sorting.length > 0) {
@@ -917,6 +916,9 @@ const CasesList = ({
                   wordBreak: "break-word",
                   px: 1.5,
                   borderRadius: 1,
+                  minWidth: "120px",
+                  width: "100%",
+                  maxWidth: "120px",
                   cursor: "pointer",
                   border: "1px solid transparent",
                   transition: "all 0.2s ease",
@@ -1520,9 +1522,7 @@ const CasesList = ({
                       ),
                     );
                     setPagination((prev) =>
-                      prev.pageIndex === 0
-                        ? prev
-                        : { ...prev, pageIndex: 0 },
+                      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
                     );
                     setOpen(false);
                   }}
@@ -1716,38 +1716,40 @@ const CasesList = ({
                         "case_id",
                       ].includes(cell.column.id);
                       return (
-                      <TableCell
-                        key={cell.id}
-                        data-prevent-row-nav={preventRowNav ? "true" : undefined}
-                        onClick={
-                          preventRowNav
-                            ? (e) => e.stopPropagation()
-                            : undefined
-                        }
-                        onMouseDown={
-                          preventRowNav
-                            ? (e) => e.stopPropagation()
-                            : undefined
-                        }
-                        sx={{
-                          padding: "10px",
-                          ...(cell.column.id === "actions" && {
-                            position: "sticky",
-                            right: 0,
-                            backgroundColor: "background.paper",
-                            zIndex: 1,
-                            boxShadow: isScrollable
-                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                              : "none",
-                          }),
-                        }}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    );
+                        <TableCell
+                          key={cell.id}
+                          data-prevent-row-nav={
+                            preventRowNav ? "true" : undefined
+                          }
+                          onClick={
+                            preventRowNav
+                              ? (e) => e.stopPropagation()
+                              : undefined
+                          }
+                          onMouseDown={
+                            preventRowNav
+                              ? (e) => e.stopPropagation()
+                              : undefined
+                          }
+                          sx={{
+                            padding: "10px",
+                            ...(cell.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 1,
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      );
                     })}
                   </TableRow>
                 ))
