@@ -41,47 +41,49 @@ const AllocateAddressesDrawer: React.FC<AllocateAddressesDrawerProps> = ({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (open) {
+    if (!open) {
+      setAddressData([]);
+      setSelectedProject(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadCaseIds = async () => {
+      let ids: string[] = [];
+      if (companyId && selectedAddresses.length) {
+        try {
+          const res = await api.get(
+            `address/next-case-ids?company_id=${companyId}&count=${selectedAddresses.length}`,
+          );
+          ids = Array.isArray(res.data?.info) ? res.data.info : [];
+        } catch (error) {
+          console.error("Failed to load case ids", error);
+        }
+      }
+
+      if (cancelled) return;
+
       setAddressData((prev) =>
-        selectedAddresses.map((addr) => {
+        selectedAddresses.map((addr, index) => {
           const existing = prev.find((item) => item.address_id === addr.id);
-
-          const projStr = selectedProject?.name || "";
-          const projPrefix = projStr
-            ? projStr.substring(0, 3).toUpperCase() + "-"
-            : "";
-          const addrPrefix = addr.name
-            ? addr.name.substring(0, 3).toUpperCase() + "-"
-            : "";
-
-          let generatedCaseId = existing?.generatedCaseId;
-          if (
-            !generatedCaseId ||
-            existing?.lastProject !== selectedProject?.id
-          ) {
-            const randomSuffix = Math.random()
-              .toString(36)
-              .substring(2, 7)
-              .toUpperCase();
-            generatedCaseId = `${projPrefix}${addrPrefix}${randomSuffix}`;
-          }
-
           return {
             address_id: addr.id,
             name: addr.name,
-            case_id: existing?.isManual ? existing.case_id : generatedCaseId,
+            case_id: existing?.isManual ? existing.case_id : ids[index] || "",
             reference: existing?.reference || "",
             isManual: existing?.isManual || false,
-            generatedCaseId,
-            lastProject: selectedProject?.id,
           };
         }),
       );
-    } else {
-      setAddressData([]);
-      setSelectedProject(null);
-    }
-  }, [open, selectedAddresses, selectedProject]);
+    };
+
+    loadCaseIds();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, selectedAddresses, companyId]);
 
   const handleInputChange = (id: number, field: string, value: string) => {
     setAddressData((prev) =>
