@@ -39,6 +39,7 @@ interface ShiftDetails {
     dayLength: number[];
     start_time: string;
     end_time: string;
+    start_work_before_minutes: string;
     is_archive: boolean;
     status: boolean;
     shift_breaks: ShiftBreak[];
@@ -71,6 +72,7 @@ interface ShiftPayload {
     days: any;
     start_time: string;
     end_time: string;
+    start_work_before_minutes: number | null;
     shift_breaks: any;
     is_archive: boolean;
     status: boolean;
@@ -173,6 +175,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
         dayLength: Array(7).fill(8),
         start_time: '09:00',
         end_time: '17:00',
+        start_work_before_minutes: '',
         is_archive: false,
         status: true,
         shift_breaks: [],
@@ -232,6 +235,9 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                             dayLength,
                             start_time: data.start_time || '09:00',
                             end_time: data.end_time || '17:00',
+                            start_work_before_minutes: data.start_work_before_minutes == null
+                                ? ''
+                                : String(data.start_work_before_minutes),
                             is_archive: data.is_archive || false,
                             status: data.status || true,
                             shift_breaks: shiftBreaks,
@@ -401,6 +407,21 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                 day_length: shiftDetail.dayLength[idx],
             }));
 
+            const rawMinutes = shiftDetail.start_work_before_minutes.trim();
+            let startWorkBeforeMinutes: number | null = null;
+            if (rawMinutes !== '') {
+                if (!/^\d+$/.test(rawMinutes)) {
+                    setErrorMessage('Minutes before start must be a whole number from 1 to 720.');
+                    return;
+                }
+                const parsedMinutes = Number(rawMinutes);
+                if (parsedMinutes < 1 || parsedMinutes > 720) {
+                    setErrorMessage('Minutes before start must be a whole number from 1 to 720.');
+                    return;
+                }
+                startWorkBeforeMinutes = parsedMinutes;
+            }
+
             const shift_breaks = shiftDetail.shift_breaks.map((b) => ({
                 id: b.id || null,
                 break_start_time: b.start,
@@ -415,6 +436,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                 days,
                 start_time: shiftDetail.start_time,
                 end_time: shiftDetail.end_time,
+                start_work_before_minutes: startWorkBeforeMinutes,
                 shift_breaks,
                 is_archive: shiftDetail.is_archive,
                 status: shiftDetail.status,
@@ -560,8 +582,12 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                             borderRadius: 2,
                             boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
                             mb: 2,
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 2,
                         }}
                     >
+                        <Box sx={{ flex: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
                             <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">{t('Start Shift')}</Typography>
                             <TimePicker
@@ -620,6 +646,18 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                                 }}
                             />
                         </Box>
+                        </Box>
+                        <TextField
+                            label={t('Minutes before start')}
+                            value={shiftDetail.start_work_before_minutes}
+                            onChange={(e) => updateShiftSettings({
+                                start_work_before_minutes: e.target.value.replace(/\D/g, '').slice(0, 3),
+                            })}
+                            placeholder={t('Optional')}
+                            size="small"
+                            inputProps={{inputMode: 'numeric', maxLength: 3}}
+                            sx={{width: 180, flexShrink: 0}}
+                        />
                     </Box>
 
                     {/* Breaks section - unchanged */}

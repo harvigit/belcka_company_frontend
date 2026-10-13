@@ -24,6 +24,7 @@ import api from '@/utils/axios';
 import CutDeleteCase from '../resolution/cut-delete-conflicts';
 import SplitDeleteCase from '../resolution/split-delete-conflicts';
 import DeleteOnlyCase from '../resolution/delete-conflicts';
+import LeaveWorklogCase from '../resolution/leave-worklog-conflicts';
 import UserProfileLink from '@/app/components/common/UserProfileLink';
 import CheckoutLocationConflict, {isCheckoutLocationConflict} from './checkout-location-conflict';
 
@@ -67,7 +68,7 @@ export interface TimesheetConflict {
     items: ConflictItem[];
 }
 
-export type ShiftConflictType = 'cut-delete' | 'split-delete' | 'delete-only' | 'pricework-timesheet' | 'checkout-location';
+export type ShiftConflictType = 'cut-delete' | 'split-delete' | 'delete-only' | 'pricework-timesheet' | 'checkout-location' | 'leave-worklog';
 
 export const parseDT = (() => {
     const cache = new Map<string, DateTime>();
@@ -113,28 +114,6 @@ const sortConflictItems = (items: ConflictItem[]): ConflictItem[] => {
     return [...items].sort((a, b) => getSortTime(a) - getSortTime(b));
 };
 
-// Leave vs worklog: the leave stays as-is and the worklog is split/cut around it.
-const getLeaveConflictType = (items: ConflictItem[]): ShiftConflictType => {
-    const leave = items.find((i) => i.is_leave);
-    const worklog = items.find((i) => !i.is_leave && i.worklog_id);
-
-    if (items.length !== 2 || !leave || !worklog) {
-        return 'delete-only';
-    }
-
-    const ls = parseDT(leave.start), le = parseDT(leave.end), ws = parseDT(worklog.start), we = parseDT(worklog.end);
-
-    if (![ls, le, ws, we].every((d) => d.isValid)) {
-        return 'delete-only';
-    }
-
-    if (ws < ls && we > le) {
-        return 'split-delete';
-    }
-
-    return ws < ls || we > le ? 'cut-delete' : 'delete-only';
-};
-
 const getShiftConflictType = (items: ConflictItem[]): ShiftConflictType => {
     if (isCheckoutLocationConflict(items)) {
         return 'checkout-location';
@@ -145,7 +124,7 @@ const getShiftConflictType = (items: ConflictItem[]): ShiftConflictType => {
     }
 
     if (items.some((i) => i.is_leave)){
-        return getLeaveConflictType(items);
+        return 'leave-worklog';
     }
     
     if (items.length !== 2){
@@ -192,6 +171,7 @@ const SHIFT_TYPE_CFG: Record<ShiftConflictType, { label: string; color: string; 
     'delete-only':   { label: 'Delete Only',    color: '#DC2626', bg: '#FEE2E2', border: '#FECACA' },
     'pricework-timesheet': { label: 'Daywork-Pricework', color: '#92400E', bg: '#FEF3C7', border: '#FDE68A' },
     'checkout-location': { label: 'Checkout Location', color: '#991B1B', bg: '#FEE2E2', border: '#FECACA' },
+    'leave-worklog': { label: 'Leave Overlap', color: '#9D174D', bg: '#FCE7F3', border: '#FBCFE8' },
 };
 
 // Shared Atoms
@@ -387,6 +367,7 @@ const TimesheetDetailPanel = React.memo(({ conflict, startDate, endDate, onClose
     const renderActions = () => {
         if (isCheckoutLocation) return <CheckoutLocationConflict conflict={conflict as any} onResolved={onResolved} />;
         if (isPriceworkTimesheet) return <Box mt={2}><CutDeleteCase {...commonProps} showResolveConflict /></Box>;
+        if (conflictType === 'leave-worklog') return <Box mt={2}><LeaveWorklogCase conflict={displayConflict} onClose={onResolved} /></Box>;
         if (conflictType === 'cut-delete') return <Box mt={2}><CutDeleteCase {...commonProps} /></Box>;
         if (conflictType === 'split-delete') return <Box mt={2}><SplitDeleteCase {...commonProps} /></Box>;
         return <Box mt={2}><DeleteOnlyCase {...commonProps} /></Box>;

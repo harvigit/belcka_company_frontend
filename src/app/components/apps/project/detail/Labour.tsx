@@ -60,6 +60,7 @@ type LabourRow = {
     trade_id?: number | null;
     trade_name?: string | null;
     date?: string | null;
+    shift_name?: string | null;
     shift_hours?: number | string | null;
     payable_hours?: number | string | null;
     payable_work_minutes?: number | string | null;
@@ -111,14 +112,15 @@ const COLUMN_LABELS: Record<string, string> = {
     type: 'Type',
     trade: 'Trade',
     date: 'Date',
+    shift: 'Shift',
     hours: 'Hours',
     qty: 'Qty',
     rate: 'Rate',
     payable: 'Payable Hr',
     total: 'Total',
     checkInNumber: 'Check-in(No.)',
-    checkInHours: 'Check-in',
-    shiftHours: 'Shift',
+    checkInHours: 'Check-in (Min.)',
+    shiftHours: 'Shift (Min.)',
     risk: 'Risk %',
 };
 
@@ -370,7 +372,7 @@ const Labour = ({projectId}: { projectId: number }) => {
                     </Typography>
                 ),
             }),
-            
+
             columnHelper.accessor('team_name', {
                 id: 'team',
                 header: () => <Typography variant="subtitle2">Team</Typography>,
@@ -421,6 +423,16 @@ const Labour = ({projectId}: { projectId: number }) => {
                 ),
             }),
 
+            columnHelper.accessor('shift_name', {
+                id: 'shift',
+                header: () => <Typography variant="subtitle2">Shift</Typography>,
+                cell: ({getValue}) => (
+                    <Typography className="f-14" color="textPrimary" noWrap>
+                        {getValue() || '-'}
+                    </Typography>
+                ),
+            }),
+
             columnHelper.accessor('work_complete', {
                 id: 'qty',
                 header: () => <Typography variant="subtitle2">Qty</Typography>,
@@ -441,14 +453,19 @@ const Labour = ({projectId}: { projectId: number }) => {
                 cell: ({row, getValue}) => {
                     const isDaywork = String(row.original.type || '').toLowerCase() === 'daywork';
                     const isPricework = String(row.original.type || '').toLowerCase() === 'pricework';
-                    const rateValue = isPricework
-                        ? row.original.amount_per_unit ?? getValue()
-                        : getValue();
+
+                    if (isPricework) {
+                        return (
+                            <Typography className="f-14" color="textPrimary" noWrap>
+                                -
+                            </Typography>
+                        );
+                    }
 
                     return (
                         <Typography className="f-14" color="textPrimary" noWrap>
-                            {currency} {Number(rateValue || 0).toFixed(2)}
-                            {isDaywork ? '/hr' : isPricework ? '/unit' : ''}
+                            {currency} {Number(getValue() || 0).toFixed(2)}
+                            {isDaywork ? '/hr' : ''}
                         </Typography>
                     );
                 },
@@ -496,7 +513,7 @@ const Labour = ({projectId}: { projectId: number }) => {
             columnHelper.accessor('check_in_hours', {
                 id: 'checkInHours',
                 header: () => (
-                    <Typography variant="subtitle2">Check-in</Typography>
+                    <Typography variant="subtitle2">Check-in (Min.)</Typography>
                 ),
                 cell: ({getValue}) => (
                     <Typography className="f-14" color="textPrimary" noWrap>
@@ -507,7 +524,7 @@ const Labour = ({projectId}: { projectId: number }) => {
             
             columnHelper.accessor('shift_hours', {
                 id: 'shiftHours',
-                header: () => <Typography variant="subtitle2">Shift</Typography>,
+                header: () => <Typography variant="subtitle2">Shift (Min.)</Typography>,
                 cell: ({getValue}) => (
                     <Typography className="f-14" color="textPrimary" noWrap>
                         {formatMinutesFromHours(getValue())}

@@ -36,6 +36,7 @@ interface Shift {
     days: string;
     time: string;
     break: string;
+    earliestStart: string | null;
     enabled: boolean;
     assignedUserCount?: number;
 }
@@ -51,6 +52,17 @@ interface User {
 
 interface ShiftListsProps {
     onClose?: () => void;
+}
+
+function earliestStartTime(startTime: string, minutes: number | null | undefined): string | null {
+    if (!minutes || minutes < 1) return null;
+    const match = String(startTime).trim().match(/^(\d{1,2}):(\d{2})/);
+    if (!match) return null;
+    const totalMinutes = Number(match[1]) * 60 + Number(match[2]) - minutes;
+    const wrapped = ((totalMinutes % 1440) + 1440) % 1440;
+    const hours = String(Math.floor(wrapped / 60)).padStart(2, "0");
+    const mins = String(wrapped % 60).padStart(2, "0");
+    return `${hours}:${mins}`;
 }
 
 // Main ShiftLists
@@ -81,6 +93,7 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                                 )
                                 .join(",") || "Every weekday",
                         time: `${shift.start_time} - ${shift.end_time}`,
+                        earliestStart: earliestStartTime(shift.start_time, shift.start_work_before_minutes),
                         break:
                             shift.shift_breaks.length > 0
                                 ? `${shift.shift_breaks[0].break_start_time} - ${shift.shift_breaks[0].break_end_time}`
@@ -339,6 +352,11 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                                     </Typography>
                                     <Typography variant="body2">
                                         <strong>Shift:</strong> {shift.time}
+                                        {shift.earliestStart ? (
+                                            <Box component="span" sx={{ color: "text.secondary", ml: 1 }}>
+                                                (from {shift.earliestStart})
+                                            </Box>
+                                        ) : null}
                                     </Typography>
                                     <Typography variant="body2">
                                         <strong>Break:</strong> {shift.break}

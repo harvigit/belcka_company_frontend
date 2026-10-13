@@ -519,11 +519,11 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
         onSuccess(savedId, !!isEdit);
         onClose();
       } else {
-        toast.error(result.data?.message || "Failed to save collect");
+        // toast.error(result.data?.message || "Failed to save collect");
       }
     } catch (error) {
       console.error("Submit failed:", error);
-      toast.error("Failed to save collect");
+      // toast.error("Failed to save collect");
     } finally {
       setIsSaving(false);
     }

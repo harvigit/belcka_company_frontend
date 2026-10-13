@@ -30,7 +30,7 @@ import {
 } from '@tabler/icons-react';
 import { AxiosResponse } from 'axios';
 import api from '@/utils/axios';
-import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from '@/utils/googleMaps';
+import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS, findZoneForPoint } from '@/utils/googleMaps';
 
 export type LocationPointType = 'start' | 'end' | 'check_in' | 'check_out';
 
@@ -268,26 +268,6 @@ const transformApiGeofences = (geofences?: ApiGeofence[]): Geofence[] =>
         })
         .filter((z): z is Geofence => z !== null);
 
-// Returns the first geofence the point falls in (needs the maps geometry library)
-const findZoneForPoint = (point: LocationPoint, zones: Geofence[]): Geofence | null => {
-    const geometry = typeof google !== 'undefined' ? google.maps?.geometry : undefined;
-    if (!geometry) return null;
-
-    const latLng = new google.maps.LatLng(Number(point.latitude), Number(point.longitude));
-
-    return zones.find((zone) => {
-        if (zone.type === 'circle') {
-            const center = new google.maps.LatLng(zone.center.lat, zone.center.lng);
-            return geometry.spherical.computeDistanceBetween(latLng, center) <= zone.radius;
-        }
-        if (zone.type === 'polygon') {
-            return geometry.poly.containsLocation(latLng, new google.maps.Polygon({ paths: zone.path }));
-        }
-        // ~20m tolerance for polyline zones
-        return geometry.poly.isLocationOnEdge(latLng, new google.maps.Polyline({ path: zone.path }), 2e-4);
-    }) ?? null;
-};
-
 const getPointColor = (point: LocationPoint) => point.color ?? TYPE_META[point.type]?.color ?? TYPE_META.end.color;
 
 // ─── PinOverlay Props ─────────────────────────────────────────────────────────
@@ -463,7 +443,7 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
     // Zone the start / stop work happened in (only computed for those two types)
     const pointZones = useMemo(
         () => locations.map((loc) =>
-            isLoaded && (loc.type === 'start' || loc.type === 'end') ? findZoneForPoint(loc, geofences) : null
+            isLoaded && (loc.type === 'start' || loc.type === 'end') ? findZoneForPoint(toLatLng(loc.latitude, loc.longitude), geofences) : null
         ),
         [locations, geofences, isLoaded]
     );

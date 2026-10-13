@@ -91,6 +91,7 @@ type OverviewData = {
   project?: {
     id: number;
     name: string;
+    code?: string | null;
     start_date?: string | null;
     last_action?: string | null;
   };
@@ -425,9 +426,11 @@ const DateMetaCard = ({
 const Overview = ({
   projectId,
   onProjectName,
+  onProjectCode,
 }: {
   projectId: number;
   onProjectName?: (name: string) => void;
+  onProjectCode?: (code: string) => void;
   onNavigateTab?: (tab: string) => void;
 }) => {
   const { data: session } = useSession();
@@ -538,6 +541,9 @@ const Overview = ({
         setInfo(res.data.info);
         if (res.data.info?.project?.name) {
           onProjectName?.(res.data.info.project.name);
+        }
+        if (res.data.info?.project?.code) {
+          onProjectCode?.(res.data.info.project.code);
         }
         const options = res.data.info?.filter_options;
         setFilterTeams(options?.teams || res.data.info?.teams || []);

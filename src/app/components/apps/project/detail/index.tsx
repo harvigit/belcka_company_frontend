@@ -95,7 +95,7 @@ const ProjectDetail = () => {
           : res.data?.info;
         const isAdmin = Number(user.user_role_id) === 1;
         if (projectRow?.name) setProjectName(projectRow.name);
-        setProjectCode(projectRow?.code || "");
+        if (projectRow?.code) setProjectCode(projectRow.code);
         setAssignedUsers(projectRow?.assigned_users || []);
         const assigned = (projectRow?.setting_users || []).some(
           (item: { id: number }) => Number(item.id) === Number(user.id),
@@ -162,6 +162,7 @@ const ProjectDetail = () => {
           <Overview
             projectId={projectId}
             onProjectName={setProjectName}
+            onProjectCode={setProjectCode}
             onNavigateTab={(next) => setTab(next as TabKey)}
           />
         );
