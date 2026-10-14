@@ -48,6 +48,7 @@ import {flexRender} from "@/utils/flexRender";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
 import { useServerTable } from "@/hooks/useServerTable";
+import { getTableSortQuery } from "@/utils/tableSort";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconExclamationCircle } from "@tabler/icons-react";
 import ColumnVisibilityPopover from "@/app/components/common/ColumnVisibilityPopover";
@@ -249,8 +250,20 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         url += `&search=${encodeURIComponent(searchTerm)}`;
       }
 
-      if (sorting && sorting.length > 0) {
-        url += `&sort_by=${sorting[0].id}&sort_order=${sorting[0].desc ? "desc" : "asc"}`;
+      const sortQuery = getTableSortQuery(sorting, {
+        statusText: "status_text",
+      });
+      const sortableParentFields = new Set([
+        "short_name",
+        "name",
+        "cases",
+        "type",
+        "progress",
+        "status_text",
+        "pin_code",
+      ]);
+      if (sortQuery && sortableParentFields.has(sortQuery.sort_by)) {
+        url += `&sort_by=${encodeURIComponent(sortQuery.sort_by)}&sort_order=${sortQuery.sort_order}`;
       }
 
       if (showConflicts) {
@@ -342,6 +355,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     () => [
       {
         id: "select",
+        enableSorting: false,
         header: ({ table }: any) => {
           const selectableData = currentFilteredData.filter(
             (item: any) => !item.is_conflict,
@@ -674,6 +688,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       columnHelper.accessor("id", {
         id: "actions",
         header: "Actions",
+        enableSorting: false,
         cell: ({ row }: any) => {
           if (row.original.is_conflict) {
             return (
@@ -742,6 +757,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     state: { sorting },
     onSortingChange: setSorting,
     manualSorting: true,
+    forceServerSorting: true,
     initialPagination: { pageIndex: 0, pageSize: 100 },
   });
 
