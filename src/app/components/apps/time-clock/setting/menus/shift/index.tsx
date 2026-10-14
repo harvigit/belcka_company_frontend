@@ -29,6 +29,7 @@ import IOSSwitch from "@/app/components/common/IOSSwitch";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import ArchiveShifts from "./archive";
+import {normalizeStartWorkAllowedFrom} from "@/app/components/apps/time-tracking/startWorkWindow";
 
 interface Shift {
     id: number;
@@ -36,6 +37,7 @@ interface Shift {
     days: string;
     time: string;
     break: string;
+    earliestStart: string | null;
     enabled: boolean;
     assignedUserCount?: number;
 }
@@ -81,6 +83,7 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                                 )
                                 .join(",") || "Every weekday",
                         time: `${shift.start_time} - ${shift.end_time}`,
+                        earliestStart: normalizeStartWorkAllowedFrom(shift.start_work_allowed_from),
                         break:
                             shift.shift_breaks.length > 0
                                 ? `${shift.shift_breaks[0].break_start_time} - ${shift.shift_breaks[0].break_end_time}`
@@ -339,6 +342,11 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                                     </Typography>
                                     <Typography variant="body2">
                                         <strong>Shift:</strong> {shift.time}
+                                        {shift.earliestStart ? (
+                                            <Box component="span" sx={{ color: "text.secondary", ml: 1 }}>
+                                                (from {shift.earliestStart})
+                                            </Box>
+                                        ) : null}
                                     </Typography>
                                     <Typography variant="body2">
                                         <strong>Break:</strong> {shift.break}
