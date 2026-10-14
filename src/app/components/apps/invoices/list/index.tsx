@@ -11,7 +11,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  Drawer,
   FormControlLabel,
   FormGroup,
   IconButton,
@@ -65,8 +64,8 @@ import TablePaginationFooter from "@/app/components/common/TablePaginationFooter
 import { useServerTable } from "@/hooks/useServerTable";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import CreateInvoice from "@/app/components/apps/invoices/create";
-import InvoiceAttachments from "@/app/components/apps/invoices/attachments";
 import InvoiceView from "@/app/components/apps/invoices/view";
+import AttachmentLightbox from "@/app/components/common/AttachmentLightbox";
 import ArchiveInvoice from "@/app/components/apps/invoices/archive";
 import { InvoiceDocument, InvoiceRow, mapInvoiceApiRow } from "./mockData";
 import ColumnVisibilityPopover from "@/app/components/common/ColumnVisibilityPopover";
@@ -101,6 +100,12 @@ type InvoicesTableCookieState = {
 };
 
 const PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
+
+const isPdfAttachment = (doc: InvoiceDocument) =>
+  doc.type === "application/pdf" ||
+  !!doc.file?.toLowerCase().endsWith(".pdf") ||
+  !!doc.url?.split("?")[0].toLowerCase().endsWith(".pdf") ||
+  !!doc.original_name?.toLowerCase().endsWith(".pdf");
 
 const getInvoicesTableStateKey = (
   userId?: number | string,
@@ -216,10 +221,6 @@ const InvoiceList = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRow | null>(
     null,
   );
-  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
-  const [attachmentsInvoiceId, setAttachmentsInvoiceId] = useState<
-    number | null
-  >(null);
   const [viewOpen, setViewOpen] = useState(false);
   const [viewInvoiceId, setViewInvoiceId] = useState<number | null>(null);
   const [shareInvoice, setShareInvoice] = useState<InvoiceRow | null>(null);
@@ -228,6 +229,10 @@ const InvoiceList = () => {
     mouseY: number;
   } | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewSlides, setPreviewSlides] = useState<
+    { src: string; alt: string; downloadFilename: string }[]
+  >([]);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [archiveListOpen, setArchiveListOpen] = useState(false);
@@ -315,14 +320,26 @@ const InvoiceList = () => {
     setFormMode("create");
   };
 
-  const openInvoiceAttachments = (invoiceId: number) => {
-    setAttachmentsInvoiceId(invoiceId);
-    setAttachmentsOpen(true);
-  };
+  const openInvoiceDocuments = (docs: InvoiceDocument[]) => {
+    const withUrl = docs.filter((doc) => doc.url);
+    const images = withUrl.filter((doc) => !isPdfAttachment(doc));
+    const pdfs = withUrl.filter((doc) => isPdfAttachment(doc));
 
-  const closeInvoiceAttachments = () => {
-    setAttachmentsOpen(false);
-    setAttachmentsInvoiceId(null);
+    pdfs.forEach((doc) => {
+      window.open(doc.url as string, "_blank", "noopener,noreferrer");
+    });
+
+    if (!images.length) return;
+
+    setPreviewSlides(
+      images.map((doc) => ({
+        src: doc.url as string,
+        alt: doc.original_name || doc.file || `Attachment ${doc.id}`,
+        downloadFilename:
+          doc.original_name || doc.file || `invoice-attachment-${doc.id}.jpg`,
+      })),
+    );
+    setPreviewOpen(true);
   };
 
   const openInvoiceView = (invoiceId: number) => {
@@ -619,9 +636,15 @@ Team Belcka
                 px: 1.5,
                 cursor: count > 0 ? "pointer" : "default",
               }}
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
-                if (count > 0) openInvoiceAttachments(row.original.id);
+                if (count <= 0) return;
+                const docs = await getInvoiceDocuments(row.original);
+                if (!docs.some((doc) => doc.url)) {
+                  toast.error("No documents available");
+                  return;
+                }
+                openInvoiceDocuments(docs);
               }}
             >
               {count}
@@ -1234,23 +1257,6 @@ Team Belcka
           onWorkUpdated={() => setRefreshKey((k) => k + 1)}
         />
 
-        <Drawer
-          anchor="right"
-          open={attachmentsOpen}
-          onClose={closeInvoiceAttachments}
-          PaperProps={{
-            sx: { width: { xs: "100%", sm: 420 } },
-          }}
-        >
-          {attachmentsInvoiceId && companyId ? (
-            <InvoiceAttachments
-              invoiceId={attachmentsInvoiceId}
-              companyId={companyId}
-              onClose={closeInvoiceAttachments}
-            />
-          ) : null}
-        </Drawer>
-
         <InvoiceView
           open={viewOpen}
           invoiceId={viewInvoiceId}
@@ -1259,6 +1265,12 @@ Team Belcka
           onEdit={(invoice) => {
             openEditInvoice(invoice);
           }}
+        />
+
+        <AttachmentLightbox
+          open={previewOpen}
+          slides={previewSlides}
+          onClose={() => setPreviewOpen(false)}
         />
 
         <Menu

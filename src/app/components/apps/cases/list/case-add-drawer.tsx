@@ -27,6 +27,7 @@ interface CaseAddDrawerProps {
   projects: any[];
   parentAddresses: any[];
   companyId?: number | null;
+  projectId?: number | null;
   cases?: any[];
   onSave: () => void;
 }
@@ -39,6 +40,7 @@ export default function CaseAddDrawer({
   projects,
   parentAddresses,
   companyId,
+  projectId,
   cases = [],
   onSave,
 }: CaseAddDrawerProps) {
@@ -58,20 +60,25 @@ export default function CaseAddDrawer({
 
   useEffect(() => {
     if (open) {
+      const lockedProject = projectId
+        ? (projects || []).find(
+            (project: any) => Number(project.id) === Number(projectId),
+          )
+        : null;
       setFormData({
-        project_id: null,
+        project_id: projectId ? Number(projectId) : null,
         parent_address_id: null,
         company_id: companyId ?? null,
         name: "",
-        radius: defaultRadius,
-        color: "#FF0000",
+        radius: lockedProject?.radius ?? defaultRadius,
+        color: lockedProject?.color || "#FF0000",
         lat: null,
         lng: null,
       });
       setSelectedLocation(null);
       setIsSaving(false);
     }
-  }, [open, companyId]);
+  }, [open, companyId, projectId]);
 
   useEffect(() => {
     if (mapRef.current && circleRef.current) {
@@ -250,10 +257,11 @@ export default function CaseAddDrawer({
                 <Box mb={2} mt={2}>
                   <Autocomplete
                     fullWidth
+                    disabled={Boolean(projectId)}
                     options={projects || []}
                     value={
                       (projects || []).find(
-                        (p: any) => p.id === formData.project_id,
+                        (p: any) => Number(p.id) === Number(formData.project_id),
                       ) || null
                     }
                     onChange={(_e, newVal: any) =>

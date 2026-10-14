@@ -619,7 +619,7 @@ const CollectList = () => {
         header: () => (
           <Stack direction="row" alignItems="center" spacing={4}>
             <Typography variant="subtitle2" fontWeight="inherit">
-              Amount
+              Incl. Tax
             </Typography>
           </Stack>
         ),
@@ -631,6 +631,29 @@ const CollectList = () => {
             <Stack direction="row" alignItems="center" px={0.5}>
               <Typography className="f-14">
                 {item.formatted_inc_tax ?? "-"}
+              </Typography>
+            </Stack>
+          );
+        },
+      }),
+
+        columnHelper.accessor("formatted_excl_tax", {
+        id: "formatted_excl_tax",
+        header: () => (
+          <Stack direction="row" alignItems="center" spacing={4}>
+            <Typography variant="subtitle2" fontWeight="inherit">
+              Excl. Tax
+            </Typography>
+          </Stack>
+        ),
+        enableSorting: true,
+        cell: ({ row }) => {
+          const item = row.original;
+
+          return (
+            <Stack direction="row" alignItems="center" px={0.5}>
+              <Typography className="f-14">
+                {item.formatted_excl_tax ?? "-"}
               </Typography>
             </Stack>
           );
