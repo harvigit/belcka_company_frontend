@@ -779,7 +779,6 @@ const Overview = ({
         internal_order: acc.internal_order + Number(row.internal_order || 0),
         direct_labour: acc.direct_labour + Number(row.direct_labour || 0),
         summary: acc.summary + Number(row.summary || 0),
-        payment: acc.payment + Number(row.payment || 0),
         profit: acc.profit + Number(row.profit || 0),
       }),
       {
@@ -788,7 +787,6 @@ const Overview = ({
         internal_order: 0,
         direct_labour: 0,
         summary: 0,
-        payment: 0,
         profit: 0,
       },
     );

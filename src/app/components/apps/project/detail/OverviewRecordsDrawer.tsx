@@ -84,7 +84,6 @@ export type MonthlyTotals = {
   internal_order: number;
   direct_labour: number;
   summary: number;
-  payment: number;
   profit: number;
 };
 
@@ -543,7 +542,6 @@ const MONTHLY_COLUMNS = [
   "Internal Order",
   "Direct Labour",
   "Summary",
-  "Payment",
   "Profit",
 ] as const;
 
@@ -553,7 +551,6 @@ const MONTHLY_TOTAL_KEYS = [
   "internal_order",
   "direct_labour",
   "summary",
-  "payment",
   "profit",
 ] as const;
 
@@ -621,9 +618,6 @@ export const MonthlyFinancialTable = ({
                     {money(currency, row.summary)}
                   </TableCell>
                   <TableCell align="right">
-                    {money(currency, row.payment)}
-                  </TableCell>
-                  <TableCell align="right">
                     {money(currency, row.profit)}
                   </TableCell>
                 </TableRow>
@@ -640,7 +634,7 @@ export const MonthlyFinancialTable = ({
               )}
               {rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8}>No monthly data</TableCell>
+                  <TableCell colSpan={7}>No monthly data</TableCell>
                 </TableRow>
               )}
             </TableBody>
