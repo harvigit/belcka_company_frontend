@@ -14,6 +14,7 @@ import {
     IconFileAlert,
     IconUserCog,
     IconUserCheck,
+    IconUsersGroup,
 } from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
@@ -31,6 +32,7 @@ import RemoveUsers from '@/app/components/apps/settings/remove-users/list';
 import RequestAction from '@/app/components/apps/settings/request-action/list';
 import UserSettings from '@/app/components/apps/settings/user-settings';
 import TaskUserCheckinSettings from '@/app/components/apps/tasks/settings/user-checkin-tasks';
+import UserGroupSettings from '@/app/components/apps/settings/user-groups';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -183,6 +185,13 @@ const AdminSetting = () => {
                                         label="User Check-in Tasks"
                                         {...a11yProps(10)}
                                     />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconUsersGroup size="20" />}
+                                        label="Groups"
+                                        {...a11yProps(11)}
+                                    />
                                 </Tabs>
                             </Stack>
                         </BlankCard>
@@ -228,6 +237,9 @@ const AdminSetting = () => {
                             </TabPanel>
                             <TabPanel value={value} index={10}>
                                 <TaskUserCheckinSettings />
+                            </TabPanel>
+                            <TabPanel value={value} index={11}>
+                                <UserGroupSettings />
                             </TabPanel>
                         </BlankCard>
                     </Grid>
