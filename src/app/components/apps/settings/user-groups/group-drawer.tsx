@@ -251,7 +251,7 @@ const GroupDrawer: React.FC<GroupDrawerProps> = ({
           display="block"
           mt={0.5}
         >
-          A user can be in only one group. Users already in another group can't
+          A user can be in only one group. Users already in another group can&apos;t
           be selected; remove them from that group first.
         </Typography>
 
