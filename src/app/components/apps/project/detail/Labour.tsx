@@ -30,10 +30,11 @@ import {
     createColumnHelper,
     SortingState} from '@tanstack/react-table';
 import {flexRender} from '@/utils/flexRender';
-import {IconEye, IconFilter, IconSearch, IconX} from '@tabler/icons-react';
+import {IconEye, IconFileExport, IconFilter, IconSearch, IconX} from '@tabler/icons-react';
 import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import dayjs from 'dayjs';
+import toast from 'react-hot-toast';
 import Image from 'next/image';
 import api from '@/utils/axios';
 import {useServerTable} from '@/hooks/useServerTable';
@@ -208,6 +209,7 @@ const Labour = ({projectId}: { projectId: number }) => {
     const [filters, setFilters] = useState<LabourFilterState>(EMPTY_LABOUR_FILTERS);
     const [tempFilters, setTempFilters] = useState<LabourFilterState>(EMPTY_LABOUR_FILTERS);
     const [filterOpen, setFilterOpen] = useState(false);
+    const [exporting, setExporting] = useState(false);
     
     const [filterOptions, setFilterOptions] = useState<{
         teams: FilterOption[];
@@ -704,6 +706,52 @@ const Labour = ({projectId}: { projectId: number }) => {
             getRowId: (row) => String(row.row_key || row.row_id || row.id),
         });
 
+    const exportLabour = async () => {
+        if (!user?.company_id || !projectId || exporting) return;
+        setExporting(true);
+        try {
+            const payload: Record<string, any> = {
+                company_id: user.company_id,
+                project_id: projectId,
+                include_cis: includeCis,
+                columns: table.getVisibleLeafColumns().map((column) => column.id).join(','),
+            };
+            if (searchTerm) payload.search = searchTerm;
+            if (formattedStart) payload.start_date = formattedStart;
+            if (formattedEnd) payload.end_date = formattedEnd;
+            if (filters.teams.length) payload.team_ids = filters.teams.join(',');
+            if (filters.users.length) payload.user_ids = filters.users.join(',');
+            if (filters.types.length) payload.types = filters.types.join(',');
+            if (filters.trades.length) payload.trade_ids = filters.trades.join(',');
+            const sortQuery = getTableSortQuery(sorting);
+            if (sortQuery) {
+                payload.sort_by = sortQuery.sort_by;
+                payload.sort_order = sortQuery.sort_order;
+            }
+
+            const res = await api.post('project-analytics/web-labors/export', payload, {
+                responseType: 'blob',
+            });
+
+            const blob = new Blob([res.data], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `labour_export_${dayjs().format('YYYY-MM-DD')}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Failed to export labour', err);
+            toast.error('Failed to export labour');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const visibleColCount =
         table.getVisibleLeafColumns().length || columns.length;
     const skeletonColumns = table.getVisibleLeafColumns().map((column) => ({
@@ -944,6 +992,16 @@ const Labour = ({projectId}: { projectId: number }) => {
                                 </Typography>
                             </Box>
                         ))}
+                        <Button
+                            variant="contained"
+                            size="small"
+                            onClick={exportLabour}
+                            disabled={exporting || totalRows === 0}
+                            startIcon={<IconFileExport size={18}/>}
+                            sx={{minHeight: 34, height: 34, whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600}}
+                        >
+                            {exporting ? 'Exporting...' : 'Export'}
+                        </Button>
                         <Tooltip title="Column visibility">
                             <IconButton
                                 onClick={(e) => setColumnMenuAnchor(e.currentTarget)}
