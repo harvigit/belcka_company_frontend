@@ -42,6 +42,7 @@ export type PeopleRow = {
 export type LabourTeamRow = {
   team_id: number;
   team: string;
+  is_removed?: boolean;
   on_site: number;
   limit: number;
   avg_7_days: number;
@@ -449,7 +450,19 @@ export const LabourTeamTable = ({
             <TableBody>
               {visible.map((row) => (
                 <TableRow key={row.team_id}>
-                  <TableCell>{row.team}</TableCell>
+                  <TableCell>
+                    {row.team}
+                    {row.is_removed && (
+                      <Typography
+                        component="span"
+                        fontSize={12}
+                        color="text.secondary"
+                        ml={0.75}
+                      >
+                        (Removed)
+                      </Typography>
+                    )}
+                  </TableCell>
                   <TableCell align="right">
                     {row.on_site}
                   </TableCell>
