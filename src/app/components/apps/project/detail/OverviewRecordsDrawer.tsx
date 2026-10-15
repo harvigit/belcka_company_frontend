@@ -376,7 +376,7 @@ export const PeopleActivityTable = ({
                   >
                     {row.address || "-"}
                   </TableCell>
-                  <TableCell>{row.start_time || "-"}</TableCell>
+                  {/* <TableCell>{row.start_time || "-"}</TableCell> */}
                 </TableRow>
               ))}
               {rows.length === 0 && (
