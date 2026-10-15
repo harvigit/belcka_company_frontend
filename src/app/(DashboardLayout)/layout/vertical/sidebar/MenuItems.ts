@@ -98,7 +98,7 @@ const MenuItems: NavGroup[] = [
   // },
   {
     id: uniqueId(),
-    title: "Project",
+    title: "Commercial",
     slug: "project",
     icon: IconChartPie,
     href: "/apps/project/list",
