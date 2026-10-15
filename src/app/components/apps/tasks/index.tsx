@@ -1014,18 +1014,18 @@ const TaskLists = () => {
                 },
             }),
 
-            columnHelper.accessor('complete', {
-                header: 'Complete',
-                cell: ({row}: any) => {
-                    const item = row.original;
+            // columnHelper.accessor('complete', {
+            //     header: 'Complete',
+            //     cell: ({row}: any) => {
+            //         const item = row.original;
 
-                    return (
-                        <Box display="flex" alignItems="center" sx={{px: 1.5}}>
-                            <Typography variant="body2">{item.complete ?? 0}</Typography>
-                        </Box>
-                    );
-                },
-            }),
+            //         return (
+            //             <Box display="flex" alignItems="center" sx={{px: 1.5}}>
+            //                 <Typography variant="body2">{item.complete ?? 0}</Typography>
+            //             </Box>
+            //         );
+            //     },
+            // }),
 
             columnHelper.accessor('created_at', {
                 header: 'Create',
@@ -1040,22 +1040,22 @@ const TaskLists = () => {
                 },
             }),
 
-            columnHelper.accessor('completed_by_short_name', {
-                header: 'By',
-                cell: ({row}: any) => {
-                    const item = row.original;
+            // columnHelper.accessor('completed_by_name', {
+            //     header: 'Completed By',
+            //     cell: ({row}: any) => {
+            //         const item = row.original;
 
-                    return (
-                        <Tooltip
-                            title={item.completed_by_name ? item.completed_by_name : ''}
-                        >
-                            <Typography variant="body2" sx={{px: 1.5}}>
-                                {item.completed_by_short_name ?? '-'}
-                            </Typography>
-                        </Tooltip>
-                    );
-                },
-            }),
+            //         return (
+            //             <Tooltip
+            //                 title={item.completed_by_name ? item.completed_by_name : ''}
+            //             >
+            //                 <Typography variant="body2" sx={{px: 1.5}}>
+            //                     {item.completed_by_name ?? '-'}
+            //                 </Typography>
+            //             </Tooltip>
+            //         );
+            //     },
+            // }),
             columnHelper.accessor((row) => row?.file_count ?? row?.task_images?.length ?? 0, {
                 id: 'file',
                 header: 'File',

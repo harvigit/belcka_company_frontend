@@ -25,7 +25,6 @@ import {
   Popover,
   FormGroup,
   FormControlLabel,
-  Checkbox,
   Drawer,
   Fab,
   Modal,
@@ -140,7 +139,6 @@ const PurchaseProductList: React.FC<Props> = ({
   const [storeSelectionOpen, setStoreSelectionOpen] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState("");
   const [tempFilters, setTempFilters] = useState(filters);
-  const [allProductsChecked, setAllProductsChecked] = useState(false);
   const [openModel, setOpenModel] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<any | null>(null);
@@ -153,7 +151,6 @@ const PurchaseProductList: React.FC<Props> = ({
   useEffect(() => {
     manuallyDeselectedRef.current = manuallyDeselected;
   }, [manuallyDeselected]);
-  const [originalData, setOriginalData] = useState<any[]>([]);
   const [latestFetchedIds, setLatestFetchedIds] = useState<Set<number>>(
     new Set(),
   );
@@ -1470,27 +1467,6 @@ const PurchaseProductList: React.FC<Props> = ({
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
-            {/* <Box display="flex" alignItems="center">
-              <FormControlLabel
-                label="All Products"
-                control={
-                  <CustomCheckbox
-                    aria-label="All Products"
-                    checked={allProductsChecked}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setAllProductsChecked(checked);
-
-                      if (checked) {
-                        fetchOrders(true);
-                      } else {
-                        fetchOrders();
-                      }
-                    }}
-                  />
-                }
-              />
-            </Box> */}
 
             <Button
               variant="contained"

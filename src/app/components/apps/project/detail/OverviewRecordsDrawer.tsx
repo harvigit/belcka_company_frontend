@@ -346,7 +346,7 @@ export const PeopleActivityTable = ({
               <TableRow>
                 <TableCell>User</TableCell>
                 <TableCell>Address</TableCell>
-                <TableCell>Start time</TableCell>
+                {/* <TableCell>Start time</TableCell> */}
               </TableRow>
             </TableHead>
             <TableBody>
