@@ -51,6 +51,8 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
     const isEdited = field === 'start' ? !!log?.start_time_edited_by : !!log?.end_time_edited_by;
     const editedByName = field === 'start' ? log?.start_time_edited_by_name : log?.end_time_edited_by_name;
     const editedAt = field === 'start' ? log?.start_time_edited_at : log?.end_time_edited_at;
+    const addedByName = log?.is_added ? log?.added_by_name : null;
+    const addedAt = log?.added_at;
 
     const dotTooltipTitle = isRequested ? `Worklog requested by ${requestedBy}` : '';
 
@@ -229,6 +231,8 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
         tooltipTitle = `Conflict resolved by ${conflictResolvedBy}`;
     } else if (isEdited) {
         tooltipTitle = `Modified by ${editedByName} on ${editedAt}`;
+    } else if (addedByName) {
+        tooltipTitle = addedAt ? `Added by ${addedByName} on ${addedAt}` : `Added by ${addedByName}`;
     } else if (isLocked) {
         tooltipTitle = 'This worklog is locked and cannot be edited';
     }

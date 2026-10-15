@@ -128,7 +128,7 @@ type ShiftOption = {
     name: string;
     start_time: string;
     end_time: string;
-    start_work_before_minutes: number | null;
+    start_work_allowed_from: string | null;
     is_pricework: boolean;
     week_days: WeekDay[];
 };
@@ -138,7 +138,7 @@ interface ShiftApiResponse {
     name: string;
     start_time: string | null;
     end_time: string | null;
-    start_work_before_minutes?: number | null;
+    start_work_allowed_from?: string | null;
     is_pricework: boolean;
     week_days: WeekDay[] | null;
 }
@@ -928,7 +928,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
             name: s.name,
             start_time: s.start_time ?? '',
             end_time: s.end_time ?? '',
-            start_work_before_minutes: s.start_work_before_minutes ?? null,
+            start_work_allowed_from: s.start_work_allowed_from ?? null,
             is_pricework: s.is_pricework ?? false,
             week_days: s.week_days ?? [],
         }));
@@ -961,7 +961,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
         return startWorkRestrictionMessage({
             startTime: shift.start_time,
             endTime: shift.end_time,
-            beforeMinutes: shift.start_work_before_minutes,
+            allowedFrom: shift.start_work_allowed_from,
             nowMs: serverClock.nowMs + (Date.now() - serverClock.receivedAt),
             timeZone: serverClock.timeZone,
         });

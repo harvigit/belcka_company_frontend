@@ -32,6 +32,10 @@ import api from "@/utils/axios";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import AttachmentLightbox from "@/app/components/common/AttachmentLightbox";
+
+const isPdf = (url?: string | null) =>
+  Boolean(url && url.split("?")[0].toLowerCase().endsWith(".pdf"));
 
 interface CollectViewDetailsProps {
   open: boolean;
@@ -54,6 +58,18 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
   const [reviewing, setReviewing] = useState(false);
   const [data, setData] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const openReceipt = (url?: string | null) => {
+    if (!url) return;
+    if (isPdf(url)) {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    setPreviewUrl(url);
+    setPreviewOpen(true);
+  };
 
   useEffect(() => {
     if (open && collectId) {
@@ -123,6 +139,7 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
     ) || 0;
 
   return (
+    <>
     <Drawer
       anchor="right"
       open={open}
@@ -333,7 +350,7 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
                           cursor: "pointer",
                           "&:hover": { bgcolor: "#f9f9f9" },
                         }}
-                        onClick={() => window.open(data.image, "_blank")}
+                        onClick={() => openReceipt(data.image)}
                       >
                         <Box
                           sx={{
@@ -479,7 +496,7 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
               {data.image && (
                 <Button
                   startIcon={<IconFileText size={18} />}
-                  onClick={() => window.open(data.image, "_blank")}
+                  onClick={() => openReceipt(data.image)}
                   sx={{ mt: 2, textTransform: "none", fontWeight: 600 }}
                   color="primary"
                 >
@@ -556,6 +573,23 @@ const CollectViewDetails: React.FC<CollectViewDetailsProps> = ({
         )}
       </Box>
     </Drawer>
+    <AttachmentLightbox
+      open={previewOpen}
+      slides={
+        previewUrl
+          ? [
+              {
+                src: previewUrl,
+                alt: "Receipt",
+                downloadFilename:
+                  previewUrl.split("?")[0].split("/").pop() || "receipt.jpg",
+              },
+            ]
+          : []
+      }
+      onClose={() => setPreviewOpen(false)}
+    />
+    </>
   );
 };
 

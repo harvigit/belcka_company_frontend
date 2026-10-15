@@ -8,6 +8,14 @@ type ZonedParts = {
 
 type StartWindow = {from: number; until: number};
 
+// Earliest clock time ("HH:mm", 24h) a shift may be started on its start day.
+export function normalizeStartWorkAllowedFrom(value: unknown): string | null {
+    if (value == null) return null;
+    const match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(String(value).trim());
+    if (!match || Number(match[1]) > 23 || Number(match[2]) > 59) return null;
+    return `${match[1].padStart(2, '0')}:${match[2]}`;
+}
+
 function zonedParts(ms: number, timeZone: string): ZonedParts | null {
     try {
         const parts = new Intl.DateTimeFormat('en-GB', {
@@ -44,7 +52,9 @@ function parseClock(time: string): {hour: number; minute: number} | null {
 
 function formatHm(ms: number): string {
     const date = new Date(ms);
-    return `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}`;
+    const hours = date.getUTCHours();
+    const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+    return `${String(hour12).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')} ${hours < 12 ? 'AM' : 'PM'}`;
 }
 
 function sameUtcDay(left: number, right: number): boolean {
@@ -55,10 +65,11 @@ function sameUtcDay(left: number, right: number): boolean {
         && a.getUTCDate() === b.getUTCDate();
 }
 
-function windowOn(dayMs: number, startTime: string, endTime: string, minutes: number): StartWindow | null {
+function windowOn(dayMs: number, startTime: string, endTime: string, allowedFrom: string): StartWindow | null {
     const start = parseClock(startTime);
     const end = parseClock(endTime);
-    if (!start || !end) return null;
+    const allowed = parseClock(allowedFrom);
+    if (!start || !end || !allowed) return null;
 
     const day = new Date(dayMs);
     const year = day.getUTCFullYear();
@@ -70,18 +81,20 @@ function windowOn(dayMs: number, startTime: string, endTime: string, minutes: nu
         until = Date.UTC(year, month, date + 1, end.hour, end.minute);
     }
 
-    return {from: startMs - minutes * 60 * 1000, until};
+    const from = Date.UTC(year, month, date, allowed.hour, allowed.minute);
+    if (from >= until) return null;
+    return {from, until};
 }
 
 export function startWorkRestrictionMessage(input: {
     startTime?: string | null;
     endTime?: string | null;
-    beforeMinutes?: number | null;
+    allowedFrom?: string | null;
     nowMs: number;
     timeZone: string;
 }): string | null {
-    const minutes = input.beforeMinutes;
-    if (minutes == null || !Number.isInteger(minutes) || minutes < 1 || minutes > 720) return null;
+    const allowedFrom = normalizeStartWorkAllowedFrom(input.allowedFrom);
+    if (allowedFrom == null) return null;
     if (!input.startTime || !input.endTime) return null;
 
     const nowParts = zonedParts(input.nowMs, input.timeZone);
@@ -93,7 +106,7 @@ export function startWorkRestrictionMessage(input: {
             Date.UTC(nowParts.year, nowParts.month - 1, nowParts.day + offset),
             input.startTime as string,
             input.endTime as string,
-            minutes,
+            allowedFrom,
         ))
         .filter((item): item is StartWindow => item != null);
 

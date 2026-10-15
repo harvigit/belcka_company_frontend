@@ -78,6 +78,7 @@ import CustomTextField from '@/app/components/forms/theme-elements/CustomTextFie
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
+import EditableGroupCell from '@/app/components/apps/settings/user-groups/EditableGroupCell';
 import {AxiosResponse} from 'axios';
 import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
 import Image from 'next/image';
@@ -99,6 +100,8 @@ import TablePaginationFooter from '@/app/components/common/TablePaginationFooter
 import {useTranslation} from 'react-i18next';
 
 export interface UserList {
+    group_id?: number | null;
+    group_name?: string | null;
     is_working: boolean;
     is_on_break: boolean;
     last_worked_date: string;
@@ -149,6 +152,7 @@ type UserFilters = {
     team: string[];
     supervisor: string[];
     trade: string[];
+    group: string[];
 };
 
 type UserFilterOption = {
@@ -172,6 +176,7 @@ const DEFAULT_USER_FILTERS: UserFilters = {
     team: [],
     supervisor: [],
     trade: [],
+    group: [],
 };
 
 const getUsersTableStateKey = (
@@ -191,6 +196,7 @@ const normalizeUserFilters = (
         team: normalizeValue(filters?.team),
         supervisor: normalizeValue(filters?.supervisor),
         trade: normalizeValue(filters?.trade),
+        group: normalizeValue(filters?.group),
     };
 };
 
@@ -212,6 +218,7 @@ const readUsersTableStateCookie = (key: string): UsersTableCookieState => {
 const USER_COLUMN_TRANSLATION_KEYS: Record<string, string> = {
     name: 'Name',
     teamName: 'Team Name',
+    groups: 'Group',
     email: 'Email',
     companyCode: 'Company Code',
     accountId: 'Account Id',
@@ -242,6 +249,11 @@ const TablePagination = () => {
     const {t} = useTranslation();
     const [data, setData] = useState<UserList[]>([]);
     const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    const [companyGroups, setCompanyGroups] = useState<{ id: number; name: string }[]>([]);
+    const groupFilterOptions = useMemo<UserFilterOption[]>(
+        () => companyGroups.map((g) => ({id: String(g.id), name: g.name})),
+        [companyGroups],
+    );
     const [totalUsersListCount, setTotalUsersListCount] = useState<number | undefined>(undefined);
     const [workingUsersListCount, setWorkingUsersListCount] = useState<number | undefined>(undefined);
     const [hasPermissionUser, setHasPermissionUser] = useState<boolean>(false);
@@ -393,6 +405,10 @@ const TablePagination = () => {
             if (filters.supervisor.length) {
                 const supervisorIds = resolveSelectedIds(filters.supervisor, companyUsers);
                 if (supervisorIds) url += `&supervisor_ids=${supervisorIds}`;
+            }
+            if (filters.group.length) {
+                const groupIds = resolveSelectedIds(filters.group, groupFilterOptions);
+                if (groupIds) url += `&group_ids=${groupIds}`;
             }
 
             const res: AxiosResponse<any> = await api.get(url);
@@ -825,6 +841,25 @@ const TablePagination = () => {
         filteredPermissions.length > 0 &&
         filteredPermissions.every((p) => tempPermissions.app.has(p.id));
 
+    useEffect(() => {
+        if (!user?.company_id) return;
+        api.get(`user-groups/list?company_id=${user.company_id}`)
+            .then((res) => setCompanyGroups(res.data?.info ?? []))
+            .catch((err) => console.error('Failed to fetch groups', err));
+    }, [user?.company_id]);
+
+    const handleUserGroupUpdated = (
+        userId: number,
+        groupId: number | null,
+        groupName: string | null,
+    ) => {
+        setData((prev) =>
+            prev.map((u) =>
+                u.id === userId ? {...u, group_id: groupId, group_name: groupName} : u,
+            ),
+        );
+    };
+
     const columns = [
         {
             id: 'select',
@@ -1023,6 +1058,29 @@ const TablePagination = () => {
                 </Typography>
                 </Tooltip>
             ),
+        }),
+
+        columnHelper.accessor((row) => row.group_name, {
+            id: 'groups',
+            header: () => (
+                <Typography variant="subtitle2" noWrap>
+                    {t('Group')}
+                </Typography>
+            ),
+            cell: (info) => {
+                const row = info.row.original;
+                return (
+                    <EditableGroupCell
+                        userId={row.id}
+                        companyId={user?.company_id}
+                        groupId={row.group_id ?? null}
+                        groupName={row.group_name ?? null}
+                        groups={companyGroups}
+                        canEdit={isAdmin}
+                        onUpdated={handleUserGroupUpdated}
+                    />
+                );
+            },
         }),
 
         columnHelper.accessor((row) => row.date_of_birth, {
@@ -1455,7 +1513,7 @@ const TablePagination = () => {
     // mark every non-limited column (including `select`) as false, so after hide/show
     // or remount the cookie merge hid the checkbox column.
     const alwaysVisibleColumns = useMemo(() => ['select'], []);
-    const limitedColumns = new Set(['name', 'user_code', 'email', 'phone']);
+    const limitedColumns = new Set(['name', 'user_code', 'email', 'phone', 'groups']);
     const limitedVisibility = useMemo(
         () =>
             columns.reduce((acc, col) => {
@@ -1584,7 +1642,8 @@ const TablePagination = () => {
     const hasActiveFilters =
         filters.team.length > 0 ||
         filters.trade.length > 0 ||
-        filters.supervisor.length > 0;
+        filters.supervisor.length > 0 ||
+        filters.group.length > 0;
 
     const handleClearAppliedFilters = (event?: React.MouseEvent) => {
         event?.stopPropagation();
@@ -1975,6 +2034,7 @@ const TablePagination = () => {
                                     companyUsers,
                                     true,
                                 )}
+                                {renderFilterSelect(t('Groups'), 'group', groupFilterOptions)}
                             </Stack>
                         </DialogContent>
 

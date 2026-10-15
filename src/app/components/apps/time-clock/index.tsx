@@ -79,6 +79,8 @@ import AddLeave from './time-clock-details/leaves/add-leave';
 import 'react-day-picker/dist/style.css';
 import '@/app/global.css';
 import {useSession} from 'next-auth/react';
+import {usePermissions} from '@/hooks/usePermissions';
+import {hasPermission} from '@/lib/permissions';
 import {User} from 'next-auth';
 import {usePathname, useRouter, useSearchParams} from 'next/navigation';
 import AddExpense from './time-clock-details/expenses/add-expense';
@@ -104,7 +106,9 @@ import UserRequests from '../requests/list';
 import {useTranslation} from 'react-i18next';
 import ExpenseList from '@/app/components/apps/expenses/list';
 import PriceworkList from '@/app/components/apps/priceworks/list';
+import GroupAnalytics from '@/app/components/apps/group-analytics';
 import AddAdjustment from './time-clock-details/adjustments/add-adjustment';
+import EditableGroupCell from '@/app/components/apps/settings/user-groups/EditableGroupCell';
 
 const columnHelper = createColumnHelper<Index>();
 
@@ -247,6 +251,8 @@ const getRangeForCycle = (cycle: string): { from: Date; to: Date } => {
 
 export type Index = {
     company_id: string;
+    group_id?: number | null;
+    group_name?: string | null;
     week_range: any;
     user_id: any;
     conflicts: string;
@@ -328,6 +334,7 @@ type FilterOption = {
 
 type TimeClockFilterState = {
     teams: number[];
+    groups: number[];
     statuses: string[];
     users: number[];
     projects: number[];
@@ -335,6 +342,7 @@ type TimeClockFilterState = {
 
 const EMPTY_TIME_CLOCK_FILTERS: TimeClockFilterState = {
     teams: [],
+    groups: [],
     statuses: [],
     users: [],
     projects: [],
@@ -379,7 +387,7 @@ type QueryParams = {
     recordId: string | null;
 };
 
-type RelatedListView = 'expense' | 'pricework' | null;
+type RelatedListView = 'expense' | 'pricework' | 'group' | null;
 
 const EMPTY_QUERY_PARAMS: QueryParams = {
     user_id: null,
@@ -535,6 +543,34 @@ const TimeClock = ({queryParams}: Props) => {
     const open = Boolean(anchorEl);
     const session = useSession();
     const user = session.data?.user as User & { company_id: number; id?: string } & { user_role_id: number; };
+    const {permissions} = usePermissions();
+    const canViewGroupReport = user?.user_role_id === 1 || hasPermission(permissions, 'group-report');
+    const [companyGroups, setCompanyGroups] = useState<{ id: number; name: string }[]>([]);
+    const groupFilterOptions = useMemo<FilterOption[]>(
+        () => companyGroups.map((g) => ({id: String(g.id), name: g.name})),
+        [companyGroups],
+    );
+
+    useEffect(() => {
+        if (!user?.company_id) return;
+        api.get(`user-groups/list?company_id=${user.company_id}`)
+            .then((res) => setCompanyGroups(res.data?.info ?? []))
+            .catch((err) => console.error('Failed to fetch groups', err));
+    }, [user?.company_id]);
+
+    const handleUserGroupUpdated = (
+        userId: number,
+        groupId: number | null,
+        groupName: string | null,
+    ) => {
+        setData((prev) =>
+            prev.map((row) =>
+                Number(row.user_id) === userId
+                    ? {...row, group_id: groupId, group_name: groupName}
+                    : row,
+            ),
+        );
+    };
     const timeClockFiltersCookieKey = useMemo(() => {
         if (!user?.id || !user?.company_id) return null;
 
@@ -589,6 +625,7 @@ const TimeClock = ({queryParams}: Props) => {
     const filterPopoverOpen = Boolean(filterAnchorEl);
     const activeFilterCount =
         filters.teams.length +
+        filters.groups.length +
         filters.statuses.length +
         filters.users.length +
         filters.projects.length;
@@ -736,6 +773,7 @@ const TimeClock = ({queryParams}: Props) => {
                 const parsed = JSON.parse(stored) as TimeClockStoredFilters;
                 const nextFilters: TimeClockFilterState = {
                     teams: normalizeStoredNumberFilter(parsed.filters?.teams),
+                    groups: normalizeStoredNumberFilter(parsed.filters?.groups),
                     statuses: normalizeStoredStringFilter(parsed.filters?.statuses),
                     users: normalizeStoredNumberFilter(parsed.filters?.users),
                     projects: normalizeStoredNumberFilter(parsed.filters?.projects),
@@ -826,6 +864,10 @@ const TimeClock = ({queryParams}: Props) => {
 
         if (filters.teams.length > 0) {
             params.teams = filters.teams.join(',');
+        }
+
+        if (filters.groups.length > 0) {
+            params.groups = filters.groups.join(',');
         }
 
         if (filters.statuses.length > 0) {
@@ -1807,6 +1849,25 @@ const TimeClock = ({queryParams}: Props) => {
             },
         }),
 
+        columnHelper.accessor('group_name', {
+            id: 'group',
+            header: 'Group',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <EditableGroupCell
+                        userId={Number(row.user_id)}
+                        companyId={user?.company_id}
+                        groupId={row.group_id ?? null}
+                        groupName={row.group_name ?? null}
+                        groups={companyGroups}
+                        canEdit={user?.user_role_id === 1}
+                        onUpdated={handleUserGroupUpdated}
+                    />
+                );
+            },
+        }),
+
         columnHelper.accessor('user_code', {
             id: 'company_code',
             header: 'Company Code',
@@ -2392,6 +2453,7 @@ const TimeClock = ({queryParams}: Props) => {
                 start_date: format(exportStartDate, 'yyyy-MM-dd'),
                 end_date: format(exportEndDate, 'yyyy-MM-dd'),
                 ...(filters.teams.length > 0 ? {teams: filters.teams.join(',')} : {}),
+                ...(filters.groups.length > 0 ? {groups: filters.groups.join(',')} : {}),
                 ...(filters.statuses.length > 0 ? {statuses: filters.statuses.join(',')} : {}),
                 ...(filters.users.length > 0 ? {users: filters.users.join(',')} : {}),
                 ...(filters.projects.length > 0 ? {projects: filters.projects.join(',')} : {}),
@@ -2887,6 +2949,18 @@ const TimeClock = ({queryParams}: Props) => {
                             >
                                 {t('Expense')}
                             </Button>
+
+                            {canViewGroupReport && (
+                                <Button
+                                    color="primary"
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => setRelatedListView('group')}
+                                    sx={toolbarButtonSx}
+                                >
+                                    {t('Group Report')}
+                                </Button>
+                            )}
                         </Box>
 
                         <Box
@@ -3142,6 +3216,7 @@ const TimeClock = ({queryParams}: Props) => {
                         <Stack spacing={2} mt={1} sx={{width: '100%', minWidth: 0}}>
                             {renderFilterSelect('Projects', 'projects', filterOptions.projects)}
                             {renderFilterSelect('Teams', 'teams', filterOptions.teams)}
+                            {renderFilterSelect('Groups', 'groups', groupFilterOptions)}
                             {renderFilterSelect('Status', 'statuses', filterOptions.statuses, false)}
                             {renderFilterSelect('Users', 'users', filterOptions.users)}
                         </Stack>
@@ -3909,7 +3984,9 @@ const TimeClock = ({queryParams}: Props) => {
                         }}
                     >
                         <Typography sx={{fontSize: '1rem', fontWeight: 700}}>
-                            {relatedListView === 'expense' ? t('Expense') : t('Pricework')}
+                            {relatedListView === 'expense'
+                                ? t('Expense')
+                                : relatedListView === 'group' ? t('Group Report') : t('Pricework')}
                         </Typography>
                         <Tooltip title={t('Close')}>
                             <IconButton size="small" onClick={() => setRelatedListView(null)}>
@@ -3920,6 +3997,11 @@ const TimeClock = ({queryParams}: Props) => {
                     <Box sx={{flex: 1, minHeight: 0, overflow: 'hidden'}}>
                         {relatedListView === 'expense' && <ExpenseList embedded />}
                         {relatedListView === 'pricework' && <PriceworkList embedded />}
+                        {relatedListView === 'group' && (
+                            <Box sx={{height: '100%', overflow: 'auto', p: 2}}>
+                                <GroupAnalytics embedded />
+                            </Box>
+                        )}
                     </Box>
                 </Box>
             </Drawer>

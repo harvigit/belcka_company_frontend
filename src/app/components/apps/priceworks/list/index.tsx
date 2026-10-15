@@ -697,7 +697,8 @@ const PriceworkList = ({
     const showApproveAction = activeTab === 'all' || activeTab === 'pending';
     const showRejectAction = activeTab === 'all' || activeTab === 'pending';
     const showUnapproveAction = activeTab === 'all' || activeTab === 'approved';
-    const showSendAction = activeTab === 'all' || activeTab === 'approved';
+    // Project view: sending to bookkeeper is not available.
+    const showSendAction = !projectId && (activeTab === 'all' || activeTab === 'approved');
     const showBackToPendingAction =
         activeTab === 'all' || activeTab === 'sent' || activeTab === 'rejected';
 

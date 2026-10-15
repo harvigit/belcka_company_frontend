@@ -29,6 +29,7 @@ import IOSSwitch from "@/app/components/common/IOSSwitch";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import ArchiveShifts from "./archive";
+import {normalizeStartWorkAllowedFrom} from "@/app/components/apps/time-tracking/startWorkWindow";
 
 interface Shift {
     id: number;
@@ -52,17 +53,6 @@ interface User {
 
 interface ShiftListsProps {
     onClose?: () => void;
-}
-
-function earliestStartTime(startTime: string, minutes: number | null | undefined): string | null {
-    if (!minutes || minutes < 1) return null;
-    const match = String(startTime).trim().match(/^(\d{1,2}):(\d{2})/);
-    if (!match) return null;
-    const totalMinutes = Number(match[1]) * 60 + Number(match[2]) - minutes;
-    const wrapped = ((totalMinutes % 1440) + 1440) % 1440;
-    const hours = String(Math.floor(wrapped / 60)).padStart(2, "0");
-    const mins = String(wrapped % 60).padStart(2, "0");
-    return `${hours}:${mins}`;
 }
 
 // Main ShiftLists
@@ -93,7 +83,7 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                                 )
                                 .join(",") || "Every weekday",
                         time: `${shift.start_time} - ${shift.end_time}`,
-                        earliestStart: earliestStartTime(shift.start_time, shift.start_work_before_minutes),
+                        earliestStart: normalizeStartWorkAllowedFrom(shift.start_work_allowed_from),
                         break:
                             shift.shift_breaks.length > 0
                                 ? `${shift.shift_breaks[0].break_start_time} - ${shift.shift_breaks[0].break_end_time}`

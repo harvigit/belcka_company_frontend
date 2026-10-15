@@ -876,6 +876,18 @@ const ProjectDashboard = () => {
         meta: { label: "Limit" },
         cell: ({ getValue }) => <NumberCell value={getValue()} />,
       }),
+      columnHelper.display({
+        id: "working_limit",
+        header: () => <HeaderLabel>Working / Limit</HeaderLabel>,
+        meta: { label: "Working / Limit" },
+        cell: ({ row }) => (
+          <NumberCell
+            value={`${row.original.total_working_users || 0} / ${
+              row.original.limit || 0
+            }`}
+          />
+        ),
+      }),
       columnHelper.accessor("checkins_7_days", {
         header: () => <StackedHeader top="Avrg" bottom="7 days" />,
         meta: { label: "Avrg 7 days" },
@@ -902,7 +914,7 @@ const ProjectDashboard = () => {
         header: () => <HeaderLabel>Shift Hours</HeaderLabel>,
         meta: { label: "Shift Hours" },
         cell: ({ getValue }) => (
-          <NumberCell value={Number(getValue() || 0).toFixed(2)} />
+          <NumberCell value={Math.round(Number(getValue() || 0))} />
         ),
       }),
       columnHelper.accessor("risk_percent", {

@@ -42,6 +42,7 @@ export type PeopleRow = {
 export type LabourTeamRow = {
   team_id: number;
   team: string;
+  is_removed?: boolean;
   on_site: number;
   limit: number;
   avg_7_days: number;
@@ -84,7 +85,6 @@ export type MonthlyTotals = {
   internal_order: number;
   direct_labour: number;
   summary: number;
-  payment: number;
   profit: number;
 };
 
@@ -450,7 +450,19 @@ export const LabourTeamTable = ({
             <TableBody>
               {visible.map((row) => (
                 <TableRow key={row.team_id}>
-                  <TableCell>{row.team}</TableCell>
+                  <TableCell>
+                    {row.team}
+                    {row.is_removed && (
+                      <Typography
+                        component="span"
+                        fontSize={12}
+                        color="text.secondary"
+                        ml={0.75}
+                      >
+                        (Removed)
+                      </Typography>
+                    )}
+                  </TableCell>
                   <TableCell align="right">
                     {row.on_site}
                   </TableCell>
@@ -543,7 +555,6 @@ const MONTHLY_COLUMNS = [
   "Internal Order",
   "Direct Labour",
   "Summary",
-  "Payment",
   "Profit",
 ] as const;
 
@@ -553,7 +564,6 @@ const MONTHLY_TOTAL_KEYS = [
   "internal_order",
   "direct_labour",
   "summary",
-  "payment",
   "profit",
 ] as const;
 
@@ -621,9 +631,6 @@ export const MonthlyFinancialTable = ({
                     {money(currency, row.summary)}
                   </TableCell>
                   <TableCell align="right">
-                    {money(currency, row.payment)}
-                  </TableCell>
-                  <TableCell align="right">
                     {money(currency, row.profit)}
                   </TableCell>
                 </TableRow>
@@ -640,7 +647,7 @@ export const MonthlyFinancialTable = ({
               )}
               {rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8}>No monthly data</TableCell>
+                  <TableCell colSpan={7}>No monthly data</TableCell>
                 </TableRow>
               )}
             </TableBody>

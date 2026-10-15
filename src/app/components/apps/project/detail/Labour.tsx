@@ -30,10 +30,11 @@ import {
     createColumnHelper,
     SortingState} from '@tanstack/react-table';
 import {flexRender} from '@/utils/flexRender';
-import {IconEye, IconFilter, IconSearch, IconX} from '@tabler/icons-react';
+import {IconEye, IconFileExport, IconFilter, IconSearch, IconX} from '@tabler/icons-react';
 import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import dayjs from 'dayjs';
+import toast from 'react-hot-toast';
 import Image from 'next/image';
 import api from '@/utils/axios';
 import {useServerTable} from '@/hooks/useServerTable';
@@ -42,6 +43,7 @@ import TablePaginationFooter from '@/app/components/common/TablePaginationFooter
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
+import IOSSwitch from '@/app/components/common/IOSSwitch';
 import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
 import {tableFilterOptions} from '@/utils/uniqueFilterOptions';
 
@@ -70,6 +72,7 @@ type LabourRow = {
     total?: number | string | null;
     check_in_number?: number | string | null;
     check_in_hours?: number | string | null;
+    check_in_minutes?: number | string | null;
     risk?: number | string | null;
     currency?: string | null;
 };
@@ -97,7 +100,6 @@ const EMPTY_LABOUR_FILTERS: LabourFilterState = {
 const NUMERIC_COLUMNS = new Set([
     'shiftHours',
     'payable',
-    'workComplete',
     'rate',
     'total',
     'checkInNumber',
@@ -114,13 +116,12 @@ const COLUMN_LABELS: Record<string, string> = {
     date: 'Date',
     shift: 'Shift',
     hours: 'Hours',
-    qty: 'Qty',
     rate: 'Rate',
     payable: 'Payable Hr',
     total: 'Total',
     checkInNumber: 'Check-in(No.)',
-    checkInHours: 'Check-in (Min.)',
-    shiftHours: 'Shift (Min.)',
+    checkInHours: 'Check-in (Hr)',
+    shiftHours: 'Shift (Hr)',
     risk: 'Risk %',
 };
 
@@ -136,7 +137,14 @@ const formatNumber = (value: number | string | null | undefined) => {
 const formatAmount = (
     currency: string | null | undefined,
     amount: number | string | null | undefined,
-) => `${currency || '£'}${Number(amount || 0).toFixed(2)}`;
+) => `${currency || '£'}${Number(amount || 0).toLocaleString('en-GB', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+})}`;
+
+// Labour rates are stored net of CIS; gross adds the 20% deduction back (net × 1.25).
+const CIS_GROSS_MULTIPLIER = 1.25;
+
 
 const getNumericResponseValue = (
     response: any,
@@ -150,15 +158,6 @@ const getNumericResponseValue = (
     }
 
     return fallback;
-};
-
-const formatMinutesFromHours = (value: number | string | null | undefined) =>
-    String(Math.round(Number(value || 0) * 60));
-
-const formatOptionalNumber = (value: number | string | null | undefined) => {
-    if (value === null || value === undefined || value === '') return '--';
-
-    return formatNumber(value);
 };
 
 const formatPayableHour = (value: number | string | null | undefined) => {
@@ -193,6 +192,7 @@ const Labour = ({projectId}: { projectId: number }) => {
     const [netAmount, setNetAmount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [includeCis, setIncludeCis] = useState(false);
     const [sorting, setSorting] = useState<SortingState>([
         {id: 'date', desc: true},
     ]);
@@ -209,6 +209,7 @@ const Labour = ({projectId}: { projectId: number }) => {
     const [filters, setFilters] = useState<LabourFilterState>(EMPTY_LABOUR_FILTERS);
     const [tempFilters, setTempFilters] = useState<LabourFilterState>(EMPTY_LABOUR_FILTERS);
     const [filterOpen, setFilterOpen] = useState(false);
+    const [exporting, setExporting] = useState(false);
     
     const [filterOptions, setFilterOptions] = useState<{
         teams: FilterOption[];
@@ -433,25 +434,10 @@ const Labour = ({projectId}: { projectId: number }) => {
                 ),
             }),
 
-            columnHelper.accessor('work_complete', {
-                id: 'qty',
-                header: () => <Typography variant="subtitle2">Qty</Typography>,
-                cell: ({row, getValue}) => {
-                    const isPricework = String(row.original.type || '').toLowerCase() === 'pricework';
-
-                    return (
-                        <Typography className="f-14" color="textPrimary" noWrap>
-                            {isPricework ? formatOptionalNumber(getValue()) : '--'}
-                        </Typography>
-                    );
-                },
-            }),
-            
             columnHelper.accessor('rate', {
                 id: 'rate',
                 header: () => <Typography variant="subtitle2">Rate</Typography>,
                 cell: ({row, getValue}) => {
-                    const isDaywork = String(row.original.type || '').toLowerCase() === 'daywork';
                     const isPricework = String(row.original.type || '').toLowerCase() === 'pricework';
 
                     if (isPricework) {
@@ -464,8 +450,7 @@ const Labour = ({projectId}: { projectId: number }) => {
 
                     return (
                         <Typography className="f-14" color="textPrimary" noWrap>
-                            {currency} {Number(getValue() || 0).toFixed(2)}
-                            {isDaywork ? '/hr' : ''}
+                            {currency} {(Number(getValue() || 0) * (includeCis ? CIS_GROSS_MULTIPLIER : 1)).toFixed(2)}
                         </Typography>
                     );
                 },
@@ -492,8 +477,10 @@ const Labour = ({projectId}: { projectId: number }) => {
                 header: () => <Typography variant="subtitle2">Total</Typography>,
                 cell: ({getValue}) => (
                     <Typography className="f-14" fontWeight={500} color="textPrimary">
-                        {currency}
-                        {Number(getValue() || 0).toFixed(2)}
+                        {formatAmount(
+                            currency,
+                            Number(getValue() || 0) * (includeCis ? CIS_GROSS_MULTIPLIER : 1),
+                        )}
                     </Typography>
                 ),
             }),
@@ -513,21 +500,25 @@ const Labour = ({projectId}: { projectId: number }) => {
             columnHelper.accessor('check_in_hours', {
                 id: 'checkInHours',
                 header: () => (
-                    <Typography variant="subtitle2">Check-in (Min.)</Typography>
+                    <Typography variant="subtitle2">Check-in (Hr)</Typography>
                 ),
-                cell: ({getValue}) => (
+                cell: ({row, getValue}) => (
                     <Typography className="f-14" color="textPrimary" noWrap>
-                        {formatMinutesFromHours(getValue())}
+                        {formatPayableHour(
+                            row.original.check_in_minutes != null
+                                ? Number(row.original.check_in_minutes) / 60
+                                : getValue(),
+                        )}
                     </Typography>
                 ),
             }),
             
             columnHelper.accessor('shift_hours', {
                 id: 'shiftHours',
-                header: () => <Typography variant="subtitle2">Shift (Min.)</Typography>,
+                header: () => <Typography variant="subtitle2">Shift (Hr)</Typography>,
                 cell: ({getValue}) => (
                     <Typography className="f-14" color="textPrimary" noWrap>
-                        {formatMinutesFromHours(getValue())}
+                        {formatPayableHour(getValue())}
                     </Typography>
                 ),
             }),
@@ -560,6 +551,7 @@ const Labour = ({projectId}: { projectId: number }) => {
         ],
         [
             currency,
+            includeCis,
             data,
             handleToggleSelect,
             handleToggleSelectAll,
@@ -714,6 +706,52 @@ const Labour = ({projectId}: { projectId: number }) => {
             getRowId: (row) => String(row.row_key || row.row_id || row.id),
         });
 
+    const exportLabour = async () => {
+        if (!user?.company_id || !projectId || exporting) return;
+        setExporting(true);
+        try {
+            const payload: Record<string, any> = {
+                company_id: user.company_id,
+                project_id: projectId,
+                include_cis: includeCis,
+                columns: table.getVisibleLeafColumns().map((column) => column.id).join(','),
+            };
+            if (searchTerm) payload.search = searchTerm;
+            if (formattedStart) payload.start_date = formattedStart;
+            if (formattedEnd) payload.end_date = formattedEnd;
+            if (filters.teams.length) payload.team_ids = filters.teams.join(',');
+            if (filters.users.length) payload.user_ids = filters.users.join(',');
+            if (filters.types.length) payload.types = filters.types.join(',');
+            if (filters.trades.length) payload.trade_ids = filters.trades.join(',');
+            const sortQuery = getTableSortQuery(sorting);
+            if (sortQuery) {
+                payload.sort_by = sortQuery.sort_by;
+                payload.sort_order = sortQuery.sort_order;
+            }
+
+            const res = await api.post('project-analytics/web-labors/export', payload, {
+                responseType: 'blob',
+            });
+
+            const blob = new Blob([res.data], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `labour_export_${dayjs().format('YYYY-MM-DD')}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Failed to export labour', err);
+            toast.error('Failed to export labour');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const visibleColCount =
         table.getVisibleLeafColumns().length || columns.length;
     const skeletonColumns = table.getVisibleLeafColumns().map((column) => ({
@@ -840,6 +878,21 @@ const Labour = ({projectId}: { projectId: number }) => {
                                 setEndDate(range.to);
                             }}
                         />
+                        {(startDate || endDate) && (
+                            <Tooltip title="Clear date range">
+                                <IconButton
+                                    size="small"
+                                    color="error"
+                                    aria-label="Clear date range"
+                                    onClick={() => {
+                                        setStartDate(null);
+                                        setEndDate(null);
+                                    }}
+                                >
+                                    <IconX size={18}/>
+                                </IconButton>
+                            </Tooltip>
+                        )}
                         <TextField
                             size="small"
                             placeholder="Search..."
@@ -898,6 +951,20 @@ const Labour = ({projectId}: { projectId: number }) => {
                         
                     </Box>
                     <Box display="flex" justifyContent="flex-end" alignItems="center" gap={0.75} flexWrap="wrap">
+                        <FormControlLabel
+                            control={
+                                <IOSSwitch
+                                    checked={includeCis}
+                                    onChange={(e) => setIncludeCis(e.target.checked)}
+                                />
+                            }
+                            label={
+                                <Typography variant="body2" noWrap>
+                                    Include CIS
+                                </Typography>
+                            }
+                            sx={{m: 0, mr: 0.5, gap: 1}}
+                        />
                         {[
                             {label: 'Gross', amount: grossAmount},
                             {label: 'Net', amount: netAmount},
@@ -925,6 +992,16 @@ const Labour = ({projectId}: { projectId: number }) => {
                                 </Typography>
                             </Box>
                         ))}
+                        <Button
+                            variant="contained"
+                            size="small"
+                            onClick={exportLabour}
+                            disabled={exporting || totalRows === 0}
+                            startIcon={<IconFileExport size={18}/>}
+                            sx={{minHeight: 34, height: 34, whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600}}
+                        >
+                            {exporting ? 'Exporting...' : 'Export'}
+                        </Button>
                         <Tooltip title="Column visibility">
                             <IconButton
                                 onClick={(e) => setColumnMenuAnchor(e.currentTarget)}
