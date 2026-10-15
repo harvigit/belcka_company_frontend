@@ -101,12 +101,10 @@ function DateTimePicker({ value, onChange }: DateTimePickerProps) {
     const dd = String(value.getDate()).padStart(2, "0");
     const MM = String(value.getMonth() + 1).padStart(2, "0");
     const yyyy = value.getFullYear();
-    // const hh = String(value.getHours()).padStart(2, '0');
-    // const mm = String(value.getMinutes()).padStart(2, '0');
+    const hh = String(value.getHours()).padStart(2, "0");
+    const mm = String(value.getMinutes()).padStart(2, "0");
 
-    // return `${dd}/${MM}/${yyyy} ${hh}:${mm}`;
-
-    return `${dd}/${MM}/${yyyy}`;
+    return `${dd}/${MM}/${yyyy} ${hh}:${mm}`;
   }, [value]);
 
   useEffect(() => {
@@ -230,7 +228,7 @@ function DateTimePicker({ value, onChange }: DateTimePickerProps) {
           style: {
             cursor: "pointer",
             caretColor: "transparent",
-            width: 135,
+            width: 150,
             fontSize: 14,
           },
         }}
@@ -337,59 +335,101 @@ function DateTimePicker({ value, onChange }: DateTimePickerProps) {
 
           <Divider />
 
-          {/*<Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>*/}
-          {/*    <TextField*/}
-          {/*        type="number"*/}
-          {/*        value={String(hours).padStart(2, '0')}*/}
-          {/*        onChange={(e) => {*/}
-          {/*            let val = Number(e.target.value);*/}
-          {/*            if (isNaN(val)) val = 0;*/}
-          {/*            val = Math.max(0, Math.min(23, val));*/}
-          {/*            setHours(val);*/}
-          {/*        }}*/}
-          {/*        onKeyDown={(e) => {*/}
-          {/*            if (e.key === 'ArrowUp') {*/}
-          {/*                e.preventDefault();*/}
-          {/*                setHours((prev) => (prev + 1) % 24);*/}
-          {/*            }*/}
-          {/*            if (e.key === 'ArrowDown') {*/}
-          {/*                e.preventDefault();*/}
-          {/*                setHours((prev) => (prev - 1 + 24) % 24);*/}
-          {/*            }*/}
-          {/*        }}*/}
-          {/*        InputProps={{sx: {'& fieldset': {border: 'none'}, borderRadius: 8, height: 48, width: 110}}}*/}
-          {/*        inputProps={{style: {textAlign: 'center', fontSize: 18, fontWeight: 600}}}*/}
-          {/*        sx={{width: 110}}*/}
-          {/*    />*/}
-          {/*    <Typography sx={{fontSize: 26, fontWeight: 700, color: '#666', mx: 0.5}}>:</Typography>*/}
-          {/*    <TextField*/}
-          {/*        type="number"*/}
-          {/*        value={String(minutes).padStart(2, '0')}*/}
-          {/*        onChange={(e) => {*/}
-          {/*            let val = Number(e.target.value);*/}
-          {/*            if (isNaN(val)) val = 0;*/}
-          {/*            val = Math.max(0, Math.min(59, val));*/}
-          {/*            setMinutes(val);*/}
-          {/*        }}*/}
-          {/*        onKeyDown={(e) => {*/}
-          {/*            if (e.key === 'ArrowUp') {*/}
-          {/*                e.preventDefault();*/}
-          {/*                setMinutes((prev) => (prev + 5) % 60);*/}
-          {/*            }*/}
-          {/*            if (e.key === 'ArrowDown') {*/}
-          {/*                e.preventDefault();*/}
-          {/*                setMinutes((prev) => (prev - 5 + 60) % 60);*/}
-          {/*            }*/}
-          {/*        }}*/}
-          {/*        InputProps={{sx: {'& fieldset': {border: 'none'}, borderRadius: 8, height: 48, width: 110}}}*/}
-          {/*        inputProps={{style: {textAlign: 'center', fontSize: 18}}}*/}
-          {/*        sx={{width: 110}}*/}
-          {/*    />*/}
-          {/*</Box>*/}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <TextField
+              type="number"
+              value={String(hours).padStart(2, "0")}
+              onChange={(e) => {
+                let val = Number(e.target.value);
+                if (isNaN(val)) val = 0;
+                val = Math.max(0, Math.min(23, val));
+                setHours(val);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setHours((prev) => (prev + 1) % 24);
+                }
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setHours((prev) => (prev - 1 + 24) % 24);
+                }
+              }}
+              InputProps={{
+                sx: {
+                  "& fieldset": { border: "none" },
+                  borderRadius: 8,
+                  height: 48,
+                  width: 110,
+                },
+              }}
+              inputProps={{
+                style: { textAlign: "center", fontSize: 18, fontWeight: 600 },
+              }}
+              sx={{ width: 110 }}
+            />
+            <Typography
+              sx={{ fontSize: 26, fontWeight: 700, color: "#666", mx: 0.5 }}
+            >
+              :
+            </Typography>
+            <TextField
+              type="number"
+              value={String(minutes).padStart(2, "0")}
+              onChange={(e) => {
+                let val = Number(e.target.value);
+                if (isNaN(val)) val = 0;
+                val = Math.max(0, Math.min(59, val));
+                setMinutes(val);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setMinutes((prev) => (prev + 5) % 60);
+                }
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setMinutes((prev) => (prev - 5 + 60) % 60);
+                }
+              }}
+              InputProps={{
+                sx: {
+                  "& fieldset": { border: "none" },
+                  borderRadius: 8,
+                  height: 48,
+                  width: 110,
+                },
+              }}
+              inputProps={{ style: { textAlign: "center", fontSize: 18 } }}
+              sx={{ width: 110 }}
+            />
+          </Box>
 
           <Divider />
 
-          <Box sx={{ px: 1.5, py: 1.5 }}>
+          <Box sx={{ px: 1.5, py: 1.5, display: "flex", gap: 1 }}>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                onChange(new Date());
+                setOpen(false);
+              }}
+              sx={{
+                textTransform: "none",
+                fontWeight: 700,
+                fontSize: 14,
+                borderRadius: 1.5,
+                minWidth: 72,
+              }}
+            >
+              Now
+            </Button>
             <Button
               fullWidth
               variant="contained"
@@ -476,8 +516,18 @@ const groupByTeam = (users: any[]): Record<string, any[]> => {
 
 const flyToZone = (map: google.maps.Map, zone: any) => {
   if (zone.type === "circle") {
-    map.panTo({ lat: Number(zone.latitude), lng: Number(zone.longitude) });
-    map.setZoom(DEFAULT_ZOOM);
+    const center = { lat: Number(zone.latitude), lng: Number(zone.longitude) };
+    if (isNaN(center.lat) || isNaN(center.lng)) return;
+    const circleBounds = new google.maps.Circle({
+      center,
+      radius: Number(zone.radius) || 0,
+    }).getBounds();
+    if (circleBounds && Number(zone.radius) > 0) {
+      map.fitBounds(circleBounds, 40);
+    } else {
+      map.panTo(center);
+      map.setZoom(DEFAULT_ZOOM);
+    }
   } else if (Array.isArray(zone.coordinates) && zone.coordinates.length > 0) {
     const bounds = new google.maps.LatLngBounds();
     zone.coordinates.forEach((pt: any) =>
@@ -540,6 +590,28 @@ const spreadOverlappingUsers = (users: any[]): any[] => {
     }
   }
   return result;
+};
+
+const CLUSTER_RADIUS_PX = 44;
+
+// Groups user markers that would overlap on screen at the current zoom level.
+const clusterUsers = (users: any[], zoom: number): any[][] => {
+  const clusters: { lat: number; lng: number; members: any[] }[] = [];
+  for (const u of users) {
+    const lat = Number(u.latitude);
+    const lng = Number(u.longitude);
+    const metersPerPixel =
+      (156543.03392 * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, zoom);
+    const threshold = CLUSTER_RADIUS_PX * metersPerPixel;
+    const match = clusters.find((c) => {
+      const dLat = (c.lat - lat) * 111320;
+      const dLng = (c.lng - lng) * 111320 * Math.cos((lat * Math.PI) / 180);
+      return Math.sqrt(dLat * dLat + dLng * dLng) < threshold;
+    });
+    if (match) match.members.push(u);
+    else clusters.push({ lat, lng, members: [u] });
+  }
+  return clusters.map((c) => c.members);
 };
 
 const uniqueZonesWithProjectCount = (zones: any[]) => {
@@ -637,6 +709,32 @@ export default function MapGantt({
   const user = session.data?.user as User & { company_id?: number | null };
 
   const mainMapRef = useRef<google.maps.Map | null>(null);
+
+  // Size the list + map row to the space left in the viewport so the page
+  // itself doesn't scroll while working with the map.
+  const contentRowRef = useRef<HTMLDivElement | null>(null);
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const measure = () => {
+      const el = contentRowRef.current;
+      if (!el) return;
+      // Fit inside the nearest scrolling container (e.g. the project tab
+      // panel), or the window when there is none. 24px leaves room for the
+      // root's bottom padding.
+      let bottom = window.innerHeight;
+      for (let p = el.parentElement; p; p = p.parentElement) {
+        if (/(auto|scroll)/.test(getComputedStyle(p).overflowY)) {
+          bottom = Math.min(bottom, p.getBoundingClientRect().bottom);
+          break;
+        }
+      }
+      const top = el.getBoundingClientRect().top;
+      setContentHeight(Math.max(450, Math.floor(bottom - top - 24)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
 
   const [filterDateTime, setFilterDateTime] = useState<Date>(() => new Date());
   const apiDateTime = useMemo(
@@ -772,8 +870,14 @@ export default function MapGantt({
         const res = await api.get("work-zone/get", { params });
         setGeofences(uniqueZonesWithProjectCount(res.data.info ?? []));
       } else {
+        // has_cases makes the API restrict parents to those with cases in project_id
         const res: AxiosResponse<any> = await api.get("address/get-parent", {
-          params: { ...params, page: 1, limit: 10000 },
+          params: {
+            ...params,
+            ...(pIds && { has_cases: "true" }),
+            page: 1,
+            limit: 10000,
+          },
         });
         const responseData =
           res.data.info?.data || res.data.info || res.data.data || [];
@@ -998,6 +1102,33 @@ export default function MapGantt({
     () => filterData.filter((z) => !hiddenZoneIds.has(z.id)),
     [filterData, hiddenZoneIds],
   );
+
+  const allZonesHidden =
+    filterData.length > 0 && filterData.every((z) => hiddenZoneIds.has(z.id));
+
+  const toggleAllZones = () => {
+    setHiddenZoneIds((prev) => {
+      const next = new Set(prev);
+      filterData.forEach((z) => {
+        if (allZonesHidden) next.delete(z.id);
+        else next.add(z.id);
+      });
+      return next;
+    });
+  };
+
+  const zoomToZone = (zone: any) => {
+    if (!mainMapRef.current) return;
+    if (hiddenZoneIds.has(zone.id)) {
+      setHiddenZoneIds((prev) => {
+        const next = new Set(prev);
+        next.delete(zone.id);
+        return next;
+      });
+    }
+    flyToZone(mainMapRef.current, zone);
+    setSelected(null);
+  };
 
   const filteredUserLocations = useMemo(() => {
     let data = userLocations;
@@ -1340,11 +1471,15 @@ export default function MapGantt({
       </Dialog>
 
       <Box
+        ref={contentRowRef}
         display="flex"
         gap={2}
         mt={2}
         sx={{
-          height: { xs: "auto", md: "calc(100vh - 130px)" },
+          height: {
+            xs: "auto",
+            md: contentHeight ? `${contentHeight}px` : "calc(100vh - 130px)",
+          },
           flexDirection: { xs: "column", md: "row" },
           overflow: { xs: "visible", md: "hidden" },
         }}
@@ -1357,8 +1492,7 @@ export default function MapGantt({
             flexShrink: 0,
             display: "flex",
             flexDirection: "column",
-            height: "80vh",
-            maxHeight: { xs: 360, md: "unset" },
+            height: { xs: 360, md: "100%" },
           }}
         >
           <TableContainer
@@ -1393,7 +1527,28 @@ export default function MapGantt({
                       background: "#f5f5f5",
                     }}
                   >
-                    <b>Action</b>
+                    <Box display="flex" alignItems="center" gap={0.5}>
+                      <b>Action</b>
+                      <Tooltip
+                        title={allZonesHidden ? "Show all zones" : "Hide all zones"}
+                        arrow
+                      >
+                        <span>
+                          <IconButton
+                            size="small"
+                            color={allZonesHidden ? "default" : "success"}
+                            onClick={toggleAllZones}
+                            disabled={filterData.length === 0}
+                          >
+                            {allZonesHidden ? (
+                              <IconEyeOff size={18} />
+                            ) : (
+                              <IconEye size={18} />
+                            )}
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -1408,7 +1563,12 @@ export default function MapGantt({
                   paginatedZones.map((z) => {
                     const isHidden = hiddenZoneIds.has(z.id);
                     return (
-                      <TableRow key={z.id}>
+                      <TableRow
+                        key={z.id}
+                        hover
+                        onClick={() => zoomToZone(z)}
+                        sx={{ cursor: "pointer" }}
+                      >
                         <TableCell>
                           <Typography
                             sx={{ color: "text.primary", fontWeight: 600 }}
@@ -1456,7 +1616,10 @@ export default function MapGantt({
                             </Tooltip>
                           </TableCell>
                         )}
-                        <TableCell sx={{ width: 152, minWidth: 152 }}>
+                        <TableCell
+                          sx={{ width: 152, minWidth: 152 }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Box display="flex" gap={0.5} flexWrap="nowrap">
                             <IconButton
                               color={isHidden ? "default" : "success"}
@@ -1478,12 +1641,7 @@ export default function MapGantt({
 
                             <IconButton
                               color="primary"
-                              onClick={() => {
-                                if (mainMapRef.current) {
-                                  flyToZone(mainMapRef.current, z);
-                                  setSelected(null);
-                                }
-                              }}
+                              onClick={() => zoomToZone(z)}
                               title="Zoom to zone on map"
                             >
                               <IconMapPin size={20} />
@@ -1593,8 +1751,8 @@ export default function MapGantt({
             minWidth: 0,
             display: "flex",
             flexDirection: "column",
-            overflow: "auto",
-            minHeight: { xs: 460, md: "unset" },
+            overflow: "hidden",
+            height: { xs: 460, md: "100%" },
           }}
         >
           <Box
@@ -1608,6 +1766,7 @@ export default function MapGantt({
           >
             <AllZonesMap
               zones={visibleZones}
+              fitZones={filterData}
               isLoaded={isLoaded}
               userLocations={usersOnMapVisible ? usersWithLocation : []}
               focusedUserId={focusedUserId}
@@ -2176,8 +2335,97 @@ const UserMarker = ({
   );
 };
 
+const UserClusterMarker = ({
+  members,
+  onClick,
+}: {
+  members: any[];
+  onClick: () => void;
+}) => {
+  const position = {
+    lat: members.reduce((s, m) => s + Number(m.latitude), 0) / members.length,
+    lng: members.reduce((s, m) => s + Number(m.longitude), 0) / members.length,
+  };
+  const workingCount = members.filter((m) => m.is_working).length;
+  const color = workingCount > 0 ? "#1976d2" : "#fc4b6c";
+  const names = members
+    .map(
+      (m) =>
+        m.user_name || `${m.first_name ?? ""} ${m.last_name ?? ""}`.trim(),
+    )
+    .filter(Boolean);
+
+  return (
+    <OverlayView
+      position={position}
+      mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+    >
+      <div style={{ position: "relative", width: 0, height: 0 }}>
+        <Tooltip
+          arrow
+          title={
+            <Box>
+              {names.slice(0, 10).map((n, i) => (
+                <Typography key={i} variant="caption" display="block">
+                  {n}
+                </Typography>
+              ))}
+              {names.length > 10 && (
+                <Typography variant="caption" display="block">
+                  +{names.length - 10} more
+                </Typography>
+              )}
+            </Box>
+          }
+        >
+          <Box
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            sx={{
+              position: "absolute",
+              left: -22,
+              top: -22,
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              backgroundColor: color,
+              border: "3px solid white",
+              boxShadow: `0 0 0 4px ${color}55, 0 3px 8px rgba(0,0,0,0.3)`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              color: "white",
+              fontWeight: 700,
+              fontSize: 15,
+              userSelect: "none",
+              "&:hover": { transform: "scale(1.08)" },
+              transition: "transform 0.15s ease",
+            }}
+          >
+            {members.length}
+          </Box>
+        </Tooltip>
+      </div>
+    </OverlayView>
+  );
+};
+
+const fitMapToZones = (map: google.maps.Map, zones: any[]) => {
+  const bounds = buildBoundsFromZones(zones);
+  if (!bounds || bounds.isEmpty()) {
+    map.setCenter(LONDON_CENTER);
+    map.setZoom(12);
+    return;
+  }
+  map.fitBounds(bounds);
+};
+
 const AllZonesMap = ({
   zones,
+  fitZones,
   isLoaded,
   userLocations = [],
   focusedUserId,
@@ -2185,6 +2433,7 @@ const AllZonesMap = ({
   onMapLoad,
 }: {
   zones: any[];
+  fitZones?: any[];
   isLoaded: boolean;
   userLocations?: any[];
   focusedUserId?: number | string | null;
@@ -2193,43 +2442,76 @@ const AllZonesMap = ({
 }) => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const ignoreNextMapClickRef = useRef(false);
+  const [zoom, setZoom] = useState(12);
+
+  // Auto-fit only when the loaded zone set changes. Toggling a zone's
+  // visibility must keep the current viewport.
+  const boundsZones = fitZones ?? zones;
+  const boundsKey = boundsZones.map((z) => z.id).join(",");
+  const boundsZonesRef = useRef(boundsZones);
+  boundsZonesRef.current = boundsZones;
 
   useEffect(() => {
     if (!mapRef.current) return;
-    if (zones.length === 0) {
-      mapRef.current.setCenter(LONDON_CENTER);
-      mapRef.current.setZoom(12);
-      return;
-    }
-    const bounds = buildBoundsFromZones(zones);
-    if (bounds) mapRef.current.fitBounds(bounds);
-  }, [zones]);
+    fitMapToZones(mapRef.current, boundsZonesRef.current);
+  }, [boundsKey]);
 
   const handleMapLoad = (map: google.maps.Map) => {
     mapRef.current = map;
     onMapLoad?.(map);
-    if (zones.length === 0) {
-      map.setCenter(LONDON_CENTER);
-      map.setZoom(12);
-      return;
-    }
-    const bounds = buildBoundsFromZones(zones);
-    if (bounds) map.fitBounds(bounds);
+    fitMapToZones(map, boundsZonesRef.current);
   };
 
   const onZoneClick = (zone: any) => {
     if (mapRef.current) flyToZone(mapRef.current, zone);
   };
 
+  const userClusters = useMemo(() => {
+    const focused = userLocations.filter(
+      (u) => focusedUserId != null && String(u.id) === String(focusedUserId),
+    );
+    const rest = userLocations.filter((u) => !focused.includes(u));
+    return [...clusterUsers(rest, zoom), ...focused.map((u) => [u])];
+  }, [userLocations, zoom, focusedUserId]);
+
+  const onClusterClick = (members: any[]) => {
+    const map = mapRef.current;
+    if (!map) return;
+    ignoreNextMapClickRef.current = true;
+    const bounds = new google.maps.LatLngBounds();
+    members.forEach((m) =>
+      bounds.extend({ lat: Number(m.latitude), lng: Number(m.longitude) }),
+    );
+    const currentZoom = map.getZoom() ?? zoom;
+    map.fitBounds(bounds, 80);
+    // Members sit (almost) on the same spot: fitBounds can't zoom in further
+    // than the current level, so force a deeper zoom to separate them.
+    // Zoom 20 is close enough for spreadOverlappingUsers pins to separate.
+    google.maps.event.addListenerOnce(map, "idle", () => {
+      const newZoom = map.getZoom() ?? 0;
+      if (newZoom <= currentZoom) {
+        map.setCenter(bounds.getCenter());
+        map.setZoom(Math.max(currentZoom + 2, 20));
+      } else if (newZoom > 20) {
+        map.setZoom(20);
+      }
+    });
+  };
+
   if (!isLoaded) return <Typography p={2}>Loading map...</Typography>;
 
   return (
-    <Paper sx={{ height: "80vh", width: "100%", minHeight: 400 }}>
+    <Paper sx={{ height: "100%", width: "100%", minHeight: 400 }}>
       <GoogleMap
-        mapContainerStyle={{ width: "100%", height: "80vh" }}
+        mapContainerStyle={{ width: "100%", height: "100%", minHeight: 400 }}
         zoom={12}
         center={LONDON_CENTER}
+        options={{ gestureHandling: "greedy" }}
         onLoad={handleMapLoad}
+        onZoomChanged={() => {
+          const z = mapRef.current?.getZoom();
+          if (z != null) setZoom(z);
+        }}
         onClick={() => {
           if (ignoreNextMapClickRef.current) {
             ignoreNextMapClickRef.current = false;
@@ -2298,6 +2580,7 @@ const AllZonesMap = ({
                   center={center}
                   radius={Number(zone.radius)}
                   options={{ strokeColor: color, fillColor: color + "33" }}
+                  onClick={() => onZoneClick(zone)}
                 />
               </React.Fragment>
             );
@@ -2409,17 +2692,25 @@ const AllZonesMap = ({
           return null;
         })}
 
-        {userLocations.map((u) => (
-          <UserMarker
-            key={`user-${u.id}`}
-            user={u}
-            isFocused={String(focusedUserId) === String(u.id)}
-            onSelect={(id) => {
-              ignoreNextMapClickRef.current = true;
-              onFocusedUserChange?.(id);
-            }}
-          />
-        ))}
+        {userClusters.map((members) =>
+          members.length === 1 ? (
+            <UserMarker
+              key={`user-${members[0].id}`}
+              user={members[0]}
+              isFocused={String(focusedUserId) === String(members[0].id)}
+              onSelect={(id) => {
+                ignoreNextMapClickRef.current = true;
+                onFocusedUserChange?.(id);
+              }}
+            />
+          ) : (
+            <UserClusterMarker
+              key={`cluster-${members.map((m) => m.id).join("-")}`}
+              members={members}
+              onClick={() => onClusterClick(members)}
+            />
+          ),
+        )}
       </GoogleMap>
     </Paper>
   );

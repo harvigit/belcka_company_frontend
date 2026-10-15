@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Autocomplete,
   Box,
@@ -30,7 +30,7 @@ import {
   createColumnHelper,
   SortingState} from "@tanstack/react-table";
 import {flexRender} from "@/utils/flexRender";
-import { IconEye, IconFilter, IconSearch, IconX } from "@tabler/icons-react";
+import { IconCalendar, IconEye, IconFilter, IconSearch, IconX } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import dayjs from "dayjs";
@@ -44,6 +44,9 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import ColumnVisibilityPopover from "@/app/components/common/ColumnVisibilityPopover";
+import LeaveCalendarDrawer, {
+  getMonthDays,
+} from "@/app/components/apps/leaves/LeaveCalendarDrawer";
 
 type LeaveRow = {
   id: number;
@@ -157,6 +160,15 @@ const Leave = ({ projectId }: { projectId: number }) => {
     null,
   );
   const [columnSearch, setColumnSearch] = useState("");
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() =>
+    dayjs().startOf("month").toDate(),
+  );
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(() =>
+    dayjs().startOf("day").toDate(),
+  );
+  const [calendarLeaves, setCalendarLeaves] = useState<LeaveRow[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
 
   const { columnVisibility, onColumnVisibilityChange } =
     usePersistentColumnVisibility({
@@ -330,6 +342,56 @@ const Leave = ({ projectId }: { projectId: number }) => {
     }
     setLoading(false);
   };
+
+  // The calendar loads every leave in the visible month grid, independent of table pagination.
+  useEffect(() => {
+    if (!calendarOpen || !user?.company_id || !projectId) return;
+
+    const controller = new AbortController();
+    const days = getMonthDays(calendarMonth);
+    const params = new URLSearchParams({
+      company_id: String(user.company_id),
+      project_id: String(projectId),
+      start_date: dayjs(days[0]).format("DD/MM/YYYY"),
+      end_date: dayjs(days[days.length - 1]).format("DD/MM/YYYY"),
+      page: "1",
+      limit: "1000",
+      calendar: "1",
+    });
+    if (searchTerm) params.set("search", searchTerm);
+    if (filters.users.length) params.set("user_ids", filters.users.join(","));
+    if (filters.leaveTypes.length) {
+      params.set("leave_type", filters.leaveTypes.join(","));
+    }
+    if (filters.statuses.length) params.set("status", filters.statuses.join(","));
+
+    setCalendarLoading(true);
+    api
+      .get(`user-leaves/project-leaves?${params.toString()}`, {
+        signal: controller.signal,
+      })
+      .then((res) => {
+        setCalendarLeaves(Array.isArray(res.data?.info) ? res.data.info : []);
+        setCalendarLoading(false);
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        console.error("Failed to fetch project leave calendar", err);
+        setCalendarLeaves([]);
+        setCalendarLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [
+    calendarOpen,
+    calendarMonth,
+    user?.company_id,
+    projectId,
+    searchTerm,
+    filters.users,
+    filters.leaveTypes,
+    filters.statuses,
+  ]);
 
   const { table, pagination, setPagination, totalRows, setTotalRows, setPageCount } =
     useServerTable({
@@ -582,6 +644,15 @@ const Leave = ({ projectId }: { projectId: number }) => {
             )}
           </Box>
           <Box display="flex" justifyContent="flex-end" alignItems="center">
+            <Tooltip title="Calendar">
+              <IconButton
+                onClick={() => setCalendarOpen(true)}
+                color="primary"
+                size="small"
+              >
+                <IconCalendar size={20} />
+              </IconButton>
+            </Tooltip>
             <Tooltip title="Column visibility">
               <IconButton
                 onClick={(e) => setColumnMenuAnchor(e.currentTarget)}
@@ -766,6 +837,17 @@ const Leave = ({ projectId }: { projectId: number }) => {
       </Dialog>
 
       <TablePaginationFooter table={table} totalRows={totalRows} />
+
+      <LeaveCalendarDrawer
+        open={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        leaves={calendarLeaves}
+        loading={calendarLoading}
+        month={calendarMonth}
+        onMonthChange={setCalendarMonth}
+        selectedDate={selectedCalendarDate}
+        onSelectedDateChange={setSelectedCalendarDate}
+      />
     </Box>
   );
 };
