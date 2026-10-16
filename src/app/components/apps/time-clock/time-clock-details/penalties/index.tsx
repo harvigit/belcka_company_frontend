@@ -317,44 +317,33 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
         [startPoint, stopPoint],
     );
 
-    const allGeofences = useMemo(() => normalizeGeofences(penalty.geofences), [penalty.geofences]);
     // Penalty is applied when the stop location is outside every work zone of the worklog's project
     const projectGeofences = useMemo(() => normalizeGeofences(penalty.project_geofences), [penalty.project_geofences]);
 
-    // Project zones sorted by distance from the stop location
-    const projectZoneDistances = useMemo(() => {
-        if (!stopPoint) return [];
+    // Nearest project zone to the stop location, used to frame the map
+    const nearestZone = useMemo(() => {
+        if (!stopPoint || projectGeofences.length === 0) return null;
         return projectGeofences
             .map((zone) => ({zone, ...getDistanceToZone(stopPoint.position, zone)}))
-            .sort((a, b) => a.distance - b.distance);
+            .sort((a, b) => a.distance - b.distance)[0];
     }, [projectGeofences, stopPoint]);
 
     const stopInsideProjectZone = useMemo(
         () => (isLoaded && stopPoint ? findZoneForPoint(stopPoint.position, projectGeofences) : null),
         [isLoaded, stopPoint, projectGeofences],
     );
-    const nearestZone = !stopInsideProjectZone ? projectZoneDistances[0] ?? null : null;
 
-    // Zones where work started / stopped
-    const pointZones = useMemo(() => {
-        if (!isLoaded) return [];
-        const zones = points
-            .map((point) => findZoneForPoint(point.position, allGeofences))
-            .filter((zone): zone is PenaltyGeofence => zone !== null);
-        return zones.filter((zone, index) => zones.findIndex((z) => z.id === zone.id) === index);
-    }, [allGeofences, points, isLoaded]);
-
-    const hasMapData = points.length > 0;
+    const hasMapData = stopPoint !== null || projectGeofences.length > 0;
 
     const fitMap = useCallback((map: google.maps.Map) => {
         const bounds = new google.maps.LatLngBounds();
         let hasBounds = false;
 
-        points.forEach((point) => {
-            bounds.extend(point.position);
+        if (stopPoint) {
+            bounds.extend(stopPoint.position);
             hasBounds = true;
-        });
-        [...pointZones, ...(nearestZone ? [nearestZone.zone] : [])].forEach((zone) => {
+        }
+        (nearestZone ? [nearestZone.zone] : projectGeofences).forEach((zone) => {
             extendBoundsWithGeofence(bounds, zone);
             hasBounds = true;
         });
@@ -365,15 +354,15 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
             return;
         }
 
-        // Single spot (one point, or start & stop at same place) with no zone → fitBounds would zoom in too far
+        // Stop point with no zone → fitBounds would zoom in too far
         if (bounds.getNorthEast().equals(bounds.getSouthWest())) {
-            map.panTo(points[0].position);
+            map.panTo(bounds.getCenter());
             map.setZoom(DEFAULT_ZOOM);
             return;
         }
 
         map.fitBounds(bounds, {top: 50, right: 50, bottom: 50, left: 50});
-    }, [pointZones, nearestZone, points]);
+    }, [nearestZone, projectGeofences, stopPoint]);
 
     useEffect(() => {
         if (mapRef.current && isLoaded) {
@@ -384,7 +373,7 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
     if (!hasMapData) {
         return (
             <Typography variant="body2" color="text.secondary">
-                No start/stop location data available.
+                No stop location or project zone data available.
             </Typography>
         );
     }
@@ -402,7 +391,7 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
             <Box sx={{height: 260, borderRadius: 1.5, overflow: 'hidden', border: '1px solid #e5e7eb'}}>
                 <GoogleMap
                     mapContainerStyle={{width: '100%', height: '100%'}}
-                    center={points[0]?.position ?? DEFAULT_CENTER}
+                    center={stopPoint?.position ?? projectGeofences[0]?.center ?? DEFAULT_CENTER}
                     zoom={DEFAULT_ZOOM}
                     onLoad={(map) => {
                         mapRef.current = map;
@@ -414,19 +403,13 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
                         fullscreenControl: true,
                     }}
                 >
-                    {pointZones.map((zone) => (
+                    {projectGeofences.map((zone) => (
                         <React.Fragment key={zone.id}>
                             <GeofenceOverlay zone={zone}/>
                             <ZoneLabel zone={zone}/>
                         </React.Fragment>
                     ))}
-                    {nearestZone && stopPoint && !pointZones.some((zone) => zone.id === nearestZone.zone.id) && (
-                        <>
-                            <GeofenceOverlay zone={{...nearestZone.zone, color: STOP_COLOR}}/>
-                            <ZoneLabel zone={nearestZone.zone} color={STOP_COLOR}/>
-                        </>
-                    )}
-                    {nearestZone && stopPoint && (
+                    {nearestZone && stopPoint && !stopInsideProjectZone && (
                         <Polyline
                             path={[stopPoint.position, nearestZone.nearest]}
                             options={{
@@ -439,9 +422,7 @@ const OutsideBoundaryMap = ({penalty}: { penalty: PenaltyItem }) => {
                             }}
                         />
                     )}
-                    {points.map((point) => (
-                        <MapPinOverlay key={point.label} point={point}/>
-                    ))}
+                    {stopPoint && <MapPinOverlay point={stopPoint}/>}
                 </GoogleMap>
             </Box>
 
