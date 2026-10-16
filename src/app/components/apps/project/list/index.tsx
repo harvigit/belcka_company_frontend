@@ -277,6 +277,9 @@ const getExportPreviewColumns = () => [
   },
 ];
 
+// API may send counts as "3 / 0"; keep only the leading number.
+const toCount = (value: unknown) => parseInt(String(value ?? 0), 10) || 0;
+
 const NumberCell = ({ value }: { value: number | string }) => (
   <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
     {value ?? 0}
@@ -868,7 +871,7 @@ const ProjectDashboard = () => {
         header: () => <HeaderLabel>On site</HeaderLabel>,
         meta: { label: "On site" },
         cell: ({ row }) => (
-          <NumberCell value={`${row.original.total_working_users || 0}`} />
+          <NumberCell value={toCount(row.original.total_working_users)} />
         ),
       }),
       columnHelper.accessor("limit", {
@@ -882,9 +885,9 @@ const ProjectDashboard = () => {
         meta: { label: "Working / Limit" },
         cell: ({ row }) => (
           <NumberCell
-            value={`${row.original.total_working_users || 0} / ${
-              row.original.limit || 0
-            }`}
+            value={`${toCount(row.original.total_working_users)} / ${toCount(
+              row.original.limit
+            )}`}
           />
         ),
       }),
