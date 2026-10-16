@@ -433,8 +433,8 @@ const Certificates = () => {
         `&user_id=${appliedUserId}` +
         `&page=${pagination.pageIndex + 1}` +
         `&limit=${pagination.pageSize}` +
-        `&start_date=${toApiDate(startDate)}` +
-        `&end_date=${toApiDate(endDate)}` +
+        // `&start_date=${toApiDate(startDate)}` +
+        // `&end_date=${toApiDate(endDate)}` +
         `&sort_by=${activeSorting.id}` +
         `&sort_order=${activeSorting.desc ? "desc" : "asc"}` +
         status +
@@ -456,7 +456,7 @@ const Certificates = () => {
       }
 
       const dash = await api.get(
-        `certificates/dashboard?company_id=${companyId}&user_id=${appliedUserId}&start_date=${toApiDate(startDate)}&end_date=${toApiDate(endDate)}`,
+        `certificates/dashboard?company_id=${companyId}&user_id=${appliedUserId}`,
       );
       setCounts({ ...EMPTY_COUNTS, ...(dash.data?.info || {}) });
     } catch (error) {
@@ -683,14 +683,14 @@ const Certificates = () => {
             alignItems={{ sm: "center" }}
           >
             <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-              <DateRangePickerBox
+              {/* <DateRangePickerBox
                 from={startDate}
                 to={endDate}
                 onChange={(range) => {
                   setStartDate(range.from);
                   setEndDate(range.to);
                 }}
-              />
+              /> */}
               <TextField
                 size="small"
                 placeholder="Search..."
