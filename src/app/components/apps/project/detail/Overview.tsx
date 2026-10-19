@@ -504,6 +504,7 @@ const Overview = ({
       if (formattedStart && formattedEnd && formattedStart !== "Invalid Date") {
         params.set("start_date", formattedStart);
         params.set("end_date", formattedEnd);
+        params.set("labour_date_filter", "1");
       }
       if (fullLabourTeamId !== "all") {
         params.set("team_id", fullLabourTeamId);
