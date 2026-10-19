@@ -57,6 +57,9 @@ import {
 } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+
+dayjs.extend(customParseFormat);
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
@@ -73,6 +76,9 @@ import CaseAddDrawer from "./case-add-drawer";
 import CaseDetail from "@/app/components/apps/cases/detail";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import ExcelImportModal from "@/app/components/common/ExcelImportModal";
+import InternalOrderDetailDrawer, {
+  type InternalOrderDetail,
+} from "@/app/components/apps/project/detail/InternalOrderDetailDrawer";
 
 type CaseFilters = {
   status: string;
@@ -224,17 +230,15 @@ const sortCaseListRows = (rows: any[], sorting: any[]) => {
   });
 };
 
-type InternalOrderItem = {
+type InternalOrderItem = InternalOrderDetail & {
   id: number;
-  order_id: string;
-  total_price: string;
-  created_at: string;
-  case_id?: string | null;
-  case_name?: string;
+  source?: "store" | "collect" | "po";
+  type_key?: "store" | "collect" | "po";
+  total?: number | string | null;
 };
 
-const formatOrderMoney = (value: number | string) =>
-  `£${Number(value || 0).toLocaleString("en-GB", {
+const formatOrderMoney = (value: number | string, currency = "£") =>
+  `${currency}${Number(value || 0).toLocaleString("en-GB", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -432,9 +436,14 @@ const CasesList = ({
 } = {}) => {
   const [data, setData] = useState<CaseSummary[]>([]);
   const [internalOrdersOpen, setInternalOrdersOpen] = useState(false);
+  const [internalOrdersLoading, setInternalOrdersLoading] = useState(false);
   const [internalOrderSearch, setInternalOrderSearch] = useState("");
   const [internalOrderSum, setInternalOrderSum] = useState(0);
+  const [internalOrderCurrency, setInternalOrderCurrency] = useState("£");
+  const [internalOrdersLoaded, setInternalOrdersLoaded] = useState(false);
   const [internalOrders, setInternalOrders] = useState<InternalOrderItem[]>([]);
+  const [selectedInternalOrder, setSelectedInternalOrder] =
+    useState<InternalOrderItem | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -583,9 +592,11 @@ const CasesList = ({
     return internalOrders.filter((order) =>
       [
         order.order_id,
-        order.case_id,
-        order.case_name,
-        formatDate(order.created_at),
+        order.user_name,
+        order.address_name,
+        order.type,
+        order.status_text,
+        order.date,
       ]
         .filter(Boolean)
         .join(" ")
@@ -593,6 +604,68 @@ const CasesList = ({
         .includes(query),
     );
   }, [internalOrderSearch, internalOrders]);
+
+  const loadInternalOrders = useCallback(async () => {
+    const targetProjectId = projectId || Number(filters.project_id);
+    if (!user?.company_id || !targetProjectId) {
+      setInternalOrders([]);
+      setInternalOrderSum(0);
+      toast.error("Select a project to view internal orders");
+      return;
+    }
+
+    setInternalOrdersLoading(true);
+    try {
+      const loadType = async (type: "store" | "collect") => {
+        const params = new URLSearchParams({
+          company_id: String(user.company_id),
+          project_id: String(targetProjectId),
+          page: "1",
+          limit: "10000",
+          type,
+        });
+        const res = await api.get(
+          `project/internal-orders?${params.toString()}`,
+        );
+        return {
+          rows: (Array.isArray(res.data?.info)
+            ? res.data.info
+            : []) as InternalOrderItem[],
+          currency: res.data?.currency as string | undefined,
+        };
+      };
+      const [storeResult, collectResult] = await Promise.all([
+        loadType("store"),
+        loadType("collect"),
+      ]);
+      const rows = [...storeResult.rows, ...collectResult.rows].sort(
+        (a, b) => {
+          const aTime = dayjs(a.date, "DD/MM/YYYY").valueOf() || 0;
+          const bTime = dayjs(b.date, "DD/MM/YYYY").valueOf() || 0;
+          return bTime - aTime;
+        },
+      );
+      const currency =
+        storeResult.currency ||
+        collectResult.currency ||
+        rows[0]?.currency ||
+        "£";
+      setInternalOrders(rows);
+      setInternalOrderCurrency(currency);
+      setInternalOrderSum(
+        rows.reduce((sum, order) => sum + Number(order.total || 0), 0),
+      );
+      setInternalOrdersLoaded(true);
+    } catch (error) {
+      console.error(error);
+      setInternalOrders([]);
+      setInternalOrderSum(0);
+      setInternalOrdersLoaded(false);
+      toast.error("Failed to load internal orders");
+    } finally {
+      setInternalOrdersLoading(false);
+    }
+  }, [filters.project_id, projectId, user?.company_id]);
 
   useEffect(() => {
     fetchProjectsAndAddresses();
@@ -658,12 +731,6 @@ const CasesList = ({
         } else if (pagMeta.last_page !== undefined) {
           setPageCount(pagMeta.last_page);
         }
-        setInternalOrderSum(Number(res.data.internal_order_sum || 0));
-        setInternalOrders(
-          Array.isArray(res.data.internal_orders)
-            ? res.data.internal_orders
-            : [],
-        );
       }
     } catch (error) {
       console.error(error);
@@ -1318,7 +1385,7 @@ const CasesList = ({
             mt={{ xs: 2, sm: 0 }}
           >
             <Box display={"flex"}>
-              {/* <Button
+              <Button
                 sx={{
                   flexShrink: 0,
                   display: "flex",
@@ -1333,16 +1400,20 @@ const CasesList = ({
                 }}
                 onClick={() => {
                   setInternalOrderSearch("");
+                  setSelectedInternalOrder(null);
                   setInternalOrdersOpen(true);
+                  void loadInternalOrders();
                 }}
               >
                 <Typography variant="caption" color="inherit" noWrap>
                   Internal Orders:
                 </Typography>
-                <Typography variant="subtitle2" fontWeight={700} noWrap>
-                  {formatOrderMoney(internalOrderSum)}
-                </Typography>
-              </Button> */}
+                {internalOrdersLoaded ? (
+                  <Typography variant="subtitle2" fontWeight={700} noWrap>
+                    {formatOrderMoney(internalOrderSum, internalOrderCurrency)}
+                  </Typography>
+                ) : null}
+              </Button>
               <IconButton
                 onClick={handleClickMenu}
                 sx={{ ml: 1 }}
@@ -1440,14 +1511,14 @@ const CasesList = ({
                 open={internalOrdersOpen}
                 onClose={() => setInternalOrdersOpen(false)}
                 fullWidth
-                maxWidth="sm"
+                maxWidth="md"
               >
                 <DialogTitle sx={{ pr: 7, position: "relative" }}>
                   Internal orders
                   <Typography variant="body2" color="text.secondary" mt={0.5}>
                     {internalOrders.length}{" "}
                     {internalOrders.length === 1 ? "order" : "orders"} ·{" "}
-                    {formatOrderMoney(internalOrderSum)}
+                    {formatOrderMoney(internalOrderSum, internalOrderCurrency)}
                   </Typography>
                   <IconButton
                     aria-label="Close"
@@ -1461,7 +1532,7 @@ const CasesList = ({
                   <TextField
                     size="small"
                     fullWidth
-                    placeholder="Search order, case, or date"
+                    placeholder="Search order, user, address, or date"
                     value={internalOrderSearch}
                     onChange={(event) =>
                       setInternalOrderSearch(event.target.value)
@@ -1475,11 +1546,16 @@ const CasesList = ({
                       ),
                     }}
                   />
-                  {filteredInternalOrders.length ? (
+                  {internalOrdersLoading ? (
+                    <Typography color="text.secondary" textAlign="center" py={4}>
+                      Loading internal orders...
+                    </Typography>
+                  ) : filteredInternalOrders.length ? (
                     <Stack spacing={1}>
                       {filteredInternalOrders.map((order) => (
                         <Box
-                          key={order.id}
+                          key={`${order.type_key || order.source}-${order.id}`}
+                          onClick={() => setSelectedInternalOrder(order)}
                           sx={{
                             display: "flex",
                             justifyContent: "space-between",
@@ -1488,6 +1564,7 @@ const CasesList = ({
                             border: "1px solid",
                             borderColor: "divider",
                             borderRadius: 1,
+                            cursor: "pointer",
                           }}
                         >
                           <Box minWidth={0}>
@@ -1496,23 +1573,49 @@ const CasesList = ({
                             </Typography>
                             <Typography
                               variant="body2"
+                              fontWeight={
+                                order.type_key === "collect" ? 700 : 500
+                              }
+                              sx={{
+                                color:
+                                  order.type_key === "collect"
+                                    ? "error.main"
+                                    : "text.primary",
+                              }}
+                            >
+                              {order.type || "Store"}
+                            </Typography>
+                            <Typography
+                              variant="body2"
                               color="text.secondary"
                               noWrap
                             >
-                              {[order.case_id, order.case_name]
+                              {[order.user_name, order.address_name]
                                 .filter(Boolean)
-                                .join(" · ") || "No case"}
+                                .join(" · ") || "No address"}
                             </Typography>
                             <Typography
                               variant="caption"
                               color="text.secondary"
                             >
-                              {formatDate(order.created_at)}
+                              {order.date || "-"}
                             </Typography>
                           </Box>
-                          <Typography fontWeight={700} sx={{ flexShrink: 0 }}>
-                            {formatOrderMoney(order.total_price)}
-                          </Typography>
+                          <Box textAlign="right" sx={{ flexShrink: 0 }}>
+                            <Typography
+                              fontWeight={700}
+                              sx={{ color: order.status_color || "text.primary" }}
+                            >
+                              {order.status_text || "-"}
+                            </Typography>
+                            <Typography fontWeight={700}>
+                              {order.total_formatted ||
+                                formatOrderMoney(
+                                  order.total || 0,
+                                  order.currency || internalOrderCurrency,
+                                )}
+                            </Typography>
+                          </Box>
                         </Box>
                       ))}
                     </Stack>
@@ -1538,6 +1641,11 @@ const CasesList = ({
                   </Button>
                 </DialogActions>
               </Dialog>
+              <InternalOrderDetailDrawer
+                open={Boolean(selectedInternalOrder)}
+                order={selectedInternalOrder}
+                onClose={() => setSelectedInternalOrder(null)}
+              />
             </Box>
             <ExcelImportModal
               open={openModel}
