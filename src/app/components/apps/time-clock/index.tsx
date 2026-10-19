@@ -403,13 +403,16 @@ const EMPTY_QUERY_PARAMS: QueryParams = {
 const isValidTimeClockTypeFilter = (value: unknown): value is string =>
     typeof value === 'string' && TIME_CLOCK_TYPE_OPTIONS.some((option) => option.value === value);
 
-const normalizeStoredNumberFilter = (value: unknown): number[] => {
+const normalizeStoredNumberFilter = (value: unknown, allowZero: boolean = false): number[] => {
     if (!Array.isArray(value)) return [];
 
     return value
         .map((item) => Number(item))
-        .filter((item) => Number.isInteger(item) && item > 0);
+        .filter((item) => Number.isInteger(item) && (item > 0 || (allowZero && item === 0)));
 };
+
+// Group filter id 0 = "Ungroup": users who are not part of any group.
+const UNGROUPED_GROUP_ID = 0;
 
 const normalizeStoredStringFilter = (value: unknown): string[] => {
     if (!Array.isArray(value)) return [];
@@ -547,7 +550,10 @@ const TimeClock = ({queryParams}: Props) => {
     const canViewGroupReport = user?.user_role_id === 1 || hasPermission(permissions, 'group-report');
     const [companyGroups, setCompanyGroups] = useState<{ id: number; name: string }[]>([]);
     const groupFilterOptions = useMemo<FilterOption[]>(
-        () => companyGroups.map((g) => ({id: String(g.id), name: g.name})),
+        () => [
+            {id: String(UNGROUPED_GROUP_ID), name: 'Ungroup'},
+            ...companyGroups.map((g) => ({id: String(g.id), name: g.name})),
+        ],
         [companyGroups],
     );
 
@@ -773,7 +779,7 @@ const TimeClock = ({queryParams}: Props) => {
                 const parsed = JSON.parse(stored) as TimeClockStoredFilters;
                 const nextFilters: TimeClockFilterState = {
                     teams: normalizeStoredNumberFilter(parsed.filters?.teams),
-                    groups: normalizeStoredNumberFilter(parsed.filters?.groups),
+                    groups: normalizeStoredNumberFilter(parsed.filters?.groups, true),
                     statuses: normalizeStoredStringFilter(parsed.filters?.statuses),
                     users: normalizeStoredNumberFilter(parsed.filters?.users),
                     projects: normalizeStoredNumberFilter(parsed.filters?.projects),
@@ -1298,7 +1304,8 @@ const TimeClock = ({queryParams}: Props) => {
         const rawValue = value as Array<string | number>;
 
         const normalizedValue = numeric
-            ? rawValue.map((item) => Number(item)).filter((item) => Number.isInteger(item) && item > 0)
+            ? rawValue.map((item) => Number(item)).filter((item) =>
+                Number.isInteger(item) && (item > 0 || (key === 'groups' && item === UNGROUPED_GROUP_ID)))
             : rawValue.map((item) => String(item)).filter(Boolean);
 
         setTempFilters((prev) => ({
