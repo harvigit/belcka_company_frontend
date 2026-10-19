@@ -59,6 +59,8 @@ import {
 } from "@/utils/listingTableStateStorage";
 import ColumnVisibilityPopover from "../../common/ColumnVisibilityPopover";
 import PermissionGuard from "@/app/auth/PermissionGuard";
+import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+import { format } from "date-fns";
 
 const columnHelper = createColumnHelper<any>();
 
@@ -122,6 +124,8 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const session = useSession();
   const user = session.data?.user as User & {
     company_id?: number | null;
@@ -204,6 +208,10 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
       let url = `user-checklog/company-checklogs?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
         url += `&search=${encodeURIComponent(searchTerm)}`;
+      }
+      if (startDate && endDate) {
+        url += `&start_date=${format(startDate, "dd/MM/yyyy")}`;
+        url += `&end_date=${format(endDate, "dd/MM/yyyy")}`;
       }
 
       if (filters.project && filters.project !== "All") {
@@ -743,6 +751,8 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
       filters,
       user?.company_id,
       isTableStateReady,
+      startDate,
+      endDate,
     ],
     state: { columnVisibility },
     onColumnVisibilityChange,
@@ -857,7 +867,38 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
           direction={{ xs: "column", sm: "row" }}
           spacing={{ xs: 1, sm: 2, md: 4 }}
         >
-          <Box display="flex" gap={1} alignItems="center">
+          <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
+            <DateRangePickerBox
+              from={startDate}
+              to={endDate}
+              onChange={(range) => {
+                skipNextDependencyPageResetRef.current = false;
+                setStartDate(range.from);
+                setEndDate(range.to);
+                setPagination((prev) =>
+                  prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                );
+              }}
+            />
+            {(startDate || endDate) && (
+              <Tooltip title="Clear date range">
+                <IconButton
+                  size="small"
+                  color="error"
+                  aria-label="Clear date range"
+                  onClick={() => {
+                    skipNextDependencyPageResetRef.current = false;
+                    setStartDate(null);
+                    setEndDate(null);
+                    setPagination((prev) =>
+                      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                    );
+                  }}
+                >
+                  <IconX size={18} />
+                </IconButton>
+              </Tooltip>
+            )}
             <TextField
               size="small"
               placeholder="Search..."

@@ -50,12 +50,15 @@ const MapCanvas = React.memo(function MapCanvas({
 
     return (
         <Box
-            height={{xs: 300, md: 390}}
-            width="100%"
-            minWidth={0}
-            borderRadius={1.5}
-            border="1px solid #e5e7eb"
-            overflow="hidden"
+            sx={{
+                width: {xs: '100%', md: 'min(100%, 62vh)'},
+                aspectRatio: '1 / 1',
+                mx: 'auto',
+                minWidth: 0,
+                borderRadius: 1.5,
+                border: '1px solid #e5e7eb',
+                overflow: 'hidden',
+            }}
         >
             <GoogleMap
                 mapContainerStyle={MAP_CONTAINER_STYLE}
@@ -63,6 +66,9 @@ const MapCanvas = React.memo(function MapCanvas({
                 zoom={ADDRESS_ZONE_ZOOM}
                 onLoad={(map) => {
                     mapRef.current = map;
+                    window.setTimeout(() => {
+                        google.maps.event.trigger(map, 'resize');
+                    }, 0);
                     if (selectedLocation) {
                         map.panTo(selectedLocation);
                         map.setZoom(ADDRESS_ZONE_ZOOM);

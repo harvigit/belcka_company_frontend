@@ -889,6 +889,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 table={table}
                 excludedColumns={["select"]}
               />
+              <Button
+                variant="contained"
+                onClick={() => handleOpenParentAddressDrawer()}
+                sx={{ ml: 1, textTransform: "none", whiteSpace: "nowrap" }}
+              >
+                <IconPlus width={18} /> Add Address
+              </Button>
               <IconButton
                 sx={{ margin: "0px" }}
                 id="basic-button"
@@ -910,28 +917,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   },
                 }}
               >
-                <MenuItem
-                  onClick={() => {
-                    handleClose();
-                    handleOpenParentAddressDrawer();
-                  }}
-                >
-                  <Box
-                    style={{
-                      width: "100%",
-                      color: "#11142D",
-                      textTransform: "none",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyItems: "center",
-                    }}
-                  >
-                    <ListItemIcon>
-                      <IconPlus width={18} />
-                    </ListItemIcon>
-                    Add Address
-                  </Box>
-                </MenuItem>
                 <MenuItem onClick={handleClose}>
                   <Link
                     color="body1"
@@ -1213,10 +1198,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         />
         <ChildAddressesDrawer
           open={addressListDrawerOpen}
-          onClose={() => {
-            setAddressListDrawerOpen(false);
-            fetchAddresses();
-          }}
+          onClose={() => setAddressListDrawerOpen(false)}
           projectId={projectId}
           parentAddressId={selectedParentAddressId}
           projects={project}
