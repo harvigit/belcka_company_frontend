@@ -18,6 +18,7 @@ import {
     Grid,
     IconButton,
     InputAdornment,
+    Menu,
     MenuItem,
     Skeleton,
     Stack,
@@ -33,6 +34,7 @@ import {
 import {
     IconChevronDown,
     IconChevronRight,
+    IconDownload,
     IconFilter,
     IconInfoCircle,
     IconSearch,
@@ -42,6 +44,7 @@ import {format} from 'date-fns';
 import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import Image from 'next/image';
+import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
@@ -204,6 +207,45 @@ export default function GroupAnalytics({embedded = false}: { embedded?: boolean 
             setSelectedGroups([]);
         }
         setFilterOpen(false);
+    };
+
+    const [exportAnchor, setExportAnchor] = useState<HTMLElement | null>(null);
+    const [exporting, setExporting] = useState(false);
+
+    // Exports with the same filters as the screen (search, users, projects included).
+    const handleExport = async (exportFormat: 'excel' | 'pdf') => {
+        setExportAnchor(null);
+        if (!user?.company_id) return;
+        setExporting(true);
+        try {
+            const res = await api.post('user-groups/analytics/export', {
+                company_id: user.company_id,
+                format: exportFormat,
+                ...(startDate ? {start_date: format(startDate, 'yyyy-MM-dd')} : {}),
+                ...(endDate ? {end_date: format(endDate, 'yyyy-MM-dd')} : {}),
+                ...(selectedGroups.length ? {group_ids: selectedGroups.map((g) => g.id)} : {}),
+                // 0 = "No project".
+                ...(selectedProjects.length ? {project_ids: selectedProjects.map((p) => p.id ?? 0)} : {}),
+                ...(selectedUsers.length ? {user_ids: selectedUsers.map((u) => u.id)} : {}),
+                ...(search.trim() ? {search: search.trim()} : {}),
+                statuses: status === 'all' ? ['paid', 'locked'] : [status],
+            });
+            const {file, filename, contentType} = res.data?.info ?? {};
+            if (!file) throw new Error(res.data?.message || 'Export failed');
+            const bytes = Uint8Array.from(atob(file), (c) => c.charCodeAt(0));
+            const url = window.URL.createObjectURL(new Blob([bytes], {type: contentType}));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Failed to export group report', err);
+            toast.error('Failed to export group report');
+        }
+        setExporting(false);
     };
 
     const money = (value: number) =>
@@ -447,6 +489,28 @@ export default function GroupAnalytics({embedded = false}: { embedded?: boolean 
                             </Button>
                         </Badge>
                     </Tooltip>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                        startIcon={<IconDownload size={16}/>}
+                        endIcon={<IconChevronDown size={16}/>}
+                        onClick={(e) => setExportAnchor(e.currentTarget)}
+                        disabled={loading || exporting || !view?.groups.length}
+                        sx={{height: 38, textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap'}}
+                    >
+                        {exporting ? 'Exporting...' : 'Export'}
+                    </Button>
+                    <Menu
+                        anchorEl={exportAnchor}
+                        open={Boolean(exportAnchor)}
+                        onClose={() => setExportAnchor(null)}
+                        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                        transformOrigin={{vertical: 'top', horizontal: 'right'}}
+                    >
+                        <MenuItem onClick={() => handleExport('excel')}>Export (Excel)</MenuItem>
+                        <MenuItem onClick={() => handleExport('pdf')}>Export (PDF)</MenuItem>
+                    </Menu>
                     <Stack direction="row" alignItems="center" spacing={0.5}>
                         <DateRangePickerBox
                             from={startDate}
