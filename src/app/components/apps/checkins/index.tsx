@@ -173,25 +173,6 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
   };
   const handlePopoverClose = () => setAnchorEl2(null);
 
-  const fetchResources = async () => {
-    try {
-      const res = await api.get(
-        `user-checklog/get-resources?company_id=${user.company_id}`,
-      );
-      if (res.data) {
-        setProjects(res.data.projects || []);
-        setTrades(res.data.trades || []);
-        setUsers(res.data.users || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch checklog resources", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchResources();
-  }, []);
-
   const handleSelectAllRows = (checked: boolean) => {
     if (checked) {
       const allIds = data.map((item: any) => item.id);
@@ -228,6 +209,9 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
       if (res.data) {
         const responseData = res.data.info || [];
         setData(responseData);
+        setProjects(res.data.data?.projects || []);
+        setTrades(res.data.data?.trades || []);
+        setUsers(res.data.data?.users || []);
 
         const pagMeta = res.data.data || {};
 
