@@ -11,13 +11,11 @@ import {
   Badge,
   IconButton,
   CircularProgress,
-  Card,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Tooltip,
-  MenuItem,
   TextField,
 } from "@mui/material";
 import {
@@ -44,13 +42,10 @@ import Notifications from "../../user-profile-setting/notifications";
 import toast from "react-hot-toast";
 import ComapnyRate from "../../user-profile-setting/company-rate";
 import Payments from "../../user-profile-setting/payments";
-import GeofencePenalty from "../../user-profile-setting/geofence-penalty";
 import UserLeaves from "../../user-profile-setting/user-leaves";
-import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 
 import UserActivity from "../../user-profile-setting/activity";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import {
   getUserDetailsHref,
   resolveUserDetailsId,
@@ -93,29 +88,18 @@ const TablePagination = () => {
   const { t } = useTranslation();
   const [data, setData] = useState<TeamList>();
   const [loading, setLoading] = useState<boolean>(true);
-  const [adminLoading, setAdminLoading] = useState<boolean>(false);
-  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
-  const [archiveLoading, setArchiveLoading] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userPermissionType, setUserPermissionType] = useState<
     "" | "view" | "view_edit"
   >("");
   const [isPhoneUpdate, setIsPhoneUpdate] = useState<boolean>(false);
   const router = useRouter();
-  const [supervisorReplacementOpen, setSupervisorReplacementOpen] =
-    useState(false);
-  const [newSupervisorId, setNewSupervisorId] = useState<number | "">("");
-  const [supervisorDetails, setSupervisorDetails] = useState<{
-    team_id: number | null;
-    team_name: string | null;
-  } | null>(null);
   const searchParams = useSearchParams();
   const isRemovedUser = searchParams?.get("is_removed_user") === "true";
   const isArchivedUser =
     searchParams?.get("is_archived_user") === "true" ||
     searchParams?.get("is_archive_user") === "true";
   const isReadOnlyUserView = isRemovedUser || isArchivedUser;
-  const [companyUsers, setCompanyUsers] = useState<any[]>([]);
 
   const allTabs = [
     "Activity",
@@ -125,7 +109,6 @@ const TablePagination = () => {
     "Health Info",
     "Notification Settings",
     "Payments",
-    "Geofence & Penalty",
   ];
 
   const visibleTabs = isReadOnlyUserView
@@ -147,9 +130,7 @@ const TablePagination = () => {
     user_role_id?: number | null;
   };
 
-  const userRole = user?.user_role_id;
   const [phone, setPhone] = useState("");
-  const [openRemoveAdminModel, setOpenRemoveAdminModel] = useState(false);
   const [openIdCard, setOpenIdCard] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [originalPhone, setOriginalPhone] = useState({
@@ -188,9 +169,6 @@ const TablePagination = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [registeredOn, setRegisteredOn] = useState("");
 
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<number>();
-
   const handleTabChange = (event: any, newValue: any) => {
     setValue(newValue);
   };
@@ -210,56 +188,9 @@ const TablePagination = () => {
   const [formData, setFormData] = useState(emptyPersonalDetails);
   const [originalFormData, setOriginalFormData] = useState(emptyPersonalDetails);
 
-  const [enabled, setEnabled] = useState<boolean>(false);
-
-  const handleSwitchToggle = () => {
-    handleToggle(!enabled);
-  };
-
-  const handleToggle = async (overrideStatus?: boolean) => {
-    if (!canModifyUserDetails) return;
-    const newStatus = overrideStatus ?? !enabled;
-
-    setEnabled(newStatus);
-
-    const payload = {
-      company_id: Number(user.company_id),
-      users: [
-        {
-          id: Number(userId),
-          is_check_in: newStatus,
-        },
-      ],
-    };
-
-    try {
-      const res = await api.post("user/change-bulk-checkin", payload);
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message);
-        fetchData();
-      }
-    } catch (e) {
-      console.error(e, "error");
-    }
-  };
   const handleFieldChange = (key: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
-  const fetchCompanyUsers = async () => {
-    try {
-      const res = await api.get("user/get-user-lists");
-      setCompanyUsers(res.data.info);
-    } catch (error) {
-      console.error("Failed to fetch company users:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (user?.company_id) {
-      fetchCompanyUsers();
-    }
-  }, [user?.company_id]);
-
   const fetchData = async () => {
     if (!userId) return;
     setLoading(true);
@@ -294,7 +225,6 @@ const TablePagination = () => {
       setData(data);
       setIsAdmin(!!res.data.is_admin);
       setUserPermissionType(res.data.permission_user_type || "");
-      setEnabled(data?.is_check_in ?? false);
 
       const ext = data?.extension || "";
       const number = data?.phone || "";
@@ -516,126 +446,6 @@ const TablePagination = () => {
 
     handleFieldChange("extension", ext);
     handleFieldChange("phone", numberOnly);
-  };
-
-  const handleConfirmAdmin = async () => {
-    if (!canModifyUserDetails) return;
-    setAdminLoading(true);
-    let shouldRefresh = false;
-    try {
-      const payload = {
-        company_id: user.company_id,
-        user_id: data?.id,
-      };
-
-      const res = await api.post("company/make-admin", payload);
-
-      if (res.data?.requires_otp) {
-        setAdminLoading(false);
-        const otp = await askOtp(
-          res.data.message ||
-          `Please verify OTP from ${res.data.company_created_by_name || "Company Owner"}.`,
-        );
-
-        if (otp === null) {
-          return;
-        }
-
-        if (!otp.trim()) {
-          toast.error("OTP is required");
-          return;
-        }
-
-        setAdminLoading(true);
-        const verifyRes = await api.post("company/make-admin", {
-          ...payload,
-          otp: otp.trim(),
-        });
-
-        if (!verifyRes.data.IsSuccess) {
-          toast.error(verifyRes.data.message || "Invalid OTP");
-          return;
-        }
-
-        toast.success(verifyRes.data.message);
-        await refreshLoggedInUserRole();
-        shouldRefresh = true;
-        return;
-      }
-
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message);
-        await refreshLoggedInUserRole();
-        shouldRefresh = true;
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setAdminLoading(false);
-      if (shouldRefresh) {
-        fetchData();
-      }
-    }
-  };
-
-  const refreshLoggedInUserRole = async () => {
-    try {
-      const res = await api.get(`user/get-user-lists?user_id=${user.id}`);
-
-      if (res.data?.info?.length) {
-        const data = res.data.info[0];
-
-        await update({
-          user: {
-            ...session?.user,
-            user_role_id: data.user_role_id,
-          },
-        });
-      }
-    } catch (err) {
-      console.error("Failed to fetch users", err);
-    }
-  };
-
-  const handleRemoveAdmin = async () => {
-    if (!canModifyUserDetails) return;
-    setLoading(true);
-    try {
-      const payload = {
-        company_id: user.company_id,
-        user_id: data?.id,
-      };
-
-      const res = await api.post("company/remove-admin", payload);
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message);
-        setOpenRemoveAdminModel(false);
-        fetchData();
-        try {
-          const res = await api.get(`user/get-user-lists?user_id=${user.id}`);
-
-          if (res.data?.info?.length) {
-            const data = res.data.info[0];
-
-            await update({
-              user: {
-                ...session?.user,
-                user_role_id: data.user_role_id,
-              },
-            });
-          }
-        } catch (err) {
-          console.error("Failed to fetch users", err);
-        }
-      } else {
-        toast.error(res.data.message);
-      }
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Something went wrong!");
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleUserStopWork = async () => {
@@ -875,34 +685,6 @@ const TablePagination = () => {
                     </Button>
                   )}
 
-                {canModifyUserDetails && data?.user_role_id == 2 && isAdmin && (
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    onClick={handleConfirmAdmin}
-                    disabled={adminLoading}
-                  >
-                    {adminLoading ? t("Updating...") : t("Make an admin")}
-                  </Button>
-                )}
-
-                {canModifyUserDetails &&
-                  !data?.is_company_owner &&
-                  data?.user_role_id == 1 &&
-                  companyUsers.find(
-                    (u: any) => Number(u.id) === Number(user.id),
-                  )?.is_company_owner && (
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      onClick={() => {
-                        setOpenRemoveAdminModel(true);
-                      }}
-                    >
-                      {t("Remove as admin")}
-                    </Button>
-                  )}
-
                 {isReadOnlyUserView && user.user_role_id == 1 && (
                   <Tooltip title={t("Bookkeeper")} arrow>
                     <Button
@@ -1137,44 +919,6 @@ const TablePagination = () => {
               </Box>
             </BlankCard>
 
-            {canModifyUserDetails && (
-              <Card sx={{ mt: 3 }}>
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{ p: 3 }}
-                >
-                  <Typography fontSize="16px !important" color="#487bb3ff">
-                    {t("Check-In")}
-                  </Typography>
-
-                  <IOSSwitch
-                    checked={!!enabled}
-                    onChange={handleSwitchToggle}
-                  />
-                </Box>
-              </Card>
-            )}
-
-            {canModifyUserDetails &&
-              (userRole === 1 || Number(user?.id) === Number(userId)) && (
-                <Card sx={{ mt: 3 }}>
-                  <Box sx={{ m: 3 }}>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      onClick={() => {
-                        setUserToDelete(Number(data?.id));
-                        setConfirmOpen(true);
-                      }}
-                      fullWidth
-                    >
-                      {t("Remove Account")}
-                    </Button>
-                  </Box>
-                </Card>
-              )}
           </Grid>
 
           <Grid
@@ -1319,13 +1063,6 @@ const TablePagination = () => {
                           userId={Number(userId)}
                         />
                       </Box>
-                      <Box hidden={value !== 7}>
-                        <GeofencePenalty
-                          companyId={Number(user.company_id)}
-                          active={value === 7}
-                          userId={Number(userId)}
-                        />
-                      </Box>
                     </>
                   )}
                 </fieldset>
@@ -1460,214 +1197,6 @@ const TablePagination = () => {
               }}
             >
               Upload
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-          <DialogTitle>
-            Confirm Deletion
-            <IconButton
-              aria-label="close"
-              onClick={() => setConfirmOpen(false)}
-              sx={{
-                position: "absolute",
-                right: 8,
-                top: 8,
-                color: (theme) => theme.palette.grey[500],
-              }}
-            >
-              <IconX />
-            </IconButton>
-          </DialogTitle>
-
-          <DialogContent>
-            <Typography color="textSecondary" fontWeight={500}>
-              This will permanently erase all actions, history, and activity
-              associated with the user. Once deleted, the data cannot be
-              recovered.
-              <br />
-              <br />
-              To remove the user without losing their information, please select
-              the Remove option instead.
-            </Typography>
-          </DialogContent>
-
-          <DialogActions>
-            <Button
-              disabled={archiveLoading}
-              onClick={async () => {
-                if (!canModifyUserDetails) return;
-                const supervisorTeamId = data?.supervisor_team_id;
-
-                if (supervisorTeamId) {
-                  setSupervisorDetails({
-                    team_id: supervisorTeamId,
-                    team_name: data?.supervisor_team_name || "the team",
-                  });
-
-                  setSupervisorReplacementOpen(true);
-                  setConfirmOpen(false);
-                  return;
-                }
-
-                setArchiveLoading(true);
-                try {
-                  const payload = {
-                    user_ids: String(userToDelete),
-                    company_id: user.company_id,
-                  };
-                  const response = await api.post("user/archive-user", payload);
-                  toast.success(response.data.message);
-                  router.push("/apps/users/list");
-                } catch (error) {
-                  console.error("Failed to archive users", error);
-                } finally {
-                  setConfirmOpen(false);
-                }
-                setArchiveLoading(false);
-              }}
-              variant="outlined"
-              color="primary"
-            >
-              Archive
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Supervisor Replacement Dialog */}
-        <Dialog
-          open={supervisorReplacementOpen}
-          onClose={() => setSupervisorReplacementOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle sx={{ m: 0, position: "relative", overflow: "visible" }}>
-            Assign New Supervisor
-            <IconButton
-              aria-label="close"
-              onClick={() => setSupervisorReplacementOpen(false)}
-              sx={{
-                position: "absolute",
-                right: 8,
-                top: 8,
-                color: (theme) => theme.palette.grey[500],
-              }}
-            >
-              <IconX />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent>
-            <Typography color="textSecondary" fontWeight={500} mb={2}>
-              The user you are archiving is currently the supervisor of{" "}
-              <strong>{supervisorDetails?.team_name || "a team"}</strong>.
-              Please assign a new supervisor for this team before archiving.
-            </Typography>
-            <CustomSelect
-              labelId="new-supervisor-label"
-              id="new-supervisor"
-              value={newSupervisorId}
-              onChange={(e: any) => setNewSupervisorId(e.target.value)}
-              fullWidth
-              displayEmpty
-            >
-              <MenuItem value="" disabled>
-                Select new supervisor
-              </MenuItem>
-              {companyUsers
-                .filter((u: any) => Number(u.id) !== Number(userToDelete))
-                .map((u: any) => (
-                  <MenuItem key={u.id} value={u.id}>
-                    {u.name}
-                  </MenuItem>
-                ))}
-            </CustomSelect>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => {
-                setSupervisorReplacementOpen(false);
-                setNewSupervisorId("");
-              }}
-              color="inherit"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!canModifyUserDetails) return;
-                if (!newSupervisorId) {
-                  toast.error("Please select a new supervisor");
-                  return;
-                }
-                try {
-                  const payload = {
-                    user_ids: userToDelete,
-                    company_id: user.company_id,
-                    supervisor_id: newSupervisorId,
-                    supervisor_team_id: supervisorDetails?.team_id,
-                  };
-                  const response = await api.post("user/archive-user", payload);
-                  toast.success(response.data.message);
-                  setSupervisorReplacementOpen(false);
-                  setNewSupervisorId("");
-                  router.push("/apps/users/list");
-                } catch (error) {
-                  console.error(
-                    "Failed to archive users with new supervisor",
-                    error,
-                  );
-                }
-              }}
-              variant="contained"
-              color="primary"
-            >
-              Confirm & Archive
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Dialog
-          open={openRemoveAdminModel}
-          onClose={() => setOpenRemoveAdminModel(false)}
-        >
-          <DialogTitle>
-            Confirmation
-            <IconButton
-              aria-label="close"
-              onClick={() => setOpenRemoveAdminModel(false)}
-              sx={{
-                position: "absolute",
-                right: 8,
-                top: 8,
-                color: (theme) => theme.palette.grey[500],
-              }}
-            >
-              <IconX />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent>
-            <Typography>
-              Are you sure you want to remove this user as an admin?
-            </Typography>
-          </DialogContent>
-
-          <DialogActions>
-            <Button
-              onClick={() => setOpenRemoveAdminModel(false)}
-              variant="outlined"
-              color="error"
-            >
-              Cancel
-            </Button>
-
-            <Button
-              onClick={handleRemoveAdmin}
-              color="primary"
-              variant="contained"
-              disabled={loading}
-            >
-              {loading ? t("Updating...") : t("Yes, Confirm")}
             </Button>
           </DialogActions>
         </Dialog>

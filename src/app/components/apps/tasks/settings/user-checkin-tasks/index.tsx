@@ -30,7 +30,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import {IconArrowLeft, IconEye, IconLock, IconSearch, IconX} from '@tabler/icons-react';
+import {IconArrowLeft, IconEye, IconHelpCircle, IconLock, IconSearch, IconX} from '@tabler/icons-react';
 import {createColumnHelper} from '@tanstack/react-table';
 import {flexRender} from '@/utils/flexRender';
 import Image from 'next/image';
@@ -87,7 +87,6 @@ type GeofenceField =
     | 'is_start_inside_boundary'
     | 'is_stop_inside_boundary';
 
-// `apiKey` is what user/update-geofence-penalty-settings expects, `field` is what user/get-user-lists returns.
 type SettingsSection = 'penalty' | 'geofence';
 
 const SECTION_TITLES: Record<SettingsSection, string> = {
@@ -95,19 +94,22 @@ const SECTION_TITLES: Record<SettingsSection, string> = {
     geofence: 'Geofence Setting',
 };
 
+// `apiKey` is what user/update-geofence-penalty-settings expects, `field` is what user/get-user-lists returns.
+// Start/stop within geofence only apply while the geofence main setting is on; turning main off clears them.
 const GEOFENCE_SETTINGS: {
     id: string;
     section: SettingsSection;
     apiKey: string;
     field: GeofenceField;
+    shortLabel: string;
     label: string;
     requiresMain?: boolean;
 }[] = [
-    {id: 'autoStopWorkPenalty', section: 'penalty', apiKey: 'auto_stop_work_penalty', field: 'is_autostop_work_penalty', label: 'Automatically stop work penalty'},
-    {id: 'stopWorkOutsidePenalty', section: 'penalty', apiKey: 'stop_work_outside_penalty', field: 'is_outside_boundary_penalty', label: 'Stop work outside of working area penalty'},
-    {id: 'geofenceMainSetting', section: 'geofence', apiKey: 'geofence_main_setting', field: 'is_location_restricted', label: 'Geofence main setting'},
-    {id: 'startWorkWithinGeofence', section: 'geofence', apiKey: 'start_work_within_geofence', field: 'is_start_inside_boundary', label: 'Only allow to start work within geofence boundary', requiresMain: true},
-    {id: 'stopWorkWithinGeofence', section: 'geofence', apiKey: 'stop_work_within_geofence', field: 'is_stop_inside_boundary', label: 'Only allow to stop work within geofence boundary', requiresMain: true},
+    {id: 'autoStopWorkPenalty', section: 'penalty', apiKey: 'auto_stop_work_penalty', field: 'is_autostop_work_penalty', shortLabel: 'Auto stop', label: 'Automatically stop work penalty'},
+    {id: 'stopWorkOutsidePenalty', section: 'penalty', apiKey: 'stop_work_outside_penalty', field: 'is_outside_boundary_penalty', shortLabel: 'Outside area', label: 'Stop work outside of working area penalty'},
+    {id: 'geofenceMainSetting', section: 'geofence', apiKey: 'geofence_main_setting', field: 'is_location_restricted', shortLabel: 'Geofence', label: 'Geofence main setting'},
+    {id: 'startWorkWithinGeofence', section: 'geofence', apiKey: 'start_work_within_geofence', field: 'is_start_inside_boundary', shortLabel: 'Start work', label: 'Only allow to start work within geofence boundary', requiresMain: true},
+    {id: 'stopWorkWithinGeofence', section: 'geofence', apiKey: 'stop_work_within_geofence', field: 'is_stop_inside_boundary', shortLabel: 'Stop work', label: 'Only allow to stop work within geofence boundary', requiresMain: true},
 ];
 
 const TaskUserCheckinSettings: React.FC = () => {
@@ -140,7 +142,6 @@ const TaskUserCheckinSettings: React.FC = () => {
     const [adminSavingId, setAdminSavingId] = useState<number | null>(null);
 
     const [geofenceSavingKey, setGeofenceSavingKey] = useState<string | null>(null);
-    const [settingsDrawer, setSettingsDrawer] = useState<{userId: number; section: SettingsSection} | null>(null);
     const [columnsAnchorEl, setColumnsAnchorEl] = useState<HTMLElement | null>(null);
     const [columnSearch, setColumnSearch] = useState('');
     const columnVisibilityKey = `columnVisibility_userAccess_${user?.id ?? ''}`;
@@ -605,8 +606,6 @@ const TaskUserCheckinSettings: React.FC = () => {
         }
     };
 
-    const drawerUser = settingsDrawer ? users.find((item) => item.id === settingsDrawer.userId) ?? null : null;
-
     const columnHelper = createColumnHelper<CheckinTaskUser>();
 
     const columns = useMemo(() => [
@@ -773,77 +772,67 @@ const TaskUserCheckinSettings: React.FC = () => {
             enableSorting: false,
             cell: ({row}: any) => {
                 const item = row.original;
-                const saving = adminSavingId === item.id;
+                const isUserAdmin = Number(item.user_role_id) === 1;
+                const canChange = isUserAdmin
+                    ? !item.is_company_owner && isCompanyOwner
+                    : isAdmin;
 
-                if (Number(item.user_role_id) === 2) {
-                    return isAdmin ? (
-                        <Button
-                            size="small"
-                            variant="outlined"
-                            color="primary"
-                            disabled={saving}
-                            onClick={() => handleMakeAdmin(item)}
-                        >
-                            {saving ? t('Updating...') : t('Make an admin')}
-                        </Button>
-                    ) : '-';
-                }
-
-                if (Number(item.user_role_id) === 1 && !item.is_company_owner && isCompanyOwner) {
-                    return (
-                        <Button
-                            size="small"
-                            variant="outlined"
-                            color="error"
-                            disabled={saving}
-                            onClick={() => setRemoveAdminUser(item)}
-                        >
-                            {t('Remove as admin')}
-                        </Button>
-                    );
-                }
-
-                return (
-                    <Typography variant="subtitle2" color="textSecondary">
-                        {item.is_company_owner ? t('Owner') : t('Admin')}
-                    </Typography>
+                const toggle = (
+                    <IOSSwitch
+                        checked={isUserAdmin}
+                        disabled={!canChange || adminSavingId === item.id}
+                        onChange={(event) =>
+                            event.target.checked ? handleMakeAdmin(item) : setRemoveAdminUser(item)
+                        }
+                    />
                 );
+
+                return item.is_company_owner ? (
+                    <Tooltip title={t('Company owner')} arrow>
+                        <span>{toggle}</span>
+                    </Tooltip>
+                ) : toggle;
             },
         }),
         ...(['penalty', 'geofence'] as SettingsSection[]).map((section) =>
-            columnHelper.display({
-                id: section,
-                meta: {label: section === 'penalty' ? 'Penalty' : 'Geofence'},
+            columnHelper.group({
+                id: `${section}Group`,
                 header: () => (
                     <Typography variant="subtitle2" noWrap>
-                        {t(section === 'penalty' ? 'Penalty' : 'Geofence')}
+                        {t(SECTION_TITLES[section])}
                     </Typography>
                 ),
-                cell: ({row}: any) => {
-                    const item = row.original;
-                    const sectionSettings = GEOFENCE_SETTINGS.filter((setting) => setting.section === section);
-                    const enabledCount = sectionSettings.filter((setting) => item[setting.field]).length;
+                columns: GEOFENCE_SETTINGS.filter((setting) => setting.section === section).map((setting) =>
+                    columnHelper.accessor((row) => row[setting.field], {
+                        id: setting.id,
+                        meta: {label: setting.label},
+                        header: () => (
+                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                <Typography variant="subtitle2" noWrap>
+                                    {t(setting.shortLabel)}
+                                </Typography>
+                                <Tooltip title={t(setting.label)} arrow placement="top">
+                                    <Box component="span" sx={{display: 'flex', color: 'text.secondary', cursor: 'help'}}>
+                                        <IconHelpCircle size={16}/>
+                                    </Box>
+                                </Tooltip>
+                            </Stack>
+                        ),
+                        enableSorting: false,
+                        cell: ({row}: any) => {
+                            const item = row.original;
+                            const locked = setting.requiresMain && !item.is_location_restricted;
 
-                    return (
-                        <Tooltip title={`${enabledCount}/${sectionSettings.length} ${t('enabled')}`} arrow>
-                            <Chip
-                                size="small"
-                                label={t('Manage')}
-                                onClick={isAdmin ? () => setSettingsDrawer({userId: item.id, section}) : undefined}
-                                sx={{
-                                    backgroundColor: (theme) => theme.palette.primary.light,
-                                    color: (theme) => theme.palette.primary.main,
-                                    fontWeight: 500,
-                                    borderRadius: '10px',
-                                    px: 1.5,
-                                    minWidth: 100,
-                                    cursor: isAdmin ? 'pointer' : 'not-allowed',
-                                    opacity: isAdmin ? 1 : 0.6,
-                                }}
-                            />
-                        </Tooltip>
-                    );
-                },
+                            return (
+                                <IOSSwitch
+                                    checked={Boolean(item[setting.field])}
+                                    disabled={!isAdmin || locked || geofenceSavingKey === `${item.id}-${setting.id}`}
+                                    onChange={(event) => handleToggleGeofence(item, setting, event.target.checked)}
+                                />
+                            );
+                        },
+                    }),
+                ),
             }),
         ),
         columnHelper.display({
@@ -1059,40 +1048,53 @@ const TaskUserCheckinSettings: React.FC = () => {
                     overflowY: 'auto',
                 }}
             >
-                <Table stickyHeader aria-label="sticky table" sx={{minWidth: 340 + (visibleColumnIds.length - 1) * 170}}>
+                <Table stickyHeader aria-label="sticky table" sx={{minWidth: 340 + (visibleColumnIds.length - 1) * 150}}>
                     <TableHead>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => (
-                                    <TableCell
-                                        key={header.id}
-                                        align={header.column.id === 'name' ? 'left' : 'center'}
-                                        sx={{
-                                            paddingTop: '10px',
-                                            paddingBottom: '10px',
-                                            width: header.column.id === 'name' ? 340 : 170,
-                                            borderRight: header.column.id === 'name' ? '1px solid #e5e7eb' : 'none',
-                                        }}
-                                    >
-                                        <Box
-                                            p={0}
-                                            sx={{
-                                                border: '2px solid transparent',
-                                                borderRadius: '6px',
-                                                display: 'flex',
-                                                justifyContent: header.column.id === 'name' ? 'flex-start' : 'center',
-                                                '&:hover': {color: '#888'},
-                                            }}
-                                        >
-                                            {flexRender(
-                                                header.column.columnDef.header,
-                                                header.getContext(),
-                                            )}
-                                        </Box>
-                                    </TableCell>
-                                ))}
-                            </TableRow>
-                        ))}
+                        {(() => {
+                            const headerGroups = table.getHeaderGroups();
+                            const hasGroups = headerGroups.length > 1;
+
+                            return headerGroups.map((headerGroup, rowIndex) => (
+                                <TableRow key={headerGroup.id}>
+                                    {headerGroup.headers.map((header) => {
+                                        // Ungrouped columns span both header rows: render them once (in the
+                                        // top row, where tanstack gives a placeholder) and skip them below.
+                                        const isGroupChild = Boolean(header.column.parent);
+                                        if (hasGroups && rowIndex > 0 && !isGroupChild) return null;
+
+                                        const isGroupHeader = header.subHeaders.length > 0 && !header.isPlaceholder;
+                                        const spansRows = hasGroups && rowIndex === 0 && !isGroupHeader;
+
+                                        return (
+                                            <TableCell
+                                                key={header.id}
+                                                colSpan={header.colSpan}
+                                                rowSpan={spansRows ? 2 : 1}
+                                                align={header.column.id === 'name' ? 'left' : 'center'}
+                                                sx={{
+                                                    paddingTop: '10px',
+                                                    paddingBottom: '10px',
+                                                    width: isGroupHeader ? undefined : header.column.id === 'name' ? 340 : 150,
+                                                    borderRight: header.column.id === 'name' ? '1px solid #e5e7eb' : 'none',
+                                                    ...(isGroupHeader && {borderBottom: '1px solid #e5e7eb'}),
+                                                    ...(hasGroups && rowIndex > 0 && {top: 45}),
+                                                }}
+                                            >
+                                                <Box
+                                                    p={0}
+                                                    sx={{
+                                                        display: 'flex',
+                                                        justifyContent: header.column.id === 'name' ? 'flex-start' : 'center',
+                                                    }}
+                                                >
+                                                    {flexRender(header.column.columnDef.header, header.getContext())}
+                                                </Box>
+                                            </TableCell>
+                                        );
+                                    })}
+                                </TableRow>
+                            ));
+                        })()}
                     </TableHead>
                     <TableBody>
                         {loading ? (
@@ -1372,70 +1374,6 @@ const TaskUserCheckinSettings: React.FC = () => {
                         </Box>
                     )}
                 </Box>
-            </Drawer>
-
-            <Drawer
-                anchor="right"
-                open={Boolean(settingsDrawer && drawerUser)}
-                onClose={() => setSettingsDrawer(null)}
-                sx={{
-                    '& .MuiDrawer-paper': {
-                        width: {xs: '100%', sm: 450},
-                        padding: 2,
-                        backgroundColor: '#f9f9f9',
-                    },
-                }}
-            >
-                {settingsDrawer && drawerUser && (
-                    <>
-                        <Box display="flex" alignItems="center" sx={{mb: 2}}>
-                            <IconButton onClick={() => setSettingsDrawer(null)} sx={{p: 0, mr: 1}}>
-                                <IconArrowLeft size={24}/>
-                            </IconButton>
-                            <Typography variant="h5" fontWeight={700} sx={{flex: 1}}>
-                                {t(SECTION_TITLES[settingsDrawer.section])} - {drawerUser.name}
-                            </Typography>
-                            <IconButton aria-label="close" onClick={() => setSettingsDrawer(null)} size="small">
-                                <IconX size={18}/>
-                            </IconButton>
-                        </Box>
-                        <Box sx={{backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: 2}}>
-                            {GEOFENCE_SETTINGS.filter((setting) => setting.section === settingsDrawer.section).map(
-                                (setting, index) => {
-                                    const locked = setting.requiresMain && !drawerUser.is_location_restricted;
-
-                                    return (
-                                        <Box
-                                            key={setting.id}
-                                            display="flex"
-                                            alignItems="center"
-                                            justifyContent="space-between"
-                                            gap={2}
-                                            sx={{px: 2.5, py: 1.75, borderTop: index === 0 ? 'none' : '1px solid #eef2f7'}}
-                                        >
-                                            <Typography
-                                                fontSize="13px"
-                                                fontWeight={600}
-                                                color={locked ? 'text.disabled' : 'text.primary'}
-                                            >
-                                                {t(setting.label)}
-                                            </Typography>
-                                            <IOSSwitch
-                                                checked={Boolean(drawerUser[setting.field])}
-                                                disabled={
-                                                    !isAdmin || locked || geofenceSavingKey === `${drawerUser.id}-${setting.id}`
-                                                }
-                                                onChange={(event) =>
-                                                    handleToggleGeofence(drawerUser, setting, event.target.checked)
-                                                }
-                                            />
-                                        </Box>
-                                    );
-                                },
-                            )}
-                        </Box>
-                    </>
-                )}
             </Drawer>
 
             <Dialog fullWidth open={otpModalOpen} onClose={() => closeOtpModal(null)}>
