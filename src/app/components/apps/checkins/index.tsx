@@ -59,6 +59,8 @@ import {
 } from "@/utils/listingTableStateStorage";
 import ColumnVisibilityPopover from "../../common/ColumnVisibilityPopover";
 import PermissionGuard from "@/app/auth/PermissionGuard";
+import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+import { format } from "date-fns";
 
 const columnHelper = createColumnHelper<any>();
 
@@ -122,6 +124,8 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const session = useSession();
   const user = session.data?.user as User & {
     company_id?: number | null;
@@ -169,25 +173,6 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
   };
   const handlePopoverClose = () => setAnchorEl2(null);
 
-  const fetchResources = async () => {
-    try {
-      const res = await api.get(
-        `user-checklog/get-resources?company_id=${user.company_id}`,
-      );
-      if (res.data) {
-        setProjects(res.data.projects || []);
-        setTrades(res.data.trades || []);
-        setUsers(res.data.users || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch checklog resources", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchResources();
-  }, []);
-
   const handleSelectAllRows = (checked: boolean) => {
     if (checked) {
       const allIds = data.map((item: any) => item.id);
@@ -205,6 +190,10 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
       if (searchTerm) {
         url += `&search=${encodeURIComponent(searchTerm)}`;
       }
+      if (startDate && endDate) {
+        url += `&start_date=${format(startDate, "dd/MM/yyyy")}`;
+        url += `&end_date=${format(endDate, "dd/MM/yyyy")}`;
+      }
 
       if (filters.project && filters.project !== "All") {
         url += `&project_id=${filters.project}`;
@@ -220,6 +209,9 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
       if (res.data) {
         const responseData = res.data.info || [];
         setData(responseData);
+        setProjects(res.data.data?.projects || []);
+        setTrades(res.data.data?.trades || []);
+        setUsers(res.data.data?.users || []);
 
         const pagMeta = res.data.data || {};
 
@@ -743,6 +735,8 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
       filters,
       user?.company_id,
       isTableStateReady,
+      startDate,
+      endDate,
     ],
     state: { columnVisibility },
     onColumnVisibilityChange,
@@ -857,7 +851,38 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
           direction={{ xs: "column", sm: "row" }}
           spacing={{ xs: 1, sm: 2, md: 4 }}
         >
-          <Box display="flex" gap={1} alignItems="center">
+          <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
+            <DateRangePickerBox
+              from={startDate}
+              to={endDate}
+              onChange={(range) => {
+                skipNextDependencyPageResetRef.current = false;
+                setStartDate(range.from);
+                setEndDate(range.to);
+                setPagination((prev) =>
+                  prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                );
+              }}
+            />
+            {(startDate || endDate) && (
+              <Tooltip title="Clear date range">
+                <IconButton
+                  size="small"
+                  color="error"
+                  aria-label="Clear date range"
+                  onClick={() => {
+                    skipNextDependencyPageResetRef.current = false;
+                    setStartDate(null);
+                    setEndDate(null);
+                    setPagination((prev) =>
+                      prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 },
+                    );
+                  }}
+                >
+                  <IconX size={18} />
+                </IconButton>
+              </Tooltip>
+            )}
             <TextField
               size="small"
               placeholder="Search..."

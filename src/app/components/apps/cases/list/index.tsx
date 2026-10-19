@@ -554,7 +554,7 @@ const CasesList = ({
       const [projRes, addrRes] = await Promise.all([
         api.get(`project/get?company_id=${user.company_id}`),
         api.get(
-          `address/get-parent?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`,
+          `address/get-parent?company_id=${user.company_id}`,
         ),
       ]);
       if (projRes.data?.info) setProjectList(projRes.data.info);

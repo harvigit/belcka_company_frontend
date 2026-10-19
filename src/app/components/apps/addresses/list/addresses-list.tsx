@@ -75,7 +75,7 @@ import { TradesTab } from "./address-sidebar-tab/trades-tab";
 import { IconX } from "@tabler/icons-react";
 import { IconFilter } from "@tabler/icons-react";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
-import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+// import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { format } from "date-fns";
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
 import {
@@ -1408,7 +1408,7 @@ const AddressesList = ({
             <Typography variant="h6" fontWeight={600}>
               Cases
             </Typography>
-            <DateRangePickerBox
+            {/* <DateRangePickerBox
               from={checkinStartDate}
               to={checkinEndDate}
               onChange={({ from, to }) => {
@@ -1434,7 +1434,7 @@ const AddressesList = ({
               >
                 <IconX size={16} />
               </IconButton>
-            )}
+            )} */}
             <TextField
               id="search"
               type="text"
