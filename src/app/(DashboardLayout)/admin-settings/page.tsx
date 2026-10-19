@@ -177,14 +177,14 @@ const AdminSetting = () => {
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconUserCog size="20" />}
-                                        label="Users Setting"
+                                        label="Users Permissions"
                                         {...a11yProps(9)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconUserCheck size="20" />}
-                                        label="User Check-in Tasks"
+                                        label="User Access"
                                         {...a11yProps(10)}
                                     />
                                     <Tab
