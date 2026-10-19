@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {
     Avatar,
     Badge,
@@ -142,6 +142,14 @@ const TaskUserCheckinSettings: React.FC = () => {
     const [adminSavingId, setAdminSavingId] = useState<number | null>(null);
 
     const [geofenceSavingKey, setGeofenceSavingKey] = useState<string | null>(null);
+    const [bulkGeofence, setBulkGeofence] = useState<{
+        setting: (typeof GEOFENCE_SETTINGS)[number];
+        checked: boolean;
+        userIds: number[];
+    } | null>(null);
+    const [bulkSaving, setBulkSaving] = useState(false);
+    const firstHeaderRowRef = useRef<HTMLTableRowElement | null>(null);
+    const [firstHeaderRowHeight, setFirstHeaderRowHeight] = useState(0);
     const [columnsAnchorEl, setColumnsAnchorEl] = useState<HTMLElement | null>(null);
     const [columnSearch, setColumnSearch] = useState('');
     const columnVisibilityKey = `columnVisibility_userAccess_${user?.id ?? ''}`;
@@ -606,6 +614,63 @@ const TaskUserCheckinSettings: React.FC = () => {
         }
     };
 
+    // Select-all scope is the searched list (all pages). Start/stop-within-geofence only
+    // apply to users whose geofence main setting is on.
+    const getBulkEligibleUsers = (setting: (typeof GEOFENCE_SETTINGS)[number]) =>
+        searchedUsers.filter((item) => !setting.requiresMain || item.is_location_restricted);
+
+    const openBulkGeofence = (setting: (typeof GEOFENCE_SETTINGS)[number], checked: boolean) => {
+        const userIds = getBulkEligibleUsers(setting)
+            .filter((item) => Boolean(item[setting.field]) !== checked)
+            .map((item) => item.id);
+        if (!userIds.length) return;
+        setBulkGeofence({setting, checked, userIds});
+    };
+
+    const handleBulkGeofence = async () => {
+        if (!bulkGeofence || !user?.company_id) return;
+
+        const {setting, checked, userIds} = bulkGeofence;
+        const idSet = new Set(userIds);
+        const clearsDependents = setting.field === 'is_location_restricted' && !checked;
+        const previousUsers = users;
+        setBulkSaving(true);
+        setUsers((prev) =>
+            prev.map((item) =>
+                idSet.has(item.id)
+                    ? {
+                        ...item,
+                        [setting.field]: checked,
+                        ...(clearsDependents && {is_start_inside_boundary: false, is_stop_inside_boundary: false}),
+                    }
+                    : item,
+            ),
+        );
+
+        try {
+            const res = await api.post('user/update-geofence-penalty-settings', {
+                user_ids: userIds,
+                company_id: Number(user.company_id),
+                [setting.apiKey]: checked,
+                ...(clearsDependents && {start_work_within_geofence: false, stop_work_within_geofence: false}),
+            });
+
+            if (!res.data?.IsSuccess) {
+                setUsers(previousUsers);
+                toast.error(res.data?.message || t('Failed to update setting'));
+                return;
+            }
+
+            toast.success(res.data.message || t('Setting updated'));
+            setBulkGeofence(null);
+        } catch (error) {
+            setUsers(previousUsers);
+            console.error('Failed to bulk update geofence setting', error);
+        } finally {
+            setBulkSaving(false);
+        }
+    };
+
     const columnHelper = createColumnHelper<CheckinTaskUser>();
 
     const columns = useMemo(() => [
@@ -806,18 +871,34 @@ const TaskUserCheckinSettings: React.FC = () => {
                     columnHelper.accessor((row) => row[setting.field], {
                         id: setting.id,
                         meta: {label: setting.label},
-                        header: () => (
-                            <Stack direction="row" alignItems="center" spacing={0.5}>
-                                <Typography variant="subtitle2" noWrap>
-                                    {t(setting.shortLabel)}
-                                </Typography>
-                                <Tooltip title={t(setting.label)} arrow placement="top">
-                                    <Box component="span" sx={{display: 'flex', color: 'text.secondary', cursor: 'help'}}>
-                                        <IconHelpCircle size={16}/>
-                                    </Box>
-                                </Tooltip>
-                            </Stack>
-                        ),
+                        header: () => {
+                            const eligible = getBulkEligibleUsers(setting);
+                            const allOn = eligible.length > 0 && eligible.every((item) => item[setting.field]);
+
+                            return (
+                                <Stack alignItems="center" spacing={0.75}>
+                                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                                        <Typography variant="subtitle2" noWrap>
+                                            {t(setting.shortLabel)}
+                                        </Typography>
+                                        <Tooltip title={t(setting.label)} arrow placement="top">
+                                            <Box component="span" sx={{display: 'flex', color: 'text.secondary', cursor: 'help'}}>
+                                                <IconHelpCircle size={16}/>
+                                            </Box>
+                                        </Tooltip>
+                                    </Stack>
+                                    <Tooltip title={allOn ? t('Deselect All') : t('Select All')} arrow>
+                                        <span>
+                                            <IOSSwitch
+                                                checked={allOn}
+                                                disabled={!isAdmin || bulkSaving || eligible.length === 0}
+                                                onChange={(event) => openBulkGeofence(setting, event.target.checked)}
+                                            />
+                                        </span>
+                                    </Tooltip>
+                                </Stack>
+                            );
+                        },
                         enableSorting: false,
                         cell: ({row}: any) => {
                             const item = row.original;
@@ -859,7 +940,7 @@ const TaskUserCheckinSettings: React.FC = () => {
                 );
             },
         }),
-    ], [isAdmin, isCompanyOwner, canRemoveAccount, checkinSavingId, adminSavingId, geofenceSavingKey, savingUserId, t, users]);
+    ], [isAdmin, isCompanyOwner, canRemoveAccount, checkinSavingId, adminSavingId, geofenceSavingKey, bulkSaving, savingUserId, searchedUsers, t, users]);
 
     const {
         table,
@@ -890,6 +971,17 @@ const TaskUserCheckinSettings: React.FC = () => {
         if (!user?.id) return;
         writeListingTableState(columnVisibilityKey, JSON.stringify(columnVisibility));
     }, [columnVisibility, columnVisibilityKey, user?.id]);
+
+    // The second (grouped) header row must stick right below the first one.
+    useLayoutEffect(() => {
+        const row = firstHeaderRowRef.current;
+        if (!row) return;
+        const measure = () => setFirstHeaderRowHeight(row.getBoundingClientRect().height);
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(row);
+        return () => observer.disconnect();
+    }, [loading]);
 
     const visibleColumnIds = table.getVisibleLeafColumns().map((column) => column.id);
     const simpleColumns = visibleColumnIds.map((name) => ({name}));
@@ -1055,7 +1147,7 @@ const TaskUserCheckinSettings: React.FC = () => {
                             const hasGroups = headerGroups.length > 1;
 
                             return headerGroups.map((headerGroup, rowIndex) => (
-                                <TableRow key={headerGroup.id}>
+                                <TableRow key={headerGroup.id} ref={rowIndex === 0 ? firstHeaderRowRef : undefined}>
                                     {headerGroup.headers.map((header) => {
                                         // Ungrouped columns span both header rows: render them once (in the
                                         // top row, where tanstack gives a placeholder) and skip them below.
@@ -1077,7 +1169,7 @@ const TaskUserCheckinSettings: React.FC = () => {
                                                     width: isGroupHeader ? undefined : header.column.id === 'name' ? 340 : 150,
                                                     borderRight: header.column.id === 'name' ? '1px solid #e5e7eb' : 'none',
                                                     ...(isGroupHeader && {borderBottom: '1px solid #e5e7eb'}),
-                                                    ...(hasGroups && rowIndex > 0 && {top: 45}),
+                                                    ...(hasGroups && rowIndex > 0 && {top: firstHeaderRowHeight}),
                                                 }}
                                             >
                                                 <Box
@@ -1375,6 +1467,45 @@ const TaskUserCheckinSettings: React.FC = () => {
                     )}
                 </Box>
             </Drawer>
+
+            <Dialog open={Boolean(bulkGeofence)} onClose={() => !bulkSaving && setBulkGeofence(null)}>
+                <DialogTitle>
+                    {t('Confirmation')}
+                    <IconButton
+                        aria-label="close"
+                        onClick={() => setBulkGeofence(null)}
+                        disabled={bulkSaving}
+                        sx={{position: 'absolute', right: 8, top: 8, color: (theme) => theme.palette.grey[500]}}
+                    >
+                        <IconX/>
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        Turn <strong>{bulkGeofence?.checked ? 'ON' : 'OFF'}</strong> &quot;
+                        {bulkGeofence ? t(bulkGeofence.setting.label) : ''}&quot; for{' '}
+                        <strong>{bulkGeofence?.userIds.length}</strong> user(s)?
+                    </Typography>
+                    {bulkGeofence?.setting.field === 'is_location_restricted' && !bulkGeofence.checked && (
+                        <Typography color="textSecondary" mt={1}>
+                            Start work and Stop work within geofence will also be turned off for these users.
+                        </Typography>
+                    )}
+                    {bulkGeofence?.setting.requiresMain && bulkGeofence.checked && (
+                        <Typography color="textSecondary" mt={1}>
+                            Only users with the Geofence main setting on are included.
+                        </Typography>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setBulkGeofence(null)} variant="outlined" color="error" disabled={bulkSaving}>
+                        {t('Cancel')}
+                    </Button>
+                    <Button onClick={handleBulkGeofence} variant="contained" color="primary" disabled={bulkSaving}>
+                        {bulkSaving ? t('Updating...') : t('Yes, Confirm')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <Dialog fullWidth open={otpModalOpen} onClose={() => closeOtpModal(null)}>
                 <DialogTitle>
