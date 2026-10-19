@@ -48,6 +48,7 @@ export type LabourTeamRow = {
   avg_7_days: number;
   avg_30_days: number;
   total_hours: number;
+  total_amount?: number;
   check_in: number;
   check_in_hours: number;
   unallocated_hours: number;
@@ -60,6 +61,7 @@ export type LabourTotals = {
   avg_7_days?: number;
   avg_30_days?: number;
   total_hours?: number;
+  total_amount?: number;
   check_in?: number;
   check_in_hours?: number;
   unallocated_hours?: number;
@@ -403,16 +405,19 @@ const LABOUR_COLUMNS = [
   "Check in Hours",
   "Unallocated Hours",
   "Risk",
+  "Total Amount",
 ] as const;
 
 export const LabourTeamTable = ({
   rows,
   totals,
+  currency = "£",
   limit,
   paginate,
 }: {
   rows: LabourTeamRow[];
   totals?: LabourTotals | null;
+  currency?: string;
   limit?: number;
   paginate?: boolean;
 }) => {
@@ -433,7 +438,7 @@ export const LabourTeamTable = ({
             stickyHeader={!!paginate}
             size="small"
             aria-label={paginate ? "sticky table" : undefined}
-            sx={{ ...overviewTableSx, minWidth: 820 }}
+            sx={{ ...overviewTableSx, minWidth: 940 }}
           >
             <TableHead>
               <TableRow>
@@ -463,9 +468,7 @@ export const LabourTeamTable = ({
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell align="right">
-                    {row.on_site}
-                  </TableCell>
+                  <TableCell align="right">{row.on_site}</TableCell>
                   {/* <TableCell align="right">{row.limit}</TableCell> */}
                   <TableCell align="right">{row.avg_7_days}</TableCell>
                   <TableCell align="right">{row.avg_30_days}</TableCell>
@@ -495,14 +498,15 @@ export const LabourTeamTable = ({
                   >
                     +{row.risk}%
                   </TableCell>
+                  <TableCell align="right">
+                    {money(currency, Number(row.total_amount || 0))}
+                  </TableCell>
                 </TableRow>
               ))}
               {rows.length > 0 && (
                 <TableRow sx={totalRowSx}>
                   <TableCell>TOTAL</TableCell>
-                  <TableCell align="right">
-                    {totals?.on_site || 0}
-                  </TableCell>
+                  <TableCell align="right">{totals?.on_site || 0}</TableCell>
                   {/* <TableCell align="right">{totals?.limit || 0}</TableCell> */}
                   <TableCell align="right">{totals?.avg_7_days || 0}</TableCell>
                   <TableCell align="right">
@@ -533,11 +537,16 @@ export const LabourTeamTable = ({
                   >
                     +{totals?.risk || 0}%
                   </TableCell>
+                  <TableCell align="right" sx={totalMoneyCellSx}>
+                    {money(currency, Number(totals?.total_amount || 0))}
+                  </TableCell>
                 </TableRow>
               )}
               {rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10}>No labour team data</TableCell>
+                  <TableCell colSpan={LABOUR_COLUMNS.length}>
+                    No labour team data
+                  </TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -736,4 +745,3 @@ export const OverviewFullListView = ({
     </Box>
   </Drawer>
 );
-

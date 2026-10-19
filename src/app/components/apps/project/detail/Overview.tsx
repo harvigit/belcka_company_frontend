@@ -1212,6 +1212,7 @@ const Overview = ({
             <LabourTeamTable
               rows={labourTeams}
               totals={info?.labour_totals}
+              currency={currency}
               limit={OVERVIEW_PREVIEW_LIMIT}
             />
           </Widget>
@@ -1539,6 +1540,7 @@ const Overview = ({
           <LabourTeamTable
             rows={fullLabourTeams}
             totals={fullLabourTotals}
+            currency={currency}
             paginate
           />
         ) : (

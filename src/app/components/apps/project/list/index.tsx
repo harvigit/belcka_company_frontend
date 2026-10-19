@@ -36,13 +36,16 @@ import {
   IconEye,
   IconFileExport,
   IconFilter,
+  IconArrowDown,
+  IconArrowUp,
+  IconChevronDown,
+  IconChevronRight,
   IconPlus,
   IconSearch,
-  IconTrash,
   IconX,
 } from "@tabler/icons-react";
-import { createColumnHelper} from "@tanstack/react-table";
-import {flexRender} from "@/utils/flexRender";
+import { createColumnHelper } from "@tanstack/react-table";
+import { flexRender } from "@/utils/flexRender";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import Image from "next/image";
@@ -55,22 +58,34 @@ import {
 } from "@/utils/listingTableStateStorage";
 import api from "@/utils/axios";
 import { useServerTable } from "@/hooks/useServerTable";
+import {
+  DndContext,
+  closestCenter,
+  useDroppable,
+  useSensor,
+  useSensors,
+  MouseSensor,
+  TouchSensor,
+  KeyboardSensor,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
-import IOSSwitch from "@/app/components/common/IOSSwitch";
 import toast from "react-hot-toast";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { useRouter } from "next/navigation";
+import CreateProject from "../../projects/create";
 import Setting from "@/app/components/apps/projects/setting";
 import { IconSettings } from "@tabler/icons-react";
-import { IconNotes } from "@tabler/icons-react";
-import CreateProject from "../../projects/create";
-import EditProject from "../../projects/edit";
-import ArchiveProject from "../../addresses/list/archive-project-list";
-import { IconEdit } from "@tabler/icons-react";
 import { Grid } from "@mui/system";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -110,6 +125,8 @@ export type ProjectDashboardRow = {
   in_amount_formatted: string;
   out_amount_formatted: string;
   currency: string;
+  section_id?: number | null;
+  section_order?: number;
   total_amount?: number;
   total_amount_formatted?: string;
   material?: number;
@@ -317,9 +334,179 @@ const StackedHeader = ({ top, bottom }: { top: string; bottom: string }) => (
   </Box>
 );
 
+type ProjectSectionGroup = {
+  id: number | null;
+  name: string;
+  sort_order?: number;
+  projects: ProjectDashboardRow[];
+};
+
+const sectionKey = (sectionId: number | null) =>
+  sectionId == null ? "none" : String(sectionId);
+
+function ProjectDragHandle({ id }: { id: number }) {
+  const { attributes, listeners } = useSortable({ id });
+
+  return (
+    <Box
+      {...attributes}
+      {...listeners}
+      onClick={(event) => event.stopPropagation()}
+      sx={{ cursor: "grab", display: "inline-flex", touchAction: "none" }}
+    >
+      <Typography textAlign="center">⋮⋮</Typography>
+    </Box>
+  );
+}
+
+function SortableProjectRow({
+  id,
+  sortable,
+  onClick,
+  children,
+}: {
+  id: number;
+  sortable: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: !sortable,
+  });
+
+  return (
+    <TableRow
+      ref={sortable ? setNodeRef : undefined}
+      hover
+      onClick={onClick}
+      sx={{
+        cursor: "pointer",
+        transform: sortable ? CSS.Transform.toString(transform) : undefined,
+        transition: sortable ? transition : undefined,
+        opacity: isDragging ? 0.65 : 1,
+      }}
+    >
+      {children}
+    </TableRow>
+  );
+}
+
+function SectionHeaderRow({
+  section,
+  colSpan,
+  collapsed,
+  onToggle,
+  checked,
+  indeterminate,
+  onCheck,
+}: {
+  section: ProjectSectionGroup;
+  colSpan: number;
+  collapsed: boolean;
+  onToggle: () => void;
+  checked: boolean;
+  indeterminate: boolean;
+  onCheck: (checked: boolean) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `section-${sectionKey(section.id)}`,
+  });
+  const onSite = section.projects.reduce(
+    (total, project) => total + Number(project.total_working_users || 0),
+    0,
+  );
+
+  return (
+    <TableRow ref={setNodeRef}>
+      <TableCell
+        sx={{
+          width: 46,
+          py: 0.75,
+          backgroundColor: isOver ? "action.hover" : "grey.100",
+          borderTop: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <CustomCheckbox
+          className="header-checkbox"
+          checked={checked}
+          indeterminate={indeterminate}
+          disabled={section.projects.length === 0}
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) => {
+            event.stopPropagation();
+            onCheck(event.target.checked);
+          }}
+          inputProps={{ "aria-label": `Select projects in ${section.name}` }}
+        />
+      </TableCell>
+      <TableCell
+        colSpan={Math.max(colSpan - 1, 1)}
+        sx={{
+          py: 0.75,
+          backgroundColor: isOver ? "action.hover" : "grey.100",
+          borderTop: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+          <IconButton
+            size="small"
+            aria-label={
+              collapsed ? `Expand ${section.name}` : `Collapse ${section.name}`
+            }
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggle();
+            }}
+            sx={{
+              border: "1px solid",
+              borderColor: "divider",
+              bgcolor: "background.paper",
+            }}
+          >
+            {collapsed ? (
+              <IconChevronRight size={18} />
+            ) : (
+              <IconChevronDown size={18} />
+            )}
+          </IconButton>
+          <Typography fontWeight={700} fontSize={14}>
+            {section.name}
+          </Typography>
+          <Chip
+            size="small"
+            label={section.projects.length}
+            sx={{ height: 22, fontWeight: 700 }}
+          />
+          <Typography variant="body2" color="text.secondary">
+            {onSite} on site
+          </Typography>
+        </Stack>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 const ProjectDashboard = () => {
   const router = useRouter();
   const [data, setData] = useState<ProjectDashboardRow[]>([]);
+  const [sections, setSections] = useState<ProjectSectionGroup[]>([]);
+  const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [sectionDialogOpen, setSectionDialogOpen] = useState(false);
+  const [sectionName, setSectionName] = useState("");
+  const [sectionError, setSectionError] = useState("");
+  const [sectionSaving, setSectionSaving] = useState(false);
+  const sectionActionsRef = useRef({
+    locked: false,
+    sorting: false,
+    sections: [] as ProjectSectionGroup[],
+    move: (_id: number, _direction: -1 | 1) => {},
+    assign: (_id: number, _sectionId: number | null) => {},
+  });
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currency, setCurrency] = useState("£");
@@ -335,9 +522,6 @@ const ProjectDashboard = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-  const [switchLoadingIds, setSwitchLoadingIds] = useState<Set<number>>(
-    new Set(),
-  );
   const [exportPreviewOpen, setExportPreviewOpen] = useState(false);
   const [exportPreviewLoading, setExportPreviewLoading] = useState(false);
   const [exportDownloading, setExportDownloading] = useState(false);
@@ -352,13 +536,9 @@ const ProjectDashboard = () => {
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
-  const [settingOpen, setSettingOpen] = useState(false);
-  const [archiveListOpen, setArchiveListOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [settingOpen, setSettingOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [openDialog, setOpenDialog] = useState(false);
   const [moduleDrawer, setModuleDrawer] = useState<ProjectModuleKey | null>(
     null,
   );
@@ -411,23 +591,6 @@ const ProjectDashboard = () => {
     setAnchorEl2(null);
   };
 
-  const handleEdit = async (project: any) => {
-    if (!user?.company_id || !project?.id) return;
-    try {
-      const res = await api.get(
-        `project/get?company_id=${user.company_id}&project_id=${project.id}`,
-      );
-      const projectRow = Array.isArray(res.data?.info)
-        ? res.data.info[0]
-        : res.data?.info;
-      setSelectedProject(projectRow || project);
-      setEditDrawerOpen(true);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to load project");
-    }
-  };
-
   const handleCreate = () => {
     handleClose();
     setFormData({ ...initialFormData, company_id: user?.company_id || 0 });
@@ -477,7 +640,7 @@ const ProjectDashboard = () => {
     usePersistentColumnVisibility({
       storageKey: `cv_${user?.company_id}_${user?.id}_project_dashboard`,
       enabled: !!user?.id,
-      alwaysVisibleColumns: ["select", "actions"],
+      alwaysVisibleColumns: ["drag", "order", "section", "select", "actions"],
     });
 
   const getExportPayload = (range?: {
@@ -581,7 +744,7 @@ const ProjectDashboard = () => {
     if (!user?.company_id || !isTableStateReady) return;
     try {
       setLoading(true);
-      let url = `project/dashboard?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      let url = `project/dashboard?company_id=${user.company_id}&is_web=true&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
       if (filters.status && filters.status !== "all") {
         url += `&status=${filters.status}`;
@@ -591,7 +754,23 @@ const ProjectDashboard = () => {
         const responseData = Array.isArray(res.data.info)
           ? res.data.info
           : res.data.info?.data || [];
-        setData(responseData);
+        const apiSections = (
+          Array.isArray(res.data.sections)
+            ? (res.data.sections as ProjectSectionGroup[])
+            : [
+                {
+                  id: null,
+                  name: "Unsectioned",
+                  sort_order: -1,
+                  projects: responseData,
+                },
+              ]
+        ).map((section) => ({
+          ...section,
+          projects: section.projects || [],
+        }));
+        setSections(apiSections);
+        setData(apiSections.flatMap((section) => section.projects || []));
         if (res.data.currency) setCurrency(res.data.currency);
 
         const pagMeta =
@@ -625,6 +804,197 @@ const ProjectDashboard = () => {
     }
   };
 
+  const persistSectionOrder = async (nextSections: ProjectSectionGroup[]) => {
+    const previousSections = sections;
+    const previousData = data;
+    const cleaned = nextSections.filter(
+      (section) => section.id != null || section.projects.length > 0,
+    );
+    setSections(cleaned);
+    setData(cleaned.flatMap((section) => section.projects));
+    const previousPlace = new Map<
+      number,
+      { sectionId: number | null; index: number }
+    >();
+    previousSections.forEach((section) => {
+      section.projects.forEach((project, index) => {
+        previousPlace.set(project.id, { sectionId: section.id, index });
+      });
+    });
+    const changedProjects = cleaned.flatMap((section) =>
+      section.projects.flatMap((project, index) => {
+        const previous = previousPlace.get(project.id);
+        if (
+          previous &&
+          previous.sectionId === section.id &&
+          previous.index === index
+        ) {
+          return [];
+        }
+        return [
+          {
+            id: project.id,
+            section_id: section.id,
+            section_order: index + 1,
+          },
+        ];
+      }),
+    );
+    if (!changedProjects.length) return;
+    try {
+      const res = await api.post("project/section-order", {
+        company_id: user?.company_id,
+        projects: changedProjects,
+      });
+      if (!res.data?.IsSuccess) {
+        throw new Error(res.data?.message || "Failed to save project order");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save project order",
+      );
+      setSections(previousSections);
+      setData(previousData);
+    }
+  };
+
+  const moveProject = (projectId: number, direction: -1 | 1) => {
+    if (sectionActionsRef.current.locked) return;
+    const next = sections.map((section) => ({
+      ...section,
+      projects: [...section.projects],
+    }));
+    const section = next.find((item) =>
+      item.projects.some((project) => project.id === projectId),
+    );
+    if (!section) return;
+    const index = section.projects.findIndex(
+      (project) => project.id === projectId,
+    );
+    const target = index + direction;
+    if (target < 0 || target >= section.projects.length) return;
+    const [project] = section.projects.splice(index, 1);
+    section.projects.splice(target, 0, project);
+    void persistSectionOrder(next);
+  };
+
+  const assignProjectSection = (
+    projectId: number,
+    sectionId: number | null,
+  ) => {
+    if (sectionActionsRef.current.locked) return;
+    const next = sections.map((section) => ({
+      ...section,
+      projects: [...section.projects],
+    }));
+    const current = next.find((section) =>
+      section.projects.some((project) => project.id === projectId),
+    );
+    if (!current || current.id === sectionId) return;
+    let moved: ProjectDashboardRow | undefined;
+    for (const section of next) {
+      const index = section.projects.findIndex(
+        (project) => project.id === projectId,
+      );
+      if (index >= 0) {
+        moved = section.projects.splice(index, 1)[0];
+        break;
+      }
+    }
+    if (!moved) return;
+    let target = next.find((section) => section.id === sectionId);
+    if (!target && sectionId == null) {
+      target = {
+        id: null,
+        name: "Unsectioned",
+        sort_order: -1,
+        projects: [],
+      };
+      next.unshift(target);
+    }
+    if (!target) return;
+    target.projects.push({ ...moved, section_id: target.id });
+    void persistSectionOrder(next);
+  };
+
+  const handleSectionDragEnd = (event: DragEndEvent) => {
+    if (sectionActionsRef.current.locked) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const projectId = Number(active.id);
+    const overId = String(over.id);
+    if (overId.startsWith("section-")) {
+      const key = overId.slice("section-".length);
+      assignProjectSection(projectId, key === "none" ? null : Number(key));
+      return;
+    }
+    const overProjectId = Number(over.id);
+    const next = sections.map((section) => ({
+      ...section,
+      projects: [...section.projects],
+    }));
+    let moved: ProjectDashboardRow | undefined;
+    for (const section of next) {
+      const index = section.projects.findIndex(
+        (project) => project.id === projectId,
+      );
+      if (index >= 0) {
+        moved = section.projects.splice(index, 1)[0];
+        break;
+      }
+    }
+    const target = next.find((section) =>
+      section.projects.some((project) => project.id === overProjectId),
+    );
+    if (!moved || !target) return;
+    const overIndex = target.projects.findIndex(
+      (project) => project.id === overProjectId,
+    );
+    target.projects.splice(
+      overIndex < 0 ? target.projects.length : overIndex,
+      0,
+      {
+        ...moved,
+        section_id: target.id,
+      },
+    );
+    void persistSectionOrder(next);
+  };
+
+  const createSection = async () => {
+    const name = sectionName.trim();
+    if (!name) {
+      setSectionError("Section name is required");
+      return;
+    }
+    if (
+      sections.some(
+        (section) => section.name.trim().toLowerCase() === name.toLowerCase(),
+      )
+    ) {
+      setSectionError("A section with this name already exists.");
+      return;
+    }
+    if (!user?.company_id) return;
+    setSectionSaving(true);
+    try {
+      const res = await api.post("project/sections", {
+        company_id: user.company_id,
+        name,
+      });
+      setSectionDialogOpen(false);
+      setSectionName("");
+      setSectionError("");
+      toast.success(res.data.message || "Section created");
+      fetchProjects();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSectionSaving(false);
+    }
+  };
+
   const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -640,26 +1010,6 @@ const ProjectDashboard = () => {
     } catch (err) {
       console.error(err);
       toast.error("Failed to create project");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const res = await api.put("project/update", formData);
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message || "Project updated successfully");
-        setEditDrawerOpen(false);
-        fetchProjects();
-      } else {
-        toast.error(res.data.message || "Failed to update project");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update project");
     } finally {
       setIsSaving(false);
     }
@@ -836,6 +1186,114 @@ const ProjectDashboard = () => {
           );
         },
       },
+      {
+        id: "drag",
+        enableSorting: false,
+        enableHiding: false,
+        header: () => <Typography variant="subtitle2"></Typography>,
+        cell: ({ row }: { row: { original: ProjectDashboardRow } }) =>
+          sectionActionsRef.current.locked ||
+          sectionActionsRef.current.sorting ? (
+            <Typography color="text.disabled" textAlign="center">
+              ⋮⋮
+            </Typography>
+          ) : (
+            <ProjectDragHandle id={row.original.id} />
+          ),
+      },
+      {
+        id: "order",
+        enableSorting: false,
+        enableHiding: false,
+        header: () => <Typography variant="subtitle2">Order</Typography>,
+        cell: ({ row }: { row: { original: ProjectDashboardRow } }) => {
+          const section = sectionActionsRef.current.sections.find((item) =>
+            item.projects.some((project) => project.id === row.original.id),
+          );
+          const index =
+            section?.projects.findIndex(
+              (project) => project.id === row.original.id,
+            ) ?? -1;
+          const locked =
+            sectionActionsRef.current.locked ||
+            sectionActionsRef.current.sorting;
+          return (
+            <Stack
+              direction="row"
+              spacing={0.25}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <IconButton
+                size="small"
+                aria-label={`Move ${row.original.name} up`}
+                disabled={locked || index <= 0}
+                onClick={() =>
+                  sectionActionsRef.current.move(row.original.id, -1)
+                }
+              >
+                <IconArrowUp size={16} />
+              </IconButton>
+              <IconButton
+                size="small"
+                aria-label={`Move ${row.original.name} down`}
+                disabled={
+                  locked ||
+                  !section ||
+                  index < 0 ||
+                  index >= section.projects.length - 1
+                }
+                onClick={() =>
+                  sectionActionsRef.current.move(row.original.id, 1)
+                }
+              >
+                <IconArrowDown size={16} />
+              </IconButton>
+            </Stack>
+          );
+        },
+      },
+      {
+        id: "section",
+        enableSorting: false,
+        enableHiding: false,
+        header: () => <Typography variant="subtitle2">Section</Typography>,
+        cell: ({ row }: { row: { original: ProjectDashboardRow } }) => {
+          const locked =
+            sectionActionsRef.current.locked ||
+            sectionActionsRef.current.sorting;
+          const current =
+            sectionActionsRef.current.sections.find((item) =>
+              item.projects.some((project) => project.id === row.original.id),
+            )?.id ?? null;
+          return (
+            <TextField
+              select
+              size="small"
+              value={current == null ? "none" : String(current)}
+              // disabled={locked}
+              aria-label={`Section for ${row.original.name}`}
+              onClick={(event) => event.stopPropagation()}
+              onChange={(event) => {
+                const value = event.target.value;
+                sectionActionsRef.current.assign(
+                  row.original.id,
+                  value === "none" ? null : Number(value),
+                );
+              }}
+              sx={{ minWidth: 140, maxWidth: 180 }}
+            >
+              <MenuItem value="none">Unsectioned</MenuItem>
+              {sectionActionsRef.current.sections
+                .filter((section) => section.id != null)
+                .map((section) => (
+                  <MenuItem key={section.id} value={String(section.id)}>
+                    {section.name}
+                  </MenuItem>
+                ))}
+            </TextField>
+          );
+        },
+      },
       columnHelper.accessor("name", {
         header: () => <HeaderLabel>Name</HeaderLabel>,
         meta: { label: "Name" },
@@ -886,7 +1344,7 @@ const ProjectDashboard = () => {
         cell: ({ row }) => (
           <NumberCell
             value={`${toCount(row.original.total_working_users)} / ${toCount(
-              row.original.limit
+              row.original.limit,
             )}`}
           />
         ),
@@ -996,8 +1454,6 @@ const ProjectDashboard = () => {
         enableHiding: false,
         cell: ({ row }) => {
           const item = row.original;
-          const isActive = Number(item.status) === 1;
-          const isSaving = switchLoadingIds.has(item.id);
 
           return (
             <Stack
@@ -1006,17 +1462,6 @@ const ProjectDashboard = () => {
               onClick={(e) => e.stopPropagation()}
               sx={{ px: 1 }}
             >
-              <Tooltip title="Edit">
-                <IconButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEdit(item);
-                  }}
-                  color="primary"
-                >
-                  <IconEdit size={18} />
-                </IconButton>
-              </Tooltip>
               <Tooltip title="Favorite Products">
                 <IconButton
                   color="success"
@@ -1029,80 +1474,12 @@ const ProjectDashboard = () => {
                   <IconBookmark size={18} />
                 </IconButton>
               </Tooltip>
-              <IOSSwitch
-                checked={isActive}
-                disabled={isSaving}
-                onChange={async (e) => {
-                  const checked = e.target.checked;
-                  setSwitchLoadingIds((prev) => {
-                    const next = new Set(prev);
-                    next.add(item.id);
-                    return next;
-                  });
-                  try {
-                    const result = await api.post("project/change-status", {
-                      id: item.id,
-                      company_id: user.company_id,
-                      status: checked,
-                    });
-                    if (result.data?.IsSuccess) {
-                      setData((prev) => {
-                        const updated = prev.map((rowItem) =>
-                          rowItem.id === item.id
-                            ? {
-                                ...rowItem,
-                                status: checked ? 1 : 0,
-                                status_text: checked ? "Active" : "Closed",
-                              }
-                            : rowItem,
-                        );
-                        if (
-                          (filters.status === "1" && !checked) ||
-                          (filters.status === "0" && checked)
-                        ) {
-                          return updated.filter(
-                            (rowItem) => rowItem.id !== item.id,
-                          );
-                        }
-                        return updated;
-                      });
-                      toast.success(
-                        result.data.message ||
-                          (checked
-                            ? "Project marked as active!"
-                            : "Project marked as closed!"),
-                      );
-                    } else {
-                      toast.error(
-                        result.data?.message || "Failed to change status",
-                      );
-                    }
-                  } catch (error) {
-                    console.error(error);
-                    toast.error("Failed to change status");
-                  } finally {
-                    setSwitchLoadingIds((prev) => {
-                      const next = new Set(prev);
-                      next.delete(item.id);
-                      return next;
-                    });
-                  }
-                }}
-              />
             </Stack>
           );
         },
       }),
     ],
-    [
-      currency,
-      data,
-      hoveredRow,
-      selectedRowIds,
-      switchLoadingIds,
-      user?.company_id,
-      filters.status,
-    ],
+    [currency, data, hoveredRow, selectedRowIds, user?.company_id],
   );
 
   const {
@@ -1112,6 +1489,7 @@ const ProjectDashboard = () => {
     setPageCount,
     totalRows,
     setTotalRows,
+    sorting,
   } = useServerTable({
     data,
     columns,
@@ -1201,6 +1579,51 @@ const ProjectDashboard = () => {
   const hasActiveFilters = Boolean(
     filters.status && filters.status !== "all" && filters.status !== "All",
   );
+  const reorderLocked = Boolean(searchTerm.trim()) || hasActiveFilters;
+  const groupedView = sorting.length === 0;
+  sectionActionsRef.current = {
+    locked: reorderLocked,
+    sorting: sorting.length > 0,
+    sections,
+    move: moveProject,
+    assign: assignProjectSection,
+  };
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor),
+  );
+
+  useEffect(() => {
+    if (!user?.company_id) return;
+    try {
+      const stored = localStorage.getItem(
+        `project-sections-collapsed:${user.company_id}`,
+      );
+      setCollapsedSectionIds(new Set(stored ? JSON.parse(stored) : []));
+    } catch {
+      setCollapsedSectionIds(new Set());
+    }
+  }, [user?.company_id]);
+
+  const toggleSection = (sectionId: number | null) => {
+    const key = sectionKey(sectionId);
+    setCollapsedSectionIds((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      if (user?.company_id) {
+        localStorage.setItem(
+          `project-sections-collapsed:${user.company_id}`,
+          JSON.stringify([...next]),
+        );
+      }
+      return next;
+    });
+  };
 
   const handleClearAppliedFilters = (event?: React.MouseEvent) => {
     event?.stopPropagation();
@@ -1300,16 +1723,18 @@ const ProjectDashboard = () => {
           </Box>
 
           <Box display="flex" alignItems="center">
-            {selectedRowIds.size > 0 && (
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<IconTrash width={18} />}
-                onClick={() => setOpenDialog(true)}
-              >
-                Archive
-              </Button>
-            )}
+            <Button
+              variant="contained"
+              startIcon={<IconPlus width={18} />}
+              onClick={() => {
+                setSectionName("");
+                setSectionError("");
+                setSectionDialogOpen(true);
+              }}
+              sx={{ ml: 1, textTransform: "none" }}
+            >
+              Add section
+            </Button>
             <Button
               variant="contained"
               onClick={openExportPreview}
@@ -1318,7 +1743,7 @@ const ProjectDashboard = () => {
               <IconFileExport width={18} /> Export
             </Button>
 
-            {user.user_role_id === 1 && (
+            {Number(user?.user_role_id) === 1 && (
               <Tooltip title="Settings">
                 <IconButton
                   color="primary"
@@ -1329,6 +1754,7 @@ const ProjectDashboard = () => {
                 </IconButton>
               </Tooltip>
             )}
+
             <IconButton
               onClick={(e) => setAnchorEl(e.currentTarget)}
               sx={{ ml: 1 }}
@@ -1346,18 +1772,6 @@ const ProjectDashboard = () => {
                   <IconPlus width={18} />
                 </ListItemIcon>
                 Add Project
-              </MenuItem>
-
-              <MenuItem
-                onClick={() => {
-                  handleClose();
-                  setArchiveListOpen(true);
-                }}
-              >
-                <ListItemIcon>
-                  <IconNotes width={18} />
-                </ListItemIcon>
-                Archived project list
               </MenuItem>
             </Menu>
 
@@ -1487,13 +1901,6 @@ const ProjectDashboard = () => {
           </Box>
         </Stack>
 
-        <ArchiveProject
-          open={archiveListOpen}
-          companyId={Number(user?.company_id)}
-          onClose={() => setArchiveListOpen(false)}
-          onWorkUpdated={fetchProjects}
-        />
-
         <Setting
           settingOpen={settingOpen}
           onClose={() => setSettingOpen(false)}
@@ -1522,7 +1929,7 @@ const ProjectDashboard = () => {
             px={2}
             py={1.25}
           >
-            <Box  width={"100%"} display={"flex"} alignItems={"center"}>
+            <Box width={"100%"} display={"flex"} alignItems={"center"}>
               <IconButton
                 onClick={() => setModuleDrawer(null)}
                 size="small"
@@ -1569,70 +1976,6 @@ const ProjectDashboard = () => {
             isSaving={isSaving}
           />
         )}
-
-        {editDrawerOpen && (
-          <EditProject
-            open={editDrawerOpen}
-            onClose={() => setEditDrawerOpen(false)}
-            formData={formData}
-            setFormData={setFormData}
-            handleSubmit={handleEditSubmit}
-            isSaving={isSaving}
-            project={selectedProject}
-          />
-        )}
-
-        {/* Dialogs and Drawers */}
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-          <DialogTitle>Confirm Archive</DialogTitle>
-          <DialogContent>
-            <Typography color="textSecondary">
-              Are you sure you want to archive {selectedRowIds.size} project(s)?
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => setOpenDialog(false)}
-              variant="outlined"
-              color="primary"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                try {
-                  let allSuccess = true;
-                  for (const id of Array.from(selectedRowIds)) {
-                    const res = await api.post("project/archive", { id });
-                    if (
-                      !res.data.IsSuccess &&
-                      !res.data.isSuccess &&
-                      !res.data.success &&
-                      !(res.status >= 200 && res.status < 300)
-                    ) {
-                      allSuccess = false;
-                    }
-                  }
-                  if (allSuccess) {
-                    toast.success("Projects archived successfully.");
-                  } else {
-                    toast.error("Some projects failed to archive.");
-                  }
-                  fetchProjects();
-                  setSelectedRowIds(new Set());
-                } catch (error) {
-                  console.error(error);
-                  toast.error("Error archiving projects.");
-                }
-                setOpenDialog(false);
-              }}
-              variant="outlined"
-              color="error"
-            >
-              Archive
-            </Button>
-          </DialogActions>
-        </Dialog>
 
         <Drawer
           anchor="right"
@@ -2149,6 +2492,48 @@ const ProjectDashboard = () => {
           </DialogActions>
         </Dialog>
 
+        <Dialog
+          open={sectionDialogOpen}
+          onClose={() => !sectionSaving && setSectionDialogOpen(false)}
+          fullWidth
+          maxWidth="xs"
+        >
+          <DialogTitle>Add section</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              fullWidth
+              margin="dense"
+              label="Section name"
+              placeholder="e.g. Priority projects"
+              value={sectionName}
+              onChange={(event) => {
+                setSectionName(event.target.value.slice(0, 50));
+                setSectionError("");
+              }}
+              inputProps={{ maxLength: 50 }}
+              error={Boolean(sectionError)}
+              helperText={sectionError || " "}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button
+              color="inherit"
+              disabled={sectionSaving}
+              onClick={() => setSectionDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              disabled={sectionSaving}
+              onClick={() => void createSection()}
+            >
+              Create section
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         <TableContainer
           ref={tableContainerRef}
           sx={{
@@ -2231,68 +2616,180 @@ const ProjectDashboard = () => {
                 </TableRow>
               ))}
             </TableHead>
-            <TableBody>
-              {loading ? (
-                <SkeletonLoader
-                  columns={simpleColumns}
-                  rowCount={simpleColumns.length}
-                />
-              ) : table.getRowModel().rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={columns.length}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "calc(50vh - 100px)",
-                      }}
-                    >
-                      <Image
-                        src="/images/no-data.png"
-                        alt="No data"
-                        width={200}
-                        height={200}
-                      />
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    hover
-                    sx={{ cursor: "pointer" }}
-                    onClick={() =>
-                      router.push(`/apps/project/list/${row.original.id}`)
-                    }
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleSectionDragEnd}
+            >
+              <TableBody>
+                {loading ? (
+                  <SkeletonLoader
+                    columns={simpleColumns}
+                    rowCount={simpleColumns.length}
+                  />
+                ) : table.getRowModel().rows.length === 0 &&
+                  sections.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length}>
+                      <Box
                         sx={{
-                          padding: "10px",
-                          ...(cell.column.id === "actions" && {
-                            position: "sticky",
-                            right: 0,
-                            backgroundColor: "background.paper",
-                            zIndex: 1,
-                            boxShadow: isScrollable
-                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                              : "none",
-                          }),
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "calc(50vh - 100px)",
                         }}
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
+                        <Image
+                          src="/images/no-data.png"
+                          alt="No data"
+                          width={200}
+                          height={200}
+                        />
+                      </Box>
+                    </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
+                ) : groupedView ? (
+                  sections.map((section) => {
+                    const collapsed = collapsedSectionIds.has(
+                      sectionKey(section.id),
+                    );
+                    const rows = section.projects
+                      .map((project) =>
+                        table
+                          .getRowModel()
+                          .rows.find((row) => row.original.id === project.id),
+                      )
+                      .filter((row): row is NonNullable<typeof row> =>
+                        Boolean(row),
+                      );
+                    return (
+                      <React.Fragment key={sectionKey(section.id)}>
+                        <SectionHeaderRow
+                          section={section}
+                          colSpan={table.getVisibleLeafColumns().length}
+                          collapsed={collapsed}
+                          onToggle={() => toggleSection(section.id)}
+                          checked={
+                            section.projects.length > 0 &&
+                            section.projects.every((project) =>
+                              selectedRowIds.has(project.id),
+                            )
+                          }
+                          indeterminate={
+                            section.projects.some((project) =>
+                              selectedRowIds.has(project.id),
+                            ) &&
+                            !section.projects.every((project) =>
+                              selectedRowIds.has(project.id),
+                            )
+                          }
+                          onCheck={(checked) => {
+                            setSelectedRowIds((current) => {
+                              const next = new Set(current);
+                              section.projects.forEach((project) => {
+                                if (checked) next.add(project.id);
+                                else next.delete(project.id);
+                              });
+                              return next;
+                            });
+                          }}
+                        />
+                        {collapsed ? null : rows.length === 0 ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={table.getVisibleLeafColumns().length}
+                              sx={{
+                                color: "text.secondary",
+                                py: 2,
+                                pl: 7,
+                              }}
+                            >
+                              No projects in this section. Choose it from a
+                              project&apos;s section menu to move one here.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          <SortableContext
+                            items={rows.map((row) => row.original.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {rows.map((row) => (
+                              <SortableProjectRow
+                                key={row.id}
+                                id={row.original.id}
+                                sortable={!reorderLocked}
+                                onClick={() =>
+                                  router.push(
+                                    `/apps/project/list/${row.original.id}`,
+                                  )
+                                }
+                              >
+                                {row.getVisibleCells().map((cell) => (
+                                  <TableCell
+                                    key={cell.id}
+                                    sx={{
+                                      padding: "10px",
+                                      ...(cell.column.id === "actions" && {
+                                        position: "sticky",
+                                        right: 0,
+                                        backgroundColor: "background.paper",
+                                        zIndex: 1,
+                                        boxShadow: isScrollable
+                                          ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                          : "none",
+                                      }),
+                                    }}
+                                  >
+                                    {flexRender(
+                                      cell.column.columnDef.cell,
+                                      cell.getContext(),
+                                    )}
+                                  </TableCell>
+                                ))}
+                              </SortableProjectRow>
+                            ))}
+                          </SortableContext>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      hover
+                      sx={{ cursor: "pointer" }}
+                      onClick={() =>
+                        router.push(`/apps/project/list/${row.original.id}`)
+                      }
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          sx={{
+                            padding: "10px",
+                            ...(cell.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 1,
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </DndContext>
           </Table>
         </TableContainer>
 

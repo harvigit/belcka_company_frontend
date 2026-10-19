@@ -15,6 +15,7 @@ import {
     IconUserCog,
     IconUserCheck,
     IconUsersGroup,
+    IconBriefcase,
 } from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
@@ -33,6 +34,7 @@ import RequestAction from '@/app/components/apps/settings/request-action/list';
 import UserSettings from '@/app/components/apps/settings/user-settings';
 import TaskUserCheckinSettings from '@/app/components/apps/tasks/settings/user-checkin-tasks';
 import UserGroupSettings from '@/app/components/apps/settings/user-groups';
+import AdminProjects from '@/app/components/apps/settings/projects';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -192,6 +194,13 @@ const AdminSetting = () => {
                                         label="Groups"
                                         {...a11yProps(11)}
                                     />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconBriefcase size="20" />}
+                                        label="Project"
+                                        {...a11yProps(12)}
+                                    />
                                 </Tabs>
                             </Stack>
                         </BlankCard>
@@ -240,6 +249,9 @@ const AdminSetting = () => {
                             </TabPanel>
                             <TabPanel value={value} index={11}>
                                 <UserGroupSettings />
+                            </TabPanel>
+                            <TabPanel value={value} index={12}>
+                                <AdminProjects />
                             </TabPanel>
                         </BlankCard>
                     </Grid>
