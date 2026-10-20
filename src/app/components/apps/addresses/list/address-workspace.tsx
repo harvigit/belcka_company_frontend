@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Box,
   Button,
@@ -26,6 +32,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -42,7 +49,10 @@ import {
   IconArrowLeft,
   IconCheck,
   IconChevronDown,
+  IconChevronsLeft,
+  IconChevronLeft,
   IconChevronRight,
+  IconChevronsRight,
   IconDotsVertical,
   IconFileExport,
   IconFileImport,
@@ -66,6 +76,7 @@ import ExcelImportModal from "@/app/components/common/ExcelImportModal";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import { useServerTable } from "@/hooks/useServerTable";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 
 dayjs.extend(customParseFormat);
 
@@ -77,6 +88,14 @@ const stickyHeadCell = {
 };
 
 const LONDON = { lat: 51.5074, lng: -0.1278 };
+const CASE_PAGE_SIZES = [50, 100, 250, 500];
+
+type CasePageState = {
+  pageIndex: number;
+  pageSize: number;
+  total: number;
+  pageCount: number;
+};
 const addressColumns = [{ id: "name", accessorKey: "name" }];
 
 type ParentAddress = {
@@ -412,6 +431,9 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
   const [casesByParent, setCasesByParent] = useState<Record<number, CaseRow[]>>(
     {},
   );
+  const [casePages, setCasePages] = useState<Record<number, CasePageState>>({});
+  const casePagesRef = useRef(casePages);
+  casePagesRef.current = casePages;
   const [casesLoading, setCasesLoading] = useState<Record<number, boolean>>({});
   const [view, setView] = useState<"list" | "map">("list");
   const [mapAddressId, setMapAddressId] = useState<number | null>(null);
@@ -509,16 +531,41 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
   }, [fetchProjects]);
 
   const loadCases = useCallback(
-    async (parentId: number) => {
+    async (parentId: number, pageIndex?: number, pageSize?: number) => {
       if (!companyId) return;
+      const stored = casePagesRef.current[parentId];
+      const nextSize = pageSize ?? stored?.pageSize ?? 50;
+      const requestedPage = pageIndex ?? stored?.pageIndex ?? 0;
+      const nextPage = Math.max(0, requestedPage);
       setCasesLoading((current) => ({ ...current, [parentId]: true }));
       try {
         const res = await api.get(
-          `address/get?company_id=${companyId}&parent_address_id=${parentId}&page=1&limit=100`,
+          `address/get?company_id=${companyId}&parent_address_id=${parentId}&page=${nextPage + 1}&limit=${nextSize}`,
+        );
+        const rows = asList<CaseRow>(res.data?.info);
+        const meta = res.data?.data || {};
+        const total = Number(meta.totalItems ?? rows.length);
+
+        const pageCount = Math.max(
+          1,
+          Number(meta.totalPages ?? (Math.ceil(total / nextSize) || 1)),
+        );
+        const currentPage = Math.max(
+          1,
+          Number(meta.currentPage ?? nextPage + 1),
         );
         setCasesByParent((current) => ({
           ...current,
-          [parentId]: asList<CaseRow>(res.data?.info),
+          [parentId]: rows,
+        }));
+        setCasePages((current) => ({
+          ...current,
+          [parentId]: {
+            pageIndex: currentPage - 1,
+            pageSize: nextSize,
+            total,
+            pageCount,
+          },
         }));
       } catch (error) {
         toast.error(
@@ -1047,6 +1094,11 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                 casesLoading={
                   mapAddress ? Boolean(casesLoading[mapAddress.id]) : false
                 }
+                casePage={mapAddress ? casePages[mapAddress.id] : undefined}
+                onCasePage={(pageIndex, pageSize) => {
+                  if (!mapAddress) return;
+                  loadCases(mapAddress.id, pageIndex, pageSize);
+                }}
                 onSelect={selectMapAddress}
                 onEditLocation={(address) => {
                   selectMapAddress(address);
@@ -1097,6 +1149,12 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                       visibleAddresses.map((address) => {
                         const expanded = expandedIds.has(address.id);
                         const cases = casesByParent[address.id] || [];
+                        const casePage = casePages[address.id];
+                        const caseTotal = casePage?.total ?? cases.length;
+                        const casePageIndex = casePage?.pageIndex ?? 0;
+                        const casePageSize = casePage?.pageSize ?? 50;
+                        const casePageCount = casePage?.pageCount ?? 1;
+                        const casesBusy = Boolean(casesLoading[address.id]);
                         return (
                           <React.Fragment key={address.id}>
                             <TableRow hover>
@@ -1176,11 +1234,30 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                 </Typography>
                               </TableCell>
                               <TableCell align="right">
-                                <Chip
-                                  size="small"
-                                  variant="outlined"
-                                  label={`${address.cases ?? 0} ${address.cases === 1 ? "case" : "cases"}`}
-                                />
+                                <Stack
+                                  direction="row"
+                                  spacing={0.5}
+                                  justifyContent="flex-end"
+                                  alignItems="center"
+                                >
+                                  <Tooltip title="Edit address">
+                                    <IconButton
+                                      size="small"
+                                      aria-label="Edit address"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        openAddressPanel(address);
+                                      }}
+                                    >
+                                      <IconMap size={18} />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    label={`${address.cases ?? 0} ${address.cases === 1 ? "case" : "cases"}`}
+                                  />
+                                </Stack>
                               </TableCell>
                             </TableRow>
                             {expanded ? (
@@ -1189,7 +1266,7 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                   colSpan={5}
                                   sx={{ py: 1.5, bgcolor: "action.hover" }}
                                 >
-                                  {casesLoading[address.id] ? (
+                                  {casesBusy && cases.length === 0 ? (
                                     <CircularProgress size={18} />
                                   ) : cases.length === 0 ? (
                                     <Stack
@@ -1214,7 +1291,10 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                       </Button>
                                     </Stack>
                                   ) : (
-                                    <Stack spacing={0.75}>
+                                    <Stack
+                                      spacing={0.75}
+                                      sx={{ opacity: casesBusy ? 0.6 : 1 }}
+                                    >
                                       <Stack
                                         direction="row"
                                         justifyContent="space-between"
@@ -1224,7 +1304,8 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                           variant="caption"
                                           color="text.secondary"
                                         >
-                                          {cases.length} cases
+                                          {caseTotal}{" "}
+                                          {caseTotal === 1 ? "case" : "cases"}
                                         </Typography>
                                         <Button
                                           size="small"
@@ -1311,6 +1392,105 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                           </Box>
                                         );
                                       })}
+                                      <Stack
+                                        direction="row"
+                                        alignItems="center"
+                                        justifyContent="flex-end"
+                                        spacing={0.5}
+                                      >
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                        >
+                                          Page {casePageIndex + 1} of{" "}
+                                          {casePageCount} | Entries :
+                                        </Typography>
+                                        <CustomSelect
+                                          size="small"
+                                          value={casePageSize}
+                                          disabled={casesBusy}
+                                          sx={{ minWidth: 72 }}
+                                          onChange={(event: any) =>
+                                            loadCases(
+                                              address.id,
+                                              0,
+                                              Number(event.target.value),
+                                            )
+                                          }
+                                        >
+                                          {CASE_PAGE_SIZES.map((size) => (
+                                            <MenuItem key={size} value={size}>
+                                              {size}
+                                            </MenuItem>
+                                          ))}
+                                        </CustomSelect>
+                                        <IconButton
+                                          size="small"
+                                          aria-label="First page"
+                                          disabled={
+                                            casesBusy || casePageIndex === 0
+                                          }
+                                          onClick={() =>
+                                            loadCases(
+                                              address.id,
+                                              0,
+                                              casePageSize,
+                                            )
+                                          }
+                                        >
+                                          <IconChevronsLeft size={18} />
+                                        </IconButton>
+                                        <IconButton
+                                          size="small"
+                                          aria-label="Previous page"
+                                          disabled={
+                                            casesBusy || casePageIndex === 0
+                                          }
+                                          onClick={() =>
+                                            loadCases(
+                                              address.id,
+                                              casePageIndex - 1,
+                                              casePageSize,
+                                            )
+                                          }
+                                        >
+                                          <IconChevronLeft size={18} />
+                                        </IconButton>
+                                        <IconButton
+                                          size="small"
+                                          aria-label="Next page"
+                                          disabled={
+                                            casesBusy ||
+                                            casePageIndex + 1 >= casePageCount
+                                          }
+                                          onClick={() =>
+                                            loadCases(
+                                              address.id,
+                                              casePageIndex + 1,
+                                              casePageSize,
+                                            )
+                                          }
+                                        >
+                                          <IconChevronRight size={18} />
+                                        </IconButton>
+                                        <IconButton
+                                          size="small"
+                                          aria-label="Last page"
+                                          disabled={
+                                            casesBusy ||
+                                            casePageIndex + 1 >= casePageCount
+                                          }
+                                          onClick={() =>
+                                            loadCases(
+                                              address.id,
+                                              casePageCount - 1,
+                                              casePageSize,
+                                            )
+                                          }
+                                        >
+                                          <IconChevronsRight size={18} />
+                                        </IconButton>
+                                      </Stack>
                                     </Stack>
                                   )}
                                 </TableCell>
@@ -1960,6 +2140,8 @@ function MapWorkspace({
   selected,
   cases,
   casesLoading,
+  casePage,
+  onCasePage,
   onSelect,
   onEditLocation,
   onCreateCase,
@@ -1970,6 +2152,8 @@ function MapWorkspace({
   selected: ParentAddress | null;
   cases: CaseRow[];
   casesLoading: boolean;
+  casePage?: CasePageState;
+  onCasePage: (pageIndex: number, pageSize: number) => void;
   onSelect: (address: ParentAddress | null) => void;
   onEditLocation: (address: ParentAddress) => void;
   onCreateCase: (address: ParentAddress) => void;
@@ -2156,40 +2340,78 @@ function MapWorkspace({
                 </Button>
               </Stack>
             </Stack>
-            {casesLoading ? (
+            {casesLoading && cases.length === 0 ? (
               <CircularProgress size={18} />
             ) : cases.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
                 No cases at this address yet.
               </Typography>
             ) : (
-              cases.map((row) => (
-                <Box
-                  key={row.id}
-                  onClick={() => onOpenCase(selected, row)}
-                  sx={{
-                    px: 1,
-                    py: 0.75,
-                    borderRadius: 1,
-                    cursor: "pointer",
-                    "&:hover": { bgcolor: "action.hover" },
-                  }}
-                >
+              <>
+                {cases.map((row) => (
+                  <Box
+                    key={row.id}
+                    onClick={() => onOpenCase(selected, row)}
+                    sx={{
+                      px: 1,
+                      py: 0.75,
+                      borderRadius: 1,
+                      cursor: "pointer",
+                      "&:hover": { bgcolor: "action.hover" },
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Box>
+                        <Typography fontWeight={600}>
+                          {caseTitle(row)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {row.project_name}
+                        </Typography>
+                      </Box>
+                      <StatusChip label={row.status_text} />
+                    </Stack>
+                  </Box>
+                ))}
+                {casePage ? (
                   <Stack
                     direction="row"
-                    justifyContent="space-between"
                     alignItems="center"
+                    justifyContent="flex-end"
                   >
-                    <Box>
-                      <Typography fontWeight={600}>{caseTitle(row)}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {row.project_name}
-                      </Typography>
-                    </Box>
-                    <StatusChip label={row.status_text} />
+                    <Typography variant="caption" color="text.secondary">
+                      Page {casePage.pageIndex + 1} of {casePage.pageCount}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      aria-label="Previous cases"
+                      disabled={casesLoading || casePage.pageIndex === 0}
+                      onClick={() =>
+                        onCasePage(casePage.pageIndex - 1, casePage.pageSize)
+                      }
+                    >
+                      <IconChevronLeft size={18} />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      aria-label="Next cases"
+                      disabled={
+                        casesLoading ||
+                        casePage.pageIndex + 1 >= casePage.pageCount
+                      }
+                      onClick={() =>
+                        onCasePage(casePage.pageIndex + 1, casePage.pageSize)
+                      }
+                    >
+                      <IconChevronRight size={18} />
+                    </IconButton>
                   </Stack>
-                </Box>
-              ))
+                ) : null}
+              </>
             )}
           </Stack>
         ) : (
