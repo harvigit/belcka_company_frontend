@@ -823,8 +823,8 @@ export default function MapGantt({
       const { data } = await api.get("work-zone/get-resources", {
         params: {
           company_id: user.company_id,
-          start_date: day,
-          end_date: day,
+          // start_date: day,
+          // end_date: day,
         },
       });
 

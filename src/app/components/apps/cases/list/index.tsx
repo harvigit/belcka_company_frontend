@@ -425,6 +425,10 @@ const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
   );
 };
 
+const INTERNAL_ORDER_TABLE_COLUMNS = [
+  { id: "date", accessorKey: "date" },
+];
+
 const CasesList = ({
   projectId,
   isUserProfile = false,
@@ -586,86 +590,70 @@ const CasesList = ({
     return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
   };
 
-  const filteredInternalOrders = useMemo(() => {
-    const query = internalOrderSearch.trim().toLowerCase();
-    if (!query) return internalOrders;
-    return internalOrders.filter((order) =>
-      [
-        order.order_id,
-        order.user_name,
-        order.address_name,
-        order.type,
-        order.status_text,
-        order.date,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(query),
-    );
-  }, [internalOrderSearch, internalOrders]);
+  const [internalOrdersTotal, setInternalOrdersTotal] = useState(0);
 
-  const loadInternalOrders = useCallback(async () => {
-    const targetProjectId = projectId || Number(filters.project_id);
-    if (!user?.company_id || !targetProjectId) {
-      setInternalOrders([]);
-      setInternalOrderSum(0);
-      toast.error("Select a project to view internal orders");
-      return;
-    }
+  const fetchInternalOrders = async () => {
+    if (!internalOrdersOpen || !user?.company_id) return;
 
+    const targetProjectId = projectId || Number(filters.project_id) || 0;
     setInternalOrdersLoading(true);
     try {
-      const loadType = async (type: "store" | "collect") => {
-        const params = new URLSearchParams({
-          company_id: String(user.company_id),
-          project_id: String(targetProjectId),
-          page: "1",
-          limit: "10000",
-          type,
-        });
-        const res = await api.get(
-          `project/internal-orders?${params.toString()}`,
-        );
-        return {
-          rows: (Array.isArray(res.data?.info)
-            ? res.data.info
-            : []) as InternalOrderItem[],
-          currency: res.data?.currency as string | undefined,
-        };
-      };
-      const [storeResult, collectResult] = await Promise.all([
-        loadType("store"),
-        loadType("collect"),
-      ]);
-      const rows = [...storeResult.rows, ...collectResult.rows].sort(
-        (a, b) => {
-          const aTime = dayjs(a.date, "DD/MM/YYYY").valueOf() || 0;
-          const bTime = dayjs(b.date, "DD/MM/YYYY").valueOf() || 0;
-          return bTime - aTime;
-        },
+      const params = new URLSearchParams({
+        company_id: String(user.company_id),
+        page: String(internalPagination.pageIndex + 1),
+        limit: String(internalPagination.pageSize),
+      });
+      if (targetProjectId) params.set("project_id", String(targetProjectId));
+      const query = internalOrderSearch.trim();
+      if (query) params.set("search", query);
+
+      const res = await api.get(
+        `project/internal-orders?${params.toString()}`,
       );
-      const currency =
-        storeResult.currency ||
-        collectResult.currency ||
-        rows[0]?.currency ||
-        "£";
+      const rows = (
+        Array.isArray(res.data?.info) ? res.data.info : []
+      ) as InternalOrderItem[];
+      const pagMeta = res.data?.data || {};
       setInternalOrders(rows);
-      setInternalOrderCurrency(currency);
-      setInternalOrderSum(
-        rows.reduce((sum, order) => sum + Number(order.total || 0), 0),
+      setInternalOrderCurrency(res.data?.currency || rows[0]?.currency || "£");
+      setInternalOrderSum(Number(res.data?.total ?? 0));
+      setInternalOrdersTotal(Number(pagMeta.totalItems ?? rows.length));
+      setInternalPageCount(
+        Number(pagMeta.totalPages ?? (rows.length ? 1 : 0)),
       );
       setInternalOrdersLoaded(true);
     } catch (error) {
       console.error(error);
       setInternalOrders([]);
       setInternalOrderSum(0);
+      setInternalOrdersTotal(0);
+      setInternalPageCount(0);
       setInternalOrdersLoaded(false);
       toast.error("Failed to load internal orders");
     } finally {
       setInternalOrdersLoading(false);
     }
-  }, [filters.project_id, projectId, user?.company_id]);
+  };
+
+  const {
+    table: internalOrdersTable,
+    pagination: internalPagination,
+    setPageCount: setInternalPageCount,
+  } = useServerTable({
+    data: internalOrders,
+    columns: INTERNAL_ORDER_TABLE_COLUMNS,
+    fetchData: fetchInternalOrders,
+    debounceDependencies: [
+      internalOrderSearch,
+      internalOrdersOpen,
+      projectId,
+      filters.project_id,
+      user?.company_id,
+    ],
+    manualSorting: true,
+    forceServerSorting: true,
+    getRowId: (row) => `${row.type_key || row.source}-${row.id}`,
+  });
 
   useEffect(() => {
     fetchProjectsAndAddresses();
@@ -1402,7 +1390,6 @@ const CasesList = ({
                   setInternalOrderSearch("");
                   setSelectedInternalOrder(null);
                   setInternalOrdersOpen(true);
-                  void loadInternalOrders();
                 }}
               >
                 <Typography variant="caption" color="inherit" noWrap>
@@ -1516,8 +1503,8 @@ const CasesList = ({
                 <DialogTitle sx={{ pr: 7, position: "relative" }}>
                   Internal orders
                   <Typography variant="body2" color="text.secondary" mt={0.5}>
-                    {internalOrders.length}{" "}
-                    {internalOrders.length === 1 ? "order" : "orders"} ·{" "}
+                    {internalOrdersTotal}{" "}
+                    {internalOrdersTotal === 1 ? "order" : "orders"} ·{" "}
                     {formatOrderMoney(internalOrderSum, internalOrderCurrency)}
                   </Typography>
                   <IconButton
@@ -1550,9 +1537,9 @@ const CasesList = ({
                     <Typography color="text.secondary" textAlign="center" py={4}>
                       Loading internal orders...
                     </Typography>
-                  ) : filteredInternalOrders.length ? (
+                  ) : internalOrders.length ? (
                     <Stack spacing={1}>
-                      {filteredInternalOrders.map((order) => (
+                      {internalOrders.map((order) => (
                         <Box
                           key={`${order.type_key || order.source}-${order.id}`}
                           onClick={() => setSelectedInternalOrder(order)}
@@ -1625,20 +1612,28 @@ const CasesList = ({
                       textAlign="center"
                       py={4}
                     >
-                      {internalOrders.length
+                      {internalOrderSearch.trim()
                         ? "No orders match your search."
                         : "No internal orders."}
                     </Typography>
                   )}
                 </DialogContent>
-                <DialogActions sx={{ px: 3, py: 2 }}>
-                  <Button
-                    variant="contained"
-                    color="error"
-                    onClick={() => setInternalOrdersOpen(false)}
-                  >
-                    Close
-                  </Button>
+                <DialogActions
+                  sx={{ px: 2, py: 1.5, display: "block" }}
+                >
+                  <TablePaginationFooter
+                    table={internalOrdersTable}
+                    totalRows={internalOrdersTotal}
+                  />
+                  <Box display="flex" justifyContent="flex-end" mt={1}>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      onClick={() => setInternalOrdersOpen(false)}
+                    >
+                      Close
+                    </Button>
+                  </Box>
                 </DialogActions>
               </Dialog>
               <InternalOrderDetailDrawer
