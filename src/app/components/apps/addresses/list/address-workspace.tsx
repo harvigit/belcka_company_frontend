@@ -1875,7 +1875,7 @@ function PlaceSearch({
   };
 
   return (
-    <Box>
+    <Box sx={{ minWidth: 0, maxWidth: "100%" }}>
       <Stack direction="row" spacing={1} alignItems="flex-start">
         <TextField
           fullWidth
@@ -1908,7 +1908,15 @@ function PlaceSearch({
       </Stack>
       {results.length > 0 ? (
         <Box
-          sx={{ mt: 0.5, border: 1, borderColor: "divider", borderRadius: 1 }}
+          sx={{
+            mt: 0.5,
+            border: 1,
+            borderColor: "divider",
+            borderRadius: 1,
+            maxHeight: 168,
+            overflowX: "hidden",
+            overflowY: "auto",
+          }}
         >
           {results.map((item) => (
             <MenuItem
@@ -1919,8 +1927,25 @@ function PlaceSearch({
                 setQuery("");
                 setResults([]);
               }}
+              sx={{
+                display: "block",
+                whiteSpace: "normal",
+                height: "auto",
+                minHeight: 0,
+                py: 0.75,
+                overflow: "hidden",
+              }}
             >
-              {item.label}
+              <Typography
+                variant="body2"
+                sx={{
+                  whiteSpace: "normal",
+                  overflowWrap: "anywhere",
+                  lineHeight: 1.35,
+                }}
+              >
+                {item.label}
+              </Typography>
             </MenuItem>
           ))}
         </Box>
