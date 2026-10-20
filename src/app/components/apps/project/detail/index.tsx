@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import { Box, IconButton, Stack, Tab, Tabs, Tooltip, Typography } from "@mui/material";
+import { Box, IconButton, Stack, Tab, Tabs, Typography } from "@mui/material";
 import {
   IconArrowLeft,
   IconBookmark,
@@ -244,15 +244,6 @@ const ProjectDetail = () => {
         >
           {projectName} {projectCode ? `(${projectCode})` : ""}
         </Typography>
-        <Tooltip title="Favorite Products">
-          <IconButton
-            color="success"
-            aria-label="Favorite Products"
-            onClick={() => setFavoriteOpen(true)}
-          >
-            <IconBookmark size={18} />
-          </IconButton>
-        </Tooltip>
         <AssigneeRoleChips
           projectId={projectId}
           companyId={user?.company_id}
@@ -273,7 +264,8 @@ const ProjectDetail = () => {
       >
         <Tabs
           value={tabValue}
-          onChange={(_, value: TabKey) => {
+          onChange={(_, value: TabKey | "favorite-products") => {
+            if (value === "favorite-products") return;
             setTab(value);
           }}
           variant="scrollable"
@@ -295,9 +287,9 @@ const ProjectDetail = () => {
             },
           }}
         >
-          {visibleTabs.map((item) => {
+          {visibleTabs.flatMap((item) => {
             const Icon = item.icon;
-            return (
+            const tab = (
               <Tab
                 key={item.key}
                 value={item.key}
@@ -307,6 +299,21 @@ const ProjectDetail = () => {
                 disableRipple
               />
             );
+            if (item.key !== "internal-orders") return [tab];
+            return [
+              tab,
+              <Tab
+                key="favorite-products"
+                value="favorite-products"
+                icon={<IconBookmark size={18} />}
+                iconPosition="top"
+                label="Favorite"
+                title="Favorite Products"
+                disableRipple
+                aria-label="Favorite Products"
+                onClick={() => setFavoriteOpen(true)}
+              />,
+            ];
           })}
         </Tabs>
       </Box>
