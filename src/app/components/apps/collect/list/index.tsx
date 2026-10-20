@@ -207,7 +207,12 @@ const CollectList = () => {
       if (res.data && res.data.info) {
         setProjects(res.data.info.projects || []);
         setSuppliers(res.data.info.suppliers || []);
-        setAddresses(res.data.info.parentAddresses || []);
+        setAddresses(
+          (res.data.info.addresses || []).map((address: any) => ({
+            ...address,
+            name: address.address_name || address.name,
+          })),
+        );
         setUsers(res.data.info.ordered_by || res.data.info.users || []);
       }
     } catch (error) {

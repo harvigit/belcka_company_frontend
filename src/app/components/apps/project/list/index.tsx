@@ -15,8 +15,6 @@ import {
   FormGroup,
   IconButton,
   InputAdornment,
-  ListItemIcon,
-  Menu,
   MenuItem,
   Popover,
   Stack,
@@ -32,7 +30,6 @@ import {
 } from "@mui/material";
 import {
   IconBookmark,
-  IconDotsVertical,
   IconEye,
   IconFileExport,
   IconFilter,
@@ -83,14 +80,13 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import toast from "react-hot-toast";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { useRouter } from "next/navigation";
-import CreateProject from "../../projects/create";
 import Setting from "@/app/components/apps/projects/setting";
 import { IconSettings } from "@tabler/icons-react";
 import { Grid } from "@mui/system";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import { usePermissions } from "@/hooks/usePermissions";
 import { hasPermission } from "@/lib/permissions";
-import AddressList from "@/app/components/apps/addresses/list";
+import AddressWorkspace from "@/app/components/apps/addresses/list/address-workspace";
 import CasesList from "@/app/components/apps/cases/list";
 import CheckinsList from "@/app/components/apps/checkins";
 import FavoriteProductsDrawer from "../FavoriteProductsDrawer";
@@ -537,7 +533,6 @@ const ProjectDashboard = () => {
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [settingOpen, setSettingOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [moduleDrawer, setModuleDrawer] = useState<ProjectModuleKey | null>(
@@ -557,39 +552,8 @@ const ProjectDashboard = () => {
     (item) => item.key === moduleDrawer,
   );
 
-  const initialFormData = {
-    name: "",
-    address: "",
-    budget: "",
-    description: "",
-    code: 0,
-    // shift_ids: "",
-    team_ids: "",
-    user_ids: "",
-    company_id: user?.company_id || 0,
-    workzone_ids: "",
-    project_limit: "",
-    allow_work: true,
-  };
-
-  const [formData, setFormData] = useState<any>(initialFormData);
-  const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
-  const openMenu = Boolean(anchorEl2);
   const [productDrawer, setProductDrawer] = useState(false);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
-
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl2(event.currentTarget);
-  };
-  const handleClose = () => {
-    setAnchorEl2(null);
-  };
-
-  const handleCreate = () => {
-    handleClose();
-    setFormData({ ...initialFormData, company_id: user?.company_id || 0 });
-    setDrawerOpen(true);
-  };
 
   React.useEffect(() => {
     const checkScroll = () => {
@@ -1647,18 +1611,6 @@ const ProjectDashboard = () => {
               <IconEye />
             </IconButton>
 
-            <IconButton onClick={handleClick} size="small">
-              <IconDotsVertical width={20} />
-            </IconButton>
-            <Menu anchorEl={anchorEl2} open={openMenu} onClose={handleClose}>
-              <MenuItem onClick={handleCreate}>
-                <ListItemIcon>
-                  <IconPlus width={18} />
-                </ListItemIcon>
-                Add Project
-              </MenuItem>
-            </Menu>
-
             <Popover
               open={Boolean(anchorEl)}
               anchorEl={anchorEl}
@@ -1794,6 +1746,7 @@ const ProjectDashboard = () => {
           anchor="bottom"
           open={Boolean(moduleDrawer)}
           onClose={() => setModuleDrawer(null)}
+          ModalProps={{ disableEnforceFocus: true }}
           PaperProps={{
             sx: {
               height: "95vh",
@@ -1843,7 +1796,7 @@ const ProjectDashboard = () => {
             }}
           >
             {moduleDrawer === "addresses" ? (
-              <AddressList projectId={null} embedded />
+              <AddressWorkspace embedded />
             ) : null}
             {moduleDrawer === "cases" ? <CasesList embedded /> : null}
             {moduleDrawer === "checkins" ? <CheckinsList embedded /> : null}

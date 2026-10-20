@@ -28,6 +28,7 @@ import {
   IconDotsVertical,
   IconEdit,
   IconNotes,
+  IconPlus,
   IconSearch,
   IconTrash,
 } from "@tabler/icons-react";
@@ -42,16 +43,8 @@ import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import EditProject from "@/app/components/apps/projects/edit";
+import CreateProject from "@/app/components/apps/projects/create";
 import ArchiveProject from "@/app/components/apps/addresses/list/archive-project-list";
-
-type AdminProjectRow = {
-  id: number;
-  name: string;
-  uuid?: string;
-  code?: string | null;
-  status: number;
-  status_text?: string;
-};
 
 const initialFormData = {
   name: "",
@@ -72,7 +65,7 @@ const AdminProjects = () => {
   const user = session.data?.user as User & {
     company_id?: number | null;
   };
-  const [data, setData] = useState<AdminProjectRow[]>([]);
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
@@ -83,6 +76,7 @@ const AdminProjects = () => {
   const [archiveListOpen, setArchiveListOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [formData, setFormData] = useState<any>(initialFormData);
   const [isSaving, setIsSaving] = useState(false);
@@ -97,7 +91,7 @@ const AdminProjects = () => {
         limit: String(pagination.pageSize),
       });
       if (search.trim()) params.set("search", search.trim());
-      const res = await api.get(`project/dashboard?${params.toString()}`);
+      const res = await api.get(`project/get?${params.toString()}`);
       const rows = Array.isArray(res.data?.info)
         ? res.data.info
         : Array.isArray(res.data?.info?.data)
@@ -124,7 +118,33 @@ const AdminProjects = () => {
     }
   };
 
-  const handleEdit = async (project: AdminProjectRow) => {
+  const handleCreate = () => {
+    setMenuAnchor(null);
+    setFormData({ ...initialFormData, company_id: user?.company_id || 0 });
+    setCreateOpen(true);
+  };
+
+  const handleCreateSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setIsSaving(true);
+    try {
+      const res = await api.post("project/create", formData);
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message || "Project created successfully");
+        setCreateOpen(false);
+        fetchProjects();
+      } else {
+        toast.error(res.data?.message || "Failed to create project");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to create project");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEdit = async (project: any) => {
     if (!user?.company_id) return;
     try {
       const res = await api.get(
@@ -161,7 +181,7 @@ const AdminProjects = () => {
     }
   };
 
-  const changeStatus = async (project: AdminProjectRow, checked: boolean) => {
+  const changeStatus = async (project: any, checked: boolean) => {
     setSwitchLoadingIds((current) => new Set(current).add(project.id));
     try {
       const result = await api.post("project/change-status", {
@@ -183,7 +203,9 @@ const AdminProjects = () => {
         );
         toast.success(
           result.data.message ||
-            (checked ? "Project marked as active!" : "Project marked as closed!"),
+            (checked
+              ? "Project marked as active!"
+              : "Project marked as closed!"),
         );
       } else {
         toast.error(result.data?.message || "Failed to change status");
@@ -247,7 +269,7 @@ const AdminProjects = () => {
             }}
           />
         ),
-        cell: ({ row }: { row: { original: AdminProjectRow } }) => {
+        cell: ({ row }: { row: { original: any } }) => {
           const checked = selectedRowIds.has(row.original.id);
           return (
             <CustomCheckbox
@@ -268,33 +290,45 @@ const AdminProjects = () => {
       {
         id: "name",
         accessorKey: "name",
-        header: () => <Typography variant="subtitle2">Name</Typography>,
-        cell: ({ row }: { row: { original: AdminProjectRow } }) => (
-          <Typography fontWeight={600}>{row.original.name || "-"}</Typography>
+        header: () => <Typography variant="body2">Name</Typography>,
+        cell: ({ row }: { row: { original: any } }) => (
+          <Typography fontWeight={600} className="f-14">
+            {row.original.name || "-"}
+          </Typography>
         ),
       },
       {
         id: "code",
-        header: () => <Typography variant="subtitle2">Code</Typography>,
-        cell: ({ row }: { row: { original: AdminProjectRow } }) => (
-          <Typography>{row.original.uuid || row.original.code || "-"}</Typography>
+        header: () => <Typography variant="body2">Code</Typography>,
+        cell: ({ row }: { row: { original: any } }) => (
+          <Typography className="f-14">
+            {row.original.uuid || row.original.code || "-"}
+          </Typography>
         ),
       },
       {
-        id: "status",
-        header: () => <Typography variant="subtitle2">Status</Typography>,
-        cell: ({ row }: { row: { original: AdminProjectRow } }) => (
-          <Typography>
-            {row.original.status_text ||
-              (Number(row.original.status) === 1 ? "Active" : "Closed")}
+        id: "start_date",
+        header: () => <Typography variant="body2">Start Date</Typography>,
+        cell: ({ row }: { row: { original: any } }) => (
+          <Typography className="f-14">
+            {row.original.start_date ?? "-"}
+          </Typography>
+        ),
+      },
+      {
+        id: "last_activity",
+        header: () => <Typography variant="body2">Last Activity</Typography>,
+        cell: ({ row }: { row: { original: any } }) => (
+          <Typography className="f-14">
+            {row.original.last_activity ?? "-"}
           </Typography>
         ),
       },
       {
         id: "actions",
         enableSorting: false,
-        header: () => <Typography variant="subtitle2">Actions</Typography>,
-        cell: ({ row }: { row: { original: AdminProjectRow } }) => {
+        header: () => <Typography variant="body2">Actions</Typography>,
+        cell: ({ row }: { row: { original: any } }) => {
           const project = row.original;
           const active = Number(project.status) === 1;
           return (
@@ -326,22 +360,24 @@ const AdminProjects = () => {
     [data, selectedRowIds, switchLoadingIds, user?.company_id],
   );
 
-  const {
-    table,
-    pagination,
-    setPageCount,
-    totalRows,
-    setTotalRows,
-  } = useServerTable({
-    data,
-    columns,
-    fetchData: fetchProjects,
-    debounceDependencies: [search, user?.company_id],
-    enableSorting: false,
-  });
+  const { table, pagination, setPageCount, totalRows, setTotalRows } =
+    useServerTable({
+      data,
+      columns,
+      fetchData: fetchProjects,
+      debounceDependencies: [search, user?.company_id],
+      enableSorting: false,
+    });
 
   return (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
+    <Box
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+      }}
+    >
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
@@ -382,6 +418,12 @@ const AdminProjects = () => {
             open={Boolean(menuAnchor)}
             onClose={() => setMenuAnchor(null)}
           >
+            <MenuItem onClick={handleCreate}>
+              <ListItemIcon>
+                <IconPlus width={18} />
+              </ListItemIcon>
+              Add Project
+            </MenuItem>
             <MenuItem
               onClick={() => {
                 setMenuAnchor(null);
@@ -432,7 +474,10 @@ const AdminProjects = () => {
                 <TableRow key={row.id} hover>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -449,6 +494,16 @@ const AdminProjects = () => {
         onClose={() => setArchiveListOpen(false)}
         onWorkUpdated={fetchProjects}
       />
+      {createOpen && (
+        <CreateProject
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          formData={formData}
+          setFormData={setFormData}
+          handleSubmit={handleCreateSubmit}
+          isSaving={isSaving}
+        />
+      )}
       {editOpen && (
         <EditProject
           open={editOpen}
@@ -477,7 +532,11 @@ const AdminProjects = () => {
           >
             Cancel
           </Button>
-          <Button color="error" variant="outlined" onClick={() => void archiveSelected()}>
+          <Button
+            color="error"
+            variant="outlined"
+            onClick={() => void archiveSelected()}
+          >
             Archive
           </Button>
         </DialogActions>
