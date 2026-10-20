@@ -1,8 +1,9 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import { Box, IconButton, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Box, IconButton, Stack, Tab, Tabs, Tooltip, Typography } from "@mui/material";
 import {
   IconArrowLeft,
+  IconBookmark,
   IconBriefcase,
   IconChartPie,
   IconCoinRupee,
@@ -31,6 +32,7 @@ import AssigneeRoleChips, {
   ProjectRoleOption,
 } from "./AssigneeRoleChips";
 import { ProjectDetailFiltersProvider } from "./ProjectDetailFiltersContext";
+import FavoriteProductsDrawer from "../FavoriteProductsDrawer";
 import MapGantt from "../../projects/zone-map/MapGantt";
 import { IconMapPin } from "@tabler/icons-react";
 
@@ -71,6 +73,7 @@ const ProjectDetail = () => {
   const [tab, setTab] = useState<TabKey>(
     TABS.some((item) => item.key === requestedTab) ? requestedTab : "overview",
   );
+  const [favoriteOpen, setFavoriteOpen] = useState(false);
   const [projectName, setProjectName] = useState("Project");
   const [projectCode, setProjectCode] = useState("");
   const [assignedUsers, setAssignedUsers] = useState<AssignedProjectUser[]>([]);
@@ -241,6 +244,15 @@ const ProjectDetail = () => {
         >
           {projectName} {projectCode ? `(${projectCode})` : ""}
         </Typography>
+        <Tooltip title="Favorite Products">
+          <IconButton
+            color="success"
+            aria-label="Favorite Products"
+            onClick={() => setFavoriteOpen(true)}
+          >
+            <IconBookmark size={18} />
+          </IconButton>
+        </Tooltip>
         <AssigneeRoleChips
           projectId={projectId}
           companyId={user?.company_id}
@@ -339,6 +351,12 @@ const ProjectDetail = () => {
           </Box>
         ) : null}
       </Box>
+      <FavoriteProductsDrawer
+        open={favoriteOpen}
+        projectId={projectId || null}
+        companyId={user?.company_id}
+        onClose={() => setFavoriteOpen(false)}
+      />
     </Box>
     </ProjectDetailFiltersProvider>
   );
