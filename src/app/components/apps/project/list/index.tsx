@@ -953,26 +953,6 @@ const ProjectDashboard = () => {
     }
   };
 
-  const handleProjectSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const res = await api.post("project/create", formData);
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message || "Project created successfully");
-        setDrawerOpen(false);
-        fetchProjects();
-      } else {
-        toast.error(res.data.message || "Failed to create project");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to create project");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const columns = useMemo(
     () => [
       {
@@ -1802,17 +1782,6 @@ const ProjectDashboard = () => {
             {moduleDrawer === "checkins" ? <CheckinsList embedded /> : null}
           </Box>
         </Drawer>
-
-        {drawerOpen && (
-          <CreateProject
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            formData={formData}
-            setFormData={setFormData}
-            handleSubmit={handleProjectSubmit}
-            isSaving={isSaving}
-          />
-        )}
 
         <FavoriteProductsDrawer
           open={productDrawer}
