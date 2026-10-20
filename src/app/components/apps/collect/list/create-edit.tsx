@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Drawer,
   Box,
@@ -202,6 +202,16 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
   const [projects, setProjects] = useState<any[]>([]);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
+  const projectCases = useMemo(
+    () =>
+      formData.project_id
+        ? addresses.filter(
+            (address) =>
+              Number(address.project_id) === Number(formData.project_id),
+          )
+        : [],
+    [addresses, formData.project_id],
+  );
 
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<GalleryImage | null>(null);
@@ -272,7 +282,12 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
       );
       if (res.data && res.data.info) {
         setProjects(res.data.info.projects || []);
-        setAddresses(res.data.info.parentAddresses || []);
+        setAddresses(
+          (res.data.info.addresses || []).map((address: any) => ({
+            ...address,
+            name: address.address_name || address.name,
+          })),
+        );
         setSuppliers(res.data.info.suppliers || []);
       }
     } catch (err) {
@@ -617,10 +632,24 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                       projects.find((p) => p.id === formData.project_id) || null
                     }
                     onChange={(_, value) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        project_id: value?.id ?? null,
-                      }))
+                      setFormData((prev) => {
+                        const nextProjectId = value?.id ?? null;
+                        const addressStillValid = addresses.some(
+                          (address) =>
+                            address.id === prev.address_id &&
+                            Number(address.project_id) === Number(nextProjectId),
+                        );
+                        return {
+                          ...prev,
+                          project_id: nextProjectId,
+                          address_id: addressStillValid ? prev.address_id : null,
+                          address_manual: addressStillValid
+                            ? prev.address_manual
+                            : prev.address_id
+                              ? ""
+                              : prev.address_manual,
+                        };
+                      })
                     }
                     renderInput={(params) => (
                       <TextField {...params} placeholder="Select Project" />
@@ -630,11 +659,11 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
 
                 <Grid size={{ xs: 12 }}>
                   <Typography variant="body2" gutterBottom>
-                    Address
+                    Case
                   </Typography>
                   <Autocomplete
                     freeSolo
-                    options={addresses}
+                    options={projectCases}
                     getOptionLabel={(option) =>
                       typeof option === "string" ? option : option.name || ""
                     }
@@ -652,13 +681,13 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                     }}
                     value={
                       formData.address_id
-                        ? addresses.find((a) => a.id === formData.address_id) ||
+                        ? projectCases.find((a) => a.id === formData.address_id) ||
                           null
                         : formData.address_manual || null
                     }
                     onChange={(_, value) => {
                       if (typeof value === "string") {
-                        const match = addresses.find(
+                        const match = projectCases.find(
                           (a) =>
                             a.name.toLowerCase() === value.trim().toLowerCase(),
                         );
@@ -685,7 +714,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                     }}
                     onInputChange={(_, value, reason) => {
                       if (reason !== "input") return;
-                      const match = addresses.find(
+                      const match = projectCases.find(
                         (a) =>
                           a.name.toLowerCase() === value.trim().toLowerCase(),
                       );
@@ -696,7 +725,14 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
                       }));
                     }}
                     renderInput={(params) => (
-                      <TextField {...params} placeholder="Select Address" />
+                      <TextField
+                        {...params}
+                        placeholder={
+                          formData.project_id
+                            ? "Select case"
+                            : "Select a project first"
+                        }
+                      />
                     )}
                   />
                 </Grid>
