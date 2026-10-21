@@ -12,15 +12,22 @@ import {
   CircularProgress,
   Paper,
   IconButton,
+  Stack,
+  TextField,
 } from "@mui/material";
 import {
+  IconArrowBackUp,
   IconArrowLeft,
   IconEye,
   IconFile,
   IconFileDownload,
+  IconMessage,
   IconPdf,
   IconPlus,
 } from "@tabler/icons-react";
+import ThumbUpAltIcon from "@mui/icons-material/ThumbUpAlt";
+import ThumbUpOffAltIcon from "@mui/icons-material/ThumbUpOffAlt";
+import IOSSwitch from "@/app/components/common/IOSSwitch";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import AnnouncementModal from "../../modals/announcement-modal";
@@ -30,12 +37,96 @@ import { User } from "next-auth";
 import { useSession } from "next-auth/react";
 import { useTranslation } from "react-i18next";
 
-const emojiList = [
-  { emoji: "😊", code: "1f60a" },
-  { emoji: "😠", code: "1f620" },
+const wrappedText = {
+  minWidth: 0,
+  maxWidth: "100%",
+  whiteSpace: "pre-wrap",
+  overflowWrap: "anywhere",
+  wordBreak: "break-word",
+} as const;
+
+function CommentRow({
+  name,
+  image,
+  text,
+  date,
+  onReply,
+  replyLabel,
+}: {
+  name?: string;
+  image?: string;
+  text?: string;
+  date?: string;
+  onReply?: () => void;
+  replyLabel?: string;
+}) {
+  return (
+    <Stack
+      direction="row"
+      spacing={1.25}
+      alignItems="flex-start"
+      sx={{ minWidth: 0, maxWidth: "100%" }}
+    >
+      <Avatar
+        src={image}
+        alt={name}
+        sx={{ width: 36, height: 36, flexShrink: 0 }}
+      />
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography variant="body2" fontWeight={700} sx={wrappedText}>
+          {name}
+        </Typography>
+        <Typography variant="body2" sx={{ ...wrappedText, mt: 0.25 }}>
+          {text}
+        </Typography>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+          {date ? (
+            <Typography variant="caption" color="text.secondary">
+              {date}
+            </Typography>
+          ) : null}
+          {onReply ? (
+            <Button
+              variant="text"
+              size="small"
+              onClick={onReply}
+              startIcon={<IconArrowBackUp size={14} stroke={1.75} />}
+              sx={{
+                p: 0,
+                minWidth: 0,
+                minHeight: 0,
+                color: "text.secondary",
+                lineHeight: 1,
+                textTransform: "none",
+                fontSize: 12,
+                fontWeight: 500,
+                "& .MuiButton-startIcon": { mr: 0.4, ml: 0 },
+                "&:hover": { color: "primary.main", bgcolor: "transparent" },
+              }}
+            >
+              {/* {replyLabel} */}
+            </Button>
+          ) : null}
+        </Stack>
+      </Box>
+    </Stack>
+  );
+}
+
+const fallbackEmojis = [
   { emoji: "👍", code: "1f44d" },
   { emoji: "👎", code: "1f44e" },
+  { emoji: "❤️", code: "2764" },
+  { emoji: "😂", code: "1f602" },
+  { emoji: "😮", code: "1f62e" },
   { emoji: "😢", code: "1f622" },
+  { emoji: "😠", code: "1f620" },
+  { emoji: "🔥", code: "1f525" },
+  { emoji: "👏", code: "1f44f" },
+  { emoji: "🎉", code: "1f389" },
+  { emoji: "🙏", code: "1f64f" },
+  { emoji: "✅", code: "2705" },
+  { emoji: "😊", code: "1f60a" },
 ];
 
 export default function AnnouncementsList({
@@ -68,6 +159,18 @@ export default function AnnouncementsList({
   const [readDrawerOpen, setReadDrawerOpen] = useState(false);
   const [announcementDetails, setAnnouncementDetails] = useState<any>([]);
   const [announcementDrawerOpen, setAnnouncementDrawerOpen] = useState(false);
+  const [emojiList, setEmojiList] = useState(fallbackEmojis);
+  const [allowReactions, setAllowReactions] = useState(true);
+  const [allowComments, setAllowComments] = useState(true);
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [replyTo, setReplyTo] = useState<{ id: number; name: string } | null>(
+    null,
+  );
+  const [commentSaving, setCommentSaving] = useState(false);
+  const [likes, setLikes] = useState<
+    Record<number, { liked: boolean; count: number }>
+  >({});
   const session = useSession();
   const user = session.data?.user as User & { id?: number | null };
   const limit = 20;
@@ -165,9 +268,135 @@ export default function AnnouncementsList({
     setReadDetails([]);
   };
 
+  const fetchComments = async (announcementId: number) => {
+    try {
+      const response = await api.get(
+        `announcements/comments?announcement_id=${announcementId}&sort=newest`,
+      );
+      setComments(response.data?.info ?? []);
+    } catch (error) {
+      console.error("Failed to fetch comments:", error);
+      setComments([]);
+    }
+  };
+
   const handleOpenAnnouncementDrawer = (announcementId: number) => {
     setAnnouncementDrawerOpen(true);
+    setCommentText("");
+    setReplyTo(null);
+    setComments([]);
     fetchAnnouncementDetails(announcementId);
+    if (allowComments) fetchComments(announcementId);
+  };
+
+  const saveAnnouncementSettings = async (next: {
+    allow_reactions?: boolean;
+    allow_comments?: boolean;
+  }) => {
+    const payload = {
+      company_id: companyId,
+      allow_reactions: next.allow_reactions ?? allowReactions,
+      allow_comments: next.allow_comments ?? allowComments,
+    };
+    setAllowReactions(payload.allow_reactions);
+    setAllowComments(payload.allow_comments);
+    try {
+      const response = await api.post("setting/announcement-settings", payload);
+      if (response.data?.IsSuccess === false) {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.error("Failed to save announcement settings:", error);
+      toast.error(t("Failed to save announcement settings."));
+    }
+  };
+
+  const likeInfo = (item: any) => {
+    const override = likes[item?.id];
+    const liked = override?.liked ?? Boolean(item?.is_like);
+    const count =
+      override?.count ?? Number(item?.like_count ?? (liked ? 1 : 0));
+    return { liked, count, filled: count > 0 };
+  };
+
+  const handleLike = async (item: any) => {
+    const current = likeInfo(item);
+    const nextLiked = !current.liked;
+    const nextCount = Math.max(0, current.count + (nextLiked ? 1 : -1));
+    setLikes((previous) => ({
+      ...previous,
+      [item.id]: { liked: nextLiked, count: nextCount },
+    }));
+    try {
+      const response = await api.post("announcements/like", {
+        announcement_id: item.id,
+        user_id: userId,
+        company_id: companyId,
+        is_like: nextLiked,
+      });
+      if (response.data?.IsSuccess === false) {
+        setLikes((previous) => ({
+          ...previous,
+          [item.id]: { liked: current.liked, count: current.count },
+        }));
+        toast.error(response.data.message);
+        return;
+      }
+      const info = response.data?.info;
+      setLikes((previous) => ({
+        ...previous,
+        [item.id]: {
+          liked: Boolean(info?.is_like),
+          count: Number(info?.like_count ?? nextCount),
+        },
+      }));
+      onUpdate?.();
+      if (announcementDetails?.id === item.id) {
+        setAnnouncementDetails((currentDetails: any) => ({
+          ...currentDetails,
+          is_like: Boolean(info?.is_like),
+          like_count: Number(info?.like_count ?? nextCount),
+        }));
+      }
+    } catch (error) {
+      setLikes((previous) => ({
+        ...previous,
+        [item.id]: { liked: current.liked, count: current.count },
+      }));
+      console.error("Failed to update like:", error);
+      toast.error(t("Failed to update the like."));
+    }
+  };
+
+  const submitComment = async () => {
+    const text = commentText.trim();
+    if (!text || !announcementDetails?.id) return;
+    setCommentSaving(true);
+    try {
+      const response = await api.post(
+        replyTo ? "announcements/reply" : "announcements/comment",
+        {
+          announcement_id: announcementDetails.id,
+          user_id: userId,
+          company_id: companyId,
+          comment: text,
+          ...(replyTo ? { comment_id: replyTo.id } : {}),
+        },
+      );
+      if (response.data?.IsSuccess === false) {
+        toast.error(response.data.message);
+        return;
+      }
+      setCommentText("");
+      setReplyTo(null);
+      await fetchComments(announcementDetails.id);
+      onUpdate?.();
+    } catch (error) {
+      console.error("Failed to save comment:", error);
+      toast.error(t("Failed to save the comment."));
+    } finally {
+      setCommentSaving(false);
+    }
   };
 
   const handleCloseEmojiDrawer = () => {
@@ -185,11 +414,93 @@ export default function AnnouncementsList({
       markAsRead();
     }
   }, [isDrawerOpen]);
+
+  useEffect(() => {
+    if (!isDrawerOpen || !companyId) return;
+    api
+      .get(`setting/announcement-settings?company_id=${companyId}`)
+      .then((response) => {
+        const settings = response.data?.data;
+        if (!settings) return;
+        setAllowReactions(settings.allow_reactions !== false);
+        setAllowComments(settings.allow_comments !== false);
+      })
+      .catch(() => undefined);
+  }, [isDrawerOpen, companyId]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .get("announcements/emojis")
+      .then((response) => {
+        const list = response.data?.info;
+        if (!active || !Array.isArray(list) || !list.length) return;
+        setEmojiList(
+          list.map((item) => ({
+            emoji: item.emoji,
+            code: item.code || item.emoji_code,
+          })),
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
   const paginatedAnnouncement = announcement?.slice(0, page * limit) || [];
 
   return (
     <Box>
-      <Box display="flex" justifyContent="end">
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        gap={2}
+        flexWrap="wrap"
+        px={2}
+      >
+        {roleId == 1 ? (
+          <Stack spacing={1.25} sx={{ flex: 1, minWidth: 240, maxWidth: 420 }}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <Stack direction="row" spacing={1.25} alignItems="center">
+                <ThumbUpAltIcon sx={{ fontSize: 22, color: "#1e4db7" }} />
+                <Typography fontSize={15} color="text.primary">
+                  {t("Allow reactions")}
+                </Typography>
+              </Stack>
+              <IOSSwitch
+                checked={allowReactions}
+                onChange={(_event, checked) =>
+                  saveAnnouncementSettings({ allow_reactions: checked })
+                }
+              />
+            </Stack>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <Stack direction="row" spacing={1.25} alignItems="center">
+                <IconMessage size={22} color="#1e4db7" stroke={1.75} />
+                <Typography fontSize={15} color="text.primary">
+                  {t("Allow comments")}
+                </Typography>
+              </Stack>
+              <IOSSwitch
+                checked={allowComments}
+                onChange={(_event, checked) =>
+                  saveAnnouncementSettings({ allow_comments: checked })
+                }
+              />
+            </Stack>
+          </Stack>
+        ) : (
+          <Box />
+        )}
         {roleId == 1 && (
           <Button
             variant="contained"
@@ -233,7 +544,10 @@ export default function AnnouncementsList({
                         }}
                       >
                         <Typography variant="h6" color="inherit">
-                          {t("Announcement from")} {it.sender_name} • {it.announcement_type == 2 ? it.sender_name : t(it.type)}
+                          {t("Announcement from")} {it.sender_name} •{" "}
+                          {it.announcement_type == 2
+                            ? it.sender_name
+                            : t(it.type)}
                         </Typography>
                         <Typography
                           color="textSecondary"
@@ -355,8 +669,11 @@ export default function AnnouncementsList({
                           display={"flex"}
                           justifyContent={"space-between"}
                           alignItems={"center"}
+                          gap={1}
+                          flexWrap="wrap"
+                          sx={{ minWidth: 0, maxWidth: "100%" }}
                         >
-                          {it.feeds && it.feeds.length > 0 ? (
+                          {allowReactions && it.feeds && it.feeds.length > 0 ? (
                             <Box
                               sx={{
                                 display: "flex",
@@ -406,6 +723,61 @@ export default function AnnouncementsList({
                           ) : (
                             <Box></Box>
                           )}
+                          <Stack
+                            direction="row"
+                            spacing={0.5}
+                            alignItems="center"
+                          >
+                            {allowReactions && (
+                              <Stack
+                                direction="row"
+                                spacing={0.25}
+                                alignItems="center"
+                              >
+                                <IconButton
+                                  size="small"
+                                  aria-label={t("Like")}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleLike(it);
+                                  }}
+                                  sx={{
+                                    color: likeInfo(it).filled
+                                      ? "#1e4db7"
+                                      : "text.secondary",
+                                  }}
+                                >
+                                  {likeInfo(it).filled ? (
+                                    <ThumbUpAltIcon sx={{ fontSize: 20 }} />
+                                  ) : (
+                                    <ThumbUpOffAltIcon sx={{ fontSize: 20 }} />
+                                  )}
+                                </IconButton>
+                                {likeInfo(it).count > 0 && (
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    {likeInfo(it).count}
+                                  </Typography>
+                                )}
+                              </Stack>
+                            )}
+                            {allowComments && (
+                              <Button
+                                size="small"
+                                color="inherit"
+                                startIcon={<IconMessage size={18} />}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleOpenAnnouncementDrawer(it.id);
+                                }}
+                                sx={{ textTransform: "none", fontWeight: 600 }}
+                              >
+                                {t("Comments")} ({it.comment_count || 0})
+                              </Button>
+                            )}
+                          </Stack>
                           {it.read_count > 0 && it.user_id == user.id && (
                             <Box sx={{ px: 1.5, py: 0.5 }}>
                               <IconButton
@@ -425,7 +797,7 @@ export default function AnnouncementsList({
                   />
 
                   {/* Emoji Popup */}
-                  {hoveredId === it.id && (
+                  {allowReactions && hoveredId === it.id && (
                     <Paper
                       sx={{
                         position: "absolute",
@@ -434,8 +806,11 @@ export default function AnnouncementsList({
                         borderRadius: 3,
                         ml: "20%",
                         display: "flex",
-                        gap: 1,
+                        flexWrap: "wrap",
+                        maxWidth: 350,
+                        gap: 0.5,
                         backgroundColor: "white",
+                        zIndex: 2,
                       }}
                     >
                       {emojiList.map((e) => (
@@ -509,10 +884,10 @@ export default function AnnouncementsList({
       <Drawer
         anchor="right"
         sx={{
-          width: 400,
+          width: 500,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
-            width: 400,
+            width: 500,
             padding: 2,
             backgroundColor: "#f9f9f9",
             display: "flex",
@@ -534,7 +909,9 @@ export default function AnnouncementsList({
             </Box>
 
             {emojiDetails.length === 0 ? (
-              <Typography color="textSecondary">{t("No reactions yet.")}</Typography>
+              <Typography color="textSecondary">
+                {t("No reactions yet.")}
+              </Typography>
             ) : (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {emojiDetails.map((feed: any) => (
@@ -600,7 +977,9 @@ export default function AnnouncementsList({
             </Box>
 
             {readDetails.length === 0 ? (
-              <Typography color="textSecondary">{t("No user read yet.")}</Typography>
+              <Typography color="textSecondary">
+                {t("No user read yet.")}
+              </Typography>
             ) : (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {readDetails.map((feed: any) => (
@@ -641,14 +1020,16 @@ export default function AnnouncementsList({
       <Drawer
         anchor="right"
         sx={{
-          width: 400,
+          width: 500,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
-            width: 400,
+            width: 500,
+            maxWidth: "100%",
             padding: 2,
             backgroundColor: "#f9f9f9",
             display: "flex",
             flexDirection: "column",
+            overflowX: "hidden",
           },
         }}
         open={announcementDrawerOpen}
@@ -666,7 +1047,9 @@ export default function AnnouncementsList({
             </Box>
 
             {announcementDetails.length === 0 ? (
-              <Typography color="textSecondary">{t("No reactions yet.")}</Typography>
+              <Typography color="textSecondary">
+                {t("No reactions yet.")}
+              </Typography>
             ) : (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 <Box
@@ -686,8 +1069,8 @@ export default function AnnouncementsList({
                   />
                   <Box>
                     <Typography variant="h6" color="inherit">
-                      {t("Announcement from")} {announcementDetails.sender_name} •{" "}
-                      {t(announcementDetails.type)}
+                      {t("Announcement from")} {announcementDetails.sender_name}{" "}
+                      • {t(announcementDetails.type)}
                     </Typography>
                     <Typography
                       color="textSecondary"
@@ -812,8 +1195,138 @@ export default function AnnouncementsList({
                 ) : (
                   <></>
                 )}
+                {allowComments && (
+                  <Box mt={2} sx={{ minWidth: 0, maxWidth: "100%" }}>
+                    <Typography fontWeight={700} fontSize={16} sx={{ mb: 1.5 }}>
+                      {t("Comments")} (
+                      {comments.reduce(
+                        (total, comment) =>
+                          total + 1 + (comment.replies?.length ?? 0),
+                        0,
+                      )}
+                      )
+                    </Typography>
+                    <Stack spacing={2} sx={{ minWidth: 0 }}>
+                      {comments.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          {t("No comments yet.")}
+                        </Typography>
+                      ) : (
+                        comments.map((comment) => (
+                          <Box key={comment.id} sx={{ minWidth: 0 }}>
+                            <CommentRow
+                              name={comment.user_name}
+                              image={
+                                comment.user_thumb_image || comment.user_image
+                              }
+                              text={comment.comment}
+                              date={comment.date}
+                              onReply={() =>
+                                setReplyTo({
+                                  id: comment.id,
+                                  name: comment.user_name,
+                                })
+                              }
+                              replyLabel={t("Reply")}
+                            />
+                            {(comment.replies ?? []).length > 0 && (
+                              <Stack
+                                spacing={1.5}
+                                sx={{
+                                  mt: 1.25,
+                                  ml: 5,
+                                  pl: 1.5,
+                                  borderLeft: "2px solid",
+                                  borderColor: "divider",
+                                  minWidth: 0,
+                                }}
+                              >
+                                {(comment.replies ?? []).map((reply: any) => (
+                                  <CommentRow
+                                    key={reply.id}
+                                    name={reply.user_name}
+                                    image={
+                                      reply.user_thumb_image || reply.user_image
+                                    }
+                                    text={reply.comment}
+                                    date={reply.date}
+                                  />
+                                ))}
+                              </Stack>
+                            )}
+                          </Box>
+                        ))
+                      )}
+                    </Stack>
+                    {replyTo && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={wrappedText}
+                      >
+                        {t("Replying to")} {replyTo.name}
+                        <Button
+                          size="small"
+                          onClick={() => setReplyTo(null)}
+                          sx={{ ml: 1 }}
+                        >
+                          {t("Cancel")}
+                        </Button>
+                      </Typography>
+                    )}
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      mt={1.5}
+                      alignItems="flex-end"
+                      sx={{ minWidth: 0, maxWidth: "100%" }}
+                    >
+                      <TextField
+                        fullWidth
+                        size="small"
+                        multiline
+                        minRows={1}
+                        maxRows={4}
+                        placeholder={t("Write a comment...")}
+                        value={commentText}
+                        onChange={(event) => setCommentText(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" && !event.shiftKey) {
+                            event.preventDefault();
+                            submitComment();
+                          }
+                        }}
+                        sx={{
+                          minWidth: 0,
+                          flex: 1,
+                          "& .MuiOutlinedInput-root": {
+                            alignItems: "flex-end",
+                            overflow: "hidden",
+                          },
+                          "& textarea": {
+                            overflowX: "hidden",
+                            overflowY: "auto",
+                            whiteSpace: "pre-wrap",
+                            overflowWrap: "anywhere",
+                            wordBreak: "break-word",
+                          },
+                        }}
+                      />
+                      <Button
+                        variant="contained"
+                        disabled={commentSaving || !commentText.trim()}
+                        onClick={submitComment}
+                        sx={{ flexShrink: 0, height: 40, mb: 0.25 }}
+                      >
+                        {t("Send")}
+                      </Button>
+                    </Stack>
+                  </Box>
+                )}
+                <Divider sx={{ mt: 1 }} />
                 <Box>
-                  {announcementDetails.feeds &&
+                  {allowReactions &&
+                    announcementDetails.feeds &&
                     announcementDetails.feeds.length > 0 && (
                       <Box
                         sx={{
