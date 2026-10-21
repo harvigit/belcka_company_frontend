@@ -25,11 +25,8 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { endOfWeek, startOfWeek } from "date-fns";
-import {
-  createColumnHelper,
-  SortingState} from "@tanstack/react-table";
-import {flexRender} from "@/utils/flexRender";
+import { createColumnHelper, SortingState } from "@tanstack/react-table";
+import { flexRender } from "@/utils/flexRender";
 import {
   IconEye,
   IconFilter,
@@ -123,12 +120,8 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "date", desc: true },
   ]);
-  const [startDate, setStartDate] = useState<Date | null>(() =>
-    startOfWeek(new Date(), { weekStartsOn: 1 }),
-  );
-  const [endDate, setEndDate] = useState<Date | null>(() =>
-    endOfWeek(new Date(), { weekStartsOn: 1 }),
-  );
+  const [startDate, setStartDate] = useState<Date | null>(() => null);
+  const [endDate, setEndDate] = useState<Date | null>(() => null);
   const [columnMenuAnchor, setColumnMenuAnchor] = useState<HTMLElement | null>(
     null,
   );
@@ -293,8 +286,10 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
       if (searchTerm) params.set("search", searchTerm);
       if (filters.type && filters.type !== "all")
         params.set("type", filters.type);
-      // if (formattedStart) params.set("start_date", formattedStart);
-      // if (formattedEnd) params.set("end_date", formattedEnd);
+      if (formattedStart && formattedEnd) {
+        params.set("start_date", formattedStart);
+        params.set("end_date", formattedEnd);
+      }
       if (sorting.length > 0) {
         params.set("sort_by", sorting[0].id);
         params.set("sort_order", sorting[0].desc ? "desc" : "asc");
@@ -433,16 +428,28 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
           alignItems={{ sm: "center" }}
         >
           <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-            {/* <DateRangePickerBox
+            <DateRangePickerBox
               from={startDate}
               to={endDate}
+              allowClear
+              placeholder="Select date range"
               onChange={(range) => {
+                if (!range.from && !range.to) {
+                  setStartDate(null);
+                  setEndDate(null);
+                  return;
+                }
                 if (range.from && range.to) {
                   setStartDate(range.from);
                   setEndDate(range.to);
+                  return;
+                }
+                if (range.from) {
+                  setStartDate(range.from);
+                  setEndDate(range.from);
                 }
               }}
-            /> */}
+            />
             <TextField
               size="small"
               placeholder="Search..."
@@ -498,7 +505,8 @@ const InternalOrders = ({ projectId }: { projectId: number }) => {
                 Total
               </Typography>
               <Typography variant="subtitle2" fontWeight={700} noWrap>
-                {recordsCurrency}{recordsTotal}
+                {recordsCurrency}
+                {recordsTotal}
               </Typography>
             </Box>
             <Tooltip title="Column visibility">

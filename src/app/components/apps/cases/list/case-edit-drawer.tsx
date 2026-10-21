@@ -395,6 +395,32 @@ export default function CaseEditDrawer({
                     }
                   />
                 </Box>
+                {(
+                  [
+                    ["po_sum", "PO sum"],
+                    ["variation_sum", "Variation sum"],
+                    ["variation_status", "Variation status"],
+                    ["client_po", "Client PO"],
+                    ["excel_status", "Excel status"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <Box mt={2} key={key}>
+                    <CustomTextField
+                      fullWidth
+                      label={label}
+                      disabled={isViewOnly}
+                      multiline={key === "excel_status"}
+                      minRows={key === "excel_status" ? 2 : undefined}
+                      value={formData[key] || ""}
+                      onChange={(e: any) =>
+                        setFormData((prev: any) => ({
+                          ...prev,
+                          [key]: e.target.value,
+                        }))
+                      }
+                    />
+                  </Box>
+                ))}
                 {typedAddress && predictions.length > 0 && (
                   <List
                     sx={{
