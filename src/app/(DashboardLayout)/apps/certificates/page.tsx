@@ -1,17 +1,14 @@
 import React from "react";
 import PageContainer from "@/app/components/container/PageContainer";
 import BlankCard from "@/app/components/shared/BlankCard";
-import PermissionGuard from "@/app/auth/PermissionGuard";
 import Certificates from "@/app/components/apps/certificates";
 
 const CertificatesPage = () => {
   return (
     <PageContainer title="Certificates" description="Company certificates">
-      <PermissionGuard permission="Documents">
-        <BlankCard>
-          <Certificates />
-        </BlankCard>
-      </PermissionGuard>
+      <BlankCard>
+        <Certificates />
+      </BlankCard>
     </PageContainer>
   );
 };
