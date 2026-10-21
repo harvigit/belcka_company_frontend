@@ -7,7 +7,7 @@ import Certificates from "@/app/components/apps/certificates";
 const CertificatesPage = () => {
   return (
     <PageContainer title="Certificates" description="Company certificates">
-      <PermissionGuard permission="Certificates">
+      <PermissionGuard permission="Documents">
         <BlankCard>
           <Certificates />
         </BlankCard>
