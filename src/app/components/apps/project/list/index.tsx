@@ -240,13 +240,47 @@ const formatActivityDate = (value?: string | null) => {
   return fallback.isValid() ? fallback.format("DD/MM/YYYY") : "-";
 };
 
-const getExportPreviewColumns = () => [
+// Optional export columns, included only when visible in the listing table.
+const EXPORT_OPTIONAL_COLUMNS = [
+  { columnId: "total_working_users", exportKey: "on_site" },
+  { columnId: "limit", exportKey: "limit" },
+] as const;
+
+const getExportPreviewColumns = (extraColumns: string[] = []) => [
   {
     key: "name",
     label: "Project",
     render: (row: ProjectDashboardRow) => row.name || "-",
     footer: () => "Category Totals",
   },
+  {
+    key: "teams",
+    label: "Teams",
+    render: (row: ProjectDashboardRow) =>
+      `${toCount(row.working_teams)} / ${toCount(row.assigned_teams)}`,
+    footer: () => "",
+  },
+  ...(extraColumns.includes("on_site")
+    ? [
+        {
+          key: "on_site",
+          label: "On site",
+          render: (row: ProjectDashboardRow) =>
+            String(toCount(row.total_working_users)),
+          footer: () => "",
+        },
+      ]
+    : []),
+  ...(extraColumns.includes("limit")
+    ? [
+        {
+          key: "limit",
+          label: "Limit",
+          render: (row: ProjectDashboardRow) => String(toCount(row.limit)),
+          footer: () => "",
+        },
+      ]
+    : []),
   {
     key: "material",
     label: "Material",
@@ -598,8 +632,13 @@ const ProjectDashboard = () => {
     usePersistentColumnVisibility({
       storageKey: `cv_${user?.company_id}_${user?.id}_project_dashboard`,
       enabled: !!user?.id,
+      defaultVisibility: { total_working_users: false, limit: false },
       alwaysVisibleColumns: ["drag", "order", "section", "select", "actions"],
     });
+
+  const exportExtraColumns = EXPORT_OPTIONAL_COLUMNS.filter(
+    ({ columnId }) => columnVisibility[columnId] !== false,
+  ).map(({ exportKey }) => exportKey);
 
   const getExportPayload = (range?: {
     start: Date | null;
@@ -612,6 +651,9 @@ const ProjectDashboard = () => {
       company_id: user.company_id,
       search: searchTerm,
       status: filters.status,
+      ...(exportExtraColumns.length > 0
+        ? { extra_columns: exportExtraColumns.join(",") }
+        : {}),
       ...(selectedIds.length > 0 ? { ids: selectedIds.join(",") } : {}),
       ...(start && end
         ? {
@@ -1151,7 +1193,13 @@ const ProjectDashboard = () => {
       columnHelper.accessor("working_teams", {
         header: () => <HeaderLabel>Teams</HeaderLabel>,
         meta: { label: "Teams" },
-        cell: ({ getValue }) => <NumberCell value={getValue()} />,
+        cell: ({ row }) => (
+          <NumberCell
+            value={`${toCount(row.original.working_teams)} / ${toCount(
+              row.original.assigned_teams,
+            )}`}
+          />
+        ),
       }),
       columnHelper.accessor("total_working_users", {
         header: () => <HeaderLabel>On site</HeaderLabel>,
@@ -1467,7 +1515,11 @@ const ProjectDashboard = () => {
     name: column.id ?? "Unnamed Column",
     width: "auto",
   }));
-  const exportPreviewColumns = useMemo(() => getExportPreviewColumns(), []);
+  const exportPreviewColumns = useMemo(
+    () => getExportPreviewColumns(exportExtraColumns),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [exportExtraColumns.join(",")],
+  );
 
   return (
     <PermissionGuard permission="Project">
