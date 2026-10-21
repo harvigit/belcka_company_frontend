@@ -62,6 +62,7 @@ interface Amounts {
 interface ProjectSpend extends Amounts {
     project_id: number | null;
     project_name: string;
+    project_code: string | null;
 }
 
 interface UserSpend extends Amounts {
@@ -360,6 +361,7 @@ export default function GroupAnalytics({embedded = false}: { embedded?: boolean 
                 .map((rows) => ({
                     project_id: rows[0].project_id,
                     project_name: rows[0].project_name,
+                    project_code: rows[0].project_code,
                     ...sumAmounts(rows),
                 }))
                 .sort(byGross);
@@ -587,6 +589,7 @@ export default function GroupAnalytics({embedded = false}: { embedded?: boolean 
                                     <TableRow>
                                         <TableCell sx={{width: 40}}/>
                                         <TableCell>Group / Project</TableCell>
+                                        <TableCell sx={{whiteSpace: 'nowrap'}}>Project code</TableCell>
                                         <TableCell align="right">Users</TableCell>
                                         {amountColumns.map((col) => (
                                             <TableCell key={col.key} align="right" sx={{whiteSpace: 'nowrap'}}>
@@ -619,6 +622,7 @@ export default function GroupAnalytics({embedded = false}: { embedded?: boolean 
                                                             sx={{ml: 1, fontWeight: 400}}
                                                         />
                                                     </TableCell>
+                                                    <TableCell/>
                                                     <TableCell align="right">
                                                         <Tooltip title="View users" arrow>
                                                             <Box
@@ -651,6 +655,9 @@ export default function GroupAnalytics({embedded = false}: { embedded?: boolean 
                                                             <TableCell/>
                                                             <TableCell sx={{pl: 4, color: 'text.secondary'}}>
                                                                 {project.project_name}
+                                                            </TableCell>
+                                                            <TableCell sx={{color: 'text.secondary'}}>
+                                                                {project.project_code || '-'}
                                                             </TableCell>
                                                             <TableCell/>
                                                             {amountColumns.map((col) => (
@@ -863,6 +870,7 @@ export default function GroupAnalytics({embedded = false}: { embedded?: boolean 
                                     <TableRow>
                                         <TableCell sx={{width: 40}}/>
                                         <TableCell>User / Project</TableCell>
+                                        <TableCell sx={{whiteSpace: 'nowrap'}}>Project code</TableCell>
                                         {amountColumns.map((col) => (
                                             <TableCell key={col.key} align="right" sx={{whiteSpace: 'nowrap'}}>
                                                 {col.label}
@@ -873,7 +881,7 @@ export default function GroupAnalytics({embedded = false}: { embedded?: boolean 
                                 <TableBody>
                                     {filteredUsers.length === 0 && (
                                         <TableRow>
-                                            <TableCell colSpan={amountColumns.length + 2} align="center"
+                                            <TableCell colSpan={amountColumns.length + 3} align="center"
                                                        sx={{py: 4, color: 'text.secondary'}}>
                                                 No users found
                                             </TableCell>
@@ -904,6 +912,7 @@ export default function GroupAnalytics({embedded = false}: { embedded?: boolean 
                                                             <span>{u.user_name}</span>
                                                         </Stack>
                                                     </TableCell>
+                                                    <TableCell/>
                                                     {amountColumns.map((col) => (
                                                         <TableCell key={col.key} align="right"
                                                                    sx={{whiteSpace: 'nowrap'}}>
@@ -917,6 +926,9 @@ export default function GroupAnalytics({embedded = false}: { embedded?: boolean 
                                                             <TableCell/>
                                                             <TableCell sx={{pl: 6, color: 'text.secondary'}}>
                                                                 {project.project_name}
+                                                            </TableCell>
+                                                            <TableCell sx={{color: 'text.secondary'}}>
+                                                                {project.project_code || '-'}
                                                             </TableCell>
                                                             {amountColumns.map((col) => (
                                                                 <TableCell
