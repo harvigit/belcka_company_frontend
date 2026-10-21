@@ -29,6 +29,7 @@ type Props = {
     buttonLabelAlign?: 'left' | 'space-between';
     buttonMinWidth?: number | string;
     placeholder?: string;
+    allowClear?: boolean;
 };
 
 const generatePayrollRanges = (cycle: PayrollCycle, count = 10): { from: Date; to: Date }[] => {
@@ -75,6 +76,7 @@ const DateRangePickerBox: React.FC<Props> = ({
     buttonLabelAlign = 'space-between',
     buttonMinWidth = 230,
     placeholder = 'Select Date Range',
+    allowClear = false,
 }) => {
     const { t } = useTranslation();
     const today = new Date();
@@ -113,6 +115,13 @@ const DateRangePickerBox: React.FC<Props> = ({
     const handleCancel = () => {
         setTempRange({ from: from ?? undefined, to: to ?? undefined });
         setSelectedPresetIndex(null);
+        handleClose();
+    };
+
+    const handleClear = () => {
+        setTempRange({ from: undefined, to: undefined });
+        setSelectedPresetIndex(null);
+        onChange({ from: null, to: null });
         handleClose();
     };
 
@@ -210,9 +219,14 @@ const DateRangePickerBox: React.FC<Props> = ({
                             className="custom-day-picker"
                             weekStartsOn={1}
                         />
-                        <Stack direction="row" justifyContent="flex-end" spacing={1} mt={2}>
-                            <Button onClick={handleCancel}>{t('Cancel')}</Button>
-                            <Button variant="contained" onClick={handleOk}>{t('OK')}</Button>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2}>
+                            {allowClear ? (
+                                <Button onClick={handleClear} color="inherit">{t('Clear')}</Button>
+                            ) : <Box />}
+                            <Stack direction="row" spacing={1}>
+                                <Button onClick={handleCancel}>{t('Cancel')}</Button>
+                                <Button variant="contained" onClick={handleOk}>{t('OK')}</Button>
+                            </Stack>
                         </Stack>
                     </Box>
                 </Box>
