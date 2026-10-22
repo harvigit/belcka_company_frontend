@@ -43,11 +43,10 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 type SurveyElement = {
   id: number;
   name: string;
-  description: string | null;
   status: boolean | number;
 };
 
-const emptyForm = { id: 0, name: "", description: "" };
+const emptyForm = { id: 0, name: "" };
 
 const isActive = (status: boolean | number) =>
   status === true || Number(status) === 1;
@@ -110,7 +109,6 @@ const SurveyElements = () => {
     setFormData({
       id: element.id,
       name: element.name || "",
-      description: element.description || "",
     });
     setDialogOpen(true);
   };
@@ -125,7 +123,6 @@ const SurveyElements = () => {
     try {
       const payload = {
         name: formData.name.trim(),
-        description: formData.description.trim(),
       };
       const res = formData.id
         ? await api.put("survey-elements/update", { id: formData.id, ...payload })
@@ -248,15 +245,6 @@ const SurveyElements = () => {
         cell: ({ row }: { row: { original: SurveyElement } }) => (
           <Typography fontWeight={600} className="f-14">
             {row.original.name || "-"}
-          </Typography>
-        ),
-      },
-      {
-        id: "description",
-        header: () => <Typography variant="body2">Description</Typography>,
-        cell: ({ row }: { row: { original: SurveyElement } }) => (
-          <Typography className="f-14">
-            {row.original.description || "-"}
           </Typography>
         ),
       },
@@ -458,19 +446,6 @@ const SurveyElements = () => {
                   }))
                 }
                 fullWidth
-              />
-              <TextField
-                label="Description"
-                value={formData.description}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    description: event.target.value,
-                  }))
-                }
-                fullWidth
-                multiline
-                minRows={3}
               />
             </Stack>
           </DialogContent>
