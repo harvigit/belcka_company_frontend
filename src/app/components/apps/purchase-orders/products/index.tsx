@@ -320,15 +320,23 @@ const PurchaseProductList: React.FC<Props> = ({
           (filters.address && filters.address !== "All");
         const listFilterActive =
           !isSearching && (nameFilterActive || filters.lowStock);
+        const listFilterKey = [
+          filters.supplier || "",
+          filters.project || "",
+          filters.address || "",
+          filters.lowStock ? "1" : "0",
+          String(searchTerm).trim(),
+        ].join("|");
+        const filterChanged = listFilterKey !== listFilterKeyRef.current;
         setData((prevData) => {
-          if (listFilterActive) {
-            const prevById = new Map(prevData.map((item) => [item.id, item]));
-            return fetchedItems.map(
-              (item: any) => prevById.get(item.id) ?? item,
-            );
-          }
+          const prevById = new Map(prevData.map((item) => [item.id, item]));
+          const mergedFetched = fetchedItems.map(
+            (item: any) => prevById.get(item.id) ?? item,
+          );
           const currentSelected = selectedRowIdsRef.current;
-          const pinnedItems = prevData.filter(
+          const pinnedItems = (
+            listFilterActive && filterChanged ? [] : prevData
+          ).filter(
             (item) =>
               currentSelected.has(item.id) || Number(item.total_qty) > 0,
           );
@@ -340,7 +348,7 @@ const PurchaseProductList: React.FC<Props> = ({
             return [...fetchedItems, ...pinnedNotInFetch];
           }
           const pinnedIds = new Set(pinnedItems.map((item) => item.id));
-          const newItems = fetchedItems.filter(
+          const newItems = mergedFetched.filter(
             (item: any) => !pinnedIds.has(item.id),
           );
           return [...pinnedItems, ...newItems];
@@ -349,14 +357,6 @@ const PurchaseProductList: React.FC<Props> = ({
           fetchedItems.map((item: any) => item.id),
         );
         setLatestFetchedIds(fetchedIdSet);
-        const listFilterKey = [
-          filters.supplier || "",
-          filters.project || "",
-          filters.address || "",
-          filters.lowStock ? "1" : "0",
-          String(searchTerm).trim(),
-        ].join("|");
-        const filterChanged = listFilterKey !== listFilterKeyRef.current;
         const resetSelection = selectionResetRef.current;
         listFilterKeyRef.current = listFilterKey;
         selectionResetRef.current = false;
