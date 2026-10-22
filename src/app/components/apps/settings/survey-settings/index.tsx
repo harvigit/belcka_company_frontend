@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Box, Tab, Tabs } from "@mui/material";
 import SurveyElements from "@/app/components/apps/settings/survey-elements";
 import SurveyGroups from "@/app/components/apps/settings/survey-groups";
+import SurveyTemplates from "@/app/components/apps/settings/survey-templates";
 
 const SurveySettings = () => {
   const [tab, setTab] = useState(0);
@@ -24,9 +25,10 @@ const SurveySettings = () => {
       >
         <Tab label="Elements" sx={{ minHeight: 42 }} />
         <Tab label="Groups" sx={{ minHeight: 42 }} />
+        <Tab label="Templates" sx={{ minHeight: 42 }} />
       </Tabs>
       <Box sx={{ flex: 1, minHeight: 0 }}>
-        {tab === 0 ? <SurveyElements /> : <SurveyGroups />}
+        {tab === 0 ? <SurveyElements /> : tab === 1 ? <SurveyGroups /> : <SurveyTemplates />}
       </Box>
     </Box>
   );
