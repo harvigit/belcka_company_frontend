@@ -29,7 +29,6 @@ import {
   Typography,
 } from "@mui/material";
 import {
-  IconBookmark,
   IconEye,
   IconFileExport,
   IconFilter,
@@ -88,12 +87,11 @@ import { hasPermission } from "@/lib/permissions";
 import dynamic from "next/dynamic";
 import { useHasOpened } from "@/hooks/useHasOpened";
 
-// Settings, module panels and the favourites drawer only render after a click, so load them on demand.
+// Settings and module panels only render after a click, so load them on demand.
 const Setting = dynamic(() => import("@/app/components/apps/projects/setting"), { ssr: false });
 const AddressWorkspace = dynamic(() => import("@/app/components/apps/addresses/list/address-workspace"), { ssr: false });
 const CasesList = dynamic(() => import("@/app/components/apps/cases/list"), { ssr: false });
 const CheckinsList = dynamic(() => import("@/app/components/apps/checkins"), { ssr: false });
-const FavoriteProductsDrawer = dynamic(() => import("../FavoriteProductsDrawer"), { ssr: false });
 
 dayjs.extend(customParseFormat);
 
@@ -568,8 +566,6 @@ const ProjectDashboard = () => {
   const [exportStartDate, setExportStartDate] = useState<Date | null>(null);
   const [exportEndDate, setExportEndDate] = useState<Date | null>(null);
   const exportPreviewRequestId = useRef(0);
-  const tableContainerRef = React.useRef<HTMLDivElement>(null);
-  const [isScrollable, setIsScrollable] = React.useState(false);
 
   const [settingOpen, setSettingOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -590,38 +586,7 @@ const ProjectDashboard = () => {
     (item) => item.key === moduleDrawer,
   );
 
-  const [productDrawer, setProductDrawer] = useState(false);
   const settingMounted = useHasOpened(settingOpen);
-  const productDrawerMounted = useHasOpened(productDrawer);
-  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
-
-  React.useEffect(() => {
-    const checkScroll = () => {
-      if (tableContainerRef.current) {
-        setIsScrollable(
-          tableContainerRef.current.scrollWidth >
-            tableContainerRef.current.clientWidth,
-        );
-      }
-    };
-    checkScroll();
-    window.addEventListener("resize", checkScroll);
-
-    const observer = new MutationObserver(checkScroll);
-    if (tableContainerRef.current) {
-      observer.observe(tableContainerRef.current, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-      });
-    }
-
-    return () => {
-      window.removeEventListener("resize", checkScroll);
-      observer.disconnect();
-    };
-  }, []);
-
   const handleSelectAllRows = (checked: boolean) => {
     if (checked) {
       setSelectedRowIds(new Set(data.map((item) => item.id)));
@@ -639,7 +604,7 @@ const ProjectDashboard = () => {
       storageKey: `cv_${user?.company_id}_${user?.id}_project_dashboard`,
       enabled: !!user?.id,
       defaultVisibility: { total_working_users: false, limit: false },
-      alwaysVisibleColumns: ["drag", "order", "section", "select", "actions"],
+      alwaysVisibleColumns: ["drag", "order", "section", "select"],
     });
 
   const exportExtraColumns = EXPORT_OPTIONAL_COLUMNS.filter(
@@ -1328,38 +1293,6 @@ const ProjectDashboard = () => {
           </Typography>
         ),
       }),
-      columnHelper.display({
-        id: "actions",
-        header: "Actions",
-        meta: { label: "Actions" },
-        enableSorting: false,
-        enableHiding: false,
-        cell: ({ row }) => {
-          const item = row.original;
-
-          return (
-            <Stack
-              direction="row"
-              alignItems="center"
-              onClick={(e) => e.stopPropagation()}
-              sx={{ px: 1 }}
-            >
-              <Tooltip title="Favorite Products">
-                <IconButton
-                  color="success"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveProjectId(item.id);
-                    setProductDrawer(true);
-                  }}
-                >
-                  <IconBookmark size={18} />
-                </IconButton>
-              </Tooltip>
-            </Stack>
-          );
-        },
-      }),
     ],
     [currency, data, hoveredRow, selectedRowIds, user?.company_id],
   );
@@ -1687,8 +1620,7 @@ const ProjectDashboard = () => {
                     const columnOptions = table
                       .getAllLeafColumns()
                       .filter((col: any) => {
-                        if (col.id === "select" || col.id === "actions")
-                          return false;
+                        if (col.id === "select") return false;
                         const label = String(
                           col.columnDef.meta?.label ||
                             (typeof col.columnDef.header === "string"
@@ -1842,15 +1774,6 @@ const ProjectDashboard = () => {
             {moduleDrawer === "checkins" ? <CheckinsList embedded /> : null}
           </Box>
         </Drawer>
-
-        {productDrawerMounted && (
-          <FavoriteProductsDrawer
-            open={productDrawer}
-            projectId={activeProjectId}
-            companyId={user?.company_id}
-            onClose={() => setProductDrawer(false)}
-          />
-        )}
 
         <Dialog
           open={filterOpen}
@@ -2161,7 +2084,6 @@ const ProjectDashboard = () => {
         </Dialog>
 
         <TableContainer
-          ref={tableContainerRef}
           sx={{
             flex: 1,
             minHeight: 0,
@@ -2186,16 +2108,6 @@ const ProjectDashboard = () => {
                           paddingTop: "10px",
                           paddingBottom: "10px",
                           width: header.column.id === "select" ? 30 : "auto",
-
-                          ...(header.column.id === "actions" && {
-                            position: "sticky",
-                            right: 0,
-                            backgroundColor: "background.paper",
-                            zIndex: 3,
-                            boxShadow: isScrollable
-                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                              : "none",
-                          }),
                         }}
                       >
                         <Box
@@ -2355,15 +2267,6 @@ const ProjectDashboard = () => {
                                     key={cell.id}
                                     sx={{
                                       padding: "10px",
-                                      ...(cell.column.id === "actions" && {
-                                        position: "sticky",
-                                        right: 0,
-                                        backgroundColor: "background.paper",
-                                        zIndex: 1,
-                                        boxShadow: isScrollable
-                                          ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                                          : "none",
-                                      }),
                                     }}
                                   >
                                     {flexRender(
@@ -2394,15 +2297,6 @@ const ProjectDashboard = () => {
                           key={cell.id}
                           sx={{
                             padding: "10px",
-                            ...(cell.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 1,
-                              boxShadow: isScrollable
-                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
-                                : "none",
-                            }),
                           }}
                         >
                           {flexRender(

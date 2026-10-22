@@ -12,12 +12,15 @@ import {
   CircularProgress,
   Paper,
   IconButton,
+  Popover,
   Stack,
   TextField,
+  Tooltip,
 } from "@mui/material";
 import {
   IconArrowBackUp,
   IconArrowLeft,
+  IconDotsVertical,
   IconEye,
   IconFile,
   IconFileDownload,
@@ -52,6 +55,10 @@ function CommentRow({
   date,
   onReply,
   replyLabel,
+  liked,
+  likeCount,
+  likedBy = [],
+  onLike,
 }: {
   name?: string;
   image?: string;
@@ -59,6 +66,10 @@ function CommentRow({
   date?: string;
   onReply?: () => void;
   replyLabel?: string;
+  liked?: boolean;
+  likeCount?: number;
+  likedBy?: { user_id: number; user_name: string }[];
+  onLike?: () => void;
 }) {
   return (
     <Stack
@@ -90,6 +101,7 @@ function CommentRow({
               variant="text"
               size="small"
               onClick={onReply}
+              aria-label={replyLabel}
               startIcon={<IconArrowBackUp size={14} stroke={1.75} />}
               sx={{
                 p: 0,
@@ -104,8 +116,51 @@ function CommentRow({
                 "&:hover": { color: "primary.main", bgcolor: "transparent" },
               }}
             >
-              {/* {replyLabel} */}
+              {null}
             </Button>
+          ) : null}
+          {onLike ? (
+            <Tooltip
+              arrow
+              placement="top"
+              disableHoverListener={likedBy.length === 0}
+              title={
+                <Stack spacing={0.25}>
+                  {likedBy.map((person) => (
+                    <Typography
+                      key={person.user_id}
+                      variant="caption"
+                      sx={{ display: "block", color: "inherit" }}
+                    >
+                      {person.user_name}
+                    </Typography>
+                  ))}
+                </Stack>
+              }
+            >
+              <Stack direction="row" spacing={0.25} alignItems="center">
+                <IconButton
+                  size="small"
+                  aria-label="Like comment"
+                  onClick={onLike}
+                  sx={{
+                    p: 0.25,
+                    color: liked ? "#1e4db7" : "text.secondary",
+                  }}
+                >
+                  {liked ? (
+                    <ThumbUpAltIcon sx={{ fontSize: 16 }} />
+                  ) : (
+                    <ThumbUpOffAltIcon sx={{ fontSize: 16 }} />
+                  )}
+                </IconButton>
+                {Number(likeCount) > 0 ? (
+                  <Typography variant="caption" color="text.secondary">
+                    {likeCount}
+                  </Typography>
+                ) : null}
+              </Stack>
+            </Tooltip>
           ) : null}
         </Stack>
       </Box>
@@ -160,17 +215,15 @@ export default function AnnouncementsList({
   const [announcementDetails, setAnnouncementDetails] = useState<any>([]);
   const [announcementDrawerOpen, setAnnouncementDrawerOpen] = useState(false);
   const [emojiList, setEmojiList] = useState(fallbackEmojis);
-  const [allowReactions, setAllowReactions] = useState(true);
-  const [allowComments, setAllowComments] = useState(true);
+  const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(
+    null,
+  );
   const [comments, setComments] = useState<any[]>([]);
   const [commentText, setCommentText] = useState("");
   const [replyTo, setReplyTo] = useState<{ id: number; name: string } | null>(
     null,
   );
   const [commentSaving, setCommentSaving] = useState(false);
-  const [likes, setLikes] = useState<
-    Record<number, { liked: boolean; count: number }>
-  >({});
   const session = useSession();
   const user = session.data?.user as User & { id?: number | null };
   const limit = 20;
@@ -286,84 +339,130 @@ export default function AnnouncementsList({
     setReplyTo(null);
     setComments([]);
     fetchAnnouncementDetails(announcementId);
-    if (allowComments) fetchComments(announcementId);
+    fetchComments(announcementId);
   };
 
   const saveAnnouncementSettings = async (next: {
     allow_reactions?: boolean;
     allow_comments?: boolean;
   }) => {
+    const announcementId = Number(announcementDetails?.id);
+    if (!announcementId) return;
     const payload = {
+      announcement_id: announcementId,
       company_id: companyId,
-      allow_reactions: next.allow_reactions ?? allowReactions,
-      allow_comments: next.allow_comments ?? allowComments,
+      user_id: userId,
+      allow_reactions:
+        next.allow_reactions ?? announcementDetails?.allow_reactions !== false,
+      allow_comments:
+        next.allow_comments ?? announcementDetails?.allow_comments !== false,
     };
-    setAllowReactions(payload.allow_reactions);
-    setAllowComments(payload.allow_comments);
+    setAnnouncementDetails((current: any) =>
+      current?.id ? { ...current, ...payload } : current,
+    );
     try {
-      const response = await api.post("setting/announcement-settings", payload);
+      const response = await api.post("announcements/settings", payload);
       if (response.data?.IsSuccess === false) {
         toast.error(response.data.message);
+        fetchAnnouncementDetails(announcementId);
+        return;
       }
+      onUpdate?.();
     } catch (error) {
       console.error("Failed to save announcement settings:", error);
       toast.error(t("Failed to save announcement settings."));
+      fetchAnnouncementDetails(announcementId);
     }
   };
 
-  const likeInfo = (item: any) => {
-    const override = likes[item?.id];
-    const liked = override?.liked ?? Boolean(item?.is_like);
-    const count =
-      override?.count ?? Number(item?.like_count ?? (liked ? 1 : 0));
-    return { liked, count, filled: count > 0 };
+  const currentUserName =
+    `${(user as User & { first_name?: string | null; last_name?: string | null })?.first_name ?? ""} ${(user as User & { last_name?: string | null })?.last_name ?? ""}`.trim() ||
+    user?.name ||
+    "You";
+
+  const patchCommentLike = (
+    list: any[],
+    commentId: number,
+    liked: boolean,
+    count: number,
+    likedBy?: { user_id: number; user_name: string }[],
+  ) => {
+    const apply = (item: any) => {
+      const people = Array.isArray(likedBy)
+        ? likedBy
+        : liked
+          ? [
+              ...(item.liked_by ?? []).filter(
+                (person: any) => Number(person.user_id) !== Number(userId),
+              ),
+              { user_id: userId, user_name: currentUserName },
+            ]
+          : (item.liked_by ?? []).filter(
+              (person: any) => Number(person.user_id) !== Number(userId),
+            );
+      return { ...item, is_like: liked, like_count: count, liked_by: people };
+    };
+    return list.map((item) => {
+      if (item.id === commentId) return apply(item);
+      if (!item.replies?.length) return item;
+      return {
+        ...item,
+        replies: item.replies.map((reply: any) =>
+          reply.id === commentId ? apply(reply) : reply,
+        ),
+      };
+    });
   };
 
-  const handleLike = async (item: any) => {
-    const current = likeInfo(item);
-    const nextLiked = !current.liked;
-    const nextCount = Math.max(0, current.count + (nextLiked ? 1 : -1));
-    setLikes((previous) => ({
-      ...previous,
-      [item.id]: { liked: nextLiked, count: nextCount },
-    }));
+  const handleCommentLike = async (comment: any) => {
+    const nextLiked = !Boolean(comment.is_like);
+    const nextCount = Math.max(
+      0,
+      Number(comment.like_count || 0) + (nextLiked ? 1 : -1),
+    );
+    setComments((current) =>
+      patchCommentLike(current, comment.id, nextLiked, nextCount),
+    );
     try {
-      const response = await api.post("announcements/like", {
-        announcement_id: item.id,
+      const response = await api.post("announcements/comment-like", {
+        comment_id: comment.id,
+        announcement_id: announcementDetails?.id,
         user_id: userId,
         company_id: companyId,
         is_like: nextLiked,
       });
       if (response.data?.IsSuccess === false) {
-        setLikes((previous) => ({
-          ...previous,
-          [item.id]: { liked: current.liked, count: current.count },
-        }));
+        setComments((current) =>
+          patchCommentLike(
+            current,
+            comment.id,
+            Boolean(comment.is_like),
+            Number(comment.like_count || 0),
+          ),
+        );
         toast.error(response.data.message);
         return;
       }
       const info = response.data?.info;
-      setLikes((previous) => ({
-        ...previous,
-        [item.id]: {
-          liked: Boolean(info?.is_like),
-          count: Number(info?.like_count ?? nextCount),
-        },
-      }));
-      onUpdate?.();
-      if (announcementDetails?.id === item.id) {
-        setAnnouncementDetails((currentDetails: any) => ({
-          ...currentDetails,
-          is_like: Boolean(info?.is_like),
-          like_count: Number(info?.like_count ?? nextCount),
-        }));
-      }
+      setComments((current) =>
+        patchCommentLike(
+          current,
+          comment.id,
+          Boolean(info?.is_like),
+          Number(info?.like_count ?? nextCount),
+          Array.isArray(info?.liked_by) ? info.liked_by : undefined,
+        ),
+      );
     } catch (error) {
-      setLikes((previous) => ({
-        ...previous,
-        [item.id]: { liked: current.liked, count: current.count },
-      }));
-      console.error("Failed to update like:", error);
+      setComments((current) =>
+        patchCommentLike(
+          current,
+          comment.id,
+          Boolean(comment.is_like),
+          Number(comment.like_count || 0),
+        ),
+      );
+      console.error("Failed to update comment like:", error);
       toast.error(t("Failed to update the like."));
     }
   };
@@ -416,19 +515,6 @@ export default function AnnouncementsList({
   }, [isDrawerOpen]);
 
   useEffect(() => {
-    if (!isDrawerOpen || !companyId) return;
-    api
-      .get(`setting/announcement-settings?company_id=${companyId}`)
-      .then((response) => {
-        const settings = response.data?.data;
-        if (!settings) return;
-        setAllowReactions(settings.allow_reactions !== false);
-        setAllowComments(settings.allow_comments !== false);
-      })
-      .catch(() => undefined);
-  }, [isDrawerOpen, companyId]);
-
-  useEffect(() => {
     let active = true;
     api
       .get("announcements/emojis")
@@ -453,54 +539,12 @@ export default function AnnouncementsList({
     <Box>
       <Box
         display="flex"
-        justifyContent="space-between"
+        justifyContent="flex-end"
         alignItems="center"
         gap={2}
         flexWrap="wrap"
         px={2}
       >
-        {roleId == 1 ? (
-          <Stack spacing={1.25} sx={{ flex: 1, minWidth: 240, maxWidth: 420 }}>
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-            >
-              <Stack direction="row" spacing={1.25} alignItems="center">
-                <ThumbUpAltIcon sx={{ fontSize: 22, color: "#1e4db7" }} />
-                <Typography fontSize={15} color="text.primary">
-                  {t("Allow reactions")}
-                </Typography>
-              </Stack>
-              <IOSSwitch
-                checked={allowReactions}
-                onChange={(_event, checked) =>
-                  saveAnnouncementSettings({ allow_reactions: checked })
-                }
-              />
-            </Stack>
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-            >
-              <Stack direction="row" spacing={1.25} alignItems="center">
-                <IconMessage size={22} color="#1e4db7" stroke={1.75} />
-                <Typography fontSize={15} color="text.primary">
-                  {t("Allow comments")}
-                </Typography>
-              </Stack>
-              <IOSSwitch
-                checked={allowComments}
-                onChange={(_event, checked) =>
-                  saveAnnouncementSettings({ allow_comments: checked })
-                }
-              />
-            </Stack>
-          </Stack>
-        ) : (
-          <Box />
-        )}
         {roleId == 1 && (
           <Button
             variant="contained"
@@ -666,20 +710,21 @@ export default function AnnouncementsList({
                         </Box>
 
                         <Box
-                          display={"flex"}
-                          justifyContent={"space-between"}
-                          alignItems={"center"}
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
                           gap={1}
                           flexWrap="wrap"
-                          sx={{ minWidth: 0, maxWidth: "100%" }}
+                          sx={{ minWidth: 0, maxWidth: "100%", mt: 1 }}
                         >
-                          {allowReactions && it.feeds && it.feeds.length > 0 ? (
+                          {it.allow_reactions !== false &&
+                          it.feeds &&
+                          it.feeds.length > 0 ? (
                             <Box
                               sx={{
                                 display: "flex",
                                 alignItems: "center",
-                                gap: 1.5,
-                                mt: 2,
+                                gap: 1,
                                 flexWrap: "wrap",
                               }}
                             >
@@ -721,14 +766,15 @@ export default function AnnouncementsList({
                               ))}
                             </Box>
                           ) : (
-                            <Box></Box>
+                            <Box />
                           )}
                           <Stack
                             direction="row"
                             spacing={0.5}
                             alignItems="center"
+                            sx={{ ml: "auto" }}
                           >
-                            {allowReactions && (
+                            {it.allow_comments !== false && (
                               <Stack
                                 direction="row"
                                 spacing={0.25}
@@ -736,68 +782,56 @@ export default function AnnouncementsList({
                               >
                                 <IconButton
                                   size="small"
-                                  aria-label={t("Like")}
+                                  aria-label={t("Comments")}
                                   onClick={(event) => {
                                     event.stopPropagation();
-                                    handleLike(it);
+                                    handleOpenAnnouncementDrawer(it.id);
                                   }}
-                                  sx={{
-                                    color: likeInfo(it).filled
-                                      ? "#1e4db7"
-                                      : "text.secondary",
-                                  }}
+                                  sx={{ color: "text.secondary" }}
                                 >
-                                  {likeInfo(it).filled ? (
-                                    <ThumbUpAltIcon sx={{ fontSize: 20 }} />
-                                  ) : (
-                                    <ThumbUpOffAltIcon sx={{ fontSize: 20 }} />
-                                  )}
+                                  <IconMessage size={18} />
                                 </IconButton>
-                                {likeInfo(it).count > 0 && (
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    {likeInfo(it).count}
-                                  </Typography>
-                                )}
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  {it.comment_count || 0}
+                                </Typography>
                               </Stack>
                             )}
-                            {allowComments && (
-                              <Button
-                                size="small"
-                                color="inherit"
-                                startIcon={<IconMessage size={18} />}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleOpenAnnouncementDrawer(it.id);
-                                }}
-                                sx={{ textTransform: "none", fontWeight: 600 }}
+                            {it.read_count > 0 && it.user_id == user.id && (
+                              <Stack
+                                direction="row"
+                                spacing={0.25}
+                                alignItems="center"
                               >
-                                {t("Comments")} ({it.comment_count || 0})
-                              </Button>
+                                <IconButton
+                                  size="small"
+                                  aria-label={t("Views")}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenReadDrawer(it.id);
+                                  }}
+                                  sx={{ color: "text.secondary" }}
+                                >
+                                  <IconEye size={18} />
+                                </IconButton>
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  {it.read_count}
+                                </Typography>
+                              </Stack>
                             )}
                           </Stack>
-                          {it.read_count > 0 && it.user_id == user.id && (
-                            <Box sx={{ px: 1.5, py: 0.5 }}>
-                              <IconButton
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenReadDrawer(it.id);
-                                }}
-                              >
-                                <IconEye />
-                              </IconButton>
-                              {it.read_count}
-                            </Box>
-                          )}
                         </Box>
                       </>
                     }
                   />
 
                   {/* Emoji Popup */}
-                  {allowReactions && hoveredId === it.id && (
+                  {it.allow_reactions !== false && hoveredId === it.id && (
                     <Paper
                       sx={{
                         position: "absolute",
@@ -1041,10 +1075,63 @@ export default function AnnouncementsList({
               <IconButton onClick={() => setAnnouncementDrawerOpen(false)}>
                 <IconArrowLeft />
               </IconButton>
-              <Typography variant="h6" color="inherit" fontWeight={700}>
+              <Typography variant="h6" color="inherit" fontWeight={700} sx={{ flex: 1 }}>
                 {t("Announcement Details")}
               </Typography>
+              {(roleId == 1 ||
+                Number(announcementDetails?.user_id) === Number(userId)) && (
+                <IconButton
+                  aria-label={t("Announcement settings")}
+                  onClick={(event) => setSettingsAnchor(event.currentTarget)}
+                >
+                  <IconDotsVertical size={18} />
+                </IconButton>
+              )}
             </Box>
+            <Popover
+              open={Boolean(settingsAnchor)}
+              anchorEl={settingsAnchor}
+              onClose={() => setSettingsAnchor(null)}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+              <Stack spacing={1.25} sx={{ p: 2, minWidth: 280 }}>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  spacing={2}
+                >
+                  <Stack direction="row" spacing={1.25} alignItems="center">
+                    <ThumbUpAltIcon sx={{ fontSize: 22, color: "#1e4db7" }} />
+                    <Typography fontSize={15}>{t("Allow reactions")}</Typography>
+                  </Stack>
+                  <IOSSwitch
+                    checked={announcementDetails?.allow_reactions !== false}
+                    onChange={(_event, checked) =>
+                      saveAnnouncementSettings({ allow_reactions: checked })
+                    }
+                  />
+                </Stack>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  spacing={2}
+                >
+                  <Stack direction="row" spacing={1.25} alignItems="center">
+                    <IconMessage size={22} color="#1e4db7" stroke={1.75} />
+                    <Typography fontSize={15}>{t("Allow comments")}</Typography>
+                  </Stack>
+                  <IOSSwitch
+                    checked={announcementDetails?.allow_comments !== false}
+                    onChange={(_event, checked) =>
+                      saveAnnouncementSettings({ allow_comments: checked })
+                    }
+                  />
+                </Stack>
+              </Stack>
+            </Popover>
 
             {announcementDetails.length === 0 ? (
               <Typography color="textSecondary">
@@ -1195,7 +1282,7 @@ export default function AnnouncementsList({
                 ) : (
                   <></>
                 )}
-                {allowComments && (
+                {announcementDetails?.allow_comments !== false && (
                   <Box mt={2} sx={{ minWidth: 0, maxWidth: "100%" }}>
                     <Typography fontWeight={700} fontSize={16} sx={{ mb: 1.5 }}>
                       {t("Comments")} (
@@ -1228,6 +1315,14 @@ export default function AnnouncementsList({
                                 })
                               }
                               replyLabel={t("Reply")}
+                              liked={Boolean(comment.is_like)}
+                              likeCount={Number(comment.like_count || 0)}
+                              likedBy={
+                                Array.isArray(comment.liked_by)
+                                  ? comment.liked_by
+                                  : []
+                              }
+                              onLike={() => handleCommentLike(comment)}
                             />
                             {(comment.replies ?? []).length > 0 && (
                               <Stack
@@ -1250,6 +1345,14 @@ export default function AnnouncementsList({
                                     }
                                     text={reply.comment}
                                     date={reply.date}
+                                    liked={Boolean(reply.is_like)}
+                                    likeCount={Number(reply.like_count || 0)}
+                                    likedBy={
+                                      Array.isArray(reply.liked_by)
+                                        ? reply.liked_by
+                                        : []
+                                    }
+                                    onLike={() => handleCommentLike(reply)}
                                   />
                                 ))}
                               </Stack>
@@ -1325,7 +1428,7 @@ export default function AnnouncementsList({
                 )}
                 <Divider sx={{ mt: 1 }} />
                 <Box>
-                  {allowReactions &&
+                  {announcementDetails?.allow_reactions !== false &&
                     announcementDetails.feeds &&
                     announcementDetails.feeds.length > 0 && (
                       <Box
@@ -1339,38 +1442,60 @@ export default function AnnouncementsList({
                         }}
                       >
                         {t("Feeds")}
-                        {Object.entries(
-                          announcementDetails.feeds.reduce(
-                            (acc: any, feed: any) => {
-                              acc[feed.action] = (acc[feed.action] || 0) + 1;
-                              return acc;
-                            },
-                            {},
-                          ),
-                        ).map(([emoji, count]: any) => (
-                          <Box
-                            key={emoji}
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 0.5,
-                              backgroundColor: "#e0e0e0",
-                              borderRadius: "20px",
-                              px: 1.5,
-                              py: 0.5,
-                              cursor: "pointer",
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEmojiDrawer(announcementDetails.id);
-                            }}
-                          >
-                            <Typography>{emoji}</Typography>
-                            <Typography variant="body2" color="textSecondary">
-                              {count}
-                            </Typography>
-                          </Box>
-                        ))}
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                          {Object.entries(
+                            announcementDetails.feeds.reduce(
+                              (acc: any, feed: any) => {
+                                acc[feed.action] = (acc[feed.action] || 0) + 1;
+                                return acc;
+                              },
+                              {},
+                            ),
+                          ).map(([emoji, count]: any) => (
+                            <Box
+                              key={emoji}
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.5,
+                                backgroundColor: "#e0e0e0",
+                                borderRadius: "20px",
+                                px: 1.5,
+                                py: 0.5,
+                                cursor: "pointer",
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEmojiDrawer(announcementDetails.id);
+                              }}
+                            >
+                              <Typography>{emoji}</Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                {count}
+                              </Typography>
+                            </Box>
+                          ))}
+                        </Stack>
+                        <Stack spacing={1} sx={{ width: "100%" }}>
+                          {announcementDetails.feeds.map((feed: any) => (
+                            <Stack
+                              key={feed.id}
+                              direction="row"
+                              spacing={1.25}
+                              alignItems="center"
+                            >
+                              <Avatar
+                                src={feed.user_thumb_image || feed.user_image}
+                                alt={feed.user_name}
+                                sx={{ width: 32, height: 32 }}
+                              />
+                              <Typography fontSize={14} sx={{ flex: 1 }}>
+                                {feed.user_name}
+                              </Typography>
+                              <Typography fontSize={18}>{feed.action}</Typography>
+                            </Stack>
+                          ))}
+                        </Stack>
                       </Box>
                     )}
                 </Box>

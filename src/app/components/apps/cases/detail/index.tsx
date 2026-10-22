@@ -57,8 +57,14 @@ dayjs.extend(customParseFormat);
 type CaseDetailData = {
   id: number;
   name?: string | null;
+  case_name?: string | null;
   case_id?: string | null;
   ref?: string | null;
+  po_sum?: string | null;
+  variation_sum?: string | null;
+  variation_status?: string | null;
+  client_po?: string | null;
+  excel_status?: string | null;
   project_id?: number | null;
   project_name?: string | null;
   project_names?: string | null;
@@ -278,6 +284,13 @@ const DetailField = ({
   </Stack>
 );
 
+const CASE_METRIC_FIELDS = [
+  ["po_sum", "PO sum"],
+  ["variation_sum", "Variation sum"],
+  ["variation_status", "Variation status"],
+  ["client_po", "Client PO"],
+] as const;
+
 const CaseLocationMap = ({
   latitude,
   longitude,
@@ -417,6 +430,14 @@ const CaseDetail: React.FC<Props> = ({
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<CaseDetailData | null>(null);
   const [savingProgress, setSavingProgress] = useState(false);
+  const [savingCaseFields, setSavingCaseFields] = useState(false);
+  const [caseFields, setCaseFields] = useState({
+    po_sum: "",
+    variation_sum: "",
+    variation_status: "",
+    client_po: "",
+    excel_status: "",
+  });
   const [activity, setActivity] = useState<CaseActivityItem[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityDrawerOpen, setActivityDrawerOpen] = useState(false);
@@ -524,6 +545,60 @@ const CaseDetail: React.FC<Props> = ({
       setCheckinTotal(0);
     } finally {
       setCheckinsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setCaseFields({
+      po_sum: detail?.po_sum || "",
+      variation_sum: detail?.variation_sum || "",
+      variation_status: detail?.variation_status || "",
+      client_po: detail?.client_po || "",
+      excel_status: detail?.excel_status || "",
+    });
+  }, [detail]);
+
+  const saveCaseFields = async () => {
+    if (!detail?.id || !detail.project_id) return;
+    setSavingCaseFields(true);
+    try {
+      const res = await api.put("address/update", {
+        id: detail.id,
+        name: detail.case_name || detail.name,
+        project_id: detail.project_id,
+        project_ids: [detail.project_id],
+        lat: Number(detail.latitude),
+        lng: Number(detail.longitude),
+        type: "circle",
+        ref: detail.ref || "",
+        case_id: detail.case_id,
+        po_sum: caseFields.po_sum.trim(),
+        variation_sum: caseFields.variation_sum.trim(),
+        variation_status: caseFields.variation_status.trim(),
+        client_po: caseFields.client_po.trim(),
+        excel_status: caseFields.excel_status.trim(),
+      });
+      if (res.data?.IsSuccess === false) {
+        throw new Error(res.data.message || "Could not save case details");
+      }
+      setDetail((current) =>
+        current
+          ? {
+              ...current,
+              po_sum: caseFields.po_sum.trim() || null,
+              variation_sum: caseFields.variation_sum.trim() || null,
+              variation_status: caseFields.variation_status.trim() || null,
+              client_po: caseFields.client_po.trim() || null,
+              excel_status: caseFields.excel_status.trim() || null,
+            }
+          : current,
+      );
+      toast.success(res.data?.message || "Case details saved");
+      onUpdated?.();
+    } catch (error: any) {
+      toast.error(error?.message || "Could not save case details");
+    } finally {
+      setSavingCaseFields(false);
     }
   };
 
@@ -717,6 +792,102 @@ const CaseDetail: React.FC<Props> = ({
                   label="Reference"
                   value={formatValue(detail.ref)}
                 />
+                <Box sx={{ gridColumn: "1 / -1" }}>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr 1fr",
+                        md: "repeat(4, minmax(0, 1fr))",
+                      },
+                      gap: 1.5,
+                    }}
+                  >
+                    {CASE_METRIC_FIELDS.map(([key, label]) =>
+                      isAdmin ? (
+                        <Stack key={key} spacing={0.5} minWidth={0}>
+                          <Typography
+                            fontSize={12}
+                            color="text.secondary"
+                            fontWeight={600}
+                          >
+                            {label}
+                          </Typography>
+                          <TextField
+                            size="small"
+                            fullWidth
+                            value={caseFields[key]}
+                            onChange={(event) =>
+                              setCaseFields((current) => ({
+                                ...current,
+                                [key]: event.target.value,
+                              }))
+                            }
+                            sx={{
+                              "& .MuiOutlinedInput-root": {
+                                bgcolor: "#f7f9fc",
+                                borderRadius: "8px",
+                              },
+                            }}
+                          />
+                        </Stack>
+                      ) : (
+                        <DetailField
+                          key={key}
+                          label={label}
+                          value={formatValue(detail[key])}
+                        />
+                      ),
+                    )}
+                  </Box>
+                  <Box mt={1.5}>
+                    {isAdmin ? (
+                      <Stack spacing={0.5}>
+                        <Typography
+                          fontSize={12}
+                          color="text.secondary"
+                          fontWeight={600}
+                        >
+                          Excel status
+                        </Typography>
+                        <TextField
+                          size="small"
+                          fullWidth
+                          multiline
+                          minRows={2}
+                          value={caseFields.excel_status}
+                          onChange={(event) =>
+                            setCaseFields((current) => ({
+                              ...current,
+                              excel_status: event.target.value,
+                            }))
+                          }
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              bgcolor: "#f7f9fc",
+                              borderRadius: "8px",
+                            },
+                          }}
+                        />
+                        <Box display="flex" justifyContent="flex-end">
+                          <Button
+                            size="small"
+                            variant="contained"
+                            disabled={savingCaseFields}
+                            onClick={saveCaseFields}
+                          >
+                            {savingCaseFields ? "Saving..." : "Save case fields"}
+                          </Button>
+                        </Box>
+                      </Stack>
+                    ) : (
+                      <DetailField
+                        label="Excel status"
+                        value={formatValue(detail.excel_status)}
+                      />
+                    )}
+                  </Box>
+                </Box>
                 <DetailField
                   label="Project"
                   value={formatValue(
