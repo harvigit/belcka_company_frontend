@@ -36,7 +36,7 @@ import UserSettings from '@/app/components/apps/settings/user-settings';
 import TaskUserCheckinSettings from '@/app/components/apps/tasks/settings/user-checkin-tasks';
 import UserGroupSettings from '@/app/components/apps/settings/user-groups';
 import AdminProjects from '@/app/components/apps/settings/projects';
-import SurveyElements from '@/app/components/apps/settings/survey-elements';
+import SurveySettings from '@/app/components/apps/settings/survey-settings';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -263,7 +263,7 @@ const AdminSetting = () => {
                                 <AdminProjects />
                             </TabPanel>
                             <TabPanel value={value} index={13}>
-                                <SurveyElements />
+                                <SurveySettings />
                             </TabPanel>
                         </BlankCard>
                     </Grid>
