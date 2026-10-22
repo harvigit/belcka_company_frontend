@@ -10,9 +10,6 @@ import {
   DialogTitle,
   IconButton,
   InputAdornment,
-  ListItemIcon,
-  Menu,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -25,7 +22,6 @@ import {
   Typography,
 } from "@mui/material";
 import {
-  IconDotsVertical,
   IconEdit,
   IconPlus,
   IconSearch,
@@ -51,6 +47,13 @@ const emptyForm = { id: 0, name: "" };
 const isActive = (status: boolean | number) =>
   status === true || Number(status) === 1;
 
+const columnWidth = (id: string) => {
+  if (id === "select") return 64;
+  if (id === "status") return 120;
+  if (id === "actions") return 120;
+  return undefined;
+};
+
 const errorMessage = (error: any, fallback: string) =>
   error?.response?.data?.message || fallback;
 
@@ -61,11 +64,6 @@ const SurveyElements = () => {
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [switchLoadingIds, setSwitchLoadingIds] = useState<Set<number>>(
     new Set(),
-  );
-  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-  const [rowMenuAnchor, setRowMenuAnchor] = useState<HTMLElement | null>(null);
-  const [rowMenuElement, setRowMenuElement] = useState<SurveyElement | null>(
-    null,
   );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -99,13 +97,11 @@ const SurveyElements = () => {
   };
 
   const openCreate = () => {
-    setMenuAnchor(null);
     setFormData(emptyForm);
     setDialogOpen(true);
   };
 
   const openEdit = (element: SurveyElement) => {
-    setRowMenuAnchor(null);
     setFormData({
       id: element.id,
       name: element.name || "",
@@ -172,8 +168,6 @@ const SurveyElements = () => {
   };
 
   const confirmDelete = (ids: number[]) => {
-    setMenuAnchor(null);
-    setRowMenuAnchor(null);
     setDeleteIds(ids);
     setDeleteOpen(true);
   };
@@ -243,10 +237,53 @@ const SurveyElements = () => {
         id: "name",
         header: () => <Typography variant="body2">Name</Typography>,
         cell: ({ row }: { row: { original: SurveyElement } }) => (
-          <Typography fontWeight={600} className="f-14">
-            {row.original.name || "-"}
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: 1,
+                bgcolor: "#e7ecf7",
+                color: "#1e4db7",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 700,
+                fontSize: 13,
+                flexShrink: 0,
+              }}
+            >
+              {(row.original.name || "?").charAt(0).toUpperCase()}
+            </Box>
+            <Typography
+              fontWeight={600}
+              color={isActive(row.original.status) ? "text.primary" : "text.secondary"}
+            >
+              {row.original.name || "-"}
+            </Typography>
+          </Stack>
         ),
+      },
+      {
+        id: "status",
+        enableSorting: false,
+        header: () => <Typography variant="body2">Active</Typography>,
+        cell: ({ row }: { row: { original: SurveyElement } }) => {
+          const element = row.original;
+          const active = isActive(element.status);
+          return (
+            <Tooltip title={active ? "Active" : "Inactive"}>
+              <span>
+                <IOSSwitch
+                  checked={active}
+                  disabled={switchLoadingIds.has(element.id)}
+                  onChange={(event) =>
+                    void changeStatus(element, event.target.checked)
+                  }
+                />
+              </span>
+            </Tooltip>
+          );
+        },
       },
       {
         id: "actions",
@@ -254,33 +291,21 @@ const SurveyElements = () => {
         header: () => <Typography variant="body2">Actions</Typography>,
         cell: ({ row }: { row: { original: SurveyElement } }) => {
           const element = row.original;
-          const active = isActive(element.status);
           return (
-            <Stack direction="row" alignItems="center" spacing={0.5}>
+            <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
               <Tooltip title="Edit">
                 <IconButton color="primary" onClick={() => openEdit(element)}>
                   <IconEdit size={18} />
                 </IconButton>
               </Tooltip>
-              <Tooltip title={active ? "Switch off" : "Switch on"}>
-                <span>
-                  <IOSSwitch
-                    checked={active}
-                    disabled={switchLoadingIds.has(element.id)}
-                    onChange={(event) =>
-                      void changeStatus(element, event.target.checked)
-                    }
-                  />
-                </span>
+              <Tooltip title="Delete">
+                <IconButton
+                  color="error"
+                  onClick={() => confirmDelete([element.id])}
+                >
+                  <IconTrash size={18} />
+                </IconButton>
               </Tooltip>
-              <IconButton
-                onClick={(event) => {
-                  setRowMenuAnchor(event.currentTarget);
-                  setRowMenuElement(element);
-                }}
-              >
-                <IconDotsVertical size={18} />
-              </IconButton>
             </Stack>
           );
         },
@@ -310,7 +335,8 @@ const SurveyElements = () => {
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
-        spacing={1}
+        alignItems="center"
+        spacing={1.5}
         px={2}
         py={1.5}
       >
@@ -339,31 +365,36 @@ const SurveyElements = () => {
               Delete
             </Button>
           )}
-          <IconButton onClick={(event) => setMenuAnchor(event.currentTarget)}>
-            <IconDotsVertical size={20} />
-          </IconButton>
-          <Menu
-            anchorEl={menuAnchor}
-            open={Boolean(menuAnchor)}
-            onClose={() => setMenuAnchor(null)}
+          <Button
+            variant="contained"
+            startIcon={<IconPlus width={18} />}
+            onClick={openCreate}
           >
-            <MenuItem onClick={openCreate}>
-              <ListItemIcon>
-                <IconPlus width={18} />
-              </ListItemIcon>
-              Add element
-            </MenuItem>
-          </Menu>
+            Add element
+          </Button>
         </Stack>
       </Stack>
 
       <TableContainer sx={{ flex: 1, minHeight: 0 }}>
-        <Table stickyHeader>
+        <Table stickyHeader size="small" sx={{ tableLayout: "fixed" }}>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableCell key={header.id}>
+                  <TableCell
+                    key={header.id}
+                    align={
+                      header.column.id === "status" ||
+                      header.column.id === "actions"
+                        ? "right"
+                        : "left"
+                    }
+                    sx={{
+                      width: columnWidth(header.column.id),
+                      bgcolor: "#f8fafc",
+                      py: 1.25,
+                    }}
+                  >
                     {flexRender(
                       header.column.columnDef.header,
                       header.getContext(),
@@ -383,7 +414,7 @@ const SurveyElements = () => {
               <TableRow>
                 <TableCell colSpan={columns.length} align="center">
                   <Typography color="text.secondary" py={6}>
-                    No survey elements found.
+                    No elements yet. Use Add element to create one.
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -391,11 +422,17 @@ const SurveyElements = () => {
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} hover>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
+                    <TableCell
+                      key={cell.id}
+                      align={
+                        cell.column.id === "status" ||
+                        cell.column.id === "actions"
+                          ? "right"
+                          : "left"
+                      }
+                      sx={{ width: columnWidth(cell.column.id), py: 1.25 }}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -405,23 +442,6 @@ const SurveyElements = () => {
         </Table>
       </TableContainer>
       <TablePaginationFooter table={table} totalRows={totalRows} />
-
-      <Menu
-        anchorEl={rowMenuAnchor}
-        open={Boolean(rowMenuAnchor)}
-        onClose={() => setRowMenuAnchor(null)}
-      >
-        <MenuItem
-          onClick={() =>
-            rowMenuElement && confirmDelete([rowMenuElement.id])
-          }
-        >
-          <ListItemIcon>
-            <IconTrash width={18} />
-          </ListItemIcon>
-          Delete
-        </MenuItem>
-      </Menu>
 
       <Dialog
         open={dialogOpen}
@@ -437,7 +457,6 @@ const SurveyElements = () => {
             <Stack spacing={2} mt={1}>
               <TextField
                 label="Name"
-                required
                 value={formData.name}
                 onChange={(event) =>
                   setFormData((current) => ({

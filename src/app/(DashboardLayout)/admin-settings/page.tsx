@@ -108,9 +108,16 @@ const AdminSetting = () => {
                                     className="admin-settings-tabs"
                                     orientation="vertical"
                                     variant="scrollable"
+                                    scrollButtons={false}
                                     value={value}
                                     onChange={handleChange}
-                                    sx={{height: '100%', overflow: 'auto'}}
+                                    sx={{
+                                        height: '100%',
+                                        minHeight: 0,
+                                        '& .MuiTabs-scroller': {
+                                            overflowY: 'auto !important',
+                                        },
+                                    }}
                                 >
                                     <Tab
                                         className="admin-settings"
