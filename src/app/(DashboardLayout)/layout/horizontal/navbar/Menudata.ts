@@ -6,7 +6,7 @@ import {
     IconUsers
 } from '@tabler/icons-react';
 import { IconHome } from "@tabler/icons-react";
-import { uniqueId } from "lodash";
+import uniqueId from "lodash/uniqueId";
 
 const Menuitems = [
   {

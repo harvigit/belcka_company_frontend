@@ -80,16 +80,20 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import toast from "react-hot-toast";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { useRouter } from "next/navigation";
-import Setting from "@/app/components/apps/projects/setting";
 import { IconSettings } from "@tabler/icons-react";
 import { Grid } from "@mui/system";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import { usePermissions } from "@/hooks/usePermissions";
 import { hasPermission } from "@/lib/permissions";
-import AddressWorkspace from "@/app/components/apps/addresses/list/address-workspace";
-import CasesList from "@/app/components/apps/cases/list";
-import CheckinsList from "@/app/components/apps/checkins";
-import FavoriteProductsDrawer from "../FavoriteProductsDrawer";
+import dynamic from "next/dynamic";
+import { useHasOpened } from "@/hooks/useHasOpened";
+
+// Settings, module panels and the favourites drawer only render after a click, so load them on demand.
+const Setting = dynamic(() => import("@/app/components/apps/projects/setting"), { ssr: false });
+const AddressWorkspace = dynamic(() => import("@/app/components/apps/addresses/list/address-workspace"), { ssr: false });
+const CasesList = dynamic(() => import("@/app/components/apps/cases/list"), { ssr: false });
+const CheckinsList = dynamic(() => import("@/app/components/apps/checkins"), { ssr: false });
+const FavoriteProductsDrawer = dynamic(() => import("../FavoriteProductsDrawer"), { ssr: false });
 
 dayjs.extend(customParseFormat);
 
@@ -587,6 +591,8 @@ const ProjectDashboard = () => {
   );
 
   const [productDrawer, setProductDrawer] = useState(false);
+  const settingMounted = useHasOpened(settingOpen);
+  const productDrawerMounted = useHasOpened(productDrawer);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
 
   React.useEffect(() => {
@@ -1769,10 +1775,12 @@ const ProjectDashboard = () => {
           </Box>
         </Stack>
 
-        <Setting
-          settingOpen={settingOpen}
-          onClose={() => setSettingOpen(false)}
-        />
+        {settingMounted && (
+          <Setting
+            settingOpen={settingOpen}
+            onClose={() => setSettingOpen(false)}
+          />
+        )}
 
         <Drawer
           anchor="bottom"
@@ -1835,12 +1843,14 @@ const ProjectDashboard = () => {
           </Box>
         </Drawer>
 
-        <FavoriteProductsDrawer
-          open={productDrawer}
-          projectId={activeProjectId}
-          companyId={user?.company_id}
-          onClose={() => setProductDrawer(false)}
-        />
+        {productDrawerMounted && (
+          <FavoriteProductsDrawer
+            open={productDrawer}
+            projectId={activeProjectId}
+            companyId={user?.company_id}
+            onClose={() => setProductDrawer(false)}
+          />
+        )}
 
         <Dialog
           open={filterOpen}

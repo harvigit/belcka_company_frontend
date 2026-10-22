@@ -21,7 +21,7 @@ import NavItem from "../NavItem";
 // plugins
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import { isNull } from "lodash";
+import isNull from "lodash/isNull";
 import { CustomizerContext } from "@/app/context/customizerContext";
 import { NavCollapseProps } from "@/app/(DashboardLayout)/types/layout/sidebar";
 
