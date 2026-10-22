@@ -27,6 +27,7 @@ import {
   IconMessage,
   IconPdf,
   IconPlus,
+  IconTrash,
 } from "@tabler/icons-react";
 import ThumbUpAltIcon from "@mui/icons-material/ThumbUpAlt";
 import ThumbUpOffAltIcon from "@mui/icons-material/ThumbUpOffAlt";
@@ -59,6 +60,8 @@ function CommentRow({
   likeCount,
   likedBy = [],
   onLike,
+  onDelete,
+  deleteLabel,
 }: {
   name?: string;
   image?: string;
@@ -70,6 +73,8 @@ function CommentRow({
   likeCount?: number;
   likedBy?: { user_id: number; user_name: string }[];
   onLike?: () => void;
+  onDelete?: () => void;
+  deleteLabel?: string;
 }) {
   return (
     <Stack
@@ -161,6 +166,20 @@ function CommentRow({
                 ) : null}
               </Stack>
             </Tooltip>
+          ) : null}
+          {onDelete ? (
+            <IconButton
+              size="small"
+              aria-label={deleteLabel || "Delete comment"}
+              onClick={onDelete}
+              sx={{
+                p: 0.25,
+                color: "text.secondary",
+                "&:hover": { color: "error.main" },
+              }}
+            >
+              <IconTrash size={14} stroke={1.75} />
+            </IconButton>
           ) : null}
         </Stack>
       </Box>
@@ -464,6 +483,54 @@ export default function AnnouncementsList({
       );
       console.error("Failed to update comment like:", error);
       toast.error(t("Failed to update the like."));
+    }
+  };
+
+  const canDeleteComment = (comment: any) =>
+    Number(roleId) === 1 ||
+    Number(comment?.user_id) === Number(userId) ||
+    Number(announcementDetails?.user_id) === Number(userId);
+
+  const handleCommentDelete = async (comment: any) => {
+    let previous: any[] = [];
+    setComments((current) => {
+      previous = current;
+      return current.flatMap((item) => {
+        if (item.id === comment.id) return [];
+        if (!item.replies?.length) return [item];
+        return [
+          {
+            ...item,
+            replies: item.replies.filter((reply: any) => reply.id !== comment.id),
+          },
+        ];
+      });
+    });
+    setReplyTo((current) => {
+      if (!current) return current;
+      if (current.id === comment.id) return null;
+      const removedReply = (comment.replies ?? []).some(
+        (reply: any) => reply.id === current.id,
+      );
+      return removedReply ? null : current;
+    });
+    try {
+      const response = await api.post("announcements/comment-delete", {
+        comment_id: comment.id,
+        announcement_id: announcementDetails?.id,
+        user_id: userId,
+        company_id: companyId,
+      });
+      if (response.data?.IsSuccess === false) {
+        setComments(previous);
+        toast.error(response.data.message);
+        return;
+      }
+      onUpdate?.();
+    } catch (error) {
+      setComments(previous);
+      console.error("Failed to delete comment:", error);
+      toast.error(t("Failed to delete the comment."));
     }
   };
 
@@ -1323,6 +1390,12 @@ export default function AnnouncementsList({
                                   : []
                               }
                               onLike={() => handleCommentLike(comment)}
+                              onDelete={
+                                canDeleteComment(comment)
+                                  ? () => handleCommentDelete(comment)
+                                  : undefined
+                              }
+                              deleteLabel={t("Delete")}
                             />
                             {(comment.replies ?? []).length > 0 && (
                               <Stack
@@ -1353,6 +1426,12 @@ export default function AnnouncementsList({
                                         : []
                                     }
                                     onLike={() => handleCommentLike(reply)}
+                                    onDelete={
+                                      canDeleteComment(reply)
+                                        ? () => handleCommentDelete(reply)
+                                        : undefined
+                                    }
+                                    deleteLabel={t("Delete")}
                                   />
                                 ))}
                               </Stack>

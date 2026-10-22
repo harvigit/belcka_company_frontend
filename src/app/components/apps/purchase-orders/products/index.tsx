@@ -280,7 +280,7 @@ const PurchaseProductList: React.FC<Props> = ({
         company_id: user.company_id,
         page: String(pagination.pageIndex + 1),
         limit: String(pagination.pageSize),
-        is_all_product: isSearching,
+        // is_all_product: isSearching,
       };
 
       if (isSearching) {
@@ -306,8 +306,8 @@ const PurchaseProductList: React.FC<Props> = ({
       }
       if (filters.lowStock && !isSearching) {
         params.low_stock = true;
-        params.is_all_product = true;
       }
+      params.is_all_product = true;
       const response = await api.get("purchase-orders/orders", { params });
       if (seq !== fetchSeqRef.current) return;
 
