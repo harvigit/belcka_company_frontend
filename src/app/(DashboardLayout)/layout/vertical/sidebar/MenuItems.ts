@@ -162,7 +162,7 @@ const MenuItems: NavGroup[] = [
   {
     id: uniqueId(),
     title: "Certificates",
-    slug: "certificates",
+    slug: "documents",
     icon: IconCertificate,
     href: "/apps/certificates",
   },
