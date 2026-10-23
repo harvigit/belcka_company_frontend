@@ -18,7 +18,6 @@ import { User } from "next-auth";
 import { IconSettings, IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import ProjectUserMultiSelect from "@/app/components/apps/projects/UserMultiSelect";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 
 interface FormData {
@@ -47,6 +46,7 @@ interface FormData {
 interface Team {
   id: number | null;
   name: string;
+  is_check_limit?: boolean;
 }
 
 interface AssignedUser {
@@ -226,6 +226,12 @@ const EditProject: React.FC<EditProjectProps> = ({
           .map((g: any) => g.workzone_id)
           .join(","),
       });
+      const limits: Record<number, boolean> = {};
+      (project.teams || []).forEach((item: any) => {
+        if (item?.id != null)
+          limits[Number(item.id)] = Boolean(item.is_check_limit);
+      });
+      setTeamCheckLimits(limits);
       const defaultSettings = createDefaultBudgetSettings();
       setBudgetSettings(defaultSettings);
       setSavedBudgetSettings(defaultSettings);
@@ -242,6 +248,12 @@ const EditProject: React.FC<EditProjectProps> = ({
 
   // const [shift, setShift] = useState<Shift[]>([]);
   const [team, setTeam] = useState<Team[]>([]);
+  const [teamCheckLimits, setTeamCheckLimits] = useState<
+    Record<number, boolean>
+  >({});
+  const [teamSwitchIds, setTeamSwitchIds] = useState<Set<number>>(new Set());
+  const [teamToAdd, setTeamToAdd] = useState<Team | null>(null);
+  const [userToAdd, setUserToAdd] = useState<AssignedUser | null>(null);
   const [users, setUsers] = useState<AssignedUser[]>([]);
   const [roles, setRoles] = useState<ProjectRoleOption[]>([]);
   const [geofence, setGeofence] = useState<Geofence[]>([]);
@@ -522,6 +534,107 @@ const EditProject: React.FC<EditProjectProps> = ({
     }
   };
 
+  const handleTeamCheckLimit = async (teamId: number, checked: boolean) => {
+    if (!project?.id || !user?.company_id) {
+      toast.error("Save the project before changing the team switch.");
+      return;
+    }
+    const previous = Boolean(teamCheckLimits[teamId]);
+    setTeamCheckLimits((current) => ({ ...current, [teamId]: checked }));
+    setTeamSwitchIds((current) => new Set(current).add(teamId));
+    try {
+      const res = await api.post("project/team-check-limit", {
+        company_id: user.company_id,
+        project_id: project.id,
+        team_id: teamId,
+        is_check_limit: checked,
+      });
+      if (res.data?.IsSuccess === false) {
+        setTeamCheckLimits((current) => ({ ...current, [teamId]: previous }));
+        toast.error(res.data.message || "Failed to update the team switch.");
+      }
+    } catch (error: any) {
+      setTeamCheckLimits((current) => ({ ...current, [teamId]: previous }));
+      toast.error(
+        error?.response?.data?.message || "Failed to update the team switch.",
+      );
+    } finally {
+      setTeamSwitchIds((current) => {
+        const next = new Set(current);
+        next.delete(teamId);
+        return next;
+      });
+    }
+  };
+
+  const removeSelectedTeam = (teamId: number) => {
+    const nextIds = String(formData.team_ids || "")
+      .split(",")
+      .filter((id) => id && Number(id) !== teamId);
+    setFormData({ ...formData, team_ids: nextIds.join(",") });
+  };
+
+  const removeSelectedUser = (userId: number) => {
+    const nextIds = String(formData.user_ids || "")
+      .split(",")
+      .map((value) => Number(value.trim()))
+      .filter(
+        (value) => Number.isInteger(value) && value > 0 && value !== userId,
+      );
+    setFormData({
+      ...formData,
+      user_ids: nextIds.join(","),
+      user_roles: (formData.user_roles || []).filter(
+        (role) => Number(role.user_id) !== userId,
+      ),
+    });
+    if (onAssigneeRoleChange) {
+      onAssigneeRoleChange(
+        (assignedUsers || [])
+          .filter(
+            (item) => Number(item.id) !== userId && item.name !== undefined,
+          )
+          .map((item) => ({
+            ...item,
+            name: item.name!,
+          })),
+      );
+    }
+  };
+
+  const addSelectedTeam = (option: Team | null) => {
+    if (!option || option.id == null) return;
+    const teamId = Number(option.id);
+    const current = String(formData.team_ids || "")
+      .split(",")
+      .filter(Boolean);
+    if (current.includes(String(teamId))) return;
+    setTeamCheckLimits((currentLimits) => ({
+      ...currentLimits,
+      [teamId]: currentLimits[teamId] ?? Boolean(option.is_check_limit),
+    }));
+    setFormData({
+      ...formData,
+      team_ids: [...current, String(teamId)].join(","),
+    });
+    setTeamToAdd(null);
+  };
+
+  const addSelectedUser = (option: AssignedUser | null) => {
+    if (!option?.id) return;
+    const userId = Number(option.id);
+    const current = String(formData.user_ids || "")
+      .split(",")
+      .map((value) => Number(value.trim()))
+      .filter((value) => Number.isInteger(value) && value > 0);
+    if (current.includes(userId)) return;
+    setFormData({
+      ...formData,
+      user_ids: [...current, userId].join(","),
+    });
+    setUserToAdd(null);
+  };
+
   useEffect(() => {
     const getGeofence = async () => {
       try {
@@ -650,6 +763,22 @@ const EditProject: React.FC<EditProjectProps> = ({
                     />
                   </>
                 );
+                const selectedTeams = selectedTeamIds.map((id) => {
+                  const fromList = team.find((item) => String(item.id) === id);
+                  if (fromList) return fromList;
+                  const fromProject = (project?.teams || []).find(
+                    (item: {
+                      id?: number;
+                      name?: string;
+                      is_check_limit?: boolean;
+                    }) => String(item.id) === id,
+                  );
+                  return {
+                    id: Number(id),
+                    name: fromProject?.name || `Team ${id}`,
+                    is_check_limit: Boolean(fromProject?.is_check_limit),
+                  };
+                });
                 const teamsField = (
                   <>
                     <Typography
@@ -657,64 +786,79 @@ const EditProject: React.FC<EditProjectProps> = ({
                       mt={embedded ? 0 : 2}
                       className="f-14"
                     >
-                      Select Teams
+                      Teams
                     </Typography>
-                    <Autocomplete
-                      fullWidth
-                      multiple
-                      id="team_ids"
-                      options={team}
-                      value={team.filter((item) =>
-                        formData.team_ids?.split(",").includes(String(item.id)),
+                    <Stack spacing={1} mt={1}>
+                      {selectedTeams.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          No teams added.
+                        </Typography>
+                      ) : (
+                        selectedTeams.map((item) => {
+                          const teamId = Number(item.id);
+                          return (
+                            <Stack
+                              key={item.id}
+                              direction="row"
+                              spacing={1}
+                              alignItems="center"
+                              sx={{
+                                border: 1,
+                                borderColor: "divider",
+                                borderRadius: 1.5,
+                                px: 1.5,
+                                py: 0.75,
+                              }}
+                            >
+                              <Typography
+                                className="f-14"
+                                noWrap
+                                sx={{ flex: 1, minWidth: 0, fontWeight: 500 }}
+                              >
+                                {item.name}
+                              </Typography>
+                              <IOSSwitch
+                                color="primary"
+                                checked={Boolean(teamCheckLimits[teamId])}
+                                disabled={teamSwitchIds.has(teamId)}
+                                onChange={(event) =>
+                                  handleTeamCheckLimit(
+                                    teamId,
+                                    event.target.checked,
+                                  )
+                                }
+                              />
+                              <IconButton
+                                size="small"
+                                aria-label="Remove team"
+                                onClick={() => removeSelectedTeam(teamId)}
+                              >
+                                <IconX size={16} />
+                              </IconButton>
+                            </Stack>
+                          );
+                        })
                       )}
-                      onChange={(event, newValue) => {
-                        let selectedIds = newValue
-                          .map((item) => item.id)
-                          .filter(Boolean);
-                        setFormData({
-                          ...formData,
-                          team_ids: selectedIds.join(","),
-                        });
-                      }}
+                    </Stack>
+                    <Autocomplete
+                      size="small"
+                      sx={{ mt: 1 }}
+                      options={team.filter(
+                        (item) =>
+                          item.id != null &&
+                          !selectedTeamIds.includes(String(item.id)),
+                      )}
+                      value={teamToAdd}
+                      onChange={(_, option) => addSelectedTeam(option)}
                       getOptionLabel={(option) => option.name}
                       isOptionEqualToValue={(option, value) =>
                         option.id === value.id
                       }
                       renderInput={(params) => (
-                        <CustomTextField
-                          {...params}
-                          placeholder="Select Teams"
-                        />
+                        <CustomTextField {...params} placeholder="Add team" />
                       )}
                     />
                   </>
-                );
-                const usersField = (
-                  <ProjectUserMultiSelect
-                    id="user_ids"
-                    label="Assigned Users"
-                    placeholder="Select Assigned Users"
-                    options={users}
-                    selectedIds={formData.user_ids || ""}
-                    onChange={(ids) => {
-                      const idSet = new Set(
-                        String(ids)
-                          .split(",")
-                          .map((value) => Number(value.trim()))
-                          .filter(
-                            (value) => Number.isInteger(value) && value > 0,
-                          ),
-                      );
-                      setFormData({
-                        ...formData,
-                        user_ids: ids,
-                        user_roles: (formData.user_roles || []).filter((item) =>
-                          idSet.has(Number(item.user_id)),
-                        ),
-                      });
-                    }}
-                    labelMt={embedded ? 0 : 2}
-                  />
                 );
                 const assignedIdList = String(formData.user_ids || "")
                   .split(",")
@@ -736,26 +880,22 @@ const EditProject: React.FC<EditProjectProps> = ({
                     fromProject || { id, name: `User ${id}` }
                   );
                 });
-                const assignRoleField = (
+                const usersField = (
                   <>
                     <Typography
                       variant="h5"
                       mt={embedded ? 0 : 2}
                       className="f-14"
                     >
-                      Assign Role
+                      Assigned users
                     </Typography>
-                    {assignedUserRows.length === 0 ? (
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        mt={0.5}
-                      >
-                        Select assigned users first.
-                      </Typography>
-                    ) : (
-                      <Stack spacing={1.25} mt={1}>
-                        {assignedUserRows.map((item) => {
+                    <Stack spacing={1} mt={1}>
+                      {assignedUserRows.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          No users added.
+                        </Typography>
+                      ) : (
+                        assignedUserRows.map((item) => {
                           const selectedRoleId =
                             (formData.user_roles || []).find(
                               (role) =>
@@ -766,23 +906,33 @@ const EditProject: React.FC<EditProjectProps> = ({
                               (role) =>
                                 Number(role.id) === Number(selectedRoleId),
                             ) || null;
-
                           return (
                             <Stack
                               key={item.id}
-                              direction={{ xs: "column", sm: "row" }}
-                              spacing={1.5}
-                              alignItems={{ xs: "stretch", sm: "center" }}
+                              direction="row"
+                              spacing={1}
+                              alignItems="center"
+                              sx={{
+                                border: 1,
+                                borderColor: "divider",
+                                borderRadius: 1.5,
+                                px: 1.5,
+                                py: 0.75,
+                              }}
                             >
                               <Typography
                                 className="f-14"
-                                sx={{ minWidth: { sm: 180 }, fontWeight: 500 }}
+                                noWrap
+                                sx={{ flex: 1, minWidth: 0, fontWeight: 500 }}
                               >
                                 {item.name}
                               </Typography>
                               <Autocomplete
                                 size="small"
-                                fullWidth
+                                sx={{
+                                  width: { xs: 140, sm: 220 },
+                                  flexShrink: 0,
+                                }}
                                 options={roles}
                                 value={selectedRole}
                                 onChange={(_, newValue) => {
@@ -803,11 +953,36 @@ const EditProject: React.FC<EditProjectProps> = ({
                                   />
                                 )}
                               />
+                              <IconButton
+                                size="small"
+                                aria-label="Remove user"
+                                onClick={() =>
+                                  removeSelectedUser(Number(item.id))
+                                }
+                              >
+                                <IconX size={16} />
+                              </IconButton>
                             </Stack>
                           );
-                        })}
-                      </Stack>
-                    )}
+                        })
+                      )}
+                    </Stack>
+                    <Autocomplete
+                      size="small"
+                      sx={{ mt: 1 }}
+                      options={users.filter(
+                        (item) => !assignedIdList.includes(Number(item.id)),
+                      )}
+                      value={userToAdd}
+                      onChange={(_, option) => addSelectedUser(option)}
+                      getOptionLabel={(option) => option.name}
+                      isOptionEqualToValue={(option, value) =>
+                        option.id === value.id
+                      }
+                      renderInput={(params) => (
+                        <CustomTextField {...params} placeholder="Add user" />
+                      )}
+                    />
                   </>
                 );
                 // const showSettingsField = (
@@ -959,13 +1134,12 @@ const EditProject: React.FC<EditProjectProps> = ({
                     <Grid container spacing={2.5}>
                       <Grid size={{ xs: 12, md: 6 }}>{nameField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{codeField}</Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>{teamsField}</Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>{usersField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{descriptionField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{addressField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{projectLimitField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{allowWorkField}</Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>{addressField}</Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>{assignRoleField}</Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>{descriptionField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{teamsField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{usersField}</Grid>
                     </Grid>
                   );
                 }
@@ -973,16 +1147,14 @@ const EditProject: React.FC<EditProjectProps> = ({
                 return (
                   <>
                     {nameField}
+                    {descriptionField}
+                    {addressField}
+                    {projectLimitField}
+                    {allowWorkField}
                     {teamsField}
                     {usersField}
-                    {/* {assignRoleField} */}
-                    {/* {geofenceField} */}
-                    {addressField}
                     {budgetField}
                     {codeField}
-                    {/* {projectLimitField} */}
-                    {descriptionField}
-                    {/* {allowWorkField} */}
                   </>
                 );
               })()}

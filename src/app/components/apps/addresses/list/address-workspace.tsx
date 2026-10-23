@@ -23,8 +23,10 @@ import {
   ListItemIcon,
   Menu,
   MenuItem,
+  FormControlLabel,
   Slider,
   Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -111,7 +113,6 @@ type ParentAddress = {
   status_text?: string;
   type?: string | null;
   group_id?: number | null;
-  group_name?: string | null;
 };
 
 type AddressGroupOption = { id: number; name: string };
@@ -169,6 +170,13 @@ type CaseForm = {
   excelStatus: string;
 };
 
+type DuplicateMatch = {
+  exists: boolean;
+  in_company?: boolean;
+  in_request?: boolean;
+  projects?: string[];
+};
+
 type DraftSite = {
   key: string;
   siteName: string;
@@ -177,6 +185,8 @@ type DraftSite = {
   lat: number | null;
   lng: number | null;
   radius: number;
+  allowDuplicate: boolean;
+  duplicate: DuplicateMatch | null;
 };
 
 type Prediction = {
@@ -230,7 +240,20 @@ const emptySite = (): DraftSite => ({
   lat: null,
   lng: null,
   radius: 100,
+  allowDuplicate: false,
+  duplicate: null,
 });
+
+function duplicateTooltip(match: DuplicateMatch) {
+  const projects = (match.projects ?? []).filter(Boolean);
+  if (projects.length) {
+    return `This address already exists in this company and in ${projects.join(", ")},are you sure to create duplicate?`;
+  }
+  if (match.in_company) {
+    return "This address already exists in this company ,are you sure to create duplicate?";
+  }
+  return "This address is listed more than once in this group ,are you sure to create duplicate?";
+}
 
 function asList<T>(value: unknown): T[] {
   if (Array.isArray(value)) return value as T[];
@@ -1225,26 +1248,6 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                   <Typography fontWeight={700}>
                                     {addressTitle(address)}
                                   </Typography>
-                                  {address.group_name ? (
-                                    <Chip
-                                      size="small"
-                                      color="primary"
-                                      variant="outlined"
-                                      label={address.group_name}
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        if (!address.group_id) return;
-                                        setTypeFilter(
-                                          `group:${address.group_id}`,
-                                        );
-                                        setPagination((current) =>
-                                          current.pageIndex === 0
-                                            ? current
-                                            : { ...current, pageIndex: 0 },
-                                        );
-                                      }}
-                                    />
-                                  ) : null}
                                 </Stack>
                               </TableCell>
                               <TableCell
@@ -2427,14 +2430,6 @@ function MapWorkspace({
                   <Typography fontWeight={700}>
                     {addressTitle(selected)}
                   </Typography>
-                  {selected.group_name ? (
-                    <Chip
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                      label={selected.group_name}
-                    />
-                  ) : null}
                 </Stack>
                 <Typography variant="body2" color="text.secondary">
                   {addressSubtitle(selected)}
@@ -2559,21 +2554,78 @@ function AddAddressDialog({
   onSaved: () => Promise<void> | void;
 }) {
   const [mode, setMode] = useState<"single" | "group">("single");
-  const [groupName, setGroupName] = useState("");
   const [sites, setSites] = useState<DraftSite[]>([emptySite()]);
   const [activeKey, setActiveKey] = useState(sites[0].key);
   const [projectId, setProjectId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [duplicatePromptKey, setDuplicatePromptKey] = useState<string | null>(
+    null,
+  );
+  const duplicateCheckSeq = useRef(0);
 
   useEffect(() => {
     if (!open) return;
     const first = emptySite();
     setMode(initialMode);
-    setGroupName("");
     setSites([first]);
     setActiveKey(first.key);
     setProjectId("");
+    setDuplicatePromptKey(null);
   }, [open, initialMode]);
+
+  const addressSignature = sites
+    .map((site) => `${site.key}|${site.street.trim()}`)
+    .join("\n");
+
+  useEffect(() => {
+    if (!open || mode !== "group") return;
+    const ready = sites.filter((site) => site.street.trim());
+    if (!ready.length) {
+      setSites((current) =>
+        current.map((site) =>
+          site.duplicate || site.allowDuplicate
+            ? { ...site, duplicate: null, allowDuplicate: false }
+            : site,
+        ),
+      );
+      return;
+    }
+    const seq = ++duplicateCheckSeq.current;
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await api.post("address/check-duplicates", {
+          company_id: companyId,
+          addresses: ready.map((site) => ({
+            key: site.key,
+            name: site.street.trim(),
+          })),
+        });
+        if (seq !== duplicateCheckSeq.current) return;
+        const matches = new Map<string, DuplicateMatch>(
+          asList<DuplicateMatch & { key?: string }>(res.data?.info).map(
+            (item) => [String(item.key), item],
+          ),
+        );
+        setSites((current) =>
+          current.map((site) => {
+            const match = matches.get(site.key);
+            const exists = Boolean(match?.exists);
+            return {
+              ...site,
+              duplicate: exists ? match || { exists: true } : null,
+              allowDuplicate: exists ? site.allowDuplicate : false,
+            };
+          }),
+        );
+      } catch {
+        if (seq !== duplicateCheckSeq.current) return;
+      }
+    }, 600);
+    return () => {
+      window.clearTimeout(timer);
+      duplicateCheckSeq.current += 1;
+    };
+  }, [open, mode, companyId, addressSignature]);
 
   const active = sites.find((site) => site.key === activeKey) || sites[0];
   const visibleSites = draftsToShow(mode, sites);
@@ -2638,22 +2690,18 @@ function AddAddressDialog({
         return;
       }
     }
-    if (mode === "group" && !groupName.trim()) {
-      toast.error("Enter a group name.");
-      return;
-    }
-
     setSaving(true);
     try {
       const res = await api.post("address/parent-create", {
         company_id: companyId,
         ...(projectId ? { project_id: Number(projectId) } : {}),
-        ...(mode === "group" ? { group_name: groupName.trim() } : {}),
+        ...(mode === "group" ? { is_group: true } : {}),
         addresses: drafts.map((site) => ({
           name: site.street.trim(),
           short_name: site.siteName.trim(),
           pin_code: site.postcode.trim(),
           type: "address",
+          allow_duplicate: mode === "group" && site.allowDuplicate,
           latitude: site.lat,
           longitude: site.lng,
           boundary: hasPoint(site.lat, site.lng)
@@ -2775,21 +2823,6 @@ function AddAddressDialog({
               <ToggleButton value="single">Single address</ToggleButton>
               <ToggleButton value="group">Address group</ToggleButton>
             </ToggleButtonGroup>
-            {mode === "group" ? (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" fontWeight={700} mb={1}>
-                  Group details
-                </Typography>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Group name"
-                  value={groupName}
-                  onChange={(event) => setGroupName(event.target.value)}
-                  helperText="Saved with these addresses so you can find the group later."
-                />
-              </Box>
-            ) : null}
             <Stack
               direction="row"
               justifyContent="space-between"
@@ -2851,6 +2884,34 @@ function AddAddressDialog({
                           >
                             {summary || "Search to set this location"}
                           </Typography>
+                          {site.duplicate?.exists ? (
+                            <Tooltip
+                              arrow
+                              placement="top"
+                              title={duplicateTooltip(site.duplicate)}
+                            >
+                              <FormControlLabel
+                                sx={{ mt: 0.5, ml: 0 }}
+                                onClick={(event) => event.stopPropagation()}
+                                control={
+                                  <Switch
+                                    size="small"
+                                    checked={site.allowDuplicate}
+                                    onChange={(_event, checked) => {
+                                      if (checked) {
+                                        setDuplicatePromptKey(site.key);
+                                        return;
+                                      }
+                                      patchSite(site.key, {
+                                        allowDuplicate: false,
+                                      });
+                                    }}
+                                  />
+                                }
+                                label="Allow duplicate"
+                              />
+                            </Tooltip>
+                          ) : null}
                         </Box>
                         {visibleSites.length > 1 ? (
                           <IconButton
@@ -3063,6 +3124,34 @@ function AddAddressDialog({
               : "Save address"}
         </Button>
       </DialogActions>
+      <Dialog
+        open={Boolean(duplicatePromptKey)}
+        onClose={() => setDuplicatePromptKey(null)}
+        maxWidth="xs"
+        fullWidth
+        sx={{ zIndex: 1700 }}
+      >
+        <DialogTitle>Duplicate address</DialogTitle>
+        <DialogContent>
+          <Typography>Do you want to create a duplicate address?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button color="inherit" onClick={() => setDuplicatePromptKey(null)}>
+            No
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (duplicatePromptKey) {
+                patchSite(duplicatePromptKey, { allowDuplicate: true });
+              }
+              setDuplicatePromptKey(null);
+            }}
+          >
+            Yes
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 }
