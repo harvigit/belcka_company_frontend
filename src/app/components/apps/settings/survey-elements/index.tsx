@@ -27,7 +27,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { IconEdit, IconEye, IconFilter, IconPlus, IconSearch, IconTrash, IconX } from "@tabler/icons-react";
+import { IconEdit, IconEye, IconFilter, IconHistory, IconPlus, IconSearch, IconTrash, IconX } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import toast from "react-hot-toast";
@@ -41,6 +41,7 @@ import { surveyInputAlignSx } from "@/app/components/apps/settings/survey-settin
 import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibility";
 import ListFiltersDialog from "@/app/components/common/ListFiltersDialog";
 import SurveyElementForm from "./element-form";
+import ElementHistoryDialog from "./element-history";
 
 type SurveyElement = {
   id: number;
@@ -81,7 +82,7 @@ const columnWidth = (id: string) => {
   if (id === "damage_types") return 200;
   if (id === "materials") return 200;
   if (id === "publish_status") return 120;
-  if (id === "actions") return 110;
+  if (id === "actions") return 150;
   return undefined;
 };
 
@@ -203,6 +204,7 @@ const SurveyElements = () => {
   const [tempFilters, setTempFilters] = useState<ElementFilters>(emptyElementFilters);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([]);
+  const [historyElement, setHistoryElement] = useState<{ id: number; name: string } | null>(null);
   const session = useSession();
   const user = session.data?.user as User & {
     company_id?: number | null;
@@ -452,6 +454,16 @@ const SurveyElements = () => {
         header: () => <Typography variant="body2">Actions</Typography>,
         cell: ({ row }: { row: { original: SurveyElement } }) => (
           <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
+            <Tooltip title="Version history">
+              <IconButton
+                color="primary"
+                onClick={() =>
+                  setHistoryElement({ id: row.original.id, name: row.original.name || "Element" })
+                }
+              >
+                <IconHistory size={18} />
+              </IconButton>
+            </Tooltip>
             <Tooltip title="Edit">
               <IconButton
                 color="primary"
@@ -518,6 +530,7 @@ const SurveyElements = () => {
           setEditorId(null);
           fetchElements();
         }}
+        onRestored={() => fetchElements()}
       />
     );
   }
@@ -862,6 +875,13 @@ const SurveyElements = () => {
       </TableContainer>
       <TablePaginationFooter table={table} totalRows={totalRows} />
 
+      <ElementHistoryDialog
+        open={Boolean(historyElement)}
+        elementId={historyElement?.id || null}
+        elementName={historyElement?.name || ""}
+        onClose={() => setHistoryElement(null)}
+        onRestored={() => fetchElements()}
+      />
       <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)}>
         <DialogTitle>Confirm delete</DialogTitle>
         <DialogContent>

@@ -120,12 +120,13 @@ const SurveyGroups = () => {
               row: SurveyElementOption & {
                 status?: boolean | number;
                 publish_status?: string;
+                latest_version?: number | null;
               },
             ) =>
               row?.id &&
               row?.name &&
               (includeIds.includes(row.id) ||
-                (row.publish_status === "published" &&
+                ((row.publish_status === "published" || Number(row.latest_version) > 0) &&
                   (row.status === true || Number(row.status) === 1))),
           )
           .map((row: SurveyElementOption) => ({ id: row.id, name: row.name })),

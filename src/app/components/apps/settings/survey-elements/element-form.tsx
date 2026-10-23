@@ -16,7 +16,8 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { IconArrowLeft, IconLock } from "@tabler/icons-react";
+import { IconArrowLeft, IconHistory, IconLock } from "@tabler/icons-react";
+import ElementHistoryDialog from "./element-history";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
@@ -167,12 +168,17 @@ const SurveyElementForm = ({
   elementId,
   onClose,
   onSaved,
+  onRestored,
 }: {
   elementId: number | null;
   onClose: () => void;
   onSaved: () => void;
+  onRestored?: () => void;
 }) => {
   const [form, setForm] = useState<ElementFormState>(emptyForm);
+  const [latestVersion, setLatestVersion] = useState<number | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [damageTypes, setDamageTypes] = useState<CatalogueDamage[]>([]);
   const [materials, setMaterials] = useState<CatalogueMaterial[]>([]);
   const [newDamageName, setNewDamageName] = useState("");
@@ -204,7 +210,10 @@ const SurveyElementForm = ({
       setLoading(true);
       try {
         await loadCatalogues();
-        if (!elementId) return;
+        if (!elementId) {
+          setLatestVersion(null);
+          return;
+        }
         const res = await api.get(`survey-elements/get?element_id=${elementId}`);
         const row = Array.isArray(res.data?.info) ? res.data.info[0] : null;
         if (!row) {
@@ -241,6 +250,7 @@ const SurveyElementForm = ({
             : [],
           publish_status: row.publish_status || "draft",
         });
+        setLatestVersion(Number(row.latest_version) > 0 ? Number(row.latest_version) : null);
         setKnownMaterials(Array.isArray(row.materials) ? row.materials : []);
       } catch (error) {
         console.error(error);
@@ -250,7 +260,7 @@ const SurveyElementForm = ({
       }
     };
     void load();
-  }, [elementId]);
+  }, [elementId, refreshKey]);
 
   const setField = (key: keyof ElementFormState, value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -465,8 +475,20 @@ const SurveyElementForm = ({
             color={form.publish_status === "published" ? "success" : "default"}
             variant={form.publish_status === "published" ? "filled" : "outlined"}
           />
+          {latestVersion ? (
+            <Chip size="small" label={`Version ${latestVersion}`} variant="outlined" />
+          ) : null}
         </Stack>
         <Stack direction="row" spacing={1} justifyContent="flex-end">
+          {elementId ? (
+            <Button
+              variant="outlined"
+              startIcon={<IconHistory size={18} />}
+              onClick={() => setHistoryOpen(true)}
+            >
+              History
+            </Button>
+          ) : null}
           <Button variant="outlined" disabled={saving || loading} onClick={() => void save(false)}>
             Save draft
           </Button>
@@ -809,10 +831,20 @@ const SurveyElementForm = ({
           </Paper>
 
           <Typography variant="body2" color="text.secondary" px={0.5}>
-            Publish makes this element available for new groups. Save draft keeps it editable and hides it from new groups.
+            Publish saves a version and makes this element available for new groups. Save draft does not create a version.
           </Typography>
         </Stack>
       </Box>
+      <ElementHistoryDialog
+        open={historyOpen}
+        elementId={elementId}
+        elementName={form.name}
+        onClose={() => setHistoryOpen(false)}
+        onRestored={() => {
+          setRefreshKey((current) => current + 1);
+          onRestored?.();
+        }}
+      />
     </Box>
   );
 };
