@@ -353,6 +353,13 @@ export default function UserRequests({
     getRequestTableName(work) === "billing_infos" ||
     getRequestTypeKey(work) === "billing info";
 
+  const isProjectCapacityRequest = (work: any) =>
+    getRequestTypeKey(work) === "project capacity" ||
+    Number(work?.request_type) === 149;
+
+  const needsRejectReason = (work: any) =>
+    isBillingInfoRequest(work) || isProjectCapacityRequest(work);
+
   const postGenericRequestAction = (
     work: any,
     action: "approve" | "reject",
@@ -465,7 +472,7 @@ export default function UserRequests({
     const logId = Number(work?.id);
     if (!logId || actioningId) return;
 
-    if (action === "reject" && isBillingInfoRequest(work) && !reason?.trim()) {
+    if (action === "reject" && needsRejectReason(work) && !reason?.trim()) {
       setRejectTarget(work);
       return;
     }
@@ -553,6 +560,7 @@ export default function UserRequests({
     Trade: (id) => getUserDetailsHref(id, { tab: "rate" }),
     Comapny: (id) => getUserDetailsHref(id, { tab: "billing" }),
     Project: (id) => `/apps/projects/index?id=${id}`,
+    "Project Capacity": (id) => `/apps/project/list/${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
     "Team Cap Increase": (id) => `/apps/teams/team?team_id=${id}`,
     Penalty: (recordId, startDate, endDate) => {
@@ -619,6 +627,7 @@ export default function UserRequests({
     Adjustment: "#0066ffff",
     "Team Cap Increase": "#2276FF",
     Team: "#2276FF",
+    "Project Capacity": "#2276FF",
   };
 
   const translateRequestText = (value?: string | null) => {
@@ -782,7 +791,10 @@ export default function UserRequests({
                       work.type_name === "Team Cap Increase"
                     ) {
                       return routeFn(work.team_id ?? work.record_id);
-                    } else if (work.type_name === "Project") {
+                    } else if (
+                      work.type_name === "Project" ||
+                      work.type_name === "Project Capacity"
+                    ) {
                       return routeFn(work?.project_id ?? work?.record_id);
                     } else {
                       return routeFn(work.user_id);
@@ -1050,7 +1062,16 @@ export default function UserRequests({
         onConfirm={(reason) =>
           handleRequestAction(rejectTarget, "reject", reason)
         }
-        title={t("Reject Billing Info Request")}
+        title={
+          isProjectCapacityRequest(rejectTarget)
+            ? t("Reject capacity request")
+            : t("Reject Billing Info Request")
+        }
+        message={
+          isProjectCapacityRequest(rejectTarget)
+            ? t("Add a reason for rejecting this capacity change.")
+            : undefined
+        }
         loading={Boolean(actioningId) && actioningType === "reject"}
       />
 

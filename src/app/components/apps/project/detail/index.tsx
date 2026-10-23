@@ -1,11 +1,23 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import { Box, IconButton, Stack, Tab, Tabs, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  IconButton,
+  Stack,
+  Tab,
+  Tabs,
+  Typography,
+} from "@mui/material";
 import {
   IconArrowLeft,
   IconBookmark,
   IconBriefcase,
   IconChartPie,
+  IconCheck,
   IconCoinRupee,
   IconPackage,
   IconReceipt,
@@ -13,7 +25,9 @@ import {
   IconDoorExit,
   IconSettings,
   IconUsers,
+  IconX,
 } from "@tabler/icons-react";
+import toast from "react-hot-toast";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
@@ -33,6 +47,7 @@ import AssigneeRoleChips, {
 } from "./AssigneeRoleChips";
 import { ProjectDetailFiltersProvider } from "./ProjectDetailFiltersContext";
 import FavoriteProductsDrawer from "../FavoriteProductsDrawer";
+import RejectReasonDialog from "@/app/components/common/RejectReasonDialog";
 import MapGantt from "../../projects/zone-map/MapGantt";
 import { IconMapPin } from "@tabler/icons-react";
 
@@ -85,36 +100,76 @@ const ProjectDetail = () => {
   const [settingsMounted, setSettingsMounted] = useState(
     requestedTab === "settings",
   );
+  const [pendingCapRequest, setPendingCapRequest] = useState<any>(null);
+  const [capRequestAction, setCapRequestAction] = useState<
+    "approve" | "reject" | null
+  >(null);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+
+  const loadProject = async () => {
+    if (!projectId || !user?.company_id) return;
+    try {
+      const res = await api.get(
+        `project/get?company_id=${user.company_id}&project_id=${projectId}`,
+      );
+      const projectRow = Array.isArray(res.data?.info)
+        ? res.data.info[0]
+        : res.data?.info;
+      const isAdmin = Number(user.user_role_id) === 1;
+      if (projectRow?.name) setProjectName(projectRow.name);
+      if (projectRow?.code) setProjectCode(projectRow.code);
+      setAssignedUsers(projectRow?.assigned_users || []);
+      setPendingCapRequest(projectRow?.pending_cap_request ?? null);
+      const assigned = (projectRow?.setting_users || []).some(
+        (item: { id: number }) => Number(item.id) === Number(user.id),
+      );
+      setCanViewSettings(
+        Boolean(projectRow?.can_view_settings) || isAdmin || assigned,
+      );
+    } catch (error) {
+      console.error("Failed to load project settings access", error);
+      setCanViewSettings(Number(user.user_role_id) === 1);
+    } finally {
+      setSettingsAccessLoaded(true);
+    }
+  };
 
   useEffect(() => {
-    const loadSettingsAccess = async () => {
-      if (!projectId || !user?.company_id) return;
-      try {
-        const res = await api.get(
-          `project/get?company_id=${user.company_id}&project_id=${projectId}`,
-        );
-        const projectRow = Array.isArray(res.data?.info)
-          ? res.data.info[0]
-          : res.data?.info;
-        const isAdmin = Number(user.user_role_id) === 1;
-        if (projectRow?.name) setProjectName(projectRow.name);
-        if (projectRow?.code) setProjectCode(projectRow.code);
-        setAssignedUsers(projectRow?.assigned_users || []);
-        const assigned = (projectRow?.setting_users || []).some(
-          (item: { id: number }) => Number(item.id) === Number(user.id),
-        );
-        setCanViewSettings(
-          Boolean(projectRow?.can_view_settings) || isAdmin || assigned,
-        );
-      } catch (error) {
-        console.error("Failed to load project settings access", error);
-        setCanViewSettings(Number(user.user_role_id) === 1);
-      } finally {
-        setSettingsAccessLoaded(true);
-      }
-    };
-    loadSettingsAccess();
+    loadProject();
   }, [projectId, user?.company_id, user?.id, user?.user_role_id]);
+
+  const pendingCapRequestId = Number(pendingCapRequest?.request_id ?? 0);
+  const capacityLabel = (value: unknown) => {
+    const amount = Number(value ?? 0);
+    return amount > 0 ? String(amount) : "Unlimited";
+  };
+
+  const handleCapRequestAction = async (
+    action: "approve" | "reject",
+    reason?: string,
+  ) => {
+    if (!pendingCapRequestId || capRequestAction) return;
+    setCapRequestAction(action);
+    try {
+      const res = await api.post(
+        `project/manage-projects/capacity-request/${action}`,
+        {
+          request_id: pendingCapRequestId,
+          company_id: Number(user?.company_id),
+          ...(action === "reject" ? { reason: reason?.trim() || "" } : {}),
+        },
+      );
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message);
+        setRejectDialogOpen(false);
+        await loadProject();
+      }
+    } catch {
+      // Axios interceptor already shows the error toast.
+    } finally {
+      setCapRequestAction(null);
+    }
+  };
 
   useEffect(() => {
     const loadRoles = async () => {
@@ -253,6 +308,106 @@ const ProjectDetail = () => {
           onUsersChange={setAssignedUsers}
         />
       </Stack>
+      {pendingCapRequestId > 0 && (
+        <Alert
+          severity="info"
+          variant="outlined"
+          color="error"
+          sx={{
+            mx: { xs: 1.5, md: 2 },
+            mt: 1,
+            flexShrink: 0,
+            width: "50%",
+            "& .MuiAlert-message": { width: "100%", py: 0.5 },
+          }}
+        >
+          <Stack spacing={1.5}>
+            <Box>
+              <Typography fontWeight={700} sx={{ mb: 0.75 }}>
+                Capacity change request pending
+              </Typography>
+              <Stack
+                direction="row"
+                flexWrap="wrap"
+                columnGap={2}
+                rowGap={0.5}
+                sx={{ fontSize: 14, color: "text.secondary" }}
+              >
+                {pendingCapRequest?.requested_by_name && (
+                  <Box>
+                    <strong>Requested by:</strong>{" "}
+                    {pendingCapRequest.requested_by_name}
+                  </Box>
+                )}
+                <Box>
+                  <strong>Capacity:</strong>{" "}
+                  <Box
+                    component="span"
+                    sx={{ color: "error.main", textDecoration: "line-through" }}
+                  >
+                    {capacityLabel(pendingCapRequest?.current_capacity)}
+                  </Box>{" "}
+                  →{" "}
+                  <Chip
+                    size="small"
+                    label={capacityLabel(pendingCapRequest?.requested_capacity)}
+                    sx={{
+                      height: 22,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      bgcolor: "#E8F5E9",
+                      color: "#2E7D32",
+                    }}
+                  />
+                </Box>
+                {pendingCapRequest?.note && (
+                  <Box>
+                    <strong>Note:</strong> {pendingCapRequest.note}
+                  </Box>
+                )}
+              </Stack>
+            </Box>
+            {Number(user?.user_role_id) === 1 && (
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  color="success"
+                  size="small"
+                  disabled={Boolean(capRequestAction)}
+                  startIcon={
+                    capRequestAction === "approve" ? (
+                      <CircularProgress size={14} color="inherit" />
+                    ) : (
+                      <IconCheck size={16} />
+                    )
+                  }
+                  onClick={() => handleCapRequestAction("approve")}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  disabled={Boolean(capRequestAction)}
+                  startIcon={
+                    capRequestAction === "reject" ? (
+                      <CircularProgress size={14} color="inherit" />
+                    ) : (
+                      <IconX size={16} />
+                    )
+                  }
+                  onClick={() => setRejectDialogOpen(true)}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Reject
+                </Button>
+              </Stack>
+            )}
+          </Stack>
+        </Alert>
+      )}
 
       <Box
         sx={{
@@ -363,6 +518,14 @@ const ProjectDetail = () => {
         projectId={projectId || null}
         companyId={user?.company_id}
         onClose={() => setFavoriteOpen(false)}
+      />
+      <RejectReasonDialog
+        open={rejectDialogOpen}
+        onClose={() => setRejectDialogOpen(false)}
+        onConfirm={(reason) => handleCapRequestAction("reject", reason)}
+        title="Reject capacity request"
+        message="Add a reason for rejecting this capacity change."
+        loading={capRequestAction === "reject"}
       />
     </Box>
     </ProjectDetailFiltersProvider>
