@@ -83,12 +83,6 @@ dayjs.extend(customParseFormat);
 
 const columnHelper = createColumnHelper<any>();
 
-const SHIFT_TYPE_FILTER_OPTIONS = [
-    { id: 'daywork', name: 'Daywork' },
-    { id: 'pricework', name: 'Pricework' },
-    { id: 'both', name: 'Both' },
-] as const;
-
 const TASKS_TABLE_SORT_MAP: Record<string, string> = {
     trade: 'trade_name',
     shift: 'shift_type',
@@ -97,26 +91,6 @@ const TASKS_TABLE_SORT_MAP: Record<string, string> = {
     unit: 'unit_name',
     show: 'is_show',
     file: 'file_count',
-};
-
-const KB_RESOURCES_TTL_MS = 5 * 60 * 1000;
-
-type KbResourcesCache = {
-    companyId: number | null;
-    expiresAt: number;
-    categories: any[];
-    subCategories: any[];
-    trades: any[];
-    shifts: any[];
-};
-
-let kbResourcesCache: KbResourcesCache = {
-    companyId: null,
-    expiresAt: 0,
-    categories: [],
-    subCategories: [],
-    trades: [],
-    shifts: [],
 };
 
 type TaskFilters = {
@@ -224,6 +198,7 @@ const TaskLists = () => {
     const [subCategories, setSubCategories] = useState<any[]>([]);
     const [trades, setTrades] = useState<any[]>([]);
     const [shifts, setShifts] = useState<any[]>([]);
+    const [shiftTypes, setShiftTypes] = useState<Array<{ id: string; name: string }>>([]);
     const [units, setUnits] = useState<any[]>([]);
     const [editingUnitTaskId, setEditingUnitTaskId] = useState<number | null>(
         null,
@@ -300,52 +275,6 @@ const TaskLists = () => {
     };
     const handlePopoverClose = () => setAnchorEl2(null);
 
-    const applyKbResources = (payload: {
-        categories?: any[];
-        subCategories?: any[];
-        trades?: any[];
-        shifts?: any[];
-    }) => {
-        setCategories(payload.categories || []);
-        setSubCategories(payload.subCategories || []);
-        setShifts(payload.shifts || []);
-        setTrades(payload.trades || []);
-    };
-
-    const fetchResources = async () => {
-        if (!user?.company_id) return;
-        const now = Date.now();
-        if (
-            kbResourcesCache.companyId === user.company_id &&
-            kbResourcesCache.expiresAt > now
-        ) {
-            applyKbResources(kbResourcesCache);
-            return;
-        }
-        try {
-            const res = await api.get(
-                `tasks/get-resources?company_id=${user.company_id}&include_projects=false`,
-            );
-            if (res.data) {
-                applyKbResources(res.data);
-                kbResourcesCache = {
-                    companyId: user.company_id,
-                    expiresAt: now + KB_RESOURCES_TTL_MS,
-                    categories: res.data.categories || [],
-                    subCategories: res.data.subCategories || [],
-                    trades: res.data.trades || [],
-                    shifts: res.data.shifts || [],
-                };
-            }
-        } catch (err) {
-            console.error('Failed to fetch inventory resources', err);
-        }
-    };
-
-    useEffect(() => {
-        fetchResources();
-    }, [user?.company_id]);
-
     const fetchUnits = async () => {
         if (!user?.company_id) return;
         try {
@@ -418,11 +347,20 @@ const TaskLists = () => {
             }
 
             url = appendTableSortQuery(url, sorting, TASKS_TABLE_SORT_MAP);
+            url += '&filters_for=tasks_list';
 
             const res = await api.get(url);
             if (res.data) {
                 const responseData = res.data.info || [];
                 setData(responseData);
+                if (res.data.filters) {
+                    const listFilters = res.data.filters;
+                    setTrades(listFilters.trades || []);
+                    setShifts(listFilters.shifts || []);
+                    setCategories(listFilters.categories || []);
+                    setSubCategories(listFilters.subCategories || []);
+                    setShiftTypes(listFilters.shiftTypes || []);
+                }
 
                 const pagMeta =
                     res.data.data?.totalPages !== undefined ||
@@ -1990,7 +1928,14 @@ const TaskLists = () => {
                                 fullWidth
                             >
                                 <MenuItem value="All">All</MenuItem>
-                                {SHIFT_TYPE_FILTER_OPTIONS.map((option) => (
+                                {tempFilters.shiftType &&
+                                    tempFilters.shiftType !== 'All' &&
+                                    !shiftTypes.some((option) => option.id === tempFilters.shiftType) && (
+                                        <MenuItem value={tempFilters.shiftType}>
+                                            {tempFilters.shiftType}
+                                        </MenuItem>
+                                    )}
+                                {shiftTypes.map((option) => (
                                     <MenuItem key={option.id} value={option.id}>
                                         {option.name}
                                     </MenuItem>
