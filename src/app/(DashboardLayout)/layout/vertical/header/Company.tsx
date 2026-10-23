@@ -37,14 +37,17 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { getFcmToken, onForegroundMessage } from "@/utils/firebase";
-import AnnouncementsList from "@/app/components/apps/settings/announcement";
-import UserRequests from "@/app/components/apps/requests/list";
 import { useRouter } from "next/navigation";
 import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 import { format, parse } from "date-fns";
 import { AxiosResponse } from "axios";
-import CompanyRegistration from "@/app/components/apps/modals/register-company";
+import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
+
+// These panels only appear after a header click, so load them on demand instead of with every page.
+const AnnouncementsList = dynamic(() => import("@/app/components/apps/settings/announcement"), { ssr: false });
+const UserRequests = dynamic(() => import("@/app/components/apps/requests/list"), { ssr: false });
+const CompanyRegistration = dynamic(() => import("@/app/components/apps/modals/register-company"), { ssr: false });
 
 const STORAGE_KEY = "feed-date-range";
 const LEAVE_STORAGE_KEY = "leave-range";
@@ -116,6 +119,8 @@ const Company = () => {
   const [announcemntCount, setAnnouncemntCount] = useState<number>(0);
   const [openannouncementDrawer, setOpenAnnouncementDrawer] = useState(false);
   const [requestDrawer, setRequestDrawer] = useState(false);
+  const [requestDrawerMounted, setRequestDrawerMounted] = useState(false);
+  const [companyDrawerMounted, setCompanyDrawerMounted] = useState(false);
   const [items, setItems] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
   const limit = 20;
@@ -550,6 +555,7 @@ const Company = () => {
           variant="outlined"
           sx={{ mb: 1 }}
           onClick={() => {
+            setCompanyDrawerMounted(true);
             setOpenCompanyDrawer(true);
             setAnchorEl(null);
           }}
@@ -597,18 +603,23 @@ const Company = () => {
       >
         <IconNotes
           size={24}
-          onClick={() => setRequestDrawer(true)}
+          onClick={() => {
+            setRequestDrawerMounted(true);
+            setRequestDrawer(true);
+          }}
           className="header-icons"
         />
       </Badge>
-      <UserRequests
-        open={requestDrawer}
-        onRequestCountChange={(count: number) => setRequestCount(count || 0)}
-        onClose={() => {
-          setRequestDrawer(false);
-          fetchCounts();
-        }}
-      />
+      {requestDrawerMounted && (
+        <UserRequests
+          open={requestDrawer}
+          onRequestCountChange={(count: number) => setRequestCount(count || 0)}
+          onClose={() => {
+            setRequestDrawer(false);
+            fetchCounts();
+          }}
+        />
+      )}
       <Drawer
         anchor="bottom"
         open={openDrawer}
@@ -1111,10 +1122,12 @@ const Company = () => {
         </Box>
       </Drawer>
 
-      <CompanyRegistration
-        open={openCompanyDrawer}
-        onClose={() => setOpenCompanyDrawer(false)}
-      />
+      {companyDrawerMounted && (
+        <CompanyRegistration
+          open={openCompanyDrawer}
+          onClose={() => setOpenCompanyDrawer(false)}
+        />
+      )}
     </Box>
   );
 };

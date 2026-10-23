@@ -1,7 +1,7 @@
 
 
 
-import _ from 'lodash';
+import merge from 'lodash/merge';
 import { createTheme } from '@mui/material/styles';
 import { useEffect, useContext } from 'react';
 import { CustomizerContext } from "@/app/context/customizerContext";
@@ -34,7 +34,7 @@ export const BuildTheme = (config: any = {}) => {
 
   // Build and merge the theme with component overrides
   const theme = createTheme(
-    _.merge({}, baseMode, defaultTheme, locales, themeSelect, {
+    merge({}, baseMode, defaultTheme, locales, themeSelect, {
       direction: config.direction,
     }),
   );

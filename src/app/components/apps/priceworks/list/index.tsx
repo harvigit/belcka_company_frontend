@@ -174,7 +174,10 @@ const PriceworkList = ({
     const user = session?.user as User & {
         company_id?: number | null;
         id?: string | number | null;
+        user_role_id?: number | string | null;
     };
+    // Only company admins can delete priceworks (including locked / paid ones).
+    const isAdmin = Number(user?.user_role_id) === 1;
 
     const sharedFilters = useProjectDetailFilters();
     const priceworkPreferencesKey = useMemo(
@@ -352,6 +355,7 @@ const PriceworkList = ({
     >('unapprove');
 
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deletePriceworkIds, setDeletePriceworkIds] = useState<number[]>([]);
     const [isDeleting, setIsDeleting] = useState(false);
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
 
@@ -843,14 +847,19 @@ const PriceworkList = ({
         }
     };
 
-    const openDeleteDialog = () => {
-        const ids = getActionPriceworkIds();
+    const getDeletePriceworkId = (item: PriceworkRow) => Number(item.pricework_id ?? item.id);
+
+    const openDeleteDialog = (
+        ids: number[] = getSelectedRows().map(getDeletePriceworkId),
+    ) => {
+        if (!isAdmin) return;
         if (!guardEmptySelection(ids)) return;
+        setDeletePriceworkIds(ids);
         setDeleteDialogOpen(true);
     };
 
     const handleDeletePriceworks = async () => {
-        const ids = getActionPriceworkIds();
+        const ids = deletePriceworkIds;
         if (ids.length === 0) {
             toast.error('Please select at least one pricework');
             setDeleteDialogOpen(false);
@@ -859,7 +868,7 @@ const PriceworkList = ({
 
         setIsDeleting(true);
         try {
-            const res = await api.post('pricework/bulk-delete', {ids});
+            const res = await api.post('pricework/admin-delete', {ids});
             if (res.data?.IsSuccess === false) {
                 toast.error(res.data?.message || 'Failed to delete priceworks');
                 return;
@@ -867,6 +876,7 @@ const PriceworkList = ({
 
             toast.success(res.data?.message || 'Pricework deleted successfully');
             setDeleteDialogOpen(false);
+            setDeletePriceworkIds([]);
             await refreshAfterAction();
         } catch (error: any) {
             toast.error(
@@ -1447,15 +1457,31 @@ const PriceworkList = ({
                 id: 'actions',
                 header: () => 'Actions',
                 cell: (info) => (
-                    <Tooltip title="View details">
-                        <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => openPriceworkDetails(info.row.original)}
-                        >
-                            <IconEye size={18}/>
-                        </IconButton>
-                    </Tooltip>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Tooltip title="View details">
+                            <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => openPriceworkDetails(info.row.original)}
+                            >
+                                <IconEye size={18}/>
+                            </IconButton>
+                        </Tooltip>
+                        {isAdmin && (
+                            <Tooltip title="Delete">
+                                <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        openDeleteDialog([getDeletePriceworkId(info.row.original)]);
+                                    }}
+                                >
+                                    <IconTrash size={18}/>
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                    </Stack>
                 ),
                 enableSorting: false,
                 enableHiding: false,
@@ -1468,6 +1494,7 @@ const PriceworkList = ({
             editingCell,
             cellInputValue,
             savingCellKeys,
+            isAdmin,
         ],
     );
 
@@ -2389,18 +2416,20 @@ const PriceworkList = ({
                                     </Button>
                                 )}
 
-                                {/* Ticket 819: hide Delete Selected on Pricework web list */}
-                                {/* <Button
-                                startIcon={<IconTrash size={15}/>}
-                                variant="outlined"
-                                color="error"
-                                size="small"
-                                onClick={openDeleteDialog}
-                                disabled={isDeleting}
-                                sx={BULK_BUTTON_SX}
-                            >
-                                {isDeleting ? 'Deleting…' : 'Delete Selected'}
-                            </Button> */}
+                                {/* Ticket 819: Delete Selected is admin-only on Pricework web list */}
+                                {isAdmin && (
+                                    <Button
+                                        startIcon={<IconTrash size={15}/>}
+                                        variant="outlined"
+                                        color="error"
+                                        size="small"
+                                        onClick={() => openDeleteDialog()}
+                                        disabled={isDeleting}
+                                        sx={BULK_BUTTON_SX}
+                                    >
+                                        {isDeleting ? 'Deleting…' : 'Delete Selected'}
+                                    </Button>
+                                )}
                             </Stack>
                         </Stack>
                     </Box>
@@ -2581,8 +2610,9 @@ const PriceworkList = ({
                 </DialogTitle>
                 <DialogContent>
                     <Typography>
-                        Are you sure you want to delete {selectedCount} selected pricework
-                        {selectedCount === 1 ? '' : 's'}? This action cannot be undone.
+                        Are you sure you want to delete {deletePriceworkIds.length} pricework
+                        {deletePriceworkIds.length === 1 ? '' : 's'}? Locked and paid records will
+                        also be removed. This action cannot be undone.
                     </Typography>
                 </DialogContent>
                 <DialogActions>

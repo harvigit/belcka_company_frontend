@@ -75,13 +75,16 @@ import {useTimeClockData} from './hooks/useTimeClockData';
 import {useEditingState} from './hooks/useEditingState';
 import {DailyBreakdown} from './types/timeClock';
 import type {User} from 'next-auth';
-import AddExpense from '@/app/components/apps/time-clock/time-clock-details/expenses/add-expense';
-import AddWorklog from '@/app/components/apps/time-clock/time-clock-details/worklog/add-worklog';
-import AddPricework from '@/app/components/apps/time-clock/time-clock-details/pricework/add-pricework';
-import PriceworkDetails from '@/app/components/apps/time-clock/time-clock-details/pricework/pricework-details';
-import Penalties from '@/app/components/apps/time-clock/time-clock-details/penalties';
+import dynamic from 'next/dynamic';
 import {GOOGLE_MAPS_SHARED_LOADER_OPTIONS} from '@/utils/googleMaps';
 import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/columnVisibilityCookies';
+
+// Drawer contents are only rendered when opened, so load them on demand to keep this page's bundle small.
+const AddExpense = dynamic(() => import('@/app/components/apps/time-clock/time-clock-details/expenses/add-expense'), {ssr: false});
+const AddWorklog = dynamic(() => import('@/app/components/apps/time-clock/time-clock-details/worklog/add-worklog'), {ssr: false});
+const AddPricework = dynamic(() => import('@/app/components/apps/time-clock/time-clock-details/pricework/add-pricework'), {ssr: false});
+const PriceworkDetails = dynamic(() => import('@/app/components/apps/time-clock/time-clock-details/pricework/pricework-details'), {ssr: false});
+const Penalties = dynamic(() => import('@/app/components/apps/time-clock/time-clock-details/penalties'), {ssr: false});
 
 const TIME_TRACKING_PAGE = 'time-tracking-page';
 const TIME_TRACKING_COLUMNS_COOKIE = 'time-tracking-column-visibility';

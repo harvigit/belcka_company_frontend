@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           # Keep in sync with `node -v` on the dev server.
-          node-version: 20.20.2
+          node-version: 24
           cache: npm
 
       - name: Set up SSH
@@ -81,6 +81,10 @@ jobs:
           export NVM_DIR="$HOME/.nvm"
           if [ -s "$NVM_DIR/nvm.sh" ]; then . "$NVM_DIR/nvm.sh"; fi
           set -u
+
+          # Frontend runs on the standalone Node 24 in /opt/node24; the system Node (20) stays for the backend.
+          export PATH="/opt/node24/bin:$PATH"
+          node -v | grep -q '^v24\.' || { echo "::error::Node 24 not found at /opt/node24"; exit 1; }
 
           cd "$DEPLOY_PATH"
 

@@ -72,9 +72,7 @@ import {
 
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
-import TimeClockDetails from './time-clock-details';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
-import AddLeave from './time-clock-details/leaves/add-leave';
 
 import 'react-day-picker/dist/style.css';
 import '@/app/global.css';
@@ -83,32 +81,38 @@ import {usePermissions} from '@/hooks/usePermissions';
 import {hasPermission} from '@/lib/permissions';
 import {User} from 'next-auth';
 import {usePathname, useRouter, useSearchParams} from 'next/navigation';
-import AddExpense from './time-clock-details/expenses/add-expense';
-import AddWorklog from './time-clock-details/worklog/add-worklog';
-import AddPricework from './time-clock-details/pricework/add-pricework';
 import Image from 'next/image';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import Link from 'next/link';
 import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import LeaveLists from './time-clock-details/leaves';
-import Conflicts from '@/app/components/apps/time-clock/time-clock-details/conflicts/conflicts';
 import {ConflictDetail} from '@/app/components/apps/time-clock/types/timeClock';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import {IconEye} from '@tabler/icons-react';
-import Settings from './setting/inex';
-import BookkeeperHistory from './history';
-import RecoverWorklogs from './recover-worklogs';
 import {useServerTable} from '@/hooks/useServerTable';
 import TablePaginationFooter from '../../common/TablePaginationFooter';
 import {usePersistentColumnVisibility} from '@/hooks/usePersistentColumnVisibility';
-import PenaltyHistory from './penalty';
-import UserRequests from '../requests/list';
 import {useTranslation} from 'react-i18next';
-import ExpenseList from '@/app/components/apps/expenses/list';
-import PriceworkList from '@/app/components/apps/priceworks/list';
-import GroupAnalytics from '@/app/components/apps/group-analytics';
-import AddAdjustment from './time-clock-details/adjustments/add-adjustment';
 import EditableGroupCell from '@/app/components/apps/settings/user-groups/EditableGroupCell';
+import dynamic from 'next/dynamic';
+import {useHasOpened} from '@/hooks/useHasOpened';
+
+// Drawers, dialogs and side panels only render after a click, so load them on demand instead of with the page.
+const TimeClockDetails = dynamic(() => import('./time-clock-details'), {ssr: false});
+const AddLeave = dynamic(() => import('./time-clock-details/leaves/add-leave'), {ssr: false});
+const AddExpense = dynamic(() => import('./time-clock-details/expenses/add-expense'), {ssr: false});
+const AddWorklog = dynamic(() => import('./time-clock-details/worklog/add-worklog'), {ssr: false});
+const AddPricework = dynamic(() => import('./time-clock-details/pricework/add-pricework'), {ssr: false});
+const Conflicts = dynamic(() => import('@/app/components/apps/time-clock/time-clock-details/conflicts/conflicts'), {ssr: false});
+const Settings = dynamic(() => import('./setting/inex'), {ssr: false});
+const BookkeeperHistory = dynamic(() => import('./history'), {ssr: false});
+const RecoverWorklogs = dynamic(() => import('./recover-worklogs'), {ssr: false});
+const PenaltyHistory = dynamic(() => import('./penalty'), {ssr: false});
+const UserRequests = dynamic(() => import('../requests/list'), {ssr: false});
+const ExpenseList = dynamic(() => import('@/app/components/apps/expenses/list'), {ssr: false});
+const PriceworkList = dynamic(() => import('@/app/components/apps/priceworks/list'), {ssr: false});
+const GroupAnalytics = dynamic(() => import('@/app/components/apps/group-analytics'), {ssr: false});
+const AddAdjustment = dynamic(() => import('./time-clock-details/adjustments/add-adjustment'), {ssr: false});
 
 const columnHelper = createColumnHelper<Index>();
 
@@ -604,6 +608,11 @@ const TimeClock = ({queryParams}: Props) => {
     const [fetchTimesheet, setFetchTimesheet] = useState<boolean>(false);
     const [openRecoverWorklogs, setOpenRecoverWorklogs] = useState(false);
     const [openPenaltyHistory, setOpenPenaltyHistory] = useState(false);
+    const settingsMounted = useHasOpened(settingOpen);
+    const bookkeeperHistoryMounted = useHasOpened(openDrawer);
+    const requestListMounted = useHasOpened(requestList);
+    const recoverWorklogsMounted = useHasOpened(openRecoverWorklogs);
+    const penaltyHistoryMounted = useHasOpened(openPenaltyHistory);
     const [relatedListView, setRelatedListView] = useState<RelatedListView>(null);
 
     const [selectedConflictUserId, setSelectedConflictUserId] = useState<any>(null);
@@ -3063,15 +3072,17 @@ const TimeClock = ({queryParams}: Props) => {
                             </Tooltip>
                             )}
 
-                            <Settings
-                                settingOpen={settingOpen}
-                                onClose={handleSettingClose}
-                                onSaved={() => {
-                                    settingsSavedRef.current = true;
-                                }}
-                                initialActiveMenuItem={settingsInitialMenu}
-                                initialProjectId={settingsInitialProjectId}
-                            />
+                            {settingsMounted && (
+                                <Settings
+                                    settingOpen={settingOpen}
+                                    onClose={handleSettingClose}
+                                    onSaved={() => {
+                                        settingsSavedRef.current = true;
+                                    }}
+                                    initialActiveMenuItem={settingsInitialMenu}
+                                    initialProjectId={settingsInitialProjectId}
+                                />
+                            )}
 
                             <IconButton
                                 size="small"
@@ -3309,12 +3320,14 @@ const TimeClock = ({queryParams}: Props) => {
                     </DialogActions>
                 </Dialog>
 
-                <BookkeeperHistory
-                    open={openDrawer}
-                    onClose={() => setOpenDrawer(false)}
-                    startDate={startDate}
-                    endDate={endDate}
-                />
+                {bookkeeperHistoryMounted && (
+                    <BookkeeperHistory
+                        open={openDrawer}
+                        onClose={() => setOpenDrawer(false)}
+                        startDate={startDate}
+                        endDate={endDate}
+                    />
+                )}
 
                 {isAnyRowSelected && (
                     <Box
@@ -3921,29 +3934,35 @@ const TimeClock = ({queryParams}: Props) => {
             <LeaveLists open={openLeaves} onClose={() => setOpenLeaves(false)} queryParams={resolvedQueryParams}/>
             
             {/* Request list */}
-            <UserRequests
-                open={requestList}
-                onRequestCountChange={(count: number) => setRequestCount(count || 0)}
-                onClose={() => setRequestList(false)}
-                onDataRefresh={refreshTimeClockData}
-                isAdmin={true}
-                showRequestActions
-            />
+            {requestListMounted && (
+                <UserRequests
+                    open={requestList}
+                    onRequestCountChange={(count: number) => setRequestCount(count || 0)}
+                    onClose={() => setRequestList(false)}
+                    onDataRefresh={refreshTimeClockData}
+                    isAdmin={true}
+                    showRequestActions
+                />
+            )}
 
             {/*  Recover Worklogs list */}
-            <RecoverWorklogs
-                open={openRecoverWorklogs}
-                onClose={() => setOpenRecoverWorklogs(false)}
-                onDataRefresh={refreshTimeClockData}
-                startDate={startDate}
-                endDate={endDate}
-            />
+            {recoverWorklogsMounted && (
+                <RecoverWorklogs
+                    open={openRecoverWorklogs}
+                    onClose={() => setOpenRecoverWorklogs(false)}
+                    onDataRefresh={refreshTimeClockData}
+                    startDate={startDate}
+                    endDate={endDate}
+                />
+            )}
             
             {/*  Penalty history */}
-            <PenaltyHistory
-                open={openPenaltyHistory}
-                onClose={() => setOpenPenaltyHistory(false)}
-            />
+            {penaltyHistoryMounted && (
+                <PenaltyHistory
+                    open={openPenaltyHistory}
+                    onClose={() => setOpenPenaltyHistory(false)}
+                />
+            )}
 
             <Drawer
                 anchor="bottom"
