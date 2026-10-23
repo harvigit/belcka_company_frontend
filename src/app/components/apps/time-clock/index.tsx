@@ -315,6 +315,13 @@ type TimeClockResponse = {
     IsSuccess: boolean;
     info: Index[];
     currency: string;
+    filters?: {
+        projects?: FilterOption[];
+        teams?: FilterOption[];
+        groups?: FilterOption[];
+        statuses?: FilterOption[];
+        users?: FilterOption[];
+    };
     data?: {
         totalItems: number;
         itemCount: number;
@@ -349,19 +356,6 @@ const EMPTY_TIME_CLOCK_FILTERS: TimeClockFilterState = {
 };
 
 const PENDING_REQUEST_COLOR = '#eab308';
-
-const PENDING_STATUS_FILTER_OPTION: FilterOption = {
-    id: '0',
-    name: 'Pending',
-};
-
-const withPendingStatusFilterOption = (statuses: FilterOption[] = []) => {
-    const hasPendingStatus = statuses.some((status) => String(status.id) === '0');
-
-    return hasPendingStatus
-        ? statuses
-        : [PENDING_STATUS_FILTER_OPTION, ...statuses];
-};
 
 const TIME_CLOCK_TYPE_OPTIONS = [
     {value: 'day_work', label: 'Day Work'},
@@ -535,11 +529,13 @@ const TimeClock = ({queryParams}: Props) => {
         statuses: FilterOption[];
         users: FilterOption[];
         projects: FilterOption[];
+        groups: FilterOption[];
     }>({
         teams: [],
         statuses: [],
         users: [],
-        projects: []
+        projects: [],
+        groups: [],
     });
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [anchorEl3, setAnchorEl3] = useState<null | HTMLElement>(null);
@@ -549,13 +545,6 @@ const TimeClock = ({queryParams}: Props) => {
     const {permissions} = usePermissions();
     const canViewGroupReport = user?.user_role_id === 1 || hasPermission(permissions, 'group-report');
     const [companyGroups, setCompanyGroups] = useState<{ id: number; name: string }[]>([]);
-    const groupFilterOptions = useMemo<FilterOption[]>(
-        () => [
-            {id: String(UNGROUPED_GROUP_ID), name: 'Ungroup'},
-            ...companyGroups.map((g) => ({id: String(g.id), name: g.name})),
-        ],
-        [companyGroups],
-    );
 
     useEffect(() => {
         if (!user?.company_id) return;
@@ -802,28 +791,6 @@ const TimeClock = ({queryParams}: Props) => {
         }
     }, [timeClockFiltersCookieKey]);
 
-    useEffect(() => {
-        if (!user?.id) return;
-
-        const fetchFilterOptions = async () => {
-            try {
-                const response = await api.get('/time-clock/get-resources');
-                if (!response.data?.IsSuccess) return;
-
-                setFilterOptions({
-                    teams: response.data.teams || [],
-                    statuses: withPendingStatusFilterOption(response.data.statuses || []),
-                    users: response.data.users || [],
-                    projects: response.data.projects || [],
-                });
-            } catch (error) {
-                console.error('Failed to fetch time-clock filter options:', error);
-            }
-        };
-
-        fetchFilterOptions();
-    }, [user?.id]);
-
     const [isFilteredView, setIsFilteredView] = useState(false);
     useEffect(() => {
         const hasUserFilter = Boolean(resolvedQueryParams.user_id);
@@ -892,6 +859,8 @@ const TimeClock = ({queryParams}: Props) => {
             params.data_type = typeFilter;
         }
 
+        params.filters_for = 'time_clock_list';
+
         const currentParams = queryParamsRef.current;
 
         if (currentParams?.user_id) {
@@ -915,6 +884,19 @@ const TimeClock = ({queryParams}: Props) => {
                 setFetchTimesheet(true);
                 const response: AxiosResponse<TimeClockResponse> = await api.get('/time-clock/list-web', {params});
                 if (response.data.IsSuccess) {
+                    const listFilters = response.data.filters;
+                    if (listFilters) {
+                        setFilterOptions({
+                            projects: listFilters.projects || [],
+                            teams: listFilters.teams || [],
+                            groups: listFilters.groups || [],
+                            statuses: (listFilters.statuses || []).map((status) => ({
+                                ...status,
+                                id: String(status.id),
+                            })),
+                            users: listFilters.users || [],
+                        });
+                    }
                     setData(response.data.info);
                     setCompanyId(response.data.company_id);
                     setUserHasRatePermission(response.data.user_rate_permission);
@@ -3223,7 +3205,7 @@ const TimeClock = ({queryParams}: Props) => {
                         <Stack spacing={2} mt={1} sx={{width: '100%', minWidth: 0}}>
                             {renderFilterSelect('Projects', 'projects', filterOptions.projects)}
                             {renderFilterSelect('Teams', 'teams', filterOptions.teams)}
-                            {renderFilterSelect('Groups', 'groups', groupFilterOptions)}
+                            {renderFilterSelect('Groups', 'groups', filterOptions.groups)}
                             {renderFilterSelect('Status', 'statuses', filterOptions.statuses, false)}
                             {renderFilterSelect('Users', 'users', filterOptions.users)}
                         </Stack>
