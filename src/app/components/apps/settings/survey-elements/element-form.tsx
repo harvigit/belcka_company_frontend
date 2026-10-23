@@ -6,6 +6,10 @@ import {
   Box,
   Button,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Paper,
   Stack,
@@ -14,9 +18,10 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from "@mui/material";
-import { IconArrowLeft, IconHistory, IconLock } from "@tabler/icons-react";
+import { IconArrowLeft, IconEdit, IconHistory, IconLock, IconTrash } from "@tabler/icons-react";
 import ElementHistoryDialog from "./element-history";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -36,12 +41,36 @@ type DamageMethod = {
   allow_area: boolean;
 };
 
-type CatalogueDamage = { id: number; name: string; status?: boolean | number };
+type CatalogueDamage = {
+  id: number;
+  name: string;
+  status?: boolean | number;
+  element_id?: number | null;
+  locked?: boolean;
+};
 type CatalogueMaterial = {
   id: number;
   name: string;
   category: string;
   status?: boolean | number;
+  element_id?: number | null;
+  locked?: boolean;
+};
+type PendingDamage = {
+  key: string;
+  name: string;
+  allow_count: boolean;
+  allow_length: boolean;
+  allow_width: boolean;
+  allow_area: boolean;
+};
+type PendingMaterial = { key: string; name: string; category: "subbase" | "topwear" };
+type RenameTarget = {
+  kind: "damage" | "material";
+  id?: number;
+  key?: string;
+  name: string;
+  category?: string;
 };
 
 type ElementFormState = {
@@ -181,6 +210,10 @@ const SurveyElementForm = ({
   const [refreshKey, setRefreshKey] = useState(0);
   const [damageTypes, setDamageTypes] = useState<CatalogueDamage[]>([]);
   const [materials, setMaterials] = useState<CatalogueMaterial[]>([]);
+  const [pendingDamage, setPendingDamage] = useState<PendingDamage[]>([]);
+  const [pendingMaterials, setPendingMaterials] = useState<PendingMaterial[]>([]);
+  const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null);
+  const [renameName, setRenameName] = useState("");
   const [newDamageName, setNewDamageName] = useState("");
   const [newSubbaseName, setNewSubbaseName] = useState("");
   const [newTopwearName, setNewTopwearName] = useState("");
@@ -189,9 +222,15 @@ const SurveyElementForm = ({
   const [saving, setSaving] = useState(false);
 
   const loadCatalogues = async () => {
+    const damageUrl = elementId
+      ? `survey-damage-types/get?element_id=${elementId}`
+      : "survey-damage-types/get";
+    const materialUrl = elementId
+      ? `survey-materials/get?element_id=${elementId}`
+      : "survey-materials/get";
     const [damageRes, materialRes] = await Promise.all([
-      api.get("survey-damage-types/get"),
-      api.get("survey-materials/get"),
+      api.get(damageUrl),
+      api.get(materialUrl),
     ]);
     setDamageTypes(
       (Array.isArray(damageRes.data?.info) ? damageRes.data.info : []).filter(
@@ -208,6 +247,8 @@ const SurveyElementForm = ({
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      setPendingDamage([]);
+      setPendingMaterials([]);
       try {
         await loadCatalogues();
         if (!elementId) {
@@ -329,13 +370,141 @@ const SurveyElementForm = ({
     });
   };
 
-  const createDamageType = async () => {
-    if (!newDamageName.trim()) {
+  const sameName = (left: string, right: string) =>
+    left.trim().toLowerCase() === right.trim().toLowerCase();
+
+  const damageNameTaken = (name: string, except?: { key?: string; id?: number }) =>
+    damageTypes.some((row) => row.id !== except?.id && sameName(row.name, name)) ||
+    pendingDamage.some((row) => row.key !== except?.key && sameName(row.name, name));
+
+  const materialNameTaken = (name: string, except?: { key?: string; id?: number }) =>
+    materials.some((row) => row.id !== except?.id && sameName(row.name, name)) ||
+    pendingMaterials.some((row) => row.key !== except?.key && sameName(row.name, name));
+
+  const openRename = (target: RenameTarget) => {
+    setRenameTarget(target);
+    setRenameName(target.name);
+  };
+
+  const saveRename = async () => {
+    const name = renameName.trim();
+    if (!renameTarget) return;
+    if (!name) {
       toast.error("Name is a required field!");
       return;
     }
+    if (renameTarget.kind === "damage" && damageNameTaken(name, renameTarget)) {
+      toast.error("Provided survey damage type exists in this company!");
+      return;
+    }
+    if (renameTarget.kind === "material" && materialNameTaken(name, renameTarget)) {
+      toast.error("Provided survey material exists in this company!");
+      return;
+    }
+    if (renameTarget.key) {
+      if (renameTarget.kind === "damage") {
+        setPendingDamage((current) =>
+          current.map((row) => (row.key === renameTarget.key ? { ...row, name } : row)),
+        );
+      } else {
+        setPendingMaterials((current) =>
+          current.map((row) => (row.key === renameTarget.key ? { ...row, name } : row)),
+        );
+      }
+      setRenameTarget(null);
+      return;
+    }
     try {
-      const res = await api.post("survey-damage-types/create", { name: newDamageName.trim() });
+      const res =
+        renameTarget.kind === "damage"
+          ? await api.put("survey-damage-types/update", { id: renameTarget.id, name })
+          : await api.put("survey-materials/update", {
+              id: renameTarget.id,
+              name,
+              category: renameTarget.category,
+            });
+      if (!res.data?.IsSuccess) {
+        toast.error(res.data?.message || "Failed to update");
+        return;
+      }
+      setRenameTarget(null);
+      await loadCatalogues();
+      toast.success(res.data.message || "Updated");
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to update"));
+    }
+  };
+
+  const deleteOwnedDamage = async (row: CatalogueDamage) => {
+    try {
+      const res = await api.post("survey-damage-types/delete", { id: row.id });
+      if (!res.data?.IsSuccess) {
+        toast.error(res.data?.message || "Failed to delete damage type");
+        return;
+      }
+      setForm((current) => ({
+        ...current,
+        damage: current.damage.filter((item) => item.id !== row.id),
+      }));
+      await loadCatalogues();
+      toast.success(res.data.message || "Damage type deleted");
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to delete damage type"));
+    }
+  };
+
+  const deleteOwnedMaterial = async (row: CatalogueMaterial) => {
+    try {
+      const res = await api.post("survey-materials/delete", { id: row.id });
+      if (!res.data?.IsSuccess) {
+        toast.error(res.data?.message || "Failed to delete material");
+        return;
+      }
+      setForm((current) => ({
+        ...current,
+        materialIds: current.materialIds.filter((id) => id !== row.id),
+      }));
+      setKnownMaterials((current) => current.filter((item) => item.id !== row.id));
+      await loadCatalogues();
+      toast.success(res.data.message || "Material deleted");
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to delete material"));
+    }
+  };
+
+  const togglePendingMethod = (key: string, field: keyof Omit<PendingDamage, "key" | "name">) => {
+    setPendingDamage((current) =>
+      current.map((row) => (row.key === key ? { ...row, [field]: !row[field] } : row)),
+    );
+  };
+
+  const createDamageType = async () => {
+    const name = newDamageName.trim();
+    if (!name) {
+      toast.error("Name is a required field!");
+      return;
+    }
+    if (damageNameTaken(name)) {
+      toast.error("Provided survey damage type exists in this company!");
+      return;
+    }
+    if (!elementId) {
+      setPendingDamage((current) => [
+        ...current,
+        {
+          key: `damage-${Date.now()}`,
+          name,
+          allow_count: false,
+          allow_length: false,
+          allow_width: false,
+          allow_area: false,
+        },
+      ]);
+      setNewDamageName("");
+      return;
+    }
+    try {
+      const res = await api.post("survey-damage-types/create", { name, element_id: elementId });
       if (!res.data?.IsSuccess) {
         toast.error(res.data?.message || "Failed to save damage type");
         return;
@@ -349,12 +518,29 @@ const SurveyElementForm = ({
   };
 
   const createMaterial = async (category: "subbase" | "topwear", name: string, clear: () => void) => {
-    if (!name.trim()) {
+    const trimmed = name.trim();
+    if (!trimmed) {
       toast.error("Name is a required field!");
       return;
     }
+    if (materialNameTaken(trimmed)) {
+      toast.error("Provided survey material exists in this company!");
+      return;
+    }
+    if (!elementId) {
+      setPendingMaterials((current) => [
+        ...current,
+        { key: `material-${Date.now()}`, name: trimmed, category },
+      ]);
+      clear();
+      return;
+    }
     try {
-      const res = await api.post("survey-materials/create", { name: name.trim(), category });
+      const res = await api.post("survey-materials/create", {
+        name: trimmed,
+        category,
+        element_id: elementId,
+      });
       if (!res.data?.IsSuccess) {
         toast.error(res.data?.message || "Failed to save material");
         return;
@@ -413,6 +599,17 @@ const SurveyElementForm = ({
         surface_photo_minimum: form.surface_photo_minimum,
         damage_types: form.damage.filter(hasMethod),
         material_ids: form.materialIds,
+        owned_damage_types: pendingDamage.map((item) => ({
+          name: item.name,
+          allow_count: item.allow_count,
+          allow_length: item.allow_length,
+          allow_width: item.allow_width,
+          allow_area: item.allow_area,
+        })),
+        owned_materials: pendingMaterials.map((item) => ({
+          name: item.name,
+          category: item.category,
+        })),
         publish,
       };
       const res = elementId
@@ -662,7 +859,7 @@ const SurveyElementForm = ({
               <SectionTitle
                 step="3"
                 title="Applicable damage types"
-                caption="Tick the measurement methods allowed for each damage type."
+                caption="Tick the measurement methods allowed for each damage type. Damage types created here stay on this element only."
               />
               <Stack direction="row" spacing={1} sx={{ minWidth: { md: 320 } }}>
                 <CustomTextField
@@ -695,18 +892,18 @@ const SurveyElementForm = ({
                   ))}
               </Stack>
             )}
-            {damageTypes.length === 0 ? (
+            {damageTypes.length === 0 && pendingDamage.length === 0 ? (
               <Typography color="text.secondary">No active damage types.</Typography>
             ) : (
               <Table size="small" sx={{ tableLayout: "fixed" }}>
                 <TableHead>
                   <TableRow>
-                    {["Damage type", "Count", "Length", "Width", "Area"].map((heading, index) => (
+                    {["Damage type", "Count", "Length", "Width", "Area", ""].map((heading, index) => (
                       <TableCell
-                        key={heading}
+                        key={heading || "actions"}
                         align={index === 0 ? "left" : "center"}
                         sx={{
-                          width: index === 0 ? "40%" : "15%",
+                          width: index === 0 ? "36%" : index === 5 ? "10%" : "13.5%",
                           bgcolor: "#f8fafc",
                           fontWeight: 600,
                         }}
@@ -719,9 +916,17 @@ const SurveyElementForm = ({
                 <TableBody>
                   {damageTypes.map((type) => {
                     const selected = damageFor(type.id);
+                    const owned = Boolean(type.element_id);
                     return (
                       <TableRow key={type.id} hover>
-                        <TableCell>{type.name}</TableCell>
+                        <TableCell>
+                          <Typography>{type.name}</Typography>
+                          {owned ? (
+                            <Typography variant="caption" color="text.secondary">
+                              Only this element
+                            </Typography>
+                          ) : null}
+                        </TableCell>
                         {(["allow_count", "allow_length", "allow_width", "allow_area"] as const).map(
                           (key) => (
                             <TableCell key={key} align="center">
@@ -732,9 +937,81 @@ const SurveyElementForm = ({
                             </TableCell>
                           ),
                         )}
+                        <TableCell align="center">
+                          {owned ? (
+                            <Stack direction="row" justifyContent="center">
+                              <IconButton
+                                size="small"
+                                aria-label="Edit damage type"
+                                onClick={() =>
+                                  openRename({ kind: "damage", id: type.id, name: type.name })
+                                }
+                              >
+                                <IconEdit size={16} />
+                              </IconButton>
+                              {type.locked ? (
+                                <Tooltip title="Used on a published version">
+                                  <span>
+                                    <IconButton size="small" disabled aria-label="Used on a published version">
+                                      <IconLock size={16} />
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              ) : (
+                                <IconButton
+                                  size="small"
+                                  aria-label="Delete damage type"
+                                  onClick={() => void deleteOwnedDamage(type)}
+                                >
+                                  <IconTrash size={16} />
+                                </IconButton>
+                              )}
+                            </Stack>
+                          ) : null}
+                        </TableCell>
                       </TableRow>
                     );
                   })}
+                  {pendingDamage.map((item) => (
+                    <TableRow key={item.key} hover>
+                      <TableCell>
+                        <Typography>{item.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Only this element
+                        </Typography>
+                      </TableCell>
+                      {(["allow_count", "allow_length", "allow_width", "allow_area"] as const).map(
+                        (key) => (
+                          <TableCell key={key} align="center">
+                            <CustomCheckbox
+                              checked={item[key]}
+                              onChange={() => togglePendingMethod(item.key, key)}
+                            />
+                          </TableCell>
+                        ),
+                      )}
+                      <TableCell align="center">
+                        <Stack direction="row" justifyContent="center">
+                          <IconButton
+                            size="small"
+                            aria-label="Edit damage type"
+                            onClick={() => openRename({ kind: "damage", key: item.key, name: item.name })}
+                          >
+                            <IconEdit size={16} />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            aria-label="Delete damage type"
+                            onClick={() =>
+                              setPendingDamage((current) => current.filter((row) => row.key !== item.key))
+                            }
+                          >
+                            <IconTrash size={16} />
+                          </IconButton>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             )}
@@ -744,7 +1021,7 @@ const SurveyElementForm = ({
             <SectionTitle
               step="4"
               title="Materials"
-              caption="Choose the substrate and the visible finish the surveyor can record."
+              caption="Choose the substrate and the visible finish the surveyor can record. Materials created here stay on this element only."
             />
             <Box
               sx={{
@@ -785,11 +1062,95 @@ const SurveyElementForm = ({
                         />
                       ))}
                   </Stack>
+                  <Stack spacing={0.5} mb={1.5}>
+                    {materialsFor(category)
+                      .filter((item) => item.element_id)
+                      .map((item) => (
+                        <Stack key={item.id} direction="row" alignItems="center" spacing={0.5}>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography noWrap>{item.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Only this element
+                            </Typography>
+                          </Box>
+                          <IconButton
+                            size="small"
+                            aria-label="Edit material"
+                            onClick={() =>
+                              openRename({
+                                kind: "material",
+                                id: item.id,
+                                name: item.name,
+                                category: item.category,
+                              })
+                            }
+                          >
+                            <IconEdit size={16} />
+                          </IconButton>
+                          {item.locked ? (
+                            <Tooltip title="Used on a published version">
+                              <span>
+                                <IconButton size="small" disabled aria-label="Used on a published version">
+                                  <IconLock size={16} />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          ) : (
+                            <IconButton
+                              size="small"
+                              aria-label="Delete material"
+                              onClick={() => void deleteOwnedMaterial(item)}
+                            >
+                              <IconTrash size={16} />
+                            </IconButton>
+                          )}
+                        </Stack>
+                      ))}
+                    {pendingMaterials
+                      .filter((item) => item.category === category)
+                      .map((item) => (
+                        <Stack key={item.key} direction="row" alignItems="center" spacing={0.5}>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography noWrap>{item.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Only this element
+                            </Typography>
+                          </Box>
+                          <IconButton
+                            size="small"
+                            aria-label="Edit material"
+                            onClick={() =>
+                              openRename({
+                                kind: "material",
+                                key: item.key,
+                                name: item.name,
+                                category: item.category,
+                              })
+                            }
+                          >
+                            <IconEdit size={16} />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            aria-label="Delete material"
+                            onClick={() =>
+                              setPendingMaterials((current) =>
+                                current.filter((row) => row.key !== item.key),
+                              )
+                            }
+                          >
+                            <IconTrash size={16} />
+                          </IconButton>
+                        </Stack>
+                      ))}
+                  </Stack>
                   <Autocomplete
                     multiple
                     options={materialsFor(category)}
                     value={selectedMaterials(category)}
-                    getOptionLabel={(option) => option.name}
+                    getOptionLabel={(option) =>
+                      option.element_id ? `${option.name} (this element)` : option.name
+                    }
                     isOptionEqualToValue={(option, value) => option.id === value.id}
                     onChange={(_, value) =>
                       setCategoryMaterials(
@@ -835,6 +1196,32 @@ const SurveyElementForm = ({
           </Typography>
         </Stack>
       </Box>
+      <Dialog
+        open={Boolean(renameTarget)}
+        onClose={() => setRenameTarget(null)}
+        fullWidth
+        maxWidth="xs"
+        sx={surveyInputAlignSx}
+      >
+        <DialogTitle>{renameTarget?.kind === "material" ? "Edit material" : "Edit damage type"}</DialogTitle>
+        <DialogContent>
+          <CustomTextField
+            autoFocus
+            size="small"
+            label="Name"
+            value={renameName}
+            onChange={(event) => setRenameName(event.target.value)}
+            fullWidth
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRenameTarget(null)}>Cancel</Button>
+          <Button variant="contained" onClick={() => void saveRename()}>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
       <ElementHistoryDialog
         open={historyOpen}
         elementId={elementId}
