@@ -366,7 +366,6 @@ const PriceworkList = ({
     const [teams, setTeams] = useState<any[]>([]);
     const [trades, setTrades] = useState<any[]>([]);
 
-    const loadedFilterCompanyIdRef = useRef<number | null>(null);
     const [editingCell, setEditingCell] = useState<{
         rowKey: string | null;
         field: 'amount_per_unit' | 'work_complete' | null;
@@ -565,28 +564,6 @@ const PriceworkList = ({
         setAttachmentsOpen(false);
         setAttachmentsPricework(null);
     };
-
-    useEffect(() => {
-        const fetchFilterOptions = async () => {
-            if (!user?.company_id || projectId || embedded) return;
-            if (loadedFilterCompanyIdRef.current === Number(user.company_id)) return;
-
-            loadedFilterCompanyIdRef.current = Number(user.company_id);
-            try {
-                const res = await api.get('pricework/list-filters');
-                const info = res.data?.info || {};
-                setProjects(info.projects || []);
-                setAddresses(info.addresses || []);
-                setUsers(info.users || []);
-                setTeams(info.teams || []);
-                setTrades(info.trades || []);
-            } catch (error) {
-                loadedFilterCompanyIdRef.current = null;
-            }
-        };
-
-        fetchFilterOptions();
-    }, [user?.company_id, projectId, embedded]);
 
     const handleToggleSelect = (row: PriceworkRow) => {
         const rowKey = getPriceworkRowKey(row);
@@ -1520,7 +1497,7 @@ const PriceworkList = ({
             if (filters.trade_id) url += `&trade_id=${filters.trade_id}`;
             if (filters.team_id) url += `&team_id=${filters.team_id}`;
             if (activeTab !== 'all') url += `&status=${activeTab}`;
-            if (embedded && !projectId) url += '&filters_for=pricework_list';
+            if (!projectId) url += '&filters_for=pricework_list';
 
             if (sorting.length > 0) {
                 url += `&sort_by=${encodeURIComponent(sorting[0].id)}&sort_order=${sorting[0].desc ? 'desc' : 'asc'}`;
@@ -1533,7 +1510,7 @@ const PriceworkList = ({
                 setData(responseData);
                 clearSelection();
 
-                if (embedded && !projectId && res.data.filters) {
+                if (!projectId && res.data.filters) {
                     const listFilters = res.data.filters;
                     setUsers(listFilters.users || []);
                     setProjects(listFilters.projects || []);
