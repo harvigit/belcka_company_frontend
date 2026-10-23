@@ -513,7 +513,7 @@ export default function AnnouncementsList({
     Number(announcementDetails?.user_id) === Number(userId);
 
   const handleAnnouncementPin = async (item: any) => {
-    if (!item?.id) return;
+    if (!item?.id || Number(roleId) !== 1) return;
     const nextPinned = !Boolean(item.is_pinned);
     const pinnedAt = nextPinned ? new Date().toISOString() : null;
     const pinnedBy = nextPinned
@@ -933,6 +933,7 @@ export default function AnnouncementsList({
                             alignItems="center"
                             sx={{ ml: "auto" }}
                           >
+                            {Number(roleId) === 1 && (
                             <Tooltip
                               arrow
                               placement="top"
@@ -964,6 +965,7 @@ export default function AnnouncementsList({
                                 )}
                               </IconButton>
                             </Tooltip>
+                            )}
                             {it.allow_comments !== false && (
                               <Stack
                                 direction="row"
@@ -1268,7 +1270,7 @@ export default function AnnouncementsList({
               <Typography variant="h6" color="inherit" fontWeight={700} sx={{ flex: 1 }}>
                 {t("Announcement Details")}
               </Typography>
-              {announcementDetails?.id ? (
+              {announcementDetails?.id && Number(roleId) === 1 ? (
                 <Tooltip
                   arrow
                   placement="top"

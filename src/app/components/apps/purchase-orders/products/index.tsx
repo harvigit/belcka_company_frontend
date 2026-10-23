@@ -32,7 +32,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { createColumnHelper } from "@tanstack/react-table";
-import {flexRender} from "@/utils/flexRender";
+import { flexRender } from "@/utils/flexRender";
 import {
   IconChevronRight,
   IconEye,
@@ -151,9 +151,6 @@ const PurchaseProductList: React.FC<Props> = ({
   useEffect(() => {
     manuallyDeselectedRef.current = manuallyDeselected;
   }, [manuallyDeselected]);
-  const [latestFetchedIds, setLatestFetchedIds] = useState<Set<number>>(
-    new Set(),
-  );
   const [draftOrderIdDialogOpen, setDraftOrderIdDialogOpen] = useState(false);
   const [manualOrderId, setManualOrderId] = useState("");
 
@@ -308,12 +305,23 @@ const PurchaseProductList: React.FC<Props> = ({
         params.low_stock = true;
       }
       params.is_all_product = true;
+      const filterUnresolved =
+        (Boolean(filters.supplier) &&
+          filters.supplier !== "All" &&
+          !params.suppliers) ||
+        (Boolean(filters.project) &&
+          filters.project !== "All" &&
+          !params.project) ||
+        (Boolean(filters.address) &&
+          filters.address !== "All" &&
+          !params.address);
+      if (filterUnresolved) return;
+
       const response = await api.get("purchase-orders/orders", { params });
       if (seq !== fetchSeqRef.current) return;
 
       if (response.data) {
         const fetchedItems = response.data.info || [];
-        const deselected = manuallyDeselectedRef.current;
         const nameFilterActive =
           (filters.supplier && filters.supplier !== "All") ||
           (filters.project && filters.project !== "All") ||
@@ -328,51 +336,60 @@ const PurchaseProductList: React.FC<Props> = ({
           String(searchTerm).trim(),
         ].join("|");
         const filterChanged = listFilterKey !== listFilterKeyRef.current;
-        setData((prevData) => {
-          const prevById = new Map(prevData.map((item) => [item.id, item]));
-          const mergedFetched = fetchedItems.map(
-            (item: any) => prevById.get(item.id) ?? item,
-          );
-          const currentSelected = selectedRowIdsRef.current;
-          const pinnedItems = (
-            listFilterActive && filterChanged ? [] : prevData
-          ).filter(
-            (item) =>
-              currentSelected.has(item.id) || Number(item.total_qty) > 0,
-          );
-          const fetchedIds = new Set(fetchedItems.map((item: any) => item.id));
-          const pinnedNotInFetch = pinnedItems.filter(
-            (item) => !fetchedIds.has(item.id),
-          );
-          if (isSearching) {
-            return [...fetchedItems, ...pinnedNotInFetch];
-          }
-          const pinnedIds = new Set(pinnedItems.map((item) => item.id));
-          const newItems = mergedFetched.filter(
-            (item: any) => !pinnedIds.has(item.id),
-          );
-          return [...pinnedItems, ...newItems];
-        });
+        const replaceSelection =
+          selectionResetRef.current || filterChanged;
+        const catalogSelected = Array.isArray(
+          (response.data as any).data?.selectedProducts,
+        )
+          ? (response.data as any).data.selectedProducts
+          : [];
+        if (replaceSelection) {
+          manuallyDeselectedRef.current = new Set();
+          setManuallyDeselected(new Set());
+          selectedProductSnapshotsRef.current.clear();
+          setData(fetchedItems);
+        } else {
+          setData((prevData) => {
+            const prevById = new Map(prevData.map((item) => [item.id, item]));
+            return fetchedItems.map(
+              (item: any) => prevById.get(item.id) ?? item,
+            );
+          });
+        }
         const fetchedIdSet = new Set<number>(
           fetchedItems.map((item: any) => item.id),
         );
-        setLatestFetchedIds(fetchedIdSet);
-        const resetSelection = selectionResetRef.current;
         listFilterKeyRef.current = listFilterKey;
         selectionResetRef.current = false;
-        const autoSelectedIds = fetchedItems
-          .filter((p: any) => Number(p.total_qty) > 0 && !deselected.has(p.id))
-          .map((p: any) => p.id);
-        const previousSelected = resetSelection
-          ? new Set<number>()
-          : selectedRowIdsRef.current;
         const nextSelected = new Set<number>();
-        previousSelected.forEach((id) => {
-          if (!listFilterActive || !filterChanged || fetchedIdSet.has(id)) {
-            nextSelected.add(id);
-          }
-        });
-        autoSelectedIds.forEach((id: number) => nextSelected.add(id));
+        if (replaceSelection) {
+          catalogSelected.forEach((product: any) => {
+            const qty = Number(product.total_qty) || 0;
+            if (qty <= 0) return;
+            nextSelected.add(product.id);
+            selectedProductSnapshotsRef.current.set(product.id, {
+              id: product.id,
+              qty,
+              price: product.price,
+              supplier_id: Number(product.supplier_id),
+              supplier_name: product.supplier_name || "",
+            });
+          });
+        } else {
+          selectedRowIdsRef.current.forEach((id) => {
+            if (!listFilterActive || !filterChanged || fetchedIdSet.has(id)) {
+              nextSelected.add(id);
+            }
+          });
+          fetchedItems.forEach((product: any) => {
+            if (
+              Number(product.total_qty) > 0 &&
+              !manuallyDeselectedRef.current.has(product.id)
+            ) {
+              nextSelected.add(product.id);
+            }
+          });
+        }
         selectedProductSnapshotsRef.current.forEach((_, id) => {
           if (!nextSelected.has(id)) {
             selectedProductSnapshotsRef.current.delete(id);
@@ -409,7 +426,6 @@ const PurchaseProductList: React.FC<Props> = ({
       setSelectedRowIds(new Set());
       selectedProductSnapshotsRef.current.clear();
       setManuallyDeselected(new Set());
-      setLatestFetchedIds(new Set());
       setDrawerOpen(false);
       setEditDrawerOpen(false);
       fetchOrders();
@@ -474,21 +490,14 @@ const PurchaseProductList: React.FC<Props> = ({
   }, [data]);
 
   const finalFilteredData = useMemo(() => {
-    const hasSearch = Boolean(String(searchTerm).trim());
     return [...filteredData].sort((a, b) => {
-      const aSearched = hasSearch && latestFetchedIds.has(a.id);
-      const bSearched = hasSearch && latestFetchedIds.has(b.id);
-      if (aSearched && !bSearched) return -1;
-      if (!aSearched && bSearched) return 1;
-
       const aPinned = selectedRowIds.has(a.id) || Number(a.total_qty) > 0;
       const bPinned = selectedRowIds.has(b.id) || Number(b.total_qty) > 0;
       if (aPinned && !bPinned) return -1;
       if (!aPinned && bPinned) return 1;
-
       return 0;
     });
-  }, [filteredData, selectedRowIds, searchTerm, latestFetchedIds]);
+  }, [filteredData, selectedRowIds]);
 
   data.forEach((item) => {
     if (!selectedRowIds.has(item.id)) return;
@@ -1467,7 +1476,6 @@ const PurchaseProductList: React.FC<Props> = ({
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
-
             <Button
               variant="contained"
               startIcon={<IconFileImport width={18} />}
