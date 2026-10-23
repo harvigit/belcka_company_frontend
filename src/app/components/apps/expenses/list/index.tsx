@@ -2701,10 +2701,7 @@ const ExpenseList = ({
             <ExpenseAttachmentsDrawer
                 open={detailOpen}
                 expenseId={selectedExpenseId}
-                onClose={() => {
-                    closeExpenseDetail();
-                    fetchExpenses();
-                }}
+                onClose={closeExpenseDetail}
             />
         </Box>
     );
