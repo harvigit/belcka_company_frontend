@@ -14,13 +14,14 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  TextField,
   Typography,
 } from "@mui/material";
 import { IconArrowLeft, IconLock } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import { surveyInputAlignSx } from "@/app/components/apps/settings/survey-settings/input-align";
 
 type FormFactor = "flat" | "volumetric" | "";
 type MeasurementMode = "dimensions" | "direct" | "";
@@ -433,7 +434,17 @@ const SurveyElementForm = ({
   );
 
   return (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0, bgcolor: "#f8fafc" }}>
+    <Box
+      className="survey-element-form"
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        bgcolor: "#f8fafc",
+        ...surveyInputAlignSx,
+      }}
+    >
       <Stack
         direction={{ xs: "column", md: "row" }}
         justifyContent="space-between"
@@ -480,14 +491,14 @@ const SurveyElementForm = ({
                 gap: 2,
               }}
             >
-              <TextField
+              <CustomTextField
                 size="small"
                 label="Element name"
                 value={form.name}
                 onChange={(event) => setField("name", event.target.value)}
                 fullWidth
               />
-              <TextField
+              <CustomTextField
                 size="small"
                 label="Description (optional)"
                 value={form.description}
@@ -549,14 +560,14 @@ const SurveyElementForm = ({
               >
                 {dimensionFields.slice(0, dimensionCount).map(([nameKey, unitKey, label]) => (
                   <Stack key={nameKey} direction="row" spacing={1}>
-                    <TextField
+                    <CustomTextField
                       size="small"
                       label={label}
                       value={form[nameKey]}
                       onChange={(event) => setField(nameKey, event.target.value)}
                       fullWidth
                     />
-                    <TextField
+                    <CustomTextField
                       size="small"
                       label="Unit"
                       value={form[unitKey]}
@@ -575,21 +586,21 @@ const SurveyElementForm = ({
                 gridTemplateColumns: { xs: "1fr", md: "1fr 160px" },
               }}
             >
-              <TextField
+              <CustomTextField
                 size="small"
                 label="Output measurement"
                 value={form.output_name}
                 onChange={(event) => setField("output_name", event.target.value)}
                 fullWidth
               />
-              <TextField
+              <CustomTextField
                 size="small"
                 label="Output unit"
                 value={form.output_unit}
                 onChange={(event) => setField("output_unit", event.target.value)}
                 fullWidth
               />
-              <TextField
+              <CustomTextField
                 size="small"
                 label="Other units available"
                 value={form.other_units}
@@ -597,7 +608,7 @@ const SurveyElementForm = ({
                 placeholder="cm, mm, cm²"
                 fullWidth
               />
-              <TextField
+              <CustomTextField
                 size="small"
                 label="Surface photos minimum"
                 type="number"
@@ -632,7 +643,7 @@ const SurveyElementForm = ({
                 caption="Tick the measurement methods allowed for each damage type."
               />
               <Stack direction="row" spacing={1} sx={{ minWidth: { md: 320 } }}>
-                <TextField
+                <CustomTextField
                   size="small"
                   label="New damage type"
                   value={newDamageName}
@@ -765,7 +776,7 @@ const SurveyElementForm = ({
                       )
                     }
                     renderInput={(params) => (
-                      <TextField
+                      <CustomTextField
                         {...params}
                         size="small"
                         placeholder={
@@ -777,7 +788,7 @@ const SurveyElementForm = ({
                     )}
                   />
                   <Stack direction="row" spacing={1} mt={1.5}>
-                    <TextField
+                    <CustomTextField
                       size="small"
                       label="New material"
                       value={draftName}

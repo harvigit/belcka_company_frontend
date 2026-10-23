@@ -30,6 +30,7 @@ import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import { surveyInputAlignSx } from "@/app/components/apps/settings/survey-settings/input-align";
 import SurveyElementForm from "./element-form";
 
 type SurveyElement = {
@@ -247,7 +248,15 @@ const SurveyElements = () => {
   }
 
   return (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
+    <Box
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        ...surveyInputAlignSx,
+      }}
+    >
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"

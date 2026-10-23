@@ -30,6 +30,7 @@ import TablePaginationFooter from "@/app/components/common/TablePaginationFooter
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import { surveyInputAlignSx } from "@/app/components/apps/settings/survey-settings/input-align";
 
 type SurveyDamageType = {
   id: number;
@@ -279,7 +280,15 @@ const SurveyDamageTypes = () => {
   });
 
   return (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
+    <Box
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        ...surveyInputAlignSx,
+      }}
+    >
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
@@ -382,7 +391,13 @@ const SurveyDamageTypes = () => {
       </TableContainer>
       <TablePaginationFooter table={table} totalRows={totalRows} />
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        sx={surveyInputAlignSx}
+      >
         <Box component="form" onSubmit={saveItem}>
           <DialogTitle>{formData.id ? "Edit damage type" : "Add damage type"}</DialogTitle>
           <DialogContent>
