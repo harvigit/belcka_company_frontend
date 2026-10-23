@@ -199,7 +199,10 @@ const ExpenseList = ({
     const user = session.data?.user as User & {
         company_id?: number | null;
         id?: string | number | null;
+        user_role_id?: number | string | null;
     };
+    // Only company admins can delete expenses (including locked / paid ones).
+    const isAdmin = Number(user?.user_role_id) === 1;
     const sharedFilters = useProjectDetailFilters();
     const expensePreferencesKey = useMemo(
         () =>
@@ -275,6 +278,7 @@ const ExpenseList = ({
     const [sendDateDialogOpen, setSendDateDialogOpen] = useState(false);
     const [sendDate, setSendDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deleteExpenseIds, setDeleteExpenseIds] = useState<number[]>([]);
     const [isDeleting, setIsDeleting] = useState(false);
     const [unapproveDialogOpen, setUnapproveDialogOpen] = useState(false);
     const [isUnapproving, setIsUnapproving] = useState(false);
@@ -831,18 +835,34 @@ const ExpenseList = ({
                 const expense = mapApiRowToListItem(info.row.original as ExpenseRow);
 
                 return (
-                    <Tooltip title="View details">
-                        <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                openExpenseDetailsDrawer(expense);
-                            }}
-                        >
-                            <IconEye size={18}/>
-                        </IconButton>
-                    </Tooltip>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Tooltip title="View details">
+                            <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    openExpenseDetailsDrawer(expense);
+                                }}
+                            >
+                                <IconEye size={18}/>
+                            </IconButton>
+                        </Tooltip>
+                        {isAdmin && (
+                            <Tooltip title="Delete">
+                                <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        openDeleteDialog([expense.id]);
+                                    }}
+                                >
+                                    <IconTrash size={18}/>
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                    </Stack>
                 );
             },
             enableSorting: false,
@@ -1391,17 +1411,18 @@ const ExpenseList = ({
         handleRejectExpenses(rejectExpenseIds, rejectNote);
     };
 
-    const openDeleteDialog = () => {
-        const ids = getActionExpenseIds();
+    const openDeleteDialog = (ids: number[] = getActionExpenseIds()) => {
+        if (!isAdmin) return;
         if (ids.length === 0) {
             toast.error('Please select at least one expense');
             return;
         }
+        setDeleteExpenseIds(ids);
         setDeleteDialogOpen(true);
     };
 
     const handleDeleteExpenses = async () => {
-        const ids = getActionExpenseIds();
+        const ids = deleteExpenseIds;
         if (ids.length === 0) {
             toast.error('Please select at least one expense');
             setDeleteDialogOpen(false);
@@ -1410,7 +1431,7 @@ const ExpenseList = ({
 
         setIsDeleting(true);
         try {
-            const res = await api.post('/expense/bulk-delete', {ids});
+            const res = await api.post('/expense/admin-delete', {ids});
             if (res.data?.IsSuccess === false) {
                 toast.error(res.data?.message || 'Failed to delete expenses');
                 return;
@@ -1418,6 +1439,7 @@ const ExpenseList = ({
 
             toast.success(res.data?.message || 'Expense deleted successfully');
             setDeleteDialogOpen(false);
+            setDeleteExpenseIds([]);
             await refreshAfterAction();
         } catch (error: any) {
             toast.error(
@@ -2268,18 +2290,20 @@ const ExpenseList = ({
                                 {/*    Export Selected*/}
                                 {/*</Button>*/}
 
-                                {/* Ticket 819: hide Delete Selected on Expenses web list */}
-                                {/* <Button
-                                startIcon={<IconTrash size={15}/>}
-                                variant="outlined"
-                                color="error"
-                                size="small"
-                                onClick={openDeleteDialog}
-                                disabled={isDeleting}
-                                sx={BULK_BUTTON_SX}
-                            >
-                                {isDeleting ? 'Deleting…' : 'Delete Selected'}
-                            </Button> */}
+                                {/* Ticket 819: Delete Selected is admin-only on Expenses web list */}
+                                {isAdmin && (
+                                    <Button
+                                        startIcon={<IconTrash size={15}/>}
+                                        variant="outlined"
+                                        color="error"
+                                        size="small"
+                                        onClick={() => openDeleteDialog()}
+                                        disabled={isDeleting}
+                                        sx={BULK_BUTTON_SX}
+                                    >
+                                        {isDeleting ? 'Deleting…' : 'Delete Selected'}
+                                    </Button>
+                                )}
                             </Stack>
                         </Stack>
                     </Box>
@@ -2452,8 +2476,9 @@ const ExpenseList = ({
                 </DialogTitle>
                 <DialogContent>
                     <Typography>
-                        Are you sure you want to delete {selectedCount} selected expense
-                        {selectedCount === 1 ? '' : 's'}? This action cannot be undone.
+                        Are you sure you want to delete {deleteExpenseIds.length} expense
+                        {deleteExpenseIds.length === 1 ? '' : 's'}? Locked and paid expenses will
+                        also be removed. This action cannot be undone.
                     </Typography>
                 </DialogContent>
                 <DialogActions>
