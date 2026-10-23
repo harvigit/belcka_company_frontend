@@ -108,17 +108,24 @@ const SurveyGroups = () => {
     }
   };
 
-  const loadElements = async () => {
+  const loadElements = async (includeIds: number[] = []) => {
     try {
       const res = await api.get("survey-elements/get");
       const rows = Array.isArray(res.data?.info) ? res.data.info : [];
       setElementOptions(
         rows
           .filter(
-            (row: SurveyElementOption & { status?: boolean | number }) =>
+            (
+              row: SurveyElementOption & {
+                status?: boolean | number;
+                publish_status?: string;
+              },
+            ) =>
               row?.id &&
               row?.name &&
-              (row.status === true || Number(row.status) === 1),
+              (includeIds.includes(row.id) ||
+                (row.publish_status === "published" &&
+                  (row.status === true || Number(row.status) === 1))),
           )
           .map((row: SurveyElementOption) => ({ id: row.id, name: row.name })),
       );
@@ -141,7 +148,7 @@ const SurveyGroups = () => {
       elementIds: (group.elements || []).map((element) => element.id),
     });
     setDialogOpen(true);
-    void loadElements();
+    void loadElements((group.elements || []).map((element) => element.id));
   };
 
   const saveGroup = async (event: React.FormEvent) => {
@@ -520,8 +527,8 @@ const SurveyGroups = () => {
                     label="Elements"
                     placeholder={
                       elementOptions.length
-                        ? "Select active elements"
-                        : "No active elements"
+                        ? "Select published elements"
+                        : "No published elements"
                     }
                   />
                 )}
