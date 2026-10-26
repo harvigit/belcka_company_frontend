@@ -19,6 +19,9 @@ import {
   LinearProgress,
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogActions,
+  Alert,
   CircularProgress,
   Tooltip,
   Paper,
@@ -26,6 +29,7 @@ import {
 import {
   IconArrowLeft,
   IconCheck,
+  IconClipboardCheck,
   IconClock,
   IconAlertTriangle,
   IconCamera,
@@ -144,6 +148,36 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
 
   // Photo preview modal
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
+  const [openSubmitDialog, setOpenSubmitDialog] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const isUnassigned = Boolean(survey && !survey.surveyor_id);
+  const isReadOnly = Boolean(
+    survey && ["submitted", "qs_review", "completed", "frozen"].includes(survey.status),
+  );
+
+  const handleSubmitInspection = async () => {
+    if (!survey) return;
+    setSubmitting(true);
+    try {
+      const res = await api.post("surveys/change-status", {
+        id: Number(survey.id),
+        status: "submitted",
+      });
+      if (res.data?.IsSuccess) {
+        toast.success("Inspection submitted successfully!");
+        setOpenSubmitDialog(false);
+        router.push(`/apps/surveys/view/${survey.id}`);
+      } else {
+        toast.error(res.data?.message || "Failed to submit inspection");
+      }
+    } catch (err: any) {
+      console.error("Submit inspection error", err);
+      toast.error(err?.response?.data?.message || "Failed to submit inspection");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // Fetch full survey
   const loadSurvey = useCallback(async () => {
@@ -301,6 +335,15 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   const handleSaveItem = async (shouldMoveToNext = false) => {
     if (!survey || !activeItem) return;
 
+    if (isReadOnly) {
+      toast.error("This survey is locked for editing.");
+      return;
+    }
+    if (isUnassigned) {
+      toast.error("Please assign an active surveyor before saving inspection progress.");
+      return;
+    }
+
     if (!condition) {
       toast.error("Please select a condition rating for this element");
       return;
@@ -356,6 +399,15 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !survey || !activeItem) return;
+
+    if (isReadOnly) {
+      toast.error("This survey is locked for editing.");
+      return;
+    }
+    if (isUnassigned) {
+      toast.error("Please assign an active surveyor before uploading photos.");
+      return;
+    }
 
     setUploadingPhoto(true);
     try {
@@ -474,7 +526,15 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                   <Chip
                     label={survey.status.replace("_", " ").toUpperCase()}
                     size="small"
-                    color={survey.status === "in_progress" ? "warning" : "info"}
+                    color={
+                      survey.status === "in_progress"
+                        ? "warning"
+                        : survey.status === "submitted"
+                        ? "success"
+                        : survey.status === "completed"
+                        ? "success"
+                        : "info"
+                    }
                     sx={{ fontWeight: 700, borderRadius: "6px" }}
                   />
                 </Stack>
@@ -489,7 +549,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                   </Stack>
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <IconUser size={16} />
-                    <Typography variant="body2">{survey.surveyor_name || "Surveyor"}</Typography>
+                    <Typography variant="body2">{survey.surveyor_name || "Unassigned"}</Typography>
                   </Stack>
                 </Stack>
               </Box>
@@ -526,6 +586,42 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
           </Stack>
         </CardContent>
       </Card>
+
+      {/* Warning: Unassigned Survey Banner */}
+      {isUnassigned && (
+        <Alert severity="warning" sx={{ mb: 3, borderRadius: "8px" }}>
+          <strong>Unassigned Survey:</strong> This survey does not have an assigned surveyor. Inspection progress and photo evidence cannot be recorded until an active surveyor is assigned.
+        </Alert>
+      )}
+
+      {/* Info: Locked / Read-only Survey Banner */}
+      {isReadOnly && (
+        <Alert severity="info" sx={{ mb: 3, borderRadius: "8px" }}>
+          <strong>Survey Locked:</strong> This survey is in <strong>{survey.status.replace("_", " ").toUpperCase()}</strong> status and is locked for editing. Viewing in read-only mode.
+        </Alert>
+      )}
+
+      {/* Success: 100% Inspected & Ready for Submission */}
+      {!isReadOnly && !isUnassigned && stats.pct === 100 && stats.total > 0 && (
+        <Alert
+          severity="success"
+          sx={{ mb: 3, borderRadius: "8px", alignItems: "center" }}
+          action={
+            <Button
+              color="success"
+              variant="contained"
+              size="small"
+              startIcon={<IconClipboardCheck size={18} />}
+              onClick={() => setOpenSubmitDialog(true)}
+              sx={{ fontWeight: 700 }}
+            >
+              Submit Inspection
+            </Button>
+          }
+        >
+          <strong>All elements inspected!</strong> You can now submit this survey for quality review and sign-off.
+        </Alert>
+      )}
 
       {/* Main Grid: Left Room Navigator + Right Element Workspace */}
       <Grid container spacing={3}>
@@ -705,16 +801,22 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                       <Grid size={{ xs: 12, sm: 6, md: 3 }} key={opt.value}>
                         <Paper
                           variant="outlined"
-                          onClick={() => setCondition(opt.value)}
+                          onClick={() => {
+                            if (!isReadOnly && !isUnassigned) setCondition(opt.value);
+                          }}
                           sx={{
                             p: 2,
                             borderRadius: "10px",
-                            cursor: "pointer",
+                            cursor: isReadOnly || isUnassigned ? "default" : "pointer",
+                            opacity: isReadOnly || isUnassigned ? 0.75 : 1,
                             borderColor: isSelected ? opt.borderColor : "divider",
                             bgcolor: isSelected ? opt.bg : "background.paper",
                             boxShadow: isSelected ? "0 4px 12px rgba(0,0,0,0.06)" : "none",
                             transition: "all 0.15s ease",
-                            "&:hover": { borderColor: opt.borderColor, bgcolor: opt.bg },
+                            "&:hover": {
+                              borderColor: isReadOnly || isUnassigned ? "divider" : opt.borderColor,
+                              bgcolor: isReadOnly || isUnassigned ? undefined : opt.bg,
+                            },
                           }}
                         >
                           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
@@ -749,6 +851,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                       type="number"
                       size="small"
                       fullWidth
+                      disabled={isReadOnly || isUnassigned}
                       value={dim1}
                       onChange={(e) => setDim1(e.target.value)}
                       InputProps={{
@@ -767,6 +870,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                       type="number"
                       size="small"
                       fullWidth
+                      disabled={isReadOnly || isUnassigned}
                       value={dim2}
                       onChange={(e) => setDim2(e.target.value)}
                       InputProps={{
@@ -785,6 +889,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                       type="number"
                       size="small"
                       fullWidth
+                      disabled={isReadOnly || isUnassigned}
                       value={dim3}
                       onChange={(e) => setDim3(e.target.value)}
                       InputProps={{
@@ -803,6 +908,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                       type="number"
                       size="small"
                       fullWidth
+                      disabled={isReadOnly || isUnassigned}
                       value={qty}
                       onChange={(e) => setQty(e.target.value)}
                       sx={{
@@ -835,6 +941,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                           label="Defect / Damage Type *"
                           size="small"
                           fullWidth
+                          disabled={isReadOnly || isUnassigned}
                           value={damageTypeId}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -861,6 +968,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                           label="Material Type"
                           size="small"
                           fullWidth
+                          disabled={isReadOnly || isUnassigned}
                           value={materialId}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -887,6 +995,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                           label="Severity Level"
                           size="small"
                           fullWidth
+                          disabled={isReadOnly || isUnassigned}
                           value={severity}
                           onChange={(e) => setSeverity(e.target.value)}
                         >
@@ -905,6 +1014,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                           placeholder="e.g., Replace panel, clean & repaint, patch crack"
                           size="small"
                           fullWidth
+                          disabled={isReadOnly || isUnassigned}
                           value={repairAction}
                           onChange={(e) => setRepairAction(e.target.value)}
                         />
@@ -922,6 +1032,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                     multiline
                     rows={2}
                     fullWidth
+                    disabled={isReadOnly || isUnassigned}
                     size="small"
                     placeholder="Enter any specific site observations, access limitations, or inspection notes..."
                     value={notes}
@@ -949,7 +1060,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                       variant="outlined"
                       component="label"
                       startIcon={uploadingPhoto ? <CircularProgress size={16} /> : <IconCamera size={18} />}
-                      disabled={uploadingPhoto}
+                      disabled={uploadingPhoto || isReadOnly || isUnassigned}
                       size="small"
                     >
                       {uploadingPhoto ? "Uploading..." : "Take / Upload Photo"}
@@ -958,6 +1069,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                         hidden
                         accept="image/*"
                         capture="environment"
+                        disabled={uploadingPhoto || isReadOnly || isUnassigned}
                         onChange={handlePhotoUpload}
                       />
                     </Button>
@@ -1026,13 +1138,15 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                               >
                                 <IconEye size={18} />
                               </IconButton>
-                              <IconButton
-                                size="small"
-                                sx={{ color: "white", bgcolor: "rgba(239,68,68,0.7)" }}
-                                onClick={() => handleDeletePhoto(photo.id)}
-                              >
-                                <IconTrash size={18} />
-                              </IconButton>
+                              {!isReadOnly && (
+                                <IconButton
+                                  size="small"
+                                  sx={{ color: "white", bgcolor: "rgba(239,68,68,0.7)" }}
+                                  onClick={() => handleDeletePhoto(photo.id)}
+                                >
+                                  <IconTrash size={18} />
+                                </IconButton>
+                              )}
                             </Stack>
                           </Paper>
                         </Grid>
@@ -1069,11 +1183,11 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                     </Button>
                   </Stack>
 
-                  <Stack direction="row" spacing={1.5}>
+                  <Stack direction="row" spacing={1.5} flexWrap="wrap">
                     <Button
                       variant="outlined"
                       onClick={() => handleSaveItem(false)}
-                      disabled={saving}
+                      disabled={saving || isReadOnly || isUnassigned}
                     >
                       {saving ? "Saving..." : "Save Progress"}
                     </Button>
@@ -1082,10 +1196,21 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                       color="primary"
                       startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <IconCheck size={18} />}
                       onClick={() => handleSaveItem(true)}
-                      disabled={saving}
+                      disabled={saving || isReadOnly || isUnassigned}
                     >
                       {currentIndex < allElements.length - 1 ? "Save & Next Element" : "Save Inspection"}
                     </Button>
+                    {!isReadOnly && !isUnassigned && stats.pct === 100 && stats.total > 0 && (
+                      <Button
+                        variant="contained"
+                        color="success"
+                        startIcon={<IconClipboardCheck size={18} />}
+                        onClick={() => setOpenSubmitDialog(true)}
+                        sx={{ fontWeight: 700 }}
+                      >
+                        Submit Inspection
+                      </Button>
+                    )}
                   </Stack>
                 </Stack>
               </Box>
@@ -1101,6 +1226,36 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
           )}
         </Grid>
       </Grid>
+
+      {/* Submit Inspection Confirmation Dialog */}
+      <Dialog
+        open={openSubmitDialog}
+        onClose={() => setOpenSubmitDialog(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Submit Inspection for Review</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            All <strong>{stats.total}</strong> elements in this survey have been inspected. Once submitted, the survey findings will be forwarded for quality review and locked for editing.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setOpenSubmitDialog(false)} color="inherit" disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            disabled={submitting}
+            startIcon={submitting ? <CircularProgress size={18} color="inherit" /> : <IconCheck size={18} />}
+            onClick={handleSubmitInspection}
+            sx={{ fontWeight: 700 }}
+          >
+            {submitting ? "Submitting..." : "Confirm & Submit"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Photo Preview Modal */}
       <Dialog
