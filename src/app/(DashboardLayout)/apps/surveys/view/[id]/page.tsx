@@ -4,6 +4,7 @@ import React from "react";
 import { useParams } from "next/navigation";
 import PageContainer from "@/app/components/container/PageContainer";
 import BlankCard from "@/app/components/shared/BlankCard";
+import PermissionGuard from "@/app/auth/PermissionGuard";
 import SurveyDetails from "@/app/components/apps/surveys/details";
 
 export default function SurveyViewPage() {
@@ -12,9 +13,11 @@ export default function SurveyViewPage() {
 
   return (
     <PageContainer title="Survey Details" description="View survey inspection details">
-      <BlankCard>
-        <SurveyDetails id={id} />
-      </BlankCard>
+      <PermissionGuard permissions={["Surveys", "Survey", "surveys"]} requireAll={false}>
+        <BlankCard>
+          <SurveyDetails id={id} />
+        </BlankCard>
+      </PermissionGuard>
     </PageContainer>
   );
 }
