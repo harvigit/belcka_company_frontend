@@ -35,6 +35,7 @@ import {
   IconPlus,
   IconEye,
   IconEdit,
+  IconCamera,
   IconTrash,
   IconClipboardCheck,
   IconClock,
@@ -301,13 +302,21 @@ export default function SurveyList() {
         meta: { label: "Status" },
         cell: ({ row }: { row: { original: Survey } }) => {
           const status = row.original.status || "draft";
+          const progress = (row.original as any).progress;
           return (
-            <Chip
-              size="small"
-              label={statusLabelMap[status] || status}
-              color={statusColorMap[status] || "default"}
-              sx={{ fontWeight: 600, textTransform: "capitalize" }}
-            />
+            <Box>
+              <Chip
+                size="small"
+                label={statusLabelMap[status] || status}
+                color={statusColorMap[status] || "default"}
+                sx={{ fontWeight: 600, textTransform: "capitalize" }}
+              />
+              {progress && progress.total > 0 && (
+                <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
+                  {progress.inspected}/{progress.total} inspected ({progress.percentage}%)
+                </Typography>
+              )}
+            </Box>
           );
         },
       },
@@ -329,6 +338,20 @@ export default function SurveyList() {
         meta: { label: "Actions" },
         cell: ({ row }: { row: { original: Survey } }) => (
           <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+            {(row.original.status === "assigned" ||
+              row.original.status === "in_progress" ||
+              row.original.status === "draft") && (
+              <Tooltip title="Conduct Inspection">
+                <IconButton
+                  size="small"
+                  color="success"
+                  component={Link}
+                  href={`/apps/surveys/inspect/${row.original.id}`}
+                >
+                  <IconCamera size={18} />
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title="View Survey">
               <IconButton
                 size="small"

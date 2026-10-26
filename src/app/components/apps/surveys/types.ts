@@ -9,6 +9,33 @@ export type SurveyStatus =
 
 export type SurveyCreationMethod = "template" | "blank";
 
+export type ElementCondition =
+  | "good"
+  | "minor_defects"
+  | "damaged"
+  | "not_accessible";
+
+export interface SurveyItemPhoto {
+  id: number;
+  file_path: string;
+  file_name?: string;
+  file_size?: number;
+  caption?: string | null;
+  created_at?: string;
+}
+
+export interface SurveyElementDetails {
+  id: number;
+  name: string;
+  form_factor?: string | null;
+  measurement_mode?: string | null;
+  dimensions_data?: any;
+  output_unit?: string | null;
+  surface_photo_minimum?: number | null;
+  damageTypes?: { id: number; name: string }[];
+  materials?: { id: number; name: string }[];
+}
+
 export interface SurveyItem {
   id: string | number;
   element_id: number;
@@ -27,9 +54,19 @@ export interface SurveyItem {
   dimension_4_unit?: string | null;
   dimension_4_value?: number | null;
   calculated_qty?: number | null;
+  condition?: ElementCondition | null;
   condition_score?: number | null;
+  damage_type_id?: number | null;
+  damage_type_name?: string | null;
+  material_id?: number | null;
+  material_name?: string | null;
+  severity?: "low" | "medium" | "high" | "critical" | string | null;
   repair_action?: string | null;
   notes?: string;
+  is_inspected?: boolean;
+  inspected_at?: string | null;
+  photos?: SurveyItemPhoto[];
+  element?: SurveyElementDetails | null;
 }
 
 export interface SurveyRoom {
@@ -58,6 +95,12 @@ export interface Survey {
   status: SurveyStatus;
   rooms: SurveyRoom[];
   notes?: string;
+  progress?: {
+    total: number;
+    inspected: number;
+    percentage: number;
+  };
+  total_rooms?: number;
   created_at: string;
   updated_at: string;
 }

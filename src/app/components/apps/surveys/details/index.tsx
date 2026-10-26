@@ -34,6 +34,7 @@ import {
 import {
   IconArrowLeft,
   IconEdit,
+  IconCamera,
   IconBuilding,
   IconMapPin,
   IconUser,
@@ -187,11 +188,48 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
   };
 
   // Helper for condition rating score
-  const renderConditionScore = (score?: number | null) => {
+  const renderConditionScore = (
+    score?: number | null,
+    condition?: string | null,
+    photoCount?: number,
+  ) => {
+    if (condition) {
+      const map: Record<
+        string,
+        { label: string; color: "success" | "warning" | "error" | "default" }
+      > = {
+        good: { label: "Good", color: "success" },
+        minor_defects: { label: "Minor Defects", color: "warning" },
+        damaged: { label: "Damaged", color: "error" },
+        not_accessible: { label: "Not Accessible", color: "default" },
+      };
+      const opt = map[condition] || { label: condition, color: "default" };
+      return (
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          <Chip
+            size="small"
+            color={opt.color}
+            variant="filled"
+            label={opt.label}
+            sx={{ fontWeight: 700, fontSize: "0.75rem" }}
+          />
+          {photoCount && photoCount > 0 ? (
+            <Chip
+              size="small"
+              icon={<IconCamera size={14} />}
+              label={photoCount}
+              variant="outlined"
+              sx={{ fontWeight: 600, fontSize: "0.7rem", height: 22 }}
+            />
+          ) : null}
+        </Stack>
+      );
+    }
+
     if (score === undefined || score === null) {
       return (
         <Typography variant="caption" color="text.secondary" fontStyle="italic">
-          Pending rating
+          Pending inspection
         </Typography>
       );
     }
@@ -336,6 +374,19 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
               ),
             )}
           </Menu>
+
+          {(survey.status === "assigned" || survey.status === "in_progress" || survey.status === "draft") && (
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={<IconCamera size={18} />}
+              component={Link}
+              href={`/apps/surveys/inspect/${survey.id}`}
+              sx={{ fontWeight: 700, borderRadius: "8px" }}
+            >
+              Conduct Inspection
+            </Button>
+          )}
 
           {survey.status !== "frozen" && (
             <Button
@@ -711,7 +762,11 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
 
                                       {/* Condition */}
                                       <TableCell sx={{ py: 1.5 }}>
-                                        {renderConditionScore(item.condition_score)}
+                                        {renderConditionScore(
+                                          item.condition_score,
+                                          item.condition,
+                                          item.photos?.length,
+                                        )}
                                       </TableCell>
 
                                       {/* Action / Repair */}
