@@ -288,26 +288,59 @@ const SurveyGroups = () => {
       },
       {
         id: "name",
-        header: () => <Typography variant="body2">Name</Typography>,
+        header: () => <Typography variant="subtitle2" fontWeight={600}>Name</Typography>,
         cell: ({ row }: { row: { original: SurveyGroup } }) => (
-          <Typography
-            fontWeight={600}
-            color={isActive(row.original.status) ? "text.primary" : "text.secondary"}
-          >
-            {row.original.name || "-"}
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: 1,
+                bgcolor: "#eff6ff",
+                color: "#2563eb",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 700,
+                fontSize: 13,
+                flexShrink: 0,
+                border: "1px solid #dbeafe",
+              }}
+            >
+              {(row.original.name || "?").charAt(0).toUpperCase()}
+            </Box>
+            <Typography
+              fontWeight={600}
+              color={isActive(row.original.status) ? "text.primary" : "text.secondary"}
+              sx={{ fontSize: "13.5px" }}
+            >
+              {row.original.name || "-"}
+            </Typography>
+          </Stack>
         ),
       },
       {
         id: "elements",
-        header: () => <Typography variant="body2">Elements</Typography>,
+        header: () => <Typography variant="subtitle2" fontWeight={600}>Elements</Typography>,
         cell: ({ row }: { row: { original: SurveyGroup } }) => {
           const elements = row.original.elements || [];
           if (!elements.length) return <Typography color="text.secondary">-</Typography>;
           return (
-            <Stack direction="row" flexWrap="wrap" gap={0.75}>
+            <Stack direction="row" flexWrap="wrap" gap={0.75} py={0.5}>
               {elements.map((element) => (
-                <Chip key={element.id} label={element.name} size="small" />
+                <Chip
+                  key={element.id}
+                  label={element.name}
+                  size="small"
+                  sx={{
+                    bgcolor: "#eff6ff",
+                    color: "#1d4ed8",
+                    border: "1px solid #dbeafe",
+                    fontWeight: 500,
+                    fontSize: "12px",
+                    height: 24,
+                    borderRadius: 1,
+                  }}
+                />
               ))}
             </Stack>
           );
@@ -316,7 +349,7 @@ const SurveyGroups = () => {
       {
         id: "status",
         enableSorting: false,
-        header: () => <Typography variant="body2">Active</Typography>,
+        header: () => <Typography variant="subtitle2" fontWeight={600}>Active</Typography>,
         cell: ({ row }: { row: { original: SurveyGroup } }) => {
           const group = row.original;
           const active = isActive(group.status);
@@ -338,7 +371,11 @@ const SurveyGroups = () => {
       {
         id: "actions",
         enableSorting: false,
-        header: () => <Typography variant="body2">Actions</Typography>,
+        header: () => (
+          <Typography variant="subtitle2" fontWeight={600} align="right">
+            Actions
+          </Typography>
+        ),
         cell: ({ row }: { row: { original: SurveyGroup } }) => {
           const group = row.original;
           return (
@@ -423,8 +460,15 @@ const SurveyGroups = () => {
         </Stack>
       </Stack>
 
-      <TableContainer sx={{ flex: 1, minHeight: 0 }}>
-        <Table stickyHeader size="small" sx={{ tableLayout: "fixed" }}>
+      <TableContainer
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          borderTop: "1px solid #eef2f7",
+          backgroundColor: "#ffffff",
+        }}
+      >
+        <Table stickyHeader size="small" sx={{ tableLayout: "fixed", minWidth: 850 }}>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

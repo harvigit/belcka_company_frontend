@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  MenuItem,
   Paper,
   Stack,
   Table,
@@ -73,17 +74,24 @@ type RenameTarget = {
   category?: string;
 };
 
+export const AVAILABLE_DIMENSIONS = ["Length", "Depth", "Height", "Width"] as const;
+export type DimensionName = (typeof AVAILABLE_DIMENSIONS)[number];
+
+export const STANDARD_UNITS = [
+  { value: "m", label: "m — Meter" },
+  { value: "cm", label: "cm — Centimeter" },
+  { value: "mm", label: "mm — Millimeter" },
+  { value: "ft", label: "ft — Feet" },
+  { value: "in", label: "in — Inch" },
+] as const;
+
 type ElementFormState = {
   name: string;
   description: string;
   form_factor: FormFactor;
   measurement_mode: MeasurementMode;
-  dimension_1_name: string;
-  dimension_1_unit: string;
-  dimension_2_name: string;
-  dimension_2_unit: string;
-  dimension_3_name: string;
-  dimension_3_unit: string;
+  selected_dimensions: DimensionName[];
+  dimensions_map: Record<DimensionName, { value: string; unit: string }>;
   output_name: string;
   output_unit: string;
   other_units: string;
@@ -93,17 +101,20 @@ type ElementFormState = {
   publish_status: string;
 };
 
+const defaultDimensionsMap: Record<DimensionName, { value: string; unit: string }> = {
+  Length: { value: "", unit: "m" },
+  Depth: { value: "", unit: "m" },
+  Height: { value: "", unit: "m" },
+  Width: { value: "", unit: "m" },
+};
+
 const emptyForm: ElementFormState = {
   name: "",
   description: "",
   form_factor: "",
   measurement_mode: "",
-  dimension_1_name: "",
-  dimension_1_unit: "",
-  dimension_2_name: "",
-  dimension_2_unit: "",
-  dimension_3_name: "",
-  dimension_3_unit: "",
+  selected_dimensions: [],
+  dimensions_map: { ...defaultDimensionsMap },
   output_name: "",
   output_unit: "",
   other_units: "",
@@ -262,6 +273,52 @@ const SurveyElementForm = ({
           onClose();
           return;
         }
+        const loadedMap: Record<DimensionName, { value: string; unit: string }> = {
+          Length: { value: "", unit: "m" },
+          Depth: { value: "", unit: "m" },
+          Height: { value: "", unit: "m" },
+          Width: { value: "", unit: "m" },
+        };
+        const loadedSelected: DimensionName[] = [];
+
+        if (Array.isArray(row.dimensions_data) && row.dimensions_data.length > 0) {
+          row.dimensions_data.forEach((item: any) => {
+            const rawName = String(item?.name || "").trim();
+            const matched = AVAILABLE_DIMENSIONS.find(
+              (d) => d.toLowerCase() === rawName.toLowerCase()
+            );
+            if (matched) {
+              if (!loadedSelected.includes(matched)) loadedSelected.push(matched);
+              loadedMap[matched] = {
+                value: item?.value !== null && item?.value !== undefined ? String(item.value) : "",
+                unit: item?.unit && typeof item.unit === "string" ? item.unit.trim() : "m",
+              };
+            }
+          });
+        } else {
+          const legacyPairs: Array<[any, any, any]> = [
+            [row.dimension_1_name, row.dimension_1_unit, row.dimension_1_value],
+            [row.dimension_2_name, row.dimension_2_unit, row.dimension_2_value],
+            [row.dimension_3_name, row.dimension_3_unit, row.dimension_3_value],
+            [row.dimension_4_name, row.dimension_4_unit, row.dimension_4_value],
+          ];
+          legacyPairs.forEach(([name, unit, val]) => {
+            if (name && typeof name === "string") {
+              const rawName = name.trim();
+              const matched = AVAILABLE_DIMENSIONS.find(
+                (d) => d.toLowerCase() === rawName.toLowerCase()
+              );
+              if (matched) {
+                if (!loadedSelected.includes(matched)) loadedSelected.push(matched);
+                loadedMap[matched] = {
+                  value: val !== null && val !== undefined ? String(val) : "",
+                  unit: unit && typeof unit === "string" && unit.trim() ? unit.trim() : "m",
+                };
+              }
+            }
+          });
+        }
+
         setForm({
           name: row.name || "",
           description: row.description || "",
@@ -272,12 +329,8 @@ const SurveyElementForm = ({
               : row.measurement_mode === "dimensions"
                 ? "dimensions"
                 : "",
-          dimension_1_name: row.dimension_1_name || "",
-          dimension_1_unit: row.dimension_1_unit || "",
-          dimension_2_name: row.dimension_2_name || "",
-          dimension_2_unit: row.dimension_2_unit || "",
-          dimension_3_name: row.dimension_3_name || "",
-          dimension_3_unit: row.dimension_3_unit || "",
+          selected_dimensions: loadedSelected,
+          dimensions_map: loadedMap,
           output_name: row.output_name || "",
           output_unit: row.output_unit || "",
           other_units: row.other_units || "",
@@ -312,8 +365,7 @@ const SurveyElementForm = ({
     setForm((current) => {
       const next = { ...current, form_factor: factor };
       const untouched =
-        !current.dimension_1_name &&
-        !current.dimension_2_name &&
+        current.selected_dimensions.length === 0 &&
         !current.output_name &&
         !current.measurement_mode;
       if (!untouched) return next;
@@ -321,10 +373,7 @@ const SurveyElementForm = ({
         return {
           ...next,
           measurement_mode: "dimensions",
-          dimension_1_name: "Height",
-          dimension_1_unit: "m",
-          dimension_2_name: "Length",
-          dimension_2_unit: "m",
+          selected_dimensions: ["Height", "Length"],
           output_name: "Area",
           output_unit: "m²",
         };
@@ -332,12 +381,7 @@ const SurveyElementForm = ({
       return {
         ...next,
         measurement_mode: "dimensions",
-        dimension_1_name: "Length",
-        dimension_1_unit: "m",
-        dimension_2_name: "Width",
-        dimension_2_unit: "m",
-        dimension_3_name: "Depth",
-        dimension_3_unit: "m",
+        selected_dimensions: ["Length", "Width", "Depth"],
         output_name: "Volume",
         output_unit: "m³",
       };
@@ -580,19 +624,89 @@ const SurveyElementForm = ({
       toast.error("Name is a required field!");
       return;
     }
+    if (publish) {
+      if (!form.form_factor) {
+        toast.error("Form factor is a required field!");
+        return;
+      }
+      if (!form.measurement_mode) {
+        toast.error("Select a measurement method!");
+        return;
+      }
+      if (form.measurement_mode === "dimensions") {
+        if (!form.selected_dimensions.length) {
+          toast.error("Select at least one dimension!");
+          return;
+        }
+        for (const dimName of form.selected_dimensions) {
+          const val = form.dimensions_map[dimName]?.value;
+          if (val === "" || val === undefined || val === null || isNaN(Number(val))) {
+            toast.error(`Enter a valid numeric measurement value for ${dimName}!`);
+            return;
+          }
+          const unit = form.dimensions_map[dimName]?.unit;
+          if (!unit) {
+            toast.error(`Select a valid unit for ${dimName}!`);
+            return;
+          }
+        }
+      }
+      if (!form.output_name.trim() || !form.output_unit.trim()) {
+        toast.error("Output measurement is a required field!");
+        return;
+      }
+      if (!form.surface_photo_minimum || Number(form.surface_photo_minimum) < 1) {
+        toast.error("Surface photo minimum is a required field!");
+        return;
+      }
+      if (!form.damage.some(hasMethod)) {
+        toast.error("Select at least one damage type!");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
+      const dimensionsPayload =
+        form.measurement_mode === "dimensions"
+          ? form.selected_dimensions.map((name) => {
+              const valStr = form.dimensions_map[name]?.value;
+              const numVal =
+                valStr !== "" && valStr !== undefined && valStr !== null && !isNaN(Number(valStr))
+                  ? Number(valStr)
+                  : null;
+              return {
+                name,
+                value: numVal,
+                unit: form.dimensions_map[name]?.unit || "m",
+              };
+            })
+          : [];
+
+      const dim1 = dimensionsPayload[0] || null;
+      const dim2 = dimensionsPayload[1] || null;
+      const dim3 = dimensionsPayload[2] || null;
+      const dim4 = dimensionsPayload[3] || null;
+
       const payload = {
         name: form.name.trim(),
         description: form.description.trim(),
         form_factor: form.form_factor,
         measurement_mode: form.measurement_mode,
-        dimension_1_name: form.dimension_1_name.trim(),
-        dimension_1_unit: form.dimension_1_unit.trim(),
-        dimension_2_name: form.dimension_2_name.trim(),
-        dimension_2_unit: form.dimension_2_unit.trim(),
-        dimension_3_name: form.dimension_3_name.trim(),
-        dimension_3_unit: form.dimension_3_unit.trim(),
+        dimensions: dimensionsPayload,
+        dimensions_data: dimensionsPayload,
+        dimension_1_name: dim1?.name || "",
+        dimension_1_unit: dim1?.unit || "",
+        dimension_1_value: dim1?.value ?? null,
+        dimension_2_name: dim2?.name || "",
+        dimension_2_unit: dim2?.unit || "",
+        dimension_2_value: dim2?.value ?? null,
+        dimension_3_name: dim3?.name || "",
+        dimension_3_unit: dim3?.unit || "",
+        dimension_3_value: dim3?.value ?? null,
+        dimension_4_name: dim4?.name || "",
+        dimension_4_unit: dim4?.unit || "",
+        dimension_4_value: dim4?.value ?? null,
         output_name: form.output_name.trim(),
         output_unit: form.output_unit.trim(),
         other_units: form.other_units.trim(),
@@ -629,16 +743,7 @@ const SurveyElementForm = ({
     }
   };
 
-  const dimensionCount = form.form_factor === "volumetric" ? 3 : 2;
-  const dimensionFields = useMemo(
-    () =>
-      [
-        ["dimension_1_name", "dimension_1_unit", "Dimension 1"],
-        ["dimension_2_name", "dimension_2_unit", "Dimension 2"],
-        ["dimension_3_name", "dimension_3_unit", "Dimension 3"],
-      ] as const,
-    [],
-  );
+
 
   return (
     <Box
@@ -714,14 +819,14 @@ const SurveyElementForm = ({
                 size="small"
                 label="Element name"
                 value={form.name}
-                onChange={(event) => setField("name", event.target.value)}
+                onChange={(event: any) => setField("name", event.target.value)}
                 fullWidth
               />
               <CustomTextField
                 size="small"
                 label="Description (optional)"
                 value={form.description}
-                onChange={(event) => setField("description", event.target.value)}
+                onChange={(event: any) => setField("description", event.target.value)}
                 fullWidth
               />
             </Box>
@@ -766,35 +871,125 @@ const SurveyElementForm = ({
             </Stack>
 
             {form.measurement_mode === "dimensions" && (
-              <Box
-                sx={{
-                  display: "grid",
-                  gap: 2,
-                  mb: 2,
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    md: dimensionCount === 3 ? "1fr 1fr 1fr" : "1fr 1fr",
-                  },
-                }}
-              >
-                {dimensionFields.slice(0, dimensionCount).map(([nameKey, unitKey, label]) => (
-                  <Stack key={nameKey} direction="row" spacing={1}>
+              <Box mb={2}>
+                <Typography variant="body2" fontWeight={600} mb={1}>
+                  Dimension selection
+                </Typography>
+                <Autocomplete
+                  multiple
+                  size="small"
+                  options={AVAILABLE_DIMENSIONS as unknown as DimensionName[]}
+                  value={form.selected_dimensions}
+                  onChange={(_, newValue) => {
+                    setForm((current) => ({
+                      ...current,
+                      selected_dimensions: newValue,
+                    }));
+                  }}
+                  renderInput={(params) => (
                     <CustomTextField
-                      size="small"
-                      label={label}
-                      value={form[nameKey]}
-                      onChange={(event) => setField(nameKey, event.target.value)}
-                      fullWidth
+                      {...params}
+                      placeholder={
+                        form.selected_dimensions.length === 0
+                          ? "Select dimensions (Length, Depth, Height, Width)"
+                          : ""
+                      }
                     />
-                    <CustomTextField
-                      size="small"
-                      label="Unit"
-                      value={form[unitKey]}
-                      onChange={(event) => setField(unitKey, event.target.value)}
-                      sx={{ width: 120, flexShrink: 0 }}
-                    />
-                  </Stack>
-                ))}
+                  )}
+                  renderTags={(tagValue, getTagProps) =>
+                    tagValue.map((option, index) => {
+                      const { key, ...tagProps } = getTagProps({ index });
+                      return (
+                        <Chip
+                          key={key}
+                          label={option}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          {...tagProps}
+                        />
+                      );
+                    })
+                  }
+                  sx={{ mb: 2 }}
+                />
+
+                {form.selected_dimensions.length > 0 && (
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gap: 2,
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        md: form.selected_dimensions.length === 1 ? "1fr" : "1fr 1fr",
+                      },
+                    }}
+                  >
+                    {form.selected_dimensions.map((dimName) => (
+                      <Stack
+                        key={dimName}
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          border: "1px solid",
+                          borderColor: "divider",
+                          bgcolor: "#fafbfc",
+                        }}
+                      >
+                        <CustomTextField
+                          size="small"
+                          label={dimName}
+                          type="number"
+                          placeholder="Enter value"
+                          value={form.dimensions_map[dimName]?.value ?? ""}
+                          onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                            const val = event.target.value;
+                            setForm((current) => ({
+                              ...current,
+                              dimensions_map: {
+                                ...current.dimensions_map,
+                                [dimName]: {
+                                  ...current.dimensions_map[dimName],
+                                  value: val,
+                                },
+                              },
+                            }));
+                          }}
+                          fullWidth
+                        />
+                        <CustomTextField
+                          select
+                          size="small"
+                          label="Unit"
+                          value={form.dimensions_map[dimName]?.unit || "m"}
+                          onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                            const u = event.target.value;
+                            setForm((current) => ({
+                              ...current,
+                              dimensions_map: {
+                                ...current.dimensions_map,
+                                [dimName]: {
+                                  ...current.dimensions_map[dimName],
+                                  unit: u,
+                                },
+                              },
+                            }));
+                          }}
+                          sx={{ width: 150, flexShrink: 0 }}
+                        >
+                          {STANDARD_UNITS.map((unitOpt) => (
+                            <MenuItem key={unitOpt.value} value={unitOpt.value}>
+                              {unitOpt.label}
+                            </MenuItem>
+                          ))}
+                        </CustomTextField>
+                      </Stack>
+                    ))}
+                  </Box>
+                )}
               </Box>
             )}
 
@@ -809,21 +1004,21 @@ const SurveyElementForm = ({
                 size="small"
                 label="Output measurement"
                 value={form.output_name}
-                onChange={(event) => setField("output_name", event.target.value)}
+                onChange={(event: any) => setField("output_name", event.target.value)}
                 fullWidth
               />
               <CustomTextField
                 size="small"
                 label="Output unit"
                 value={form.output_unit}
-                onChange={(event) => setField("output_unit", event.target.value)}
+                onChange={(event: any) => setField("output_unit", event.target.value)}
                 fullWidth
               />
               <CustomTextField
                 size="small"
                 label="Other units available"
                 value={form.other_units}
-                onChange={(event) => setField("other_units", event.target.value)}
+                onChange={(event: any) => setField("other_units", event.target.value)}
                 placeholder="cm, mm, cm²"
                 fullWidth
               />
@@ -832,7 +1027,7 @@ const SurveyElementForm = ({
                 label="Surface photos minimum"
                 type="number"
                 value={form.surface_photo_minimum}
-                onChange={(event) => setField("surface_photo_minimum", event.target.value)}
+                onChange={(event: any) => setField("surface_photo_minimum", event.target.value)}
                 fullWidth
               />
             </Box>
@@ -866,7 +1061,7 @@ const SurveyElementForm = ({
                   size="small"
                   label="New damage type"
                   value={newDamageName}
-                  onChange={(event) => setNewDamageName(event.target.value)}
+                  onChange={(event: any) => setNewDamageName(event.target.value)}
                   fullWidth
                 />
                 <Button variant="outlined" onClick={() => void createDamageType()} sx={{ flexShrink: 0 }}>
@@ -1175,7 +1370,7 @@ const SurveyElementForm = ({
                       size="small"
                       label="New material"
                       value={draftName}
-                      onChange={(event) => setDraftName(event.target.value)}
+                      onChange={(event: any) => setDraftName(event.target.value)}
                       fullWidth
                     />
                     <Button
@@ -1210,7 +1405,7 @@ const SurveyElementForm = ({
             size="small"
             label="Name"
             value={renameName}
-            onChange={(event) => setRenameName(event.target.value)}
+            onChange={(event: any) => setRenameName(event.target.value)}
             fullWidth
             sx={{ mt: 1 }}
           />

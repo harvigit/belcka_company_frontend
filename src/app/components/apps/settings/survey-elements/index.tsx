@@ -27,7 +27,17 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { IconEdit, IconEye, IconFilter, IconHistory, IconPlus, IconSearch, IconTrash, IconX } from "@tabler/icons-react";
+import {
+  IconEdit,
+  IconEye,
+  IconFilter,
+  IconHistory,
+  IconPhoto,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+  IconX,
+} from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import toast from "react-hot-toast";
@@ -51,10 +61,17 @@ type SurveyElement = {
   measurement_mode?: string | null;
   dimension_1_name?: string | null;
   dimension_1_unit?: string | null;
+  dimension_1_value?: number | null;
   dimension_2_name?: string | null;
   dimension_2_unit?: string | null;
+  dimension_2_value?: number | null;
   dimension_3_name?: string | null;
   dimension_3_unit?: string | null;
+  dimension_3_value?: number | null;
+  dimension_4_name?: string | null;
+  dimension_4_unit?: string | null;
+  dimension_4_value?: number | null;
+  dimensions_data?: { name: string; value?: number | null; unit: string }[] | null;
   output_name?: string | null;
   output_unit?: string | null;
   surface_photo_minimum?: number | null;
@@ -75,14 +92,15 @@ const columnLabels: Record<string, string> = {
 };
 
 const columnWidth = (id: string) => {
-  if (id === "select") return 56;
-  if (id === "form_factor") return 130;
-  if (id === "measurement") return 220;
-  if (id === "output") return 150;
-  if (id === "damage_types") return 200;
-  if (id === "materials") return 200;
-  if (id === "publish_status") return 120;
-  if (id === "actions") return 150;
+  if (id === "select") return 48;
+  if (id === "name") return 260;
+  if (id === "form_factor") return 120;
+  if (id === "measurement") return 280;
+  if (id === "output") return 140;
+  if (id === "damage_types") return 210;
+  if (id === "materials") return 240;
+  if (id === "publish_status") return 110;
+  if (id === "actions") return 130;
   return undefined;
 };
 
@@ -101,12 +119,25 @@ const formFactorLabel = (value?: string | null) => {
 const measurementLabel = (element: SurveyElement) => {
   if (element.measurement_mode === "direct") return "Direct area / volume";
   if (element.measurement_mode !== "dimensions") return "";
-  const parts = [1, 2, 3]
+  if (Array.isArray(element.dimensions_data) && element.dimensions_data.length > 0) {
+    return element.dimensions_data
+      .map((dim) => {
+        const valStr = dim.value !== null && dim.value !== undefined ? ` ${dim.value}` : "";
+        const unitStr = dim.unit?.trim() ? ` ${dim.unit.trim()}` : "";
+        return `${dim.name}${valStr ? ` (${valStr.trim()}${unitStr})` : unitStr ? ` (${unitStr.trim()})` : ""}`;
+      })
+      .filter(Boolean)
+      .join(" × ");
+  }
+  const parts = [1, 2, 3, 4]
     .map((index) => {
       const name = element[`dimension_${index}_name` as keyof SurveyElement];
       const unit = element[`dimension_${index}_unit` as keyof SurveyElement];
+      const val = element[`dimension_${index}_value` as keyof SurveyElement];
       if (typeof name !== "string" || !name.trim()) return "";
-      return typeof unit === "string" && unit.trim() ? `${name} (${unit})` : name;
+      const valStr = val !== null && val !== undefined ? ` ${val}` : "";
+      const unitStr = typeof unit === "string" && unit.trim() ? ` ${unit.trim()}` : "";
+      return `${name}${valStr ? ` (${valStr.trim()}${unitStr})` : unitStr ? ` (${unitStr.trim()})` : ""}`;
     })
     .filter(Boolean);
   return parts.join(" × ");
@@ -124,23 +155,42 @@ const NameChips = ({ names }: { names: string[] }) => {
   const shown = names.slice(0, 2);
   const hidden = names.slice(2);
   return (
-    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+    <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="nowrap" sx={{ minWidth: 0 }}>
       {shown.map((name, index) => (
         <Chip
           key={`${name}-${index}`}
           size="small"
           label={name}
           sx={{
-            bgcolor: "#e7ecf7",
-            color: "#1e4db7",
-            maxWidth: 120,
-            "& .MuiChip-label": { overflow: "hidden", textOverflow: "ellipsis" },
+            bgcolor: "#eff6ff",
+            color: "#1d4ed8",
+            border: "1px solid #dbeafe",
+            fontWeight: 500,
+            fontSize: "11px",
+            height: 22,
+            maxWidth: 90,
+            borderRadius: 1,
+            "& .MuiChip-label": { px: 0.75, overflow: "hidden", textOverflow: "ellipsis" },
           }}
+          title={name}
         />
       ))}
       {hidden.length > 0 && (
         <Tooltip title={hidden.join(", ")}>
-          <Chip size="small" label={`+${hidden.length}`} variant="outlined" />
+          <Chip
+            size="small"
+            label={`+${hidden.length}`}
+            sx={{
+              bgcolor: "#f1f5f9",
+              color: "text.secondary",
+              fontWeight: 600,
+              fontSize: "11px",
+              height: 22,
+              borderRadius: 1,
+              cursor: "pointer",
+              "& .MuiChip-label": { px: 0.75 },
+            }}
+          />
         </Tooltip>
       )}
     </Stack>
@@ -213,6 +263,7 @@ const SurveyElements = () => {
   const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
     storageKey: `cv_${user?.company_id}_${user?.id}_survey_elements`,
     enabled: !!user?.id,
+    alwaysVisibleColumns: ["select", "name", "actions"],
   });
 
   const fetchElements = async () => {
@@ -307,40 +358,51 @@ const SurveyElements = () => {
       {
         id: "name",
         meta: { label: columnLabels.name },
-        header: () => <Typography variant="body2">Name</Typography>,
+        header: () => <Typography variant="subtitle2" fontWeight={600}>Name</Typography>,
         cell: ({ row }: { row: { original: SurveyElement } }) => {
           const published = row.original.publish_status === "published";
+          const firstLetter = (row.original.name || "?").charAt(0).toUpperCase();
           return (
-            <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
               <Box
                 sx={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 1,
-                  bgcolor: "#e7ecf7",
-                  color: "#1e4db7",
+                  width: 36,
+                  height: 36,
+                  borderRadius: 1.5,
+                  bgcolor: "#eff6ff",
+                  color: "#2563eb",
                   display: "grid",
                   placeItems: "center",
                   fontWeight: 700,
-                  fontSize: 13,
+                  fontSize: 14,
                   flexShrink: 0,
+                  border: "1px solid #dbeafe",
                 }}
               >
-                {(row.original.name || "?").charAt(0).toUpperCase()}
+                {firstLetter}
               </Box>
-              <Box sx={{ minWidth: 0 }}>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
                 <Typography
+                  variant="body2"
                   fontWeight={600}
                   noWrap
                   color={published ? "text.primary" : "text.secondary"}
+                  title={row.original.name}
+                  sx={{ fontSize: "13.5px" }}
                 >
                   {row.original.name || "—"}
                 </Typography>
-                {row.original.description?.trim() && (
-                  <Typography variant="caption" color="text.secondary" noWrap>
+                {row.original.description?.trim() ? (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    noWrap
+                    title={row.original.description.trim()}
+                    sx={{ display: "block", fontSize: "11.5px" }}
+                  >
                     {row.original.description.trim()}
                   </Typography>
-                )}
+                ) : null}
               </Box>
             </Stack>
           );
@@ -350,32 +412,69 @@ const SurveyElements = () => {
         id: "form_factor",
         meta: { label: columnLabels.form_factor },
         enableSorting: false,
-        header: () => <Typography variant="body2">Form</Typography>,
+        header: () => <Typography variant="subtitle2" fontWeight={600}>Form</Typography>,
         cell: ({ row }: { row: { original: SurveyElement } }) => {
-          const label = formFactorLabel(row.original.form_factor);
-          return label ? <Typography variant="body2">{label}</Typography> : <EmptyMark />;
+          const form = row.original.form_factor;
+          if (form === "flat") {
+            return (
+              <Chip
+                size="small"
+                label="Flat"
+                sx={{
+                  bgcolor: "#eff6ff",
+                  color: "#1d4ed8",
+                  fontWeight: 600,
+                  fontSize: "11.5px",
+                  height: 23,
+                  borderRadius: 1,
+                  border: "1px solid #bfdbfe",
+                }}
+              />
+            );
+          }
+          if (form === "volumetric") {
+            return (
+              <Chip
+                size="small"
+                label="Volumetric"
+                sx={{
+                  bgcolor: "#faf5ff",
+                  color: "#7e22ce",
+                  fontWeight: 600,
+                  fontSize: "11.5px",
+                  height: 23,
+                  borderRadius: 1,
+                  border: "1px solid #e9d5ff",
+                }}
+              />
+            );
+          }
+          return <EmptyMark />;
         },
       },
       {
         id: "measurement",
         meta: { label: columnLabels.measurement },
         enableSorting: false,
-        header: () => <Typography variant="body2">Measurement</Typography>,
+        header: () => <Typography variant="subtitle2" fontWeight={600}>Measurement</Typography>,
         cell: ({ row }: { row: { original: SurveyElement } }) => {
           const label = measurementLabel(row.original);
           if (!label) return <EmptyMark />;
           const photos = Number(row.original.surface_photo_minimum);
           return (
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="body2" noWrap>
+            <Stack spacing={0.3} sx={{ minWidth: 0 }}>
+              <Typography variant="body2" fontWeight={500} noWrap title={label} sx={{ fontSize: "13px" }}>
                 {label}
               </Typography>
               {photos >= 1 && (
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  {photos} surface photo{photos === 1 ? "" : "s"}
-                </Typography>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <IconPhoto size={13} style={{ color: "#64748b", flexShrink: 0 }} />
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: "11px" }}>
+                    {photos} surface photo{photos === 1 ? "" : "s"} min
+                  </Typography>
+                </Stack>
               )}
-            </Box>
+            </Stack>
           );
         },
       },
@@ -383,11 +482,11 @@ const SurveyElements = () => {
         id: "output",
         meta: { label: columnLabels.output },
         enableSorting: false,
-        header: () => <Typography variant="body2">Output</Typography>,
+        header: () => <Typography variant="subtitle2" fontWeight={600}>Output</Typography>,
         cell: ({ row }: { row: { original: SurveyElement } }) => {
           const label = outputLabel(row.original);
           return label ? (
-            <Typography variant="body2" noWrap>
+            <Typography variant="body2" fontWeight={500} noWrap title={label} sx={{ fontSize: "13px" }}>
               {label}
             </Typography>
           ) : (
@@ -399,7 +498,7 @@ const SurveyElements = () => {
         id: "damage_types",
         meta: { label: columnLabels.damage_types },
         enableSorting: false,
-        header: () => <Typography variant="body2">Damage types</Typography>,
+        header: () => <Typography variant="subtitle2" fontWeight={600}>Damage types</Typography>,
         cell: ({ row }: { row: { original: SurveyElement } }) => (
           <NameChips names={(row.original.damage_types || []).map((item) => item.name)} />
         ),
@@ -408,7 +507,7 @@ const SurveyElements = () => {
         id: "materials",
         meta: { label: columnLabels.materials },
         enableSorting: false,
-        header: () => <Typography variant="body2">Materials</Typography>,
+        header: () => <Typography variant="subtitle2" fontWeight={600}>Materials</Typography>,
         cell: ({ row }: { row: { original: SurveyElement } }) => {
           const materials = row.original.materials || [];
           const subbase = materials
@@ -419,13 +518,23 @@ const SurveyElements = () => {
             .map((item) => item.name);
           if (!subbase.length && !topwear.length) return <EmptyMark />;
           return (
-            <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-              <Typography variant="body2" noWrap>
-                Subbase: {subbase.join(", ") || "—"}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" noWrap>
-                Topwear: {topwear.join(", ") || "—"}
-              </Typography>
+            <Stack spacing={0.3} sx={{ minWidth: 0 }}>
+              {subbase.length > 0 && (
+                <Typography variant="body2" sx={{ fontSize: "12px" }} noWrap title={`Subbase: ${subbase.join(", ")}`}>
+                  <Box component="span" sx={{ fontWeight: 600, color: "text.secondary", mr: 0.5 }}>
+                    Subbase:
+                  </Box>
+                  {subbase.join(", ")}
+                </Typography>
+              )}
+              {topwear.length > 0 && (
+                <Typography variant="body2" sx={{ fontSize: "12px" }} noWrap title={`Topwear: ${topwear.join(", ")}`}>
+                  <Box component="span" sx={{ fontWeight: 600, color: "text.secondary", mr: 0.5 }}>
+                    Topwear:
+                  </Box>
+                  {topwear.join(", ")}
+                </Typography>
+              )}
             </Stack>
           );
         },
@@ -434,15 +543,22 @@ const SurveyElements = () => {
         id: "publish_status",
         meta: { label: columnLabels.publish_status },
         enableSorting: false,
-        header: () => <Typography variant="body2">Status</Typography>,
+        header: () => <Typography variant="subtitle2" fontWeight={600}>Status</Typography>,
         cell: ({ row }: { row: { original: SurveyElement } }) => {
           const published = row.original.publish_status === "published";
           return (
             <Chip
               size="small"
               label={published ? "Published" : "Draft"}
-              color={published ? "success" : "default"}
-              variant={published ? "filled" : "outlined"}
+              sx={{
+                bgcolor: published ? "#ecfdf5" : "#fef3c7",
+                color: published ? "#047857" : "#b45309",
+                border: `1px solid ${published ? "#a7f3d0" : "#fde68a"}`,
+                fontWeight: 600,
+                fontSize: "11px",
+                height: 23,
+                borderRadius: 1,
+              }}
             />
           );
         },
@@ -451,11 +567,16 @@ const SurveyElements = () => {
         id: "actions",
         meta: { label: columnLabels.actions },
         enableSorting: false,
-        header: () => <Typography variant="body2">Actions</Typography>,
+        header: () => (
+          <Typography variant="subtitle2" fontWeight={600} align="right">
+            Actions
+          </Typography>
+        ),
         cell: ({ row }: { row: { original: SurveyElement } }) => (
           <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
             <Tooltip title="Version history">
               <IconButton
+                size="small"
                 color="primary"
                 onClick={() =>
                   setHistoryElement({ id: row.original.id, name: row.original.name || "Element" })
@@ -464,8 +585,9 @@ const SurveyElements = () => {
                 <IconHistory size={18} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Edit">
+            <Tooltip title="Edit element">
               <IconButton
+                size="small"
                 color="primary"
                 onClick={() => {
                   setEditorId(row.original.id);
@@ -475,8 +597,12 @@ const SurveyElements = () => {
                 <IconEdit size={18} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Delete">
-              <IconButton color="error" onClick={() => confirmDelete([row.original.id])}>
+            <Tooltip title="Delete element">
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => confirmDelete([row.original.id])}
+              >
                 <IconTrash size={18} />
               </IconButton>
             </Tooltip>
@@ -779,40 +905,45 @@ const SurveyElements = () => {
                     onClick={(event) => event.stopPropagation()}
                     label="Select All"
                   />
-                  {columnOptions.map((col) => (
-                    <FormControlLabel
-                      key={col.id}
-                      control={
-                        <CustomCheckbox
-                          size="small"
-                          checked={col.getIsVisible()}
-                          onChange={(event) => {
-                            event.stopPropagation();
-                            col.getToggleVisibilityHandler()(event);
-                          }}
-                          onClick={(event) => event.stopPropagation()}
-                          sx={{ p: 0.5, mr: 1 }}
-                        />
-                      }
-                      sx={{
-                        m: 0,
-                        px: 0.75,
-                        py: 0.375,
-                        width: "100%",
-                        borderRadius: 1.5,
-                        alignItems: "center",
-                        "&:hover": { backgroundColor: "#f8fafc" },
-                        "& .MuiFormControlLabel-label": {
-                          fontSize: "14px",
-                          lineHeight: 1.35,
-                        },
-                      }}
-                      onClick={(event) => event.stopPropagation()}
-                      label={
-                        (col.columnDef.meta as { label?: string } | undefined)?.label || col.id
-                      }
-                    />
-                  ))}
+                  {columnOptions.map((col) => {
+                    const isAlwaysVisible = col.id === "name" || col.id === "actions";
+                    return (
+                      <FormControlLabel
+                        key={col.id}
+                        control={
+                          <CustomCheckbox
+                            size="small"
+                            checked={col.getIsVisible()}
+                            disabled={isAlwaysVisible}
+                            onChange={(event) => {
+                              event.stopPropagation();
+                              col.getToggleVisibilityHandler()(event);
+                            }}
+                            onClick={(event) => event.stopPropagation()}
+                            sx={{ p: 0.5, mr: 1 }}
+                          />
+                        }
+                        sx={{
+                          m: 0,
+                          px: 0.75,
+                          py: 0.375,
+                          width: "100%",
+                          borderRadius: 1.5,
+                          alignItems: "center",
+                          opacity: isAlwaysVisible ? 0.6 : 1,
+                          "&:hover": { backgroundColor: "#f8fafc" },
+                          "& .MuiFormControlLabel-label": {
+                            fontSize: "14px",
+                            lineHeight: 1.35,
+                          },
+                        }}
+                        onClick={(event) => event.stopPropagation()}
+                        label={
+                          (col.columnDef.meta as { label?: string } | undefined)?.label || col.id
+                        }
+                      />
+                    );
+                  })}
                 </>
               );
             })()}
@@ -820,24 +951,43 @@ const SurveyElements = () => {
         </Box>
       </Popover>
 
-      <TableContainer sx={{ flex: 1, minHeight: 0 }}>
-        <Table stickyHeader size="small" sx={{ tableLayout: "fixed", minWidth: 1180 }}>
+      <TableContainer
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          borderTop: "1px solid #eef2f7",
+          backgroundColor: "#ffffff",
+        }}
+      >
+        <Table stickyHeader size="small" sx={{ tableLayout: "fixed", minWidth: 1538 }}>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableCell
-                    key={header.id}
-                    align={header.column.id === "actions" ? "right" : "left"}
-                    sx={{
-                      width: columnWidth(header.column.id),
-                      bgcolor: "#f8fafc",
-                      py: 1.25,
-                    }}
-                  >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableCell>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const width = columnWidth(header.column.id);
+                  return (
+                    <TableCell
+                      key={header.id}
+                      align={header.column.id === "actions" ? "right" : "left"}
+                      sx={{
+                        width,
+                        minWidth: width,
+                        maxWidth: width,
+                        bgcolor: "#f8fafc",
+                        py: 1.5,
+                        px: 1.5,
+                        borderBottom: "1px solid #e2e8f0",
+                        fontWeight: 600,
+                        fontSize: "12px",
+                        color: "text.secondary",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                      }}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableCell>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHead>
@@ -850,23 +1000,48 @@ const SurveyElements = () => {
             ) : table.getRowModel().rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={table.getVisibleLeafColumns().length} align="center">
-                  <Typography color="text.secondary" py={6}>
-                    No elements yet. Use Add element to create one.
-                  </Typography>
+                  <Box py={8}>
+                    <Typography variant="subtitle1" fontWeight={600} color="text.secondary">
+                      No survey elements found
+                    </Typography>
+                    <Typography variant="body2" color="text.disabled" mt={0.5}>
+                      {search || hasElementFilters(filters)
+                        ? "Try clearing filters or search terms"
+                        : "Use Add element to create your first element"}
+                    </Typography>
+                  </Box>
                 </TableCell>
               </TableRow>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} hover>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      align={cell.column.id === "actions" ? "right" : "left"}
-                      sx={{ width: columnWidth(cell.column.id), py: 1.25 }}
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                <TableRow
+                  key={row.id}
+                  hover
+                  sx={{
+                    "&:hover": { bgcolor: "#f8fafc" },
+                    transition: "background-color 0.15s ease",
+                  }}
+                >
+                  {row.getVisibleCells().map((cell) => {
+                    const width = columnWidth(cell.column.id);
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        align={cell.column.id === "actions" ? "right" : "left"}
+                        sx={{
+                          width,
+                          minWidth: width,
+                          maxWidth: width,
+                          py: 1.25,
+                          px: 1.5,
+                          borderBottom: "1px solid #f1f5f9",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             )}
@@ -895,7 +1070,7 @@ const SurveyElements = () => {
           </Button>
           <Button
             color="error"
-            variant="outlined"
+            variant="contained"
             disabled={isSaving}
             onClick={() => void deleteSelected()}
           >
