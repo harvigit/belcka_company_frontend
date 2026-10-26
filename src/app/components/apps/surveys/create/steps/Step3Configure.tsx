@@ -15,7 +15,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   MenuItem,
   Autocomplete,
   Tooltip,
@@ -38,6 +37,7 @@ import {
   IconArrowsMaximize,
   IconArrowsMinimize,
 } from "@tabler/icons-react";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import {
   SurveyRoom,
   SurveyItem,
@@ -355,11 +355,11 @@ export default function Step3Configure({
 
                       {isEditing ? (
                         <Stack direction="row" spacing={1} alignItems="center" onClick={(e) => e.stopPropagation()}>
-                          <TextField
+                          <CustomTextField
                             size="small"
                             value={editingRoomName}
-                            onChange={(e) => setEditingRoomName(e.target.value)}
-                            onKeyDown={(e) => {
+                            onChange={(e: any) => setEditingRoomName(e.target.value)}
+                            onKeyDown={(e: any) => {
                               if (e.key === "Enter") saveEditRoomName(room.id);
                               if (e.key === "Escape") setEditingRoomId(null);
                             }}
@@ -592,12 +592,12 @@ export default function Step3Configure({
 
           <Stack spacing={3}>
             {/* Standard Groups */}
-            <TextField
+            <CustomTextField
               select
               fullWidth
               label="Select Standard Group (Recommended)"
               value={selectedGroupToAdd || ""}
-              onChange={(e) => {
+              onChange={(e: any) => {
                 const val = Number(e.target.value) || null;
                 setSelectedGroupToAdd(val);
                 if (val) {
@@ -613,17 +613,17 @@ export default function Step3Configure({
                   {g.name} ({g.elements?.length || 0} elements)
                 </MenuItem>
               ))}
-            </TextField>
+            </CustomTextField>
 
             <Divider>OR</Divider>
 
             {/* Custom Room Name */}
-            <TextField
+            <CustomTextField
               fullWidth
               label="Room / Area Display Name"
               placeholder="e.g. Master Bedroom, Living Room, Rear Garden, Hallway"
               value={customRoomName}
-              onChange={(e) => setCustomRoomName(e.target.value)}
+              onChange={(e: any) => setCustomRoomName(e.target.value)}
               helperText="The survey-specific room label shown to the surveyor"
             />
           </Stack>
@@ -659,7 +659,7 @@ export default function Step3Configure({
             getOptionLabel={(option) => `${option.name} ${option.output_unit ? `(${option.output_unit})` : ""}`}
             onChange={(_, val) => setSelectedElementId(val?.id || null)}
             renderInput={(params) => (
-              <TextField
+              <CustomTextField
                 {...params}
                 label="Search Survey Elements"
                 placeholder="e.g. Wall, Window, Ceiling, Radiator..."

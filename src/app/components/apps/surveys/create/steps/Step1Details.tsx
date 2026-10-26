@@ -3,7 +3,6 @@
 import React, { useMemo } from "react";
 import {
   Grid,
-  TextField,
   MenuItem,
   Typography,
   Box,
@@ -13,6 +12,7 @@ import {
   Stack,
   Alert,
 } from "@mui/material";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import {
   IconBuilding,
   IconMapPin,
@@ -80,12 +80,12 @@ export default function Step1Details({
       <Grid container spacing={3}>
         {/* Reference & Title */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <TextField
+          <CustomTextField
             fullWidth
             required
             label="Survey Reference"
             value={formData.reference}
-            onChange={(e) =>
+            onChange={(e: any) =>
               setFormData((prev: any) => ({ ...prev, reference: e.target.value }))
             }
             error={Boolean(errors.reference)}
@@ -101,13 +101,13 @@ export default function Step1Details({
         </Grid>
 
         <Grid size={{ xs: 12, md: 8 }}>
-          <TextField
+          <CustomTextField
             fullWidth
             required
             label="Survey Title / Description"
             placeholder="e.g. Comprehensive Condition Survey or Void Inspection"
             value={formData.title}
-            onChange={(e) =>
+            onChange={(e: any) =>
               setFormData((prev: any) => ({ ...prev, title: e.target.value }))
             }
             error={Boolean(errors.title)}
@@ -117,13 +117,13 @@ export default function Step1Details({
 
         {/* Project & Address */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <TextField
+          <CustomTextField
             select
             fullWidth
             required
             label="Project"
             value={formData.projectId || ""}
-            onChange={(e) => {
+            onChange={(e: any) => {
               const val = Number(e.target.value) || null;
               setFormData((prev: any) => ({
                 ...prev,
@@ -152,17 +152,17 @@ export default function Step1Details({
                 </MenuItem>
               ))
             )}
-          </TextField>
+          </CustomTextField>
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <TextField
+          <CustomTextField
             select
             fullWidth
             required
             label="Property / Property Address"
             value={formData.addressId || ""}
-            onChange={(e) =>
+            onChange={(e: any) =>
               setFormData((prev: any) => ({
                 ...prev,
                 addressId: Number(e.target.value) || null,
@@ -196,18 +196,18 @@ export default function Step1Details({
                 </MenuItem>
               ))
             )}
-          </TextField>
+          </CustomTextField>
         </Grid>
 
         {/* Surveyor & Date */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <TextField
+          <CustomTextField
             select
             fullWidth
             required
             label="Assigned Surveyor"
             value={formData.surveyorId || ""}
-            onChange={(e) =>
+            onChange={(e: any) =>
               setFormData((prev: any) => ({
                 ...prev,
                 surveyorId: Number(e.target.value) || null,
@@ -234,17 +234,17 @@ export default function Step1Details({
                 </MenuItem>
               ))
             )}
-          </TextField>
+          </CustomTextField>
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <TextField
+          <CustomTextField
             fullWidth
             required
             type="date"
             label="Scheduled Survey Date"
             value={formData.surveyDate}
-            onChange={(e) =>
+            onChange={(e: any) =>
               setFormData((prev: any) => ({ ...prev, surveyDate: e.target.value }))
             }
             InputLabelProps={{ shrink: true }}
@@ -262,14 +262,14 @@ export default function Step1Details({
 
         {/* Notes */}
         <Grid size={{ xs: 12 }}>
-          <TextField
+          <CustomTextField
             fullWidth
             multiline
             rows={3}
             label="Surveyor Instructions / Access Notes (Optional)"
             placeholder="e.g. Tenant contact details, key safe access code, parking restrictions, specific inspection focus areas..."
             value={formData.notes}
-            onChange={(e) =>
+            onChange={(e: any) =>
               setFormData((prev: any) => ({ ...prev, notes: e.target.value }))
             }
           />

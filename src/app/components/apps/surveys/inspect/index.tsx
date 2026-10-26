@@ -9,7 +9,6 @@ import {
   Typography,
   Button,
   IconButton,
-  TextField,
   Chip,
   Card,
   CardContent,
@@ -47,6 +46,7 @@ import {
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import BlankCard from "@/app/components/shared/BlankCard";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import {
   Survey,
   SurveyRoom,
@@ -846,14 +846,14 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
 
                 <Grid container spacing={2} mb={3}>
                   <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <TextField
+                    <CustomTextField
                       label={activeItem.dimension_1_name || "Length"}
                       type="number"
                       size="small"
                       fullWidth
                       disabled={isReadOnly || isUnassigned}
                       value={dim1}
-                      onChange={(e) => setDim1(e.target.value)}
+                      onChange={(e: any) => setDim1(e.target.value)}
                       InputProps={{
                         endAdornment: activeItem.dimension_1_unit ? (
                           <Typography variant="caption" color="text.secondary">
@@ -865,14 +865,14 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                   </Grid>
 
                   <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <TextField
+                    <CustomTextField
                       label={activeItem.dimension_2_name || "Width"}
                       type="number"
                       size="small"
                       fullWidth
                       disabled={isReadOnly || isUnassigned}
                       value={dim2}
-                      onChange={(e) => setDim2(e.target.value)}
+                      onChange={(e: any) => setDim2(e.target.value)}
                       InputProps={{
                         endAdornment: activeItem.dimension_2_unit ? (
                           <Typography variant="caption" color="text.secondary">
@@ -884,14 +884,14 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                   </Grid>
 
                   <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <TextField
+                    <CustomTextField
                       label={activeItem.dimension_3_name || "Height / Depth"}
                       type="number"
                       size="small"
                       fullWidth
                       disabled={isReadOnly || isUnassigned}
                       value={dim3}
-                      onChange={(e) => setDim3(e.target.value)}
+                      onChange={(e: any) => setDim3(e.target.value)}
                       InputProps={{
                         endAdornment: activeItem.dimension_3_unit ? (
                           <Typography variant="caption" color="text.secondary">
@@ -903,14 +903,14 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                   </Grid>
 
                   <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <TextField
+                    <CustomTextField
                       label={`Total Qty (${activeItem.output_unit || "units"})`}
                       type="number"
                       size="small"
                       fullWidth
                       disabled={isReadOnly || isUnassigned}
                       value={qty}
-                      onChange={(e) => setQty(e.target.value)}
+                      onChange={(e: any) => setQty(e.target.value)}
                       sx={{
                         "& .MuiOutlinedInput-root": {
                           fontWeight: 700,
@@ -936,14 +936,14 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                     <Grid container spacing={2}>
                       {/* Defect Type Dropdown */}
                       <Grid size={{ xs: 12, sm: 6 }}>
-                        <TextField
+                        <CustomTextField
                           select
                           label="Defect / Damage Type *"
                           size="small"
                           fullWidth
                           disabled={isReadOnly || isUnassigned}
                           value={damageTypeId}
-                          onChange={(e) => {
+                          onChange={(e: any) => {
                             const val = e.target.value;
                             setDamageTypeId(val);
                             const found = availableDamageTypes.find((d) => String(d.id) === String(val));
@@ -958,19 +958,19 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                               {dt.name}
                             </MenuItem>
                           ))}
-                        </TextField>
+                        </CustomTextField>
                       </Grid>
 
                       {/* Material Dropdown */}
                       <Grid size={{ xs: 12, sm: 6 }}>
-                        <TextField
+                        <CustomTextField
                           select
                           label="Material Type"
                           size="small"
                           fullWidth
                           disabled={isReadOnly || isUnassigned}
                           value={materialId}
-                          onChange={(e) => {
+                          onChange={(e: any) => {
                             const val = e.target.value;
                             setMaterialId(val);
                             const found = availableMaterials.find((m) => String(m.id) === String(val));
@@ -985,38 +985,38 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                               {mat.name}
                             </MenuItem>
                           ))}
-                        </TextField>
+                        </CustomTextField>
                       </Grid>
 
                       {/* Severity */}
                       <Grid size={{ xs: 12, sm: 6 }}>
-                        <TextField
+                        <CustomTextField
                           select
                           label="Severity Level"
                           size="small"
                           fullWidth
                           disabled={isReadOnly || isUnassigned}
                           value={severity}
-                          onChange={(e) => setSeverity(e.target.value)}
+                          onChange={(e: any) => setSeverity(e.target.value)}
                         >
                           {severityOptions.map((sev) => (
                             <MenuItem key={sev.value} value={sev.value}>
                               {sev.label}
                             </MenuItem>
                           ))}
-                        </TextField>
+                        </CustomTextField>
                       </Grid>
 
                       {/* Recommended Repair Action */}
                       <Grid size={{ xs: 12, sm: 6 }}>
-                        <TextField
+                        <CustomTextField
                           label="Recommended Repair Action"
                           placeholder="e.g., Replace panel, clean & repaint, patch crack"
                           size="small"
                           fullWidth
                           disabled={isReadOnly || isUnassigned}
                           value={repairAction}
-                          onChange={(e) => setRepairAction(e.target.value)}
+                          onChange={(e: any) => setRepairAction(e.target.value)}
                         />
                       </Grid>
                     </Grid>
@@ -1028,7 +1028,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                   <Typography variant="subtitle2" fontWeight={700} mb={1}>
                     Surveyor Notes & Observations
                   </Typography>
-                  <TextField
+                  <CustomTextField
                     multiline
                     rows={2}
                     fullWidth
@@ -1036,7 +1036,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                     size="small"
                     placeholder="Enter any specific site observations, access limitations, or inspection notes..."
                     value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    onChange={(e: any) => setNotes(e.target.value)}
                   />
                 </Box>
 

@@ -331,7 +331,7 @@ input#project_id::placeholder {
   width: 20%;
 }
 
-.mui-od50dp-MuiInputBase-input-MuiOutlinedInput-input {
+.timesheet-tabs input {
   text-align: center;
 }
 

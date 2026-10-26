@@ -9,7 +9,7 @@ import {
   Typography,
   Button,
   IconButton,
-  TextField,
+  
   InputAdornment,
   Table,
   TableBody,
@@ -53,6 +53,7 @@ import ColumnVisibilityPopover from "@/app/components/common/ColumnVisibilityPop
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import BlankCard from "@/app/components/shared/BlankCard";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { Survey, SurveyProjectOption, SurveyorOption, SurveyStatus } from "../types";
 
 const statusColorMap: Record<
@@ -545,11 +546,11 @@ export default function SurveyList() {
             flexWrap="wrap"
           >
             {/* Search */}
-            <TextField
+            <CustomTextField
               size="small"
               placeholder="Search reference, property, title..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e: any) => setSearch(e.target.value)}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -561,12 +562,12 @@ export default function SurveyList() {
             />
 
             {/* Status Filter */}
-            <TextField
+            <CustomTextField
               size="small"
               select
               label="Status"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e: any) => setStatusFilter(e.target.value)}
               sx={{ minWidth: 140 }}
             >
               <MenuItem value="all">All Statuses</MenuItem>
@@ -577,15 +578,15 @@ export default function SurveyList() {
               <MenuItem value="qs_review">QS Review</MenuItem>
               <MenuItem value="completed">Completed</MenuItem>
               <MenuItem value="frozen">Frozen</MenuItem>
-            </TextField>
+            </CustomTextField>
 
             {/* Project Filter */}
-            <TextField
+            <CustomTextField
               size="small"
               select
               label="Project"
               value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
+              onChange={(e: any) => setProjectFilter(e.target.value)}
               sx={{ minWidth: 160 }}
             >
               <MenuItem value="all">All Projects</MenuItem>
@@ -594,15 +595,15 @@ export default function SurveyList() {
                   {p.name}
                 </MenuItem>
               ))}
-            </TextField>
+            </CustomTextField>
 
             {/* Surveyor Filter */}
-            <TextField
+            <CustomTextField
               size="small"
               select
               label="Assigned Surveyor"
               value={surveyorFilter}
-              onChange={(e) => setSurveyorFilter(e.target.value)}
+              onChange={(e: any) => setSurveyorFilter(e.target.value)}
               sx={{ minWidth: 170 }}
             >
               <MenuItem value="all">All Surveyors</MenuItem>
@@ -611,7 +612,7 @@ export default function SurveyList() {
                   {s.name}
                 </MenuItem>
               ))}
-            </TextField>
+            </CustomTextField>
 
             {/* Clear Filters Button */}
             {hasActiveFilters && (

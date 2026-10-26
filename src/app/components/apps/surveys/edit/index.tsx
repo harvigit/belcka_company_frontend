@@ -9,7 +9,7 @@ import {
   Stack,
   Button,
   IconButton,
-  TextField,
+  
   MenuItem,
   Card,
   CardContent,
@@ -31,6 +31,7 @@ import {
   SurveyRoom,
 } from "../types";
 import BlankCard from "@/app/components/shared/BlankCard";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import Step3Configure from "../create/steps/Step3Configure";
 
 interface SurveyEditProps {
@@ -269,31 +270,31 @@ export default function SurveyEdit({ id }: SurveyEditProps) {
 
           <Grid container spacing={2.5}>
             <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
+              <CustomTextField
                 fullWidth
                 size="small"
                 label="Survey Reference"
                 value={reference}
-                onChange={(e) => setReference(e.target.value)}
+                onChange={(e: any) => setReference(e.target.value)}
               />
             </Grid>
             <Grid size={{ xs: 12, md: 8 }}>
-              <TextField
+              <CustomTextField
                 fullWidth
                 size="small"
                 label="Survey Title"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e: any) => setTitle(e.target.value)}
               />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
+              <CustomTextField
                 fullWidth
                 size="small"
                 select
                 label="Assigned Surveyor"
                 value={surveyorId ? String(surveyorId) : ""}
-                onChange={(e) => setSurveyorId(e.target.value ? Number(e.target.value) : null)}
+                onChange={(e: any) => setSurveyorId(e.target.value ? Number(e.target.value) : null)}
               >
                 <MenuItem value="">Unassigned</MenuItem>
                 {surveyors.map((s) => (
@@ -301,28 +302,28 @@ export default function SurveyEdit({ id }: SurveyEditProps) {
                     {s.name}
                   </MenuItem>
                 ))}
-              </TextField>
+              </CustomTextField>
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
+              <CustomTextField
                 fullWidth
                 size="small"
                 type="date"
                 label="Inspection Date"
                 InputLabelProps={{ shrink: true }}
                 value={surveyDate}
-                onChange={(e) => setSurveyDate(e.target.value)}
+                onChange={(e: any) => setSurveyDate(e.target.value)}
               />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <TextField
+              <CustomTextField
                 fullWidth
                 multiline
                 rows={2}
                 size="small"
                 label="Notes"
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(e: any) => setNotes(e.target.value)}
               />
             </Grid>
           </Grid>
