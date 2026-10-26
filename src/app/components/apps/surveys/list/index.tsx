@@ -42,6 +42,7 @@ import {
   IconCheck,
   IconFileText,
   IconX,
+  IconCalculator,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -339,6 +340,18 @@ export default function SurveyList() {
         meta: { label: "Actions" },
         cell: ({ row }: { row: { original: Survey } }) => (
           <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+            {["submitted", "qs_review", "completed", "frozen"].includes(row.original.status) && (
+              <Tooltip title="QS Assessment & Costing">
+                <IconButton
+                  size="small"
+                  color="secondary"
+                  component={Link}
+                  href={`/apps/surveys/qs/${row.original.id}`}
+                >
+                  <IconCalculator size={18} />
+                </IconButton>
+              </Tooltip>
+            )}
             {(row.original.status === "assigned" ||
               row.original.status === "in_progress" ||
               row.original.status === "draft") && (

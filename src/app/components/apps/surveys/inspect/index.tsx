@@ -587,6 +587,13 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
         </CardContent>
       </Card>
 
+      {/* Warning: Rework Requested Banner */}
+      {survey.qs_status === "rework_requested" && survey.rework_notes && (
+        <Alert severity="warning" icon={<IconAlertTriangle size={20} />} sx={{ mb: 3, borderRadius: "8px" }}>
+          <strong>Quality Review / QS Rework Requested:</strong> {survey.rework_notes}
+        </Alert>
+      )}
+
       {/* Warning: Unassigned Survey Banner */}
       {isUnassigned && (
         <Alert severity="warning" sx={{ mb: 3, borderRadius: "8px" }}>

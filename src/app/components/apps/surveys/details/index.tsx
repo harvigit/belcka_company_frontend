@@ -49,6 +49,9 @@ import {
   IconTool,
   IconLayersIntersect,
   IconInfoCircle,
+  IconCalculator,
+  IconLock,
+  IconAlertTriangle,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -375,6 +378,19 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
             )}
           </Menu>
 
+          {["submitted", "qs_review", "completed", "frozen"].includes(survey.status) && (
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<IconCalculator size={18} />}
+              component={Link}
+              href={`/apps/surveys/qs/${survey.id}`}
+              sx={{ fontWeight: 700, borderRadius: "8px" }}
+            >
+              QS Assessment & Costing
+            </Button>
+          )}
+
           {(survey.status === "assigned" || survey.status === "in_progress" || survey.status === "draft") && (
             <Button
               variant="contained"
@@ -402,6 +418,20 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
           )}
         </Stack>
       </Stack>
+
+      {/* Rework Alert Banner */}
+      {survey.qs_status === "rework_requested" && survey.rework_notes && (
+        <Alert severity="warning" icon={<IconAlertTriangle size={20} />} sx={{ mb: 3 }}>
+          <strong>Survey Rework Requested:</strong> {survey.rework_notes}
+        </Alert>
+      )}
+
+      {/* Locked Baseline Alert Banner */}
+      {survey.status === "completed" && survey.baseline_total !== null && survey.baseline_total !== undefined && (
+        <Alert severity="success" icon={<IconLock size={20} />} sx={{ mb: 3 }}>
+          <strong>Commercial Baseline Locked:</strong> Approved remediation cost: £{Number(survey.baseline_total).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.
+        </Alert>
+      )}
 
       {/* Overview Cards (Equal height grid) */}
       <Grid container spacing={2.5} mb={3}>
