@@ -10,8 +10,6 @@ import {
   Button,
   IconButton,
   Chip,
-  Card,
-  CardContent,
   Grid,
   Divider,
   MenuItem,
@@ -24,23 +22,32 @@ import {
   CircularProgress,
   Tooltip,
   Paper,
+  InputAdornment,
+  Collapse,
 } from "@mui/material";
 import {
   IconArrowLeft,
+  IconArrowRight,
   IconCheck,
-  IconClipboardCheck,
+  IconCircleCheck,
   IconClock,
+  IconAlertCircle,
   IconAlertTriangle,
   IconCamera,
   IconTrash,
   IconPlus,
   IconChevronRight,
   IconChevronLeft,
+  IconChevronDown,
+  IconChevronUp,
   IconBuilding,
   IconMapPin,
   IconUser,
   IconEye,
-  IconSparkles,
+  IconEyeOff,
+  IconCalculator,
+  IconRuler,
+  IconDoor,
   IconX,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
@@ -53,64 +60,70 @@ import {
   SurveyItem,
   ElementCondition,
   SurveyItemPhoto,
+  SurveyStatus,
 } from "../types";
 
 interface SurveyInspectProps {
   id: string | number;
 }
 
-const conditionOptions: {
+const statusColorMap: Record<
+  SurveyStatus,
+  "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"
+> = {
+  draft: "default",
+  assigned: "info",
+  in_progress: "primary",
+  submitted: "primary",
+  qs_review: "secondary",
+  completed: "success",
+  frozen: "success",
+};
+
+interface ConditionOption {
   value: ElementCondition;
   label: string;
   score: number;
-  color: "success" | "warning" | "error" | "default";
-  bg: string;
-  borderColor: string;
   desc: string;
-}[] = [
+  icon: React.ReactNode;
+}
+
+const conditionOptions: ConditionOption[] = [
   {
     value: "good",
     label: "Good",
     score: 1,
-    color: "success",
-    bg: "#f0fdf4",
-    borderColor: "#86efac",
-    desc: "Sound condition with no defect",
+    desc: "Sound condition with no defects observed",
+    icon: <IconCircleCheck size={22} />,
   },
   {
     value: "minor_defects",
     label: "Minor Defects",
     score: 2,
-    color: "warning",
-    bg: "#fefce8",
-    borderColor: "#fde047",
-    desc: "Cosmetic wear / minor repairs",
+    desc: "Cosmetic wear / minor repairs needed",
+    icon: <IconAlertCircle size={22} />,
   },
   {
     value: "damaged",
     label: "Damaged",
     score: 3,
-    color: "error",
-    bg: "#fef2f2",
-    borderColor: "#fca5a5",
-    desc: "Significant damage / repair required",
+    desc: "Significant damage / defect requiring repair",
+    icon: <IconAlertTriangle size={22} />,
   },
   {
     value: "not_accessible",
     label: "Not Accessible",
     score: 4,
-    color: "default",
-    bg: "#f8fafc",
-    borderColor: "#cbd5e1",
-    desc: "Locked, hazardous, or obstructed",
+    desc: "Locked, obstructed, or hazardous to inspect",
+    icon: <IconEyeOff size={22} />,
   },
 ];
 
 const severityOptions = [
-  { value: "low", label: "Low", color: "info" },
-  { value: "medium", label: "Medium", color: "warning" },
-  { value: "high", label: "High", color: "error" },
-  { value: "critical", label: "Critical", color: "error" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "critical", label: "Critical" },
 ];
 
 export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
@@ -122,6 +135,9 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   // Active selection
   const [activeRoomId, setActiveRoomId] = useState<string | number | null>(null);
   const [activeItemId, setActiveItemId] = useState<string | number | null>(null);
+
+  // Room accordion expanded states
+  const [expandedRooms, setExpandedRooms] = useState<Record<string, boolean>>({});
 
   // Global damage types and materials cache
   const [globalDamageTypes, setGlobalDamageTypes] = useState<{ id: number; name: string }[]>([]);
@@ -146,14 +162,14 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  // Photo preview modal
+  // Modals
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
   const [openSubmitDialog, setOpenSubmitDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const isUnassigned = Boolean(survey && !survey.surveyor_id);
   const isReadOnly = Boolean(
-    survey && ["submitted", "qs_review", "completed", "frozen"].includes(survey.status),
+    survey && ["submitted", "qs_review", "completed", "frozen"].includes(survey.status)
   );
 
   const handleSubmitInspection = async () => {
@@ -187,13 +203,24 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
         const s: Survey = res.data.data;
         setSurvey(s);
 
-        // Auto-select first room and first element if not set
+        // Auto-select first room and element if not set
         if (s.rooms && s.rooms.length > 0) {
           const firstRoom = s.rooms[0];
           setActiveRoomId((prev) => (prev ? prev : firstRoom.id));
           if (firstRoom.items && firstRoom.items.length > 0) {
             setActiveItemId((prev) => (prev ? prev : firstRoom.items[0].id));
           }
+
+          // Expand all rooms by default
+          setExpandedRooms((prev) => {
+            const next = { ...prev };
+            s.rooms.forEach((r) => {
+              if (next[r.id] === undefined) {
+                next[r.id] = true;
+              }
+            });
+            return next;
+          });
         }
       } else {
         toast.error("Survey not found");
@@ -247,15 +274,42 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
     return activeRoom.items.find((i) => String(i.id) === String(activeItemId)) || activeRoom.items[0] || null;
   }, [activeRoom, activeItemId]);
 
+  // Expand active room
+  useEffect(() => {
+    if (activeRoomId) {
+      setExpandedRooms((prev) => ({ ...prev, [activeRoomId]: true }));
+    }
+  }, [activeRoomId]);
+
   // Populate local form state when activeItem changes
   useEffect(() => {
     if (activeItem) {
       setCondition(activeItem.condition || "");
-      setDim1(activeItem.dimension_1_value !== null && activeItem.dimension_1_value !== undefined ? String(activeItem.dimension_1_value) : "");
-      setDim2(activeItem.dimension_2_value !== null && activeItem.dimension_2_value !== undefined ? String(activeItem.dimension_2_value) : "");
-      setDim3(activeItem.dimension_3_value !== null && activeItem.dimension_3_value !== undefined ? String(activeItem.dimension_3_value) : "");
-      setDim4(activeItem.dimension_4_value !== null && activeItem.dimension_4_value !== undefined ? String(activeItem.dimension_4_value) : "");
-      setQty(activeItem.calculated_qty !== null && activeItem.calculated_qty !== undefined ? String(activeItem.calculated_qty) : "");
+      setDim1(
+        activeItem.dimension_1_value !== null && activeItem.dimension_1_value !== undefined
+          ? String(activeItem.dimension_1_value)
+          : ""
+      );
+      setDim2(
+        activeItem.dimension_2_value !== null && activeItem.dimension_2_value !== undefined
+          ? String(activeItem.dimension_2_value)
+          : ""
+      );
+      setDim3(
+        activeItem.dimension_3_value !== null && activeItem.dimension_3_value !== undefined
+          ? String(activeItem.dimension_3_value)
+          : ""
+      );
+      setDim4(
+        activeItem.dimension_4_value !== null && activeItem.dimension_4_value !== undefined
+          ? String(activeItem.dimension_4_value)
+          : ""
+      );
+      setQty(
+        activeItem.calculated_qty !== null && activeItem.calculated_qty !== undefined
+          ? String(activeItem.calculated_qty)
+          : ""
+      );
       setDamageTypeId(activeItem.damage_type_id || "");
       setDamageTypeName(activeItem.damage_type_name || "");
       setMaterialId(activeItem.material_id || "");
@@ -285,7 +339,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
     }
   }, [dim1, dim2, dim3, dim4, activeItem]);
 
-  // Compute available damage types & materials (linked first, fallback to global)
+  // Available damage types & materials
   const availableDamageTypes = useMemo(() => {
     const linked = activeItem?.element?.damageTypes || [];
     if (linked.length > 0) return linked;
@@ -298,7 +352,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
     return globalMaterials;
   }, [activeItem, globalMaterials]);
 
-  // Overall and room progress calculation
+  // Progress stats
   const stats = useMemo(() => {
     if (!survey?.rooms) return { total: 0, inspected: 0, pct: 0 };
     const total = survey.rooms.reduce((acc, r) => acc + (r.items?.length || 0), 0);
@@ -310,7 +364,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
     return { total, inspected, pct };
   }, [survey]);
 
-  // Flattened elements array for Previous/Next navigation
+  // Navigation across all elements
   const allElements = useMemo(() => {
     if (!survey?.rooms) return [];
     return survey.rooms.flatMap((r) =>
@@ -322,6 +376,9 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
     if (!activeItem) return -1;
     return allElements.findIndex((entry) => String(entry.item.id) === String(activeItem.id));
   }, [allElements, activeItem]);
+
+  const isLastElement = currentIndex >= allElements.length - 1;
+  const isAllInspected = stats.pct === 100 && stats.total > 0;
 
   // Image helper
   const getImageUrl = (path: string) => {
@@ -378,10 +435,10 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
 
       const res = await api.post("surveys/inspect-item", payload);
       if (res.data?.IsSuccess) {
-        toast.success("Inspection saved!");
+        toast.success("Inspection saved");
         await loadSurvey();
 
-        if (shouldMoveToNext) {
+        if (shouldMoveToNext && !isLastElement) {
           handleNextElement();
         }
       } else {
@@ -421,7 +478,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
       });
 
       if (res.data?.IsSuccess) {
-        toast.success("Photo uploaded!");
+        toast.success("Photo uploaded");
         await loadSurvey();
       } else {
         toast.error(res.data?.message || "Failed to upload photo");
@@ -431,7 +488,6 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
       toast.error(err?.response?.data?.message || "Failed to upload photo");
     } finally {
       setUploadingPhoto(false);
-      // Reset input
       e.target.value = "";
     }
   };
@@ -474,11 +530,18 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
     }
   };
 
+  const toggleRoomExpand = (roomId: string | number) => {
+    setExpandedRooms((prev) => ({
+      ...prev,
+      [roomId]: !prev[roomId],
+    }));
+  };
+
   if (loading) {
     return (
       <Box p={8} textAlign="center">
         <Stack spacing={2} alignItems="center">
-          <CircularProgress size={36} />
+          <CircularProgress size={32} />
           <Typography variant="body2" color="text.secondary">
             Loading inspection workspace...
           </Typography>
@@ -489,275 +552,341 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
 
   if (!survey) {
     return (
-      <Box p={3} textAlign="center">
+      <Box p={4} textAlign="center">
         <Typography variant="h6">Survey not found</Typography>
+        <Button
+          variant="outlined"
+          sx={{ mt: 2 }}
+          onClick={() => router.push("/apps/surveys/list")}
+        >
+          Return to Surveys
+        </Button>
       </Box>
     );
   }
 
   return (
     <Box>
-      {/* Top Header Card */}
-      <Card sx={{ mb: 3, border: "1px solid", borderColor: "divider" }} elevation={0}>
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+      {/* ================================================================== */}
+      {/* 1. HEADER CARD (Clean, minimal, Belcka styled)                     */}
+      {/* ================================================================== */}
+      <BlankCard sx={{ mb: 2.5 }}>
+        <Box p={{ xs: 2, md: 2.5 }}>
           <Stack
-            direction={{ xs: "column", sm: "row" }}
+            direction={{ xs: "column", md: "row" }}
             justifyContent="space-between"
-            alignItems={{ xs: "flex-start", sm: "center" }}
+            alignItems={{ xs: "flex-start", md: "center" }}
             spacing={2}
           >
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <IconButton
-                onClick={() => router.push(`/apps/surveys/view/${id}`)}
-                sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: "8px",
-                  p: 1,
-                }}
-              >
-                <IconArrowLeft size={20} />
-              </IconButton>
-              <Box>
-                <Stack direction="row" alignItems="center" spacing={1.5} mb={0.5}>
-                  <Typography variant="h4" fontWeight={700}>
+            {/* Title & Metadata */}
+            <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
+              <Tooltip title="Back to Survey Details">
+                <IconButton
+                  component={Link}
+                  href={`/apps/surveys/view/${id}`}
+                  size="small"
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: "8px",
+                  }}
+                >
+                  <IconArrowLeft size={18} />
+                </IconButton>
+              </Tooltip>
+
+              <Box sx={{ minWidth: 0 }}>
+                <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+                  <Typography variant="h4" fontWeight={700} noWrap>
                     {survey.title || survey.reference}
                   </Typography>
+
                   <Chip
                     label={survey.status.replace("_", " ").toUpperCase()}
                     size="small"
-                    color={
-                      survey.status === "in_progress"
-                        ? "warning"
-                        : survey.status === "submitted"
-                        ? "success"
-                        : survey.status === "completed"
-                        ? "success"
-                        : "info"
-                    }
-                    sx={{ fontWeight: 700, borderRadius: "6px" }}
+                    color={statusColorMap[survey.status] || "default"}
+                    sx={{ fontWeight: 600, height: 22, fontSize: "0.75rem" }}
                   />
+
+                  {survey.reference && (
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      Ref: {survey.reference}
+                    </Typography>
+                  )}
                 </Stack>
-                <Stack direction="row" flexWrap="wrap" gap={2} color="text.secondary">
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <IconBuilding size={16} />
-                    <Typography variant="body2">{survey.project_name || "General Project"}</Typography>
-                  </Stack>
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <IconMapPin size={16} />
-                    <Typography variant="body2">{survey.property_name || "Property Site"}</Typography>
-                  </Stack>
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <IconUser size={16} />
-                    <Typography variant="body2">{survey.surveyor_name || "Unassigned"}</Typography>
-                  </Stack>
+
+                {/* Metadata Row */}
+                <Stack direction="row" flexWrap="wrap" gap={1.5} alignItems="center" mt={0.5}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "text.secondary" }}>
+                    <IconBuilding size={15} />
+                    <Typography variant="body2" color="text.secondary">
+                      {survey.project_name || survey.project?.name || "General Project"}
+                    </Typography>
+                  </Box>
+
+                  <Typography variant="caption" color="divider">
+                    •
+                  </Typography>
+
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "text.secondary" }}>
+                    <IconMapPin size={15} />
+                    <Typography variant="body2" color="text.secondary">
+                      {survey.property_name || survey.address?.name || "Property Site"}
+                    </Typography>
+                  </Box>
+
+                  <Typography variant="caption" color="divider">
+                    •
+                  </Typography>
+
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "text.secondary" }}>
+                    <IconUser size={15} />
+                    <Typography variant="body2" color="text.secondary">
+                      {survey.surveyor_name ||
+                        (survey.surveyor
+                          ? `${survey.surveyor.first_name} ${survey.surveyor.last_name}`
+                          : "Unassigned")}
+                    </Typography>
+                  </Box>
                 </Stack>
               </Box>
             </Stack>
 
-            {/* Progress summary box */}
-            <Box
-              sx={{
-                bgcolor: "background.paper",
-                p: 2,
-                borderRadius: "8px",
-                border: "1px solid",
-                borderColor: "divider",
-                minWidth: { xs: "100%", sm: 240 },
-              }}
-            >
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                <Typography variant="caption" fontWeight={700} color="text.secondary">
-                  INSPECTION PROGRESS
+            {/* Inspection Progress Tracker (Clean, no duplicate button) */}
+            <Box sx={{ width: { xs: "100%", md: 220 } }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
+                <Typography variant="caption" fontWeight={600} color="text.secondary">
+                  Inspection Progress
                 </Typography>
-                <Typography variant="subtitle2" fontWeight={800} color="primary.main">
-                  {stats.pct}%
+                <Typography variant="caption" fontWeight={700} color="text.primary">
+                  {stats.inspected} / {stats.total} ({stats.pct}%)
                 </Typography>
               </Stack>
               <LinearProgress
                 variant="determinate"
                 value={stats.pct}
-                sx={{ height: 8, borderRadius: 4, mb: 0.5 }}
+                sx={{
+                  height: 6,
+                  borderRadius: 3,
+                  bgcolor: "grey.100",
+                  "& .MuiLinearProgress-bar": {
+                    borderRadius: 3,
+                    bgcolor: stats.pct === 100 ? "success.main" : "primary.main",
+                  },
+                }}
               />
-              <Typography variant="caption" color="text.secondary">
-                {stats.inspected} of {stats.total} elements inspected
-              </Typography>
             </Box>
           </Stack>
-        </CardContent>
-      </Card>
+        </Box>
+      </BlankCard>
 
-      {/* Warning: Rework Requested Banner */}
+      {/* ================================================================== */}
+      {/* 2. ALERTS (Shown only when meaningful)                             */}
+      {/* ================================================================== */}
       {survey.qs_status === "rework_requested" && survey.rework_notes && (
-        <Alert severity="warning" icon={<IconAlertTriangle size={20} />} sx={{ mb: 3, borderRadius: "8px" }}>
+        <Alert severity="warning" sx={{ mb: 2.5, borderRadius: "8px" }}>
           <strong>Quality Review / QS Rework Requested:</strong> {survey.rework_notes}
         </Alert>
       )}
 
-      {/* Warning: Unassigned Survey Banner */}
       {isUnassigned && (
-        <Alert severity="warning" sx={{ mb: 3, borderRadius: "8px" }}>
-          <strong>Unassigned Survey:</strong> This survey does not have an assigned surveyor. Inspection progress and photo evidence cannot be recorded until an active surveyor is assigned.
+        <Alert severity="warning" sx={{ mb: 2.5, borderRadius: "8px" }}>
+          This survey does not have an assigned surveyor. Assign an active surveyor to record inspection data.
         </Alert>
       )}
 
-      {/* Info: Locked / Read-only Survey Banner */}
       {isReadOnly && (
-        <Alert severity="info" sx={{ mb: 3, borderRadius: "8px" }}>
-          <strong>Survey Locked:</strong> This survey is in <strong>{survey.status.replace("_", " ").toUpperCase()}</strong> status and is locked for editing. Viewing in read-only mode.
+        <Alert severity="info" sx={{ mb: 2.5, borderRadius: "8px" }}>
+          This survey is in <strong>{survey.status.replace("_", " ").toUpperCase()}</strong> status and is locked for editing.
         </Alert>
       )}
 
-      {/* Success: 100% Inspected & Ready for Submission */}
-      {!isReadOnly && !isUnassigned && stats.pct === 100 && stats.total > 0 && (
-        <Alert
-          severity="success"
-          sx={{ mb: 3, borderRadius: "8px", alignItems: "center" }}
-          action={
-            <Button
-              color="success"
-              variant="contained"
-              size="small"
-              startIcon={<IconClipboardCheck size={18} />}
-              onClick={() => setOpenSubmitDialog(true)}
-              sx={{ fontWeight: 700 }}
-            >
-              Submit Inspection
-            </Button>
-          }
-        >
-          <strong>All elements inspected!</strong> You can now submit this survey for quality review and sign-off.
+      {!isReadOnly && !isUnassigned && isAllInspected && (
+        <Alert severity="success" sx={{ mb: 2.5, borderRadius: "8px" }}>
+          All {stats.total} elements have been inspected. Review your entries and click <strong>Submit Inspection</strong> at the bottom when ready.
         </Alert>
       )}
 
-      {/* Main Grid: Left Room Navigator + Right Element Workspace */}
-      <Grid container spacing={3}>
-        {/* Left Column: Rooms & Elements Stepper */}
+      {/* ================================================================== */}
+      {/* 3. MAIN WORKSPACE: LEFT NAVIGATOR + RIGHT INSPECTOR                */}
+      {/* ================================================================== */}
+      <Grid container spacing={2.5}>
+        {/* Left Column: Rooms & Elements Navigation */}
         <Grid size={{ xs: 12, md: 4, lg: 3.5 }}>
-          <BlankCard>
-            <Box p={2.5} borderBottom="1px solid" borderColor="divider">
-              <Typography variant="subtitle1" fontWeight={700}>
-                Survey Rooms & Areas
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Walk through rooms and inspect each assigned element
-              </Typography>
-            </Box>
+          <Box sx={{ position: { md: "sticky" }, top: 85 }}>
+            <BlankCard>
+              <Box p={2} borderBottom="1px solid" borderColor="divider">
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <IconDoor size={18} />
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      Rooms & Areas
+                    </Typography>
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    {survey.rooms.length} {survey.rooms.length === 1 ? "room" : "rooms"}
+                  </Typography>
+                </Stack>
+              </Box>
 
-            <Box p={1.5} sx={{ maxHeight: "calc(100vh - 280px)", overflowY: "auto" }}>
-              {survey.rooms.map((room, rIdx) => {
-                const roomItems = room.items || [];
-                const roomInspected = roomItems.filter((i) => i.is_inspected).length;
-                const isRoomActive = activeRoom?.id === room.id;
+              <Box p={1.5} sx={{ maxHeight: "calc(100vh - 280px)", overflowY: "auto" }}>
+                {survey.rooms.map((room, rIdx) => {
+                  const roomItems = room.items || [];
+                  const roomInspected = roomItems.filter((i) => i.is_inspected).length;
+                  const isRoomActive = activeRoom?.id === room.id;
+                  const isExpanded = expandedRooms[room.id] ?? true;
+                  const isRoomComplete = roomInspected === roomItems.length && roomItems.length > 0;
 
-                return (
-                  <Paper
-                    key={room.id}
-                    variant="outlined"
-                    sx={{
-                      mb: 1.5,
-                      borderRadius: "8px",
-                      borderColor: isRoomActive ? "primary.main" : "divider",
-                      bgcolor: isRoomActive ? "#f8fafc" : "background.paper",
-                      overflow: "hidden",
-                    }}
-                  >
+                  return (
                     <Box
-                      p={1.5}
-                      sx={{ cursor: "pointer" }}
-                      onClick={() => {
-                        setActiveRoomId(room.id);
-                        if (roomItems.length > 0) {
-                          setActiveItemId(roomItems[0].id);
-                        }
+                      key={room.id}
+                      sx={{
+                        mb: 1,
+                        borderRadius: "8px",
+                        border: "1px solid",
+                        borderColor: isRoomActive ? "primary.main" : "divider",
+                        overflow: "hidden",
                       }}
                     >
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
-                        <Typography variant="subtitle2" fontWeight={700}>
-                          {rIdx + 1}. {room.name}
-                        </Typography>
-                        <Chip
-                          label={`${roomInspected}/${roomItems.length}`}
-                          size="small"
-                          color={roomInspected === roomItems.length && roomItems.length > 0 ? "success" : "default"}
-                          sx={{ height: 20, fontSize: "0.7rem", fontWeight: 700 }}
-                        />
-                      </Stack>
-                      <LinearProgress
-                        variant="determinate"
-                        value={roomItems.length > 0 ? (roomInspected / roomItems.length) * 100 : 0}
-                        sx={{ height: 4, borderRadius: 2 }}
-                        color={roomInspected === roomItems.length && roomItems.length > 0 ? "success" : "primary"}
-                      />
-                    </Box>
+                      {/* Room Header Trigger */}
+                      <Box
+                        p={1.25}
+                        sx={{
+                          cursor: "pointer",
+                          userSelect: "none",
+                          bgcolor: isRoomActive ? "grey.50" : "background.paper",
+                          "&:hover": { bgcolor: "grey.50" },
+                        }}
+                        onClick={() => {
+                          setActiveRoomId(room.id);
+                          if (roomItems.length > 0 && !roomItems.some((i) => i.id === activeItemId)) {
+                            setActiveItemId(roomItems[0].id);
+                          }
+                          toggleRoomExpand(room.id);
+                        }}
+                      >
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                          <Typography
+                            variant="subtitle2"
+                            fontWeight={isRoomActive ? 700 : 600}
+                            color={isRoomActive ? "primary.main" : "text.primary"}
+                          >
+                            {rIdx + 1}. {room.name}
+                          </Typography>
 
-                    {/* Room elements list */}
-                    {isRoomActive && (
-                      <Stack spacing={0.5} p={1} bgcolor="background.paper" borderTop="1px solid" borderColor="divider">
-                        {roomItems.map((item) => {
-                          const isItemActive = activeItem?.id === item.id;
-                          return (
-                            <Box
-                              key={item.id}
-                              onClick={() => setActiveItemId(item.id)}
-                              sx={{
-                                p: 1,
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                bgcolor: isItemActive ? "primary.light" : "transparent",
-                                "&:hover": { bgcolor: isItemActive ? "primary.light" : "grey.50" },
-                              }}
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <Typography
+                              variant="caption"
+                              fontWeight={600}
+                              color={isRoomComplete ? "success.main" : "text.secondary"}
                             >
-                              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                                <Stack direction="row" alignItems="center" spacing={1}>
-                                  {item.is_inspected ? (
-                                    <IconCheck size={16} color="#16a34a" />
-                                  ) : (
-                                    <IconClock size={16} color="#94a3b8" />
-                                  )}
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={isItemActive ? 700 : 500}
-                                    color={isItemActive ? "primary.main" : "text.primary"}
-                                  >
-                                    {item.name}
-                                  </Typography>
+                              {roomInspected}/{roomItems.length}
+                            </Typography>
+                            {isExpanded ? (
+                              <IconChevronUp size={15} color="#64748b" />
+                            ) : (
+                              <IconChevronDown size={15} color="#64748b" />
+                            )}
+                          </Stack>
+                        </Stack>
+                      </Box>
+
+                      {/* Room Items List */}
+                      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                        <Stack
+                          spacing={0.5}
+                          p={0.75}
+                          bgcolor="background.paper"
+                          borderTop="1px solid"
+                          borderColor="divider"
+                        >
+                          {roomItems.map((item) => {
+                            const isItemActive = activeItem?.id === item.id;
+                            const photoCount = item.photos?.length || 0;
+
+                            return (
+                              <Box
+                                key={item.id}
+                                onClick={() => {
+                                  setActiveRoomId(room.id);
+                                  setActiveItemId(item.id);
+                                }}
+                                sx={{
+                                  p: 1,
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                  borderLeft: isItemActive ? "3px solid #1e4db7" : "3px solid transparent",
+                                  bgcolor: isItemActive ? "grey.100" : "transparent",
+                                  "&:hover": {
+                                    bgcolor: isItemActive ? "grey.100" : "grey.50",
+                                  },
+                                }}
+                              >
+                                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                  <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
+                                    {item.is_inspected ? (
+                                      <IconCheck size={15} color="#10b981" />
+                                    ) : (
+                                      <IconClock size={15} color="#94a3b8" />
+                                    )}
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={isItemActive ? 700 : 500}
+                                      color={isItemActive ? "primary.main" : "text.primary"}
+                                      noWrap
+                                    >
+                                      {item.name}
+                                    </Typography>
+                                  </Stack>
+
+                                  <Stack direction="row" spacing={0.5} alignItems="center">
+                                    {photoCount > 0 && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+                                        <IconCamera size={12} /> {photoCount}
+                                      </Typography>
+                                    )}
+
+                                    {item.condition && (
+                                      <Chip
+                                        label={
+                                          item.condition === "damaged"
+                                            ? "Damaged"
+                                            : item.condition === "good"
+                                            ? "Good"
+                                            : item.condition === "minor_defects"
+                                            ? "Minor"
+                                            : "N/A"
+                                        }
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{
+                                          height: 18,
+                                          fontSize: "0.65rem",
+                                          fontWeight: 600,
+                                        }}
+                                      />
+                                    )}
+                                  </Stack>
                                 </Stack>
-                                {item.condition && (
-                                  <Chip
-                                    label={item.condition === "damaged" ? "Damaged" : item.condition === "good" ? "Good" : item.condition === "minor_defects" ? "Minor" : "N/A"}
-                                    size="small"
-                                    color={
-                                      item.condition === "damaged"
-                                        ? "error"
-                                        : item.condition === "good"
-                                        ? "success"
-                                        : item.condition === "minor_defects"
-                                        ? "warning"
-                                        : "default"
-                                    }
-                                    sx={{ height: 18, fontSize: "0.65rem" }}
-                                  />
-                                )}
-                              </Stack>
-                            </Box>
-                          );
-                        })}
-                      </Stack>
-                    )}
-                  </Paper>
-                );
-              })}
-            </Box>
-          </BlankCard>
+                              </Box>
+                            );
+                          })}
+                        </Stack>
+                      </Collapse>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </BlankCard>
+          </Box>
         </Grid>
 
-        {/* Right Column: Active Element Inspector */}
+        {/* Right Column: Active Element Inspector Workspace */}
         <Grid size={{ xs: 12, md: 8, lg: 8.5 }}>
           {activeItem ? (
             <BlankCard>
               {/* Element Header */}
-              <Box p={3} borderBottom="1px solid" borderColor="divider">
+              <Box p={{ xs: 2, sm: 2.5 }} borderBottom="1px solid" borderColor="divider">
                 <Stack
                   direction={{ xs: "column", sm: "row" }}
                   justifyContent="space-between"
@@ -765,10 +894,10 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                   spacing={1}
                 >
                   <Box>
-                    <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                      {activeRoom?.name?.toUpperCase()} • ELEMENT {currentIndex + 1} OF {allElements.length}
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      {activeRoom?.name} • Element {currentIndex + 1} of {allElements.length}
                     </Typography>
-                    <Typography variant="h4" fontWeight={800} mt={0.5}>
+                    <Typography variant="h3" fontWeight={700} mt={0.25}>
                       {activeItem.name}
                     </Typography>
                   </Box>
@@ -776,264 +905,315 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                   <Stack direction="row" spacing={1} alignItems="center">
                     {activeItem.output_unit && (
                       <Chip
+                        icon={<IconRuler size={13} />}
                         label={`Unit: ${activeItem.output_unit}`}
                         size="small"
                         variant="outlined"
                         sx={{ fontWeight: 600 }}
                       />
                     )}
+
                     <Chip
-                      label={activeItem.is_inspected ? "Inspected" : "Pending Inspection"}
+                      label={activeItem.is_inspected ? "Inspected" : "Pending"}
                       size="small"
-                      color={activeItem.is_inspected ? "success" : "warning"}
-                      sx={{ fontWeight: 700 }}
+                      color={activeItem.is_inspected ? "success" : "default"}
+                      variant={activeItem.is_inspected ? "filled" : "outlined"}
+                      sx={{ fontWeight: 600 }}
                     />
                   </Stack>
                 </Stack>
               </Box>
 
-              <Box p={3}>
+              {/* Inspector Form Sections */}
+              <Box p={{ xs: 2, sm: 2.5 }}>
                 {/* 1. Visual Condition Rating */}
-                <Typography variant="subtitle1" fontWeight={700} mb={1}>
-                  1. Visual Condition Rating *
-                </Typography>
-                <Typography variant="caption" color="text.secondary" display="block" mb={2}>
-                  Inspect the physical element on site and record its visual condition
-                </Typography>
+                <Box mb={3.5}>
+                  <Typography variant="subtitle1" fontWeight={700} mb={0.5}>
+                    1. Visual Condition Rating
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" mb={1.5}>
+                    Inspect the element on site and record its physical condition.
+                  </Typography>
 
-                <Grid container spacing={2} mb={4}>
-                  {conditionOptions.map((opt) => {
-                    const isSelected = condition === opt.value;
-                    return (
-                      <Grid size={{ xs: 12, sm: 6, md: 3 }} key={opt.value}>
-                        <Paper
-                          variant="outlined"
-                          onClick={() => {
-                            if (!isReadOnly && !isUnassigned) setCondition(opt.value);
-                          }}
-                          sx={{
-                            p: 2,
-                            borderRadius: "10px",
-                            cursor: isReadOnly || isUnassigned ? "default" : "pointer",
-                            opacity: isReadOnly || isUnassigned ? 0.75 : 1,
-                            borderColor: isSelected ? opt.borderColor : "divider",
-                            bgcolor: isSelected ? opt.bg : "background.paper",
-                            boxShadow: isSelected ? "0 4px 12px rgba(0,0,0,0.06)" : "none",
-                            transition: "all 0.15s ease",
-                            "&:hover": {
-                              borderColor: isReadOnly || isUnassigned ? "divider" : opt.borderColor,
-                              bgcolor: isReadOnly || isUnassigned ? undefined : opt.bg,
-                            },
-                          }}
-                        >
-                          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                            <Typography variant="subtitle2" fontWeight={800}>
-                              {opt.label}
+                  <Grid container spacing={1.5}>
+                    {conditionOptions.map((opt) => {
+                      const isSelected = condition === opt.value;
+                      return (
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }} key={opt.value}>
+                          <Paper
+                            variant="outlined"
+                            onClick={() => {
+                              if (!isReadOnly && !isUnassigned) setCondition(opt.value);
+                            }}
+                            sx={{
+                              p: 1.75,
+                              borderRadius: "8px",
+                              cursor: isReadOnly || isUnassigned ? "default" : "pointer",
+                              opacity: isReadOnly || isUnassigned ? 0.75 : 1,
+                              borderColor: isSelected ? "primary.main" : "divider",
+                              borderWidth: isSelected ? "2px" : "1px",
+                              bgcolor: isSelected ? "grey.50" : "background.paper",
+                              transition: "all 0.15s ease",
+                              "&:hover": {
+                                borderColor: isReadOnly || isUnassigned ? "divider" : "primary.main",
+                              },
+                            }}
+                          >
+                            <Stack direction="row" alignItems="center" spacing={1} mb={0.75}>
+                              <Box
+                                sx={{
+                                  color: isSelected ? "primary.main" : "text.secondary",
+                                  display: "flex",
+                                  alignItems: "center",
+                                }}
+                              >
+                                {opt.icon}
+                              </Box>
+                              <Typography
+                                variant="subtitle2"
+                                fontWeight={isSelected ? 700 : 600}
+                                color={isSelected ? "primary.main" : "text.primary"}
+                              >
+                                {opt.label}
+                              </Typography>
+                            </Stack>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                              {opt.desc}
                             </Typography>
-                            {isSelected && <IconCheck size={18} color="#16a34a" />}
-                          </Stack>
-                          <Typography variant="caption" color="text.secondary">
-                            {opt.desc}
-                          </Typography>
-                        </Paper>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
+                          </Paper>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                </Box>
 
                 <Divider sx={{ my: 3 }} />
 
-                {/* 2. Site Measurements */}
-                <Typography variant="subtitle1" fontWeight={700} mb={1}>
-                  2. Site Measurements & Dimensions
-                </Typography>
-                <Typography variant="caption" color="text.secondary" display="block" mb={2}>
-                  Enter actual dimensions measured on site. Quantity calculates automatically.
-                </Typography>
+                {/* 2. Site Measurements & Dimensions */}
+                <Box mb={3.5}>
+                  <Typography variant="subtitle1" fontWeight={700} mb={0.5}>
+                    2. Site Measurements & Dimensions
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" mb={1.5}>
+                    Enter actual site dimensions. The billable quantity calculates automatically.
+                  </Typography>
 
-                <Grid container spacing={2} mb={3}>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <CustomTextField
-                      label={activeItem.dimension_1_name || "Length"}
-                      type="number"
-                      size="small"
-                      fullWidth
-                      disabled={isReadOnly || isUnassigned}
-                      value={dim1}
-                      onChange={(e: any) => setDim1(e.target.value)}
-                      InputProps={{
-                        endAdornment: activeItem.dimension_1_unit ? (
-                          <Typography variant="caption" color="text.secondary">
-                            {activeItem.dimension_1_unit}
-                          </Typography>
-                        ) : null,
-                      }}
-                    />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <CustomTextField
-                      label={activeItem.dimension_2_name || "Width"}
-                      type="number"
-                      size="small"
-                      fullWidth
-                      disabled={isReadOnly || isUnassigned}
-                      value={dim2}
-                      onChange={(e: any) => setDim2(e.target.value)}
-                      InputProps={{
-                        endAdornment: activeItem.dimension_2_unit ? (
-                          <Typography variant="caption" color="text.secondary">
-                            {activeItem.dimension_2_unit}
-                          </Typography>
-                        ) : null,
-                      }}
-                    />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <CustomTextField
-                      label={activeItem.dimension_3_name || "Height / Depth"}
-                      type="number"
-                      size="small"
-                      fullWidth
-                      disabled={isReadOnly || isUnassigned}
-                      value={dim3}
-                      onChange={(e: any) => setDim3(e.target.value)}
-                      InputProps={{
-                        endAdornment: activeItem.dimension_3_unit ? (
-                          <Typography variant="caption" color="text.secondary">
-                            {activeItem.dimension_3_unit}
-                          </Typography>
-                        ) : null,
-                      }}
-                    />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <CustomTextField
-                      label={`Total Qty (${activeItem.output_unit || "units"})`}
-                      type="number"
-                      size="small"
-                      fullWidth
-                      disabled={isReadOnly || isUnassigned}
-                      value={qty}
-                      onChange={(e: any) => setQty(e.target.value)}
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          fontWeight: 700,
-                          bgcolor: "#f8fafc",
-                        },
-                      }}
-                    />
-                  </Grid>
-                </Grid>
-
-                <Divider sx={{ my: 3 }} />
-
-                {/* 3. Defect & Repair Details (If Damaged or Minor Defects) */}
-                {(condition === "damaged" || condition === "minor_defects") && (
-                  <Box sx={{ p: 2.5, bgcolor: "#fefce8", borderRadius: "8px", border: "1px solid #fde047", mb: 3 }}>
-                    <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                      <IconAlertTriangle size={20} color="#ca8a04" />
-                      <Typography variant="subtitle1" fontWeight={700} color="#854d0e">
-                        Defect & Repair Specifications
-                      </Typography>
-                    </Stack>
-
-                    <Grid container spacing={2}>
-                      {/* Defect Type Dropdown */}
-                      <Grid size={{ xs: 12, sm: 6 }}>
-                        <CustomTextField
-                          select
-                          label="Defect / Damage Type *"
-                          size="small"
-                          fullWidth
-                          disabled={isReadOnly || isUnassigned}
-                          value={damageTypeId}
-                          onChange={(e: any) => {
-                            const val = e.target.value;
-                            setDamageTypeId(val);
-                            const found = availableDamageTypes.find((d) => String(d.id) === String(val));
-                            setDamageTypeName(found ? found.name : "");
-                          }}
-                        >
-                          <MenuItem value="">
-                            <em>Choose defect type...</em>
-                          </MenuItem>
-                          {availableDamageTypes.map((dt) => (
-                            <MenuItem key={dt.id} value={dt.id}>
-                              {dt.name}
-                            </MenuItem>
-                          ))}
-                        </CustomTextField>
-                      </Grid>
-
-                      {/* Material Dropdown */}
-                      <Grid size={{ xs: 12, sm: 6 }}>
-                        <CustomTextField
-                          select
-                          label="Material Type"
-                          size="small"
-                          fullWidth
-                          disabled={isReadOnly || isUnassigned}
-                          value={materialId}
-                          onChange={(e: any) => {
-                            const val = e.target.value;
-                            setMaterialId(val);
-                            const found = availableMaterials.find((m) => String(m.id) === String(val));
-                            setMaterialName(found ? found.name : "");
-                          }}
-                        >
-                          <MenuItem value="">
-                            <em>Choose material...</em>
-                          </MenuItem>
-                          {availableMaterials.map((mat) => (
-                            <MenuItem key={mat.id} value={mat.id}>
-                              {mat.name}
-                            </MenuItem>
-                          ))}
-                        </CustomTextField>
-                      </Grid>
-
-                      {/* Severity */}
-                      <Grid size={{ xs: 12, sm: 6 }}>
-                        <CustomTextField
-                          select
-                          label="Severity Level"
-                          size="small"
-                          fullWidth
-                          disabled={isReadOnly || isUnassigned}
-                          value={severity}
-                          onChange={(e: any) => setSeverity(e.target.value)}
-                        >
-                          {severityOptions.map((sev) => (
-                            <MenuItem key={sev.value} value={sev.value}>
-                              {sev.label}
-                            </MenuItem>
-                          ))}
-                        </CustomTextField>
-                      </Grid>
-
-                      {/* Recommended Repair Action */}
-                      <Grid size={{ xs: 12, sm: 6 }}>
-                        <CustomTextField
-                          label="Recommended Repair Action"
-                          placeholder="e.g., Replace panel, clean & repaint, patch crack"
-                          size="small"
-                          fullWidth
-                          disabled={isReadOnly || isUnassigned}
-                          value={repairAction}
-                          onChange={(e: any) => setRepairAction(e.target.value)}
-                        />
-                      </Grid>
+                  <Grid container spacing={2} alignItems="stretch">
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <CustomTextField
+                        label={activeItem.dimension_1_name || "Length"}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        disabled={isReadOnly || isUnassigned}
+                        value={dim1}
+                        onChange={(e: any) => setDim1(e.target.value)}
+                        placeholder="0.00"
+                        InputProps={{
+                          endAdornment: activeItem.dimension_1_unit ? (
+                            <InputAdornment position="end">
+                              <Typography variant="caption" color="text.secondary">
+                                {activeItem.dimension_1_unit}
+                              </Typography>
+                            </InputAdornment>
+                          ) : null,
+                        }}
+                      />
                     </Grid>
-                  </Box>
+
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <CustomTextField
+                        label={activeItem.dimension_2_name || "Width"}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        disabled={isReadOnly || isUnassigned}
+                        value={dim2}
+                        onChange={(e: any) => setDim2(e.target.value)}
+                        placeholder="0.00"
+                        InputProps={{
+                          endAdornment: activeItem.dimension_2_unit ? (
+                            <InputAdornment position="end">
+                              <Typography variant="caption" color="text.secondary">
+                                {activeItem.dimension_2_unit}
+                              </Typography>
+                            </InputAdornment>
+                          ) : null,
+                        }}
+                      />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <CustomTextField
+                        label={activeItem.dimension_3_name || "Height / Depth"}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        disabled={isReadOnly || isUnassigned}
+                        value={dim3}
+                        onChange={(e: any) => setDim3(e.target.value)}
+                        placeholder="0.00"
+                        InputProps={{
+                          endAdornment: activeItem.dimension_3_unit ? (
+                            <InputAdornment position="end">
+                              <Typography variant="caption" color="text.secondary">
+                                {activeItem.dimension_3_unit}
+                              </Typography>
+                            </InputAdornment>
+                          ) : null,
+                        }}
+                      />
+                    </Grid>
+
+                    {/* Integrated Calculation Result Card */}
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <Paper
+                        variant="outlined"
+                        sx={{
+                          p: 1.5,
+                          borderRadius: "8px",
+                          bgcolor: "grey.50",
+                          borderColor: "divider",
+                          height: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Stack direction="row" spacing={0.5} alignItems="center" mb={0.25}>
+                          <IconCalculator size={15} color="#64748b" />
+                          <Typography variant="caption" fontWeight={600} color="text.secondary">
+                            Calculated Qty
+                          </Typography>
+                        </Stack>
+
+                        <Typography variant="h4" fontWeight={700} color="text.primary">
+                          {qty !== "" ? qty : "0.00"}{" "}
+                          <Typography component="span" variant="body2" color="text.secondary">
+                            {activeItem.output_unit || "units"}
+                          </Typography>
+                        </Typography>
+
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.7rem" }}>
+                          {activeItem.element?.measurement_mode === "area"
+                            ? "Length × Width"
+                            : activeItem.element?.measurement_mode === "volume"
+                            ? "Length × Width × Height"
+                            : "Direct measurement"}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                {/* 3. Defect & Repair Specifications (Only when Damaged or Minor Defects) */}
+                {(condition === "damaged" || condition === "minor_defects") && (
+                  <>
+                    <Divider sx={{ my: 3 }} />
+                    <Box mb={3.5}>
+                      <Typography variant="subtitle1" fontWeight={700} mb={0.5}>
+                        3. Defect & Repair Specifications
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                        Provide defect classification and remedial action for commercial costing.
+                      </Typography>
+
+                      <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                          <CustomTextField
+                            select
+                            label="Defect / Damage Type *"
+                            size="small"
+                            fullWidth
+                            disabled={isReadOnly || isUnassigned}
+                            value={damageTypeId}
+                            onChange={(e: any) => {
+                              const val = e.target.value;
+                              setDamageTypeId(val);
+                              const found = availableDamageTypes.find((d) => String(d.id) === String(val));
+                              setDamageTypeName(found ? found.name : "");
+                            }}
+                          >
+                            <MenuItem value="">
+                              <em>Select defect type...</em>
+                            </MenuItem>
+                            {availableDamageTypes.map((dt) => (
+                              <MenuItem key={dt.id} value={dt.id}>
+                                {dt.name}
+                              </MenuItem>
+                            ))}
+                          </CustomTextField>
+                        </Grid>
+
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                          <CustomTextField
+                            select
+                            label="Material Classification"
+                            size="small"
+                            fullWidth
+                            disabled={isReadOnly || isUnassigned}
+                            value={materialId}
+                            onChange={(e: any) => {
+                              const val = e.target.value;
+                              setMaterialId(val);
+                              const found = availableMaterials.find((m) => String(m.id) === String(val));
+                              setMaterialName(found ? found.name : "");
+                            }}
+                          >
+                            <MenuItem value="">
+                              <em>Select material...</em>
+                            </MenuItem>
+                            {availableMaterials.map((mat) => (
+                              <MenuItem key={mat.id} value={mat.id}>
+                                {mat.name}
+                              </MenuItem>
+                            ))}
+                          </CustomTextField>
+                        </Grid>
+
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                          <CustomTextField
+                            select
+                            label="Severity Level"
+                            size="small"
+                            fullWidth
+                            disabled={isReadOnly || isUnassigned}
+                            value={severity}
+                            onChange={(e: any) => setSeverity(e.target.value)}
+                          >
+                            {severityOptions.map((sev) => (
+                              <MenuItem key={sev.value} value={sev.value}>
+                                {sev.label}
+                              </MenuItem>
+                            ))}
+                          </CustomTextField>
+                        </Grid>
+
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                          <CustomTextField
+                            label="Recommended Repair Action"
+                            placeholder="e.g. Replace pane, clean & repaint, patch crack"
+                            size="small"
+                            fullWidth
+                            disabled={isReadOnly || isUnassigned}
+                            value={repairAction}
+                            onChange={(e: any) => setRepairAction(e.target.value)}
+                          />
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  </>
                 )}
 
-                {/* Surveyor Notes */}
-                <Box mb={3}>
-                  <Typography variant="subtitle2" fontWeight={700} mb={1}>
-                    Surveyor Notes & Observations
+                <Divider sx={{ my: 3 }} />
+
+                {/* 4. Surveyor Notes */}
+                <Box mb={3.5}>
+                  <Typography variant="subtitle1" fontWeight={700} mb={0.5}>
+                    4. Surveyor Notes
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" mb={1.5}>
+                    Site observations, accessibility limits, or specific inspector comments.
                   </Typography>
                   <CustomTextField
                     multiline
@@ -1041,7 +1221,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                     fullWidth
                     disabled={isReadOnly || isUnassigned}
                     size="small"
-                    placeholder="Enter any specific site observations, access limitations, or inspection notes..."
+                    placeholder="Enter any notes or observations..."
                     value={notes}
                     onChange={(e: any) => setNotes(e.target.value)}
                   />
@@ -1049,28 +1229,33 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
 
                 <Divider sx={{ my: 3 }} />
 
-                {/* 4. Photo Evidence */}
-                <Box mb={3}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                {/* 5. Photo Evidence */}
+                <Box mb={3.5}>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={1.5}
+                  >
                     <Box>
                       <Typography variant="subtitle1" fontWeight={700}>
-                        4. Photo Evidence & Attachments
+                        5. Photo Evidence
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {activeItem.element?.surface_photo_minimum
-                          ? `Minimum ${activeItem.element.surface_photo_minimum} photo(s) recommended for this element`
-                          : "Upload clear photo evidence of element condition or damage"}
+                          ? `Minimum ${activeItem.element.surface_photo_minimum} photo(s) recommended`
+                          : "Upload site photos of element condition or defects (optional)"}
                       </Typography>
                     </Box>
 
                     <Button
                       variant="outlined"
                       component="label"
-                      startIcon={uploadingPhoto ? <CircularProgress size={16} /> : <IconCamera size={18} />}
+                      startIcon={uploadingPhoto ? <CircularProgress size={14} /> : <IconCamera size={16} />}
                       disabled={uploadingPhoto || isReadOnly || isUnassigned}
                       size="small"
                     >
-                      {uploadingPhoto ? "Uploading..." : "Take / Upload Photo"}
+                      {uploadingPhoto ? "Uploading..." : "Upload Photo"}
                       <input
                         type="file"
                         hidden
@@ -1082,24 +1267,42 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                     </Button>
                   </Stack>
 
-                  {/* Photo Thumbnails Gallery */}
+                  {/* Photo Cards Grid */}
                   {(!activeItem.photos || activeItem.photos.length === 0) ? (
                     <Box
-                      p={3}
-                      textAlign="center"
-                      borderRadius="8px"
-                      border="1px dashed"
-                      borderColor="divider"
-                      bgcolor="#f8fafc"
+                      component="label"
+                      sx={{
+                        p: 3,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: "8px",
+                        border: "1px dashed",
+                        borderColor: "divider",
+                        bgcolor: "grey.50",
+                        cursor: isReadOnly || isUnassigned ? "default" : "pointer",
+                        "&:hover": {
+                          borderColor: isReadOnly || isUnassigned ? "divider" : "primary.main",
+                        },
+                      }}
                     >
-                      <IconCamera size={32} color="#94a3b8" />
-                      <Typography variant="body2" color="text.secondary" mt={1}>
-                        No inspection photos attached yet.
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        capture="environment"
+                        disabled={uploadingPhoto || isReadOnly || isUnassigned}
+                        onChange={handlePhotoUpload}
+                      />
+                      <IconCamera size={28} color="#94a3b8" />
+                      <Typography variant="body2" color="text.secondary" mt={0.5}>
+                        No photos attached. Click to upload site evidence.
                       </Typography>
                     </Box>
                   ) : (
-                    <Grid container spacing={2}>
-                      {activeItem.photos.map((photo: SurveyItemPhoto) => (
+                    <Grid container spacing={1.5}>
+                      {activeItem.photos.map((photo: SurveyItemPhoto, pIdx: number) => (
                         <Grid size={{ xs: 6, sm: 4, md: 3 }} key={photo.id}>
                           <Paper
                             variant="outlined"
@@ -1107,23 +1310,25 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                               borderRadius: "8px",
                               overflow: "hidden",
                               position: "relative",
+                              borderColor: "divider",
                               "&:hover .photo-overlay": { opacity: 1 },
                             }}
                           >
                             <Box
                               component="img"
                               src={getImageUrl(photo.file_path)}
-                              alt={photo.file_name || "Inspection Evidence"}
+                              alt={photo.file_name || `Evidence ${pIdx + 1}`}
                               sx={{
                                 width: "100%",
-                                height: 120,
+                                height: 110,
                                 objectFit: "cover",
                                 display: "block",
                                 cursor: "pointer",
                               }}
                               onClick={() => setPreviewPhotoUrl(getImageUrl(photo.file_path))}
                             />
-                            {/* Hover overlay with actions */}
+
+                            {/* Hover overlay with zoom & delete */}
                             <Stack
                               className="photo-overlay"
                               direction="row"
@@ -1138,84 +1343,150 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                                 transition: "opacity 0.2s ease",
                               }}
                             >
-                              <IconButton
-                                size="small"
-                                sx={{ color: "white", bgcolor: "rgba(255,255,255,0.2)" }}
-                                onClick={() => setPreviewPhotoUrl(getImageUrl(photo.file_path))}
-                              >
-                                <IconEye size={18} />
-                              </IconButton>
-                              {!isReadOnly && (
+                              <Tooltip title="View Full Photo">
                                 <IconButton
                                   size="small"
-                                  sx={{ color: "white", bgcolor: "rgba(239,68,68,0.7)" }}
-                                  onClick={() => handleDeletePhoto(photo.id)}
+                                  sx={{ color: "white", bgcolor: "rgba(255,255,255,0.2)" }}
+                                  onClick={() => setPreviewPhotoUrl(getImageUrl(photo.file_path))}
                                 >
-                                  <IconTrash size={18} />
+                                  <IconEye size={16} />
                                 </IconButton>
+                              </Tooltip>
+
+                              {!isReadOnly && !isUnassigned && (
+                                <Tooltip title="Delete Photo">
+                                  <IconButton
+                                    size="small"
+                                    sx={{ color: "white", bgcolor: "rgba(239,68,68,0.8)" }}
+                                    onClick={() => handleDeletePhoto(photo.id)}
+                                  >
+                                    <IconTrash size={16} />
+                                  </IconButton>
+                                </Tooltip>
                               )}
                             </Stack>
                           </Paper>
                         </Grid>
                       ))}
+
+                      {/* Add more photo card */}
+                      {!isReadOnly && !isUnassigned && (
+                        <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+                          <Box
+                            component="label"
+                            sx={{
+                              height: 110,
+                              borderRadius: "8px",
+                              border: "1px dashed",
+                              borderColor: "divider",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              "&:hover": { borderColor: "primary.main" },
+                            }}
+                          >
+                            <input
+                              type="file"
+                              hidden
+                              accept="image/*"
+                              capture="environment"
+                              disabled={uploadingPhoto}
+                              onChange={handlePhotoUpload}
+                            />
+                            <IconPlus size={20} color="#64748b" />
+                            <Typography variant="caption" color="text.secondary" mt={0.5}>
+                              Add Photo
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      )}
                     </Grid>
                   )}
                 </Box>
 
-                {/* Footer Controls */}
+                {/* ------------------------------------------------------------ */}
+                {/* 6. Action Toolbar (Clear hierarchy, no duplicates)           */}
+                {/* ------------------------------------------------------------ */}
                 <Divider sx={{ my: 3 }} />
 
                 <Stack
                   direction={{ xs: "column", sm: "row" }}
                   justifyContent="space-between"
-                  alignItems="center"
-                  spacing={2}
+                  alignItems={{ xs: "stretch", sm: "center" }}
+                  spacing={1.5}
                 >
-                  <Stack direction="row" spacing={1.5}>
+                  {/* Left: Previous / Next Navigation */}
+                  <Stack direction="row" spacing={1} alignItems="center">
                     <Button
                       variant="outlined"
-                      startIcon={<IconChevronLeft size={18} />}
+                      size="small"
+                      startIcon={<IconChevronLeft size={16} />}
                       onClick={handlePreviousElement}
                       disabled={currentIndex <= 0}
                     >
                       Previous
                     </Button>
+
                     <Button
                       variant="outlined"
-                      endIcon={<IconChevronRight size={18} />}
+                      size="small"
+                      endIcon={<IconChevronRight size={16} />}
                       onClick={handleNextElement}
-                      disabled={currentIndex >= allElements.length - 1}
+                      disabled={isLastElement}
                     >
                       Next
                     </Button>
+
+                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                      {currentIndex + 1} of {allElements.length}
+                    </Typography>
                   </Stack>
 
-                  <Stack direction="row" spacing={1.5} flexWrap="wrap">
+                  {/* Right: Actions */}
+                  <Stack direction="row" spacing={1.5} alignItems="center">
                     <Button
                       variant="outlined"
+                      size="medium"
                       onClick={() => handleSaveItem(false)}
                       disabled={saving || isReadOnly || isUnassigned}
+                      sx={{ fontWeight: 600 }}
                     >
                       {saving ? "Saving..." : "Save Progress"}
                     </Button>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <IconCheck size={18} />}
-                      onClick={() => handleSaveItem(true)}
-                      disabled={saving || isReadOnly || isUnassigned}
-                    >
-                      {currentIndex < allElements.length - 1 ? "Save & Next Element" : "Save Inspection"}
-                    </Button>
-                    {!isReadOnly && !isUnassigned && stats.pct === 100 && stats.total > 0 && (
+
+                    {/* Single Main Action Button */}
+                    {!isReadOnly && !isUnassigned && isAllInspected ? (
                       <Button
                         variant="contained"
-                        color="success"
-                        startIcon={<IconClipboardCheck size={18} />}
+                        color="primary"
+                        size="medium"
+                        startIcon={<IconCheck size={18} />}
                         onClick={() => setOpenSubmitDialog(true)}
                         sx={{ fontWeight: 700 }}
                       >
                         Submit Inspection
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        size="medium"
+                        endIcon={
+                          saving ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : isLastElement ? (
+                            <IconCheck size={18} />
+                          ) : (
+                            <IconArrowRight size={18} />
+                          )
+                        }
+                        onClick={() => handleSaveItem(!isLastElement)}
+                        disabled={saving || isReadOnly || isUnassigned}
+                        sx={{ fontWeight: 700 }}
+                      >
+                        {isLastElement ? "Save Inspection" : "Save & Next"}
                       </Button>
                     )}
                   </Stack>
@@ -1224,9 +1495,13 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
             </BlankCard>
           ) : (
             <BlankCard>
-              <Box p={5} textAlign="center">
-                <Typography variant="body1" color="text.secondary">
-                  No element selected. Select an element from the left room list.
+              <Box p={6} textAlign="center">
+                <IconDoor size={40} color="#94a3b8" />
+                <Typography variant="h6" fontWeight={600} mt={1}>
+                  No Element Selected
+                </Typography>
+                <Typography variant="body2" color="text.secondary" mt={0.5}>
+                  Select an element from the left room list to begin inspection.
                 </Typography>
               </Box>
             </BlankCard>
@@ -1234,28 +1509,51 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
         </Grid>
       </Grid>
 
-      {/* Submit Inspection Confirmation Dialog */}
+      {/* ================================================================== */}
+      {/* 4. SUBMIT CONFIRMATION DIALOG                                      */}
+      {/* ================================================================== */}
       <Dialog
         open={openSubmitDialog}
         onClose={() => setOpenSubmitDialog(false)}
         maxWidth="xs"
         fullWidth
+        PaperProps={{ sx: { borderRadius: "10px" } }}
       >
         <DialogTitle sx={{ fontWeight: 700 }}>Submit Inspection for Review</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            All <strong>{stats.total}</strong> elements in this survey have been inspected. Once submitted, the survey findings will be forwarded for quality review and locked for editing.
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            All <strong>{stats.total}</strong> elements in this survey have been inspected. Once submitted, the survey will be marked as <strong>SUBMITTED</strong> and locked for quality review.
           </Typography>
+          <Box
+            sx={{
+              p: 1.5,
+              borderRadius: "8px",
+              bgcolor: "grey.50",
+              border: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Typography variant="caption" color="text.secondary" display="block">
+              Inspection Summary
+            </Typography>
+            <Typography variant="body2" fontWeight={600}>
+              {stats.total} of {stats.total} elements completed (100%)
+            </Typography>
+          </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setOpenSubmitDialog(false)} color="inherit" disabled={submitting}>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button
+            onClick={() => setOpenSubmitDialog(false)}
+            color="inherit"
+            disabled={submitting}
+          >
             Cancel
           </Button>
           <Button
             variant="contained"
-            color="success"
+            color="primary"
             disabled={submitting}
-            startIcon={submitting ? <CircularProgress size={18} color="inherit" /> : <IconCheck size={18} />}
+            startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : <IconCheck size={16} />}
             onClick={handleSubmitInspection}
             sx={{ fontWeight: 700 }}
           >
@@ -1264,26 +1562,42 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
         </DialogActions>
       </Dialog>
 
-      {/* Photo Preview Modal */}
+      {/* ================================================================== */}
+      {/* 5. PHOTO FULL PREVIEW MODAL                                        */}
+      {/* ================================================================== */}
       <Dialog
         open={Boolean(previewPhotoUrl)}
         onClose={() => setPreviewPhotoUrl(null)}
         maxWidth="md"
         fullWidth
+        PaperProps={{ sx: { borderRadius: "10px", overflow: "hidden" } }}
       >
-        <DialogContent sx={{ p: 1, position: "relative", bgcolor: "black", textAlign: "center" }}>
+        <DialogContent sx={{ p: 0, position: "relative", bgcolor: "black", textAlign: "center" }}>
           <IconButton
             onClick={() => setPreviewPhotoUrl(null)}
-            sx={{ position: "absolute", top: 10, right: 10, color: "white", bgcolor: "rgba(0,0,0,0.6)" }}
+            sx={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              color: "white",
+              bgcolor: "rgba(0,0,0,0.6)",
+              "&:hover": { bgcolor: "rgba(0,0,0,0.85)" },
+            }}
           >
-            <IconX size={20} />
+            <IconX size={18} />
           </IconButton>
           {previewPhotoUrl && (
             <Box
               component="img"
               src={previewPhotoUrl}
-              alt="Inspection Evidence Full Preview"
-              sx={{ maxHeight: "80vh", maxWidth: "100%", objectFit: "contain" }}
+              alt="Inspection Evidence Preview"
+              sx={{
+                maxHeight: "80vh",
+                maxWidth: "100%",
+                objectFit: "contain",
+                display: "block",
+                margin: "0 auto",
+              }}
             />
           )}
         </DialogContent>

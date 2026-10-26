@@ -31,6 +31,7 @@ import {
   Select,
   FormControl,
   InputLabel,
+  InputAdornment,
 } from "@mui/material";
 import {
   IconArrowLeft,
@@ -51,6 +52,7 @@ import {
   IconX,
   IconShieldCheck,
   IconCamera,
+  IconSearch,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -70,7 +72,7 @@ interface SurveyQSWorkspaceProps {
 const statusColorMap: Record<string, "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"> = {
   draft: "default",
   assigned: "info",
-  in_progress: "warning",
+  in_progress: "primary",
   submitted: "primary",
   qs_review: "secondary",
   completed: "success",
@@ -199,19 +201,26 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
       const matchQuery =
         !searchQuery ||
         item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.element_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.item_code?.toLowerCase().includes(searchQuery.toLowerCase());
+        (item.item_code && item.item_code.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.element_name && item.element_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.room_name && item.room_name.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchRoom && matchQuery;
     });
   }, [scopeData, selectedRoom, searchQuery]);
 
-  // Active selected evidence item for right pane
-  const activeEvidence = useMemo(() => {
+  // Currently selected evidence record
+  const activeEvidence: SurveyEvidenceItem | null = useMemo(() => {
     if (!scopeData?.evidence_items || !selectedEvidenceId) return null;
     return scopeData.evidence_items.find((e) => e.id === selectedEvidenceId) || null;
   }, [scopeData, selectedEvidenceId]);
 
-  // Live real-time totals reflecting unsaved table edits and adjustment changes
+  // Format currency helper
+  const formatMoney = (val: number | string | null | undefined) => {
+    const num = Number(val) || 0;
+    return `£${num.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  // Live real-time calculations (includes unsaved local input changes)
   const liveTotals = useMemo(() => {
     if (!scopeData?.scope_items) {
       return {
@@ -227,14 +236,15 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
     let base = 0;
     let reviewed = 0;
 
-    for (const item of scopeData.scope_items) {
-      const qty = editedLines[item.id]?.quantity !== undefined ? Number(editedLines[item.id]!.quantity) || 0 : Number(item.quantity) || 0;
-      const rate = editedLines[item.id]?.unit_rate !== undefined ? Number(editedLines[item.id]!.unit_rate) || 0 : Number(item.unit_rate) || 0;
-      const isRev = editedLines[item.id]?.is_reviewed !== undefined ? Boolean(editedLines[item.id]!.is_reviewed) : Boolean(item.is_reviewed);
+    scopeData.scope_items.forEach((item) => {
+      const local = editedLines[item.id];
+      const qty = local?.quantity !== undefined ? Number(local.quantity) : Number(item.quantity);
+      const rate = local?.unit_rate !== undefined ? Number(local.unit_rate) : Number(item.unit_rate);
+      const isRev = local?.is_reviewed !== undefined ? Boolean(local.is_reviewed) : Boolean(item.is_reviewed);
 
-      base += Math.round((qty * rate + Number.EPSILON) * 100) / 100;
+      base += (qty || 0) * (rate || 0);
       if (isRev) reviewed++;
-    }
+    });
 
     base = Math.round((base + Number.EPSILON) * 100) / 100;
 
@@ -291,7 +301,6 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
       const res = await api.put(`surveys/${id}/scope-items/${item.id}`, payload);
       if (res.data?.IsSuccess) {
         toast.success("Work line updated");
-        // Clear edited state for this line
         setEditedLines((prev) => {
           const next = { ...prev };
           delete next[item.id];
@@ -316,13 +325,13 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
         is_reviewed: newStatus,
       });
       if (res.data?.IsSuccess) {
-        toast.success(newStatus ? "Line verified" : "Line marked pending review");
+        toast.success(newStatus ? "Line marked reviewed" : "Line marked pending review");
         await fetchScopeData();
       } else {
         toast.error(res.data?.message || "Failed to update review status");
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to update review status");
+      toast.error(err?.response?.data?.message || "Failed to update status");
     }
   };
 
@@ -343,9 +352,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
     }
   };
 
-  // ----------------------------------------------------
   // Whole Scope Adjustments Handler
-  // ----------------------------------------------------
   const handleSaveAdjustments = async () => {
     if (isLocked) return;
     try {
@@ -358,7 +365,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
       });
 
       if (res.data?.IsSuccess) {
-        toast.success("Scope adjustments updated successfully");
+        toast.success("Scope adjustments saved");
         await fetchScopeData();
       } else {
         toast.error(res.data?.message || "Failed to save adjustments");
@@ -370,9 +377,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
     }
   };
 
-  // ----------------------------------------------------
   // Auto-Generate Work Items from Survey Defects
-  // ----------------------------------------------------
   const handleAutoGenerate = async () => {
     if (isLocked) return;
     try {
@@ -391,9 +396,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
     }
   };
 
-  // ----------------------------------------------------
   // Add Custom Work Item Dialog Handler
-  // ----------------------------------------------------
   const handleAddWorkItem = async () => {
     if (isLocked) return;
     if (!newItemData.description.trim()) {
@@ -412,7 +415,6 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
         notes: newItemData.notes.trim() || undefined,
         room_name: newItemData.room_name.trim() || undefined,
         element_name: newItemData.element_name.trim() || undefined,
-        is_reviewed: false,
       };
 
       if (newItemData.survey_item_id) {
@@ -421,8 +423,9 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
 
       const res = await api.post(`surveys/${id}/scope-items`, payload);
       if (res.data?.IsSuccess) {
-        toast.success("Commercial work line added");
+        toast.success("Work line added to scope");
         setAddModalOpen(false);
+        // Reset form
         setNewItemData({
           survey_item_id: "",
           room_name: "",
@@ -445,13 +448,11 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
     }
   };
 
-  // ----------------------------------------------------
-  // Quality Review: Request Rework Handler
-  // ----------------------------------------------------
+  // Request Surveyor Rework
   const handleRequestRework = async () => {
     if (isLocked) return;
     if (!reworkNotes.trim()) {
-      toast.error("Please explain what requires rework or correction");
+      toast.error("Please provide clear rework notes for the surveyor");
       return;
     }
 
@@ -465,7 +466,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
         toast.success("Survey returned to surveyor for rework");
         setReworkModalOpen(false);
         setReworkNotes("");
-        router.push(`/apps/surveys/details/${id}`);
+        router.push(`/apps/surveys/view/${id}`);
       } else {
         toast.error(res.data?.message || "Failed to request rework");
       }
@@ -476,49 +477,54 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
     }
   };
 
-  // ----------------------------------------------------
-  // Lock Baseline Handler
-  // ----------------------------------------------------
+  // Lock Baseline & Sign Off Scope
   const handleLockBaseline = async () => {
     if (isLocked) return;
+
+    if (liveTotals.pending_count > 0) {
+      toast.error(`Cannot approve scope: ${liveTotals.pending_count} work items are still pending verification`);
+      return;
+    }
+
     try {
       setActionLoading(true);
       const res = await api.post(`surveys/${id}/lock-scope`, {
-        notes: lockNotes.trim() || undefined,
+        approval_notes: lockNotes.trim() || undefined,
       });
 
       if (res.data?.IsSuccess) {
-        toast.success(res.data.message || "Commercial baseline locked successfully!");
+        toast.success("Commercial baseline approved and locked permanently");
         setLockModalOpen(false);
-        setLockNotes("");
         await fetchScopeData();
       } else {
-        toast.error(res.data?.message || "Failed to lock scope");
+        toast.error(res.data?.message || "Failed to lock baseline");
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to lock scope");
+      toast.error(err?.response?.data?.message || "Failed to lock baseline");
     } finally {
       setActionLoading(false);
     }
   };
 
-  // Format currency helper
-  const formatMoney = (val: number | undefined | null) => {
-    const num = Number(val) || 0;
-    return `£${num.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
+  // ----------------------------------------------------
+  // Render
+  // ----------------------------------------------------
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
-        <CircularProgress />
+      <Box p={8} textAlign="center">
+        <Stack spacing={2} alignItems="center">
+          <CircularProgress size={32} />
+          <Typography variant="body2" color="text.secondary">
+            Loading commercial costing workspace...
+          </Typography>
+        </Stack>
       </Box>
     );
   }
 
-  if (!scopeData) {
+  if (!scopeData?.survey) {
     return (
-      <Alert severity="error" sx={{ mt: 3 }}>
+      <Alert severity="error" sx={{ mt: 3, borderRadius: "8px" }}>
         Survey not found or you do not have permission to access the commercial scope.
       </Alert>
     );
@@ -528,207 +534,362 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
 
   return (
     <Box>
-      {/* ------------------------------------------------------------------ */}
-      {/* Top Header Bar */}
-      {/* ------------------------------------------------------------------ */}
-      <Box sx={{ mb: 3 }}>
-        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={2}>
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <IconButton component={Link} href={`/apps/surveys/details/${survey.id}`} size="small" sx={{ border: "1px solid", borderColor: "divider" }}>
-              <IconArrowLeft size={20} />
-            </IconButton>
-            <Box>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="h4" fontWeight={700}>
-                  {survey.title || "Commercial QS Assessment"}
-                </Typography>
-                <Chip
-                  label={survey.status.replace("_", " ").toUpperCase()}
-                  color={statusColorMap[survey.status] || "default"}
+      {/* ================================================================== */}
+      {/* 1. TOP HEADER CARD                                                 */}
+      {/* ================================================================== */}
+      <BlankCard sx={{ mb: 2.5 }}>
+        <Box p={{ xs: 2, md: 2.5 }}>
+          <Stack
+            direction={{ xs: "column", lg: "row" }}
+            justifyContent="space-between"
+            alignItems={{ xs: "flex-start", lg: "center" }}
+            spacing={2}
+          >
+            {/* Title & Metadata */}
+            <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+              <Tooltip title="Back to Survey Details">
+                <IconButton
+                  component={Link}
+                  href={`/apps/surveys/view/${survey.id}`}
                   size="small"
-                  sx={{ fontWeight: 600 }}
-                />
-                {isLocked && (
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: "8px",
+                    flexShrink: 0,
+                  }}
+                >
+                  <IconArrowLeft size={18} />
+                </IconButton>
+              </Tooltip>
+
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+                  <Typography variant="h4" fontWeight={700} noWrap>
+                    {survey.title || "Commercial QS Assessment"}
+                  </Typography>
+
                   <Chip
-                    icon={<IconLock size={14} />}
-                    label="Baseline Locked"
-                    color="success"
+                    label={survey.status.replace("_", " ").toUpperCase()}
+                    size="small"
+                    color={statusColorMap[survey.status] || "default"}
+                    sx={{ fontWeight: 600, height: 22, fontSize: "0.75rem" }}
+                  />
+
+                  {isLocked && (
+                    <Chip
+                      icon={<IconLock size={13} />}
+                      label="Baseline Locked"
+                      color="success"
+                      size="small"
+                      sx={{ fontWeight: 600, height: 22, fontSize: "0.75rem" }}
+                    />
+                  )}
+                </Stack>
+
+                {/* Metadata Row */}
+                <Stack direction="row" flexWrap="nowrap" gap={1.5} alignItems="center" mt={0.5} sx={{ overflow: "hidden" }}>
+                  {survey.reference && (
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ flexShrink: 0 }}>
+                      Ref: {survey.reference}
+                    </Typography>
+                  )}
+
+                  {survey.project?.name && (
+                    <>
+                      <Typography variant="caption" color="divider" sx={{ flexShrink: 0 }}>•</Typography>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "text.secondary", flexShrink: 0 }}>
+                        <IconBuilding size={14} />
+                        <Typography variant="body2" color="text.secondary" noWrap>
+                          {survey.project.name}
+                        </Typography>
+                      </Box>
+                    </>
+                  )}
+
+                  {survey.address?.name && (
+                    <>
+                      <Typography variant="caption" color="divider" sx={{ flexShrink: 0 }}>•</Typography>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "text.secondary", minWidth: 0, maxWidth: { xs: 150, sm: 220, md: 300, xl: 450 } }}>
+                        <IconMapPin size={14} style={{ flexShrink: 0 }} />
+                        <Typography variant="body2" color="text.secondary" noWrap title={survey.address.name}>
+                          {survey.address.name}
+                        </Typography>
+                      </Box>
+                    </>
+                  )}
+
+                  {survey.surveyor && (
+                    <>
+                      <Typography variant="caption" color="divider" sx={{ flexShrink: 0 }}>•</Typography>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "text.secondary", flexShrink: 0 }}>
+                        <IconUser size={14} />
+                        <Typography variant="body2" color="text.secondary" noWrap>
+                          {survey.surveyor.first_name} {survey.surveyor.last_name}
+                        </Typography>
+                      </Box>
+                    </>
+                  )}
+                </Stack>
+              </Box>
+            </Stack>
+
+            {/* Header Action Buttons (Single clean row, no wrap on desktop) */}
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{
+                flexShrink: 0,
+                flexWrap: { xs: "wrap", md: "nowrap" },
+                rowGap: 1,
+              }}
+            >
+              {!isLocked ? (
+                <>
+                  <Button
                     variant="outlined"
                     size="small"
-                    sx={{ fontWeight: 600 }}
-                  />
-                )}
-              </Stack>
-              <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
-                Ref: <strong>{survey.reference}</strong>
-                {survey.project?.name && ` • Project: ${survey.project.name}`}
-                {survey.address?.name && ` • Property: ${survey.address.name}`}
-                {survey.surveyor && ` • Surveyor: ${survey.surveyor.first_name} ${survey.surveyor.last_name}`}
-              </Typography>
-            </Box>
+                    startIcon={<IconRotateClockwise size={16} />}
+                    onClick={() => setReworkModalOpen(true)}
+                    disabled={actionLoading}
+                    sx={{
+                      borderRadius: "8px",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      height: 34,
+                    }}
+                  >
+                    Request Rework
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<IconSparkles size={16} />}
+                    onClick={handleAutoGenerate}
+                    disabled={actionLoading}
+                    sx={{
+                      borderRadius: "8px",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      height: 34,
+                    }}
+                  >
+                    Auto-generate
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<IconPlus size={16} />}
+                    onClick={() => setAddModalOpen(true)}
+                    disabled={actionLoading}
+                    sx={{
+                      borderRadius: "8px",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      height: 34,
+                    }}
+                  >
+                    Add Work Line
+                  </Button>
+
+                  <Tooltip
+                    title={
+                      liveTotals.pending_count > 0
+                        ? `${liveTotals.pending_count} work line(s) still require review before approval`
+                        : liveTotals.total_count === 0
+                        ? "Add at least one commercial work line"
+                        : "Approve commercial scope and freeze baseline"
+                    }
+                  >
+                    <span>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        startIcon={<IconShieldCheck size={16} />}
+                        onClick={() => setLockModalOpen(true)}
+                        disabled={actionLoading || liveTotals.pending_count > 0 || liveTotals.total_count === 0}
+                        sx={{
+                          borderRadius: "8px",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          height: 34,
+                        }}
+                      >
+                        Lock Baseline & Approve
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </>
+              ) : (
+                <Chip
+                  icon={<IconLock size={15} />}
+                  label={`Approved Baseline: ${formatMoney(survey.baseline_total)}`}
+                  color="success"
+                  sx={{ height: 34, px: 1, fontWeight: 700 }}
+                />
+              )}
+            </Stack>
           </Stack>
+        </Box>
+      </BlankCard>
 
-          <Stack direction="row" spacing={1.5} flexWrap="wrap">
-            {!isLocked && (
-              <>
-                <Button
-                  variant="outlined"
-                  color="warning"
-                  startIcon={<IconRotateClockwise size={18} />}
-                  onClick={() => setReworkModalOpen(true)}
-                  disabled={actionLoading}
-                >
-                  Request Rework
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  color="info"
-                  startIcon={<IconSparkles size={18} />}
-                  onClick={handleAutoGenerate}
-                  disabled={actionLoading}
-                >
-                  Auto-generate Lines
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  startIcon={<IconPlus size={18} />}
-                  onClick={() => setAddModalOpen(true)}
-                  disabled={actionLoading}
-                >
-                  Add Work Line
-                </Button>
-
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<IconShieldCheck size={18} />}
-                  onClick={() => setLockModalOpen(true)}
-                  disabled={actionLoading || liveTotals.pending_count > 0 || liveTotals.total_count === 0}
-                >
-                  Lock Baseline & Approve
-                </Button>
-              </>
-            )}
-
-            {isLocked && (
-              <Chip
-                icon={<IconLock size={16} />}
-                label={`Approved Baseline: ${formatMoney(survey.baseline_total)}`}
-                color="success"
-                sx={{ fontSize: "14px", height: "38px", px: 1, fontWeight: 700 }}
-              />
-            )}
-          </Stack>
-        </Stack>
-      </Box>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Locked / Rework Banners */}
-      {/* ------------------------------------------------------------------ */}
+      {/* ================================================================== */}
+      {/* 2. ALERTS                                                          */}
+      {/* ================================================================== */}
       {isLocked && (
-        <Alert severity="success" icon={<IconLock size={20} />} sx={{ mb: 3 }}>
-          <strong>Commercial Baseline Locked:</strong> This survey has been reviewed, approved, and locked. The commercial quantities and schedule of rates are now immutable field records.
+        <Alert severity="success" icon={<IconLock size={18} />} sx={{ mb: 2.5, borderRadius: "8px" }}>
+          <strong>Commercial Baseline Locked:</strong> This survey has been reviewed, approved, and locked. The commercial quantities and schedule of rates are permanently recorded.
         </Alert>
       )}
 
       {survey.qs_status === "rework_requested" && survey.rework_notes && (
-        <Alert severity="warning" icon={<IconAlertTriangle size={20} />} sx={{ mb: 3 }}>
+        <Alert severity="warning" icon={<IconAlertTriangle size={18} />} sx={{ mb: 2.5, borderRadius: "8px" }}>
           <strong>Previous Rework Note:</strong> {survey.rework_notes}
         </Alert>
       )}
 
-      {/* ------------------------------------------------------------------ */}
-      {/* KPI / Metric Summary Cards (Live Real-time Totals) */}
-      {/* ------------------------------------------------------------------ */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      {/* ================================================================== */}
+      {/* 3. KPI / METRIC SUMMARY CARDS                                      */}
+      {/* ================================================================== */}
+      <Grid container spacing={2} sx={{ mb: 2.5 }}>
+        {/* Card 1: Review Progress */}
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <BlankCard>
-            <CardContent sx={{ p: 2.5 }}>
+            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Box>
-                  <Typography variant="subtitle2" color="textSecondary" textTransform="uppercase" fontWeight={600}>
-                    Work Items Reviewed
+                  <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase">
+                    Items Reviewed
                   </Typography>
-                  <Typography variant="h4" fontWeight={700} sx={{ mt: 0.5 }}>
+                  <Typography variant="h4" fontWeight={700} sx={{ mt: 0.25 }}>
                     {liveTotals.reviewed_count} / {liveTotals.total_count}
                   </Typography>
-                  <Typography variant="caption" color={liveTotals.pending_count > 0 ? "warning.main" : "success.main"} fontWeight={600}>
-                    {liveTotals.pending_count > 0 ? `${liveTotals.pending_count} lines require review` : "All lines reviewed"}
+                  <Typography variant="caption" color={liveTotals.pending_count > 0 ? "warning.main" : "text.secondary"}>
+                    {liveTotals.pending_count > 0 ? `${liveTotals.pending_count} pending review` : "All items verified"}
                   </Typography>
                 </Box>
-                <Box sx={{ width: 44, height: 44, borderRadius: "50%", bgcolor: liveTotals.pending_count > 0 ? "warning.light" : "success.light", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {liveTotals.pending_count > 0 ? <IconClock size={24} color="#d97706" /> : <IconCheck size={24} color="#059669" />}
+                <Box
+                  sx={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: "8px",
+                    bgcolor: "grey.100",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: liveTotals.pending_count > 0 ? "warning.main" : "success.main",
+                  }}
+                >
+                  {liveTotals.pending_count > 0 ? <IconClock size={20} /> : <IconCheck size={20} />}
                 </Box>
               </Stack>
             </CardContent>
           </BlankCard>
         </Grid>
 
+        {/* Card 2: Base Estimate */}
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <BlankCard>
-            <CardContent sx={{ p: 2.5 }}>
+            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Box>
-                  <Typography variant="subtitle2" color="textSecondary" textTransform="uppercase" fontWeight={600}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase">
                     Base Estimate
                   </Typography>
-                  <Typography variant="h4" fontWeight={700} sx={{ mt: 0.5 }}>
+                  <Typography variant="h4" fontWeight={700} sx={{ mt: 0.25 }}>
                     {formatMoney(liveTotals.base_amount)}
                   </Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    Direct line item sum
+                  <Typography variant="caption" color="text.secondary">
+                    Sum of line items
                   </Typography>
                 </Box>
-                <Box sx={{ width: 44, height: 44, borderRadius: "50%", bgcolor: "primary.light", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconCalculator size={24} color="#2563eb" />
+                <Box
+                  sx={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: "8px",
+                    bgcolor: "grey.100",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "text.secondary",
+                  }}
+                >
+                  <IconCalculator size={20} />
                 </Box>
               </Stack>
             </CardContent>
           </BlankCard>
         </Grid>
 
+        {/* Card 3: Scope Adjustment */}
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <BlankCard>
-            <CardContent sx={{ p: 2.5 }}>
+            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Box>
-                  <Typography variant="subtitle2" color="textSecondary" textTransform="uppercase" fontWeight={600}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase">
                     Scope Adjustment
                   </Typography>
-                  <Typography variant="h4" fontWeight={700} sx={{ mt: 0.5 }}>
+                  <Typography variant="h4" fontWeight={700} sx={{ mt: 0.25 }}>
                     {liveTotals.adjust_amount >= 0 ? `+${formatMoney(liveTotals.adjust_amount)}` : `-${formatMoney(Math.abs(liveTotals.adjust_amount))}`}
                   </Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    {adjustType === "percent" ? `${adjustSign > 0 ? "+" : "-"}${adjustValue}% global markup` : "Fixed global adjustment"}
+                  <Typography variant="caption" color="text.secondary">
+                    {adjustType === "percent" ? `${adjustSign > 0 ? "+" : "-"}${adjustValue}% global markup` : "Fixed adjustment"}
                   </Typography>
                 </Box>
-                <Box sx={{ width: 44, height: 44, borderRadius: "50%", bgcolor: "info.light", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconSparkles size={24} color="#0284c7" />
+                <Box
+                  sx={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: "8px",
+                    bgcolor: "grey.100",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "text.secondary",
+                  }}
+                >
+                  <IconSparkles size={20} />
                 </Box>
               </Stack>
             </CardContent>
           </BlankCard>
         </Grid>
 
+        {/* Card 4: Proposed Scope Total */}
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <BlankCard>
-            <CardContent sx={{ p: 2.5, bgcolor: isLocked ? "success.light" : undefined }}>
+            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Box>
-                  <Typography variant="subtitle2" color="textSecondary" textTransform="uppercase" fontWeight={600}>
-                    {isLocked ? "Locked Baseline Total" : "Proposed Scope Total"}
+                  <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase">
+                    {isLocked ? "Approved Total" : "Proposed Total"}
                   </Typography>
-                  <Typography variant="h4" fontWeight={700} color={isLocked ? "success.dark" : "primary.main"} sx={{ mt: 0.5 }}>
+                  <Typography variant="h4" fontWeight={700} color="primary.main" sx={{ mt: 0.25 }}>
                     {formatMoney(liveTotals.total_amount)}
                   </Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    {durationDays ? `Est. duration: ${durationDays} working days` : "Duration not specified"}
+                  <Typography variant="caption" color="text.secondary">
+                    {durationDays ? `Est. ${durationDays} days` : "Duration not set"}
                   </Typography>
                 </Box>
-                <Box sx={{ width: 44, height: 44, borderRadius: "50%", bgcolor: isLocked ? "success.main" : "primary.light", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {isLocked ? <IconLock size={24} color="#ffffff" /> : <IconCalculator size={24} color="#2563eb" />}
+                <Box
+                  sx={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: "8px",
+                    bgcolor: isLocked ? "success.light" : "grey.100",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: isLocked ? "success.main" : "primary.main",
+                  }}
+                >
+                  {isLocked ? <IconLock size={20} /> : <IconCalculator size={20} />}
                 </Box>
               </Stack>
             </CardContent>
@@ -736,84 +897,131 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
         </Grid>
       </Grid>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Main Dual-Pane Workspace */}
-      {/* ------------------------------------------------------------------ */}
-      <Grid container spacing={3}>
-        {/* LEFT / MAIN COLUMN: Commercial Work Items & Rate Matching */}
+      {/* ================================================================== */}
+      {/* 4. MAIN DUAL-PANE WORKSPACE                                        */}
+      {/* ================================================================== */}
+      <Grid container spacing={2.5}>
+        {/* LEFT PANE: Schedule of Rates Table */}
         <Grid size={{ xs: 12, lg: 8 }}>
           <BlankCard>
-            <CardContent sx={{ p: 3 }}>
-              {/* Toolbar: Filters & Actions */}
-              <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={2} sx={{ mb: 2.5 }}>
+            <Box p={{ xs: 2, md: 2.5 }}>
+              {/* Header toolbar */}
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                justifyContent="space-between"
+                alignItems={{ sm: "center" }}
+                spacing={1.5}
+                mb={2}
+              >
                 <Box>
-                  <Typography variant="h5" fontWeight={700}>
+                  <Typography variant="subtitle1" fontWeight={700}>
                     Work Items & Schedule of Rates
                   </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Match surveyed defects to commercial rate lines. Survey evidence remains separate and immutable.
+                  <Typography variant="caption" color="text.secondary">
+                    Match surveyed defects to commercial rate lines. Survey evidence remains separate.
                   </Typography>
                 </Box>
 
-                <Stack direction="row" spacing={1.5} alignItems="center">
-                  <FormControl size="small" sx={{ minWidth: 160 }}>
-                    <InputLabel id="filter-room-label">Room Filter</InputLabel>
-                    <Select
-                      labelId="filter-room-label"
-                      label="Room Filter"
-                      value={selectedRoom}
-                      onChange={(e: any) => setSelectedRoom(e.target.value)}
-                    >
-                      <MenuItem value="All">All Rooms ({scopeData.scope_items.length})</MenuItem>
-                      {roomOptions.map((r) => (
-                        <MenuItem key={r} value={r}>
-                          {r}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <CustomTextField
+                    select
+                    size="small"
+                    value={selectedRoom}
+                    onChange={(e: any) => setSelectedRoom(e.target.value)}
+                    sx={{ minWidth: 140 }}
+                  >
+                    <MenuItem value="All">All Rooms ({scopeData.scope_items.length})</MenuItem>
+                    {roomOptions.map((r) => (
+                      <MenuItem key={r} value={r}>
+                        {r}
+                      </MenuItem>
+                    ))}
+                  </CustomTextField>
 
                   <CustomTextField
                     size="small"
-                    placeholder="Search work lines..."
+                    placeholder="Search..."
                     value={searchQuery}
                     onChange={(e: any) => setSearchQuery(e.target.value)}
-                    sx={{ width: 180 }}
+                    sx={{ width: 140 }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <IconSearch size={14} color="#64748b" />
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                 </Stack>
               </Stack>
 
               {/* Table of Scope Items */}
-              <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1.5 }}>
+              <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: "8px", borderColor: "divider" }}>
                 <Table size="small">
-                  <TableHead sx={{ bgcolor: "action.hover" }}>
+                  <TableHead sx={{ bgcolor: "grey.50" }}>
                     <TableRow>
-                      <TableCell width={50} align="center">Review</TableCell>
-                      <TableCell width={160}>Area / Element</TableCell>
-                      <TableCell width={80}>Code</TableCell>
-                      <TableCell>Work Description</TableCell>
-                      <TableCell width={85} align="right">Qty</TableCell>
-                      <TableCell width={60}>Unit</TableCell>
-                      <TableCell width={100} align="right">Rate (£)</TableCell>
-                      <TableCell width={110} align="right">Amount (£)</TableCell>
-                      <TableCell width={90} align="center">Actions</TableCell>
+                      <TableCell width={50} align="center">
+                        <Typography variant="caption" fontWeight={700} color="text.secondary">
+                          Review
+                        </Typography>
+                      </TableCell>
+                      <TableCell width={150}>
+                        <Typography variant="caption" fontWeight={700} color="text.secondary">
+                          Area / Element
+                        </Typography>
+                      </TableCell>
+                      <TableCell width={80}>
+                        <Typography variant="caption" fontWeight={700} color="text.secondary">
+                          Code
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" fontWeight={700} color="text.secondary">
+                          Work Description
+                        </Typography>
+                      </TableCell>
+                      <TableCell width={75} align="right">
+                        <Typography variant="caption" fontWeight={700} color="text.secondary">
+                          Qty
+                        </Typography>
+                      </TableCell>
+                      <TableCell width={50} align="center">
+                        <Typography variant="caption" fontWeight={700} color="text.secondary">
+                          Unit
+                        </Typography>
+                      </TableCell>
+                      <TableCell width={85} align="right">
+                        <Typography variant="caption" fontWeight={700} color="text.secondary">
+                          Rate (£)
+                        </Typography>
+                      </TableCell>
+                      <TableCell width={95} align="right">
+                        <Typography variant="caption" fontWeight={700} color="text.secondary">
+                          Amount (£)
+                        </Typography>
+                      </TableCell>
+                      <TableCell width={80} align="center">
+                        <Typography variant="caption" fontWeight={700} color="text.secondary">
+                          Actions
+                        </Typography>
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {filteredItems.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
-                          <Typography variant="subtitle1" color="textSecondary" sx={{ mb: 1 }}>
+                        <TableCell colSpan={9} align="center" sx={{ py: 5 }}>
+                          <Typography variant="body2" color="text.secondary" mb={1}>
                             No commercial work items found
                           </Typography>
                           {!isLocked && (
                             <Button
                               variant="outlined"
                               size="small"
-                              startIcon={<IconSparkles size={16} />}
+                              startIcon={<IconSparkles size={15} />}
                               onClick={handleAutoGenerate}
                             >
-                              Auto-generate lines from survey defects
+                              Auto-generate lines from defects
                             </Button>
                           )}
                         </TableCell>
@@ -838,13 +1046,8 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                             }}
                             sx={{
                               cursor: item.survey_item_id ? "pointer" : "default",
-                              bgcolor: isSelectedEvidence
-                                ? "rgba(37, 99, 235, 0.08)"
-                                : hasChanges
-                                ? "action.hover"
-                                : undefined,
-                              borderLeft: isSelectedEvidence ? "4px solid #2563eb" : "4px solid transparent",
-                              transition: "all 0.15s ease-in-out",
+                              bgcolor: isSelectedEvidence ? "grey.50" : undefined,
+                              borderLeft: isSelectedEvidence ? "3px solid #1e4db7" : "3px solid transparent",
                             }}
                           >
                             {/* Review Checkbox / Toggle */}
@@ -854,10 +1057,13 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                                   <IconButton
                                     size="small"
                                     color={item.is_reviewed ? "success" : "default"}
-                                    onClick={() => handleToggleReviewed(item)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleReviewed(item);
+                                    }}
                                     disabled={isLocked}
                                   >
-                                    {item.is_reviewed ? <IconCheck size={18} /> : <IconClock size={18} />}
+                                    {item.is_reviewed ? <IconCheck size={16} /> : <IconClock size={16} />}
                                   </IconButton>
                                 </span>
                               </Tooltip>
@@ -866,24 +1072,26 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                             {/* Area / Element */}
                             <TableCell>
                               <Typography variant="subtitle2" fontWeight={600} noWrap>
-                                {item.room_name || "Whole property"}
+                                {item.room_name || "General"}
                               </Typography>
-                              <Typography variant="caption" color="textSecondary" noWrap display="block">
-                                {item.element_name || "General scope"}
+                              <Typography variant="caption" color="text.secondary" noWrap display="block">
+                                {item.element_name || "Scope"}
                               </Typography>
                             </TableCell>
 
                             {/* Code */}
                             <TableCell>
                               {isLocked ? (
-                                <Chip label={item.item_code || "—"} size="small" variant="outlined" />
+                                <Typography variant="caption" fontWeight={600}>
+                                  {item.item_code || "—"}
+                                </Typography>
                               ) : (
                                 <CustomTextField
                                   size="small"
                                   value={editedLines[item.id]?.item_code !== undefined ? editedLines[item.id]!.item_code : item.item_code || ""}
                                   onChange={(e: any) => handleLineFieldChange(item.id, "item_code", e.target.value)}
                                   placeholder="Code"
-                                  sx={{ width: 75 }}
+                                  sx={{ width: 70 }}
                                 />
                               )}
                             </TableCell>
@@ -915,14 +1123,14 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                                   inputProps={{ min: 0, step: "any" }}
                                   value={lineQty}
                                   onChange={(e: any) => handleLineFieldChange(item.id, "quantity", e.target.value)}
-                                  sx={{ width: 75 }}
+                                  sx={{ width: 70 }}
                                 />
                               )}
                             </TableCell>
 
                             {/* Unit */}
-                            <TableCell>
-                              <Typography variant="caption" color="textSecondary" fontWeight={600}>
+                            <TableCell align="center">
+                              <Typography variant="caption" color="text.secondary" fontWeight={600}>
                                 {item.unit}
                               </Typography>
                             </TableCell>
@@ -940,29 +1148,32 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                                   inputProps={{ min: 0, step: "any" }}
                                   value={lineRate}
                                   onChange={(e: any) => handleLineFieldChange(item.id, "unit_rate", e.target.value)}
-                                  sx={{ width: 85 }}
+                                  sx={{ width: 80 }}
                                 />
                               )}
                             </TableCell>
 
                             {/* Amount */}
                             <TableCell align="right">
-                              <Typography variant="subtitle2" fontWeight={700} color="primary.main">
+                              <Typography variant="subtitle2" fontWeight={700}>
                                 {formatMoney(lineAmount)}
                               </Typography>
                             </TableCell>
 
                             {/* Actions */}
                             <TableCell align="center">
-                              <Stack direction="row" spacing={0.5} justifyContent="center">
+                              <Stack direction="row" spacing={0.25} justifyContent="center" alignItems="center">
                                 {item.survey_item_id && (
-                                  <Tooltip title="View original site evidence">
+                                  <Tooltip title="View site evidence">
                                     <IconButton
                                       size="small"
                                       color={selectedEvidenceId === item.survey_item_id ? "primary" : "default"}
-                                      onClick={() => setSelectedEvidenceId(item.survey_item_id!)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedEvidenceId(item.survey_item_id!);
+                                      }}
                                     >
-                                      <IconEye size={17} />
+                                      <IconEye size={16} />
                                     </IconButton>
                                   </Tooltip>
                                 )}
@@ -972,22 +1183,29 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                                     <IconButton
                                       size="small"
                                       color="primary"
-                                      onClick={() => handleSaveLine(item)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleSaveLine(item);
+                                      }}
                                       disabled={savingItem === item.id}
                                     >
-                                      {savingItem === item.id ? <CircularProgress size={16} /> : <IconDeviceFloppy size={17} />}
+                                      {savingItem === item.id ? <CircularProgress size={14} /> : <IconDeviceFloppy size={16} />}
                                     </IconButton>
                                   </Tooltip>
                                 )}
 
                                 {!isLocked && (
-                                  <Tooltip title="Delete work line">
+                                  <Tooltip title="Delete line">
                                     <IconButton
                                       size="small"
-                                      color="error"
-                                      onClick={() => handleDeleteLine(item.id)}
+                                      color="default"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteLine(item.id);
+                                      }}
+                                      sx={{ "&:hover": { color: "error.main" } }}
                                     >
-                                      <IconTrash size={17} />
+                                      <IconTrash size={16} />
                                     </IconButton>
                                   </Tooltip>
                                 )}
@@ -1001,54 +1219,54 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                 </Table>
               </TableContainer>
 
-              {/* ------------------------------------------------------------------ */}
-              {/* Whole-Scope Commercial Adjustment Form */}
-              {/* ------------------------------------------------------------------ */}
-              <Box sx={{ mt: 4, pt: 3, borderTop: "1px dashed", borderColor: "divider" }}>
-                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} sx={{ mb: 2 }}>
+              {/* ------------------------------------------------------------ */}
+              {/* Whole-Scope Commercial Adjustment Panel                      */}
+              {/* ------------------------------------------------------------ */}
+              <Box sx={{ mt: 3, p: 2, borderRadius: "8px", bgcolor: "grey.50", border: "1px solid", borderColor: "divider" }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
                   <Box>
-                    <Typography variant="h6" fontWeight={700}>
+                    <Typography variant="subtitle2" fontWeight={700}>
                       Whole-Scope Commercial Adjustment
                     </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Applied globally to the entire base estimate (e.g., contractor margin, overheads, or negotiated client discount).
+                    <Typography variant="caption" color="text.secondary">
+                      Apply global contractor margin, overheads, or negotiated discount.
                     </Typography>
                   </Box>
-                  <Chip label="Global Scope" size="small" color="info" variant="outlined" />
+                  <Chip label="Global Scope" size="small" variant="outlined" sx={{ height: 20, fontSize: "0.7rem" }} />
                 </Stack>
 
-                <Grid container spacing={2} alignItems="center">
-                  <Grid size={{ xs: 12, sm: 3 }}>
-                    <FormControl fullWidth size="small" disabled={isLocked}>
-                      <InputLabel id="adjust-sign-label">Direction</InputLabel>
-                      <Select
-                        labelId="adjust-sign-label"
-                        label="Direction"
-                        value={adjustSign}
-                        onChange={(e: any) => setAdjustSign(Number(e.target.value))}
-                      >
-                        <MenuItem value={1}>Increase (+)</MenuItem>
-                        <MenuItem value={-1}>Deduction (−)</MenuItem>
-                      </Select>
-                    </FormControl>
+                <Grid container spacing={1.5} alignItems="center">
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <CustomTextField
+                      select
+                      fullWidth
+                      size="small"
+                      label="Direction"
+                      disabled={isLocked}
+                      value={adjustSign}
+                      onChange={(e: any) => setAdjustSign(Number(e.target.value))}
+                    >
+                      <MenuItem value={1}>Increase (+)</MenuItem>
+                      <MenuItem value={-1}>Deduction (−)</MenuItem>
+                    </CustomTextField>
                   </Grid>
 
-                  <Grid size={{ xs: 12, sm: 3 }}>
-                    <FormControl fullWidth size="small" disabled={isLocked}>
-                      <InputLabel id="adjust-type-label">Adjustment Type</InputLabel>
-                      <Select
-                        labelId="adjust-type-label"
-                        label="Adjustment Type"
-                        value={adjustType}
-                        onChange={(e: any) => setAdjustType(e.target.value)}
-                      >
-                        <MenuItem value="percent">Percentage (%)</MenuItem>
-                        <MenuItem value="fixed">Fixed Amount (£)</MenuItem>
-                      </Select>
-                    </FormControl>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <CustomTextField
+                      select
+                      fullWidth
+                      size="small"
+                      label="Adjustment Type"
+                      disabled={isLocked}
+                      value={adjustType}
+                      onChange={(e: any) => setAdjustType(e.target.value)}
+                    >
+                      <MenuItem value="percent">Percentage (%)</MenuItem>
+                      <MenuItem value="fixed">Fixed Amount (£)</MenuItem>
+                    </CustomTextField>
                   </Grid>
 
-                  <Grid size={{ xs: 12, sm: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <CustomTextField
                       fullWidth
                       size="small"
@@ -1061,7 +1279,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                     />
                   </Grid>
 
-                  <Grid size={{ xs: 12, sm: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <CustomTextField
                       fullWidth
                       size="small"
@@ -1075,13 +1293,15 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                   </Grid>
 
                   {!isLocked && (
-                    <Grid size={{ xs: 12 }} sx={{ display: "flex", justifyContent: "flex-end" }}>
+                    <Grid size={{ xs: 12 }} sx={{ display: "flex", justifyContent: "flex-end", mt: 0.5 }}>
                       <Button
                         variant="contained"
                         color="primary"
-                        startIcon={<IconDeviceFloppy size={18} />}
+                        size="small"
+                        startIcon={<IconDeviceFloppy size={16} />}
                         onClick={handleSaveAdjustments}
                         disabled={savingAdjustments}
+                        sx={{ fontWeight: 600 }}
                       >
                         {savingAdjustments ? "Saving..." : "Save Adjustments"}
                       </Button>
@@ -1089,34 +1309,34 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                   )}
                 </Grid>
               </Box>
-            </CardContent>
+            </Box>
           </BlankCard>
         </Grid>
 
-        {/* RIGHT COLUMN: Original Survey Evidence (Read-only Site Facts) */}
+        {/* RIGHT PANE: Original Survey Evidence (Read-Only) */}
         <Grid size={{ xs: 12, lg: 4 }}>
           <BlankCard>
-            <CardContent sx={{ p: 3 }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Box p={{ xs: 2, md: 2.5 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                 <Box>
-                  <Typography variant="h6" fontWeight={700}>
+                  <Typography variant="subtitle1" fontWeight={700}>
                     Original Survey Evidence
                   </Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    Inspector site observations & verified measurements
+                  <Typography variant="caption" color="text.secondary">
+                    Immutable surveyor site data
                   </Typography>
                 </Box>
-                <Chip label="Read Only" size="small" color="primary" variant="outlined" />
+                <Chip label="Read Only" size="small" variant="outlined" sx={{ height: 20, fontSize: "0.7rem" }} />
               </Stack>
 
               {activeEvidence ? (
-                <Box>
-                  {/* Element & Room Title */}
-                  <Box sx={{ p: 2, bgcolor: "action.hover", borderRadius: 1.5, mb: 2.5 }}>
-                    <Typography variant="subtitle1" fontWeight={700}>
+                <Stack spacing={2}>
+                  {/* Element & Condition Summary */}
+                  <Box sx={{ p: 1.5, bgcolor: "grey.50", borderRadius: "8px", border: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="subtitle2" fontWeight={700}>
                       {activeEvidence.room_name} • {activeEvidence.element_name}
                     </Typography>
-                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                    <Stack direction="row" spacing={0.75} sx={{ mt: 0.75 }}>
                       <Chip
                         label={activeEvidence.condition ? activeEvidence.condition.replace("_", " ").toUpperCase() : "NOT RECORDED"}
                         color={
@@ -1127,25 +1347,25 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                             : "warning"
                         }
                         size="small"
-                        sx={{ fontWeight: 600 }}
+                        sx={{ fontWeight: 600, height: 20, fontSize: "0.7rem" }}
                       />
                       {activeEvidence.severity && (
                         <Chip
                           label={`Severity: ${activeEvidence.severity}`}
-                          color="error"
-                          variant="outlined"
                           size="small"
+                          variant="outlined"
+                          sx={{ height: 20, fontSize: "0.7rem" }}
                         />
                       )}
                     </Stack>
                   </Box>
 
                   {/* Verified Site Measurements */}
-                  <Box sx={{ mb: 2.5 }}>
-                    <Typography variant="subtitle2" color="textSecondary" textTransform="uppercase" fontWeight={600} sx={{ mb: 1 }}>
-                      Verified Site Measurements
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase" display="block" mb={0.75}>
+                      Site Measurements
                     </Typography>
-                    <Box sx={{ p: 1.5, bgcolor: "background.paper", border: "1px solid", borderColor: "divider", borderRadius: 1 }}>
+                    <Box sx={{ p: 1.25, bgcolor: "background.paper", border: "1px solid", borderColor: "divider", borderRadius: "6px" }}>
                       <Typography variant="body2">
                         <strong>Calculated Qty:</strong>{" "}
                         {activeEvidence.calculated_qty !== null && activeEvidence.calculated_qty !== undefined
@@ -1153,13 +1373,14 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                           : "No quantity calculated"}
                       </Typography>
                       {activeEvidence.dimensions?.length > 0 && (
-                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 0.5 }}>
+                        <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ mt: 0.5 }}>
                           {activeEvidence.dimensions.map((d, i) => (
                             <Chip
                               key={i}
                               label={`${d.name}: ${d.value} ${d.unit || ""}`}
                               size="small"
                               variant="outlined"
+                              sx={{ height: 20, fontSize: "0.65rem" }}
                             />
                           ))}
                         </Stack>
@@ -1168,23 +1389,23 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                   </Box>
 
                   {/* Defect Details */}
-                  <Box sx={{ mb: 2.5 }}>
-                    <Typography variant="subtitle2" color="textSecondary" textTransform="uppercase" fontWeight={600} sx={{ mb: 1 }}>
-                      Defect & Repair Action
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase" display="block" mb={0.75}>
+                      Defect & Remedial Work
                     </Typography>
-                    <Box sx={{ p: 1.5, bgcolor: "background.paper", border: "1px solid", borderColor: "divider", borderRadius: 1 }}>
+                    <Box sx={{ p: 1.25, bgcolor: "background.paper", border: "1px solid", borderColor: "divider", borderRadius: "6px" }}>
                       <Typography variant="body2">
                         <strong>Damage Type:</strong> {activeEvidence.damage_type_name || "None recorded"}
                       </Typography>
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      <Typography variant="body2" sx={{ mt: 0.25 }}>
                         <strong>Material:</strong> {activeEvidence.material_name || "Unspecified"}
                       </Typography>
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      <Typography variant="body2" sx={{ mt: 0.25 }}>
                         <strong>Recommended Action:</strong>{" "}
                         {activeEvidence.repair_action ? activeEvidence.repair_action.replace(/_/g, " ") : "None specified"}
                       </Typography>
                       {activeEvidence.notes && (
-                        <Typography variant="body2" sx={{ mt: 1, color: "text.secondary", fontStyle: "italic" }}>
+                        <Typography variant="caption" sx={{ mt: 0.5, color: "text.secondary", display: "block" }}>
                           &ldquo;{activeEvidence.notes}&rdquo;
                         </Typography>
                       )}
@@ -1193,11 +1414,9 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
 
                   {/* Photo Evidence Gallery */}
                   <Box>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                      <Typography variant="subtitle2" color="textSecondary" textTransform="uppercase" fontWeight={600}>
-                        Site Photos ({activeEvidence.photos?.length || 0})
-                      </Typography>
-                    </Stack>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase" display="block" mb={0.75}>
+                      Site Evidence Photos ({activeEvidence.photos?.length || 0})
+                    </Typography>
 
                     {activeEvidence.photos?.length > 0 ? (
                       <Grid container spacing={1}>
@@ -1208,12 +1427,12 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                                 position: "relative",
                                 width: "100%",
                                 paddingTop: "75%",
-                                borderRadius: 1,
+                                borderRadius: "6px",
                                 overflow: "hidden",
                                 border: "1px solid",
                                 borderColor: "divider",
                                 cursor: "pointer",
-                                "&:hover": { opacity: 0.9 },
+                                "&:hover": { opacity: 0.85 },
                               }}
                               onClick={() => setPreviewPhoto(photo)}
                             >
@@ -1231,76 +1450,72 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                                 }}
                               />
                             </Box>
-                            {photo.caption && (
-                              <Typography variant="caption" color="textSecondary" noWrap display="block" sx={{ mt: 0.5 }}>
-                                {photo.caption}
-                              </Typography>
-                            )}
                           </Grid>
                         ))}
                       </Grid>
                     ) : (
-                      <Alert severity="info" sx={{ py: 0.5 }}>
-                        No photos captured for this element.
-                      </Alert>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontStyle: "italic" }}>
+                        No photos attached for this element.
+                      </Typography>
                     )}
                   </Box>
-                </Box>
+                </Stack>
               ) : (
                 <Box sx={{ py: 6, textAlign: "center" }}>
-                  <IconCamera size={36} color="#94a3b8" />
-                  <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                    Select a work item in the schedule to view its verified site facts and photo evidence.
+                  <IconCamera size={32} color="#94a3b8" />
+                  <Typography variant="body2" color="text.secondary" mt={1}>
+                    Select a line in the schedule to view its verified site facts and photo evidence.
                   </Typography>
                 </Box>
               )}
-
-              <Divider sx={{ my: 3 }} />
-
-              <Alert severity="info" variant="outlined" sx={{ fontSize: "12px" }}>
-                <strong>Quality Protection:</strong> Site evidence and surveyor findings are immutable records and cannot be overwritten from the commercial assessment workspace.
-              </Alert>
-            </CardContent>
+            </Box>
           </BlankCard>
         </Grid>
       </Grid>
 
-      {/* ------------------------------------------------------------------ */}
+      {/* ================================================================== */}
+      {/* 5. MODALS (Add Line, Request Rework, Lock Baseline, Photo Zoom)    */}
+      {/* ================================================================== */}
+
       {/* Modal: Add Work Item */}
-      {/* ------------------------------------------------------------------ */}
-      <Dialog open={addModalOpen} onClose={() => setAddModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Commercial Work Line</DialogTitle>
+      <Dialog
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: "10px" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Add Commercial Work Line</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel id="link-element-label">Link to Surveyed Element (Optional)</InputLabel>
-              <Select
-                labelId="link-element-label"
-                label="Link to Surveyed Element (Optional)"
-                value={newItemData.survey_item_id}
-                onChange={(e: any) => {
-                  const val = e.target.value;
-                  const item = scopeData.evidence_items.find((ei) => ei.id === Number(val));
-                  setNewItemData((prev) => ({
-                    ...prev,
-                    survey_item_id: val,
-                    room_name: item ? item.room_name : prev.room_name,
-                    element_name: item ? item.element_name : prev.element_name,
-                    quantity: item?.calculated_qty ? Number(item.calculated_qty) : prev.quantity,
-                    unit: item?.output_unit || prev.unit,
-                  }));
-                }}
-              >
-                <MenuItem value="">None / Custom item</MenuItem>
-                {scopeData.evidence_items.map((ei) => (
-                  <MenuItem key={ei.id} value={ei.id}>
-                    {ei.room_name} • {ei.element_name} ({ei.condition || "uninspected"})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <CustomTextField
+              select
+              fullWidth
+              size="small"
+              label="Link to Surveyed Element (Optional)"
+              value={newItemData.survey_item_id}
+              onChange={(e: any) => {
+                const val = e.target.value;
+                const item = scopeData.evidence_items.find((ei) => ei.id === Number(val));
+                setNewItemData((prev) => ({
+                  ...prev,
+                  survey_item_id: val,
+                  room_name: item ? item.room_name : prev.room_name,
+                  element_name: item ? item.element_name : prev.element_name,
+                  quantity: item?.calculated_qty ? Number(item.calculated_qty) : prev.quantity,
+                  unit: item?.output_unit || prev.unit,
+                }));
+              }}
+            >
+              <MenuItem value="">None / Custom line</MenuItem>
+              {scopeData.evidence_items.map((ei) => (
+                <MenuItem key={ei.id} value={ei.id}>
+                  {ei.room_name} • {ei.element_name} ({ei.condition || "uninspected"})
+                </MenuItem>
+              ))}
+            </CustomTextField>
 
-            <Grid container spacing={2}>
+            <Grid container spacing={1.5}>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <CustomTextField
                   fullWidth
@@ -1321,7 +1536,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
               </Grid>
             </Grid>
 
-            <Grid container spacing={2}>
+            <Grid container spacing={1.5}>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <CustomTextField
                   fullWidth
@@ -1353,7 +1568,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
               placeholder="e.g. Prepare wall plaster and apply 2 coats vinyl matt emulsion"
             />
 
-            <Grid container spacing={2}>
+            <Grid container spacing={1.5}>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <CustomTextField
                   fullWidth
@@ -1378,7 +1593,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
               </Grid>
             </Grid>
 
-            <Box sx={{ p: 1.5, bgcolor: "action.hover", borderRadius: 1 }}>
+            <Box sx={{ p: 1.5, bgcolor: "grey.50", borderRadius: "6px" }}>
               <Typography variant="subtitle2" fontWeight={600}>
                 Line Total: {formatMoney(newItemData.quantity * newItemData.unit_rate)}
               </Typography>
@@ -1387,31 +1602,33 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setAddModalOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleAddWorkItem} disabled={actionLoading}>
+          <Button variant="contained" onClick={handleAddWorkItem} disabled={actionLoading} sx={{ fontWeight: 600 }}>
             Add Line
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* ------------------------------------------------------------------ */}
       {/* Modal: Request Rework */}
-      {/* ------------------------------------------------------------------ */}
-      <Dialog open={reworkModalOpen} onClose={() => setReworkModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ color: "warning.main", display: "flex", alignItems: "center", gap: 1 }}>
-          <IconAlertTriangle size={22} /> Request Surveyor Rework
-        </DialogTitle>
+      <Dialog
+        open={reworkModalOpen}
+        onClose={() => setReworkModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: "10px" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Request Surveyor Rework</DialogTitle>
         <DialogContent dividers>
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            Sending this survey back will transition its status to <strong>In Progress</strong> and unlock the field inspection workspace for surveyor <strong>{survey.surveyor?.first_name} {survey.surveyor?.last_name}</strong>.
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Sending this survey back will transition its status to <strong>In Progress</strong> and reopen the field inspection workspace for surveyor <strong>{survey.surveyor?.first_name} {survey.surveyor?.last_name}</strong>.
           </Typography>
 
           <CustomTextField
             fullWidth
             required
             multiline
-            rows={4}
+            rows={3}
             label="Rework Instructions & Missing Evidence *"
-            placeholder="Please detail why rework is needed (e.g. missing defect photos, incorrect dimensions, uninspected elements)..."
+            placeholder="Detail why rework is needed (e.g. missing defect photos, dimension check)..."
             value={reworkNotes}
             onChange={(e: any) => setReworkNotes(e.target.value)}
           />
@@ -1420,35 +1637,38 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
           <Button onClick={() => setReworkModalOpen(false)}>Cancel</Button>
           <Button
             variant="contained"
-            color="warning"
+            color="primary"
             onClick={handleRequestRework}
             disabled={actionLoading || !reworkNotes.trim()}
+            sx={{ fontWeight: 600 }}
           >
-            Confirm Rework Request
+            Confirm Rework
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* ------------------------------------------------------------------ */}
       {/* Modal: Lock Baseline */}
-      {/* ------------------------------------------------------------------ */}
-      <Dialog open={lockModalOpen} onClose={() => setLockModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ color: "primary.main", display: "flex", alignItems: "center", gap: 1 }}>
-          <IconShieldCheck size={22} /> Approve Scope & Lock Commercial Baseline
-        </DialogTitle>
+      <Dialog
+        open={lockModalOpen}
+        onClose={() => setLockModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: "10px" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Approve Scope & Lock Commercial Baseline</DialogTitle>
         <DialogContent dividers>
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            Locking the baseline completes the commercial review and fixes the remediation cost figures. Further edits will require formal Variation Orders.
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Locking the baseline completes the commercial review and freezes the remediation costing figures.
           </Typography>
 
-          <Box sx={{ p: 2, bgcolor: "action.hover", borderRadius: 1.5, mb: 2 }}>
-            <Stack spacing={1}>
+          <Box sx={{ p: 1.5, bgcolor: "grey.50", borderRadius: "8px", mb: 2, border: "1px solid", borderColor: "divider" }}>
+            <Stack spacing={0.75}>
               <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2">Base Estimate ({totals.total_count} items):</Typography>
+                <Typography variant="body2" color="text.secondary">Base Estimate ({totals.total_count} items):</Typography>
                 <Typography variant="subtitle2" fontWeight={600}>{formatMoney(totals.base_amount)}</Typography>
               </Stack>
               <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2">Whole-Scope Adjustment:</Typography>
+                <Typography variant="body2" color="text.secondary">Whole-Scope Adjustment:</Typography>
                 <Typography variant="subtitle2" fontWeight={600}>{formatMoney(totals.adjust_amount)}</Typography>
               </Stack>
               <Divider />
@@ -1476,25 +1696,35 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
             color="primary"
             onClick={handleLockBaseline}
             disabled={actionLoading}
+            sx={{ fontWeight: 700 }}
           >
             Lock Baseline & Complete
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Lightbox Photo Preview Modal */}
-      {/* ------------------------------------------------------------------ */}
-      <Dialog open={!!previewPhoto} onClose={() => setPreviewPhoto(null)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Typography variant="subtitle1" fontWeight={600}>
-            {previewPhoto?.caption || "Inspection Evidence Photo"}
-          </Typography>
-          <IconButton size="small" onClick={() => setPreviewPhoto(null)}>
-            <IconX size={20} />
+      {/* Photo Preview Modal */}
+      <Dialog
+        open={!!previewPhoto}
+        onClose={() => setPreviewPhoto(null)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: "10px", overflow: "hidden" } }}
+      >
+        <DialogContent sx={{ p: 0, position: "relative", bgcolor: "black", textAlign: "center" }}>
+          <IconButton
+            onClick={() => setPreviewPhoto(null)}
+            sx={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              color: "white",
+              bgcolor: "rgba(0,0,0,0.6)",
+              "&:hover": { bgcolor: "rgba(0,0,0,0.85)" },
+            }}
+          >
+            <IconX size={18} />
           </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ textAlign: "center", p: 1 }}>
           {previewPhoto && (
             <Box
               component="img"
@@ -1504,7 +1734,8 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                 maxWidth: "100%",
                 maxHeight: "75vh",
                 objectFit: "contain",
-                borderRadius: 1,
+                display: "block",
+                margin: "0 auto",
               }}
             />
           )}
