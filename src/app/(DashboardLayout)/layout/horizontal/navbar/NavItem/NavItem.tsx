@@ -38,6 +38,18 @@ export default function NavItem({
   const { t } = useTranslation();
 
 
+  const isSelected = Boolean(
+    item?.href && (
+      pathDirect === item.href ||
+      pathDirect.startsWith(`${item.href}/`) ||
+      (item.href === "/apps/surveys/list" &&
+        (pathDirect.startsWith("/apps/surveys") || pathDirect.startsWith("/surveys"))) ||
+      (item as any).matchRoutes?.some(
+        (route: string) => pathDirect === route || pathDirect.startsWith(`${route}/`),
+      )
+    ),
+  );
+
   const itemIcon = Icon ? (
     (level ?? 1) > 1 ? (
       <Icon stroke={1.5} size="1rem" />
@@ -52,7 +64,7 @@ export default function NavItem({
     borderRadius: `${isBorderRadius}px`,
     marginBottom: (level ?? 1) > 1 ? '3px' : '0px',
     color:
-      (level ?? 1) > 1 && pathDirect === item.href ? `${theme.palette.primary.main}!important` : theme.palette.text.primary,
+      (level ?? 1) > 1 && isSelected ? `${theme.palette.primary.main}!important` : theme.palette.text.primary,
 
     '&:hover': {
       backgroundColor: theme.palette.primary.light,
@@ -75,7 +87,7 @@ export default function NavItem({
         <ListItemStyled
           // {...listItemProps}
           disabled={item?.disabled}
-          selected={pathDirect === item?.href}
+          selected={isSelected}
           onClick={lgDown ? onClick : undefined}
         >
           <ListItemIcon
@@ -83,7 +95,7 @@ export default function NavItem({
               minWidth: 'auto',
               p: "3px 0",
               color:
-                (level ?? 1) > 1 && pathDirect === item?.href
+                (level ?? 1) > 1 && isSelected
                   ? `${theme.palette.primary.main}!important`
                   : "inherit",
             }}

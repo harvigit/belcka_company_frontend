@@ -28,6 +28,7 @@ import {
   IconReceipt,
   IconChartPie,
   IconCertificate,
+  IconClipboardCheck,
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
@@ -102,6 +103,14 @@ const MenuItems: NavGroup[] = [
     slug: "project",
     icon: IconChartPie,
     href: "/apps/project/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Survey",
+    slug: "surveys",
+    icon: IconClipboardCheck,
+    href: "/apps/surveys/list",
+    matchRoutes: ["/apps/surveys", "/surveys"],
   },
   {
     id: uniqueId(),

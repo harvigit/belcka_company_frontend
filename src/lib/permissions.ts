@@ -112,6 +112,7 @@ export function canAccessMenuItem(
     if (!item || item.subheader || item.navlabel) return false;
     if (isAdmin) return true;
     if (item.slug === "health_safety") return false;
+    if (item.slug === "surveys") return true;
 
     if (item.children && item.children.length > 0) {
         return item.children.some((child) => canAccessMenuItem(child, permissions, isAdmin))

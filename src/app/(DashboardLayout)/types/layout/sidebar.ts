@@ -18,6 +18,7 @@ export type NavGroup = {
   level?: number;
   bgcolor?: string;
   onClick?: (event: MouseEvent<HTMLElement>) => void;
+  matchRoutes?: string[];
 };
 
 export interface ItemType {
