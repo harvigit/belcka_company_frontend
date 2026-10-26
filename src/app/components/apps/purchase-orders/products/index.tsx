@@ -347,11 +347,13 @@ const PurchaseProductList: React.FC<Props> = ({
           if (isSearching) {
             return [...fetchedItems, ...pinnedNotInFetch];
           }
-          const pinnedIds = new Set(pinnedItems.map((item) => item.id));
-          const newItems = mergedFetched.filter(
-            (item: any) => !pinnedIds.has(item.id),
-          );
-          return [...pinnedItems, ...newItems];
+          // Show only this page's rows. Selections on other pages stay in
+          return mergedFetched.map((item: any) => {
+            const snapshot = selectedProductSnapshotsRef.current.get(item.id);
+            return snapshot && !prevById.has(item.id)
+              ? { ...item, total_qty: snapshot.qty }
+              : item;
+          });
         });
         const fetchedIdSet = new Set<number>(
           fetchedItems.map((item: any) => item.id),
