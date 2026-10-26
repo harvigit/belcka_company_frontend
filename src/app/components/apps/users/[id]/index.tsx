@@ -46,6 +46,9 @@ import UserLeaves from "../../user-profile-setting/user-leaves";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 
 import UserActivity from "../../user-profile-setting/activity";
+import UserContracts from "../../user-profile-setting/contracts";
+import { usePermissions } from "@/hooks/usePermissions";
+import { hasPermission } from "@/lib/permissions";
 import {
   getUserDetailsHref,
   resolveUserDetailsId,
@@ -109,16 +112,8 @@ const TablePagination = () => {
     "Health Info",
     "Notification Settings",
     "Payments",
+    "Contracts",
   ];
-
-  const visibleTabs = isReadOnlyUserView
-    ? allTabs.filter(
-      (label) =>
-        label === "Activity" ||
-        label === "Payments" ||
-        label === "Billing Info",
-    )
-    : allTabs;
 
   const { data: session, update } = useSession();
   const user = session?.user as User & {
@@ -129,6 +124,19 @@ const TablePagination = () => {
     user_thumb_image?: string | null;
     user_role_id?: number | null;
   };
+
+  // Contracts tab: company admins, or users given the Contracts permission.
+  const { permissions } = usePermissions();
+  const canManageContracts = user?.user_role_id === 1 || hasPermission(permissions, "contracts");
+
+  const visibleTabs = isReadOnlyUserView
+    ? allTabs.filter(
+      (label) =>
+        label === "Activity" ||
+        label === "Payments" ||
+        label === "Billing Info",
+    )
+    : allTabs.filter((label) => label !== "Contracts" || canManageContracts);
 
   const [phone, setPhone] = useState("");
   const [openIdCard, setOpenIdCard] = useState(false);
@@ -497,6 +505,10 @@ const TablePagination = () => {
         case "leave":
           setValue(3);
           break;
+        case "contracts":
+          // Only once we know they may see it; otherwise stay on the first tab.
+          setValue(canManageContracts ? 7 : 0);
+          break;
         default:
           setValue(0);
       }
@@ -516,7 +528,7 @@ const TablePagination = () => {
         ),
       );
     }
-  }, [searchParams]);
+  }, [searchParams, canManageContracts]);
 
   if (!userId || loading) {
     return (
@@ -1078,16 +1090,25 @@ const TablePagination = () => {
                     />
                   </Box>
                 ) : (
-                  <Box hidden={value !== 6}>
-                    <Payments
-                      companyId={Number(user.company_id)}
-                      active={value === 6}
-                      userId={Number(userId)}
-                      isShow={false}
-                      disableDateFilter={true}
-                      readOnly={!canModifyUserDetails}
-                    />
-                  </Box>
+                  <>
+                    <Box hidden={value !== 6}>
+                      <Payments
+                        companyId={Number(user.company_id)}
+                        active={value === 6}
+                        userId={Number(userId)}
+                        isShow={false}
+                        disableDateFilter={true}
+                        readOnly={!canModifyUserDetails}
+                      />
+                    </Box>
+                    <Box hidden={value !== 7 || !canManageContracts}>
+                      <UserContracts
+                        userId={Number(userId)}
+                        active={value === 7 && canManageContracts}
+                        canEdit={canModifyUserDetails}
+                      />
+                    </Box>
+                  </>
                 )}
               </Box>
             </BlankCard>
