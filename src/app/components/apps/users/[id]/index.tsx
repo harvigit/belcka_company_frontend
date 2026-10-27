@@ -186,7 +186,42 @@ const TablePagination = () => {
   };
 
   const [formData, setFormData] = useState(emptyPersonalDetails);
-  const [originalFormData, setOriginalFormData] = useState(emptyPersonalDetails);
+  const [originalFormData, setOriginalFormData] =
+    useState(emptyPersonalDetails);
+  // Billing name, email and phone replace the personal ones (read only) when billing info exists.
+  const [billingDetails, setBillingDetails] = useState<{
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+  } | null>(null);
+
+ 
+  const fetchBillingDetails = async () => {
+    if (!userId || !user?.company_id) return;
+    try {
+      const res = await api.get(
+        `user-billing/get-user-billing-info?user_id=${userId}&company_id=${user.company_id}`,
+        { skipToast: true } as any,
+      );
+      const billing = res.data?.info;
+      if (!res.data?.IsSuccess || !billing?.id) {
+        setBillingDetails(null);
+        return;
+      }
+      const ext = billing.extension || "";
+      const number = billing.phone || "";
+      setBillingDetails({
+        first_name: billing.first_name || "",
+        last_name: billing.last_name || "",
+        email: billing.email || "",
+        phone: ext && number ? ext.replace("+", "") + number : number,
+      });
+    } catch (err) {
+      console.error("Failed to fetch billing info", err);
+      setBillingDetails(null);
+    }
+  };
 
   const handleFieldChange = (key: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -253,6 +288,7 @@ const TablePagination = () => {
       };
       setFormData(nextFormData);
       setOriginalFormData(nextFormData);
+      fetchBillingDetails();
 
       setRegisteredOn(userInfo.registered_on ?? "");
       if (ext && number) {
@@ -755,12 +791,12 @@ const TablePagination = () => {
                     className="custom_color"
                     name="first_name"
                     placeholder={t("Enter first name..")}
-                    value={formData.first_name}
+                    value={billingDetails?.first_name ?? formData.first_name}
                     onChange={(e: any) =>
                       handleFieldChange("first_name", e.target.value)
                     }
                     inputProps={{ maxLength: 25 }}
-                    disabled={!canModifyUserDetails}
+                    disabled={!canModifyUserDetails || !!billingDetails}
                     fullWidth
                   />
 
@@ -772,12 +808,12 @@ const TablePagination = () => {
                     name="last_name"
                     className="custom_color"
                     placeholder={t("Enter last name..")}
-                    value={formData.last_name}
+                    value={billingDetails?.last_name ?? formData.last_name}
                     onChange={(e: any) =>
                       handleFieldChange("last_name", e.target.value)
                     }
                     inputProps={{ maxLength: 25 }}
-                    disabled={!canModifyUserDetails}
+                    disabled={!canModifyUserDetails || !!billingDetails}
                     fullWidth
                   />
 
@@ -786,7 +822,7 @@ const TablePagination = () => {
                   </Typography>
                   <PhoneInput
                     country={"gb"}
-                    value={phone}
+                    value={billingDetails?.phone ?? phone}
                     onChange={handlePhoneInputChange}
                     inputStyle={{
                       width: "100%",
@@ -795,7 +831,23 @@ const TablePagination = () => {
                     }}
                     inputClass="phone-input"
                     enableSearch
-                    disabled={!canModifyUserDetails}
+                    disabled={!canModifyUserDetails || !!billingDetails}
+                  />
+
+                  <Typography color="textSecondary" variant="h5" mt={2}>
+                    {t("Email")}
+                  </Typography>
+                  <CustomTextField
+                    id="email"
+                    name="email"
+                    className="custom_color"
+                    placeholder={t("Enter email..")}
+                    value={billingDetails?.email ?? formData.email}
+                    onChange={(e: any) =>
+                      handleFieldChange("email", e.target.value)
+                    }
+                    fullWidth
+                    disabled={!canModifyUserDetails || !!billingDetails}
                   />
 
                   <Typography color="textSecondary" variant="h5" mt={2}>
@@ -816,22 +868,6 @@ const TablePagination = () => {
                     inputProps={{
                       max: dayjs().format("YYYY-MM-DD"),
                     }}
-                  />
-
-                  <Typography color="textSecondary" variant="h5" mt={2}>
-                    {t("Email")}
-                  </Typography>
-                  <CustomTextField
-                    id="email"
-                    name="email"
-                    className="custom_color"
-                    placeholder={t("Enter email..")}
-                    value={formData.email}
-                    onChange={(e: any) =>
-                      handleFieldChange("email", e.target.value)
-                    }
-                    fullWidth
-                    disabled={!canModifyUserDetails}
                   />
 
                   <Typography color="textSecondary" variant="h5" mt={2}>
@@ -918,7 +954,6 @@ const TablePagination = () => {
                 )}
               </Box>
             </BlankCard>
-
           </Grid>
 
           <Grid
@@ -926,7 +961,7 @@ const TablePagination = () => {
               xs: 9,
               lg: 9,
             }}
-          // sx={{ boxShadow: (theme) => theme.shadows[8] }}
+            // sx={{ boxShadow: (theme) => theme.shadows[8] }}
           >
             <BlankCard>
               <Box>
