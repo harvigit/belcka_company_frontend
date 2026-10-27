@@ -15,11 +15,16 @@ import {
   CardContent,
   Grid,
   Alert,
+  AlertTitle,
   CircularProgress,
 } from "@mui/material";
 import {
   IconArrowLeft,
   IconDeviceFloppy,
+  IconEye,
+  IconRuler,
+  IconCalculator,
+  IconLock,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -106,6 +111,12 @@ export default function SurveyEdit({ id }: SurveyEditProps) {
             );
             setNotes(loadedSurvey.notes || "");
             setRooms(loadedSurvey.rooms || []);
+
+            if (loadedSurvey.status !== "draft" && loadedSurvey.status !== "assigned") {
+              toast.error(
+                `Survey ${loadedSurvey.reference} is in '${loadedSurvey.status}' status and cannot be edited. It has been opened in read-only mode.`
+              );
+            }
           }
         }
       } catch (err) {
@@ -120,6 +131,12 @@ export default function SurveyEdit({ id }: SurveyEditProps) {
 
   const handleSave = async () => {
     if (!survey) return;
+    if (survey.status !== "draft" && survey.status !== "assigned") {
+      toast.error(
+        `Cannot save changes: Survey is in '${survey.status}' status. Editing is only permitted for surveys in 'draft' or 'assigned' status.`
+      );
+      return;
+    }
     if (!reference.trim()) {
       toast.error("Reference is required");
       return;
@@ -214,6 +231,117 @@ export default function SurveyEdit({ id }: SurveyEditProps) {
         >
           Return to Surveys
         </Button>
+      </Box>
+    );
+  }
+
+  const isEditable = survey.status === "draft" || survey.status === "assigned";
+
+  if (!isEditable) {
+    return (
+      <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 900, mx: "auto" }}>
+        <Stack direction="row" alignItems="center" spacing={1.5} mb={3}>
+          <IconButton
+            onClick={() => router.push(`/apps/surveys/view/${survey.id}`)}
+            sx={{
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: "8px",
+            }}
+            aria-label="Back to survey"
+          >
+            <IconArrowLeft size={20} />
+          </IconButton>
+          <Box>
+            <Typography variant="h5" fontWeight={700}>
+              Survey Locked: {survey.reference}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Editing is restricted based on survey status.
+            </Typography>
+          </Box>
+        </Stack>
+
+        <Alert
+          severity="warning"
+          icon={<IconLock size={24} />}
+          sx={{ mb: 3, borderRadius: 2 }}
+        >
+          <AlertTitle sx={{ fontWeight: 700, fontSize: "1rem" }}>
+            Survey is in &apos;{survey.status.toUpperCase()}&apos; Status
+          </AlertTitle>
+          Surveys can only be edited when they are in <strong>Draft</strong> or <strong>Assigned</strong> status.
+          This survey is currently in <strong>{survey.status.replace("_", " ")}</strong> status and is protected from modification.
+        </Alert>
+
+        <BlankCard>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="subtitle1" fontWeight={700} mb={1}>
+              Available Actions
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mb={3}>
+              Choose an action below to view or manage this survey in its current workflow state:
+            </Typography>
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} flexWrap="wrap">
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<IconEye size={18} />}
+                component={Link}
+                href={`/apps/surveys/view/${survey.id}`}
+              >
+                View Survey Details
+              </Button>
+
+              {survey.status === "in_progress" && (
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  startIcon={<IconRuler size={18} />}
+                  component={Link}
+                  href={`/apps/surveys/execute/${survey.id}`}
+                >
+                  Continue Field Inspection
+                </Button>
+              )}
+
+              {(survey.status === "submitted" || survey.status === "qs_review") && (
+                <Button
+                  variant="outlined"
+                  color="info"
+                  startIcon={<IconCalculator size={18} />}
+                  component={Link}
+                  href={`/apps/surveys/assessment/${survey.id}`}
+                >
+                  Open QS Assessment
+                </Button>
+              )}
+
+              {(survey.status === "completed" || survey.status === "frozen") && (
+                <Button
+                  variant="outlined"
+                  color="success"
+                  startIcon={<IconEye size={18} />}
+                  component={Link}
+                  href={`/apps/surveys/view/${survey.id}?tab=costing`}
+                >
+                  View Commercial Scope & Costing
+                </Button>
+              )}
+
+              <Button
+                variant="text"
+                color="inherit"
+                startIcon={<IconArrowLeft size={18} />}
+                component={Link}
+                href="/apps/surveys/list"
+              >
+                Back to Survey List
+              </Button>
+            </Stack>
+          </CardContent>
+        </BlankCard>
       </Box>
     );
   }
