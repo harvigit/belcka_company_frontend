@@ -71,6 +71,7 @@ import api from '@/utils/axios';
 import {startWorkRestrictionMessage} from './startWorkWindow';
 import TimeClockTable from './components/TimeClockTable';
 import TimeClockStats from './components/TimeClockStats';
+import SignContractDialog from './components/SignContractDialog';
 import {useTimeClockData} from './hooks/useTimeClockData';
 import {useEditingState} from './hooks/useEditingState';
 import {DailyBreakdown} from './types/timeClock';
@@ -162,6 +163,8 @@ type ApiResponse<T = unknown> = {
     message: string;
     data?: T;
     is_rate_approved?: boolean;
+    is_contract_signed?: boolean;
+    user_contract_id?: number | null;
     user_worklog_id?: number | null;
 };
 
@@ -1254,6 +1257,12 @@ const TimeTracking: React.FC<Props> = () => {
     const [clockLoading, setClockLoading] = useState(false);
     const clockActionInProgressRef = useRef(false);
     const startDialogOpenRef = useRef(false);
+    // Start work blocked by an unsigned contract: the contract to sign + the start request to retry after signing.
+    const [contractToSign, setContractToSign] = useState<{
+        contractId: number;
+        message: string;
+        retry: { shiftId: number; projectId: number | null; coords: LocationCoords };
+    } | null>(null);
     const [todayLoading, setTodayLoading] = useState(true);
     const [toast, setToast] = useState<ToastState>({open: false, message: '', severity: 'success'});
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -1989,6 +1998,21 @@ const TimeTracking: React.FC<Props> = () => {
             // The catch below shows the server's message itself, so skip the global error toast (no double message).
             const res: AxiosResponse<ApiResponse> = await api.post('user-worklog/user-start-work', payload, {skipToast: true} as any);
             
+            if (res.data.IsSuccess && res.data.is_contract_signed === false) {
+                startDialogOpenRef.current = false;
+                setStartDialogOpen(false);
+                if (res.data.user_contract_id) {
+                    setContractToSign({
+                        contractId: res.data.user_contract_id,
+                        message: res.data.message,
+                        retry: {shiftId, projectId, coords},
+                    });
+                } else {
+                    showToast(res.data.message || 'Please sign your contract before starting work.', 'error');
+                }
+                return;
+            }
+
             if (res.data.IsSuccess && res.data.is_rate_approved !== false && res.data.user_worklog_id) {
                 showToast(res.data.message || 'Work started!', 'success');
                 
@@ -2010,6 +2034,13 @@ const TimeTracking: React.FC<Props> = () => {
             setClockLoading(false);
         }
     }, [user?.company_id, showToast, fetchTodayClock, fetchTimeClockData, startDate, endDate]);
+
+    const handleContractSigned = useCallback(() => {
+        const retry = contractToSign?.retry;
+        setContractToSign(null);
+        showToast('Contract signed', 'success');
+        if (retry) handleStartWork(retry.shiftId, retry.projectId, retry.coords);
+    }, [contractToSign, showToast, handleStartWork]);
 
     const handleClockButtonClick = useCallback(() => {
         if (clockLoading || startDialogOpenRef.current || clockActionInProgressRef.current) {
@@ -2519,6 +2550,13 @@ const TimeTracking: React.FC<Props> = () => {
                     loading={clockLoading}
                     lastKnownLocation={lastKnownLocation}
                     setLastKnownLocation={setLastKnownLocation}
+                />
+
+                <SignContractDialog
+                    contractId={contractToSign?.contractId ?? null}
+                    message={contractToSign?.message}
+                    onClose={() => setContractToSign(null)}
+                    onSigned={handleContractSigned}
                 />
 
                 <Dialog

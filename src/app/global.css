@@ -331,7 +331,11 @@ input#project_id::placeholder {
   width: 20%;
 }
 
-.mui-od50dp-MuiInputBase-input-MuiOutlinedInput-input {
+/* Time-clock settings: centre plain small inputs (no select, multiline or adornment). */
+.time-clock-settings
+  .MuiOutlinedInput-input.MuiInputBase-inputSizeSmall:not(.MuiSelect-select):not(.MuiInputBase-inputMultiline):not(
+    .MuiInputBase-inputAdornedStart
+  ):not(.MuiInputBase-inputAdornedEnd) {
   text-align: center;
 }
 

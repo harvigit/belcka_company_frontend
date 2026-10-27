@@ -85,6 +85,7 @@ const Inex: React.FC<SettingsProps> = ({
                 open={settingOpen}
                 onClose={onClose}
                 PaperProps={{
+                    className: "time-clock-settings",
                     sx: {
                         borderTopLeftRadius: 12,
                         borderTopRightRadius: 12,
