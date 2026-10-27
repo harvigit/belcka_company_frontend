@@ -51,10 +51,7 @@ const ContractPreviewDialog = ({ templateId, onClose }: Props) => {
       })
       .then((res) => {
         setHtml(res.data?.info?.html ?? "");
-        setMissing([
-          ...(res.data?.info?.missing_company_fields ?? []),
-          ...(res.data?.info?.missing_user_fields ?? []),
-        ]);
+        setMissing(res.data?.info?.missing_user_fields ?? []);
       })
       .catch((error) => console.error(error))
       .finally(() => setLoading(false));

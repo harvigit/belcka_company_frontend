@@ -23,7 +23,7 @@ import {
 import { IconSearch } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
-import type { ContractUserRow } from "./contracts-api";
+import type { ContractGroup, ContractUserRow } from "./contracts-api";
 
 export interface PublishAssignment {
   assign_mode: "ALL" | "SELECTED";
@@ -41,18 +41,15 @@ interface Props {
   isFirstVersion: boolean;
   /** Assign users only (templates list): no version, change type or note. */
   assignOnly?: boolean;
-  companies: { id: number; name: string }[];
+  /** The template's company. */
+  companyId: number;
+  /** The template's groups: only their members can be assigned. */
+  groups: ContractGroup[];
   /** The contract's current switch, shown pre-set. */
   isRequired: boolean;
   publishing: boolean;
   onClose: () => void;
   onPublish: (changeType: "MAJOR" | "MINOR", changeNote: string, assignment: PublishAssignment) => void;
-}
-
-interface CompanyUsers {
-  id: number;
-  name: string;
-  users: ContractUserRow[];
 }
 
 const option = (selected: boolean) => ({
@@ -72,7 +69,8 @@ const PublishDialog = ({
   nextVersion,
   isFirstVersion,
   assignOnly = false,
-  companies,
+  companyId,
+  groups,
   isRequired,
   publishing,
   onClose,
@@ -83,56 +81,53 @@ const PublishDialog = ({
   const [assignMode, setAssignMode] = useState<"ALL" | "SELECTED">("ALL");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [required, setRequired] = useState(isRequired);
-  const [groups, setGroups] = useState<CompanyUsers[]>([]);
+  const [users, setUsers] = useState<ContractUserRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
 
-  // Reload only when the dialog opens or the set of companies changes (not on every new array).
-  const companyKey = companies.map((c) => `${c.id}:${c.name}`).join(",");
+  // Reload only when the dialog opens or the set of groups changes (not on every new array).
+  const groupKey = groups.map((g) => g.id).join(",");
 
-  // Load each company's users and settings; start from what is set today.
+  // Load the users of the template's groups; start from what is set today.
   useEffect(() => {
     if (!open) return;
     setChangeType("MAJOR");
     setNote("");
     setSearch("");
     setRequired(isRequired);
+    if (!companyId || !groups.length) {
+      setUsers([]);
+      setAssignMode("ALL");
+      setSelected(new Set());
+      return;
+    }
     setLoading(true);
-    Promise.all(
-      companies.map(async (c) => {
-        const w = await api.get("contracts/users", {
-          params: { company_id: c.id, ...(templateId ? { template_id: templateId } : {}) },
-        });
-        return {
-          id: c.id,
-          name: c.name,
-          audience: w.data?.info?.audience as string,
-          users: (w.data?.info?.users ?? []) as ContractUserRow[],
-        };
-      }),
-    )
-      .then((rows) => {
-        setGroups(rows);
-        const onlySelected = rows.length > 0 && rows.every((r) => r.audience === "ONLY_SELECTED");
+    api
+      .get("contracts/users", {
+        params: {
+          company_id: companyId,
+          group_ids: groupKey,
+          ...(templateId ? { template_id: templateId } : {}),
+        },
+      })
+      .then((res) => {
+        const rows = (res.data?.info?.users ?? []) as ContractUserRow[];
+        const onlySelected = res.data?.info?.audience === "ONLY_SELECTED";
+        setUsers(rows);
         setAssignMode(onlySelected ? "SELECTED" : "ALL");
         // Pre-tick only users already chosen by hand; coming from "All users" the list starts empty.
-        setSelected(
-          onlySelected
-            ? new Set(rows.flatMap((r) => r.users.filter((u) => u.must_sign).map((u) => u.user_id)))
-            : new Set(),
-        );
+        setSelected(onlySelected ? new Set(rows.filter((u) => u.must_sign).map((u) => u.user_id)) : new Set());
       })
       .catch((error) => console.error(error))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, companyKey, templateId]);
+  }, [open, companyId, groupKey, templateId]);
 
-  const allUserIds = useMemo(() => [...new Set(groups.flatMap((g) => g.users.map((u) => u.user_id)))], [groups]);
+  const allUserIds = useMemo(() => users.map((u) => u.user_id), [users]);
   const term = search.trim().toLowerCase();
-  const excludedCount = groups.reduce(
-    (n, g) => n + g.users.filter((u) => u.requirement?.type === "EXEMPT").length,
-    0,
-  );
+  const visibleUsers = users.filter((u) => !term || u.name.toLowerCase().includes(term));
+  const excludedCount = users.filter((u) => u.requirement?.type === "EXEMPT").length;
+  const groupNames = groups.map((g) => g.name).join(", ");
   const signsAgain = isFirstVersion || changeType === "MAJOR";
 
   const toggle = (userId: number) =>
@@ -144,7 +139,7 @@ const PublishDialog = ({
     });
 
   const allSelected = allUserIds.length > 0 && allUserIds.every((id) => selected.has(id));
-  const canPublish = !publishing && !loading && (assignMode === "ALL" || selected.size > 0);
+  const canPublish = !publishing && !loading && groups.length > 0 && (assignMode === "ALL" || selected.size > 0);
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -152,10 +147,15 @@ const PublishDialog = ({
         {assignOnly ? "Assign users" : `Publish version ${nextVersion}`}
         <Typography variant="body2" color="textSecondary">
           {title}
-          {companies.length ? ` · ${companies.map((c) => c.name).join(", ")}` : ""}
+          {groupNames ? ` · ${groupNames}` : ""}
         </Typography>
       </DialogTitle>
       <DialogContent dividers>
+        {!groups.length && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Choose at least one group for this template first. Only users in its groups are asked to sign.
+          </Alert>
+        )}
         {assignOnly ? (
           <Typography variant="body2" color="textSecondary">
             Newly assigned users are asked to sign the current version. Users you take off no longer need to.
@@ -216,8 +216,8 @@ const PublishDialog = ({
                 <Box>
                   <Typography fontWeight={600}>All users</Typography>
                   <Typography variant="body2" color="textSecondary">
-                    Every user in {companies.length > 1 ? "these companies" : "this company"} ({allUserIds.length}
-                    ), including users who join later.
+                    Every user in {groups.length > 1 ? "these groups" : "this group"} ({allUserIds.length}
+                    ), including users added to {groups.length > 1 ? "them" : "it"} later.
                     {excludedCount
                       ? excludedCount === 1
                         ? " 1 user already marked as not required stays excluded."
@@ -235,7 +235,8 @@ const PublishDialog = ({
                 <Box>
                   <Typography fontWeight={600}>Select users manually</Typography>
                   <Typography variant="body2" color="textSecondary">
-                    Only the users you tick. Nobody else is asked to sign.
+                    Only the users you tick from {groups.length > 1 ? "these groups" : "this group"}. Nobody else is
+                    asked to sign.
                   </Typography>
                 </Box>
               }
@@ -278,47 +279,34 @@ const PublishDialog = ({
                   <CircularProgress size={24} />
                 </Box>
               ) : (
-                groups.map((g) => {
-                  const users = g.users.filter((u) => !term || u.name.toLowerCase().includes(term));
-                  if (!users.length) return null;
-                  return (
-                    <Box key={g.id}>
-                      {groups.length > 1 && (
-                        <Typography variant="caption" fontWeight={600} color="textSecondary" sx={{ display: "block", px: 2, pt: 1.5 }}>
-                          {g.name}
-                        </Typography>
-                      )}
-                      {users.map((u) => (
-                        <Stack
-                          key={`${g.id}-${u.user_id}`}
-                          direction="row"
-                          alignItems="center"
-                          spacing={1.5}
-                          sx={{ px: 1.5, py: 0.5, cursor: "pointer" }}
-                          onClick={() => toggle(u.user_id)}
-                        >
-                          <Checkbox
-                            checked={selected.has(u.user_id)}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={() => toggle(u.user_id)}
-                            inputProps={{ "aria-label": `Assign to ${u.name}` }}
-                          />
-                          <Avatar sx={{ width: 30, height: 30, fontSize: 12 }}>
-                            {u.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
-                          </Avatar>
-                          <Box minWidth={0}>
-                            <Typography variant="body2" fontWeight={600} noWrap>
-                              {u.name}
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary" noWrap component="div">
-                              {[u.trade, u.team].filter(Boolean).join(" · ") || "—"}
-                            </Typography>
-                          </Box>
-                        </Stack>
-                      ))}
+                visibleUsers.map((u) => (
+                  <Stack
+                    key={u.user_id}
+                    direction="row"
+                    alignItems="center"
+                    spacing={1.5}
+                    sx={{ px: 1.5, py: 0.5, cursor: "pointer" }}
+                    onClick={() => toggle(u.user_id)}
+                  >
+                    <Checkbox
+                      checked={selected.has(u.user_id)}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={() => toggle(u.user_id)}
+                      inputProps={{ "aria-label": `Assign to ${u.name}` }}
+                    />
+                    <Avatar sx={{ width: 30, height: 30, fontSize: 12 }}>
+                      {u.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
+                    </Avatar>
+                    <Box minWidth={0}>
+                      <Typography variant="body2" fontWeight={600} noWrap>
+                        {u.name}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary" noWrap component="div">
+                        {[u.trade, u.team].filter(Boolean).join(" · ") || "—"}
+                      </Typography>
                     </Box>
-                  );
-                })
+                  </Stack>
+                ))
               )}
             </Box>
             <Typography variant="body2" color="textSecondary" sx={{ px: 2, py: 1, borderTop: 1, borderColor: "divider" }}>

@@ -11,6 +11,11 @@ export interface ContractField {
   placeholder?: string;
 }
 
+export interface ContractGroup {
+  id: number;
+  name: string;
+}
+
 /** A contract's own rules. */
 export interface ContractRules {
   /** On: users must sign before they can start work. Off: asked to sign, not blocked. */
@@ -26,7 +31,8 @@ export interface ContractTemplateRow extends ContractRules {
   status: "PUBLISHED" | "DRAFT";
   has_unpublished_changes: boolean;
   field_count: number;
-  companies: { id: number; name: string | null }[];
+  /** User groups whose members are asked to sign. */
+  groups: ContractGroup[];
   latest_version: {
     version_no: number;
     change_type: "MAJOR" | "MINOR";
@@ -43,7 +49,10 @@ export interface ContractTemplateDetail extends ContractRules {
   is_active: boolean;
   body_html: string;
   has_unpublished_changes: boolean;
-  companies: { id: number; name: string }[];
+  company_id: number;
+  audience: ContractAudience;
+  /** User groups whose members are asked to sign. */
+  groups: ContractGroup[];
   fields: ContractField[];
   versions: {
     id: number;
@@ -54,6 +63,15 @@ export interface ContractTemplateDetail extends ContractRules {
     published_by_name: string;
     is_current: boolean;
   }[];
+}
+
+/** A user holding a signed copy of a template. */
+export interface ContractSigner {
+  user_id: number;
+  name: string | null;
+  contract_id: number;
+  version_no: number | null;
+  signed_at: string | null;
 }
 
 export interface ContractRequirementRow {

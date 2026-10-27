@@ -30,7 +30,7 @@ import ContractEditor from "./ContractEditor";
 import ContractPreviewDialog from "./ContractPreviewDialog";
 import PublishDialog, { PublishAssignment } from "./PublishDialog";
 import { toInputDate } from "./contracts-api";
-import type { ContractField, ContractTemplateDetail } from "./contracts-api";
+import type { ContractField, ContractGroup, ContractTemplateDetail } from "./contracts-api";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 
 const card = {
@@ -57,11 +57,11 @@ const TemplateEditor = ({ templateId }: Props) => {
   const user = session.data?.user as User & { company_id?: number | null; id?: number };
 
   const [fields, setFields] = useState<ContractField[]>([]);
-  const [companies, setCompanies] = useState<{ id: number; name: string }[]>([]);
+  const [groups, setGroups] = useState<(ContractGroup & { members_count: number })[]>([]);
   const [template, setTemplate] = useState<ContractTemplateDetail | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState(templateId ? "" : STARTER_WORDING);
-  const [companyIds, setCompanyIds] = useState<number[]>([]);
+  const [groupIds, setGroupIds] = useState<number[]>([]);
   // The contract's own rules.
   const [isRequired, setIsRequired] = useState(true);
   const [expiryMonths, setExpiryMonths] = useState<number>(0);
@@ -76,26 +76,27 @@ const TemplateEditor = ({ templateId }: Props) => {
   const insertField = useRef<((key: string) => void) | null>(null);
 
   const load = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id || !user.company_id) return;
     try {
-      const [f, c, t] = await Promise.all([
+      const [f, t] = await Promise.all([
         api.get("contracts/fields"),
-        api.get(`user/switch-company-list?user_id=${user.id}`),
         templateId ? api.get(`contracts/templates/${templateId}`) : Promise.resolve(null),
       ]);
+      const detail: ContractTemplateDetail | null = t?.data?.info ?? null;
+      // Groups of the template's own company (the active one for a new template).
+      const g = await api.get(`user-groups/list?company_id=${detail?.company_id ?? user.company_id}`);
       setFields(f.data?.info ?? []);
-      setCompanies((c.data?.info ?? []).map((x: any) => ({ id: Number(x.id), name: x.name })));
-      if (t) {
-        const detail: ContractTemplateDetail = t.data.info;
+      setGroups(
+        (g.data?.info ?? []).map((x: any) => ({ id: Number(x.id), name: x.name, members_count: x.members_count ?? 0 })),
+      );
+      if (detail) {
         setTemplate(detail);
         setTitle(detail.title);
         setBody(detail.body_html);
-        setCompanyIds(detail.companies.map((x) => x.id));
+        setGroupIds(detail.groups.map((x) => x.id));
         setIsRequired(detail.is_required);
         setExpiryMonths(detail.expiry_months ?? 0);
         setRequiredFrom(toInputDate(detail.required_from));
-      } else if (user.company_id) {
-        setCompanyIds([Number(user.company_id)]);
       }
       setDirty(false);
     } catch (error) {
@@ -130,8 +131,8 @@ const TemplateEditor = ({ templateId }: Props) => {
       toast.error("Template name is required");
       return null;
     }
-    if (!companyIds.length) {
-      toast.error("Choose at least one company");
+    if (!groupIds.length) {
+      toast.error("Choose at least one group");
       return null;
     }
     setSaving(true);
@@ -139,14 +140,14 @@ const TemplateEditor = ({ templateId }: Props) => {
       const payload = {
         title: title.trim(),
         body_html: body,
-        company_ids: companyIds,
+        group_ids: groupIds,
         is_required: isRequired,
         expiry_months: expiryMonths || null,
         required_from: requiredFrom || null,
       };
       const res = templateId
         ? await api.post(`contracts/templates/${templateId}/update`, payload)
-        : await api.post("contracts/templates", payload);
+        : await api.post(`contracts/templates?company_id=${user.company_id}`, payload);
       const saved: ContractTemplateDetail = res.data.info;
       setTemplate(saved);
       setDirty(false);
@@ -356,25 +357,38 @@ const TemplateEditor = ({ templateId }: Props) => {
           </Box>
 
           <Box sx={{ ...card, p: 2.5 }}>
-            <Typography variant="h6" mb={1}>
-              Companies using this template
+            <Typography variant="h6">Groups using this template</Typography>
+            <Typography variant="body2" color="textSecondary" mb={1}>
+              Only users in these groups are asked to sign.
             </Typography>
-            {companies.map((c) => (
+            {groups.map((g) => (
               <FormControlLabel
-                key={c.id}
+                key={g.id}
                 sx={{ display: "flex" }}
                 control={
                   <Checkbox
-                    checked={companyIds.includes(c.id)}
+                    checked={groupIds.includes(g.id)}
                     onChange={(e) => {
-                      setCompanyIds((ids) => (e.target.checked ? [...ids, c.id] : ids.filter((x) => x !== c.id)));
+                      setGroupIds((ids) => (e.target.checked ? [...ids, g.id] : ids.filter((x) => x !== g.id)));
                       setDirty(true);
                     }}
                   />
                 }
-                label={c.name}
+                label={
+                  <>
+                    {g.name}{" "}
+                    <Typography component="span" variant="caption" color="textSecondary">
+                      · {g.members_count} user{g.members_count === 1 ? "" : "s"}
+                    </Typography>
+                  </>
+                }
               />
             ))}
+            {!groups.length && (
+              <Typography variant="body2" color="textSecondary">
+                No groups yet. Create user groups in Admin settings first.
+              </Typography>
+            )}
           </Box>
 
           <Box sx={{ ...card, p: 2.5 }}>
@@ -450,7 +464,8 @@ const TemplateEditor = ({ templateId }: Props) => {
         nextVersion={nextVersion}
         isFirstVersion={!template?.versions.length}
         isRequired={isRequired}
-        companies={companies.filter((c) => companyIds.includes(c.id))}
+        companyId={template?.company_id ?? Number(user?.company_id)}
+        groups={groups.filter((g) => groupIds.includes(g.id))}
         publishing={publishing || saving}
         onClose={() => setPublishOpen(false)}
         onPublish={publish}

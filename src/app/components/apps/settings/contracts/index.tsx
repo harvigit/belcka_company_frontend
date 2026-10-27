@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import {
+  Alert,
+  Avatar,
   Box,
   Button,
   Chip,
@@ -35,6 +37,7 @@ import IOSSwitch from "@/app/components/common/IOSSwitch";
 import ContractPreviewDialog from "./ContractPreviewDialog";
 import PublishDialog, { PublishAssignment } from "./PublishDialog";
 import {
+  ContractSigner,
   ContractTemplateRow,
 } from "./contracts-api";
 
@@ -63,6 +66,21 @@ const ContractsSettings = () => {
   const [loading, setLoading] = useState(true);
   const [previewId, setPreviewId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ContractTemplateRow | null>(null);
+  const [signers, setSigners] = useState<ContractSigner[]>([]);
+  const [signersLoading, setSignersLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Who signed the template, so the manager sees whose signed copies disappear.
+  useEffect(() => {
+    if (!deleteTarget) return;
+    setSigners([]);
+    setSignersLoading(true);
+    api
+      .get(`contracts/templates/${deleteTarget.id}/signers`)
+      .then((res) => setSigners(res.data?.info ?? []))
+      .catch((error) => console.error(error))
+      .finally(() => setSignersLoading(false));
+  }, [deleteTarget]);
   const [assignTarget, setAssignTarget] = useState<ContractTemplateRow | null>(null);
   const [assigning, setAssigning] = useState(false);
 
@@ -124,6 +142,7 @@ const ContractsSettings = () => {
 
   const deleteTemplate = async () => {
     if (!deleteTarget) return;
+    setDeleting(true);
     try {
       const res = await api.post(`contracts/templates/${deleteTarget.id}/delete`);
       toast.success(res.data?.message || "Deleted");
@@ -131,6 +150,8 @@ const ContractsSettings = () => {
       loadAll();
     } catch (error) {
       console.error(error);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -195,7 +216,7 @@ const ContractsSettings = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Template</TableCell>
-                <TableCell>Companies</TableCell>
+                <TableCell>Groups</TableCell>
                 <TableCell>Version</TableCell>
                 <TableCell>Signed</TableCell>
                 <TableCell>Last published</TableCell>
@@ -219,9 +240,15 @@ const ContractsSettings = () => {
                     </TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                        {t.companies.map((c) => (
-                          <Chip key={c.id} size="small" color="primary" variant="outlined" label={c.name ?? c.id} />
-                        ))}
+                        {t.groups.length ? (
+                          t.groups.map((g) => (
+                            <Chip key={g.id} size="small" color="primary" variant="outlined" label={g.name} />
+                          ))
+                        ) : (
+                          <Typography variant="caption" color="warning.main">
+                            No groups · nobody is asked to sign
+                          </Typography>
+                        )}
                       </Stack>
                     </TableCell>
                     <TableCell>
@@ -331,7 +358,7 @@ const ContractsSettings = () => {
           </Table>
         </TableContainer>
         <Typography variant="body2" color="textSecondary" sx={{ px: 2.5, py: 1.5, borderTop: 1, borderColor: "divider" }}>
-          {templates.length} template{templates.length === 1 ? "" : "s"} · A company can use several templates. Users sign each one assigned to them.
+          {templates.length} template{templates.length === 1 ? "" : "s"} · A group can use several templates. Users sign each one assigned to them.
         </Typography>
       </Box>
 
@@ -345,25 +372,66 @@ const ContractsSettings = () => {
         nextVersion={0}
         isFirstVersion={false}
         isRequired={assignTarget?.is_required ?? true}
-        companies={(assignTarget?.companies ?? []).map((c) => ({ id: c.id, name: c.name ?? String(c.id) }))}
+        companyId={companyId}
+        groups={assignTarget?.groups ?? []}
         publishing={assigning}
         onClose={() => setAssignTarget(null)}
         onPublish={(_type, _note, assignment) => assignUsers(assignment)}
       />
 
-      <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} maxWidth="xs" fullWidth>
+      <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} maxWidth="sm" fullWidth>
         <DialogTitle>Delete “{deleteTarget?.title}”?</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Open signing requests are cancelled. Contracts already signed are kept on each user’s profile.
-          </Typography>
+        <DialogContent dividers>
+          {signersLoading ? (
+            <Box display="flex" justifyContent="center" py={3}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : signers.length ? (
+            <>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                {signers.length === 1 ? "1 user has" : `${signers.length} users have`} signed this contract. After
+                deleting, it won’t show in their contracts in the app any more.
+              </Alert>
+              <Typography variant="subtitle2" mb={1}>
+                Signed by
+              </Typography>
+              <Box sx={{ maxHeight: 280, overflowY: "auto", border: 1, borderColor: "divider", borderRadius: 2 }}>
+                {signers.map((s) => (
+                  <Stack
+                    key={s.user_id}
+                    direction="row"
+                    alignItems="center"
+                    spacing={1.5}
+                    sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: "divider", "&:last-child": { borderBottom: 0 } }}
+                  >
+                    <Avatar sx={{ width: 30, height: 30, fontSize: 12 }}>
+                      {(s.name ?? "?").split(" ").map((p) => p[0]).join("").slice(0, 2)}
+                    </Avatar>
+                    <Box minWidth={0}>
+                      <Typography variant="body2" fontWeight={600} noWrap>
+                        {s.name ?? `User ${s.user_id}`}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Signed v{s.version_no} · {s.signed_at}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                ))}
+              </Box>
+              <Typography variant="body2" color="textSecondary" mt={2}>
+                Open signing requests are cancelled too.
+              </Typography>
+            </>
+          ) : (
+            <Typography>Nobody has signed this contract yet. Open signing requests are cancelled.</Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button color="inherit" onClick={() => setDeleteTarget(null)}>
             Cancel
           </Button>
-          <Button color="error" variant="contained" onClick={deleteTemplate}>
-            Delete
+          <Button color="error" variant="contained" disabled={signersLoading || deleting} onClick={deleteTemplate}>
+            {deleting ? "Deleting..." : signers.length ? "Delete anyway" : "Delete"}
           </Button>
         </DialogActions>
       </Dialog>
