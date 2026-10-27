@@ -29,6 +29,7 @@ import {
   DialogActions,
   Avatar,
   Divider,
+  CircularProgress,
 } from "@mui/material";
 import {
   IconSearch,
@@ -43,6 +44,8 @@ import {
   IconFileText,
   IconX,
   IconCalculator,
+  IconBriefcase,
+  IconLock,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -101,6 +104,57 @@ export default function SurveyList() {
   // Delete modal state
   const [deleteTargetId, setDeleteTargetId] = useState<string | number | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Work Order Handoff Dialog State
+  const [handoffTargetSurvey, setHandoffTargetSurvey] = useState<Survey | null>(null);
+  const [submittingWo, setSubmittingWo] = useState(false);
+  const [woForm, setWoForm] = useState({
+    contractor_id: "",
+    contractor_name: "",
+    trade_name: "",
+    start_date: "",
+    target_completion_date: "",
+    notes: "",
+  });
+
+  const handleOpenHandoff = (survey: Survey) => {
+    setHandoffTargetSurvey(survey);
+    setWoForm({
+      contractor_id: survey.surveyor_id ? String(survey.surveyor_id) : "",
+      contractor_name: survey.surveyor_name || "",
+      trade_name: "",
+      start_date: new Date().toISOString().split("T")[0],
+      target_completion_date: "",
+      notes: `Handoff from survey ${survey.reference}. Baseline total: £${Number(survey.baseline_total || 0).toFixed(2)}.`,
+    });
+  };
+
+  const handleCreateWorkOrder = async () => {
+    if (!handoffTargetSurvey) return;
+    try {
+      setSubmittingWo(true);
+      const res = await api.post(`/surveys/${handoffTargetSurvey.id}/work-order`, {
+        contractor_id: woForm.contractor_id ? Number(woForm.contractor_id) : undefined,
+        contractor_name: woForm.contractor_name.trim() || undefined,
+        trade_name: woForm.trade_name.trim() || undefined,
+        start_date: woForm.start_date || undefined,
+        target_completion_date: woForm.target_completion_date || undefined,
+        notes: woForm.notes.trim() || undefined,
+      });
+
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message || "Work order successfully issued to contractor!");
+        setHandoffTargetSurvey(null);
+        void fetchSurveys();
+      } else {
+        toast.error(res.data?.message || "Failed to issue work order");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to issue work order");
+    } finally {
+      setSubmittingWo(false);
+    }
+  };
 
   // Column Visibility Popover Anchor
   const [columnAnchor, setColumnAnchor] = useState<HTMLElement | null>(null);
@@ -323,6 +377,117 @@ export default function SurveyList() {
         },
       },
       {
+        id: "baseline_total",
+        header: "Commercial Baseline",
+        meta: { label: "Commercial Baseline" },
+        cell: ({ row }: { row: { original: Survey } }) => {
+          const hasBaseline = row.original.baseline_total !== null && row.original.baseline_total !== undefined;
+          const isCompleted = row.original.status === "completed" || row.original.status === "frozen";
+
+          if (hasBaseline) {
+            return (
+              <Box>
+                <Typography variant="body2" fontWeight={800} color={isCompleted ? "success.dark" : "text.primary"}>
+                  £{Number(row.original.baseline_total).toLocaleString("en-GB", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </Typography>
+                <Chip
+                  size="small"
+                  color="success"
+                  label="Locked Baseline"
+                  sx={{ height: 18, fontSize: "0.68rem", fontWeight: 700, mt: 0.5 }}
+                />
+              </Box>
+            );
+          }
+
+          if (["submitted", "qs_review"].includes(row.original.status)) {
+            return (
+              <Box>
+                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
+                  Under QS Review
+                </Typography>
+                <Chip
+                  size="small"
+                  color="secondary"
+                  variant="outlined"
+                  label="Pricing in Progress"
+                  sx={{ height: 18, fontSize: "0.68rem", fontWeight: 600, mt: 0.5 }}
+                />
+              </Box>
+            );
+          }
+
+          return (
+            <Typography variant="caption" color="text.secondary" fontStyle="italic">
+              Pre-Inspection
+            </Typography>
+          );
+        },
+      },
+      {
+        id: "qs_status",
+        header: "QS & Work Order",
+        meta: { label: "QS & Work Order" },
+        cell: ({ row }: { row: { original: Survey } }) => {
+          const qsStatus = row.original.qs_status;
+          const workOrder = (row.original as any).work_order;
+
+          return (
+            <Stack spacing={0.5} alignItems="flex-start">
+              {workOrder ? (
+                <Tooltip title={`Issued to ${workOrder.contractor_name || "Contractor"} for £${Number(workOrder.total_amount).toFixed(2)}`}>
+                  <Chip
+                    size="small"
+                    color="primary"
+                    icon={<IconBriefcase size={12} />}
+                    label={workOrder.reference}
+                    component={Link}
+                    href={`/apps/surveys/view/${row.original.id}`}
+                    clickable
+                    sx={{ height: 20, fontSize: "0.7rem", fontWeight: 700 }}
+                  />
+                </Tooltip>
+              ) : (row.original.status === "completed" || row.original.status === "frozen") && row.original.baseline_locked_at ? (
+                <Chip
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                  label="Ready for Handoff"
+                  onClick={() => handleOpenHandoff(row.original)}
+                  sx={{ height: 20, fontSize: "0.7rem", fontWeight: 600, cursor: "pointer" }}
+                />
+              ) : null}
+
+              {qsStatus === "rework_requested" ? (
+                <Chip
+                  size="small"
+                  color="warning"
+                  label="Rework Requested"
+                  sx={{ height: 18, fontSize: "0.68rem", fontWeight: 600 }}
+                />
+              ) : qsStatus === "approved" ? (
+                <Chip
+                  size="small"
+                  color="success"
+                  label="QS Approved"
+                  sx={{ height: 18, fontSize: "0.68rem", fontWeight: 600 }}
+                />
+              ) : qsStatus === "in_review" || qsStatus === "in_progress" ? (
+                <Chip
+                  size="small"
+                  color="secondary"
+                  label="QS In Review"
+                  sx={{ height: 18, fontSize: "0.68rem", fontWeight: 600 }}
+                />
+              ) : null}
+            </Stack>
+          );
+        },
+      },
+      {
         id: "created_at",
         header: "Created Date",
         meta: { label: "Created Date" },
@@ -338,67 +503,105 @@ export default function SurveyList() {
         id: "actions",
         header: "Actions",
         meta: { label: "Actions" },
-        cell: ({ row }: { row: { original: Survey } }) => (
-          <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-            {["submitted", "qs_review", "completed", "frozen"].includes(row.original.status) && (
-              <Tooltip title="QS Assessment & Costing">
+        cell: ({ row }: { row: { original: Survey } }) => {
+          const isCompleted = row.original.status === "completed" || row.original.status === "frozen";
+          const hasBaseline = Boolean(row.original.baseline_locked_at);
+          const workOrder = (row.original as any).work_order;
+
+          return (
+            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+              {/* Work Order Handoff Action */}
+              {isCompleted && hasBaseline && (
+                workOrder ? (
+                  <Tooltip title={`View Work Order ${workOrder.reference}`}>
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      component={Link}
+                      href={`/apps/surveys/view/${row.original.id}`}
+                    >
+                      <IconBriefcase size={18} />
+                    </IconButton>
+                  </Tooltip>
+                ) : (
+                  <Tooltip title="Issue Contractor Work Order">
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() => handleOpenHandoff(row.original)}
+                    >
+                      <IconBriefcase size={18} />
+                    </IconButton>
+                  </Tooltip>
+                )
+              )}
+
+              {["submitted", "qs_review", "completed", "frozen"].includes(row.original.status) && (
+                <Tooltip title="QS Assessment & Costing">
+                  <IconButton
+                    size="small"
+                    color="secondary"
+                    component={Link}
+                    href={`/apps/surveys/qs/${row.original.id}`}
+                  >
+                    <IconCalculator size={18} />
+                  </IconButton>
+                </Tooltip>
+              )}
+
+              {(row.original.status === "assigned" ||
+                row.original.status === "in_progress" ||
+                row.original.status === "draft") && (
+                <Tooltip title="Conduct Inspection">
+                  <IconButton
+                    size="small"
+                    color="success"
+                    component={Link}
+                    href={`/apps/surveys/inspect/${row.original.id}`}
+                  >
+                    <IconCamera size={18} />
+                  </IconButton>
+                </Tooltip>
+              )}
+
+              <Tooltip title="View Survey">
                 <IconButton
                   size="small"
-                  color="secondary"
+                  color="primary"
                   component={Link}
-                  href={`/apps/surveys/qs/${row.original.id}`}
+                  href={`/apps/surveys/view/${row.original.id}`}
                 >
-                  <IconCalculator size={18} />
+                  <IconEye size={18} />
                 </IconButton>
               </Tooltip>
-            )}
-            {(row.original.status === "assigned" ||
-              row.original.status === "in_progress" ||
-              row.original.status === "draft") && (
-              <Tooltip title="Conduct Inspection">
-                <IconButton
-                  size="small"
-                  color="success"
-                  component={Link}
-                  href={`/apps/surveys/inspect/${row.original.id}`}
-                >
-                  <IconCamera size={18} />
-                </IconButton>
-              </Tooltip>
-            )}
-            <Tooltip title="View Survey">
-              <IconButton
-                size="small"
-                color="primary"
-                component={Link}
-                href={`/apps/surveys/view/${row.original.id}`}
-              >
-                <IconEye size={18} />
-              </IconButton>
-            </Tooltip>
-            {row.original.status !== "frozen" && (
-              <Tooltip title="Edit Survey">
-                <IconButton
-                  size="small"
-                  color="info"
-                  component={Link}
-                  href={`/apps/surveys/edit/${row.original.id}`}
-                >
-                  <IconEdit size={18} />
-                </IconButton>
-              </Tooltip>
-            )}
-            <Tooltip title="Delete Survey">
-              <IconButton
-                size="small"
-                color="error"
-                onClick={() => setDeleteTargetId(row.original.id)}
-              >
-                <IconTrash size={18} />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        ),
+
+              {!isCompleted && (
+                <Tooltip title="Edit Survey">
+                  <IconButton
+                    size="small"
+                    color="info"
+                    component={Link}
+                    href={`/apps/surveys/edit/${row.original.id}`}
+                  >
+                    <IconEdit size={18} />
+                  </IconButton>
+                </Tooltip>
+              )}
+
+              {["draft", "assigned", "in_progress"].includes(row.original.status) && (
+                <Tooltip title="Delete Survey">
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => setDeleteTargetId(row.original.id)}
+                  >
+                    <IconTrash size={18} />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Stack>
+          );
+        },
       },
     ],
     [],
@@ -763,6 +966,167 @@ export default function SurveyList() {
         {/* Standard Pagination Footer */}
         <TablePaginationFooter table={table} totalRows={totalRows} />
       </BlankCard>
+
+      {/* Work Order Handoff Dialog */}
+      <Dialog
+        open={Boolean(handoffTargetSurvey)}
+        onClose={() => !submittingWo && setHandoffTargetSurvey(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Avatar sx={{ bgcolor: "primary.light", color: "primary.main", width: 36, height: 36 }}>
+              <IconBriefcase size={20} />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" fontWeight={700}>
+                Issue Contractor Work Order
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Survey Ref: {handoffTargetSurvey?.reference} • Baseline: £
+                {Number(handoffTargetSurvey?.baseline_total || 0).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </Typography>
+            </Box>
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1.5,
+                bgcolor: "grey.50",
+                border: "1px dashed",
+                borderColor: "grey.300",
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                This will create an official contractor/subcontractor work order snapshotting
+                the approved scope items and rates. The original commercial baseline of{" "}
+                <strong>
+                  £
+                  {Number(handoffTargetSurvey?.baseline_total || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </strong>{" "}
+                will be preserved. Any future scope changes must be handled via formal Variation Orders.
+              </Typography>
+            </Box>
+
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <CustomTextField
+                  select
+                  fullWidth
+                  label="Assign Contractor / Subcontractor"
+                  value={woForm.contractor_id}
+                  onChange={(e: any) => {
+                    const selId = e.target.value;
+                    const found = surveyors.find((s) => String(s.id) === String(selId));
+                    setWoForm((prev) => ({
+                      ...prev,
+                      contractor_id: selId,
+                      contractor_name: found ? found.name : prev.contractor_name,
+                    }));
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>Select from registered users</em>
+                  </MenuItem>
+                  {surveyors.map((s) => (
+                    <MenuItem key={s.id} value={String(s.id)}>
+                      {s.name} {s.email ? `(${s.email})` : ""}
+                    </MenuItem>
+                  ))}
+                </CustomTextField>
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <CustomTextField
+                  fullWidth
+                  label="Contractor Name / Firm"
+                  placeholder="e.g. Acme Demolition Ltd"
+                  value={woForm.contractor_name}
+                  onChange={(e: any) =>
+                    setWoForm((prev) => ({ ...prev, contractor_name: e.target.value }))
+                  }
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <CustomTextField
+                  fullWidth
+                  label="Trade / Package Name"
+                  placeholder="e.g. General Building Works, Strip Out, Electrical"
+                  value={woForm.trade_name}
+                  onChange={(e: any) =>
+                    setWoForm((prev) => ({ ...prev, trade_name: e.target.value }))
+                  }
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <CustomTextField
+                  fullWidth
+                  type="date"
+                  label="Scheduled Start Date"
+                  value={woForm.start_date}
+                  onChange={(e: any) =>
+                    setWoForm((prev) => ({ ...prev, start_date: e.target.value }))
+                  }
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <CustomTextField
+                  fullWidth
+                  type="date"
+                  label="Target Completion Date"
+                  value={woForm.target_completion_date}
+                  onChange={(e: any) =>
+                    setWoForm((prev) => ({ ...prev, target_completion_date: e.target.value }))
+                  }
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <CustomTextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  label="Handoff Notes & Instructions"
+                  placeholder="Site access details, safety precautions, handover conditions..."
+                  value={woForm.notes}
+                  onChange={(e: any) =>
+                    setWoForm((prev) => ({ ...prev, notes: e.target.value }))
+                  }
+                />
+              </Grid>
+            </Grid>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setHandoffTargetSurvey(null)} disabled={submittingWo}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={submittingWo ? <CircularProgress size={16} color="inherit" /> : <IconBriefcase size={18} />}
+            onClick={handleCreateWorkOrder}
+            disabled={submittingWo}
+          >
+            {submittingWo ? "Issuing Work Order..." : "Issue Work Order"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={Boolean(deleteTargetId)} onClose={() => setDeleteTargetId(null)}>

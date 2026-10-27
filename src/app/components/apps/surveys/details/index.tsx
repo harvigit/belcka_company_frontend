@@ -30,6 +30,11 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  AlertTitle,
 } from "@mui/material";
 import {
   IconArrowLeft,
@@ -52,11 +57,31 @@ import {
   IconCalculator,
   IconLock,
   IconAlertTriangle,
+  IconDownload,
+  IconPrinter,
+  IconEye,
+  IconFileDescription,
+  IconCoins,
+  IconReceiptTax,
+  IconClock,
+  IconX,
+  IconBriefcase,
+  IconPlus,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import BlankCard from "@/app/components/shared/BlankCard";
-import { Survey, SurveyItem, SurveyStatus } from "../types";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import {
+  Survey,
+  SurveyItem,
+  SurveyStatus,
+  SurveyScopeItem,
+  SurveyWorkOrder,
+  SurveyVariationOrder,
+} from "../types";
+import { exportSurveyReportToPdf } from "./pdf/surveyPdfExport";
+import SurveyPrintableReport from "./pdf/SurveyPrintableReport";
 
 const statusColorMap: Record<
   SurveyStatus,
@@ -99,34 +124,197 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
   // Accordion expanded state
   const [expandedRooms, setExpandedRooms] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    const fetchSurvey = async () => {
-      setLoading(true);
-      try {
-        const res = await api.get(`surveys/${id}`);
-        if (res.data?.IsSuccess) {
-          const loaded: Survey = res.data.info || res.data.data;
-          setSurvey(loaded);
+  // Contractors list for Work Order Handoff
+  const [contractors, setContractors] = useState<{ id: number; name: string; email?: string }[]>([]);
 
-          // Default all rooms expanded
-          const exp: Record<string, boolean> = {};
-          (loaded.rooms || []).forEach((r) => {
-            exp[String(r.id)] = true;
-          });
-          setExpandedRooms(exp);
-        } else {
-          setSurvey(null);
+  // Work Order Handoff Dialog State
+  const [woDialogOpen, setWoDialogOpen] = useState(false);
+  const [submittingWo, setSubmittingWo] = useState(false);
+  const [woForm, setWoForm] = useState({
+    contractor_id: "",
+    contractor_name: "",
+    trade_name: "",
+    start_date: "",
+    target_completion_date: "",
+    notes: "",
+  });
+
+  // Variation Order Dialog State
+  const [voDialogOpen, setVoDialogOpen] = useState(false);
+  const [submittingVo, setSubmittingVo] = useState(false);
+  const [actioningVoId, setActioningVoId] = useState<number | null>(null);
+  const [voForm, setVoForm] = useState({
+    reason: "",
+    amount: "",
+    notes: "",
+  });
+
+  // PDF Export & Preview State
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const reportPrintRef = React.useRef<HTMLDivElement>(null);
+
+  const handleExportPdf = async () => {
+    if (!survey || !reportPrintRef.current) return;
+    try {
+      setExportingPdf(true);
+      toast.loading("Generating professional survey PDF report...", { id: "pdf-export" });
+      const filename = `${survey.reference || `SURVEY-${survey.id}`}-Inspection-Report.pdf`;
+      await exportSurveyReportToPdf(reportPrintRef.current, filename);
+      toast.success("PDF survey report downloaded successfully!", { id: "pdf-export" });
+    } catch (err: any) {
+      console.error("PDF export failed:", err);
+      toast.error(err?.message || "Failed to generate PDF report", { id: "pdf-export" });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const fetchSurvey = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`surveys/${id}`);
+      if (res.data?.IsSuccess) {
+        const loaded: Survey = res.data.info || res.data.data;
+        setSurvey(loaded);
+
+        // Default all rooms expanded
+        const exp: Record<string, boolean> = {};
+        (loaded.rooms || []).forEach((r) => {
+          exp[String(r.id)] = true;
+        });
+        setExpandedRooms(exp);
+      } else {
+        setSurvey(null);
+      }
+    } catch (err) {
+      console.error("Failed to load survey details", err);
+      setSurvey(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    void fetchSurvey();
+  }, [fetchSurvey]);
+
+  // Load registered contractors / users
+  useEffect(() => {
+    const loadContractors = async () => {
+      try {
+        const res = await api.get("/user/list");
+        if (res.data?.info) {
+          setContractors(
+            res.data.info.map((u: any) => ({
+              id: u.id,
+              name: `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email || `User #${u.id}`,
+              email: u.email,
+            }))
+          );
         }
       } catch (err) {
-        console.error("Failed to load survey details", err);
-        setSurvey(null);
-      } finally {
-        setLoading(false);
+        console.error("Failed to load user list", err);
       }
     };
+    void loadContractors();
+  }, []);
 
-    void fetchSurvey();
-  }, [id]);
+  const handleOpenHandoff = () => {
+    if (!survey) return;
+    setWoForm({
+      contractor_id: survey.surveyor_id ? String(survey.surveyor_id) : "",
+      contractor_name: survey.surveyor_name || "",
+      trade_name: "",
+      start_date: new Date().toISOString().split("T")[0],
+      target_completion_date: "",
+      notes: `Handoff from survey ${survey.reference}. Baseline total: £${Number(survey.baseline_total || 0).toFixed(2)}.`,
+    });
+    setWoDialogOpen(true);
+  };
+
+  const handleCreateWorkOrder = async () => {
+    if (!survey) return;
+    try {
+      setSubmittingWo(true);
+      const res = await api.post(`/surveys/${survey.id}/work-order`, {
+        contractor_id: woForm.contractor_id ? Number(woForm.contractor_id) : undefined,
+        contractor_name: woForm.contractor_name.trim() || undefined,
+        trade_name: woForm.trade_name.trim() || undefined,
+        start_date: woForm.start_date || undefined,
+        target_completion_date: woForm.target_completion_date || undefined,
+        notes: woForm.notes.trim() || undefined,
+      });
+
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message || "Work order successfully issued!");
+        setWoDialogOpen(false);
+        void fetchSurvey();
+      } else {
+        toast.error(res.data?.message || "Failed to issue work order");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to issue work order");
+    } finally {
+      setSubmittingWo(false);
+    }
+  };
+
+  const handleCreateVariationOrder = async () => {
+    if (!survey) return;
+    if (!voForm.reason.trim()) {
+      toast.error("Please provide a reason for the variation order");
+      return;
+    }
+    const amt = parseFloat(voForm.amount);
+    if (isNaN(amt)) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    try {
+      setSubmittingVo(true);
+      const res = await api.post(`/surveys/${survey.id}/variation-orders`, {
+        reason: voForm.reason.trim(),
+        amount: amt,
+        notes: voForm.notes.trim() || undefined,
+      });
+
+      if (res.data?.IsSuccess) {
+        toast.success("Variation order requested successfully!");
+        setVoDialogOpen(false);
+        setVoForm({ reason: "", amount: "", notes: "" });
+        void fetchSurvey();
+      } else {
+        toast.error(res.data?.message || "Failed to create variation order");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to create variation order");
+    } finally {
+      setSubmittingVo(false);
+    }
+  };
+
+  const handleUpdateVoStatus = async (voId: number, nextStatus: "approved" | "rejected") => {
+    if (!survey) return;
+    try {
+      setActioningVoId(voId);
+      const res = await api.patch(`/surveys/${survey.id}/variation-orders/${voId}/status`, {
+        status: nextStatus,
+      });
+
+      if (res.data?.IsSuccess) {
+        toast.success(`Variation order #${voId} has been ${nextStatus}!`);
+        void fetchSurvey();
+      } else {
+        toast.error(res.data?.message || "Failed to update variation order");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to update variation order");
+    } finally {
+      setActioningVoId(null);
+    }
+  };
 
   const toggleRoomAccordion = (roomId: string | number) => {
     setExpandedRooms((prev) => ({
@@ -378,6 +566,27 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
             )}
           </Menu>
 
+          <Button
+            variant="outlined"
+            color="inherit"
+            startIcon={<IconEye size={18} />}
+            onClick={() => setPreviewOpen(true)}
+            sx={{ fontWeight: 600, borderRadius: "8px" }}
+          >
+            Preview Report
+          </Button>
+
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={exportingPdf ? <CircularProgress size={16} /> : <IconDownload size={18} />}
+            onClick={handleExportPdf}
+            disabled={exportingPdf || !survey}
+            sx={{ fontWeight: 600, borderRadius: "8px" }}
+          >
+            {exportingPdf ? "Exporting PDF..." : "Export Report (PDF)"}
+          </Button>
+
           {["submitted", "qs_review", "completed", "frozen"].includes(survey.status) && (
             <Button
               variant="contained"
@@ -404,7 +613,32 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
             </Button>
           )}
 
-          {survey.status !== "frozen" && (
+          {/* Work Order Action Button */}
+          {(survey.status === "completed" || survey.status === "frozen") && survey.baseline_locked_at && (
+            (survey.work_order || survey.work_orders?.[0]) ? (
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<IconBriefcase size={18} />}
+                onClick={() => setTabValue(1)}
+                sx={{ fontWeight: 700, borderRadius: "8px" }}
+              >
+                WO: {(survey.work_order || survey.work_orders?.[0])?.reference}
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<IconBriefcase size={18} />}
+                onClick={handleOpenHandoff}
+                sx={{ fontWeight: 700, borderRadius: "8px" }}
+              >
+                Issue Work Order
+              </Button>
+            )
+          )}
+
+          {!["completed", "frozen"].includes(survey.status) && (
             <Button
               variant="contained"
               color="primary"
@@ -564,6 +798,21 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
             }}
           >
             <Tab label={`Rooms & Inspection Elements (${survey.rooms?.length || 0})`} />
+            <Tab
+              label={
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <span>Commercial Scope & Costing</span>
+                  {(survey.scope_items?.length || 0) > 0 && (
+                    <Chip
+                      size="small"
+                      label={survey.scope_items?.length}
+                      color={survey.baseline_locked_at ? "success" : "secondary"}
+                      sx={{ height: 20, fontSize: "0.72rem", fontWeight: 700 }}
+                    />
+                  )}
+                </Stack>
+              }
+            />
             <Tab label="Survey Details & Metadata" />
           </Tabs>
 
@@ -840,8 +1089,608 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
           </Box>
         )}
 
-        {/* Tab 1: Survey Metadata & Audit */}
-        {tabValue === 1 && (
+        {/* Tab 1: Commercial Scope & Costing */}
+        {tabValue === 1 && (() => {
+          const scopeItems = survey.scope_items || [];
+          const baseEstimate = scopeItems.reduce((acc, l) => acc + (Number(l.total_amount) || 0), 0);
+          const adjustSign = survey.scope_adjust_sign === -1 ? -1 : 1;
+          const adjustType = survey.scope_adjust_type || "percent";
+          const adjustValue = Number(survey.scope_adjust_value) || 0;
+          let adjustAmount = 0;
+          if (adjustType === "percent") {
+            adjustAmount = Math.round((baseEstimate * (adjustValue / 100) * adjustSign + Number.EPSILON) * 100) / 100;
+          } else {
+            adjustAmount = Math.round((adjustValue * adjustSign + Number.EPSILON) * 100) / 100;
+          }
+          const baselineTotal =
+            survey.baseline_total !== null && survey.baseline_total !== undefined
+              ? Number(survey.baseline_total)
+              : Math.max(0, baseEstimate + adjustAmount);
+
+          if (scopeItems.length === 0) {
+            return (
+              <Box p={6} textAlign="center">
+                <Avatar
+                  sx={{
+                    bgcolor: "secondary.light",
+                    color: "secondary.main",
+                    width: 64,
+                    height: 64,
+                    mx: "auto",
+                    mb: 2,
+                    borderRadius: "16px",
+                  }}
+                >
+                  <IconCalculator size={36} />
+                </Avatar>
+                <Typography variant="h6" fontWeight={700} gutterBottom>
+                  No Commercial Scope Generated Yet
+                </Typography>
+                <Typography variant="body2" color="text.secondary" maxWidth={540} mx="auto" mb={3}>
+                  Commercial scope line items, remedial measurements, and Schedule of Rates are compiled
+                  and priced by the Quantity Surveyor during the commercial assessment phase.
+                </Typography>
+                {["submitted", "qs_review", "completed", "frozen"].includes(survey.status) ? (
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<IconCalculator size={18} />}
+                    component={Link}
+                    href={`/apps/surveys/qs/${survey.id}`}
+                    sx={{ fontWeight: 700, borderRadius: "8px" }}
+                  >
+                    Open QS Assessment & Costing Studio
+                  </Button>
+                ) : (
+                  <Alert severity="info" sx={{ maxWidth: 520, mx: "auto", textAlign: "left" }}>
+                    Commercial scope becomes available once the site inspection has been submitted for QS review.
+                  </Alert>
+                )}
+              </Box>
+            );
+          }
+
+          return (
+            <Box p={3}>
+              {/* Financial KPI Cards */}
+              <Grid container spacing={2.5} mb={3}>
+                <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                  <BlankCard sx={{ height: "100%", p: 2 }}>
+                    <Stack direction="row" spacing={1.5} alignItems="center" mb={1}>
+                      <Avatar sx={{ bgcolor: "primary.light", color: "primary.main", width: 38, height: 38, borderRadius: "8px" }}>
+                        <IconCoins size={20} />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5, textTransform: "uppercase" }}>
+                          Base Schedule Total
+                        </Typography>
+                        <Typography variant="subtitle1" fontWeight={800}>
+                          £{baseEstimate.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary">
+                      {scopeItems.length} remedial line item(s)
+                    </Typography>
+                  </BlankCard>
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                  <BlankCard sx={{ height: "100%", p: 2 }}>
+                    <Stack direction="row" spacing={1.5} alignItems="center" mb={1}>
+                      <Avatar sx={{ bgcolor: "warning.light", color: "warning.main", width: 38, height: 38, borderRadius: "8px" }}>
+                        <IconReceiptTax size={20} />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5, textTransform: "uppercase" }}>
+                          Scope Adjustment
+                        </Typography>
+                        <Typography variant="subtitle1" fontWeight={800} color={adjustSign === -1 ? "error.main" : "text.primary"}>
+                          {adjustSign === -1 ? "-" : "+"}£{Math.abs(adjustAmount).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary">
+                      {adjustType === "percent" ? `${adjustValue}% ${adjustSign === -1 ? "Discount" : "Contingency"}` : "Fixed Commercial Adjustment"}
+                    </Typography>
+                  </BlankCard>
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                  <BlankCard sx={{ height: "100%", p: 2, border: "2px solid", borderColor: survey.baseline_locked_at ? "success.main" : "primary.main" }}>
+                    <Stack direction="row" spacing={1.5} alignItems="center" mb={1}>
+                      <Avatar sx={{ bgcolor: "success.light", color: "success.main", width: 38, height: 38, borderRadius: "8px" }}>
+                        <IconLock size={20} />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5, textTransform: "uppercase" }}>
+                          Approved Baseline
+                        </Typography>
+                        <Typography variant="subtitle1" fontWeight={800} color="success.main">
+                          £{baselineTotal.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary">
+                      {survey.baseline_locked_at ? `Baseline locked ${new Date(survey.baseline_locked_at).toLocaleDateString()}` : "Pending final baseline lock"}
+                    </Typography>
+                  </BlankCard>
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                  <BlankCard sx={{ height: "100%", p: 2 }}>
+                    <Stack direction="row" spacing={1.5} alignItems="center" mb={1}>
+                      <Avatar sx={{ bgcolor: "info.light", color: "info.main", width: 38, height: 38, borderRadius: "8px" }}>
+                        <IconClock size={20} />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5, textTransform: "uppercase" }}>
+                          Target Duration
+                        </Typography>
+                        <Typography variant="subtitle1" fontWeight={800}>
+                          {survey.estimated_duration_days ? `${survey.estimated_duration_days} Days` : "—"}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary">
+                      Estimated remedial period
+                    </Typography>
+                  </BlankCard>
+                </Grid>
+              </Grid>
+
+              {/* Status Alert Banner */}
+              {survey.baseline_locked_at ? (
+                <Alert severity="success" icon={<IconLock size={20} />} sx={{ mb: 3 }}>
+                  <AlertTitle sx={{ fontWeight: 700 }}>Commercial Baseline Approved & Locked</AlertTitle>
+                  The commercial remediation baseline totaling <strong>£{baselineTotal.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> was approved on {new Date(survey.baseline_locked_at).toLocaleDateString()}. All scope items and contractor rates are frozen for project execution.
+                </Alert>
+              ) : (
+                <Alert
+                  severity="info"
+                  icon={<IconInfoCircle size={20} />}
+                  action={
+                    ["submitted", "qs_review", "completed", "frozen"].includes(survey.status) && (
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="secondary"
+                        component={Link}
+                        href={`/apps/surveys/qs/${survey.id}`}
+                        sx={{ fontWeight: 600, textTransform: "none" }}
+                      >
+                        Edit in QS Studio
+                      </Button>
+                    )
+                  }
+                  sx={{ mb: 3 }}
+                >
+                  <AlertTitle sx={{ fontWeight: 700 }}>Preliminary Commercial Assessment</AlertTitle>
+                  These scope quantities and unit rates have been compiled by the QS team and remain subject to final verification and baseline lock.
+                </Alert>
+              )}
+
+              {/* Scope & Schedule of Rates Table */}
+              <Typography variant="h6" fontWeight={700} mb={1.5}>
+                Approved Schedule of Rates & Works
+              </Typography>
+
+              <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: "8px", mb: 3, overflowX: "auto" }}>
+                <Table size="small">
+                  <TableHead sx={{ bgcolor: "grey.100" }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700, width: 80 }}>Item #</TableCell>
+                      <TableCell sx={{ fontWeight: 700, width: 180 }}>Room & Element</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Remedial Scope & Description</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, width: 90 }}>Qty</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, width: 80 }}>Unit</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, width: 120 }}>Unit Rate (£)</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, width: 130 }}>Total Amount (£)</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, width: 110 }}>QS Review</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {scopeItems.map((item, idx) => (
+                      <TableRow key={item.id || idx} hover sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
+                        <TableCell sx={{ fontWeight: 700, color: "text.secondary" }}>
+                          {item.item_code || `#${idx + 1}`}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={600}>
+                            {item.room_name || "General"}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {item.element_name || "—"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">{item.description}</Typography>
+                          {item.notes && (
+                            <Typography variant="caption" color="text.secondary" display="block" fontStyle="italic" mt={0.5}>
+                              Note: {item.notes}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" fontWeight={600}>
+                            {Number(item.quantity).toLocaleString("en-GB", { maximumFractionDigits: 2 })}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip size="small" variant="outlined" label={item.unit || "item"} sx={{ height: 22, fontSize: "0.75rem" }} />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2">
+                            £{Number(item.unit_rate || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" fontWeight={700}>
+                            £{Number(item.total_amount || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          {item.is_reviewed ? (
+                            <Chip size="small" color="success" label="Reviewed" sx={{ fontWeight: 600, height: 22, fontSize: "0.75rem" }} />
+                          ) : (
+                            <Chip size="small" color="warning" variant="outlined" label="Pending" sx={{ fontWeight: 600, height: 22, fontSize: "0.75rem" }} />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Financial Reconciliation Cards & Details */}
+              <Grid container spacing={3} alignItems="flex-start" mb={3}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <BlankCard sx={{ p: 2.5, height: "100%" }}>
+                    <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
+                      Commercial Execution & Duration
+                    </Typography>
+                    <Stack spacing={1.5}>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
+                          ESTIMATED PROJECT DURATION
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600} mt={0.5}>
+                          {survey.estimated_duration_days ? `${survey.estimated_duration_days} working days` : "Not scheduled"}
+                        </Typography>
+                      </Box>
+                      {survey.rework_notes && (
+                        <Box p={1.5} bgcolor="warning.light" borderRadius="6px">
+                          <Typography variant="caption" color="warning.dark" fontWeight={700} display="block">
+                            SURVEY REWORK / SCOPE INSTRUCTIONS
+                          </Typography>
+                          <Typography variant="body2" color="warning.dark" mt={0.5}>
+                            {survey.rework_notes}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Stack>
+                  </BlankCard>
+                </Grid>
+
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <BlankCard sx={{ p: 2.5, height: "100%" }}>
+                    <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
+                      Financial Reconciliation
+                    </Typography>
+                    <Stack spacing={1.5}>
+                      <Stack direction="row" justifyContent="space-between">
+                        <Typography variant="body2" color="text.secondary">
+                          Base Schedule Total ({scopeItems.length} items):
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          £{baseEstimate.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                      </Stack>
+                      <Stack direction="row" justifyContent="space-between">
+                        <Typography variant="body2" color="text.secondary">
+                          Commercial Adjustment ({adjustSign === -1 ? "-" : "+"}{adjustType === "percent" ? `${adjustValue}%` : `£${adjustValue}`}):
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600} color={adjustSign === -1 ? "error.main" : "text.primary"}>
+                          {adjustSign === -1 ? "-" : "+"}£{Math.abs(adjustAmount).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                      </Stack>
+                      <Divider />
+                      <Stack direction="row" justifyContent="space-between" alignItems="baseline">
+                        <Typography variant="subtitle1" fontWeight={700}>
+                          Approved Baseline Total:
+                        </Typography>
+                        <Typography variant="h5" fontWeight={800} color="primary.main">
+                          £{baselineTotal.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  </BlankCard>
+                </Grid>
+              </Grid>
+
+              {/* Contractor Work Order & Variations (Visible for completed / frozen surveys) */}
+              {(survey.status === "completed" || survey.status === "frozen") && (() => {
+                const wo = survey.work_order || (survey.work_orders && survey.work_orders[0]);
+                const vos: SurveyVariationOrder[] = survey.variation_orders || (wo?.variation_orders) || [];
+                const approvedVos = vos.filter((v) => v.status === "approved");
+                const totalApprovedVoAmount = approvedVos.reduce((sum, v) => sum + Number(v.amount || 0), 0);
+                const currentTotal = Number(wo?.total_amount ?? ((Number(wo?.baseline_total || survey.baseline_total || 0)) + totalApprovedVoAmount));
+
+                return (
+                  <Box mb={3}>
+                    {wo ? (
+                      <BlankCard sx={{ p: 3, border: "1.5px solid", borderColor: "primary.light" }}>
+                        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={2} mb={2.5}>
+                          <Stack direction="row" spacing={1.5} alignItems="center">
+                            <Avatar sx={{ bgcolor: "primary.main", color: "white", width: 44, height: 44, borderRadius: "10px" }}>
+                              <IconBriefcase size={24} />
+                            </Avatar>
+                            <Box>
+                              <Stack direction="row" spacing={1} alignItems="center">
+                                <Typography variant="h6" fontWeight={800}>
+                                  Contractor Work Order: {wo.reference}
+                                </Typography>
+                                <Chip
+                                  size="small"
+                                  label={wo.status.toUpperCase()}
+                                  color={wo.status === "active" ? "primary" : wo.status === "completed" ? "success" : "default"}
+                                  sx={{ fontWeight: 700, fontSize: "0.72rem", height: 22 }}
+                                />
+                              </Stack>
+                              <Typography variant="caption" color="text.secondary">
+                                Issued {wo.issued_at ? new Date(wo.issued_at).toLocaleDateString() : "—"} • Baseline Total Snapshot: £{Number(wo.baseline_total || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </Typography>
+                            </Box>
+                          </Stack>
+
+                          <Button
+                            variant="outlined"
+                            color="secondary"
+                            startIcon={<IconPlus size={16} />}
+                            onClick={() => setVoDialogOpen(true)}
+                            sx={{ fontWeight: 700, borderRadius: "8px", textTransform: "none" }}
+                          >
+                            Request Variation Order
+                          </Button>
+                        </Stack>
+
+                        <Grid container spacing={2.5} mb={3}>
+                          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                            <Box p={2} bgcolor="grey.50" borderRadius="8px" border="1px solid" borderColor="grey.200">
+                              <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ textTransform: "uppercase" }}>
+                                Assigned Contractor
+                              </Typography>
+                              <Typography variant="subtitle2" fontWeight={700} mt={0.5}>
+                                {wo.contractor_name || "Direct Subcontractor"}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Trade: {wo.trade_name || "General Works"}
+                              </Typography>
+                            </Box>
+                          </Grid>
+
+                          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                            <Box p={2} bgcolor="grey.50" borderRadius="8px" border="1px solid" borderColor="grey.200">
+                              <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ textTransform: "uppercase" }}>
+                                Schedule & Period
+                              </Typography>
+                              <Typography variant="subtitle2" fontWeight={700} mt={0.5}>
+                                {wo.start_date ? new Date(wo.start_date).toLocaleDateString() : "TBD"} – {wo.target_completion_date ? new Date(wo.target_completion_date).toLocaleDateString() : "TBD"}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {wo.duration_days ? `${wo.duration_days} Days Scheduled` : "Estimated duration"}
+                              </Typography>
+                            </Box>
+                          </Grid>
+
+                          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                            <Box p={2} bgcolor="grey.50" borderRadius="8px" border="1px solid" borderColor="grey.200">
+                              <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ textTransform: "uppercase" }}>
+                                Locked Baseline
+                              </Typography>
+                              <Typography variant="subtitle2" fontWeight={800} color="success.main" mt={0.5}>
+                                £{Number(wo.baseline_total || survey.baseline_total || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Immutable contract baseline
+                              </Typography>
+                            </Box>
+                          </Grid>
+
+                          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                            <Box p={2} bgcolor="primary.light" borderRadius="8px" border="1px solid" borderColor="primary.main">
+                              <Typography variant="caption" color="primary.dark" fontWeight={700} display="block" sx={{ textTransform: "uppercase" }}>
+                                Current Contract Value
+                              </Typography>
+                              <Typography variant="subtitle2" fontWeight={800} color="primary.dark" mt={0.5}>
+                                £{currentTotal.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </Typography>
+                              <Typography variant="caption" color="primary.dark">
+                                Baseline + £{totalApprovedVoAmount.toFixed(2)} variations
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        </Grid>
+
+                        {wo.notes && (
+                          <Box p={1.5} bgcolor="grey.50" borderRadius="6px" mb={2.5}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
+                              WORK ORDER INSTRUCTIONS & NOTES
+                            </Typography>
+                            <Typography variant="body2" mt={0.5}>
+                              {wo.notes}
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {/* Variation Orders List */}
+                        <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
+                          Variation Orders ({vos.length})
+                        </Typography>
+
+                        {vos.length === 0 ? (
+                          <Box p={2.5} textAlign="center" bgcolor="grey.50" borderRadius="8px" border="1px dashed" borderColor="grey.300">
+                            <Typography variant="body2" color="text.secondary">
+                              No variation orders requested yet. Any site alterations, extra scope, or rate changes must be requested as formal variation orders to protect baseline integrity.
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: "8px" }}>
+                            <Table size="small">
+                              <TableHead sx={{ bgcolor: "grey.100" }}>
+                                <TableRow>
+                                  <TableCell sx={{ fontWeight: 700, width: 140 }}>VO Reference</TableCell>
+                                  <TableCell sx={{ fontWeight: 700 }}>Reason & Description</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 700, width: 120 }}>Amount (£)</TableCell>
+                                  <TableCell align="center" sx={{ fontWeight: 700, width: 120 }}>Status</TableCell>
+                                  <TableCell sx={{ fontWeight: 700, width: 140 }}>Created Date</TableCell>
+                                  <TableCell align="center" sx={{ fontWeight: 700, width: 150 }}>QS / Admin Action</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {vos.map((vo: any) => (
+                                  <TableRow key={vo.id} hover>
+                                    <TableCell sx={{ fontWeight: 700, color: "primary.main" }}>
+                                      {vo.reference}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography variant="body2" fontWeight={600}>
+                                        {vo.reason}
+                                      </Typography>
+                                      {vo.notes && (
+                                        <Typography variant="caption" color="text.secondary" display="block">
+                                          {vo.notes}
+                                        </Typography>
+                                      )}
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      <Typography variant="body2" fontWeight={700} color={Number(vo.amount) < 0 ? "error.main" : "text.primary"}>
+                                        {Number(vo.amount) < 0 ? "-" : "+"}£{Math.abs(Number(vo.amount)).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell align="center">
+                                      <Chip
+                                        size="small"
+                                        label={vo.status.toUpperCase()}
+                                        color={vo.status === "approved" ? "success" : vo.status === "rejected" ? "error" : "warning"}
+                                        sx={{ fontWeight: 700, fontSize: "0.7rem", height: 20 }}
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography variant="caption" color="text.secondary">
+                                        {vo.created_at ? new Date(vo.created_at).toLocaleDateString() : "—"}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell align="center">
+                                      {vo.status === "pending" ? (
+                                        <Stack direction="row" spacing={1} justifyContent="center">
+                                          <Button
+                                            size="small"
+                                            variant="contained"
+                                            color="success"
+                                            disabled={actioningVoId === vo.id}
+                                            onClick={() => handleUpdateVoStatus(vo.id, "approved")}
+                                            sx={{ fontSize: "0.72rem", py: 0.25, px: 1, minWidth: 64, textTransform: "none" }}
+                                          >
+                                            Approve
+                                          </Button>
+                                          <Button
+                                            size="small"
+                                            variant="outlined"
+                                            color="error"
+                                            disabled={actioningVoId === vo.id}
+                                            onClick={() => handleUpdateVoStatus(vo.id, "rejected")}
+                                            sx={{ fontSize: "0.72rem", py: 0.25, px: 1, minWidth: 64, textTransform: "none" }}
+                                          >
+                                            Reject
+                                          </Button>
+                                        </Stack>
+                                      ) : (
+                                        <Typography variant="caption" color="text.secondary">
+                                          {vo.status === "approved" ? "Approved & Reconciled" : "Rejected"}
+                                        </Typography>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        )}
+                      </BlankCard>
+                    ) : (
+                      <BlankCard sx={{ p: 3, bgcolor: "grey.50", border: "1.5px dashed", borderColor: "success.main" }}>
+                        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={2}>
+                          <Stack direction="row" spacing={2} alignItems="center">
+                            <Avatar sx={{ bgcolor: "success.light", color: "success.main", width: 48, height: 48, borderRadius: "10px" }}>
+                              <IconLock size={26} />
+                            </Avatar>
+                            <Box>
+                              <Typography variant="h6" fontWeight={700}>
+                                Commercial Baseline Locked & Ready for Contractor Handoff
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Approved commercial scope (£{Number(survey.baseline_total || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) is ready to be converted into an official contractor work order.
+                              </Typography>
+                            </Box>
+                          </Stack>
+
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<IconBriefcase size={18} />}
+                            onClick={handleOpenHandoff}
+                            sx={{ fontWeight: 700, borderRadius: "8px", px: 3, py: 1 }}
+                          >
+                            Issue Work Order
+                          </Button>
+                        </Stack>
+                      </BlankCard>
+                    )}
+                  </Box>
+                );
+              })()}
+
+              {/* Action Buttons in Tab 1 */}
+              <Stack direction="row" spacing={2} justifyContent="flex-end">
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  startIcon={<IconEye size={18} />}
+                  onClick={() => setPreviewOpen(true)}
+                  sx={{ fontWeight: 600, borderRadius: "8px" }}
+                >
+                  Preview Printable Report
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={exportingPdf ? <CircularProgress size={16} /> : <IconDownload size={18} />}
+                  onClick={handleExportPdf}
+                  disabled={exportingPdf}
+                  sx={{ fontWeight: 600, borderRadius: "8px" }}
+                >
+                  {exportingPdf ? "Generating PDF..." : "Export Report (PDF)"}
+                </Button>
+                {["submitted", "qs_review", "completed", "frozen"].includes(survey.status) && (
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<IconCalculator size={18} />}
+                    component={Link}
+                    href={`/apps/surveys/qs/${survey.id}`}
+                    sx={{ fontWeight: 700, borderRadius: "8px" }}
+                  >
+                    Open QS Assessment & Costing Studio
+                  </Button>
+                )}
+              </Stack>
+            </Box>
+          );
+        })()}
+
+        {/* Tab 2: Survey Metadata & Audit */}
+        {tabValue === 2 && (
           <Box p={3}>
             <Grid container spacing={3}>
               <Grid size={{ xs: 12, md: 6 }}>
@@ -944,6 +1793,342 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
           </Box>
         )}
       </BlankCard>
+
+      {/* Report Preview Modal Dialog */}
+      <Dialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "12px", maxHeight: "90vh" },
+        }}
+      >
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1.5 }}>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <IconFileDescription size={22} />
+            <Typography variant="h6" fontWeight={700}>
+              Survey Inspection & Commercial Report Preview
+            </Typography>
+          </Stack>
+          <IconButton size="small" onClick={() => setPreviewOpen(false)}>
+            <IconX size={20} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ bgcolor: "#f1f5f9", p: 3, display: "flex", justifyContent: "center" }}>
+          <Box
+            sx={{
+              boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
+              bgcolor: "#ffffff",
+              maxWidth: "100%",
+              overflowX: "auto",
+            }}
+          >
+            <SurveyPrintableReport survey={survey} />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, justifyContent: "space-between" }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            startIcon={<IconPrinter size={18} />}
+            onClick={() => window.print()}
+          >
+            Print
+          </Button>
+          <Stack direction="row" spacing={1.5}>
+            <Button variant="outlined" onClick={() => setPreviewOpen(false)}>
+              Close
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={exportingPdf ? <CircularProgress size={16} color="inherit" /> : <IconDownload size={18} />}
+              onClick={handleExportPdf}
+              disabled={exportingPdf}
+              sx={{ fontWeight: 700 }}
+            >
+              {exportingPdf ? "Generating PDF..." : "Download PDF"}
+            </Button>
+          </Stack>
+        </DialogActions>
+      </Dialog>
+
+      {/* Work Order Handoff Dialog */}
+      <Dialog
+        open={woDialogOpen}
+        onClose={() => !submittingWo && setWoDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Avatar sx={{ bgcolor: "primary.light", color: "primary.main", width: 36, height: 36 }}>
+              <IconBriefcase size={20} />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" fontWeight={700}>
+                Issue Contractor Work Order
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Survey Ref: {survey?.reference} • Baseline: £
+                {Number(survey?.baseline_total || 0).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </Typography>
+            </Box>
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1.5,
+                bgcolor: "grey.50",
+                border: "1px dashed",
+                borderColor: "grey.300",
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                This will create a legally binding contractor/subcontractor work order snapshotting
+                the approved scope items and rates. The original commercial baseline of{" "}
+                <strong>
+                  £
+                  {Number(survey?.baseline_total || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </strong>{" "}
+                will be preserved. Any future scope changes must be handled via formal Variation Orders.
+              </Typography>
+            </Box>
+
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <CustomTextField
+                  select
+                  fullWidth
+                  label="Assign Contractor / Subcontractor"
+                  value={woForm.contractor_id}
+                  onChange={(e: any) => {
+                    const selId = e.target.value;
+                    const found = contractors.find((s) => String(s.id) === String(selId));
+                    setWoForm((prev) => ({
+                      ...prev,
+                      contractor_id: selId,
+                      contractor_name: found ? found.name : prev.contractor_name,
+                    }));
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>Select from registered users</em>
+                  </MenuItem>
+                  {contractors.map((s) => (
+                    <MenuItem key={s.id} value={String(s.id)}>
+                      {s.name} {s.email ? `(${s.email})` : ""}
+                    </MenuItem>
+                  ))}
+                </CustomTextField>
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <CustomTextField
+                  fullWidth
+                  label="Contractor Name / Firm"
+                  placeholder="e.g. Acme Demolition Ltd"
+                  value={woForm.contractor_name}
+                  onChange={(e: any) =>
+                    setWoForm((prev) => ({ ...prev, contractor_name: e.target.value }))
+                  }
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <CustomTextField
+                  fullWidth
+                  label="Trade / Package Name"
+                  placeholder="e.g. General Building Works, Strip Out, Electrical"
+                  value={woForm.trade_name}
+                  onChange={(e: any) =>
+                    setWoForm((prev) => ({ ...prev, trade_name: e.target.value }))
+                  }
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <CustomTextField
+                  fullWidth
+                  type="date"
+                  label="Scheduled Start Date"
+                  value={woForm.start_date}
+                  onChange={(e: any) =>
+                    setWoForm((prev) => ({ ...prev, start_date: e.target.value }))
+                  }
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <CustomTextField
+                  fullWidth
+                  type="date"
+                  label="Target Completion Date"
+                  value={woForm.target_completion_date}
+                  onChange={(e: any) =>
+                    setWoForm((prev) => ({ ...prev, target_completion_date: e.target.value }))
+                  }
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <CustomTextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  label="Handoff Notes & Instructions"
+                  placeholder="Site access details, safety precautions, handover conditions..."
+                  value={woForm.notes}
+                  onChange={(e: any) =>
+                    setWoForm((prev) => ({ ...prev, notes: e.target.value }))
+                  }
+                />
+              </Grid>
+            </Grid>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setWoDialogOpen(false)} disabled={submittingWo}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={submittingWo ? <CircularProgress size={16} color="inherit" /> : <IconBriefcase size={18} />}
+            onClick={handleCreateWorkOrder}
+            disabled={submittingWo}
+          >
+            {submittingWo ? "Issuing Work Order..." : "Issue Work Order"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Request Variation Order Dialog */}
+      <Dialog
+        open={voDialogOpen}
+        onClose={() => !submittingVo && setVoDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Avatar sx={{ bgcolor: "warning.light", color: "warning.main", width: 36, height: 36 }}>
+              <IconFileDescription size={20} />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" fontWeight={700}>
+                Request Variation Order (VO)
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Work Order: {(survey?.work_order || survey?.work_orders?.[0])?.reference || survey?.reference}
+              </Typography>
+            </Box>
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1.5,
+                bgcolor: "grey.50",
+                border: "1px dashed",
+                borderColor: "grey.300",
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Submit extra scope, unforeseen site conditions, or contractual value adjustments.
+                Once submitted, a Quantity Surveyor (QS) or Admin must approve this Variation Order before it is reconciled into the current contract total.
+              </Typography>
+            </Box>
+
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12 }}>
+                <CustomTextField
+                  fullWidth
+                  required
+                  label="Variation Reason / Justification"
+                  placeholder="e.g. Discovered rotted timber joists requiring replacement behind bathroom wall"
+                  value={voForm.reason}
+                  onChange={(e: any) =>
+                    setVoForm((prev) => ({ ...prev, reason: e.target.value }))
+                  }
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <CustomTextField
+                  fullWidth
+                  required
+                  type="number"
+                  label="Variation Cost (£ Amount)"
+                  placeholder="e.g. 850.00"
+                  value={voForm.amount}
+                  onChange={(e: any) =>
+                    setVoForm((prev) => ({ ...prev, amount: e.target.value }))
+                  }
+                  helperText="Positive value for additional costs; negative value for scope reductions/credits."
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <CustomTextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  label="Detailed Notes / Schedule Reference"
+                  placeholder="Additional trade details, materials specification, or site photos reference..."
+                  value={voForm.notes}
+                  onChange={(e: any) =>
+                    setVoForm((prev) => ({ ...prev, notes: e.target.value }))
+                  }
+                />
+              </Grid>
+            </Grid>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setVoDialogOpen(false)} disabled={submittingVo}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={submittingVo ? <CircularProgress size={16} color="inherit" /> : <IconCheck size={18} />}
+            onClick={handleCreateVariationOrder}
+            disabled={submittingVo}
+          >
+            {submittingVo ? "Submitting..." : "Submit Variation Order"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Off-screen render container for PDF export generator */}
+      <Box
+        sx={{
+          position: "fixed",
+          left: -99999,
+          top: 0,
+          width: "794px",
+          opacity: 0,
+          pointerEvents: "none",
+          zIndex: -1,
+        }}
+      >
+        <SurveyPrintableReport survey={survey} containerRef={reportPrintRef} />
+      </Box>
     </Box>
   );
 }

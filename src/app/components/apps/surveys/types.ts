@@ -114,6 +114,10 @@ export interface Survey {
   baseline_locked_at?: string | null;
   baseline_locked_by?: number | null;
   baseline_total?: number | null;
+  scope_items?: SurveyScopeItem[];
+  work_orders?: SurveyWorkOrder[];
+  work_order?: SurveyWorkOrder | null;
+  variation_orders?: SurveyVariationOrder[];
   rooms: SurveyRoom[];
   notes?: string;
   progress?: {
@@ -235,3 +239,53 @@ export interface SurveyScopeData {
   scope_items: SurveyScopeItem[];
   totals: SurveyScopeTotals;
 }
+
+export interface SurveyWorkOrderItem {
+  id: number;
+  work_order_id: number;
+  survey_scope_item_id?: number | null;
+  item_code?: string | null;
+  room_name?: string | null;
+  element_name?: string | null;
+  description: string;
+  quantity: number;
+  unit: string;
+  unit_rate: number;
+  total_amount: number;
+  notes?: string | null;
+  sort_order?: number;
+}
+
+export interface SurveyVariationOrder {
+  id: number;
+  survey_id: number;
+  work_order_id?: number | null;
+  reference: string;
+  reason: string;
+  amount: number;
+  status: "pending" | "approved" | "rejected";
+  notes?: string | null;
+  approved_at?: string | null;
+  created_at: string;
+}
+
+export interface SurveyWorkOrder {
+  id: number;
+  survey_id: number;
+  reference: string;
+  contractor_id?: number | null;
+  contractor_name?: string | null;
+  trade_id?: number | null;
+  trade_name?: string | null;
+  status: string;
+  baseline_total: number;
+  total_amount: number;
+  start_date?: string | null;
+  target_completion_date?: string | null;
+  duration_days?: number | null;
+  notes?: string | null;
+  issued_at: string;
+  items?: SurveyWorkOrderItem[];
+  variation_orders?: SurveyVariationOrder[];
+}
+
