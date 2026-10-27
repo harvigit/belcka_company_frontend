@@ -23,9 +23,12 @@ import {
   IconItalic,
   IconList,
   IconListNumbers,
+  IconForms,
   IconPlus,
   IconSeparatorHorizontal,
 } from "@tabler/icons-react";
+import FormFieldDialog from "./FormFieldDialog";
+import { extractFormFields } from "./contracts-api";
 import type { ContractField } from "./contracts-api";
 
 interface Props {
@@ -38,6 +41,7 @@ interface Props {
 
 const ContractEditor = ({ value, onChange, fields, onReady }: Props) => {
   const [fieldMenu, setFieldMenu] = useState<HTMLElement | null>(null);
+  const [formFieldOpen, setFormFieldOpen] = useState(false);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -122,7 +126,22 @@ const ContractEditor = ({ value, onChange, fields, onReady }: Props) => {
             </MenuItem>
           ))}
         </Menu>
+        <Button
+          size="small"
+          variant="text"
+          startIcon={<IconForms size={16} />}
+          onClick={() => setFormFieldOpen(true)}
+          sx={{ bgcolor: "primary.light" }}
+        >
+          Form field
+        </Button>
       </Stack>
+      <FormFieldDialog
+        open={formFieldOpen}
+        usedKeys={formFieldOpen ? extractFormFields(value).fields.map((f) => f.key) : []}
+        onClose={() => setFormFieldOpen(false)}
+        onInsert={(token) => editor?.chain().focus().insertContent(token).run()}
+      />
       <Box
         sx={{
           "& .contract-editor-content": {

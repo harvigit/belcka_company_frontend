@@ -11,6 +11,96 @@ export interface ContractField {
   placeholder?: string;
 }
 
+export const FORM_FIELD_TYPES = [
+  { value: "text", label: "Short text" },
+  { value: "textarea", label: "Long text" },
+  { value: "number", label: "Number" },
+  { value: "date", label: "Date" },
+  { value: "checkbox", label: "Tick box" },
+  { value: "select", label: "Choice (pick one)" },
+] as const;
+
+export type ContractFormFieldType = (typeof FORM_FIELD_TYPES)[number]["value"];
+
+/** An input the user fills in on the sign screen: {{form:key|type|Label|Option 1;Option 2|required}}. */
+export interface ContractFormField {
+  key: string;
+  type: ContractFormFieldType;
+  label: string;
+  options: string[];
+  required: boolean;
+}
+
+const FORM_RE = /\{\{\s*form:([^{}]*?)\s*\}\}/g;
+const decodeEntities = (value: string) =>
+  value
+    .replace(/&nbsp;|&#160;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+
+/** Same rules as the server (contract-html.util.ts), so the editor can flag mistakes as you type. */
+export const extractFormFields = (html: string): { fields: ContractFormField[]; errors: string[] } => {
+  const types = FORM_FIELD_TYPES.map((t) => t.value) as string[];
+  const fields = new Map<string, ContractFormField>();
+  const errors = new Set<string>();
+  for (const match of String(html ?? "").matchAll(FORM_RE)) {
+    const parts = decodeEntities(match[1].replace(/<[^>]*>/g, "")).split("|").map((p) => p.trim());
+    const key = parts[0] ?? "";
+    const type = (parts[1] || "text").toLowerCase();
+    if (!/^[a-z][a-z0-9_]{0,59}$/.test(key)) {
+      errors.add(`Form field "${key}" needs a key of lowercase letters, numbers and _ (e.g. principal_trade).`);
+      continue;
+    }
+    if (!types.includes(type)) {
+      errors.add(`Form field "${key}" has an unknown type "${parts[1]}".`);
+      continue;
+    }
+    const rest = parts.slice(3);
+    const optionsPart = rest.find((p) => p && !["required", "optional"].includes(p.toLowerCase()));
+    const options =
+      type === "select" && optionsPart
+        ? [...new Set(optionsPart.split(";").map((o) => o.trim()).filter(Boolean))]
+        : [];
+    if (type === "select" && options.length < 2) {
+      errors.add(`Form field "${key}" is a choice, so it needs at least two options separated by ";".`);
+      continue;
+    }
+    const field: ContractFormField = {
+      key,
+      type: type as ContractFormFieldType,
+      label: (parts[2] || key.replace(/_/g, " ")).slice(0, 190),
+      options,
+      required: rest.some((p) => p.toLowerCase() === "required"),
+    };
+    const seen = fields.get(key);
+    if (!seen) fields.set(key, field);
+    else if (JSON.stringify(seen) !== JSON.stringify(field)) {
+      errors.add(`Form field "${key}" is used twice with different settings. Use a different key.`);
+    }
+  }
+  return { fields: [...fields.values()], errors: [...errors] };
+};
+
+/** The text inserted into the wording for a form field. */
+export const buildFormToken = (field: ContractFormField) => {
+  const clean = (v: string) => v.replace(/[|{}]/g, " ").replace(/\s+/g, " ").trim();
+  const parts = [field.key, field.type, clean(field.label)];
+  if (field.type === "select") parts.push(field.options.map((o) => clean(o).replace(/;/g, ",")).filter(Boolean).join(";"));
+  if (field.required) parts.push("required");
+  return `{{form:${parts.join("|")}}}`;
+};
+
+/** label → key: "CSCS card expiry" → "cscs_card_expiry". */
+export const toFormKey = (label: string) =>
+  label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^[^a-z]+|_+$/g, "")
+    .slice(0, 60);
+
 export interface ContractGroup {
   id: number;
   name: string;
@@ -31,6 +121,7 @@ export interface ContractTemplateRow extends ContractRules {
   status: "PUBLISHED" | "DRAFT";
   has_unpublished_changes: boolean;
   field_count: number;
+  form_field_count: number;
   /** User groups whose members are asked to sign. */
   groups: ContractGroup[];
   latest_version: {
@@ -48,6 +139,8 @@ export interface ContractTemplateDetail extends ContractRules {
   title: string;
   is_active: boolean;
   body_html: string;
+  form_fields: ContractFormField[];
+  form_errors: string[];
   has_unpublished_changes: boolean;
   company_id: number;
   audience: ContractAudience;
@@ -111,6 +204,8 @@ export interface ContractSummary {
   reminded_at: string | null;
   reminder_count: number;
   has_pdf: boolean;
+  /** The user's answers to the contract's form fields. */
+  form_answers: { key: string; label: string; type: string; value: string; display: string }[];
   signing_record: {
     signed_at: string | null;
     ip: string | null;

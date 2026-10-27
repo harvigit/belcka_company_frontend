@@ -17,6 +17,7 @@ import {
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
+import type { ContractFormField } from "./contracts-api";
 
 interface Props {
   templateId: number | null;
@@ -32,6 +33,7 @@ const ContractPreviewDialog = ({ templateId, onClose }: Props) => {
   const [selectedUser, setSelectedUser] = useState<{ user_id: number; name: string } | null>(null);
   const [html, setHtml] = useState("");
   const [missing, setMissing] = useState<string[]>([]);
+  const [formFields, setFormFields] = useState<ContractFormField[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -52,6 +54,7 @@ const ContractPreviewDialog = ({ templateId, onClose }: Props) => {
       .then((res) => {
         setHtml(res.data?.info?.html ?? "");
         setMissing(res.data?.info?.missing_user_fields ?? []);
+        setFormFields(res.data?.info?.form_fields ?? []);
       })
       .catch((error) => console.error(error))
       .finally(() => setLoading(false));
@@ -78,6 +81,11 @@ const ContractPreviewDialog = ({ templateId, onClose }: Props) => {
           />
           {selectedUser && missing.length > 0 && (
             <Alert severity="warning">Missing for this user: {missing.join(", ")}</Alert>
+          )}
+          {formFields.length > 0 && (
+            <Alert severity="info">
+              When signing, the user fills in: {formFields.map((f) => f.label + (f.required ? " *" : "")).join(", ")}
+            </Alert>
           )}
           {loading ? (
             <Box display="flex" justifyContent="center" py={4}><CircularProgress size={28} /></Box>

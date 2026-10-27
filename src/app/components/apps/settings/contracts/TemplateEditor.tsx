@@ -29,7 +29,7 @@ import api from "@/utils/axios";
 import ContractEditor from "./ContractEditor";
 import ContractPreviewDialog from "./ContractPreviewDialog";
 import PublishDialog, { PublishAssignment } from "./PublishDialog";
-import { toInputDate } from "./contracts-api";
+import { extractFormFields, FORM_FIELD_TYPES, toInputDate } from "./contracts-api";
 import type { ContractField, ContractGroup, ContractTemplateDetail } from "./contracts-api";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 
@@ -123,6 +123,7 @@ const TemplateEditor = ({ templateId }: Props) => {
 
   const latest = template?.versions.find((v) => v.is_current) ?? null;
   const nextVersion = (latest?.version_no ?? 0) + 1;
+  const formFields = useMemo(() => extractFormFields(body), [body]);
   const usedKeys = useMemo(() => new Set([...body.matchAll(/\{\{\s*([a-z_]+)\s*\}\}/g)].map((m) => m[1])), [body]);
 
   /** Saves the draft. Returns the template id (new templates get one here). */
@@ -422,6 +423,45 @@ const TemplateEditor = ({ templateId }: Props) => {
             <Alert severity="warning" sx={{ mt: 1.5 }}>
               If a company field is empty, the manager is told and users can’t sign until it’s filled.
             </Alert>
+          </Box>
+
+          <Box sx={{ ...card, p: 2.5 }}>
+            <Typography variant="h6">Form fields</Typography>
+            <Typography variant="body2" color="textSecondary" mb={1}>
+              Questions the user answers when signing. Add one with “Form field” in the toolbar.
+            </Typography>
+            {formFields.fields.map((f) => (
+              <Stack
+                key={f.key}
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                spacing={1}
+                sx={{ py: 0.75, borderBottom: 1, borderColor: "divider" }}
+              >
+                <Box minWidth={0}>
+                  <Typography variant="body2" fontWeight={600} noWrap title={f.label}>
+                    {f.label}
+                    {f.required ? " *" : ""}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary" component="div" noWrap title={f.options.join(", ")}>
+                    {f.key}
+                    {f.options.length ? ` · ${f.options.length} options` : ""}
+                  </Typography>
+                </Box>
+                <Chip size="small" label={FORM_FIELD_TYPES.find((t) => t.value === f.type)?.label ?? f.type} />
+              </Stack>
+            ))}
+            {!formFields.fields.length && !formFields.errors.length && (
+              <Typography variant="body2" color="textSecondary">
+                No form fields in this contract.
+              </Typography>
+            )}
+            {formFields.errors.map((error) => (
+              <Alert key={error} severity="error" sx={{ mt: 1 }}>
+                {error}
+              </Alert>
+            ))}
           </Box>
 
           {template && template.versions.length > 0 && (

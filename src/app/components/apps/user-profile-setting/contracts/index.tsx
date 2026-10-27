@@ -376,6 +376,25 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                                 </Typography>
                               </Grid>
                             ))}
+                            {(h.form_answers ?? []).length > 0 && (
+                              <Grid size={12}>
+                                <Typography variant="subtitle2" mt={0.5} mb={1}>
+                                  Form answers
+                                </Typography>
+                                <Grid container spacing={2}>
+                                  {(h.form_answers ?? []).map((a) => (
+                                    <Grid key={a.key} size={{ xs: 12, sm: 6, md: 3 }}>
+                                      <Typography variant="caption" color="textSecondary">
+                                        {a.label}
+                                      </Typography>
+                                      <Typography variant="body2" sx={{ wordBreak: "break-word", whiteSpace: "pre-line" }}>
+                                        {a.display || "—"}
+                                      </Typography>
+                                    </Grid>
+                                  ))}
+                                </Grid>
+                              </Grid>
+                            )}
                           </Grid>
                         </Collapse>
                       </TableCell>
