@@ -300,7 +300,7 @@ export default function SurveyEdit({ id }: SurveyEditProps) {
                   color="warning"
                   startIcon={<IconRuler size={18} />}
                   component={Link}
-                  href={`/apps/surveys/execute/${survey.id}`}
+                  href={`/apps/surveys/inspect/${survey.id}`}
                 >
                   Continue Field Inspection
                 </Button>
@@ -312,7 +312,7 @@ export default function SurveyEdit({ id }: SurveyEditProps) {
                   color="info"
                   startIcon={<IconCalculator size={18} />}
                   component={Link}
-                  href={`/apps/surveys/assessment/${survey.id}`}
+                  href={`/apps/surveys/qs/${survey.id}`}
                 >
                   Open QS Assessment
                 </Button>
@@ -324,7 +324,7 @@ export default function SurveyEdit({ id }: SurveyEditProps) {
                   color="success"
                   startIcon={<IconEye size={18} />}
                   component={Link}
-                  href={`/apps/surveys/view/${survey.id}?tab=costing`}
+                  href={`/apps/surveys/view/${survey.id}?tab=commercial`}
                 >
                   View Commercial Scope & Costing
                 </Button>
