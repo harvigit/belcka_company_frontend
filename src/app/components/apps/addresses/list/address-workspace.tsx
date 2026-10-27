@@ -126,6 +126,11 @@ type CaseRow = {
   status_text?: string;
   case_id?: string | null;
   ref?: string | null;
+  po_sum?: string | null;
+  variation_sum?: string | null;
+  variation_status?: string | null;
+  client_po?: string | null;
+  excel_status?: string | null;
   project_id?: number;
   project_name?: string;
   start_date?: string | null;
@@ -157,6 +162,11 @@ type CaseForm = {
   reference: string;
   caseId: string;
   progress: number;
+  poSum: string;
+  variationSum: string;
+  variationStatus: string;
+  clientPo: string;
+  excelStatus: string;
 };
 
 type DraftSite = {
@@ -198,6 +208,11 @@ const emptyCaseForm = (): CaseForm => ({
   reference: "",
   caseId: "",
   progress: 0,
+  poSum: "",
+  variationSum: "",
+  variationStatus: "",
+  clientPo: "",
+  excelStatus: "",
 });
 
 function progressValue(value?: string | number | null) {
@@ -540,7 +555,7 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
       setCasesLoading((current) => ({ ...current, [parentId]: true }));
       try {
         const res = await api.get(
-          `address/get?company_id=${companyId}&parent_address_id=${parentId}&page=${nextPage + 1}&limit=${nextSize}`,
+          `address/get?company_id=${companyId}&parent_address_id=${parentId}&page=${nextPage + 1}&limit=${nextSize}&summary=1`,
         );
         const rows = asList<CaseRow>(res.data?.info);
         const meta = res.data?.data || {};
@@ -635,6 +650,11 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
       reference: row.ref || "",
       caseId: row.case_id || "",
       progress: progressValue(row.progress),
+      poSum: row.po_sum || "",
+      variationSum: row.variation_sum || "",
+      variationStatus: row.variation_status || "",
+      clientPo: row.client_po || "",
+      excelStatus: row.excel_status || "",
     });
   };
 
@@ -744,6 +764,11 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
           type: "circle",
           ref: caseForm.reference.trim(),
           case_id: caseForm.caseId,
+          po_sum: caseForm.poSum.trim(),
+          variation_sum: caseForm.variationSum.trim(),
+          variation_status: caseForm.variationStatus.trim(),
+          client_po: caseForm.clientPo.trim(),
+          excel_status: caseForm.excelStatus.trim(),
         });
         if (res.data?.IsSuccess === false) {
           toast.error(res.data.message || "Could not save the case.");
@@ -1364,6 +1389,42 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                                     .filter(Boolean)
                                                     .join(" · ")}
                                                 </Typography>
+                                                {[
+                                                  row.po_sum &&
+                                                    `PO sum ${row.po_sum}`,
+                                                  row.variation_sum &&
+                                                    `Variation sum ${row.variation_sum}`,
+                                                  row.variation_status &&
+                                                    `Variation status ${row.variation_status}`,
+                                                  row.client_po &&
+                                                    `Client PO ${row.client_po}`,
+                                                  row.excel_status &&
+                                                    `Excel status ${row.excel_status}`,
+                                                ].some(Boolean) ? (
+                                                  <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                    sx={{
+                                                      display: "block",
+                                                      whiteSpace: "normal",
+                                                    }}
+                                                  >
+                                                    {[
+                                                      row.po_sum &&
+                                                        `PO sum ${row.po_sum}`,
+                                                      row.variation_sum &&
+                                                        `Variation sum ${row.variation_sum}`,
+                                                      row.variation_status &&
+                                                        `Variation status ${row.variation_status}`,
+                                                      row.client_po &&
+                                                        `Client PO ${row.client_po}`,
+                                                      row.excel_status &&
+                                                        `Excel status ${row.excel_status}`,
+                                                    ]
+                                                      .filter(Boolean)
+                                                      .join(" · ")}
+                                                  </Typography>
+                                                ) : null}
                                               </Box>
                                               <Stack
                                                 direction="row"
@@ -1738,6 +1799,62 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                       }))
                     }
                   />
+                  {caseForm.caseId ? (
+                    <>
+                      <TextField
+                        label="PO sum"
+                        value={caseForm.poSum}
+                        onChange={(event) =>
+                          setCaseForm((current) => ({
+                            ...current,
+                            poSum: event.target.value,
+                          }))
+                        }
+                      />
+                      <TextField
+                        label="Variation sum"
+                        value={caseForm.variationSum}
+                        onChange={(event) =>
+                          setCaseForm((current) => ({
+                            ...current,
+                            variationSum: event.target.value,
+                          }))
+                        }
+                      />
+                      <TextField
+                        label="Variation status"
+                        value={caseForm.variationStatus}
+                        onChange={(event) =>
+                          setCaseForm((current) => ({
+                            ...current,
+                            variationStatus: event.target.value,
+                          }))
+                        }
+                      />
+                      <TextField
+                        label="Client PO"
+                        value={caseForm.clientPo}
+                        onChange={(event) =>
+                          setCaseForm((current) => ({
+                            ...current,
+                            clientPo: event.target.value,
+                          }))
+                        }
+                      />
+                      <TextField
+                        label="Excel status"
+                        value={caseForm.excelStatus}
+                        multiline
+                        minRows={2}
+                        onChange={(event) =>
+                          setCaseForm((current) => ({
+                            ...current,
+                            excelStatus: event.target.value,
+                          }))
+                        }
+                      />
+                    </>
+                  ) : null}
                   {caseForm.caseId ? (
                     <Box>
                       <Stack direction="row" justifyContent="space-between">

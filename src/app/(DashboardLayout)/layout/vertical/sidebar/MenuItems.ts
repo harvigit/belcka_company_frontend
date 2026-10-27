@@ -31,7 +31,7 @@ import {
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
-import { IconSettings } from "@tabler/icons-react";
+import { IconSettings, IconFileText } from "@tabler/icons-react";
 import { IconBox } from "@tabler/icons-react";
 import { IconPoint } from "@tabler/icons-react";
 
@@ -162,7 +162,7 @@ const MenuItems: NavGroup[] = [
   {
     id: uniqueId(),
     title: "Certificates",
-    slug: "certificates",
+    slug: "documents",
     icon: IconCertificate,
     href: "/apps/certificates",
   },
@@ -172,6 +172,14 @@ const MenuItems: NavGroup[] = [
     slug: "forms",
     icon: IconForms,
     href: "/apps/forms",
+  },
+  {
+    id: uniqueId(),
+    title: "Contracts",
+    // Shown to admins and to users given the Contracts permission.
+    slug: "contracts",
+    icon: IconFileText,
+    href: "/apps/contracts",
   },
   {
     id: uniqueId(),

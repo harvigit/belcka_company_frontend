@@ -250,10 +250,12 @@ const TablePagination = () => {
     const [data, setData] = useState<UserList[]>([]);
     const [isAdmin, setIsAdmin] = useState<boolean>(false);
     const [companyGroups, setCompanyGroups] = useState<{ id: number; name: string }[]>([]);
-    const groupFilterOptions = useMemo<UserFilterOption[]>(
-        () => companyGroups.map((g) => ({id: String(g.id), name: g.name})),
-        [companyGroups],
-    );
+    const [listFilterOptions, setListFilterOptions] = useState<{
+        teams: UserFilterOption[];
+        trades: UserFilterOption[];
+        supervisors: UserFilterOption[];
+        groups: UserFilterOption[];
+    }>({teams: [], trades: [], supervisors: [], groups: []});
     const [totalUsersListCount, setTotalUsersListCount] = useState<number | undefined>(undefined);
     const [workingUsersListCount, setWorkingUsersListCount] = useState<number | undefined>(undefined);
     const [hasPermissionUser, setHasPermissionUser] = useState<boolean>(false);
@@ -305,7 +307,6 @@ const TablePagination = () => {
     const [inviteUser, setInviteUser] = useState(false);
     const [trade, setTrade] = useState<any[]>([]);
     const [teams, setTeams] = useState<any[]>([]);
-    const [companyUsers, setCompanyUsers] = useState<any[]>([]);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [email, setEmail] = useState('');
     const [firstName, setfirstName] = useState('');
@@ -378,7 +379,7 @@ const TablePagination = () => {
         const requestId = ++fetchRequestIdRef.current;
         setFetchUser(true);
         try {
-            let url = `user/get-user-lists?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+            let url = `user/get-user-lists?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}&filters_for=users_list`;
             const resolveSelectedIds = (
                 selectedValues: string[],
                 options: any[],
@@ -395,19 +396,22 @@ const TablePagination = () => {
                 url += `&search=${encodeURIComponent(searchTerm)}`;
             }
             if (filters.team.length) {
-                const teamIds = resolveSelectedIds(filters.team, teams);
+                const teamIds = resolveSelectedIds(filters.team, listFilterOptions.teams);
                 if (teamIds) url += `&team_ids=${teamIds}`;
             }
             if (filters.trade.length) {
-                const tradeIds = resolveSelectedIds(filters.trade, trade);
+                const tradeIds = resolveSelectedIds(filters.trade, listFilterOptions.trades);
                 if (tradeIds) url += `&trade_ids=${tradeIds}`;
             }
             if (filters.supervisor.length) {
-                const supervisorIds = resolveSelectedIds(filters.supervisor, companyUsers);
+                const supervisorIds = resolveSelectedIds(
+                    filters.supervisor,
+                    listFilterOptions.supervisors,
+                );
                 if (supervisorIds) url += `&supervisor_ids=${supervisorIds}`;
             }
             if (filters.group.length) {
-                const groupIds = resolveSelectedIds(filters.group, groupFilterOptions);
+                const groupIds = resolveSelectedIds(filters.group, listFilterOptions.groups);
                 if (groupIds) url += `&group_ids=${groupIds}`;
             }
 
@@ -419,6 +423,24 @@ const TablePagination = () => {
                 const responseData =
                     res.data.info?.data || res.data.info || res.data.data || [];
                 setData(responseData);
+                if (res.data.filters) {
+                    const toOptions = (rows: any[] = []): UserFilterOption[] =>
+                        rows
+                            .filter((row) => row?.id != null && row?.name)
+                            .map((row) => ({
+                                id: String(row.id),
+                                name: String(row.name),
+                                user_code: row.user_code ?? null,
+                                user_image: row.user_image ?? null,
+                                user_thumb_image: row.user_thumb_image ?? null,
+                            }));
+                    setListFilterOptions({
+                        teams: toOptions(res.data.filters.teams),
+                        trades: toOptions(res.data.filters.trades),
+                        supervisors: toOptions(res.data.filters.supervisors),
+                        groups: toOptions(res.data.filters.groups),
+                    });
+                }
                 setIsAdmin(res.data.is_admin);
                 setHasPermissionUser(res.data.has_permission_user || false);
                 setPermissionUserType(res.data.permission_user_type || '');
@@ -558,55 +580,14 @@ const TablePagination = () => {
                 console.error('Failed to fetch teams', err);
             }
         };
-        const fetchCompanyUsers = async () => {
-            try {
-                const res = await api.get(
-                    `get-company-resources?flag=usersList&company_id=${user.company_id}`,
-                );
-                if (res.data) setCompanyUsers(res.data.info || []);
-            } catch (err) {
-                console.error('Failed to fetch company users', err);
-            }
-        };
         fetchTeams();
         fetchTrades();
-        fetchCompanyUsers();
     }, [user?.company_id]);
 
     const closeInviteDrawer = () => {
         setInviteUser(false);
         setSelectedUser(null);
     };
-
-    const uniqueTeams = useMemo(
-        () =>
-            teams
-                .filter((item) => item?.id && item?.name)
-                .map((item) => ({id: String(item.id), name: item.name})),
-        [teams],
-    );
-
-    const uniqueTrades = useMemo(
-        () =>
-            trade
-                .filter((item) => item?.id && item?.name)
-                .map((item) => ({id: String(item.id), name: item.name})),
-        [trade],
-    );
-
-    const uniqueSupervisors = useMemo(
-        () =>
-            companyUsers
-                .filter((item) => item?.id && item?.name)
-                .map((item) => ({
-                    id: String(item.id),
-                    name: item.name,
-                    user_code: item.user_code,
-                    user_image: item.user_image,
-                    user_thumb_image: item.user_thumb_image,
-                })),
-        [companyUsers],
-    );
 
     const formatDate = (date?: Date | string | null) => {
         if (!date) return '-';
@@ -2026,15 +2007,15 @@ const TablePagination = () => {
 
                         <DialogContent sx={{overflowX: 'hidden'}}>
                             <Stack spacing={2} mt={1} sx={{width: '100%', minWidth: 0}}>
-                                {renderFilterSelect(t('Teams'), 'team', teams)}
-                                {renderFilterSelect(t('Trades'), 'trade', trade)}
+                                {renderFilterSelect(t('Teams'), 'team', listFilterOptions.teams)}
+                                {renderFilterSelect(t('Trades'), 'trade', listFilterOptions.trades)}
                                 {renderFilterSelect(
                                     t('Supervisors'),
                                     'supervisor',
-                                    companyUsers,
+                                    listFilterOptions.supervisors,
                                     true,
                                 )}
-                                {renderFilterSelect(t('Groups'), 'group', groupFilterOptions)}
+                                {renderFilterSelect(t('Groups'), 'group', listFilterOptions.groups)}
                             </Stack>
                         </DialogContent>
 

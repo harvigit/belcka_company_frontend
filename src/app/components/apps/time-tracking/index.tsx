@@ -1986,7 +1986,8 @@ const TimeTracking: React.FC<Props> = () => {
             };
             if (projectId) payload.project_id = projectId;
 
-            const res: AxiosResponse<ApiResponse> = await api.post('user-worklog/user-start-work', payload);
+            // The catch below shows the server's message itself, so skip the global error toast (no double message).
+            const res: AxiosResponse<ApiResponse> = await api.post('user-worklog/user-start-work', payload, {skipToast: true} as any);
             
             if (res.data.IsSuccess && res.data.is_rate_approved !== false && res.data.user_worklog_id) {
                 showToast(res.data.message || 'Work started!', 'success');

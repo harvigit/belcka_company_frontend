@@ -7,13 +7,16 @@ import {
   Autocomplete,
   RadioGroup,
   Radio,
+  Stack,
   TextField,
   Typography,
   IconButton,
   useTheme,
 } from "@mui/material";
 import { Grid } from "@mui/system";
-import { IconArrowLeft, IconCamera, IconTrash } from "@tabler/icons-react";
+import { IconArrowLeft, IconCamera, IconMessage, IconTrash } from "@tabler/icons-react";
+import ThumbUpAltIcon from "@mui/icons-material/ThumbUpAlt";
+import IOSSwitch from "@/app/components/common/IOSSwitch";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
@@ -48,6 +51,8 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
   const [selectedTeams, setSelectedTeams] = useState<number[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [sendAs, setSendAs] = useState<"company" | "admin">("company");
+  const [allowReactions, setAllowReactions] = useState(true);
+  const [allowComments, setAllowComments] = useState(true);
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<Users[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -160,6 +165,8 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
       setSelectedTeams([]);
       setSelectedUsers([]);
       setUploadedFiles([]);
+      setAllowReactions(true);
+      setAllowComments(true);
     }
   }, [open]);
 
@@ -205,6 +212,8 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
     fd.append("company_id", String(user.company_id));
     fd.append("user_id", String(user.id));
     fd.append("send_as", sendAs);
+    fd.append("allow_reactions", String(allowReactions));
+    fd.append("allow_comments", String(allowComments));
 
     if (!companyUsers) {
       selectedTeams.forEach((t) => fd.append("team_ids[]", String(t)));
@@ -459,6 +468,48 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                     },
                   }}
                 />
+              </Box>
+
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  borderRadius: "22px",
+                  bgcolor: "#fff",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                  border: "1px solid #ececec",
+                }}
+              >
+                <Stack spacing={1.25}>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <Stack direction="row" spacing={1.25} alignItems="center">
+                      <ThumbUpAltIcon sx={{ fontSize: 22, color: "#1e4db7" }} />
+                      <Typography fontSize={15}>{t("Allow reactions")}</Typography>
+                    </Stack>
+                    <IOSSwitch
+                      checked={allowReactions}
+                      onChange={(_event, checked) => setAllowReactions(checked)}
+                    />
+                  </Stack>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <Stack direction="row" spacing={1.25} alignItems="center">
+                      <IconMessage size={22} color="#1e4db7" stroke={1.75} />
+                      <Typography fontSize={15}>{t("Allow comments")}</Typography>
+                    </Stack>
+                    <IOSSwitch
+                      checked={allowComments}
+                      onChange={(_event, checked) => setAllowComments(checked)}
+                    />
+                  </Stack>
+                </Stack>
               </Box>
 
               {/* File Preview */}

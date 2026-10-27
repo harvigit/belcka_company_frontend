@@ -470,8 +470,12 @@ export const LabourTeamTable = ({
                   </TableCell>
                   <TableCell align="right">{row.on_site}</TableCell>
                   {/* <TableCell align="right">{row.limit}</TableCell> */}
-                  <TableCell align="right">{row.avg_7_days}</TableCell>
-                  <TableCell align="right">{row.avg_30_days}</TableCell>
+                  <TableCell align="right">
+                    {Math.round(Number(row.avg_7_days || 0))}
+                  </TableCell>
+                  <TableCell align="right">
+                    {Math.round(Number(row.avg_30_days || 0))}
+                  </TableCell>
                   <TableCell align="right">
                     {Math.round(Number(row.total_hours || 0))}
                   </TableCell>
@@ -508,9 +512,11 @@ export const LabourTeamTable = ({
                   <TableCell>TOTAL</TableCell>
                   <TableCell align="right">{totals?.on_site || 0}</TableCell>
                   {/* <TableCell align="right">{totals?.limit || 0}</TableCell> */}
-                  <TableCell align="right">{totals?.avg_7_days || 0}</TableCell>
                   <TableCell align="right">
-                    {totals?.avg_30_days || 0}
+                    {Math.round(Number(totals?.avg_7_days || 0))}
+                  </TableCell>
+                  <TableCell align="right">
+                    {Math.round(Number(totals?.avg_30_days || 0))}
                   </TableCell>
                   <TableCell align="right">
                     {Math.round(Number(totals?.total_hours || 0))}
