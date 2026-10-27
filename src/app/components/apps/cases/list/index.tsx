@@ -79,6 +79,7 @@ import ExcelImportModal from "@/app/components/common/ExcelImportModal";
 import InternalOrderDetailDrawer, {
   type InternalOrderDetail,
 } from "@/app/components/apps/project/detail/InternalOrderDetailDrawer";
+import IOSSwitch from "@/app/components/common/IOSSwitch";
 
 type CaseFilters = {
   status: string;
@@ -787,6 +788,52 @@ const CasesList = ({
     [],
   );
 
+  const [visibilitySavingIds, setVisibilitySavingIds] = useState<Set<number>>(
+    () => new Set(),
+  );
+
+  // Off shows "-" instead of this case in the check-in, expense and pricework lists.
+  const handleListVisibilityToggle = useCallback(
+    async (rowId: number, showInLists: boolean) => {
+      const setRowValue = (value: boolean) =>
+        setData((prev: any[]) =>
+          prev.map((item) =>
+            item.id === rowId ? { ...item, show_in_lists: value } : item,
+          ),
+        );
+      const setSaving = (saving: boolean) =>
+        setVisibilitySavingIds((prev) => {
+          const next = new Set(prev);
+          if (saving) next.add(rowId);
+          else next.delete(rowId);
+          return next;
+        });
+
+      setRowValue(showInLists);
+      setSaving(true);
+      try {
+        const res = await api.put("address/list-visibility", {
+          id: rowId,
+          show_in_lists: showInLists,
+        });
+        if (!res.data?.IsSuccess) {
+          throw new Error(res.data?.message);
+        }
+        toast.success(res.data.message);
+      } catch (error: any) {
+        setRowValue(!showInLists);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update case visibility",
+        );
+      } finally {
+        setSaving(false);
+      }
+    },
+    [],
+  );
+
   const exportCases = async () => {
     try {
       const selectedIds = Array.from(selectedRowIds);
@@ -1151,8 +1198,44 @@ const CasesList = ({
       //     );
       //   },
       // },
+      {
+        id: "actions",
+        enableSorting: false,
+        header: "Actions",
+        cell: ({ row }: any) => {
+          const item = row.original;
+          return (
+            <Box onClick={(e) => e.stopPropagation()}>
+              <Tooltip
+                title={
+                  item.show_in_lists === false
+                    ? "Case shows as - in check-ins, expenses and priceworks"
+                    : "Case shown in check-ins, expenses and priceworks"
+                }
+              >
+                <IOSSwitch
+                  size="small"
+                  checked={item.show_in_lists !== false}
+                  disabled={visibilitySavingIds.has(item.id)}
+                  onChange={(e) =>
+                    handleListVisibilityToggle(item.id, e.target.checked)
+                  }
+                />
+              </Tooltip>
+            </Box>
+          );
+        },
+      },
     ],
-    [data, selectedRowIds, hoveredRow, handleProgressSave, openCaseDetail],
+    [
+      data,
+      selectedRowIds,
+      hoveredRow,
+      handleProgressSave,
+      openCaseDetail,
+      visibilitySavingIds,
+      handleListVisibilityToggle,
+    ],
   );
   const simpleColumns = columns.map((column: any) => ({
     name: column.id ?? "Unnamed Column",

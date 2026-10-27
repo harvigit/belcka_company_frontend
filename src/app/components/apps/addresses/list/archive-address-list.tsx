@@ -65,7 +65,9 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
   };
 
   useEffect(() => {
-    fetchCases();
+    if (open == true) {
+      fetchCases();
+    }
   }, [open == true]);
 
   const handleConfirmAction = async () => {
@@ -194,7 +196,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconArrowBackUp  size={18}/>
+                        <IconArrowBackUp size={18} />
                       </IconButton>
                       <IconButton
                         color="error"
@@ -204,7 +206,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
                           setOpenDialog(true);
                         }}
                       >
-                        <IconTrash size={18}/>
+                        <IconTrash size={18} />
                       </IconButton>
                     </Box>
                   </Box>
