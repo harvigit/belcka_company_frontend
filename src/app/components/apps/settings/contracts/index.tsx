@@ -93,7 +93,7 @@ const ContractsSettings = () => {
         api.get("contracts/templates", { params }),
       ]);
       setOverview(o.data?.info ?? null);
-      setTemplates(t.data?.info ?? []);
+      setTemplates(Array.isArray(t.data?.info) ? t.data.info : []);
     } catch (error) {
       console.error(error);
     } finally {
@@ -240,7 +240,7 @@ const ContractsSettings = () => {
                     </TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                        {t.groups.length ? (
+                        {t.groups?.length ? (
                           t.groups.map((g) => (
                             <Chip key={g.id} size="small" color="primary" variant="outlined" label={g.name} />
                           ))
