@@ -24,6 +24,7 @@ import {
   Paper,
   InputAdornment,
   Collapse,
+  InputBase,
 } from "@mui/material";
 import {
   IconArrowLeft,
@@ -125,6 +126,76 @@ const severityOptions = [
   { value: "high", label: "High" },
   { value: "critical", label: "Critical" },
 ];
+
+function calculateQuantity(
+  v1Str: string,
+  v2Str: string,
+  v3Str: string,
+  item?: SurveyItem | null
+): string {
+  if (!item) return "";
+  const v1 = parseFloat(v1Str) || 0;
+  const v2 = parseFloat(v2Str) || 0;
+  const v3 = parseFloat(v3Str) || 0;
+
+  const outputName = (item.element?.output_name || "").toLowerCase();
+  const outputUnit = (item.output_unit || item.element?.output_unit || "").toLowerCase();
+  const isVolume =
+    outputName === "volume" ||
+    outputUnit.includes("m³") ||
+    outputUnit.includes("m3") ||
+    outputUnit.includes("cum");
+  const isArea =
+    outputName === "area" ||
+    outputUnit.includes("m²") ||
+    outputUnit.includes("m2") ||
+    outputUnit.includes("sqm");
+  const isLength =
+    outputName === "length" ||
+    outputUnit === "m" ||
+    outputUnit === "lm";
+  const isCount =
+    outputName === "count" ||
+    outputUnit === "nr" ||
+    outputUnit === "item";
+
+  if (isVolume) {
+    if (v1 > 0 && v2 > 0 && v3 > 0) {
+      return (v1 * v2 * v3).toFixed(2);
+    } else if (v1 > 0 && v2 > 0 && !item.element?.dimension_3_name) {
+      return (v1 * v2).toFixed(2);
+    }
+    return "";
+  }
+
+  if (isArea) {
+    if (v1 > 0 && v2 > 0) {
+      return (v1 * v2).toFixed(2);
+    }
+    return "";
+  }
+
+  if (isLength) {
+    if (v1 > 0) return v1.toFixed(2);
+    return "";
+  }
+
+  if (isCount) {
+    if (v1 > 0) return String(Math.round(v1));
+    return "";
+  }
+
+  // Fallback: multiple dimensions
+  if (v1 > 0 && v2 > 0 && v3 > 0) {
+    return (v1 * v2 * v3).toFixed(2);
+  } else if (v1 > 0 && v2 > 0) {
+    return (v1 * v2).toFixed(2);
+  } else if (v1 > 0) {
+    return v1.toFixed(2);
+  }
+
+  return "";
+}
 
 export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   const router = useRouter();
@@ -285,31 +356,35 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   useEffect(() => {
     if (activeItem) {
       setCondition(activeItem.condition || "");
-      setDim1(
+      const d1 =
         activeItem.dimension_1_value !== null && activeItem.dimension_1_value !== undefined
           ? String(activeItem.dimension_1_value)
-          : ""
-      );
-      setDim2(
+          : "";
+      const d2 =
         activeItem.dimension_2_value !== null && activeItem.dimension_2_value !== undefined
           ? String(activeItem.dimension_2_value)
-          : ""
-      );
-      setDim3(
+          : "";
+      const d3 =
         activeItem.dimension_3_value !== null && activeItem.dimension_3_value !== undefined
           ? String(activeItem.dimension_3_value)
-          : ""
-      );
-      setDim4(
+          : "";
+      const d4 =
         activeItem.dimension_4_value !== null && activeItem.dimension_4_value !== undefined
           ? String(activeItem.dimension_4_value)
-          : ""
-      );
-      setQty(
-        activeItem.calculated_qty !== null && activeItem.calculated_qty !== undefined
-          ? String(activeItem.calculated_qty)
-          : ""
-      );
+          : "";
+
+      setDim1(d1);
+      setDim2(d2);
+      setDim3(d3);
+      setDim4(d4);
+
+      if (activeItem.calculated_qty !== null && activeItem.calculated_qty !== undefined) {
+        setQty(String(activeItem.calculated_qty));
+      } else {
+        const computed = calculateQuantity(d1, d2, d3, activeItem);
+        setQty(computed);
+      }
+
       setDamageTypeId(activeItem.damage_type_id || "");
       setDamageTypeName(activeItem.damage_type_name || "");
       setMaterialId(activeItem.material_id || "");
@@ -320,24 +395,109 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
     }
   }, [activeItem]);
 
+  // Dimension and Unit Resolution with element fallbacks
+  const dim1Label =
+    activeItem?.dimension_1_name ||
+    activeItem?.element?.dimension_1_name ||
+    activeItem?.element?.dimensions_data?.[0]?.name ||
+    "Length";
+  const dim1Unit =
+    activeItem?.dimension_1_unit ||
+    activeItem?.element?.dimension_1_unit ||
+    activeItem?.element?.dimensions_data?.[0]?.unit ||
+    "m";
+
+  const dim2Label =
+    activeItem?.dimension_2_name ||
+    activeItem?.element?.dimension_2_name ||
+    activeItem?.element?.dimensions_data?.[1]?.name ||
+    "Width";
+  const dim2Unit =
+    activeItem?.dimension_2_unit ||
+    activeItem?.element?.dimension_2_unit ||
+    activeItem?.element?.dimensions_data?.[1]?.unit ||
+    "m";
+
+  const dim3Label =
+    activeItem?.dimension_3_name ||
+    activeItem?.element?.dimension_3_name ||
+    activeItem?.element?.dimensions_data?.[2]?.name ||
+    "Height / Depth";
+  const dim3Unit =
+    activeItem?.dimension_3_unit ||
+    activeItem?.element?.dimension_3_unit ||
+    activeItem?.element?.dimensions_data?.[2]?.unit ||
+    "m";
+
+  const outputName =
+    activeItem?.element?.output_name ||
+    (activeItem?.element?.measurement_mode === "volume" ? "Volume" : "Area");
+
+  const outputUnit =
+    activeItem?.output_unit ||
+    activeItem?.element?.output_unit ||
+    (outputName === "Volume" ? "m³" : "m²");
+
+  const hasDim3 = Boolean(
+    activeItem?.element?.dimension_3_name ||
+    activeItem?.dimension_3_name ||
+    outputName === "Volume" ||
+    outputUnit === "m³" ||
+    outputUnit === "m3" ||
+    (!activeItem?.element)
+  );
+
+  const formulaText = useMemo(() => {
+    if (outputName === "Volume" || outputUnit === "m³" || outputUnit === "m3") {
+      return `${dim1Label} × ${dim2Label} × ${dim3Label}`;
+    }
+    if (outputName === "Area" || outputUnit === "m²" || outputUnit === "m2") {
+      return `${dim1Label} × ${dim2Label}`;
+    }
+    if (outputName === "Length" || outputUnit === "m" || outputUnit === "lm") {
+      return dim1Label;
+    }
+    if (outputName === "Count" || outputUnit === "nr") {
+      return "Count";
+    }
+    if (hasDim3) {
+      return `${dim1Label} × ${dim2Label} × ${dim3Label}`;
+    }
+    return `${dim1Label} × ${dim2Label}`;
+  }, [outputName, outputUnit, dim1Label, dim2Label, dim3Label, hasDim3]);
+
+  const handleDimChange = (dimIndex: 1 | 2 | 3, value: string) => {
+    let v1 = dim1;
+    let v2 = dim2;
+    let v3 = dim3;
+
+    if (dimIndex === 1) {
+      setDim1(value);
+      v1 = value;
+    } else if (dimIndex === 2) {
+      setDim2(value);
+      v2 = value;
+    } else if (dimIndex === 3) {
+      setDim3(value);
+      v3 = value;
+    }
+
+    if (activeItem) {
+      const calculated = calculateQuantity(v1, v2, v3, activeItem);
+      if (calculated !== "") {
+        setQty(calculated);
+      }
+    }
+  };
+
   // Auto-calculate quantity based on element dimensions
   useEffect(() => {
     if (!activeItem) return;
-    const mode = activeItem.element?.measurement_mode;
-    const v1 = parseFloat(dim1) || 0;
-    const v2 = parseFloat(dim2) || 0;
-    const v3 = parseFloat(dim3) || 0;
-
-    if (mode === "area" && v1 > 0 && v2 > 0) {
-      setQty((v1 * v2).toFixed(2));
-    } else if (mode === "volume" && v1 > 0 && v2 > 0 && v3 > 0) {
-      setQty((v1 * v2 * v3).toFixed(2));
-    } else if (mode === "length" && v1 > 0) {
-      setQty(v1.toFixed(2));
-    } else if (mode === "count" && v1 > 0) {
-      setQty(String(Math.round(v1)));
+    const computed = calculateQuantity(dim1, dim2, dim3, activeItem);
+    if (computed !== "") {
+      setQty(computed);
     }
-  }, [dim1, dim2, dim3, dim4, activeItem]);
+  }, [dim1, dim2, dim3, activeItem]);
 
   // Available damage types & materials
   const availableDamageTypes = useMemo(() => {
@@ -425,11 +585,18 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
         severity: condition === "damaged" || condition === "minor_defects" ? severity : null,
         repair_action: repairAction.trim() || null,
         notes: notes.trim() || null,
+        dimension_1_name: dim1Label,
+        dimension_1_unit: dim1Unit,
         dimension_1_value: dim1 !== "" ? parseFloat(dim1) : null,
+        dimension_2_name: dim2Label,
+        dimension_2_unit: dim2Unit,
         dimension_2_value: dim2 !== "" ? parseFloat(dim2) : null,
-        dimension_3_value: dim3 !== "" ? parseFloat(dim3) : null,
+        dimension_3_name: hasDim3 ? dim3Label : null,
+        dimension_3_unit: hasDim3 ? dim3Unit : null,
+        dimension_3_value: hasDim3 && dim3 !== "" ? parseFloat(dim3) : null,
         dimension_4_value: dim4 !== "" ? parseFloat(dim4) : null,
         calculated_qty: qty !== "" ? parseFloat(qty) : null,
+        output_unit: outputUnit,
         is_inspected: true,
       };
 
@@ -903,10 +1070,10 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                   </Box>
 
                   <Stack direction="row" spacing={1} alignItems="center">
-                    {activeItem.output_unit && (
+                    {outputUnit && (
                       <Chip
                         icon={<IconRuler size={13} />}
-                        label={`Unit: ${activeItem.output_unit}`}
+                        label={`Unit: ${outputUnit}`}
                         size="small"
                         variant="outlined"
                         sx={{ fontWeight: 600 }}
@@ -999,21 +1166,21 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                   </Typography>
 
                   <Grid container spacing={2} alignItems="stretch">
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Grid size={{ xs: 12, sm: hasDim3 ? 6 : 4, md: hasDim3 ? 3 : 4 }}>
                       <CustomTextField
-                        label={activeItem.dimension_1_name || "Length"}
+                        label={dim1Label}
                         type="number"
                         size="small"
                         fullWidth
                         disabled={isReadOnly || isUnassigned}
                         value={dim1}
-                        onChange={(e: any) => setDim1(e.target.value)}
+                        onChange={(e: any) => handleDimChange(1, e.target.value)}
                         placeholder="0.00"
                         InputProps={{
-                          endAdornment: activeItem.dimension_1_unit ? (
+                          endAdornment: dim1Unit ? (
                             <InputAdornment position="end">
                               <Typography variant="caption" color="text.secondary">
-                                {activeItem.dimension_1_unit}
+                                {dim1Unit}
                               </Typography>
                             </InputAdornment>
                           ) : null,
@@ -1021,21 +1188,21 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                       />
                     </Grid>
 
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Grid size={{ xs: 12, sm: hasDim3 ? 6 : 4, md: hasDim3 ? 3 : 4 }}>
                       <CustomTextField
-                        label={activeItem.dimension_2_name || "Width"}
+                        label={dim2Label}
                         type="number"
                         size="small"
                         fullWidth
                         disabled={isReadOnly || isUnassigned}
                         value={dim2}
-                        onChange={(e: any) => setDim2(e.target.value)}
+                        onChange={(e: any) => handleDimChange(2, e.target.value)}
                         placeholder="0.00"
                         InputProps={{
-                          endAdornment: activeItem.dimension_2_unit ? (
+                          endAdornment: dim2Unit ? (
                             <InputAdornment position="end">
                               <Typography variant="caption" color="text.secondary">
-                                {activeItem.dimension_2_unit}
+                                {dim2Unit}
                               </Typography>
                             </InputAdornment>
                           ) : null,
@@ -1043,30 +1210,32 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                       />
                     </Grid>
 
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <CustomTextField
-                        label={activeItem.dimension_3_name || "Height / Depth"}
-                        type="number"
-                        size="small"
-                        fullWidth
-                        disabled={isReadOnly || isUnassigned}
-                        value={dim3}
-                        onChange={(e: any) => setDim3(e.target.value)}
-                        placeholder="0.00"
-                        InputProps={{
-                          endAdornment: activeItem.dimension_3_unit ? (
-                            <InputAdornment position="end">
-                              <Typography variant="caption" color="text.secondary">
-                                {activeItem.dimension_3_unit}
-                              </Typography>
-                            </InputAdornment>
-                          ) : null,
-                        }}
-                      />
-                    </Grid>
+                    {hasDim3 && (
+                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <CustomTextField
+                          label={dim3Label}
+                          type="number"
+                          size="small"
+                          fullWidth
+                          disabled={isReadOnly || isUnassigned}
+                          value={dim3}
+                          onChange={(e: any) => handleDimChange(3, e.target.value)}
+                          placeholder="0.00"
+                          InputProps={{
+                            endAdornment: dim3Unit ? (
+                              <InputAdornment position="end">
+                                <Typography variant="caption" color="text.secondary">
+                                  {dim3Unit}
+                                </Typography>
+                              </InputAdornment>
+                            ) : null,
+                          }}
+                        />
+                      </Grid>
+                    )}
 
                     {/* Integrated Calculation Result Card */}
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Grid size={{ xs: 12, sm: hasDim3 ? 6 : 4, md: hasDim3 ? 3 : 4 }}>
                       <Paper
                         variant="outlined"
                         sx={{
@@ -1087,19 +1256,30 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                           </Typography>
                         </Stack>
 
-                        <Typography variant="h4" fontWeight={700} color="text.primary">
-                          {qty !== "" ? qty : "0.00"}{" "}
-                          <Typography component="span" variant="body2" color="text.secondary">
-                            {activeItem.output_unit || "units"}
+                        <Box sx={{ display: "flex", alignItems: "baseline", gap: 0.75 }}>
+                          <InputBase
+                            value={qty}
+                            onChange={(e: any) => setQty(e.target.value)}
+                            placeholder="0.00"
+                            disabled={isReadOnly || isUnassigned}
+                            type="number"
+                            inputProps={{ step: "any" }}
+                            sx={{
+                              fontSize: "1.6rem",
+                              fontWeight: 700,
+                              color: "text.primary",
+                              width: "100%",
+                              maxWidth: 130,
+                              "& input": { p: 0 },
+                            }}
+                          />
+                          <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                            {outputUnit}
                           </Typography>
-                        </Typography>
+                        </Box>
 
                         <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.7rem" }}>
-                          {activeItem.element?.measurement_mode === "area"
-                            ? "Length × Width"
-                            : activeItem.element?.measurement_mode === "volume"
-                            ? "Length × Width × Height"
-                            : "Direct measurement"}
+                          {formulaText}
                         </Typography>
                       </Paper>
                     </Grid>

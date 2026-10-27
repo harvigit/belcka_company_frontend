@@ -29,8 +29,17 @@ export interface SurveyElementDetails {
   name: string;
   form_factor?: string | null;
   measurement_mode?: string | null;
-  dimensions_data?: any;
+  output_name?: string | null;
   output_unit?: string | null;
+  dimension_1_name?: string | null;
+  dimension_1_unit?: string | null;
+  dimension_2_name?: string | null;
+  dimension_2_unit?: string | null;
+  dimension_3_name?: string | null;
+  dimension_3_unit?: string | null;
+  dimension_4_name?: string | null;
+  dimension_4_unit?: string | null;
+  dimensions_data?: any;
   surface_photo_minimum?: number | null;
   damageTypes?: { id: number; name: string }[];
   materials?: { id: number; name: string }[];
