@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -352,9 +352,12 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
     }
   }, [activeRoomId]);
 
-  // Populate local form state when activeItem changes
+  // Populate local form state when the user moves to a different element. Survey reloads
+  // (e.g. after a photo upload/delete) must not wipe unsaved entries for the current element.
+  const populatedItemIdRef = useRef<string | number | null>(null);
   useEffect(() => {
-    if (activeItem) {
+    if (activeItem && populatedItemIdRef.current !== activeItem.id) {
+      populatedItemIdRef.current = activeItem.id;
       setCondition(activeItem.condition || "");
       const d1 =
         activeItem.dimension_1_value !== null && activeItem.dimension_1_value !== undefined
