@@ -254,6 +254,9 @@ export interface SurveyWorkOrderItem {
   total_amount: number;
   notes?: string | null;
   sort_order?: number;
+  is_completed: boolean;
+  completed_at?: string | null;
+  completion_notes?: string | null;
 }
 
 export interface SurveyVariationOrder {
@@ -287,5 +290,10 @@ export interface SurveyWorkOrder {
   issued_at: string;
   items?: SurveyWorkOrderItem[];
   variation_orders?: SurveyVariationOrder[];
+  progress?: {
+    total: number;
+    completed: number;
+    percentage: number;
+  };
 }
 

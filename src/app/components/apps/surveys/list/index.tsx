@@ -445,7 +445,7 @@ export default function SurveyList() {
                     icon={<IconBriefcase size={12} />}
                     label={workOrder.reference}
                     component={Link}
-                    href={`/apps/surveys/view/${row.original.id}`}
+                    href={`/apps/surveys/view/${row.original.id}?tab=commercial`}
                     clickable
                     sx={{ height: 20, fontSize: "0.7rem", fontWeight: 700 }}
                   />
@@ -518,7 +518,7 @@ export default function SurveyList() {
                       size="small"
                       color="primary"
                       component={Link}
-                      href={`/apps/surveys/view/${row.original.id}`}
+                      href={`/apps/surveys/view/${row.original.id}?tab=commercial`}
                     >
                       <IconBriefcase size={18} />
                     </IconButton>

@@ -147,3 +147,5 @@ export const exportSurveyReportToPdf = async (
 
   pdf.save(fileName);
 };
+
+export const exportWorkOrderJobPackToPdf = exportSurveyReportToPdf;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
   Typography,
@@ -35,6 +35,8 @@ import {
   DialogContent,
   DialogActions,
   AlertTitle,
+  LinearProgress,
+  Checkbox,
 } from "@mui/material";
 import {
   IconArrowLeft,
@@ -67,6 +69,8 @@ import {
   IconX,
   IconBriefcase,
   IconPlus,
+  IconPlayerPlay,
+  IconArchive,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -78,10 +82,12 @@ import {
   SurveyStatus,
   SurveyScopeItem,
   SurveyWorkOrder,
+  SurveyWorkOrderItem,
   SurveyVariationOrder,
 } from "../types";
-import { exportSurveyReportToPdf } from "./pdf/surveyPdfExport";
+import { exportSurveyReportToPdf, exportWorkOrderJobPackToPdf } from "./pdf/surveyPdfExport";
 import SurveyPrintableReport from "./pdf/SurveyPrintableReport";
+import WorkOrderJobPackReport from "./pdf/WorkOrderJobPackReport";
 
 const statusColorMap: Record<
   SurveyStatus,
@@ -104,6 +110,16 @@ const statusLabelMap: Record<SurveyStatus, string> = {
   qs_review: "QS Review",
   completed: "Completed",
   frozen: "Frozen",
+};
+
+const ALLOWED_SURVEY_TRANSITIONS: Record<SurveyStatus, SurveyStatus[]> = {
+  draft: ["assigned", "in_progress", "submitted"],
+  assigned: ["in_progress", "submitted", "draft"],
+  in_progress: ["submitted", "assigned"],
+  submitted: ["qs_review", "in_progress"],
+  qs_review: ["completed", "in_progress"],
+  completed: ["frozen"],
+  frozen: [],
 };
 
 interface SurveyDetailsProps {
@@ -153,6 +169,117 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const reportPrintRef = React.useRef<HTMLDivElement>(null);
+
+  const searchParams = useSearchParams();
+
+  // Tab synchronization with query parameter
+  useEffect(() => {
+    const tabParam = searchParams?.get("tab");
+    if (tabParam === "commercial" || tabParam === "work-order" || tabParam === "1") {
+      setTabValue(1);
+    }
+  }, [searchParams]);
+
+  // Freeze / Archive Confirmation Dialog State
+  const [freezeDialogOpen, setFreezeDialogOpen] = useState(false);
+  const [freezing, setFreezing] = useState(false);
+
+  // Work Order Execution Status Management
+  const [updatingWoStatus, setUpdatingWoStatus] = useState(false);
+  const [cancelWoDialogOpen, setCancelWoDialogOpen] = useState(false);
+  const [cancelWoReason, setCancelWoReason] = useState("");
+
+  // Work Order Item Progress Toggle State
+  const [togglingItemId, setTogglingItemId] = useState<number | null>(null);
+
+  // Work Order Job Pack PDF Export & Preview State
+  const [exportingWoPdf, setExportingWoPdf] = useState(false);
+  const [woPreviewOpen, setWoPreviewOpen] = useState(false);
+  const woReportPrintRef = React.useRef<HTMLDivElement>(null);
+
+  const handleExportWoJobPackPdf = async () => {
+    const wo = survey?.work_order || survey?.work_orders?.[0];
+    if (!survey || !wo || !woReportPrintRef.current) return;
+    try {
+      setExportingWoPdf(true);
+      toast.loading("Generating Contractor Work Order Job Pack PDF...", { id: "wo-pdf-export" });
+      const filename = `${wo.reference || `WO-${survey.reference}`}-Job-Pack.pdf`;
+      await exportWorkOrderJobPackToPdf(woReportPrintRef.current, filename);
+      toast.success("Work Order Job Pack PDF downloaded successfully!", { id: "wo-pdf-export" });
+    } catch (err: any) {
+      console.error("Job Pack export failed:", err);
+      toast.error(err?.message || "Failed to generate Job Pack PDF", { id: "wo-pdf-export" });
+    } finally {
+      setExportingWoPdf(false);
+    }
+  };
+
+  const handleFreezeSurvey = async () => {
+    if (!survey) return;
+    try {
+      setFreezing(true);
+      const res = await api.post(`/surveys/${survey.id}/freeze`);
+      if (res.data?.IsSuccess) {
+        toast.success("Survey successfully frozen and archived permanently!");
+        setFreezeDialogOpen(false);
+        void fetchSurvey();
+      } else {
+        toast.error(res.data?.message || "Failed to freeze survey");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to freeze survey");
+    } finally {
+      setFreezing(false);
+    }
+  };
+
+  const handleUpdateWoStatus = async (targetStatus: "in_progress" | "completed" | "cancelled", notes?: string) => {
+    if (!survey) return;
+    try {
+      setUpdatingWoStatus(true);
+      const res = await api.patch(`/surveys/${survey.id}/work-order/status`, {
+        status: targetStatus,
+        notes: notes || undefined,
+      });
+
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message || `Work order status updated to ${targetStatus}!`);
+        if (targetStatus === "cancelled") {
+          setCancelWoDialogOpen(false);
+          setCancelWoReason("");
+        }
+        void fetchSurvey();
+      } else {
+        toast.error(res.data?.message || "Failed to update work order status");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to update work order status");
+    } finally {
+      setUpdatingWoStatus(false);
+    }
+  };
+
+  const handleToggleWoItemProgress = async (itemId: number, currentCompleted: boolean) => {
+    if (!survey) return;
+    try {
+      setTogglingItemId(itemId);
+      const nextCompleted = !currentCompleted;
+      const res = await api.patch(`/surveys/${survey.id}/work-order/items/${itemId}/progress`, {
+        is_completed: nextCompleted,
+      });
+
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message || `Item marked ${nextCompleted ? "completed" : "incomplete"}`);
+        void fetchSurvey();
+      } else {
+        toast.error(res.data?.message || "Failed to update item progress");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to update item progress");
+    } finally {
+      setTogglingItemId(null);
+    }
+  };
 
   const handleExportPdf = async () => {
     if (!survey || !reportPrintRef.current) return;
@@ -488,6 +615,9 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
     0,
   );
 
+  const activeWorkOrder: SurveyWorkOrder | undefined =
+    survey.work_order || (survey.work_orders && survey.work_orders.length > 0 ? survey.work_orders[0] : undefined);
+
   return (
     <Box sx={{ p: { xs: 2, sm: 3 } }}>
       {/* Top Navigation Header */}
@@ -531,40 +661,72 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
         </Stack>
 
         <Stack direction="row" spacing={1.5} alignItems="center">
-          {/* Status Change Dropdown */}
-          <Button
-            variant="outlined"
-            color="secondary"
-            endIcon={<IconChevronDown size={16} />}
-            onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
-            disabled={updatingStatus || survey.status === "frozen"}
-            sx={{ fontWeight: 600, borderRadius: "8px" }}
-          >
-            Change Status
-          </Button>
-          <Menu
-            anchorEl={statusMenuAnchor}
-            open={Boolean(statusMenuAnchor)}
-            onClose={() => setStatusMenuAnchor(null)}
-          >
-            {(["draft", "assigned", "in_progress", "submitted", "qs_review", "completed"] as SurveyStatus[]).map(
-              (st) => (
-                <MenuItem
-                  key={st}
-                  selected={survey.status === st}
-                  onClick={() => handleUpdateStatus(st)}
-                >
-                  <Chip
-                    size="small"
-                    label={statusLabelMap[st]}
-                    color={statusColorMap[st]}
-                    sx={{ mr: 1.5, minWidth: 80, fontWeight: 600 }}
-                  />
-                  <Typography variant="body2">{statusLabelMap[st]}</Typography>
-                </MenuItem>
-              ),
-            )}
-          </Menu>
+          {/* Status Change Dropdown (Strictly aligned with ALLOWED_SURVEY_TRANSITIONS) */}
+          {survey.status !== "frozen" && (ALLOWED_SURVEY_TRANSITIONS[survey.status] || []).length > 0 && (
+            <>
+              <Button
+                variant="outlined"
+                color="secondary"
+                endIcon={<IconChevronDown size={16} />}
+                onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
+                disabled={updatingStatus}
+                sx={{ fontWeight: 600, borderRadius: "8px" }}
+              >
+                Change Status
+              </Button>
+              <Menu
+                anchorEl={statusMenuAnchor}
+                open={Boolean(statusMenuAnchor)}
+                onClose={() => setStatusMenuAnchor(null)}
+              >
+                {(ALLOWED_SURVEY_TRANSITIONS[survey.status] || []).map((st) => (
+                  <MenuItem
+                    key={st}
+                    onClick={() => {
+                      setStatusMenuAnchor(null);
+                      if (st === "frozen") {
+                        setFreezeDialogOpen(true);
+                      } else {
+                        handleUpdateStatus(st);
+                      }
+                    }}
+                  >
+                    <Chip
+                      size="small"
+                      label={statusLabelMap[st]}
+                      color={statusColorMap[st]}
+                      sx={{ mr: 1.5, minWidth: 80, fontWeight: 600 }}
+                    />
+                    <Typography variant="body2">{statusLabelMap[st]}</Typography>
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
+          )}
+
+          {/* Explicit Freeze & Archive Button for Completed surveys */}
+          {survey.status === "completed" && (
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<IconLock size={18} />}
+              onClick={() => setFreezeDialogOpen(true)}
+              sx={{ fontWeight: 700, borderRadius: "8px" }}
+            >
+              Freeze & Archive
+            </Button>
+          )}
+
+          {/* Frozen Indicator */}
+          {survey.status === "frozen" && (
+            <Chip
+              icon={<IconLock size={16} />}
+              label="Survey Frozen & Archived"
+              color="default"
+              variant="outlined"
+              sx={{ fontWeight: 700, height: 36, px: 1, borderColor: "grey.400" }}
+            />
+          )}
 
           <Button
             variant="outlined"
@@ -1433,7 +1595,15 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                 <Chip
                                   size="small"
                                   label={wo.status.toUpperCase()}
-                                  color={wo.status === "active" ? "primary" : wo.status === "completed" ? "success" : "default"}
+                                  color={
+                                    wo.status === "in_progress"
+                                      ? "warning"
+                                      : wo.status === "completed"
+                                      ? "success"
+                                      : wo.status === "cancelled"
+                                      ? "error"
+                                      : "primary"
+                                  }
                                   sx={{ fontWeight: 700, fontSize: "0.72rem", height: 22 }}
                                 />
                               </Stack>
@@ -1443,15 +1613,96 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                             </Box>
                           </Stack>
 
-                          <Button
-                            variant="outlined"
-                            color="secondary"
-                            startIcon={<IconPlus size={16} />}
-                            onClick={() => setVoDialogOpen(true)}
-                            sx={{ fontWeight: 700, borderRadius: "8px", textTransform: "none" }}
-                          >
-                            Request Variation Order
-                          </Button>
+                          {/* Work Order Execution and Export Actions */}
+                          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              size="small"
+                              startIcon={<IconEye size={16} />}
+                              onClick={() => setWoPreviewOpen(true)}
+                              sx={{ fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+                            >
+                              Preview Job Pack
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              size="small"
+                              startIcon={<IconDownload size={16} />}
+                              onClick={handleExportWoJobPackPdf}
+                              disabled={exportingWoPdf}
+                              sx={{ fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+                            >
+                              {exportingWoPdf ? "Exporting..." : "Download Job Pack (PDF)"}
+                            </Button>
+
+                            {/* Status Transition Actions */}
+                            {wo.status === "issued" && (
+                              <Button
+                                variant="contained"
+                                color="warning"
+                                size="small"
+                                startIcon={<IconPlayerPlay size={16} />}
+                                onClick={() => handleUpdateWoStatus("in_progress")}
+                                disabled={updatingWoStatus}
+                                sx={{ fontWeight: 700, borderRadius: "8px", textTransform: "none" }}
+                              >
+                                Start Works
+                              </Button>
+                            )}
+
+                            {wo.status === "in_progress" && (
+                              <Tooltip
+                                title={
+                                  (wo.progress?.completed ?? 0) < (wo.progress?.total ?? 0)
+                                    ? `All ${wo.progress?.total} items must be marked complete before completing the work order (${(wo.progress?.completed ?? 0)}/${wo.progress?.total ?? 0} done)`
+                                    : "Mark all works completed and finish work order"
+                                }
+                              >
+                                <span>
+                                  <Button
+                                    variant="contained"
+                                    color="success"
+                                    size="small"
+                                    startIcon={<IconCheck size={16} />}
+                                    onClick={() => handleUpdateWoStatus("completed")}
+                                    disabled={updatingWoStatus || ((wo.progress?.completed ?? 0) < (wo.progress?.total ?? 0))}
+                                    sx={{ fontWeight: 700, borderRadius: "8px", textTransform: "none" }}
+                                  >
+                                    Complete Work Order
+                                  </Button>
+                                </span>
+                              </Tooltip>
+                            )}
+
+                            {(wo.status === "issued" || wo.status === "in_progress") && (
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                startIcon={<IconX size={16} />}
+                                onClick={() => setCancelWoDialogOpen(true)}
+                                disabled={updatingWoStatus}
+                                sx={{ fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+                              >
+                                Cancel
+                              </Button>
+                            )}
+
+                            {(wo.status === "issued" || wo.status === "in_progress") && (
+                              <Button
+                                variant="outlined"
+                                color="secondary"
+                                size="small"
+                                startIcon={<IconPlus size={16} />}
+                                onClick={() => setVoDialogOpen(true)}
+                                sx={{ fontWeight: 700, borderRadius: "8px", textTransform: "none" }}
+                              >
+                                Request Variation
+                              </Button>
+                            )}
+                          </Stack>
                         </Stack>
 
                         <Grid container spacing={2.5} mb={3}>
@@ -1522,6 +1773,143 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                             </Typography>
                           </Box>
                         )}
+
+                        {/* Work Order Execution Progress */}
+                        {wo.progress && (
+                          <Box p={2.5} bgcolor="grey.50" borderRadius="8px" border="1px solid" borderColor="grey.200" mb={3}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                              <Stack direction="row" spacing={1} alignItems="center">
+                                <Typography variant="subtitle2" fontWeight={700}>
+                                  Work Order Execution Progress
+                                </Typography>
+                                <Chip
+                                  size="small"
+                                  label={
+                                    wo.status === "completed"
+                                      ? "100% COMPLETE"
+                                      : wo.status === "cancelled"
+                                      ? "CANCELLED"
+                                      : `${wo.progress.completed} of ${wo.progress.total} items completed (${wo.progress.percentage}%)`
+                                  }
+                                  color={wo.status === "completed" ? "success" : wo.status === "cancelled" ? "error" : "primary"}
+                                  sx={{ fontWeight: 700, fontSize: "0.72rem" }}
+                                />
+                              </Stack>
+                              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                {wo.status === "completed"
+                                  ? "All scheduled scope verified and completed"
+                                  : wo.status === "cancelled"
+                                  ? "Execution halted"
+                                  : `${wo.progress.total - wo.progress.completed} items remaining`}
+                              </Typography>
+                            </Stack>
+                            <LinearProgress
+                              variant="determinate"
+                              value={wo.progress.percentage}
+                              color={wo.status === "completed" ? "success" : wo.status === "cancelled" ? "error" : "primary"}
+                              sx={{ height: 8, borderRadius: 4 }}
+                            />
+                          </Box>
+                        )}
+
+                        {/* Itemized Work Order Scope & Checklist */}
+                        <Box mb={3}>
+                          <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
+                            Schedule of Works & Progress Tracking ({wo.items?.length || 0} items)
+                          </Typography>
+                          {(!wo.items || wo.items.length === 0) ? (
+                            <Box p={2.5} textAlign="center" bgcolor="grey.50" borderRadius="8px" border="1px dashed" borderColor="grey.300">
+                              <Typography variant="body2" color="text.secondary">
+                                No work items recorded in this work order.
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: "8px", mb: 2 }}>
+                              <Table size="small">
+                                <TableHead sx={{ bgcolor: "grey.100" }}>
+                                  <TableRow>
+                                    <TableCell sx={{ fontWeight: 700, width: 60 }} align="center">Done</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, width: 100 }}>Item Code</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, width: 140 }}>Location</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, width: 160 }}>Element</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 700, width: 90 }}>Qty</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 700, width: 110 }}>Rate (£)</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 700, width: 120 }}>Total (£)</TableCell>
+                                    <TableCell align="center" sx={{ fontWeight: 700, width: 130 }}>Status</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {wo.items.map((it: SurveyWorkOrderItem) => {
+                                    const isCompleted = Boolean(it.is_completed);
+                                    const isImmutable = wo.status === "completed" || wo.status === "cancelled" || survey.status === "frozen";
+
+                                    return (
+                                      <TableRow
+                                        key={it.id}
+                                        hover
+                                        sx={{
+                                          bgcolor: isCompleted ? "success.lighter" : "inherit",
+                                        }}
+                                      >
+                                        <TableCell align="center" sx={{ py: 0.5 }}>
+                                          <Checkbox
+                                            checked={isCompleted}
+                                            disabled={isImmutable || togglingItemId === it.id}
+                                            onChange={() => handleToggleWoItemProgress(it.id, isCompleted)}
+                                            size="small"
+                                            color="success"
+                                          />
+                                        </TableCell>
+                                        <TableCell sx={{ fontWeight: 600, fontSize: "0.82rem" }}>
+                                          {it.item_code || `ITM-${it.id}`}
+                                        </TableCell>
+                                        <TableCell sx={{ fontSize: "0.82rem" }}>
+                                          {it.room_name || "General"}
+                                        </TableCell>
+                                        <TableCell sx={{ fontSize: "0.82rem", fontWeight: 600 }}>
+                                          {it.element_name || "—"}
+                                        </TableCell>
+                                        <TableCell sx={{ fontSize: "0.82rem" }}>
+                                          <Typography variant="body2" sx={{ fontSize: "0.82rem", fontWeight: isCompleted ? 600 : 400 }}>
+                                            {it.description}
+                                          </Typography>
+                                          {it.notes && (
+                                            <Typography variant="caption" color="text.secondary" display="block">
+                                              {it.notes}
+                                            </Typography>
+                                          )}
+                                          {it.completed_at && (
+                                            <Typography variant="caption" color="success.dark" display="block">
+                                              Completed: {new Date(it.completed_at).toLocaleDateString()} {new Date(it.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </Typography>
+                                          )}
+                                        </TableCell>
+                                        <TableCell align="right" sx={{ fontSize: "0.82rem" }}>
+                                          {Number(it.quantity).toFixed(2)} {it.unit}
+                                        </TableCell>
+                                        <TableCell align="right" sx={{ fontSize: "0.82rem" }}>
+                                          £{Number(it.unit_rate).toFixed(2)}
+                                        </TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.82rem" }}>
+                                          £{Number(it.total_amount).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </TableCell>
+                                        <TableCell align="center">
+                                          <Chip
+                                            size="small"
+                                            label={isCompleted ? "COMPLETED" : "PENDING"}
+                                            color={isCompleted ? "success" : "default"}
+                                            sx={{ fontWeight: 700, fontSize: "0.68rem", height: 20 }}
+                                          />
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          )}
+                        </Box>
 
                         {/* Variation Orders List */}
                         <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
@@ -2115,6 +2503,139 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
         </DialogActions>
       </Dialog>
 
+      {/* Freeze & Archive Confirmation Dialog */}
+      <Dialog
+        open={freezeDialogOpen}
+        onClose={() => !freezing && setFreezeDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <IconArchive size={22} color="#d32f2f" />
+          Freeze & Archive Survey Permanently
+        </DialogTitle>
+        <DialogContent dividers>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <AlertTitle sx={{ fontWeight: 700 }}>Irreversible Action</AlertTitle>
+            Freezing a survey permanently locks all inspection data, commercial scope items, baseline costs, and work orders.
+            Once frozen, no further modifications, status changes, room/item edits, or variation orders can be made.
+          </Alert>
+          <Typography variant="body2" color="text.secondary">
+            Survey Reference: <strong>{survey?.reference}</strong>
+            <br />
+            Property: <strong>{survey?.property_name || "—"}</strong>
+            <br />
+            Commercial Baseline: <strong>£{Number(survey?.baseline_total || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setFreezeDialogOpen(false)} disabled={freezing}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={freezing ? <CircularProgress size={16} color="inherit" /> : <IconArchive size={18} />}
+            onClick={handleFreezeSurvey}
+            disabled={freezing}
+          >
+            {freezing ? "Freezing..." : "Yes, Freeze & Archive Survey"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Cancel Work Order Dialog */}
+      <Dialog
+        open={cancelWoDialogOpen}
+        onClose={() => !updatingWoStatus && setCancelWoDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <IconX size={22} color="#d32f2f" />
+          Cancel Work Order
+        </DialogTitle>
+        <DialogContent dividers>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            <AlertTitle sx={{ fontWeight: 700 }}>Notice</AlertTitle>
+            Cancelling this work order will permanently halt all work and mark the work order cancelled. This action cannot be undone.
+          </Alert>
+          <CustomTextField
+            fullWidth
+            required
+            multiline
+            rows={3}
+            label="Cancellation Reason / Notes"
+            placeholder="Provide a clear reason for cancelling this contractor work order..."
+            value={cancelWoReason}
+            onChange={(e: any) => setCancelWoReason(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setCancelWoDialogOpen(false)} disabled={updatingWoStatus}>
+            Keep Work Order
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={updatingWoStatus ? <CircularProgress size={16} color="inherit" /> : <IconX size={18} />}
+            onClick={() => handleUpdateWoStatus("cancelled", cancelWoReason)}
+            disabled={updatingWoStatus || !cancelWoReason.trim()}
+          >
+            {updatingWoStatus ? "Cancelling..." : "Confirm Cancellation"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Contractor Job Pack PDF Preview Dialog */}
+      <Dialog
+        open={woPreviewOpen}
+        onClose={() => setWoPreviewOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <IconBriefcase size={22} />
+            <Typography variant="h6" fontWeight={700}>
+              Contractor Work Order Job Pack Preview
+            </Typography>
+          </Stack>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              startIcon={<IconDownload size={16} />}
+              onClick={handleExportWoJobPackPdf}
+              disabled={exportingWoPdf}
+            >
+              {exportingWoPdf ? "Downloading..." : "Download Job Pack PDF"}
+            </Button>
+            <IconButton size="small" onClick={() => setWoPreviewOpen(false)}>
+              <IconX size={18} />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers sx={{ bgcolor: "grey.100", p: 3, display: "flex", justifyContent: "center" }}>
+          {activeWorkOrder ? (
+            <Box sx={{ width: "794px", bgcolor: "#fff", boxShadow: 3, borderRadius: 1, overflow: "hidden" }}>
+              <WorkOrderJobPackReport
+                survey={survey}
+                workOrder={activeWorkOrder}
+              />
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No work order data available to preview.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setWoPreviewOpen(false)}>Close Preview</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Off-screen render container for PDF export generator */}
       <Box
         sx={{
@@ -2129,6 +2650,27 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       >
         <SurveyPrintableReport survey={survey} containerRef={reportPrintRef} />
       </Box>
+
+      {/* Off-screen render container for Contractor Work Order Job Pack PDF export */}
+      {activeWorkOrder && (
+        <Box
+          sx={{
+            position: "fixed",
+            left: -99999,
+            top: 0,
+            width: "794px",
+            opacity: 0,
+            pointerEvents: "none",
+            zIndex: -1,
+          }}
+        >
+          <WorkOrderJobPackReport
+            survey={survey}
+            workOrder={activeWorkOrder}
+            containerRef={woReportPrintRef}
+          />
+        </Box>
+      )}
     </Box>
   );
 }
