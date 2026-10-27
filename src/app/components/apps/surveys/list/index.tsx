@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -49,6 +49,7 @@ import {
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import useSurveyAccess from "../useSurveyAccess";
 import { useSession } from "next-auth/react";
 import { flexRender } from "@tanstack/react-table";
 import { useServerTable } from "@/hooks/useServerTable";
@@ -85,11 +86,15 @@ const statusLabelMap: Record<SurveyStatus, string> = {
 
 export default function SurveyList() {
   const router = useRouter();
+  const access = useSurveyAccess();
+  const isAdmin = access.is_admin;
   const session = useSession();
   const user = session.data?.user as any;
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Survey[]>([]);
+  // Totals per status across all pages, returned by the list API for the summary cards.
+  const [statusCounts, setStatusCounts] = useState<Record<string, number> | null>(null);
 
   // Search & Filters
   const [search, setSearch] = useState("");
@@ -172,7 +177,7 @@ export default function SurveyList() {
       try {
         const [resExpense, resUsers] = await Promise.allSettled([
           api.get("/expense/get-resources"),
-          api.get("/user/list"),
+          api.get("surveys/assignable-users"),
         ]);
 
         if (resExpense.status === "fulfilled" && resExpense.value.data) {
@@ -198,8 +203,9 @@ export default function SurveyList() {
     void loadResources();
   }, []);
 
-  // Fetch surveys from backend API
-  const fetchSurveys = useCallback(async () => {
+  // Fetch surveys from backend API. A plain function (not memoised) so the table hook always
+  // calls the version that sees the current page and page size.
+  const fetchSurveys = async () => {
     setLoading(true);
     try {
       const params: any = {
@@ -218,20 +224,23 @@ export default function SurveyList() {
         setData(rows);
         setTotalRows(res.data.data?.totalItems ?? rows.length);
         setPageCount(res.data.data?.totalPages ?? 1);
+        setStatusCounts(res.data.data?.statusCounts ?? null);
       } else {
         setData([]);
         setTotalRows(0);
         setPageCount(1);
+        setStatusCounts(null);
       }
     } catch (err) {
       console.error("Failed to load surveys", err);
       setData([]);
       setTotalRows(0);
       setPageCount(1);
+      setStatusCounts(null);
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, projectFilter, surveyorFilter]);
+  };
 
   const handleDelete = async () => {
     if (!deleteTargetId) return;
@@ -437,20 +446,21 @@ export default function SurveyList() {
 
           return (
             <Stack spacing={0.5} alignItems="flex-start">
-              {workOrder ? (
-                <Tooltip title={`Issued to ${workOrder.contractor_name || "Contractor"} for £${Number(workOrder.total_amount).toFixed(2)}`}>
+              {workOrder && (
+                <Tooltip title={workOrder.status === "cancelled" ? `Work order ${workOrder.reference} was cancelled` : `Issued to ${workOrder.contractor_name || "Contractor"} for £${Number(workOrder.total_amount).toFixed(2)}`}>
                   <Chip
                     size="small"
-                    color="primary"
+                    color={workOrder.status === "cancelled" ? "default" : "primary"}
                     icon={<IconBriefcase size={12} />}
-                    label={workOrder.reference}
+                    label={workOrder.status === "cancelled" ? `${workOrder.reference} (cancelled)` : workOrder.reference}
                     component={Link}
                     href={`/apps/surveys/view/${row.original.id}?tab=commercial`}
                     clickable
                     sx={{ height: 20, fontSize: "0.7rem", fontWeight: 700 }}
                   />
                 </Tooltip>
-              ) : (row.original.status === "completed" || row.original.status === "frozen") && row.original.baseline_locked_at ? (
+              )}
+              {isAdmin && row.original.status === "completed" && row.original.baseline_locked_at && (!workOrder || workOrder.status === "cancelled") && (
                 <Chip
                   size="small"
                   color="success"
@@ -459,7 +469,7 @@ export default function SurveyList() {
                   onClick={() => handleOpenHandoff(row.original)}
                   sx={{ height: 20, fontSize: "0.7rem", fontWeight: 600, cursor: "pointer" }}
                 />
-              ) : null}
+              )}
 
               {qsStatus === "rework_requested" ? (
                 <Chip
@@ -511,8 +521,7 @@ export default function SurveyList() {
           return (
             <Stack direction="row" spacing={0.5} justifyContent="flex-end">
               {/* Work Order Handoff Action */}
-              {isCompleted && hasBaseline && (
-                workOrder ? (
+              {isCompleted && hasBaseline && workOrder && (
                   <Tooltip title={`View Work Order ${workOrder.reference}`}>
                     <IconButton
                       size="small"
@@ -523,7 +532,8 @@ export default function SurveyList() {
                       <IconBriefcase size={18} />
                     </IconButton>
                   </Tooltip>
-                ) : (
+              )}
+              {isCompleted && hasBaseline && isAdmin && row.original.status === "completed" && (!workOrder || workOrder.status === "cancelled") && (
                   <Tooltip title="Issue Contractor Work Order">
                     <IconButton
                       size="small"
@@ -533,7 +543,6 @@ export default function SurveyList() {
                       <IconBriefcase size={18} />
                     </IconButton>
                   </Tooltip>
-                )
               )}
 
               {["submitted", "qs_review", "completed", "frozen"].includes(row.original.status) && (
@@ -549,7 +558,8 @@ export default function SurveyList() {
                 </Tooltip>
               )}
 
-              {(row.original.status === "assigned" ||
+              {(isAdmin || row.original.surveyor_id === access.user_id) &&
+                (row.original.status === "assigned" ||
                 row.original.status === "in_progress" ||
                 row.original.status === "draft") && (
                 <Tooltip title="Conduct Inspection">
@@ -575,7 +585,7 @@ export default function SurveyList() {
                 </IconButton>
               </Tooltip>
 
-              {!isCompleted && (
+              {isAdmin && !isCompleted && (
                 <Tooltip title="Edit Survey">
                   <IconButton
                     size="small"
@@ -588,7 +598,7 @@ export default function SurveyList() {
                 </Tooltip>
               )}
 
-              {["draft", "assigned", "in_progress"].includes(row.original.status) && (
+              {isAdmin && ["draft", "assigned", "in_progress"].includes(row.original.status) && (
                 <Tooltip title="Delete Survey">
                   <IconButton
                     size="small"
@@ -604,7 +614,7 @@ export default function SurveyList() {
         },
       },
     ],
-    [],
+    [isAdmin, access.user_id],
   );
 
   const {
@@ -623,6 +633,12 @@ export default function SurveyList() {
     state: { columnVisibility },
     onColumnVisibilityChange,
   });
+
+  // Summary card count for the given statuses: API totals when available, otherwise the loaded rows.
+  const countByStatus = (...statuses: string[]) =>
+    statusCounts
+      ? statuses.reduce((sum, s) => sum + (statusCounts[s] ?? 0), 0)
+      : data.filter((s) => statuses.includes(s.status)).length;
 
   // Reset to first page when search or filters change
   useEffect(() => {
@@ -648,16 +664,18 @@ export default function SurveyList() {
           </Typography>
         </Box>
 
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<IconPlus size={18} />}
-          component={Link}
-          href="/apps/surveys/create"
-          sx={{ fontWeight: 600, borderRadius: "8px" }}
-        >
-          Create Survey
-        </Button>
+        {isAdmin && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<IconPlus size={18} />}
+            component={Link}
+            href="/apps/surveys/create"
+            sx={{ fontWeight: 600, borderRadius: "8px" }}
+          >
+            Create Survey
+          </Button>
+        )}
       </Stack>
 
       {/* KPI Summary Cards */}
@@ -694,7 +712,7 @@ export default function SurveyList() {
                     Drafts
                   </Typography>
                   <Typography variant="h5" fontWeight={700}>
-                    {data.filter((s) => s.status === "draft").length}
+                    {countByStatus("draft")}
                   </Typography>
                 </Box>
               </Stack>
@@ -714,7 +732,7 @@ export default function SurveyList() {
                     In Progress / Assigned
                   </Typography>
                   <Typography variant="h5" fontWeight={700}>
-                    {data.filter((s) => s.status === "assigned" || s.status === "in_progress").length}
+                    {countByStatus("assigned", "in_progress")}
                   </Typography>
                 </Box>
               </Stack>
@@ -734,7 +752,7 @@ export default function SurveyList() {
                     Completed / Submitted
                   </Typography>
                   <Typography variant="h5" fontWeight={700}>
-                    {data.filter((s) => s.status === "completed" || s.status === "submitted" || s.status === "qs_review" || s.status === "frozen").length}
+                    {countByStatus("completed", "submitted", "qs_review", "frozen")}
                   </Typography>
                 </Box>
               </Stack>
@@ -924,16 +942,18 @@ export default function SurveyList() {
                           ? "No surveys matched your search criteria. Try clearing some filters."
                           : "No surveys have been created yet. Click 'Create Survey' to launch the builder with an existing template or blank property."}
                       </Typography>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<IconPlus size={18} />}
-                        component={Link}
-                        href="/apps/surveys/create"
-                        sx={{ mt: 1, borderRadius: "8px" }}
-                      >
-                        Create Survey
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          startIcon={<IconPlus size={18} />}
+                          component={Link}
+                          href="/apps/surveys/create"
+                          sx={{ mt: 1, borderRadius: "8px" }}
+                        >
+                          Create Survey
+                        </Button>
+                      )}
                     </Stack>
                   </TableCell>
                 </TableRow>

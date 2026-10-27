@@ -28,6 +28,7 @@ import {
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import useSurveyAccess from "../useSurveyAccess";
 import {
   Survey,
   SurveyorOption,
@@ -44,6 +45,7 @@ interface SurveyEditProps {
 }
 
 export default function SurveyEdit({ id }: SurveyEditProps) {
+  const access = useSurveyAccess();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -69,7 +71,7 @@ export default function SurveyEdit({ id }: SurveyEditProps) {
       try {
         const [resSurvey, resUsers, resGroups, resElements] = await Promise.allSettled([
           api.get(`surveys/${id}`),
-          api.get("/user/list"),
+          api.get("surveys/assignable-users"),
           api.get("/survey-groups/get"),
           api.get("/survey-elements/get"),
         ]);
@@ -204,7 +206,7 @@ export default function SurveyEdit({ id }: SurveyEditProps) {
     }
   };
 
-  if (loading) {
+  if (loading || !access.loaded) {
     return (
       <Box p={8} textAlign="center">
         <Stack spacing={2} alignItems="center">
@@ -230,6 +232,28 @@ export default function SurveyEdit({ id }: SurveyEditProps) {
           href="/apps/surveys/list"
         >
           Return to Surveys
+        </Button>
+      </Box>
+    );
+  }
+
+  if (!access.is_admin) {
+    return (
+      <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 900, mx: "auto" }}>
+        <Alert severity={access.failed ? "warning" : "info"} icon={<IconLock size={24} />} sx={{ mb: 3, borderRadius: 2 }}>
+          <AlertTitle sx={{ fontWeight: 700 }}>
+            {access.failed ? "Permissions could not be verified" : "Editing is limited to administrators"}
+          </AlertTitle>
+          {access.failed
+            ? "Couldn't verify your survey permissions. Refresh the page to try again."
+            : `Only company administrators can edit survey ${survey.reference}.`}
+        </Alert>
+        <Button
+          variant="contained"
+          startIcon={<IconEye size={18} />}
+          onClick={() => router.push(`/apps/surveys/view/${survey.id}`)}
+        >
+          View Survey Details
         </Button>
       </Box>
     );

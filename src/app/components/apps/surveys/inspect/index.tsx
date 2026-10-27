@@ -53,6 +53,7 @@ import {
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import useSurveyAccess from "../useSurveyAccess";
 import BlankCard from "@/app/components/shared/BlankCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import {
@@ -199,6 +200,7 @@ function calculateQuantity(
 
 export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   const router = useRouter();
+  const access = useSurveyAccess();
 
   const [loading, setLoading] = useState(true);
   const [survey, setSurvey] = useState<Survey | null>(null);
@@ -239,9 +241,12 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const isUnassigned = Boolean(survey && !survey.surveyor_id);
-  const isReadOnly = Boolean(
+  const isStatusLocked = Boolean(
     survey && ["submitted", "qs_review", "completed", "frozen"].includes(survey.status)
   );
+  // Only the assigned surveyor or a company administrator may record inspection evidence.
+  const canRecordInspection = access.is_admin || Boolean(survey && survey.surveyor_id === access.user_id);
+  const isReadOnly = isStatusLocked || !canRecordInspection;
 
   const handleSubmitInspection = async () => {
     if (!survey) return;
@@ -441,6 +446,9 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
     activeItem?.element?.output_unit ||
     (outputName === "Volume" ? "m³" : "m²");
 
+  // "Direct area / volume" elements are measured as a finished value, not from dimensions.
+  const isDirectMeasurement = activeItem?.element?.measurement_mode === "direct";
+
   const hasDim3 = Boolean(
     activeItem?.element?.dimension_3_name ||
     activeItem?.dimension_3_name ||
@@ -588,16 +596,31 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
         severity: condition === "damaged" || condition === "minor_defects" ? severity : null,
         repair_action: repairAction.trim() || null,
         notes: notes.trim() || null,
-        dimension_1_name: dim1Label,
-        dimension_1_unit: dim1Unit,
-        dimension_1_value: dim1 !== "" ? parseFloat(dim1) : null,
-        dimension_2_name: dim2Label,
-        dimension_2_unit: dim2Unit,
-        dimension_2_value: dim2 !== "" ? parseFloat(dim2) : null,
-        dimension_3_name: hasDim3 ? dim3Label : null,
-        dimension_3_unit: hasDim3 ? dim3Unit : null,
-        dimension_3_value: hasDim3 && dim3 !== "" ? parseFloat(dim3) : null,
-        dimension_4_value: dim4 !== "" ? parseFloat(dim4) : null,
+        ...(isDirectMeasurement
+          ? {
+              dimension_1_name: null,
+              dimension_1_unit: null,
+              dimension_1_value: null,
+              dimension_2_name: null,
+              dimension_2_unit: null,
+              dimension_2_value: null,
+              dimension_3_name: null,
+              dimension_3_unit: null,
+              dimension_3_value: null,
+              dimension_4_value: null,
+            }
+          : {
+              dimension_1_name: dim1Label,
+              dimension_1_unit: dim1Unit,
+              dimension_1_value: dim1 !== "" ? parseFloat(dim1) : null,
+              dimension_2_name: dim2Label,
+              dimension_2_unit: dim2Unit,
+              dimension_2_value: dim2 !== "" ? parseFloat(dim2) : null,
+              dimension_3_name: hasDim3 ? dim3Label : null,
+              dimension_3_unit: hasDim3 ? dim3Unit : null,
+              dimension_3_value: hasDim3 && dim3 !== "" ? parseFloat(dim3) : null,
+              dimension_4_value: dim4 !== "" ? parseFloat(dim4) : null,
+            }),
         calculated_qty: qty !== "" ? parseFloat(qty) : null,
         output_unit: outputUnit,
         is_inspected: true,
@@ -865,7 +888,15 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
         </Alert>
       )}
 
-      {isReadOnly && (
+      {access.loaded && !isStatusLocked && !canRecordInspection && (
+        <Alert severity={access.failed ? "warning" : "info"} sx={{ mb: 2.5, borderRadius: "8px" }}>
+          {access.failed
+            ? "Read only: Couldn't verify your survey permissions. Refresh the page to try again."
+            : "Read only: only the assigned surveyor or a company administrator can record inspection evidence for this survey."}
+        </Alert>
+      )}
+
+      {isStatusLocked && (
         <Alert severity="info" sx={{ mb: 2.5, borderRadius: "8px" }}>
           This survey is in <strong>{survey.status.replace("_", " ").toUpperCase()}</strong> status and is locked for editing.
         </Alert>
@@ -1165,9 +1196,37 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                     2. Site Measurements & Dimensions
                   </Typography>
                   <Typography variant="caption" color="text.secondary" display="block" mb={1.5}>
-                    Enter actual site dimensions. The billable quantity calculates automatically.
+                    {isDirectMeasurement
+                      ? `Enter the finished ${outputName.toLowerCase()} measured on site.`
+                      : "Enter actual site dimensions. The billable quantity calculates automatically."}
                   </Typography>
 
+                  {isDirectMeasurement ? (
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                        <CustomTextField
+                          label={outputName}
+                          type="number"
+                          size="small"
+                          fullWidth
+                          disabled={isReadOnly || isUnassigned}
+                          value={qty}
+                          onChange={(e: any) => setQty(e.target.value)}
+                          placeholder="0.00"
+                          inputProps={{ step: "any", min: 0 }}
+                          InputProps={{
+                            endAdornment: outputUnit ? (
+                              <InputAdornment position="end">
+                                <Typography variant="caption" color="text.secondary">
+                                  {outputUnit}
+                                </Typography>
+                              </InputAdornment>
+                            ) : null,
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
+                  ) : (
                   <Grid container spacing={2} alignItems="stretch">
                     <Grid size={{ xs: 12, sm: hasDim3 ? 6 : 4, md: hasDim3 ? 3 : 4 }}>
                       <CustomTextField
@@ -1287,6 +1346,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                       </Paper>
                     </Grid>
                   </Grid>
+                  )}
                 </Box>
 
                 {/* 3. Defect & Repair Specifications (Only when Damaged or Minor Defects) */}

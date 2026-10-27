@@ -74,6 +74,7 @@ import {
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import useSurveyAccess from "../useSurveyAccess";
 import BlankCard from "@/app/components/shared/BlankCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import {
@@ -128,6 +129,15 @@ interface SurveyDetailsProps {
 
 export default function SurveyDetails({ id }: SurveyDetailsProps) {
   const router = useRouter();
+  const access = useSurveyAccess();
+  const isAdmin = access.is_admin;
+  const canRunWorkOrder = (wo: { contractor_id?: number | null }) =>
+    isAdmin || (wo.contractor_id != null && wo.contractor_id === access.user_id);
+  // Variation orders cannot be decided once their work order is completed or cancelled.
+  const isVoWorkOrderClosed = (vo: { work_order_id?: number | null }) => {
+    const linked = (survey?.work_orders || []).find((w) => w.id === vo.work_order_id);
+    return Boolean(linked && ["completed", "cancelled"].includes(linked.status));
+  };
 
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [loading, setLoading] = useState(true);
@@ -330,7 +340,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
   useEffect(() => {
     const loadContractors = async () => {
       try {
-        const res = await api.get("/user/list");
+        const res = await api.get("surveys/assignable-users");
         if (res.data?.info) {
           setContractors(
             res.data.info.map((u: any) => ({
@@ -615,6 +625,9 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
     0,
   );
 
+  const latestWorkOrder = survey.work_order || survey.work_orders?.[0];
+  const hasOpenWorkOrder = Boolean(latestWorkOrder && latestWorkOrder.status !== "cancelled");
+
   const activeWorkOrder: SurveyWorkOrder | undefined =
     survey.work_order || (survey.work_orders && survey.work_orders.length > 0 ? survey.work_orders[0] : undefined);
 
@@ -642,7 +655,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
           </IconButton>
           <Box>
             <Stack direction="row" alignItems="center" spacing={1.5}>
-              <Typography variant="h4" fontWeight={700}>
+              <Typography variant="h4" fontWeight={700} sx={{ whiteSpace: "nowrap" }}>
                 {survey.reference || `SRV-${survey.id}`}
               </Typography>
               <Chip
@@ -660,9 +673,9 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
           </Box>
         </Stack>
 
-        <Stack direction="row" spacing={1.5} alignItems="center">
+        <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap justifyContent="flex-end">
           {/* Status Change Dropdown (Strictly aligned with ALLOWED_SURVEY_TRANSITIONS) */}
-          {survey.status !== "frozen" && (ALLOWED_SURVEY_TRANSITIONS[survey.status] || []).length > 0 && (
+          {isAdmin && survey.status !== "frozen" && (ALLOWED_SURVEY_TRANSITIONS[survey.status] || []).length > 0 && (
             <>
               <Button
                 variant="outlined"
@@ -705,7 +718,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
           )}
 
           {/* Explicit Freeze & Archive Button for Completed surveys */}
-          {survey.status === "completed" && (
+          {isAdmin && survey.status === "completed" && (
             <Button
               variant="outlined"
               color="error"
@@ -762,7 +775,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
             </Button>
           )}
 
-          {(survey.status === "assigned" || survey.status === "in_progress" || survey.status === "draft") && (
+          {(isAdmin || survey.surveyor_id === access.user_id) &&
+            (survey.status === "assigned" || survey.status === "in_progress" || survey.status === "draft") && (
             <Button
               variant="contained"
               color="success"
@@ -777,7 +791,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
 
           {/* Work Order Action Button */}
           {(survey.status === "completed" || survey.status === "frozen") && survey.baseline_locked_at && (
-            (survey.work_order || survey.work_orders?.[0]) ? (
+            <>
+            {(survey.work_order || survey.work_orders?.[0]) && (
               <Button
                 variant="outlined"
                 color="primary"
@@ -787,7 +802,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
               >
                 WO: {(survey.work_order || survey.work_orders?.[0])?.reference}
               </Button>
-            ) : (
+            )}
+            {isAdmin && survey.status === "completed" && !hasOpenWorkOrder && (
               <Button
                 variant="contained"
                 color="primary"
@@ -797,10 +813,11 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
               >
                 Issue Work Order
               </Button>
-            )
+            )}
+            </>
           )}
 
-          {!["completed", "frozen"].includes(survey.status) && (
+          {isAdmin && !["completed", "frozen"].includes(survey.status) && (
             <Button
               variant="contained"
               color="primary"
@@ -1018,15 +1035,17 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                 <Typography variant="body2" color="text.secondary" mb={2}>
                   This survey currently has no inspection elements configured.
                 </Typography>
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<IconEdit size={16} />}
-                  component={Link}
-                  href={`/apps/surveys/edit/${survey.id}`}
-                >
-                  Configure Rooms in Edit Mode
-                </Button>
+                {isAdmin && (
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<IconEdit size={16} />}
+                    component={Link}
+                    href={`/apps/surveys/edit/${survey.id}`}
+                  >
+                    Configure Rooms in Edit Mode
+                  </Button>
+                )}
               </Box>
             ) : (
               <Stack spacing={2.5}>
@@ -1580,7 +1599,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
 
                 return (
                   <Box mb={3}>
-                    {wo ? (
+                    {wo && (
                       <BlankCard sx={{ p: 3, border: "1.5px solid", borderColor: "primary.light" }}>
                         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={2} mb={2.5}>
                           <Stack direction="row" spacing={1.5} alignItems="center">
@@ -1638,7 +1657,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                             </Button>
 
                             {/* Status Transition Actions */}
-                            {wo.status === "issued" && (
+                            {wo.status === "issued" && survey.status !== "frozen" && canRunWorkOrder(wo) && (
                               <Button
                                 variant="contained"
                                 color="warning"
@@ -1652,7 +1671,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                               </Button>
                             )}
 
-                            {wo.status === "in_progress" && (
+                            {wo.status === "in_progress" && survey.status !== "frozen" && canRunWorkOrder(wo) && (
                               <Tooltip
                                 title={
                                   (wo.progress?.completed ?? 0) < (wo.progress?.total ?? 0)
@@ -1676,7 +1695,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                               </Tooltip>
                             )}
 
-                            {(wo.status === "issued" || wo.status === "in_progress") && (
+                            {isAdmin && survey.status !== "frozen" && (wo.status === "issued" || wo.status === "in_progress") && (
                               <Button
                                 variant="outlined"
                                 color="error"
@@ -1690,7 +1709,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                               </Button>
                             )}
 
-                            {(wo.status === "issued" || wo.status === "in_progress") && (
+                            {survey.status !== "frozen" && (wo.status === "issued" || wo.status === "in_progress") && (
                               <Button
                                 variant="outlined"
                                 color="secondary"
@@ -1855,7 +1874,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                         <TableCell align="center" sx={{ py: 0.5 }}>
                                           <Checkbox
                                             checked={isCompleted}
-                                            disabled={isImmutable || togglingItemId === it.id}
+                                            disabled={isImmutable || !canRunWorkOrder(wo) || togglingItemId === it.id}
                                             onChange={() => handleToggleWoItemProgress(it.id, isCompleted)}
                                             size="small"
                                             color="success"
@@ -1970,7 +1989,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                       </Typography>
                                     </TableCell>
                                     <TableCell align="center">
-                                      {vo.status === "pending" ? (
+                                      {vo.status === "pending" && isAdmin && survey.status !== "frozen" && !isVoWorkOrderClosed(vo) ? (
                                         <Stack direction="row" spacing={1} justifyContent="center">
                                           <Button
                                             size="small"
@@ -1995,7 +2014,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                         </Stack>
                                       ) : (
                                         <Typography variant="caption" color="text.secondary">
-                                          {vo.status === "approved" ? "Approved & Reconciled" : "Rejected"}
+                                          {vo.status === "approved" ? "Approved & Reconciled" : vo.status === "pending" ? (survey.status === "frozen" ? "Pending (survey frozen)" : isVoWorkOrderClosed(vo) ? "Pending (work order closed)" : "Awaiting admin approval") : "Rejected"}
                                         </Typography>
                                       )}
                                     </TableCell>
@@ -2006,8 +2025,9 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                           </TableContainer>
                         )}
                       </BlankCard>
-                    ) : (
-                      <BlankCard sx={{ p: 3, bgcolor: "grey.50", border: "1.5px dashed", borderColor: "success.main" }}>
+                    )}
+                    {(!wo || wo.status === "cancelled") && (
+                      <BlankCard sx={{ p: 3, mt: wo ? 2.5 : 0, bgcolor: "grey.50", border: "1.5px dashed", borderColor: "success.main" }}>
                         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={2}>
                           <Stack direction="row" spacing={2} alignItems="center">
                             <Avatar sx={{ bgcolor: "success.light", color: "success.main", width: 48, height: 48, borderRadius: "10px" }}>
@@ -2018,20 +2038,24 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                 Commercial Baseline Locked & Ready for Contractor Handoff
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                Approved commercial scope (£{Number(survey.baseline_total || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) is ready to be converted into an official contractor work order.
+                                {wo
+                                  ? `Work order ${wo.reference} was cancelled. Issue a replacement work order for the approved scope (£${Number(survey.baseline_total || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}).`
+                                  : `Approved commercial scope (£${Number(survey.baseline_total || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) is ready to be converted into an official contractor work order.`}
                               </Typography>
                             </Box>
                           </Stack>
 
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            startIcon={<IconBriefcase size={18} />}
-                            onClick={handleOpenHandoff}
-                            sx={{ fontWeight: 700, borderRadius: "8px", px: 3, py: 1 }}
-                          >
-                            Issue Work Order
-                          </Button>
+                          {isAdmin && survey.status === "completed" && (
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              startIcon={<IconBriefcase size={18} />}
+                              onClick={handleOpenHandoff}
+                              sx={{ fontWeight: 700, borderRadius: "8px", px: 3, py: 1 }}
+                            >
+                              Issue Work Order
+                            </Button>
+                          )}
                         </Stack>
                       </BlankCard>
                     )}

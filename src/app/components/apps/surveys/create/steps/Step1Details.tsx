@@ -82,14 +82,14 @@ export default function Step1Details({
         <Grid size={{ xs: 12, md: 4 }}>
           <CustomTextField
             fullWidth
-            required
             label="Survey Reference"
+            placeholder="Auto-generated"
             value={formData.reference}
             onChange={(e: any) =>
               setFormData((prev: any) => ({ ...prev, reference: e.target.value }))
             }
             error={Boolean(errors.reference)}
-            helperText={errors.reference || "Unique reference for this survey scope"}
+            helperText={errors.reference || "Leave blank to number automatically"}
             InputProps={{
               startAdornment: (
                 <Box mr={1} color="text.secondary" display="flex">

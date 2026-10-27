@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Alert,
   Box,
   Typography,
   Stepper,
@@ -23,6 +24,7 @@ import {
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import useSurveyAccess from "../useSurveyAccess";
 import {
   Survey,
   SurveyCreationMethod,
@@ -48,6 +50,7 @@ const steps = [
 
 export default function CreateSurveyWizard() {
   const router = useRouter();
+  const access = useSurveyAccess();
 
   const [activeStep, setActiveStep] = useState(0);
 
@@ -62,7 +65,7 @@ export default function CreateSurveyWizard() {
 
   // Step 1 Form Data
   const [formData, setFormData] = useState({
-    reference: `SRV-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+    reference: "",
     title: "",
     projectId: null as number | null,
     addressId: null as number | null,
@@ -90,7 +93,7 @@ export default function CreateSurveyWizard() {
         const [resExpense, resUsers, resTemplates, resGroups, resElements] =
           await Promise.allSettled([
             api.get("/expense/get-resources"),
-            api.get("/user/list"),
+            api.get("surveys/assignable-users"),
             api.get("/survey-templates/get"),
             api.get("/survey-groups/get"),
             api.get("/survey-elements/get"),
@@ -217,7 +220,6 @@ export default function CreateSurveyWizard() {
     const errs: Record<string, string> = {};
 
     if (step === 0) {
-      if (!formData.reference.trim()) errs.reference = "Reference is required";
       if (!formData.title.trim()) errs.title = "Survey title is required";
       if (!formData.projectId) errs.projectId = "Project is required";
       if (!formData.addressId) errs.addressId = "Property address is required";
@@ -253,7 +255,7 @@ export default function CreateSurveyWizard() {
     setSubmitting(true);
     try {
       const payload = {
-        reference: formData.reference.trim(),
+        reference: formData.reference.trim() || undefined,
         title: formData.title.trim(),
         project_id: formData.projectId,
         address_id: formData.addressId,
@@ -317,6 +319,27 @@ export default function CreateSurveyWizard() {
   const selectedProject = projects.find((p) => p.id === formData.projectId);
   const selectedAddress = addresses.find((a) => a.id === formData.addressId);
   const selectedSurveyor = surveyors.find((s) => s.id === formData.surveyorId);
+
+  if (!access.loaded) {
+    return (
+      <Box sx={{ p: 6, display: "flex", justifyContent: "center" }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!access.is_admin) {
+    return (
+      <Box sx={{ p: { xs: 2, sm: 3 } }}>
+        <Alert severity={access.failed ? "warning" : "info"} sx={{ mb: 2 }}>
+          {access.failed ? "Couldn't verify your survey permissions. Refresh the page to try again." : "Only company administrators can create surveys."}
+        </Alert>
+        <Button variant="contained" onClick={() => router.push("/apps/surveys/list")}>
+          Back to Surveys
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3 } }}>

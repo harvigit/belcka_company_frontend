@@ -77,8 +77,8 @@ export default function Step4Review({
                   <Typography variant="caption" color="text.secondary" fontWeight={600}>
                     Survey Reference
                   </Typography>
-                  <Typography variant="body1" fontWeight={700} color="primary.main">
-                    {formData.reference}
+                  <Typography variant="body1" fontWeight={700} color={formData.reference.trim() ? "primary.main" : "text.secondary"}>
+                    {formData.reference.trim() || "Assigned automatically on save"}
                   </Typography>
                 </Box>
 
@@ -256,7 +256,7 @@ export default function Step4Review({
       {/* Backend Integration Status Banner */}
       <Alert severity="success" icon={<IconCheck size={20} />} sx={{ mt: 3, borderRadius: "8px" }}>
         <Typography variant="body2">
-          <strong>Review Quality Checked:</strong> All required fields are validated. Clicking <strong>Save Draft</strong> or <strong>Create & Assign</strong> will persist this survey, its rooms, and inspection elements directly into the database.
+          <strong>Review Quality Checked:</strong> All required fields are validated. Clicking <strong>Save as Draft</strong> or <strong>Create Survey</strong> will save this survey, its rooms, and inspection elements.
         </Typography>
       </Alert>
     </Box>

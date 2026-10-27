@@ -168,10 +168,10 @@ export default function WorkOrderJobPackReport({
               Assigned Contractor / Subcontractor
             </Typography>
             <Typography variant="subtitle1" fontWeight={700} color="#0f172a" mt={0.5}>
-              {workOrder.contractor_name || "Direct Subcontractor"}
+              {workOrder.contractor_name || "—"}
             </Typography>
             <Typography variant="body2" color="#334155" mt={0.25}>
-              Trade Package: <strong>{workOrder.trade_name || "General Building Works"}</strong>
+              Trade Package: <strong>{workOrder.trade_name || "—"}</strong>
             </Typography>
             {workOrder.contractor_id && (
               <Typography variant="caption" color="#64748b" display="block" mt={0.5}>
@@ -198,10 +198,10 @@ export default function WorkOrderJobPackReport({
               Project & Property Location
             </Typography>
             <Typography variant="subtitle1" fontWeight={700} color="#0f172a" mt={0.5}>
-              {survey.project_name || "Belcka Asset Management"}
+              {survey.project_name || survey.project?.name || "—"}
             </Typography>
             <Typography variant="body2" color="#334155" mt={0.25}>
-              Property Address: <strong>{survey.property_name || "Property Site Address"}</strong>
+              Property Address: <strong>{survey.property_name || survey.address?.name || "—"}</strong>
             </Typography>
             {survey.title && survey.title !== survey.reference && (
               <Typography variant="caption" color="#64748b" display="block" mt={0.5}>

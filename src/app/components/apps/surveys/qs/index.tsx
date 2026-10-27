@@ -56,6 +56,7 @@ import {
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import useSurveyAccess from "../useSurveyAccess";
 import BlankCard from "@/app/components/shared/BlankCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import {
@@ -81,6 +82,7 @@ const statusColorMap: Record<string, "default" | "primary" | "secondary" | "erro
 
 export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
   const router = useRouter();
+  const access = useSurveyAccess();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [savingItem, setSavingItem] = useState<number | null>(null);
@@ -178,10 +180,12 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
   }, [id, fetchScopeData]);
 
   // Derived lock state
-  const isLocked = useMemo(() => {
+  const isBaselineLocked = useMemo(() => {
     if (!scopeData?.survey?.status) return false;
     return ["completed", "frozen"].includes(scopeData.survey.status);
   }, [scopeData]);
+  // QS actions are limited to company administrators; everyone else gets the read-only view.
+  const isLocked = isBaselineLocked || !access.is_admin;
 
   // Unique Room names for filter
   const roomOptions = useMemo(() => {
@@ -576,7 +580,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                     sx={{ fontWeight: 600, height: 22, fontSize: "0.75rem" }}
                   />
 
-                  {isLocked && (
+                  {isBaselineLocked && (
                     <Chip
                       icon={<IconLock size={13} />}
                       label="Baseline Locked"
@@ -724,13 +728,15 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                     </span>
                   </Tooltip>
                 </>
-              ) : (
+              ) : isBaselineLocked ? (
                 <Chip
                   icon={<IconLock size={15} />}
                   label={`Approved Baseline: ${formatMoney(survey.baseline_total)}`}
                   color="success"
                   sx={{ height: 34, px: 1, fontWeight: 700 }}
                 />
+              ) : (
+                <Chip icon={<IconLock size={15} />} label="Read only" variant="outlined" sx={{ height: 34, px: 1, fontWeight: 700 }} />
               )}
             </Stack>
           </Stack>
@@ -740,9 +746,18 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
       {/* ================================================================== */}
       {/* 2. ALERTS                                                          */}
       {/* ================================================================== */}
-      {isLocked && (
+      {isBaselineLocked && (
         <Alert severity="success" icon={<IconLock size={18} />} sx={{ mb: 2.5, borderRadius: "8px" }}>
           <strong>Commercial Baseline Locked:</strong> This survey has been reviewed, approved, and locked. The commercial quantities and schedule of rates are permanently recorded.
+        </Alert>
+      )}
+
+      {access.loaded && !access.is_admin && !isBaselineLocked && (
+        <Alert severity={access.failed ? "warning" : "info"} icon={<IconLock size={18} />} sx={{ mb: 2.5, borderRadius: "8px" }}>
+          <strong>Read only:</strong>{" "}
+          {access.failed
+            ? "Couldn't verify your survey permissions. Refresh the page to try again."
+            : "only company administrators can edit the commercial scope or lock the baseline."}
         </Alert>
       )}
 
@@ -868,7 +883,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Box>
                   <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase">
-                    {isLocked ? "Approved Total" : "Proposed Total"}
+                    {isBaselineLocked ? "Approved Total" : "Proposed Total"}
                   </Typography>
                   <Typography variant="h4" fontWeight={700} color="primary.main" sx={{ mt: 0.25 }}>
                     {formatMoney(liveTotals.total_amount)}
@@ -882,14 +897,14 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                     width: 38,
                     height: 38,
                     borderRadius: "8px",
-                    bgcolor: isLocked ? "success.light" : "grey.100",
+                    bgcolor: isBaselineLocked ? "success.light" : "grey.100",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: isLocked ? "success.main" : "primary.main",
+                    color: isBaselineLocked ? "success.main" : "primary.main",
                   }}
                 >
-                  {isLocked ? <IconLock size={20} /> : <IconCalculator size={20} />}
+                  {isBaselineLocked ? <IconLock size={20} /> : <IconCalculator size={20} />}
                 </Box>
               </Stack>
             </CardContent>
@@ -902,7 +917,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
       {/* ================================================================== */}
       <Grid container spacing={2.5}>
         {/* LEFT PANE: Schedule of Rates Table */}
-        <Grid size={{ xs: 12, lg: 8 }}>
+        <Grid size={{ xs: 12, xl: 8 }}>
           <BlankCard>
             <Box p={{ xs: 2, md: 2.5 }}>
               {/* Header toolbar */}
@@ -957,7 +972,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
 
               {/* Table of Scope Items */}
               <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: "8px", borderColor: "divider" }}>
-                <Table size="small">
+                <Table size="small" sx={{ minWidth: 900 }}>
                   <TableHead sx={{ bgcolor: "grey.50" }}>
                     <TableRow>
                       <TableCell width={50} align="center">
@@ -1091,7 +1106,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                                   value={editedLines[item.id]?.item_code !== undefined ? editedLines[item.id]!.item_code : item.item_code || ""}
                                   onChange={(e: any) => handleLineFieldChange(item.id, "item_code", e.target.value)}
                                   placeholder="Code"
-                                  sx={{ width: 70 }}
+                                  sx={{ width: 96 }}
                                 />
                               )}
                             </TableCell>
@@ -1104,8 +1119,11 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                                 <CustomTextField
                                   size="small"
                                   fullWidth
+                                  multiline
+                                  maxRows={3}
                                   value={editedLines[item.id]?.description !== undefined ? editedLines[item.id]!.description : item.description}
                                   onChange={(e: any) => handleLineFieldChange(item.id, "description", e.target.value)}
+                                  sx={{ minWidth: 220 }}
                                 />
                               )}
                             </TableCell>
@@ -1123,7 +1141,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                                   inputProps={{ min: 0, step: "any" }}
                                   value={lineQty}
                                   onChange={(e: any) => handleLineFieldChange(item.id, "quantity", e.target.value)}
-                                  sx={{ width: 70 }}
+                                  sx={{ width: 90 }}
                                 />
                               )}
                             </TableCell>
@@ -1314,7 +1332,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
         </Grid>
 
         {/* RIGHT PANE: Original Survey Evidence (Read-Only) */}
-        <Grid size={{ xs: 12, lg: 4 }}>
+        <Grid size={{ xs: 12, xl: 4 }}>
           <BlankCard>
             <Box p={{ xs: 2, md: 2.5 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
