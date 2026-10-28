@@ -335,6 +335,14 @@ input#project_id::placeholder {
   text-align: center;
 }
 
+/* Time-clock settings: centre plain small inputs (no select, multiline or adornment). */
+.time-clock-settings
+  .MuiOutlinedInput-input.MuiInputBase-inputSizeSmall:not(.MuiSelect-select):not(.MuiInputBase-inputMultiline):not(
+    .MuiInputBase-inputAdornedStart
+  ):not(.MuiInputBase-inputAdornedEnd) {
+  text-align: center;
+}
+
 .phone-input {
   height: 47px !important;
   background-color: transparent !important;
