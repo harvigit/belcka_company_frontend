@@ -78,6 +78,7 @@ import ExcelImportModal from '@/app/components/common/ExcelImportModal';
 import TaskAddEdit from './create-edit';
 import IOSSwitch from '../../common/IOSSwitch';
 import ArchiveTasks from './archive';
+import TaskBulkUpdateBar from './bulk-update-bar';
 
 dayjs.extend(customParseFormat);
 
@@ -1778,6 +1779,20 @@ const TaskLists = () => {
                     savingLabel="Saving"
                     onSuccess={fetchTasks}
                 />
+
+                {selectedRowIds.size > 0 && (
+                    <TaskBulkUpdateBar
+                        companyId={Number(user?.company_id)}
+                        selectedIds={Array.from(selectedRowIds)}
+                        selectedTasks={data.filter((item: any) => selectedRowIds.has(item.id))}
+                        units={units}
+                        onClear={() => setSelectedRowIds(new Set())}
+                        onSaved={async () => {
+                            setSelectedRowIds(new Set());
+                            await fetchTasks();
+                        }}
+                    />
+                )}
 
                 {/* Dialogs and Drawers */}
                 <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>

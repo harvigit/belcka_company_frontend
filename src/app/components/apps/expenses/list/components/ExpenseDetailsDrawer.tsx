@@ -45,6 +45,7 @@ type Option = {
     title?: string;
     project_id?: number | null;
     is_transport_category?: boolean;
+    show_in_lists?: boolean;
 };
 
 type Props = {
@@ -169,6 +170,7 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
     const [saving, setSaving] = useState(false);
     const [editing, setEditing] = useState(false);
     const [addressSearch, setAddressSearch] = useState('');
+    const [resourceAddresses, setResourceAddresses] = useState<Option[] | null>(null);
     const [receiptDateAnchorEl, setReceiptDateAnchorEl] =
         useState<HTMLElement | null>(null);
     const [form, setForm] = useState({
@@ -189,17 +191,32 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
         [categories, form.expense_category_id],
     );
     const isTransportCategory = selectedCategory?.is_transport_category === true;
+    // Edit options come from the add-expense resources; cases switched off on the cases list are
+    // hidden, except the one this expense already uses.
+    const addressOptions = useMemo(() => {
+        const currentId = Number(detail?.address_id);
+        const source = resourceAddresses ?? addresses;
+        const options = source.filter(
+            (address) => address.show_in_lists !== false || Number(address.id) === currentId,
+        );
+        if (!currentId || options.some((address) => Number(address.id) === currentId)) return options;
+        return [
+            ...options,
+            {id: currentId, name: detail?.address_name || '', project_id: Number(detail?.project_id) || null},
+        ];
+    }, [resourceAddresses, addresses, detail?.address_id, detail?.address_name, detail?.project_id]);
+
     const filteredAddresses = useMemo(() => {
         if (!form.project_id) return [];
 
-        return addresses.filter((address) => {
+        return addressOptions.filter((address) => {
             const matchesProject = Number(address.project_id) === Number(form.project_id);
             const matchesSearch = getOptionLabel(address)
                 .toLowerCase()
                 .includes(addressSearch.trim().toLowerCase());
             return matchesProject && matchesSearch;
         });
-    }, [addresses, addressSearch, form.project_id]);
+    }, [addressOptions, addressSearch, form.project_id]);
 
     const activityLogs = detail?.activity_logs || [];
     const status = normalizeExpenseStatus(detail?.status_text || detail?.status) || expense?.status || 'pending';
@@ -268,6 +285,13 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
         loadDetail();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, expense?.id]);
+
+    useEffect(() => {
+        if (!editing || resourceAddresses) return;
+        api.get('/expense/get-resources')
+            .then((res) => setResourceAddresses(res.data?.addresses || []))
+            .catch(() => setResourceAddresses(null));
+    }, [editing, resourceAddresses]);
 
     const startHeroAmountEdit = () => {
         if (!canEdit || editing || savingHeroAmount) return;
@@ -594,7 +618,7 @@ const ExpenseDetailsDrawer = ({open, onClose, expense, projects = [], addresses 
                                                         if (!selected) {
                                                             return <Typography color="#999">Select Address</Typography>;
                                                         }
-                                                        const address = addresses.find((item) => item.id === Number(selected));
+                                                        const address = addressOptions.find((item) => Number(item.id) === Number(selected));
                                                         return getOptionLabel(address || null);
                                                     }}
                                                 >

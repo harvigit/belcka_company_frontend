@@ -635,6 +635,31 @@ const CasesList = ({
     }
   };
 
+  const fetchInternalOrdersSummary = async () => {
+    if (!user?.company_id) return;
+    const targetProjectId = projectId || Number(filters.project_id) || 0;
+    try {
+      const params = new URLSearchParams({
+        company_id: String(user.company_id),
+        page: "1",
+        limit: "1",
+      });
+      if (targetProjectId) params.set("project_id", String(targetProjectId));
+      const res = await api.get(`project/internal-orders?${params.toString()}`);
+      const rows = Array.isArray(res.data?.info) ? res.data.info : [];
+      setInternalOrderCurrency(res.data?.currency || rows[0]?.currency || "£");
+      setInternalOrderSum(Number(res.data?.total ?? 0));
+      setInternalOrdersLoaded(true);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    if (internalOrdersOpen) return;
+    fetchInternalOrdersSummary();
+  }, [projectId, filters.project_id, user?.company_id]);
+
   const {
     table: internalOrdersTable,
     pagination: internalPagination,

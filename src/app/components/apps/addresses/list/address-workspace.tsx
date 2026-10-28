@@ -1265,6 +1265,25 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                   justifyContent="flex-end"
                                   alignItems="center"
                                 >
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<IconPlus size={14} />}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openCreatePanel([address.id]);
+                                    }}
+                                    sx={{
+                                      py: 0.25,
+                                      px: 1,
+                                      minHeight: 0,
+                                      fontSize: 12,
+                                      whiteSpace: "nowrap",
+                                      "& .MuiButton-startIcon": { mr: 0.5 },
+                                    }}
+                                  >
+                                    Add case
+                                  </Button>
                                   <Tooltip title="Edit address">
                                     <IconButton
                                       size="small"
@@ -1320,27 +1339,6 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                       spacing={0.75}
                                       sx={{ opacity: casesBusy ? 0.6 : 1 }}
                                     >
-                                      <Stack
-                                        direction="row"
-                                        justifyContent="space-between"
-                                        alignItems="center"
-                                      >
-                                        <Typography
-                                          variant="caption"
-                                          color="text.secondary"
-                                        >
-                                          {caseTotal}{" "}
-                                          {caseTotal === 1 ? "case" : "cases"}
-                                        </Typography>
-                                        <Button
-                                          size="small"
-                                          onClick={() =>
-                                            openCreatePanel([address.id])
-                                          }
-                                        >
-                                          Create case
-                                        </Button>
-                                      </Stack>
                                       {cases.map((row) => {
                                         const active =
                                           panel?.mode === "case" &&
