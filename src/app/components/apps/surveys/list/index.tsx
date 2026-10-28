@@ -46,9 +46,12 @@ import {
   IconCalculator,
   IconBriefcase,
   IconLock,
+  IconSettings,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import { usePermissions } from "@/hooks/usePermissions";
+import { hasPermission } from "@/lib/permissions";
 import useSurveyAccess from "../useSurveyAccess";
 import { useSession } from "next-auth/react";
 import { flexRender } from "@tanstack/react-table";
@@ -59,6 +62,7 @@ import TablePaginationFooter from "@/app/components/common/TablePaginationFooter
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import BlankCard from "@/app/components/shared/BlankCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import SurveySettings from "@/app/components/apps/settings/survey-settings";
 import { Survey, SurveyProjectOption, SurveyorOption, SurveyStatus } from "../types";
 
 const statusColorMap: Record<
@@ -90,6 +94,10 @@ export default function SurveyList() {
   const isAdmin = access.is_admin;
   const session = useSession();
   const user = session.data?.user as any;
+  // Survey Settings is open to admins and holders of the Settings permission; the API enforces the same rule.
+  const { permissions } = usePermissions();
+  const canOpenSettings = isAdmin || hasPermission(permissions, "Settings");
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Survey[]>([]);
@@ -664,17 +672,27 @@ export default function SurveyList() {
           </Typography>
         </Box>
 
-        {isAdmin && (
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<IconPlus size={18} />}
-            component={Link}
-            href="/apps/surveys/create"
-            sx={{ fontWeight: 600, borderRadius: "8px" }}
-          >
-            Create Survey
-          </Button>
+        {canOpenSettings && (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Tooltip title="Survey Settings">
+              <IconButton onClick={() => setSettingsOpen(true)} color="primary" aria-label="Survey Settings">
+                <IconSettings />
+              </IconButton>
+            </Tooltip>
+            <SurveySettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+            {isAdmin && (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<IconPlus size={18} />}
+                component={Link}
+                href="/apps/surveys/create"
+                sx={{ fontWeight: 600, borderRadius: "8px" }}
+              >
+                Create Survey
+              </Button>
+            )}
+          </Stack>
         )}
       </Stack>
 

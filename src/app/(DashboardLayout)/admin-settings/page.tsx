@@ -16,7 +16,6 @@ import {
     IconUserCheck,
     IconUsersGroup,
     IconBriefcase,
-    IconClipboardList,
 } from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
@@ -36,7 +35,6 @@ import UserSettings from '@/app/components/apps/settings/user-settings';
 import TaskUserCheckinSettings from '@/app/components/apps/tasks/settings/user-checkin-tasks';
 import UserGroupSettings from '@/app/components/apps/settings/user-groups';
 import AdminProjects from '@/app/components/apps/settings/projects';
-import SurveySettings from '@/app/components/apps/settings/survey-settings';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -210,13 +208,6 @@ const AdminSetting = () => {
                                         label="Project"
                                         {...a11yProps(12)}
                                     />
-                                    <Tab
-                                        className="admin-settings"
-                                        iconPosition="start"
-                                        icon={<IconClipboardList size="20" />}
-                                        label="Survey Settings"
-                                        {...a11yProps(13)}
-                                    />
                                 </Tabs>
                             </Stack>
                         </BlankCard>
@@ -268,9 +259,6 @@ const AdminSetting = () => {
                             </TabPanel>
                             <TabPanel value={value} index={12}>
                                 <AdminProjects />
-                            </TabPanel>
-                            <TabPanel value={value} index={13}>
-                                <SurveySettings />
                             </TabPanel>
                         </BlankCard>
                     </Grid>
