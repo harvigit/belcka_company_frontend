@@ -353,7 +353,7 @@ const ProjectDetail = () => {
             companyId={user?.company_id}
             users={assignedUsers}
             roles={projectRoles}
-            canEdit={canViewSettings}
+            // canEdit={canViewSettings}
             onUsersChange={setAssignedUsers}
           />
         </Stack>
