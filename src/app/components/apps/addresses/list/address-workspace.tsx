@@ -10,6 +10,7 @@ import React, {
 import {
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Dialog,
@@ -50,7 +51,10 @@ import {
   IconArrowLeft,
   IconCheck,
   IconChevronDown,
+  IconChevronsLeft,
+  IconChevronLeft,
   IconChevronRight,
+  IconChevronsRight,
   IconDotsVertical,
   IconFileExport,
   IconFileImport,
@@ -74,6 +78,7 @@ import ExcelImportModal from "@/app/components/common/ExcelImportModal";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import { useServerTable } from "@/hooks/useServerTable";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 
 dayjs.extend(customParseFormat);
 
@@ -85,6 +90,14 @@ const stickyHeadCell = {
 };
 
 const LONDON = { lat: 51.5074, lng: -0.1278 };
+const CASE_PAGE_SIZES = [50, 100, 250, 500];
+
+type CasePageState = {
+  pageIndex: number;
+  pageSize: number;
+  total: number;
+  pageCount: number;
+};
 const addressColumns = [{ id: "name", accessorKey: "name" }];
 
 type ParentAddress = {
@@ -456,7 +469,9 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
   const [casesByParent, setCasesByParent] = useState<Record<number, CaseRow[]>>(
     {},
   );
-  const [caseTotals, setCaseTotals] = useState<Record<number, number>>({});
+  const [casePages, setCasePages] = useState<Record<number, CasePageState>>({});
+  const casePagesRef = useRef(casePages);
+  casePagesRef.current = casePages;
   const [casesLoading, setCasesLoading] = useState<Record<number, boolean>>({});
   const [view, setView] = useState<"list" | "map">("list");
   const [mapAddressId, setMapAddressId] = useState<number | null>(null);
@@ -553,22 +568,43 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
     fetchProjects();
   }, [fetchProjects]);
 
-  // Loads every case of a parent address (no paging).
   const loadCases = useCallback(
-    async (parentId: number) => {
+    async (parentId: number, pageIndex?: number, pageSize?: number) => {
       if (!companyId) return;
+      const stored = casePagesRef.current[parentId];
+      const nextSize = pageSize ?? stored?.pageSize ?? 50;
+      const requestedPage = pageIndex ?? stored?.pageIndex ?? 0;
+      const nextPage = Math.max(0, requestedPage);
       setCasesLoading((current) => ({ ...current, [parentId]: true }));
       try {
         const res = await api.get(
-          `address/get?company_id=${companyId}&parent_address_id=${parentId}&summary=1`,
+          `address/get?company_id=${companyId}&parent_address_id=${parentId}&page=${nextPage + 1}&limit=${nextSize}&summary=1`,
         );
         const rows = asList<CaseRow>(res.data?.info);
-        const total = Number(res.data?.data?.totalItems ?? rows.length);
+        const meta = res.data?.data || {};
+        const total = Number(meta.totalItems ?? rows.length);
+
+        const pageCount = Math.max(
+          1,
+          Number(meta.totalPages ?? (Math.ceil(total / nextSize) || 1)),
+        );
+        const currentPage = Math.max(
+          1,
+          Number(meta.currentPage ?? nextPage + 1),
+        );
         setCasesByParent((current) => ({
           ...current,
           [parentId]: rows,
         }));
-        setCaseTotals((current) => ({ ...current, [parentId]: total }));
+        setCasePages((current) => ({
+          ...current,
+          [parentId]: {
+            pageIndex: currentPage - 1,
+            pageSize: nextSize,
+            total,
+            pageCount,
+          },
+        }));
       } catch (error) {
         toast.error(
           errorMessage(error, "Could not load cases for this address."),
@@ -1106,6 +1142,11 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                 casesLoading={
                   mapAddress ? Boolean(casesLoading[mapAddress.id]) : false
                 }
+                casePage={mapAddress ? casePages[mapAddress.id] : undefined}
+                onCasePage={(pageIndex, pageSize) => {
+                  if (!mapAddress) return;
+                  loadCases(mapAddress.id, pageIndex, pageSize);
+                }}
                 onSelect={selectMapAddress}
                 onEditLocation={(address) => {
                   selectMapAddress(address);
@@ -1156,8 +1197,11 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                       visibleAddresses.map((address) => {
                         const expanded = expandedIds.has(address.id);
                         const cases = casesByParent[address.id] || [];
-                        const caseTotal =
-                          caseTotals[address.id] ?? cases.length;
+                        const casePage = casePages[address.id];
+                        const caseTotal = casePage?.total ?? cases.length;
+                        const casePageIndex = casePage?.pageIndex ?? 0;
+                        const casePageSize = casePage?.pageSize ?? 50;
+                        const casePageCount = casePage?.pageCount ?? 1;
                         const casesBusy = Boolean(casesLoading[address.id]);
                         return (
                           <React.Fragment key={address.id}>
@@ -1248,11 +1292,7 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                               <TableRow>
                                 <TableCell
                                   colSpan={5}
-                                  sx={{
-                                    py: 1,
-                                    px: 1.5,
-                                    bgcolor: "action.hover",
-                                  }}
+                                  sx={{ py: 1.5, bgcolor: "action.hover" }}
                                 >
                                   {casesBusy && cases.length === 0 ? (
                                     <CircularProgress size={18} />
@@ -1279,24 +1319,24 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                       </Button>
                                     </Stack>
                                   ) : (
-                                    <Box sx={{ opacity: casesBusy ? 0.6 : 1 }}>
+                                    <Stack
+                                      spacing={0.75}
+                                      sx={{ opacity: casesBusy ? 0.6 : 1 }}
+                                    >
                                       <Stack
                                         direction="row"
                                         justifyContent="space-between"
                                         alignItems="center"
-                                        mb={0.5}
                                       >
                                         <Typography
                                           variant="caption"
                                           color="text.secondary"
-                                          fontWeight={600}
                                         >
                                           {caseTotal}{" "}
                                           {caseTotal === 1 ? "case" : "cases"}
                                         </Typography>
                                         <Button
                                           size="small"
-                                          sx={{ py: 0, minHeight: 0 }}
                                           onClick={() =>
                                             openCreatePanel([address.id])
                                           }
@@ -1304,162 +1344,218 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                           Create case
                                         </Button>
                                       </Stack>
-                                      {/* All cases load at once, so long lists scroll here */}
-                                      <Box
-                                        sx={{
-                                          maxHeight: 420,
-                                          overflowY: "auto",
-                                          border: "1px solid",
-                                          borderColor: "divider",
-                                          borderRadius: 1.5,
-                                          bgcolor: "background.paper",
-                                        }}
-                                      >
-                                        {cases.map((row, index) => {
-                                          const active =
-                                            panel?.mode === "case" &&
-                                            panel.caseId === row.id;
-                                          const progressValue = Math.min(
-                                            Math.max(
-                                              parseFloat(
-                                                String(row.progress ?? ""),
-                                              ) || 0,
-                                              0,
-                                            ),
-                                            100,
-                                          );
-                                          const hasProgress =
-                                            row.progress != null &&
-                                            String(row.progress).trim() !== "";
-                                          const details = [
-                                            row.project_name,
-                                            [
-                                              recordDate(row.start_date),
-                                              recordDate(row.end_date),
-                                            ]
-                                              .filter(Boolean)
-                                              .join(" – "),
-                                            row.po_sum && `PO ${row.po_sum}`,
-                                            row.variation_sum &&
-                                              `Variation ${row.variation_sum}`,
-                                            row.variation_status &&
-                                              `Var. status ${row.variation_status}`,
-                                            row.client_po &&
-                                              `Client PO ${row.client_po}`,
-                                            row.excel_status &&
-                                              `Excel ${row.excel_status}`,
-                                          ]
-                                            .filter(Boolean)
-                                            .join(" · ");
-                                          return (
-                                            <Box
-                                              key={row.id}
-                                              onClick={() =>
-                                                openCasePanel(address, row)
-                                              }
-                                              sx={{
-                                                px: 1.25,
-                                                py: 0.625,
-                                                cursor: "pointer",
-                                                borderTop: index
-                                                  ? "1px solid"
-                                                  : "none",
-                                                borderColor: "divider",
-                                                borderLeft: "3px solid",
-                                                borderLeftColor: active
-                                                  ? "primary.main"
-                                                  : "transparent",
-                                                bgcolor: active
-                                                  ? "action.selected"
-                                                  : "transparent",
-                                                "&:hover": {
-                                                  bgcolor: "action.hover",
-                                                },
-                                              }}
+                                      {cases.map((row) => {
+                                        const active =
+                                          panel?.mode === "case" &&
+                                          panel.caseId === row.id;
+                                        return (
+                                          <Box
+                                            key={row.id}
+                                            onClick={() =>
+                                              openCasePanel(address, row)
+                                            }
+                                            sx={{
+                                              px: 1.5,
+                                              py: 1,
+                                              borderRadius: 1.5,
+                                              cursor: "pointer",
+                                              bgcolor: active
+                                                ? "action.selected"
+                                                : "background.paper",
+                                              "&:hover": {
+                                                bgcolor: "action.hover",
+                                              },
+                                            }}
+                                          >
+                                            <Stack
+                                              direction="row"
+                                              justifyContent="space-between"
+                                              spacing={1}
                                             >
-                                              <Stack
-                                                direction="row"
-                                                alignItems="center"
-                                                spacing={1}
-                                              >
-                                                {row.case_id ? (
+                                              <Box minWidth={0}>
+                                                <Typography
+                                                  fontWeight={600}
+                                                  noWrap
+                                                >
+                                                  {caseTitle(row)}
+                                                </Typography>
+                                                <Typography
+                                                  variant="body2"
+                                                  color="text.secondary"
+                                                  noWrap
+                                                >
+                                                  {[
+                                                    row.project_name,
+                                                    recordDate(row.start_date),
+                                                    recordDate(row.end_date),
+                                                  ]
+                                                    .filter(Boolean)
+                                                    .join(" · ")}
+                                                </Typography>
+                                                {[
+                                                  row.po_sum &&
+                                                    `PO sum ${row.po_sum}`,
+                                                  row.variation_sum &&
+                                                    `Variation sum ${row.variation_sum}`,
+                                                  row.variation_status &&
+                                                    `Variation status ${row.variation_status}`,
+                                                  row.client_po &&
+                                                    `Client PO ${row.client_po}`,
+                                                  row.excel_status &&
+                                                    `Excel status ${row.excel_status}`,
+                                                ].some(Boolean) ? (
                                                   <Typography
-                                                    component="span"
+                                                    variant="caption"
+                                                    color="text.secondary"
                                                     sx={{
-                                                      px: 0.625,
-                                                      borderRadius: 0.75,
-                                                      bgcolor: "action.hover",
-                                                      color: "text.secondary",
-                                                      fontFamily: "monospace",
-                                                      fontSize: 11,
-                                                      fontWeight: 700,
-                                                      lineHeight: "18px",
-                                                      flexShrink: 0,
+                                                      display: "block",
+                                                      whiteSpace: "normal",
                                                     }}
                                                   >
-                                                    {row.case_id}
+                                                    {[
+                                                      row.po_sum &&
+                                                        `PO sum ${row.po_sum}`,
+                                                      row.variation_sum &&
+                                                        `Variation sum ${row.variation_sum}`,
+                                                      row.variation_status &&
+                                                        `Variation status ${row.variation_status}`,
+                                                      row.client_po &&
+                                                        `Client PO ${row.client_po}`,
+                                                      row.excel_status &&
+                                                        `Excel status ${row.excel_status}`,
+                                                    ]
+                                                      .filter(Boolean)
+                                                      .join(" · ")}
                                                   </Typography>
                                                 ) : null}
-                                                <Box minWidth={0} flex={1}>
+                                              </Box>
+                                              <Stack
+                                                direction="row"
+                                                spacing={1}
+                                                alignItems="center"
+                                              >
+                                                {row.progress != null &&
+                                                String(row.progress).trim() !==
+                                                  "" ? (
                                                   <Typography
-                                                    fontSize={13}
-                                                    fontWeight={600}
-                                                    noWrap
-                                                    lineHeight={1.35}
+                                                    variant="caption"
+                                                    color="text.secondary"
                                                   >
-                                                    {caseTitle(row)}
+                                                    {String(
+                                                      row.progress,
+                                                    ).includes("%")
+                                                      ? row.progress
+                                                      : `${row.progress}%`}
                                                   </Typography>
-                                                  {details ? (
-                                                    <Tooltip
-                                                      title={details}
-                                                      enterDelay={500}
-                                                      placement="bottom-start"
-                                                    >
-                                                      <Typography
-                                                        fontSize={11}
-                                                        color="text.secondary"
-                                                        noWrap
-                                                        lineHeight={1.35}
-                                                      >
-                                                        {details}
-                                                      </Typography>
-                                                    </Tooltip>
-                                                  ) : null}
-                                                </Box>
-                                                {hasProgress ? (
-                                                  <Stack
-                                                    direction="row"
-                                                    alignItems="center"
-                                                    spacing={0.75}
-                                                    sx={{ flexShrink: 0 }}
-                                                  >
-                                                    <Typography
-                                                      fontSize={11}
-                                                      fontWeight={600}
-                                                      color="text.secondary"
-                                                      sx={{
-                                                        minWidth: 30,
-                                                        textAlign: "right",
-                                                      }}
-                                                    >
-                                                      {Math.round(
-                                                        progressValue,
-                                                      )}
-                                                      %
-                                                    </Typography>
-                                                  </Stack>
                                                 ) : null}
-                                                <Box sx={{ flexShrink: 0 }}>
-                                                  <StatusChip
-                                                    label={row.status_text}
-                                                  />
-                                                </Box>
+                                                <StatusChip
+                                                  label={row.status_text}
+                                                />
                                               </Stack>
-                                            </Box>
-                                          );
-                                        })}
-                                      </Box>
-                                    </Box>
+                                            </Stack>
+                                          </Box>
+                                        );
+                                      })}
+                                      <Stack
+                                        direction="row"
+                                        alignItems="center"
+                                        justifyContent="flex-end"
+                                        spacing={0.5}
+                                      >
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                        >
+                                          Page {casePageIndex + 1} of{" "}
+                                          {casePageCount} | Entries :
+                                        </Typography>
+                                        <CustomSelect
+                                          size="small"
+                                          value={casePageSize}
+                                          disabled={casesBusy}
+                                          sx={{ minWidth: 72 }}
+                                          onChange={(event: any) =>
+                                            loadCases(
+                                              address.id,
+                                              0,
+                                              Number(event.target.value),
+                                            )
+                                          }
+                                        >
+                                          {CASE_PAGE_SIZES.map((size) => (
+                                            <MenuItem key={size} value={size}>
+                                              {size}
+                                            </MenuItem>
+                                          ))}
+                                        </CustomSelect>
+                                        <IconButton
+                                          size="small"
+                                          aria-label="First page"
+                                          disabled={
+                                            casesBusy || casePageIndex === 0
+                                          }
+                                          onClick={() =>
+                                            loadCases(
+                                              address.id,
+                                              0,
+                                              casePageSize,
+                                            )
+                                          }
+                                        >
+                                          <IconChevronsLeft size={18} />
+                                        </IconButton>
+                                        <IconButton
+                                          size="small"
+                                          aria-label="Previous page"
+                                          disabled={
+                                            casesBusy || casePageIndex === 0
+                                          }
+                                          onClick={() =>
+                                            loadCases(
+                                              address.id,
+                                              casePageIndex - 1,
+                                              casePageSize,
+                                            )
+                                          }
+                                        >
+                                          <IconChevronLeft size={18} />
+                                        </IconButton>
+                                        <IconButton
+                                          size="small"
+                                          aria-label="Next page"
+                                          disabled={
+                                            casesBusy ||
+                                            casePageIndex + 1 >= casePageCount
+                                          }
+                                          onClick={() =>
+                                            loadCases(
+                                              address.id,
+                                              casePageIndex + 1,
+                                              casePageSize,
+                                            )
+                                          }
+                                        >
+                                          <IconChevronRight size={18} />
+                                        </IconButton>
+                                        <IconButton
+                                          size="small"
+                                          aria-label="Last page"
+                                          disabled={
+                                            casesBusy ||
+                                            casePageIndex + 1 >= casePageCount
+                                          }
+                                          onClick={() =>
+                                            loadCases(
+                                              address.id,
+                                              casePageCount - 1,
+                                              casePageSize,
+                                            )
+                                          }
+                                        >
+                                          <IconChevronsRight size={18} />
+                                        </IconButton>
+                                      </Stack>
+                                    </Stack>
                                   )}
                                 </TableCell>
                               </TableRow>
@@ -2164,6 +2260,8 @@ function MapWorkspace({
   selected,
   cases,
   casesLoading,
+  casePage,
+  onCasePage,
   onSelect,
   onEditLocation,
   onCreateCase,
@@ -2174,6 +2272,8 @@ function MapWorkspace({
   selected: ParentAddress | null;
   cases: CaseRow[];
   casesLoading: boolean;
+  casePage?: CasePageState;
+  onCasePage: (pageIndex: number, pageSize: number) => void;
   onSelect: (address: ParentAddress | null) => void;
   onEditLocation: (address: ParentAddress) => void;
   onCreateCase: (address: ParentAddress) => void;
@@ -2366,51 +2466,63 @@ function MapWorkspace({
                     onClick={() => onOpenCase(selected, row)}
                     sx={{
                       px: 1,
-                      py: 0.5,
+                      py: 0.75,
                       borderRadius: 1,
                       cursor: "pointer",
                       "&:hover": { bgcolor: "action.hover" },
                     }}
                   >
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      {row.case_id ? (
-                        <Typography
-                          component="span"
-                          sx={{
-                            px: 0.625,
-                            borderRadius: 0.75,
-                            bgcolor: "action.hover",
-                            color: "text.secondary",
-                            fontFamily: "monospace",
-                            fontSize: 11,
-                            fontWeight: 700,
-                            lineHeight: "18px",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {row.case_id}
-                        </Typography>
-                      ) : null}
-                      <Box minWidth={0} flex={1}>
-                        <Typography fontSize={13} fontWeight={600} noWrap>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Box>
+                        <Typography fontWeight={600}>
                           {caseTitle(row)}
                         </Typography>
-                        {row.project_name ? (
-                          <Typography
-                            fontSize={11}
-                            color="text.secondary"
-                            noWrap
-                          >
-                            {row.project_name}
-                          </Typography>
-                        ) : null}
+                        <Typography variant="body2" color="text.secondary">
+                          {row.project_name}
+                        </Typography>
                       </Box>
-                      <Box sx={{ flexShrink: 0 }}>
-                        <StatusChip label={row.status_text} />
-                      </Box>
+                      <StatusChip label={row.status_text} />
                     </Stack>
                   </Box>
                 ))}
+                {casePage ? (
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="flex-end"
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      Page {casePage.pageIndex + 1} of {casePage.pageCount}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      aria-label="Previous cases"
+                      disabled={casesLoading || casePage.pageIndex === 0}
+                      onClick={() =>
+                        onCasePage(casePage.pageIndex - 1, casePage.pageSize)
+                      }
+                    >
+                      <IconChevronLeft size={18} />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      aria-label="Next cases"
+                      disabled={
+                        casesLoading ||
+                        casePage.pageIndex + 1 >= casePage.pageCount
+                      }
+                      onClick={() =>
+                        onCasePage(casePage.pageIndex + 1, casePage.pageSize)
+                      }
+                    >
+                      <IconChevronRight size={18} />
+                    </IconButton>
+                  </Stack>
+                ) : null}
               </>
             )}
           </Stack>

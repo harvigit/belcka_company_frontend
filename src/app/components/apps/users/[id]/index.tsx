@@ -292,7 +292,7 @@ const TablePagination = () => {
 
   const updateProfile = async () => {
     if (!canModifyUserDetails) return;
-    const payload: Record<string, any> = {
+    const payload = {
       user_id: userId,
       company_id: user.company_id,
       ...formData,
@@ -300,14 +300,6 @@ const TablePagination = () => {
         ? dayjs(formData.date_of_birth, "YYYY-MM-DD").format("DD/MM/YYYY")
         : formData.date_of_birth,
     };
-    // With billing info the API shows billing name/email/phone; never write those back to the user.
-    if (billingDetails) {
-      delete payload.first_name;
-      delete payload.last_name;
-      delete payload.email;
-      delete payload.phone;
-      delete payload.extension;
-    }
     const res = await api.post("user/update-profile", payload);
 
     if (res.data.IsSuccess) {
