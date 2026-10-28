@@ -291,7 +291,6 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       formData.append("otp", otp);
       formData.append("first_name", first_name);
       formData.append("last_name", last_name);
-      formData.append("email", email);
       formData.append("is_web", "true");
       if (date_of_birth) {
         const [year, month, day] = date_of_birth.split("-");
