@@ -21,7 +21,7 @@ import toast from 'react-hot-toast';
 
 type Resource = { id: number; name: string };
 type ProjectResource = Resource & { team_ids?: number[] };
-type Address = Resource & { project_id: number };
+type Address = Resource & { project_id: number; show_in_lists?: boolean };
 type UserResource = Resource & { first_name?: string; last_name?: string; trade_id?: number | null };
 type SubCategoryResource = Resource & { category_id: number; task_id: number };
 type CategoryResource = Resource & {
@@ -350,8 +350,15 @@ const AddPricework: React.FC<AddPriceworkProps> = ({
     }, [amountPerUnit, workComplete]);
 
     const filteredAddresses = useMemo(
-        () => addresses.filter((address) => address.project_id === Number(projectId)),
-        [addresses, projectId],
+        () =>
+            addresses.filter(
+                (address) =>
+                    address.project_id === Number(projectId) &&
+                    // Switched-off cases are hidden, except the one an edited record already uses.
+                    (address.show_in_lists !== false ||
+                        (isEditMode && String(address.id) === String(pricework?.address_id ?? ''))),
+            ),
+        [addresses, projectId, isEditMode, pricework?.address_id],
     );
 
     const filteredTeams = useMemo(() => {

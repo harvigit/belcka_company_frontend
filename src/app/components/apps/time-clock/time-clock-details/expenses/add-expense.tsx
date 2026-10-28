@@ -28,7 +28,7 @@ import toast from 'react-hot-toast';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 
 interface Project { id: number; name: string; }
-interface Address { id: number; name: string; project_id: number; }
+interface Address { id: number; name: string; project_id: number; show_in_lists?: boolean; }
 interface Category { id: number; name: string; is_transport_category: boolean; }
 
 interface UploadedFile {
@@ -132,6 +132,8 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         if (!selectedProject) return [];
 
         return addresses.filter((addr) => {
+            // Cases switched off on the cases list can't be picked for new expenses.
+            if (addr.show_in_lists === false) return false;
             const matchesProject = addr.project_id === Number(selectedProject);
             const name = (addr.name || '').toLowerCase();
             const matchesSearch = name.includes(searchTerm.toLowerCase());

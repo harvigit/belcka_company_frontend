@@ -1224,6 +1224,25 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                   justifyContent="flex-end"
                                   alignItems="center"
                                 >
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<IconPlus size={14} />}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openCreatePanel([address.id]);
+                                    }}
+                                    sx={{
+                                      py: 0.25,
+                                      px: 1,
+                                      minHeight: 0,
+                                      fontSize: 12,
+                                      whiteSpace: "nowrap",
+                                      "& .MuiButton-startIcon": { mr: 0.5 },
+                                    }}
+                                  >
+                                    Add case
+                                  </Button>
                                   <Tooltip title="Edit address">
                                     <IconButton
                                       size="small"
@@ -1280,30 +1299,6 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                     </Stack>
                                   ) : (
                                     <Box sx={{ opacity: casesBusy ? 0.6 : 1 }}>
-                                      <Stack
-                                        direction="row"
-                                        justifyContent="space-between"
-                                        alignItems="center"
-                                        mb={0.5}
-                                      >
-                                        <Typography
-                                          variant="caption"
-                                          color="text.secondary"
-                                          fontWeight={600}
-                                        >
-                                          {caseTotal}{" "}
-                                          {caseTotal === 1 ? "case" : "cases"}
-                                        </Typography>
-                                        <Button
-                                          size="small"
-                                          sx={{ py: 0, minHeight: 0 }}
-                                          onClick={() =>
-                                            openCreatePanel([address.id])
-                                          }
-                                        >
-                                          Create case
-                                        </Button>
-                                      </Stack>
                                       {/* All cases load at once, so long lists scroll here */}
                                       <Box
                                         sx={{
