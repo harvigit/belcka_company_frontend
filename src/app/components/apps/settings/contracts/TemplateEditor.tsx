@@ -19,7 +19,6 @@ import {
   IconButton,
   Stack,
   TextField,
-  Tooltip,
   Typography,
   CircularProgress,
 } from "@mui/material";
@@ -121,6 +120,8 @@ const TemplateEditor = ({ templateId }: Props) => {
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
+  // Id of the saved template — a new one gets it on its first save.
+  const currentId = template?.id ?? templateId;
   const latest = template?.versions.find((v) => v.is_current) ?? null;
   const nextVersion = (latest?.version_no ?? 0) + 1;
   const formFields = useMemo(() => extractFormFields(body), [body]);
@@ -146,14 +147,16 @@ const TemplateEditor = ({ templateId }: Props) => {
         expiry_months: expiryMonths || null,
         required_from: requiredFrom || null,
       };
-      const res = templateId
-        ? await api.post(`contracts/templates/${templateId}/update`, payload)
+      const res = currentId
+        ? await api.post(`contracts/templates/${currentId}/update`, payload)
         : await api.post(`contracts/templates?company_id=${user.company_id}`, payload);
       const saved: ContractTemplateDetail = res.data.info;
       setTemplate(saved);
       setDirty(false);
       if (!quiet) toast.success(res.data?.message || "Saved");
-      if (!templateId) router.replace(`/apps/contracts/templates/${saved.id}`);
+      // Update the URL without navigating: router.replace re-mounts the [id] page
+      // and drops what's open (e.g. the preview dialog).
+      if (!templateId) window.history.replaceState(null, "", `/apps/contracts/templates/${saved.id}`);
       return saved.id;
     } catch (error) {
       console.error(error);
@@ -164,7 +167,7 @@ const TemplateEditor = ({ templateId }: Props) => {
   };
 
   const publish = async (changeType: "MAJOR" | "MINOR", changeNote: string, assignment: PublishAssignment) => {
-    const id = dirty ? await save(true) : templateId;
+    const id = dirty || !currentId ? await save(true) : currentId;
     if (!id) return;
     setPublishing(true);
     try {
@@ -189,14 +192,14 @@ const TemplateEditor = ({ templateId }: Props) => {
   };
 
   const openPreview = async () => {
-    const id = dirty || !templateId ? await save(true) : templateId;
+    const id = dirty || !currentId ? await save(true) : currentId;
     if (id) setPreviewOpen(true);
   };
 
   const showVersion = async (versionId: number) => {
-    if (!templateId) return;
+    if (!currentId) return;
     try {
-      const res = await api.get(`contracts/templates/${templateId}/versions/${versionId}`);
+      const res = await api.get(`contracts/templates/${currentId}/versions/${versionId}`);
       setViewVersion(res.data.info);
     } catch (error) {
       console.error(error);
@@ -236,18 +239,9 @@ const TemplateEditor = ({ templateId }: Props) => {
           <Button variant="outlined" startIcon={<IconEye size={16} />} onClick={openPreview}>
             Preview as user
           </Button>
-          <Tooltip title={templateId ? "" : "Save the draft first"}>
-            <span>
-              <Button
-                variant="contained"
-                startIcon={<IconArrowUp size={16} />}
-                disabled={!templateId}
-                onClick={() => setPublishOpen(true)}
-              >
-                Publish v{nextVersion}
-              </Button>
-            </span>
-          </Tooltip>
+          <Button variant="contained" startIcon={<IconArrowUp size={16} />} onClick={() => setPublishOpen(true)}>
+            Publish v{nextVersion}
+          </Button>
         </Stack>
       </Stack>
 
