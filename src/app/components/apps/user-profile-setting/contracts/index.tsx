@@ -127,10 +127,10 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
     }
   };
 
-  const download = async (contractId: number) => {
+  const download = async (contractId: number, title?: string | null) => {
     setBusy(`pdf-${contractId}`);
     try {
-      await downloadContractPdf(contractId);
+      await downloadContractPdf(contractId, title);
     } catch (error) {
       console.error(error);
     } finally {
@@ -247,7 +247,7 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                       variant="outlined"
                       startIcon={<IconDownload size={15} />}
                       disabled={busy === `pdf-${c.signed.id}`}
-                      onClick={() => download(c.signed!.id)}
+                      onClick={() => download(c.signed!.id, c.signed!.template_title ?? c.template_title)}
                     >
                       PDF
                     </Button>
@@ -348,7 +348,7 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                             <IconButton
                               color="primary"
                               disabled={!h.has_pdf || busy === `pdf-${h.id}`}
-                              onClick={() => download(h.id)}
+                              onClick={() => download(h.id, h.template_title)}
                               aria-label={`Download PDF, ${h.company_name} version ${h.version_no}`}
                             >
                               <IconDownload size={18} />

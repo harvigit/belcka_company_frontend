@@ -257,14 +257,15 @@ export const toInputDate = (value?: string | null) => {
 };
 
 /** Opens an authenticated PDF download (PDFs are not on public links). */
-export const downloadContractPdf = async (contractId: number) => {
+export const downloadContractPdf = async (contractId: number, title?: string | null) => {
   const res = await api.get(`contracts/${contractId}/pdf`, { responseType: "blob" });
   const disposition: string = res.headers?.["content-disposition"] ?? "";
   const match = /filename="?([^"]+)"?/.exec(disposition);
   const url = URL.createObjectURL(res.data);
   const link = document.createElement("a");
   link.href = url;
-  link.download = match?.[1] ?? `contract-${contractId}.pdf`;
+  const fallback = (title ?? "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "contract";
+  link.download = match?.[1] ?? `${fallback}-${contractId}.pdf`;
   document.body.appendChild(link);
   link.click();
   link.remove();
