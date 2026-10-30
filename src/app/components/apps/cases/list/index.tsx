@@ -470,10 +470,13 @@ const CasesList = ({
     project_id: projectId ? String(projectId) : "",
   });
 
+  // Shows the clear (X) button when search or any filter (status, project, type) is applied.
   const hasActiveFilters = Boolean(
+    search.trim() ||
     (filters.status && filters.status !== "All") ||
     // filters.parent_address_id ||
-    (!projectId && filters.project_id),
+    (!projectId && filters.project_id) ||
+    filters.type,
   );
 
   useEffect(() => {
@@ -634,6 +637,31 @@ const CasesList = ({
       setInternalOrdersLoading(false);
     }
   };
+
+  const fetchInternalOrdersSummary = async () => {
+    if (!user?.company_id) return;
+    const targetProjectId = projectId || Number(filters.project_id) || 0;
+    try {
+      const params = new URLSearchParams({
+        company_id: String(user.company_id),
+        page: "1",
+        limit: "1",
+      });
+      if (targetProjectId) params.set("project_id", String(targetProjectId));
+      const res = await api.get(`project/internal-orders?${params.toString()}`);
+      const rows = Array.isArray(res.data?.info) ? res.data.info : [];
+      setInternalOrderCurrency(res.data?.currency || rows[0]?.currency || "£");
+      setInternalOrderSum(Number(res.data?.total ?? 0));
+      setInternalOrdersLoaded(true);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    if (internalOrdersOpen) return;
+    fetchInternalOrdersSummary();
+  }, [projectId, filters.project_id, user?.company_id]);
 
   const {
     table: internalOrdersTable,
@@ -1258,10 +1286,14 @@ const CasesList = ({
     pagination.pageSize,
   ]);
 
-  const handleClearAppliedFilters = (event?: React.MouseEvent) => {
+  const handleClearAppliedFilters = (
+    event?: React.MouseEvent,
+    keepSearch = false,
+  ) => {
     event?.stopPropagation();
     skipNextDependencyPageResetRef.current = false;
     const nextFilters = getClearedFilters();
+    if (!keepSearch) setSearch("");
     setTempFilters(nextFilters);
     setFilters(nextFilters);
     setPagination((prev) =>
@@ -1774,7 +1806,7 @@ const CasesList = ({
               <DialogActions>
                 <Button
                   onClick={() => {
-                    handleClearAppliedFilters();
+                    handleClearAppliedFilters(undefined, true);
                     setOpen(false);
                   }}
                   color="inherit"

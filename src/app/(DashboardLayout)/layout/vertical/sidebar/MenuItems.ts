@@ -32,7 +32,7 @@ import {
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
-import { IconSettings, IconFileText } from "@tabler/icons-react";
+import { IconSettings, IconFileText, IconFileCheck } from "@tabler/icons-react";
 import { IconBox } from "@tabler/icons-react";
 import { IconPoint } from "@tabler/icons-react";
 
@@ -189,6 +189,14 @@ const MenuItems: NavGroup[] = [
     slug: "contracts",
     icon: IconFileText,
     href: "/apps/contracts",
+  },
+  {
+    id: uniqueId(),
+    title: "Contract Approvals",
+    // Shown to admins and to users given the Contract Approvals permission.
+    slug: "contract_approvals",
+    icon: IconFileCheck,
+    href: "/apps/contract-approvals",
   },
   {
     id: uniqueId(),

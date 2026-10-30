@@ -32,7 +32,6 @@ import api from "@/utils/axios";
 import {
   ContractSummary,
   downloadContractPdf,
-  REASON_LABELS,
   UserCompanyContract,
 } from "@/app/components/apps/settings/contracts/contracts-api";
 
@@ -54,9 +53,15 @@ const STATUS_STYLE: Record<
   NOT_ENABLED: { label: "Contracts off", color: "default", border: "divider" },
 };
 
-const HISTORY_STATUS: Record<string, { label: string; color: "success" | "default" }> = {
+const HISTORY_STATUS: Record<string, { label: string; color: "success" | "default" | "error" }> = {
   SIGNED: { label: "Current", color: "success" },
   SUPERSEDED: { label: "Replaced", color: "default" },
+  REJECTED: { label: "Rejected", color: "error" },
+};
+
+const REVIEW_STATUS: Record<string, { label: string; color: "success" | "warning" }> = {
+  AWAITING: { label: "Awaiting approval", color: "warning" },
+  APPROVED: { label: "Approved", color: "success" },
 };
 
 const UserContracts = ({ userId, active, canEdit }: Props) => {
@@ -127,12 +132,12 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
     }
   };
 
-  const download = async (contractId: number) => {
+  const download = async (contractId: number, title?: string | null) => {
     setBusy(`pdf-${contractId}`);
     try {
-      await downloadContractPdf(contractId);
-    } catch (error) {
-      console.error(error);
+      await downloadContractPdf(contractId, title);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to download the contract PDF.");
     } finally {
       setBusy(null);
     }
@@ -201,9 +206,11 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                   )}
                   {(c.status === "WAITING" || c.status === "DETAILS_MISSING") && (
                     <>
-                      <Typography variant="body2">
-                        <b>Why:</b> {c.reason_detail || REASON_LABELS[c.reason ?? ""] || "Signature needed"}
-                      </Typography>
+                      {c.change_note && (
+                        <Typography variant="body2" sx={{ whiteSpace: "pre-line", wordBreak: "break-word" }}>
+                          <b>What changed:</b> {c.change_note}
+                        </Typography>
+                      )}
                       {c.pending && (
                         <Typography variant="body2" color="textSecondary">
                           Asked {c.pending.requested_at}
@@ -247,7 +254,7 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                       variant="outlined"
                       startIcon={<IconDownload size={15} />}
                       disabled={busy === `pdf-${c.signed.id}`}
-                      onClick={() => download(c.signed!.id)}
+                      onClick={() => download(c.signed!.id, c.signed!.template_title ?? c.template_title)}
                     >
                       PDF
                     </Button>
@@ -307,7 +314,6 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                 <TableCell>Signed</TableCell>
                 <TableCell>Company</TableCell>
                 <TableCell>Contract</TableCell>
-                <TableCell>Reason</TableCell>
                 <TableCell>Day rate</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="right">PDF</TableCell>
@@ -337,10 +343,24 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                           v{h.version_no}
                         </Typography>
                       </TableCell>
-                      <TableCell>{REASON_LABELS[h.reason] ?? h.reason}</TableCell>
                       <TableCell>{h.day_rate != null ? Number(h.day_rate).toFixed(2) : "—"}</TableCell>
                       <TableCell>
-                        <Chip size="small" color={status.color} label={status.label} />
+                        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                          <Chip size="small" color={status.color} label={status.label} />
+                          {h.status !== "REJECTED" && h.review_status && REVIEW_STATUS[h.review_status] && (
+                            <Chip
+                              size="small"
+                              variant="outlined"
+                              color={REVIEW_STATUS[h.review_status].color}
+                              label={REVIEW_STATUS[h.review_status].label}
+                            />
+                          )}
+                        </Stack>
+                        {h.status === "REJECTED" && h.review_note && (
+                          <Typography variant="caption" color="error" display="block" sx={{ wordBreak: "break-word" }}>
+                            {h.review_note}
+                          </Typography>
+                        )}
                       </TableCell>
                       <TableCell align="right">
                         <Tooltip title="Download PDF">
@@ -348,7 +368,7 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                             <IconButton
                               color="primary"
                               disabled={!h.has_pdf || busy === `pdf-${h.id}`}
-                              onClick={() => download(h.id)}
+                              onClick={() => download(h.id, h.template_title)}
                               aria-label={`Download PDF, ${h.company_name} version ${h.version_no}`}
                             >
                               <IconDownload size={18} />
@@ -358,7 +378,7 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell colSpan={8} sx={{ py: 0 }}>
+                      <TableCell colSpan={7} sx={{ py: 0 }}>
                         <Collapse in={open} unmountOnExit>
                           <Grid container spacing={2} sx={{ my: 1.5, p: 1.5, border: 1, borderStyle: "dashed", borderColor: "divider", borderRadius: 1 }}>
                             {[
@@ -404,7 +424,7 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
               })}
               {!history.length && (
                 <TableRow>
-                  <TableCell colSpan={8}>
+                  <TableCell colSpan={7}>
                     <Typography variant="body2" color="textSecondary" py={1}>
                       No signed contracts yet.
                     </Typography>
