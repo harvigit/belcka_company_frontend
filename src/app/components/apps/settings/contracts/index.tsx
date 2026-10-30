@@ -30,12 +30,15 @@ import {
   Typography,
   CircularProgress,
 } from "@mui/material";
-import { IconEdit, IconEye, IconPlus, IconTrash, IconUsers } from "@tabler/icons-react";
+import { IconChevronRight, IconEdit, IconEye, IconPlus, IconTrash, IconUsers } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import { usePermissions } from "@/hooks/usePermissions";
+import { hasPermission } from "@/lib/permissions";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import ContractPreviewDialog from "./ContractPreviewDialog";
 import PublishDialog, { PublishAssignment } from "./PublishDialog";
+import OverviewUsersDrawer, { OverviewType } from "./OverviewUsersDrawer";
 import {
   ContractSigner,
   ContractTemplateRow,
@@ -53,13 +56,16 @@ interface Overview {
   waiting_to_sign: number;
   details_missing: number;
   expiring_30_days: number;
+  awaiting_approval: number;
 }
 
 const ContractsSettings = () => {
   const router = useRouter();
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & { company_id?: number | null; user_role_id?: number };
   const companyId = Number(user?.company_id) || 0;
+  const { permissions } = usePermissions();
+  const canReview = user?.user_role_id === 1 || hasPermission(permissions, "contract_approvals");
 
   const [overview, setOverview] = useState<Overview | null>(null);
   const [templates, setTemplates] = useState<ContractTemplateRow[]>([]);
@@ -81,6 +87,7 @@ const ContractsSettings = () => {
       .catch((error) => console.error(error))
       .finally(() => setSignersLoading(false));
   }, [deleteTarget]);
+  const [overviewType, setOverviewType] = useState<OverviewType | null>(null);
   const [assignTarget, setAssignTarget] = useState<ContractTemplateRow | null>(null);
   const [assigning, setAssigning] = useState(false);
 
@@ -163,27 +170,80 @@ const ContractsSettings = () => {
     );
   }
 
-  const tiles = [
-    { label: "Signed and valid", value: overview?.signed_valid, color: "success.dark" },
-    { label: "Waiting to sign", value: overview?.waiting_to_sign, color: "warning.dark" },
-    { label: "Blocked: details missing", value: overview?.details_missing, color: "error.main" },
-    { label: "Expiring in 30 days", value: overview?.expiring_30_days, color: "text.primary" },
+  const tiles: { label: string; value?: number; color: string; type?: OverviewType; href?: string }[] = [
+    { label: "Signed and valid", value: overview?.signed_valid, color: "success.dark", type: "signed" },
+    { label: "Waiting to sign", value: overview?.waiting_to_sign, color: "warning.dark", type: "waiting" },
+    { label: "Blocked: details missing", value: overview?.details_missing, color: "error.main", type: "details_missing" },
+    { label: "Expiring in 30 days", value: overview?.expiring_30_days, color: "text.primary", type: "expiring" },
+    {
+      label: "Awaiting approval",
+      value: overview?.awaiting_approval,
+      color: "info.main",
+      href: canReview ? "/apps/contract-approvals" : undefined,
+    },
   ];
+  const openTile = (tile: (typeof tiles)[number]) =>
+    tile.type ? setOverviewType(tile.type) : tile.href && router.push(tile.href);
+  const activeTile = tiles.find((tile) => tile.type && tile.type === overviewType);
 
   return (
     <Stack spacing={2} p={2}>
       {/* Tiles */}
       <Grid container spacing={2}>
         {tiles.map((tile) => (
-          <Grid key={tile.label} size={{ xs: 6, md: 3 }}>
-            <Box sx={{ ...card, p: 2 }}>
-              <Typography variant="body2" color="textSecondary">
-                {tile.label}
-              </Typography>
-              <Typography variant="h3" color={tile.color}>
-                {tile.value ?? 0}
-              </Typography>
-            </Box>
+          <Grid key={tile.label} size={{ xs: 6, sm: 4, md: "grow" }}>
+            {tile.type || tile.href ? (
+              <Box
+                role="button"
+                tabIndex={0}
+                aria-label={tile.type ? `Show users: ${tile.label}` : `Open contract approvals`}
+                onClick={() => openTile(tile)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openTile(tile);
+                  }
+                }}
+                sx={{
+                  ...card,
+                  p: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  cursor: "pointer",
+                  transition: "border-color .2s, box-shadow .2s, transform .2s",
+                  "& .tile-arrow": { transition: "transform .2s, color .2s", color: "text.secondary" },
+                  "&:hover, &:focus-visible": {
+                    borderColor: tile.color,
+                    boxShadow: 3,
+                    transform: "translateY(-2px)",
+                    outline: "none",
+                    "& .tile-arrow": { transform: "translateX(4px)", color: tile.color },
+                  },
+                }}
+              >
+                <Box>
+                  <Typography variant="body2" color="textSecondary">
+                    {tile.label}
+                  </Typography>
+                  <Typography variant="h3" color={tile.color}>
+                    {tile.value ?? 0}
+                  </Typography>
+                </Box>
+                <Box className="tile-arrow" display="flex">
+                  <IconChevronRight size={22} />
+                </Box>
+              </Box>
+            ) : (
+              <Box sx={{ ...card, p: 2 }}>
+                <Typography variant="body2" color="textSecondary">
+                  {tile.label}
+                </Typography>
+                <Typography variant="h3" color={tile.color}>
+                  {tile.value ?? 0}
+                </Typography>
+              </Box>
+            )}
           </Grid>
         ))}
       </Grid>
@@ -258,6 +318,18 @@ const ContractsSettings = () => {
                           <Typography component="span" variant="caption" color="textSecondary">
                             · {t.latest_version.change_type === "MAJOR" ? "Major" : "Minor"}
                           </Typography>
+                          {t.latest_version.change_note && (
+                            <Tooltip title={t.latest_version.change_note}>
+                              <Typography
+                                variant="caption"
+                                color="textSecondary"
+                                display="block"
+                                sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                              >
+                                What changed: {t.latest_version.change_note}
+                              </Typography>
+                            </Tooltip>
+                          )}
                         </>
                       ) : (
                         "Draft"
@@ -361,6 +433,14 @@ const ContractsSettings = () => {
           {templates.length} template{templates.length === 1 ? "" : "s"} · A group can use several templates. Users sign each one assigned to them.
         </Typography>
       </Box>
+
+      <OverviewUsersDrawer
+        type={overviewType}
+        title={activeTile?.label ?? ""}
+        color={activeTile?.color ?? "primary.main"}
+        companyId={companyId}
+        onClose={() => setOverviewType(null)}
+      />
 
       <ContractPreviewDialog templateId={previewId} onClose={() => setPreviewId(null)} />
 

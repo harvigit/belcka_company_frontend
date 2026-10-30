@@ -127,6 +127,8 @@ export interface ContractTemplateRow extends ContractRules {
   latest_version: {
     version_no: number;
     change_type: "MAJOR" | "MINOR";
+    /** The "What changed?" note from publishing it. */
+    change_note: string | null;
     published_at: string | null;
     published_by_name: string;
   } | null;
@@ -188,15 +190,17 @@ export interface ContractUserRow {
   requirement: { id: number; type: string; reason: string | null; valid_until: string | null } | null;
 }
 
+export type ContractReviewStatus = "AWAITING" | "APPROVED" | "REJECTED";
+
 export interface ContractSummary {
   id: number;
   company_id: number;
   company_name: string | null;
   template_title: string | null;
   version_no: number | null;
-  status: "PENDING" | "SIGNED" | "SUPERSEDED" | "VOID";
-  reason: string;
-  reason_detail: string | null;
+  /** The "What changed?" note from publishing this version. */
+  change_note: string | null;
+  status: "PENDING" | "SIGNED" | "SUPERSEDED" | "VOID" | "REJECTED";
   day_rate: number | null;
   signed_at: string | null;
   expires_at: string | null;
@@ -204,6 +208,11 @@ export interface ContractSummary {
   reminded_at: string | null;
   reminder_count: number;
   has_pdf: boolean;
+  /** Review by a user with the Contract Approvals permission; null before signing. */
+  review_status: ContractReviewStatus | null;
+  reviewed_at: string | null;
+  /** Approval note, or why it was rejected. */
+  review_note: string | null;
   /** The user's answers to the contract's form fields. */
   form_answers: { key: string; label: string; type: string; value: string; display: string }[];
   signing_record: {
@@ -231,23 +240,14 @@ export interface UserCompanyContract {
   blocks_start_work: boolean;
   must_sign: boolean;
   requirement: { id: number; type: string; reason: string | null; valid_until: string | null } | null;
-  reason: string | null;
-  reason_detail: string | null;
+  /** The "What changed?" note of the version waiting to be signed. */
+  change_note: string | null;
   missing_company_fields: string[];
   template_title: string | null;
   current_version_no: number | null;
   signed: ContractSummary | null;
   pending: ContractSummary | null;
 }
-
-export const REASON_LABELS: Record<string, string> = {
-  NEW: "First contract",
-  COMPANY_JOIN: "Joined company",
-  RATE_CHANGE: "Day rate changed",
-  TERMS_CHANGE: "Terms changed",
-  EXPIRY: "Contract expired",
-  MANUAL: "Requested by manager",
-};
 
 /** dd/MM/yyyy → yyyy-MM-dd for <input type="date">. */
 export const toInputDate = (value?: string | null) => {
@@ -258,7 +258,20 @@ export const toInputDate = (value?: string | null) => {
 
 /** Opens an authenticated PDF download (PDFs are not on public links). */
 export const downloadContractPdf = async (contractId: number, title?: string | null) => {
-  const res = await api.get(`contracts/${contractId}/pdf`, { responseType: "blob" });
+  // Callers show the toast; a blob error body hides the server message from the global interceptor.
+  const res = await api
+    .get(`contracts/${contractId}/pdf`, { responseType: "blob", skipToast: true } as any)
+    .catch(async (error) => {
+      const body = error?.response?.data;
+      if (body instanceof Blob) {
+        try {
+          error.response.data = JSON.parse(await body.text());
+        } catch {
+          error.response.data = {};
+        }
+      }
+      throw error;
+    });
   const disposition: string = res.headers?.["content-disposition"] ?? "";
   const match = /filename="?([^"]+)"?/.exec(disposition);
   const url = URL.createObjectURL(res.data);
@@ -271,3 +284,24 @@ export const downloadContractPdf = async (contractId: number, title?: string | n
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
+
+export type ApprovalTab = "awaiting" | "approved" | "rejected";
+
+/** A signed contract as the reviewer sees it. */
+export interface ContractApproval extends ContractSummary {
+  user_id: number;
+  user_name: string | null;
+  user_image: string | null;
+  user_thumb_image: string | null;
+  reviewed_by_name: string | null;
+  can_review: boolean;
+}
+
+export interface ContractApprovalsResponse {
+  counts: Record<ApprovalTab, number>;
+  total: number;
+  page: number;
+  limit: number;
+  templates: { id: number; title: string }[];
+  items: ContractApproval[];
+}
