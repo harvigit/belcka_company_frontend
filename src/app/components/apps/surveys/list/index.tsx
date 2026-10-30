@@ -63,7 +63,8 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import BlankCard from "@/app/components/shared/BlankCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import SurveySettings from "@/app/components/apps/settings/survey-settings";
-import { Survey, SurveyProjectOption, SurveyorOption, SurveyStatus } from "../types";
+import { NamedFilterOption, tableFilterOptions } from "@/utils/uniqueFilterOptions";
+import { Survey, SurveyorOption, SurveyStatus } from "../types";
 
 const statusColorMap: Record<
   SurveyStatus,
@@ -111,8 +112,11 @@ export default function SurveyList() {
   const [surveyorFilter, setSurveyorFilter] = useState<string>("all");
 
   // Options
-  const [projects, setProjects] = useState<SurveyProjectOption[]>([]);
+  // Assignable users for the work order dialog's contractor picker.
   const [surveyors, setSurveyors] = useState<SurveyorOption[]>([]);
+  // Filter dropdown options: only projects and surveyors that appear in the listing (all pages).
+  const [projectOptions, setProjectOptions] = useState<NamedFilterOption[]>([]);
+  const [surveyorOptions, setSurveyorOptions] = useState<NamedFilterOption[]>([]);
 
   // Delete modal state
   const [deleteTargetId, setDeleteTargetId] = useState<string | number | null>(null);
@@ -179,19 +183,11 @@ export default function SurveyList() {
     alwaysVisibleColumns: ["actions"],
   });
 
-  // Load resource options (projects & surveyors)
+  // Load assignable users for the work order dialog
   useEffect(() => {
     const loadResources = async () => {
       try {
-        const [resExpense, resUsers] = await Promise.allSettled([
-          api.get("/expense/get-resources"),
-          api.get("surveys/assignable-users"),
-        ]);
-
-        if (resExpense.status === "fulfilled" && resExpense.value.data) {
-          const rawProjects = resExpense.value.data.projects || [];
-          setProjects(rawProjects.map((p: any) => ({ id: p.id, name: p.name })));
-        }
+        const [resUsers] = await Promise.allSettled([api.get("surveys/assignable-users")]);
 
         if (resUsers.status === "fulfilled" && resUsers.value.data) {
           const rawUsers = resUsers.value.data.info || [];
@@ -233,6 +229,9 @@ export default function SurveyList() {
         setTotalRows(res.data.data?.totalItems ?? rows.length);
         setPageCount(res.data.data?.totalPages ?? 1);
         setStatusCounts(res.data.data?.statusCounts ?? null);
+        const filterOptions = res.data.filter_options || {};
+        setProjectOptions((prev) => tableFilterOptions(filterOptions.projects, rows, "project_id", "project_name", prev));
+        setSurveyorOptions((prev) => tableFilterOptions(filterOptions.surveyors, rows, "surveyor_id", "surveyor_name", prev));
       } else {
         setData([]);
         setTotalRows(0);
@@ -842,7 +841,7 @@ export default function SurveyList() {
               sx={{ minWidth: 160 }}
             >
               <MenuItem value="all">All Projects</MenuItem>
-              {projects.map((p) => (
+              {projectOptions.map((p) => (
                 <MenuItem key={p.id} value={String(p.id)}>
                   {p.name}
                 </MenuItem>
@@ -859,7 +858,7 @@ export default function SurveyList() {
               sx={{ minWidth: 170 }}
             >
               <MenuItem value="all">All Surveyors</MenuItem>
-              {surveyors.map((s) => (
+              {surveyorOptions.map((s) => (
                 <MenuItem key={s.id} value={String(s.id)}>
                   {s.name}
                 </MenuItem>
