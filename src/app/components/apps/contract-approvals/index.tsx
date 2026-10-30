@@ -33,11 +33,17 @@ import {
   Typography,
 } from "@mui/material";
 import {
+  IconCalendarEvent,
   IconCheck,
   IconChevronDown,
   IconChevronUp,
+  IconCopy,
+  IconDeviceMobile,
   IconDownload,
+  IconForms,
   IconSearch,
+  IconShieldCheck,
+  IconWorld,
   IconX,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
@@ -70,6 +76,305 @@ type ReviewAction = {
 
 const errorMessage = (error: any, fallback: string) =>
   error?.response?.data?.message || fallback;
+
+const DetailCard = ({
+  icon,
+  title,
+  action,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) => (
+  <Box
+    sx={{
+      flex: 1,
+      minWidth: 0,
+      bgcolor: "background.paper",
+      border: 1,
+      borderColor: "divider",
+      borderRadius: 2,
+      overflow: "hidden",
+    }}
+  >
+    <Stack
+      direction="row"
+      alignItems="center"
+      justifyContent="space-between"
+      spacing={1}
+      sx={{ px: 2, py: 1.25, borderBottom: 1, borderColor: "divider" }}
+    >
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={1}
+        color="primary.main"
+      >
+        {icon}
+        <Typography className="f-14" fontWeight={600} color="textPrimary">
+          {title}
+        </Typography>
+      </Stack>
+      {action}
+    </Stack>
+    <Box p={2}>{children}</Box>
+  </Box>
+);
+
+const RecordRow = ({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) => (
+  <Stack direction="row" alignItems="center" spacing={1.5} py={1}>
+    <Box
+      sx={{
+        width: 32,
+        height: 32,
+        borderRadius: "8px",
+        bgcolor: "primary.light",
+        color: "primary.main",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      {icon}
+    </Box>
+    <Box minWidth={0}>
+      <Typography
+        variant="caption"
+        color="textSecondary"
+        display="block"
+        lineHeight={1.3}
+      >
+        {label}
+      </Typography>
+      <Typography
+        className="f-14"
+        color="textPrimary"
+        fontWeight={500}
+        sx={{ wordBreak: "break-word" }}
+      >
+        {value || "—"}
+      </Typography>
+    </Box>
+  </Stack>
+);
+
+/** Expanded row: what the user filled in and how they signed. */
+const ContractDetails = ({ contract: c }: { contract: ContractApproval }) => {
+  const record = c.signing_record;
+  const copyHash = async () => {
+    if (!record?.document_sha256) return;
+    try {
+      await navigator.clipboard.writeText(record.document_sha256);
+      toast.success("Document hash copied.");
+    } catch {
+      toast.error("Could not copy the hash.");
+    }
+  };
+
+  const reviewed =
+    c.review_status === "APPROVED" || c.review_status === "REJECTED";
+  const rejected = c.review_status === "REJECTED";
+
+  return (
+    <Stack
+      spacing={2}
+      sx={{ my: 1.5, p: 2, bgcolor: "action.hover", borderRadius: 2 }}
+    >
+      {reviewed && (
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 1, sm: 2 }}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          sx={{
+            px: 2,
+            py: 1.5,
+            borderRadius: 2,
+            border: 1,
+            borderColor: rejected ? "error.main" : "success.main",
+            bgcolor: rejected ? "error.light" : "success.light",
+          }}
+        >
+          <Chip
+            size="small"
+            color={rejected ? "error" : "success"}
+            icon={rejected ? <IconX size={14} /> : <IconCheck size={14} />}
+            label={rejected ? "Rejected" : "Approved"}
+            sx={{ fontWeight: 600, flexShrink: 0 }}
+          />
+          <Box minWidth={0} flex={1}>
+            <Typography className="f-14" color="textPrimary">
+              {rejected ? "Rejected" : "Approved"} by{" "}
+              <b>{c.reviewed_by_name ?? "a reviewer"}</b>
+              {c.reviewed_at ? ` on ${c.reviewed_at}` : ""}
+            </Typography>
+            <Typography
+              className="f-14"
+              color={rejected ? "error.main" : "textSecondary"}
+              sx={{ wordBreak: "break-word", whiteSpace: "pre-line", mt: 0.25 }}
+            >
+              {c.review_note
+                ? `${rejected ? "Reason" : "Note"}: ${c.review_note}`
+                : rejected
+                  ? "No reason given."
+                  : "No note added."}
+            </Typography>
+          </Box>
+        </Stack>
+      )}
+      <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+        <DetailCard
+          icon={<IconForms size={18} />}
+          title="Form answers"
+          action={
+            c.day_rate != null ? (
+              <Chip
+                size="small"
+                color="primary"
+                variant="outlined"
+                label={`Day rate £${Number(c.day_rate).toFixed(2)}`}
+                sx={{ fontWeight: 600 }}
+              />
+            ) : undefined
+          }
+        >
+          {c.form_answers.length ? (
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "repeat(2, minmax(0, 1fr))",
+                },
+                columnGap: 3,
+                rowGap: 2,
+              }}
+            >
+              {c.form_answers.map((a) => (
+                <Box key={a.key} minWidth={0}>
+                  <Typography
+                    variant="caption"
+                    color="textSecondary"
+                    display="block"
+                    mb={0.25}
+                  >
+                    {a.label}
+                  </Typography>
+                  {a.type === "checkbox" ? (
+                    <Chip
+                      size="small"
+                      color={a.value === "true" ? "success" : "default"}
+                      label={a.value === "true" ? "Yes" : "No"}
+                      sx={{ fontWeight: 600, height: 22 }}
+                    />
+                  ) : (
+                    <Typography
+                      className="f-14"
+                      color="textPrimary"
+                      fontWeight={500}
+                      sx={{ wordBreak: "break-word", whiteSpace: "pre-line" }}
+                    >
+                      {a.display || "—"}
+                    </Typography>
+                  )}
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <Typography className="f-14" color="textSecondary">
+              No form fields on this contract.
+            </Typography>
+          )}
+        </DetailCard>
+
+        <DetailCard icon={<IconShieldCheck size={18} />} title="Signing record">
+          {record ? (
+            <>
+              <Box
+                sx={{ "& > * + *": { borderTop: 1, borderColor: "divider" } }}
+              >
+                <RecordRow
+                  icon={<IconCalendarEvent size={16} />}
+                  label="Signed at"
+                  value={record.signed_at}
+                />
+                <RecordRow
+                  icon={<IconWorld size={16} />}
+                  label="IP address"
+                  value={record.ip}
+                />
+                <RecordRow
+                  icon={<IconDeviceMobile size={16} />}
+                  label="Device"
+                  value={record.device}
+                />
+              </Box>
+              {record.document_sha256 && (
+                <Box mt={1.5}>
+                  <Typography
+                    variant="caption"
+                    color="textSecondary"
+                    display="block"
+                    mb={0.5}
+                  >
+                    Document hash (SHA-256)
+                  </Typography>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={1}
+                    sx={{
+                      bgcolor: "action.hover",
+                      borderRadius: "8px",
+                      pl: 1.5,
+                      pr: 0.5,
+                      py: 0.5,
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontFamily: "Menlo, Consolas, monospace",
+                        fontSize: 12,
+                        color: "text.secondary",
+                        wordBreak: "break-all",
+                        flex: 1,
+                      }}
+                    >
+                      {record.document_sha256}
+                    </Typography>
+                    <Tooltip title="Copy hash">
+                      <IconButton
+                        size="small"
+                        onClick={copyHash}
+                        aria-label="Copy document hash"
+                      >
+                        <IconCopy size={16} />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                </Box>
+              )}
+            </>
+          ) : (
+            <Typography className="f-14" color="textSecondary">
+              No signing record.
+            </Typography>
+          )}
+        </DetailCard>
+      </Stack>
+    </Stack>
+  );
+};
 
 const ContractApprovals = () => {
   const session = useSession();
@@ -235,9 +540,12 @@ const ContractApprovals = () => {
     <Stack
       spacing={2.5}
       p={{ xs: 2, md: 3 }}
-      pb={{
-        xs: selectable && bulkCount > 0 ? 12 : 2,
-        md: selectable && bulkCount > 0 ? 12 : 3,
+      pb={{ xs: 0, md: 0 }}
+      sx={{
+        // Like the time clock list: the page keeps its height and only the table body scrolls.
+        height: "calc(100vh - 100px)",
+        minHeight: 480,
+        "& > *": { flexShrink: 0 },
       }}
     >
       <Box>
@@ -335,9 +643,19 @@ const ContractApprovals = () => {
         )}
       </Stack>
 
-      <Box>
+      <Box
+        sx={{
+          flex: "1 1 auto !important",
+          flexShrink: "1 !important",
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Divider />
-        <TableContainer sx={{ overflowX: "auto" }}>
+        <TableContainer
+          sx={{ flex: 1, minHeight: 0, overflowX: "auto", overflowY: "auto" }}
+        >
           <Table
             stickyHeader
             sx={{
@@ -508,16 +826,25 @@ const ContractApprovals = () => {
                               {c.reviewed_at}
                             </Typography>
                             {c.review_note && (
-                              <Typography
-                                variant="caption"
-                                color={
-                                  tab === "rejected" ? "error" : "textSecondary"
-                                }
-                                display="block"
-                                sx={{ wordBreak: "break-word" }}
+                              <Tooltip
+                                title={c.review_note}
+                                placement="top"
+                                arrow
                               >
-                                {c.review_note}
-                              </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color={
+                                    tab === "rejected"
+                                      ? "error"
+                                      : "textSecondary"
+                                  }
+                                  display="block"
+                                  noWrap
+                                  sx={{ maxWidth: 240 }}
+                                >
+                                  {c.review_note}
+                                </Typography>
+                              </Tooltip>
                             )}
                           </TableCell>
                         )}
@@ -583,79 +910,7 @@ const ContractApprovals = () => {
                           sx={{ py: "0 !important" }}
                         >
                           <Collapse in={open} unmountOnExit>
-                            <Box py={2} pl={{ xs: 0, sm: 6 }}>
-                              <Stack
-                                direction={{ xs: "column", md: "row" }}
-                                spacing={4}
-                              >
-                                <Box flex={1}>
-                                  <Typography variant="subtitle2" mb={1}>
-                                    Form answers
-                                  </Typography>
-                                  {c.form_answers.length ? (
-                                    <Stack spacing={0.5}>
-                                      {c.form_answers.map((a) => (
-                                        <Typography
-                                          key={a.key}
-                                          variant="body2"
-                                          sx={{ wordBreak: "break-word" }}
-                                        >
-                                          <b>{a.label}:</b> {a.display}
-                                        </Typography>
-                                      ))}
-                                    </Stack>
-                                  ) : (
-                                    <Typography
-                                      variant="body2"
-                                      color="textSecondary"
-                                    >
-                                      No form fields on this contract.
-                                    </Typography>
-                                  )}
-                                  {c.day_rate != null && (
-                                    <Typography variant="body2" mt={1}>
-                                      <b>Day rate:</b>{" "}
-                                      {Number(c.day_rate).toFixed(2)}
-                                    </Typography>
-                                  )}
-                                </Box>
-                                <Box flex={1}>
-                                  <Typography variant="subtitle2" mb={1}>
-                                    Signing record
-                                  </Typography>
-                                  {c.signing_record ? (
-                                    <Stack spacing={0.5}>
-                                      <Typography variant="body2">
-                                        <b>Signed:</b>{" "}
-                                        {c.signing_record.signed_at}
-                                      </Typography>
-                                      <Typography variant="body2">
-                                        <b>IP:</b> {c.signing_record.ip ?? "—"}
-                                      </Typography>
-                                      <Typography variant="body2">
-                                        <b>Device:</b>{" "}
-                                        {c.signing_record.device ?? "—"}
-                                      </Typography>
-                                      <Typography
-                                        variant="caption"
-                                        color="textSecondary"
-                                        sx={{ wordBreak: "break-all" }}
-                                      >
-                                        SHA-256:{" "}
-                                        {c.signing_record.document_sha256}
-                                      </Typography>
-                                    </Stack>
-                                  ) : (
-                                    <Typography
-                                      variant="body2"
-                                      color="textSecondary"
-                                    >
-                                      —
-                                    </Typography>
-                                  )}
-                                </Box>
-                              </Stack>
-                            </Box>
+                            <ContractDetails contract={c} />
                           </Collapse>
                         </TableCell>
                       </TableRow>
