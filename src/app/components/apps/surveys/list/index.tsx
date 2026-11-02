@@ -50,8 +50,6 @@ import {
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
-import { usePermissions } from "@/hooks/usePermissions";
-import { hasPermission } from "@/lib/permissions";
 import useSurveyAccess from "../useSurveyAccess";
 import { useSession } from "next-auth/react";
 import { flexRender } from "@tanstack/react-table";
@@ -95,9 +93,8 @@ export default function SurveyList() {
   const isAdmin = access.is_admin;
   const session = useSession();
   const user = session.data?.user as any;
-  // Survey Settings is open to admins and holders of the Settings permission; the API enforces the same rule.
-  const { permissions } = usePermissions();
-  const canOpenSettings = isAdmin || hasPermission(permissions, "Settings");
+  // Survey Settings is open to everyone who can see this page (admins and Surveys permission
+  // holders); the API allows the same users to manage elements, groups, templates, etc.
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -671,28 +668,26 @@ export default function SurveyList() {
           </Typography>
         </Box>
 
-        {canOpenSettings && (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Tooltip title="Survey Settings">
-              <IconButton onClick={() => setSettingsOpen(true)} color="primary" aria-label="Survey Settings">
-                <IconSettings />
-              </IconButton>
-            </Tooltip>
-            <SurveySettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-            {isAdmin && (
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<IconPlus size={18} />}
-                component={Link}
-                href="/apps/surveys/create"
-                sx={{ fontWeight: 600, borderRadius: "8px" }}
-              >
-                Create Survey
-              </Button>
-            )}
-          </Stack>
-        )}
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Tooltip title="Survey Settings">
+            <IconButton onClick={() => setSettingsOpen(true)} color="primary" aria-label="Survey Settings">
+              <IconSettings />
+            </IconButton>
+          </Tooltip>
+          <SurveySettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+          {isAdmin && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<IconPlus size={18} />}
+              component={Link}
+              href="/apps/surveys/create"
+              sx={{ fontWeight: 600, borderRadius: "8px" }}
+            >
+              Create Survey
+            </Button>
+          )}
+        </Stack>
       </Stack>
 
       {/* KPI Summary Cards */}
