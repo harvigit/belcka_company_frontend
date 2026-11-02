@@ -2091,6 +2091,12 @@ const ProjectDashboard = () => {
             overflowY: "auto",
           }}
         >
+          {/* DndContext renders hidden accessibility <div>s, so it must sit outside <table>. */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleSectionDragEnd}
+          >
           <Table stickyHeader>
             <TableHead>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -2154,11 +2160,6 @@ const ProjectDashboard = () => {
                 </TableRow>
               ))}
             </TableHead>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleSectionDragEnd}
-            >
               <TableBody>
                 {loading ? (
                   <SkeletonLoader
@@ -2309,8 +2310,8 @@ const ProjectDashboard = () => {
                   ))
                 )}
               </TableBody>
-            </DndContext>
           </Table>
+          </DndContext>
         </TableContainer>
 
         <TablePaginationFooter
