@@ -231,7 +231,7 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({
                                         <Typography variant="body2" sx={{ mt: 2 }}>User</Typography>
                                         <Select
                                             fullWidth
-                                            value={formData.user_id}
+                                            value={formData.user_id || ''}
                                             onChange={(e) =>
                                                 setFormData((p) => ({ ...p, user_id: Number(e.target.value) }))
                                             }
