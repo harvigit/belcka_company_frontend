@@ -77,7 +77,11 @@ import { IconFilter } from "@tabler/icons-react";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 // import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { format } from "date-fns";
-import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
+import {
+  GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
+  consumePlacesSessionToken,
+  getPlacesSessionToken,
+} from "@/utils/googleMaps";
 import {
   Circle,
   GoogleMap,
@@ -926,7 +930,7 @@ const AddressesList = ({
 
     const service = new google.maps.places.AutocompleteService();
 
-    service.getPlacePredictions({ input: query }, (results, status) => {
+    service.getPlacePredictions({ input: query, sessionToken: getPlacesSessionToken() }, (results, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && results) {
         setPredictions(
           results.map((r) => ({
@@ -947,7 +951,11 @@ const AddressesList = ({
       document.createElement("div"),
     );
 
-    service.getDetails({ placeId: item.place_id }, (place, status) => {
+    service.getDetails({
+      placeId: item.place_id,
+      fields: ["formatted_address", "geometry"],
+      sessionToken: consumePlacesSessionToken(),
+    }, (place, status) => {
       if (
         status === google.maps.places.PlacesServiceStatus.OK &&
         place?.geometry?.location
