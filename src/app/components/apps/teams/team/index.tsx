@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   TableContainer,
   Table,
@@ -447,9 +447,16 @@ const TablePagination = () => {
     }
   };
 
+  // useServerTable already loads the member list on mount; only refetch here
+  // when the team changes afterwards.
+  const isFirstTeamLoad = useRef(true);
   useEffect(() => {
     fetchUniqueUsers();
-    fetchData();
+    if (isFirstTeamLoad.current) {
+      isFirstTeamLoad.current = false;
+    } else {
+      fetchData();
+    }
     if (teamId == "null") {
       router.push("/apps/teams/list");
     }
