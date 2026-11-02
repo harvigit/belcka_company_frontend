@@ -1352,8 +1352,17 @@ const CasesList = ({
     );
   };
 
-  return (
-    <PermissionGuard permission="Project">
+  // When embedded in the project list drawer, that page already checks the
+  // same "Project" permission, so skip a second guard (and its user/profile call).
+  const withPermissionGuard = (children: React.ReactNode) =>
+    embedded ? (
+      <>{children}</>
+    ) : (
+      <PermissionGuard permission="Project">{children}</PermissionGuard>
+    );
+
+  return withPermissionGuard(
+    <>
       <Box
         sx={{
           height: projectId || embedded ? "100%" : "calc(100vh - 100px)",
@@ -2142,7 +2151,7 @@ const CasesList = ({
         cases={data}
         onSave={fetchCases}
       />
-    </PermissionGuard>
+    </>,
   );
 };
 

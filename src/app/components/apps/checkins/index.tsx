@@ -164,6 +164,20 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
     () => getCheckinsTableStateKey(user?.id, user?.company_id),
     [user?.id, user?.company_id],
   );
+  // Start the table on the saved page/size. Restoring it after mount changes
+  // pagination, which fetches once immediately and again from the debounce.
+  const [initialCheckinsPagination] = useState(() => {
+    const saved = readCheckinsTableStateCookie(checkinsTableStateKey).pagination;
+    if (
+      typeof saved?.pageIndex === "number" &&
+      saved.pageIndex >= 0 &&
+      typeof saved?.pageSize === "number" &&
+      saved.pageSize > 0
+    ) {
+      return { pageIndex: saved.pageIndex, pageSize: saved.pageSize };
+    }
+    return undefined;
+  });
   const restoredTableStateKeyRef = useRef("");
   const skipNextDependencyPageResetRef = useRef(false);
   const [isTableStateReady, setIsTableStateReady] = useState(false);
@@ -730,6 +744,7 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
     data: data,
     columns,
     fetchData: fetchChecklogs,
+    initialPagination: initialCheckinsPagination,
     debounceDependencies: [
       searchTerm,
       filters,
@@ -833,8 +848,16 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
     width: "auto",
   }));
 
-  return (
-    <PermissionGuard permission="Project">
+  // When embedded in the project list drawer, that page already checks the
+  // same "Project" permission, so skip a second guard (and its user/profile call).
+  const withPermissionGuard = (children: React.ReactNode) =>
+    embedded ? (
+      <>{children}</>
+    ) : (
+      <PermissionGuard permission="Project">{children}</PermissionGuard>
+    );
+
+  return withPermissionGuard(
       <Box
         sx={{
           height: embedded ? "100%" : "calc(100vh - 100px)",
@@ -1513,8 +1536,7 @@ const CheckinsList = ({ embedded = false }: { embedded?: boolean } = {}) => {
             </Stack>
           </Box>
         </Dialog>
-      </Box>
-    </PermissionGuard>
+      </Box>,
   );
 };
 
