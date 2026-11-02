@@ -184,7 +184,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
     if (!scopeData?.survey?.status) return false;
     return ["completed", "frozen"].includes(scopeData.survey.status);
   }, [scopeData]);
-  // QS actions are limited to company administrators; everyone else gets the read-only view.
+  // QS actions need the Surveys permission; everyone else gets the read-only view.
   const isLocked = isBaselineLocked || !access.is_admin;
 
   // Unique Room names for filter
@@ -757,7 +757,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
           <strong>Read only:</strong>{" "}
           {access.failed
             ? "Couldn't verify your survey permissions. Refresh the page to try again."
-            : "only company administrators can edit the commercial scope or lock the baseline."}
+            : "only users with the Surveys permission can edit the commercial scope or lock the baseline."}
         </Alert>
       )}
 

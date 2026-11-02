@@ -6,6 +6,7 @@ import api from "@/utils/axios";
 
 export interface SurveyAccess {
   user_id: number | null;
+  /** Full Survey module access: company admins and Surveys permission holders (name kept for the API). */
   is_admin: boolean;
   loaded: boolean;
   /** The role could not be confirmed; admin-only actions stay hidden until a reload succeeds. */

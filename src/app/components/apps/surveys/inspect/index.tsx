@@ -244,7 +244,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   const isStatusLocked = Boolean(
     survey && ["submitted", "qs_review", "completed", "frozen"].includes(survey.status)
   );
-  // Only the assigned surveyor or a company administrator may record inspection evidence.
+  // Only the assigned surveyor or a user with the Surveys permission may record inspection evidence.
   const canRecordInspection = access.is_admin || Boolean(survey && survey.surveyor_id === access.user_id);
   const isReadOnly = isStatusLocked || !canRecordInspection;
 
@@ -892,7 +892,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
         <Alert severity={access.failed ? "warning" : "info"} sx={{ mb: 2.5, borderRadius: "8px" }}>
           {access.failed
             ? "Read only: Couldn't verify your survey permissions. Refresh the page to try again."
-            : "Read only: only the assigned surveyor or a company administrator can record inspection evidence for this survey."}
+            : "Read only: only the assigned surveyor or a user with the Surveys permission can record inspection evidence for this survey."}
         </Alert>
       )}
 

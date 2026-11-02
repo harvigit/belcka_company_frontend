@@ -332,7 +332,7 @@ export default function CreateSurveyWizard() {
     return (
       <Box sx={{ p: { xs: 2, sm: 3 } }}>
         <Alert severity={access.failed ? "warning" : "info"} sx={{ mb: 2 }}>
-          {access.failed ? "Couldn't verify your survey permissions. Refresh the page to try again." : "Only company administrators can create surveys."}
+          {access.failed ? "Couldn't verify your survey permissions. Refresh the page to try again." : "Only users with the Surveys permission can create surveys."}
         </Alert>
         <Button variant="contained" onClick={() => router.push("/apps/surveys/list")}>
           Back to Surveys

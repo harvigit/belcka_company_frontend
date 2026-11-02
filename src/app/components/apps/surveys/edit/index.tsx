@@ -242,11 +242,11 @@ export default function SurveyEdit({ id }: SurveyEditProps) {
       <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 900, mx: "auto" }}>
         <Alert severity={access.failed ? "warning" : "info"} icon={<IconLock size={24} />} sx={{ mb: 3, borderRadius: 2 }}>
           <AlertTitle sx={{ fontWeight: 700 }}>
-            {access.failed ? "Permissions could not be verified" : "Editing is limited to administrators"}
+            {access.failed ? "Permissions could not be verified" : "Editing needs the Surveys permission"}
           </AlertTitle>
           {access.failed
             ? "Couldn't verify your survey permissions. Refresh the page to try again."
-            : `Only company administrators can edit survey ${survey.reference}.`}
+            : `Only users with the Surveys permission can edit survey ${survey.reference}.`}
         </Alert>
         <Button
           variant="contained"
