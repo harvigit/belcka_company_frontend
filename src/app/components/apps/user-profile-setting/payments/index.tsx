@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Box, Tabs, Tab, Divider } from "@mui/material";
 import PayslipsList from "./components/payslips/index";
 import InvoicesList from "./components/invoices/index";
@@ -20,6 +20,15 @@ interface PayslipListingProps {
 const Payments: React.FC<PayslipListingProps> = ({companyId, active, userId, isShow, disableDateFilter = false, readOnly = false}) => {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState(0);
+    // On the user details page every tab is mounted up front and hidden; wait
+    // until this one is first opened before loading its guard and lists.
+    const [hasBeenActive, setHasBeenActive] = useState(active);
+
+    useEffect(() => {
+        if (active) setHasBeenActive(true);
+    }, [active]);
+
+    if (!hasBeenActive) return null;
 
     return (
         <PermissionGuard permission={userId && !Number.isNaN(userId) ? "Users" : "Payments"}>

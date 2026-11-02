@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   Typography,
@@ -283,11 +283,13 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
     findPermission();
   }, [userId, active]);
 
+  // Load the trade list once, the first time the Rate tab is opened for this user.
+  const tradesLoadedFor = useRef<number | null>(null);
   useEffect(() => {
-    if (userId) {
-      fetchTrades();
-    }
-  }, [userId,active]);
+    if (!userId || !active || tradesLoadedFor.current === userId) return;
+    tradesLoadedFor.current = userId;
+    fetchTrades();
+  }, [userId, active]);
 
   const hasTradeChange = hasPendingTradeChange(comapny);
   const hasRateChange = hasPendingRateChange(comapny);
