@@ -1,5 +1,11 @@
 "use client";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useEffect } from "react";
 import { Box, Grid, Stack } from "@mui/system";
 import {
@@ -104,19 +110,87 @@ const saveDateRangeToStorage = (
   }
 };
 
-const Company = () => {
+// Header data shared by every mounted <Company /> (the one in the header and the
+// copy in the small-screen "more" panel), so opening the panel reuses what the
+// header already loaded instead of fetching it again. Scoped to user + company
+// so a different login never sees the previous user's data.
+type SharedHeaderData = {
+  companies: any[];
+  teams: any[];
+  trade: any[];
+  count: number;
+  requestCount: number;
+  announcemntCount: number;
+};
+
+const sharedHeaderDefaults: SharedHeaderData = {
+  companies: [],
+  teams: [],
+  trade: [],
+  count: 0,
+  requestCount: 0,
+  announcemntCount: 0,
+};
+
+let sharedHeaderOwner: string | null = null;
+let sharedHeaderData: SharedHeaderData = sharedHeaderDefaults;
+const sharedHeaderListeners = new Set<() => void>();
+
+const subscribeSharedHeader = (listener: () => void) => {
+  sharedHeaderListeners.add(listener);
+  return () => {
+    sharedHeaderListeners.delete(listener);
+  };
+};
+
+const useSharedHeaderState = <K extends keyof SharedHeaderData>(
+  owner: string,
+  field: K,
+) => {
+  const value = useSyncExternalStore(
+    subscribeSharedHeader,
+    () =>
+      sharedHeaderOwner === owner
+        ? sharedHeaderData[field]
+        : sharedHeaderDefaults[field],
+    () => sharedHeaderDefaults[field],
+  );
+
+  const setValue = useCallback(
+    (next: SharedHeaderData[K]) => {
+      if (sharedHeaderOwner !== owner) {
+        sharedHeaderOwner = owner;
+        sharedHeaderData = sharedHeaderDefaults;
+      }
+      sharedHeaderData = { ...sharedHeaderData, [field]: next };
+      sharedHeaderListeners.forEach((listener) => listener());
+    },
+    [owner, field],
+  );
+
+  return [value, setValue] as const;
+};
+
+type CompanyProps = {
+  // True for the copy rendered inside the header's "more" panel: it shows the
+  // shared data and skips the mount-time requests the header copy already made.
+  isPanelCopy?: boolean;
+};
+
+const Company = ({ isPanelCopy = false }: CompanyProps) => {
   const { t } = useTranslation();
-  const [companies, setCompanies] = useState<any[]>([]);
+  const session = useSession();
+  const sharedOwner = `${(session.data?.user as any)?.id}:${(session.data?.user as any)?.company_id}`;
+  const [companies, setCompanies] = useSharedHeaderState(sharedOwner, "companies");
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [openDrawer, setOpenDrawer] = useState(false);
   const [feed, setFeed] = useState<any[]>([]);
   const [unreedFeed, setUnreedFeed] = useState<Set<number>>(new Set());
-  const [count, setCount] = useState<number>(0);
-  const [requestCount, setRequestCount] = useState<number>(0);
-  const session = useSession();
+  const [count, setCount] = useSharedHeaderState(sharedOwner, "count");
+  const [requestCount, setRequestCount] = useSharedHeaderState(sharedOwner, "requestCount");
   const [filterRequest, setFilterRequest] = useState<string>("all");
-  const [announcemntCount, setAnnouncemntCount] = useState<number>(0);
+  const [announcemntCount, setAnnouncemntCount] = useSharedHeaderState(sharedOwner, "announcemntCount");
   const [openannouncementDrawer, setOpenAnnouncementDrawer] = useState(false);
   const [requestDrawer, setRequestDrawer] = useState(false);
   const [requestDrawerMounted, setRequestDrawerMounted] = useState(false);
@@ -135,8 +209,8 @@ const Company = () => {
     );
   };
   const [openCompanyDrawer, setOpenCompanyDrawer] = useState(false);
-  const [teams, setTeams] = useState<any[]>([]);
-  const [trade, setTrade] = useState<any[]>([]);
+  const [teams, setTeams] = useSharedHeaderState(sharedOwner, "teams");
+  const [trade, setTrade] = useSharedHeaderState(sharedOwner, "trade");
 
   const [open, setOpen] = useState(false);
   const [filters, setFilters] = useState({
@@ -182,6 +256,7 @@ const Company = () => {
 
   // Fetch user companies
   useEffect(() => {
+    if (isPanelCopy) return;
     const fetchCompanies = async () => {
       try {
         const response: AxiosResponse<any> = await api.get(
@@ -194,9 +269,10 @@ const Company = () => {
     };
 
     fetchCompanies();
-  }, [user?.company_id, user?.id]);
+  }, [user?.company_id, user?.id, isPanelCopy]);
 
   useEffect(() => {
+    if (isPanelCopy) return;
     const fetchTrades = async () => {
       try {
         const res = await api.get(
@@ -220,7 +296,7 @@ const Company = () => {
     };
     fetchTeams();
     fetchTrades();
-  }, [user?.company_id]);
+  }, [user?.company_id, isPanelCopy]);
 
   const uniqueTeams = useMemo(
     () => [...new Set(teams.map((item) => item.name).filter(Boolean))],
@@ -293,9 +369,9 @@ const Company = () => {
   );
 
   useEffect(() => {
-    if (!user?.company_id || !user?.id) return;
+    if (isPanelCopy || !user?.company_id || !user?.id) return;
     fetchCounts();
-  }, [user?.company_id, user?.id, fetchCounts]);
+  }, [user?.company_id, user?.id, fetchCounts, isPanelCopy]);
 
   useEffect(() => {
     if (!openDrawer) return;
@@ -501,18 +577,23 @@ const Company = () => {
 
   useEffect(() => {
     if (!user?.id) return;
+    // The panel copy only needs to listen while one of its own drawers is open;
+    // the header copy owns the token, the browser notification and the counts.
+    if (isPanelCopy && !openDrawer && !openannouncementDrawer) return;
 
-    getFcmToken();
+    if (!isPanelCopy) getFcmToken();
     const unsubscribe = onForegroundMessage((payload) => {
-      console.log("📩 New FCM message:", payload);
-      if (Notification.permission === "granted") {
-        new Notification("", {
-          body: payload?.notification?.body || "",
-          icon: "/favicon.svg",
-        });
+      if (!isPanelCopy) {
+        console.log("📩 New FCM message:", payload);
+        if (Notification.permission === "granted") {
+          new Notification("", {
+            body: payload?.notification?.body || "",
+            icon: "/favicon.svg",
+          });
+        }
       }
       if (payload) {
-        fetchCounts();
+        if (!isPanelCopy) fetchCounts();
         if (openDrawer) fetchFeeds(1);
         if (openannouncementDrawer) fetchList();
       }
@@ -528,6 +609,7 @@ const Company = () => {
     fetchList,
     openDrawer,
     openannouncementDrawer,
+    isPanelCopy,
   ]);
 
   return (

@@ -156,7 +156,7 @@ const Header = () => {
             <CollpaseMenubar>
               <Stack direction="row" justifyContent="space-between" spacing={1}>
                 <Box display="flex" gap={1}>
-                  <Company />
+                  <Company isPanelCopy />
                   <Search />
                 </Box>
                 <IconButton
