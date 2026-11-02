@@ -1,5 +1,5 @@
 'use client';
-import React, {useEffect, useState, useMemo} from 'react';
+import React, {useEffect, useState, useMemo, useRef} from 'react';
 import {
     TableContainer,
     Table,
@@ -239,7 +239,6 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-    const [users, setUsers] = useState<any[]>([]);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
     const [openPreview, setOpenPreview] = useState(false);
@@ -298,18 +297,6 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
         setAnchorEl(null);
     };
 
-    const fetchResources = async () => {
-        try {
-            const res = await api.get(
-                `get-inventory-resources?company_id=${user.company_id}`,
-            );
-            if (res.data) {
-                setUsers(res.data.users);
-            }
-        } catch (err) {
-            console.error('Failed to fetch inventory resource', err);
-        }
-    };
 
     // Fetch data
     const fetchInvoices = async (start?: Date | null, end?: Date | null, restorePage?: number) => {
@@ -362,11 +349,14 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
         }
     };
 
+    // useServerTable already loads the first page on mount; only refetch here
+    // when the company or date range changes afterwards.
+    const skipInitialInvoicesFetch = useRef(true);
     useEffect(() => {
-        fetchResources();
-    }, [api]);
-
-    useEffect(() => {
+        if (skipInitialInvoicesFetch.current) {
+            skipInitialInvoicesFetch.current = false;
+            return;
+        }
         if (user?.company_id) {
             fetchInvoices();
         }

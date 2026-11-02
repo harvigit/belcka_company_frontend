@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   TableContainer,
   Table,
@@ -210,7 +210,14 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
         setFetchPayslip(false);
     };
 
+    // useServerTable already loads the first page on mount; only refetch here
+    // when the company or date range changes afterwards.
+    const skipInitialPaymentsFetch = useRef(true);
     useEffect(() => {
+        if (skipInitialPaymentsFetch.current) {
+            skipInitialPaymentsFetch.current = false;
+            return;
+        }
         if (user?.company_id) {
             fetchPayments(startDate, endDate);
         }
