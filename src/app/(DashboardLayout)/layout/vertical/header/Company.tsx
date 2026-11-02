@@ -1074,6 +1074,7 @@ const Company = ({ isPanelCopy = false }: CompanyProps) => {
                                 >
                                   {item?.note ? t("Note:") : ""}
                                   <Typography
+                                    component="span"
                                     className="f-14"
                                     color="textSecondary"
                                     fontWeight={500}
