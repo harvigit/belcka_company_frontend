@@ -454,11 +454,6 @@ const Certificates = () => {
         setTotalRows(list.length);
         setPageCount(1);
       }
-
-      const dash = await api.get(
-        `certificates/dashboard?company_id=${companyId}&user_id=${appliedUserId}`,
-      );
-      setCounts({ ...EMPTY_COUNTS, ...(dash.data?.info || {}) });
     } catch (error) {
       toast.error(errorMessage(error, "Could not load certificates"));
       setRows([]);
@@ -468,6 +463,23 @@ const Certificates = () => {
       setLoading(false);
     }
   };
+
+  // The counts depend only on the company and the user filter, not on search, cards, sort or page.
+  const fetchDashboard = async () => {
+    if (!companyId) return;
+    try {
+      const dash = await api.get(
+        `certificates/dashboard?company_id=${companyId}&user_id=${appliedUserId}`,
+      );
+      setCounts({ ...EMPTY_COUNTS, ...(dash.data?.info || {}) });
+    } catch (error) {
+      toast.error(errorMessage(error, "Could not load certificates"));
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [companyId, appliedUserId]);
 
   const {
     table,
@@ -586,7 +598,7 @@ const Certificates = () => {
       toast.success(res.data?.message || "Certificate uploaded");
       setUploadOpen(false);
       resetUpload();
-      await fetchCertificates();
+      await Promise.all([fetchCertificates(), fetchDashboard()]);
     } catch (error) {
       toast.error(errorMessage(error, "Could not save certificate"));
     } finally {
@@ -611,7 +623,7 @@ const Certificates = () => {
       });
       toast.success(res.data?.message || "Document replaced");
       await openDetail(detail.id);
-      await fetchCertificates();
+      await Promise.all([fetchCertificates(), fetchDashboard()]);
     } catch (error) {
       toast.error(errorMessage(error, "Could not replace document"));
     } finally {
@@ -628,7 +640,7 @@ const Certificates = () => {
       setDeleteOpen(false);
       setDetailOpen(false);
       setDetail(null);
-      await fetchCertificates();
+      await Promise.all([fetchCertificates(), fetchDashboard()]);
     } catch (error) {
       toast.error(errorMessage(error, "Could not delete certificate"));
     } finally {
