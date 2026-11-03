@@ -62,6 +62,7 @@ export default function CreateSurveyWizard() {
   const [templates, setTemplates] = useState<SurveyTemplateOption[]>([]);
   const [groups, setGroups] = useState<SurveyGroupOption[]>([]);
   const [elements, setElements] = useState<SurveyElementOption[]>([]);
+  const [inspectionForms, setInspectionForms] = useState<{ id: number; name: string }[]>([]);
 
   // Step 1 Form Data
   const [formData, setFormData] = useState({
@@ -77,6 +78,8 @@ export default function CreateSurveyWizard() {
   // Step 2 Creation Method Data
   const [method, setMethod] = useState<SurveyCreationMethod>("template");
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  // Inspection form for a blank survey; a template brings its own form.
+  const [blankFormId, setBlankFormId] = useState<number | null>(null);
 
   // Step 3 Rooms & Elements Data
   const [rooms, setRooms] = useState<SurveyRoom[]>([]);
@@ -90,13 +93,14 @@ export default function CreateSurveyWizard() {
     const fetchAllData = async () => {
       setLoadingResources(true);
       try {
-        const [resExpense, resUsers, resTemplates, resGroups, resElements] =
+        const [resExpense, resUsers, resTemplates, resGroups, resElements, resForms] =
           await Promise.allSettled([
             api.get("/expense/get-resources"),
             api.get("surveys/assignable-users"),
             api.get("/survey-templates/get"),
             api.get("/survey-groups/get"),
             api.get("/survey-elements/get"),
+            api.get("/survey-forms/get"),
           ]);
 
         // Projects & Addresses
@@ -155,6 +159,16 @@ export default function CreateSurveyWizard() {
             ? resElements.value.data.info
             : [];
           setElements(rawElements);
+        }
+
+        // Active inspection forms, offered for blank surveys
+        if (resForms.status === "fulfilled" && resForms.value.data) {
+          const rawForms = Array.isArray(resForms.value.data.info) ? resForms.value.data.info : [];
+          setInspectionForms(
+            rawForms
+              .filter((f: any) => f?.id && f?.name && (f.status === true || Number(f.status) === 1))
+              .map((f: any) => ({ id: f.id, name: f.name })),
+          );
         }
 
         // If templates and groups exist, populate default rooms from first template
@@ -263,6 +277,7 @@ export default function CreateSurveyWizard() {
         survey_date: formData.surveyDate,
         creation_method: method,
         template_id: method === "template" ? selectedTemplateId : null,
+        form_id: method === "blank" ? blankFormId : null,
         status: status,
         notes: formData.notes.trim() || undefined,
         rooms: rooms.map((r, rIdx) => ({
@@ -397,9 +412,15 @@ export default function CreateSurveyWizard() {
           {activeStep === 1 && (
             <Step2Template
               method={method}
-              setMethod={setMethod}
+              setMethod={(next) => {
+                setMethod(next);
+                if (next === "template") setBlankFormId(null);
+              }}
               selectedTemplateId={selectedTemplateId}
               onSelectTemplate={handleSelectTemplate}
+              inspectionForms={inspectionForms}
+              selectedFormId={blankFormId}
+              onSelectForm={setBlankFormId}
               templates={templates}
               groups={groups}
               loadingTemplates={loadingResources}
@@ -427,7 +448,11 @@ export default function CreateSurveyWizard() {
               }}
               method={method}
               templateName={selectedTemplate?.name}
-              formName={selectedTemplate?.form?.name}
+              formName={
+                method === "template"
+                  ? selectedTemplate?.form?.name
+                  : inspectionForms.find((f) => f.id === blankFormId)?.name
+              }
               rooms={rooms}
             />
           )}

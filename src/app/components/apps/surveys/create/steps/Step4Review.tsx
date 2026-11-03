@@ -187,7 +187,7 @@ export default function Step4Review({
                   </Box>
                 </Box>
 
-                {method === "template" && formName && (
+                {formName && (
                   <Box>
                     <Typography variant="caption" color="text.secondary" fontWeight={600}>
                       Inspection Form
