@@ -243,8 +243,11 @@ const TemplateEditor = ({templateId}: Props) => {
                     <Button variant="outlined" startIcon={<IconEye size={16}/>} onClick={openPreview}>
                         Preview as user
                     </Button>
-                    <Button variant="contained" startIcon={<IconArrowUp size={16}/>}
-                            onClick={() => setPublishOpen(true)}>
+                    <Button 
+                        variant="contained"
+                        startIcon={<IconArrowUp size={16}/>}
+                        onClick={() => setPublishOpen(true)}
+                    >
                         Publish v{nextVersion}
                     </Button>
                 </Stack>
@@ -396,6 +399,7 @@ const TemplateEditor = ({templateId}: Props) => {
                         <Typography variant="body2" color="textSecondary" mb={1}>
                             Click a field to insert it at the cursor.
                         </Typography>
+                        
                         {fields.map((f) => (
                             <Stack
                                 key={f.key}
@@ -413,12 +417,14 @@ const TemplateEditor = ({templateId}: Props) => {
                                     {f.label}
                                     {usedKeys.has(f.key) ? ' ✓' : ''}
                                 </Button>
+                                
                                 <Typography variant="caption" color="textSecondary" textAlign="right">
                                     {f.source}
                                     {f.fillable ? ' · user fills if missing' : ''}
                                 </Typography>
                             </Stack>
                         ))}
+                        
                         <Alert severity="warning" sx={{mt: 1.5}}>
                             If a company field is empty, the manager is told and users can’t sign until it’s filled.
                         </Alert>
@@ -443,21 +449,30 @@ const TemplateEditor = ({templateId}: Props) => {
                                         {f.label}
                                         {f.required ? ' *' : ''}
                                     </Typography>
-                                    <Typography variant="caption" color="textSecondary" component="div" noWrap
-                                                title={f.options.join(', ')}>
+                                    <Typography
+                                        variant="caption"
+                                        color="textSecondary" 
+                                        component="div"
+                                        noWrap                                         
+                                        title={f.options.join(', ')}
+                                    >
                                         {f.key}
                                         {f.options.length ? ` · ${f.options.length} options` : ''}
                                     </Typography>
                                 </Box>
-                                <Chip size="small"
-                                      label={FORM_FIELD_TYPES.find((t) => t.value === f.type)?.label ?? f.type}/>
+                                <Chip
+                                    size="small"
+                                    label={FORM_FIELD_TYPES.find((t) => t.value === f.type)?.label ?? f.type}
+                                />
                             </Stack>
                         ))}
+                        
                         {!formFields.fields.length && !formFields.errors.length && (
                             <Typography variant="body2" color="textSecondary">
                                 No form fields in this contract.
                             </Typography>
                         )}
+                        
                         {formFields.errors.map((error) => (
                             <Alert key={error} severity="error" sx={{mt: 1}}>
                                 {error}
