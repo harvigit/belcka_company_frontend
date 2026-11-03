@@ -75,6 +75,8 @@ import {
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import useSurveyAccess from "../useSurveyAccess";
+import useInspectionForm from "../inspection-form/useInspectionForm";
+import InspectionFormPanel from "../inspection-form/InspectionFormPanel";
 import BlankCard from "@/app/components/shared/BlankCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import {
@@ -128,6 +130,7 @@ interface SurveyDetailsProps {
 }
 
 export default function SurveyDetails({ id }: SurveyDetailsProps) {
+  const inspectionForm = useInspectionForm(id);
   const router = useRouter();
   const access = useSurveyAccess();
   const isAdmin = access.is_admin;
@@ -993,6 +996,27 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
               }
             />
             <Tab label="Survey Details & Metadata" />
+            {inspectionForm.data?.form && (
+              <Tab
+                label={
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <span>Inspection Form</span>
+                    {inspectionForm.data.progress.required_total > 0 && (
+                      <Chip
+                        size="small"
+                        label={`${inspectionForm.data.progress.required_answered}/${inspectionForm.data.progress.required_total}`}
+                        color={
+                          inspectionForm.data.progress.required_answered === inspectionForm.data.progress.required_total
+                            ? "success"
+                            : "default"
+                        }
+                        sx={{ height: 20, fontSize: "0.72rem", fontWeight: 700 }}
+                      />
+                    )}
+                  </Stack>
+                }
+              />
+            )}
           </Tabs>
 
           {tabValue === 0 && (survey.rooms || []).length > 0 && (
@@ -2102,6 +2126,12 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
         })()}
 
         {/* Tab 2: Survey Metadata & Audit */}
+        {tabValue === 3 && inspectionForm.data?.form && (
+          <Box p={{ xs: 2, sm: 2.5 }}>
+            <InspectionFormPanel data={inspectionForm.data} readOnly />
+          </Box>
+        )}
+
         {tabValue === 2 && (
           <Box p={3}>
             <Grid container spacing={3}>

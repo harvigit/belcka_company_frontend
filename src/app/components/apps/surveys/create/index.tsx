@@ -427,6 +427,7 @@ export default function CreateSurveyWizard() {
               }}
               method={method}
               templateName={selectedTemplate?.name}
+              formName={selectedTemplate?.form?.name}
               rooms={rooms}
             />
           )}

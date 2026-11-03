@@ -20,6 +20,7 @@ import {
   IconCheck,
   IconFolder,
   IconLayersIntersect,
+  IconClipboardList,
 } from "@tabler/icons-react";
 import {
   SurveyCreationMethod,
@@ -220,6 +221,15 @@ export default function Step2Template({
                             />
                           )}
                         </Stack>
+
+                        {tpl.form && (
+                          <Stack direction="row" alignItems="center" spacing={0.5} mt={0.5}>
+                            <IconClipboardList size={16} color="#666" />
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} noWrap>
+                              Inspection form: {tpl.form.name}
+                            </Typography>
+                          </Stack>
+                        )}
 
                         <Stack direction="row" spacing={2} my={1.5}>
                           <Stack direction="row" alignItems="center" spacing={0.5}>
