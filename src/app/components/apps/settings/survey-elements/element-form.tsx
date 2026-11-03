@@ -77,6 +77,16 @@ type RenameTarget = {
 export const AVAILABLE_DIMENSIONS = ["Length", "Depth", "Height", "Width"] as const;
 export type DimensionName = (typeof AVAILABLE_DIMENSIONS)[number];
 
+// Outputs the inspection quantity calculation supports (it does not convert units), per form factor.
+export const OUTPUT_OPTIONS = [
+  { name: "Area", unit: "m²", factors: ["flat"] },
+  { name: "Length", unit: "m", factors: ["flat"] },
+  { name: "Volume", unit: "m³", factors: ["volumetric"] },
+  { name: "Count", unit: "nr", factors: ["flat", "volumetric"] },
+] as const;
+
+const outputKey = (name: string, unit: string) => `${name}|${unit}`;
+
 export const STANDARD_UNITS = [
   { value: "m", label: "m — Meter" },
   { value: "cm", label: "cm — Centimeter" },
@@ -368,7 +378,18 @@ const SurveyElementForm = ({
         current.selected_dimensions.length === 0 &&
         !current.output_name &&
         !current.measurement_mode;
-      if (!untouched) return next;
+      if (!untouched) {
+        const fits = OUTPUT_OPTIONS.some(
+          (option) =>
+            option.name === current.output_name &&
+            option.unit === current.output_unit &&
+            (option.factors as readonly string[]).includes(factor),
+        );
+        if (fits) return next;
+        return factor === "flat"
+          ? { ...next, output_name: "Area", output_unit: "m²" }
+          : { ...next, output_name: "Volume", output_unit: "m³" };
+      }
       if (factor === "flat") {
         return {
           ...next,
@@ -624,6 +645,27 @@ const SurveyElementForm = ({
       toast.error("Name is a required field!");
       return;
     }
+    if (form.measurement_mode === "dimensions") {
+      for (const dimName of form.selected_dimensions) {
+        const val = String(form.dimensions_map[dimName]?.value ?? "").trim();
+        if (val !== "" && !(Number(val) > 0)) {
+          toast.error(`${dimName} must be greater than 0!`);
+          return;
+        }
+      }
+    }
+    if (
+      (form.output_name || form.output_unit) &&
+      !OUTPUT_OPTIONS.some((o) => o.name === form.output_name && o.unit === form.output_unit)
+    ) {
+      toast.error("Select a valid output measurement!");
+      return;
+    }
+    const photoMinimum = String(form.surface_photo_minimum ?? "").trim();
+    if (photoMinimum && (!Number.isInteger(Number(photoMinimum)) || Number(photoMinimum) < 1)) {
+      toast.error("Surface photos minimum must be a whole number of 1 or more!");
+      return;
+    }
     if (publish) {
       if (!form.form_factor) {
         toast.error("Form factor is a required field!");
@@ -640,8 +682,8 @@ const SurveyElementForm = ({
         }
         for (const dimName of form.selected_dimensions) {
           const val = form.dimensions_map[dimName]?.value;
-          if (val === "" || val === undefined || val === null || isNaN(Number(val))) {
-            toast.error(`Enter a valid numeric measurement value for ${dimName}!`);
+          if (val === "" || val === undefined || val === null || !(Number(val) > 0)) {
+            toast.error(`Enter a measurement greater than 0 for ${dimName}!`);
             return;
           }
           const unit = form.dimensions_map[dimName]?.unit;
@@ -655,12 +697,35 @@ const SurveyElementForm = ({
         toast.error("Output measurement is a required field!");
         return;
       }
+      if (
+        !OUTPUT_OPTIONS.some(
+          (o) =>
+            o.name === form.output_name &&
+            o.unit === form.output_unit &&
+            (o.factors as readonly string[]).includes(form.form_factor),
+        )
+      ) {
+        toast.error("The output measurement does not match the form factor!");
+        return;
+      }
       if (!form.surface_photo_minimum || Number(form.surface_photo_minimum) < 1) {
         toast.error("Surface photo minimum is a required field!");
         return;
       }
       if (!form.damage.some(hasMethod)) {
         toast.error("Select at least one damage type!");
+        return;
+      }
+      // Selected materials and new ones added on this element both count.
+      const hasMaterial = (category: "subbase" | "topwear") =>
+        selectedMaterials(category).length > 0 ||
+        pendingMaterials.some((item) => item.category === category);
+      if (!hasMaterial("subbase")) {
+        toast.error("Select at least one subbase material!");
+        return;
+      }
+      if (!hasMaterial("topwear")) {
+        toast.error("Select at least one topwear material!");
         return;
       }
     }
@@ -943,6 +1008,7 @@ const SurveyElementForm = ({
                           size="small"
                           label={dimName}
                           type="number"
+                          inputProps={{ min: 0, step: "any" }}
                           placeholder="Enter value"
                           value={form.dimensions_map[dimName]?.value ?? ""}
                           onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1001,17 +1067,36 @@ const SurveyElementForm = ({
               }}
             >
               <CustomTextField
+                select
                 size="small"
                 label="Output measurement"
-                value={form.output_name}
-                onChange={(event: any) => setField("output_name", event.target.value)}
+                value={
+                  OUTPUT_OPTIONS.some((o) => o.name === form.output_name && o.unit === form.output_unit)
+                    ? outputKey(form.output_name, form.output_unit)
+                    : ""
+                }
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                  const [name, unit] = event.target.value.split("|");
+                  setForm((current) => ({ ...current, output_name: name, output_unit: unit }));
+                }}
+                helperText={form.form_factor ? undefined : "Choose a form factor first"}
+                disabled={!form.form_factor}
                 fullWidth
-              />
+              >
+                {OUTPUT_OPTIONS.filter((o) =>
+                  (o.factors as readonly string[]).includes(form.form_factor),
+                ).map((o) => (
+                  <MenuItem key={outputKey(o.name, o.unit)} value={outputKey(o.name, o.unit)}>
+                    {o.name}
+                  </MenuItem>
+                ))}
+              </CustomTextField>
               <CustomTextField
                 size="small"
                 label="Output unit"
                 value={form.output_unit}
-                onChange={(event: any) => setField("output_unit", event.target.value)}
+                InputProps={{ readOnly: true }}
+                helperText="Set by the output measurement"
                 fullWidth
               />
               <CustomTextField
@@ -1026,6 +1111,7 @@ const SurveyElementForm = ({
                 size="small"
                 label="Surface photos minimum"
                 type="number"
+                inputProps={{ min: 1, step: 1 }}
                 value={form.surface_photo_minimum}
                 onChange={(event: any) => setField("surface_photo_minimum", event.target.value)}
                 fullWidth
@@ -1216,7 +1302,7 @@ const SurveyElementForm = ({
             <SectionTitle
               step="4"
               title="Materials"
-              caption="Choose the substrate and the visible finish the surveyor can record. Materials created here stay on this element only."
+              caption="Choose the substrate and the visible finish the surveyor can record. Publishing needs at least one subbase and one topwear material. Materials created here stay on this element only."
             />
             <Box
               sx={{
