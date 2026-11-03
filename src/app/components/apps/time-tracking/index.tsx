@@ -415,15 +415,26 @@ const saveSettingsToStorage = (
     }
 };
 
-const getIPAddress = async (): Promise<string | null> => {
-    try {
-        const res = await fetch('https://api.ipify.org?format=json');
-        if (!res.ok) throw new Error('Failed to fetch IP');
-        const data = await res.json();
-        return data.ip ?? null;
-    } catch {
-        return null;
+// Public IP rarely changes during a session, so the ipify lookup is cached (and retried after a failure).
+let ipAddressPromise: Promise<string | null> | null = null;
+
+const getIPAddress = (): Promise<string | null> => {
+    if (!ipAddressPromise) {
+        ipAddressPromise = (async () => {
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                if (!res.ok) throw new Error('Failed to fetch IP');
+                const data = await res.json();
+                return data.ip ?? null;
+            } catch {
+                return null;
+            }
+        })().then((ip) => {
+            if (!ip) ipAddressPromise = null;
+            return ip;
+        });
     }
+    return ipAddressPromise;
 };
 
 const getAddressFromCoordinates = (latitude: number, longitude: number): Promise<string | null> => {
@@ -511,9 +522,12 @@ const useGeolocation = (
                         accuracy: pos.coords.accuracy ?? Infinity,
                     };
                     console.log(`📍 Attempt ${i + 1} — accuracy: ${candidate.accuracy.toFixed(2)}m`);
-                    if (!best || candidate.accuracy < best.accuracy) best = candidate;
+                    const improved = !best || candidate.accuracy < best.accuracy;
+                    if (improved) best = candidate;
                     if (candidate.accuracy <= 30) break;
-                    if (i < 2) await new Promise((r) => setTimeout(r, 3000));
+                    // Desktop browsers (Wi-Fi/IP location) return the same fix on every attempt, so stop retrying once it stops improving.
+                    if (!improved) break;
+                    if (i < 2) await new Promise((r) => setTimeout(r, 1000));
                 } catch (err) {
                     lastError = toErrorType(err as GeolocationPositionError);
                     if (lastError === 'denied') {
@@ -947,6 +961,8 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
         if (locationRequestInProgressRef.current) return;
         locationRequestInProgressRef.current = true;
         setLocationLoading(true);
+        // Warm the IP lookup while GPS runs so start-work doesn't wait for it afterwards.
+        void getIPAddress();
         try {
             const coords = await getLocation((type) => {
                 setLocationError(type);
@@ -1936,7 +1952,28 @@ const TimeTracking: React.FC<Props> = () => {
         clockActionInProgressRef.current = true;
         setClockLoading(true);
         try {
-            const ipAddress = await getIPAddress();
+            // IP lookup and location (GPS + geocode) are independent, so run them together instead of back to back.
+            const locationPromise = (async (): Promise<{ latitude: string; longitude: string; address?: string } | null> => {
+                try {
+                    const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                            timeout: 10000,
+                            enableHighAccuracy: true,
+                            maximumAge: 0
+                        })
+                    );
+                    const address = await getAddressFromCoordinates(pos.coords.latitude, pos.coords.longitude);
+                    return {
+                        latitude: String(pos.coords.latitude),
+                        longitude: String(pos.coords.longitude),
+                        ...(address ? {address} : {}),
+                    };
+                } catch { /* location not available */
+                    return null;
+                }
+            })();
+            const [ipAddress, location] = await Promise.all([getIPAddress(), locationPromise]);
+
             const payload: Record<string, unknown> = {
                 user_worklog_id: clockInfo.user_worklog_id,
                 device_type: 3,
@@ -1944,28 +1981,13 @@ const TimeTracking: React.FC<Props> = () => {
                     ? `${navigator.userAgent.substring(0, 50)} | IP: ${ipAddress}`
                     : navigator.userAgent.substring(0, 50),
                 ...(user?.company_id ? {company_id: user.company_id} : {}),
+                ...(location ?? {}),
             };
-
-            try {
-                const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        timeout: 10000,
-                        enableHighAccuracy: true,
-                        maximumAge: 0
-                    })
-                );
-                payload.latitude = String(pos.coords.latitude);
-                payload.longitude = String(pos.coords.longitude);
-                const address = await getAddressFromCoordinates(pos.coords.latitude, pos.coords.longitude);
-                if (address) payload.address = address;
-            } catch { /* location not available */
-            }
 
             const res: AxiosResponse<ApiResponse> = await api.post('user-worklog/user-stop-work', payload);
             if (res.data.IsSuccess) {
                 showToast(res.data.message || 'Work stopped!', 'success');
-                await fetchTodayClock();
-                await fetchTimeClockData(startDate, endDate);
+                await Promise.all([fetchTodayClock(), fetchTimeClockData(startDate, endDate)]);
             } else {
                 showToast(res.data.message || 'Failed to stop work', 'error');
             }
@@ -2025,8 +2047,7 @@ const TimeTracking: React.FC<Props> = () => {
             startDialogOpenRef.current = false;
             setStartDialogOpen(false);
             
-            await fetchTodayClock();
-            await fetchTimeClockData(startDate, endDate);
+            await Promise.all([fetchTodayClock(), fetchTimeClockData(startDate, endDate)]);
         } catch (err: any) {
             showToast(err?.response?.data?.message || 'Failed to start work', 'error');
         } finally {
