@@ -318,6 +318,25 @@ const MenuItems: NavGroup[] = [
   },
 
   {
+    navlabel: true,
+    subheader: "Inventory New",
+  },
+  {
+    id: uniqueId(),
+    title: "Internal Items",
+    slug: "internal-products",
+    icon: IconDatabase,
+    href: "/apps/inventory-new/internal-items/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Supplier Items",
+    slug: "supplier-products",
+    icon: IconBox,
+    href: "/apps/inventory-new/supplier-items/list",
+  },
+  // Settings stays last: SidebarItems pins the "settings" slug to the bottom of the sidebar.
+  {
     id: uniqueId(),
     title: "Admin Panel",
     slug: "settings",
