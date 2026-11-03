@@ -122,7 +122,7 @@ const SurveyTemplates = () => {
     }
   };
 
-  // Active inspection forms for the required single-select; a template's current form stays listed even if inactive.
+  // Active property details for the required single-select; a template's current form stays listed even if inactive.
   const loadForms = async (current?: SurveyFormOption | null) => {
     try {
       const res = await api.get("survey-forms/get");
@@ -140,7 +140,7 @@ const SurveyTemplates = () => {
       );
     } catch (error) {
       console.error(error);
-      toast.error(errorMessage(error, "Failed to load inspection forms"));
+      toast.error(errorMessage(error, "Failed to load property details"));
     }
   };
 
@@ -174,7 +174,7 @@ const SurveyTemplates = () => {
       return;
     }
     if (!formData.formId) {
-      toast.error("Select an inspection form!");
+      toast.error("Select a property detail!");
       return;
     }
     setIsSaving(true);
@@ -330,7 +330,7 @@ const SurveyTemplates = () => {
       },
       {
         id: "form",
-        header: () => <Typography variant="body2">Inspection form</Typography>,
+        header: () => <Typography variant="body2">Property detail</Typography>,
         cell: ({ row }: { row: { original: SurveyTemplate } }) =>
           row.original.form ? (
             <Chip label={row.original.form.name} size="small" color="primary" variant="outlined" />
@@ -553,9 +553,9 @@ const SurveyTemplates = () => {
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Inspection form"
+                    label="Property detail"
                     required
-                    placeholder={formOptions.length ? "Select an inspection form" : "No active inspection forms"}
+                    placeholder={formOptions.length ? "Select a property detail" : "No active property details"}
                   />
                 )}
               />

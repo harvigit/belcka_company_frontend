@@ -155,7 +155,7 @@ export interface SurveyTemplateOption {
   id: number;
   name: string;
   status: boolean;
-  /** Inspection form copied onto surveys created from this template. */
+  /** Property detail copied onto surveys created from this template. */
   form?: { id: number; name: string } | null;
   groups: {
     id: number;

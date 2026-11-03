@@ -36,7 +36,7 @@ import api from "@/utils/axios";
 import SurveyFormPdfPreview, { PdfPreviewSource } from "./pdf-preview";
 
 /**
- * One field of an inspection form. Same shape the Forms module stores, so the saved JSON stays
+ * One field of a property detail. Same shape the Forms module stores, so the saved JSON stays
  * compatible: sections are `Group` fields whose children live in `fields`.
  */
 export type InspectionField = {
@@ -129,7 +129,7 @@ const move = <T,>(items: T[], index: number, delta: number) => {
   return next;
 };
 
-// Inspection form builder: sections on the left, the selected section's fields on the right.
+// Property detail builder: sections on the left, the selected section's fields on the right.
 const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProps) => {
   const [name, setName] = useState("");
   const [sections, setSections] = useState<InspectionField[]>([]);
@@ -271,14 +271,14 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
         ? await api.put("survey-forms/update", { id: form.id, ...payload })
         : await api.post("survey-forms/create", payload);
       if (res.data?.IsSuccess) {
-        toast.success(res.data.message || "Inspection form saved");
+        toast.success(res.data.message || "Property detail saved");
         onSaved();
       } else {
-        toast.error(res.data?.message || "Failed to save inspection form");
+        toast.error(res.data?.message || "Failed to save property detail");
       }
     } catch (err) {
       console.error(err);
-      toast.error(errorMessage(err, "Failed to save inspection form"));
+      toast.error(errorMessage(err, "Failed to save property detail"));
     } finally {
       setSaving(false);
     }
@@ -516,7 +516,7 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
         sx={{ flexShrink: 0, borderBottom: "1px solid", borderColor: "divider", bgcolor: "#fff" }}
       >
         <Typography fontWeight={700} fontSize={17} sx={{ whiteSpace: "nowrap" }}>
-          {form?.id ? "Edit inspection form" : "Add inspection form"}
+          {form?.id ? "Edit property detail" : "Add property detail"}
         </Typography>
         <TextField
           size="small"

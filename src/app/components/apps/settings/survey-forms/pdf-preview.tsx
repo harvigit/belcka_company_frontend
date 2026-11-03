@@ -27,7 +27,7 @@ type PdfPreviewProps = {
   onClose: () => void;
 };
 
-// Shows the paper-style PDF of an inspection form inside the app, with a download button.
+// Shows the paper-style PDF of a property detail inside the app, with a download button.
 const SurveyFormPdfPreview = ({ form, onClose }: PdfPreviewProps) => {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -98,7 +98,7 @@ const SurveyFormPdfPreview = ({ form, onClose }: PdfPreviewProps) => {
       </Stack>
       <Box sx={{ flex: 1, minHeight: 0, bgcolor: "#525659" }}>
         {url ? (
-          <iframe title="Inspection form PDF" src={url} style={{ width: "100%", height: "100%", border: 0 }} />
+          <iframe title="Property detail PDF" src={url} style={{ width: "100%", height: "100%", border: 0 }} />
         ) : (
           <Stack alignItems="center" justifyContent="center" spacing={1.5} sx={{ height: "100%", color: "#fff" }}>
             {error ? (

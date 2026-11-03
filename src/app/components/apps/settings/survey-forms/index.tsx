@@ -77,7 +77,7 @@ const SurveyForms = () => {
       setPageCount(Number(meta.totalPages ?? 1));
     } catch (error) {
       console.error(error);
-      toast.error(errorMessage(error, "Failed to load inspection forms"));
+      toast.error(errorMessage(error, "Failed to load property details"));
       setData([]);
       setTotalRows(0);
       setPageCount(1);
@@ -132,8 +132,8 @@ const SurveyForms = () => {
           failed += 1;
         }
       }
-      if (failed === 0) toast.success("Inspection form deleted successfully!");
-      else toast.error("Some inspection forms failed to delete.");
+      if (failed === 0) toast.success("Property detail deleted successfully!");
+      else toast.error("Some property details failed to delete.");
       setSelectedRowIds(new Set());
       setDeleteOpen(false);
       fetchForms();
@@ -279,7 +279,7 @@ const SurveyForms = () => {
       >
         <TextField
           size="small"
-          placeholder="Search inspection forms..."
+          placeholder="Search property details..."
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           InputProps={{
@@ -303,7 +303,7 @@ const SurveyForms = () => {
             </Button>
           )}
           <Button variant="contained" startIcon={<IconPlus width={18} />} onClick={() => openEditor(null)}>
-            Add inspection form
+            Add property detail
           </Button>
         </Stack>
       </Stack>
@@ -334,7 +334,7 @@ const SurveyForms = () => {
               <TableRow>
                 <TableCell colSpan={columns.length} align="center">
                   <Typography color="text.secondary" py={6}>
-                    No inspection forms yet. Use Add inspection form to create one.
+                    No property details yet. Use Add property detail to create one.
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -374,7 +374,7 @@ const SurveyForms = () => {
         <DialogTitle>Confirm delete</DialogTitle>
         <DialogContent>
           <Typography color="text.secondary">
-            Are you sure you want to delete {deleteIds.length} inspection form(s)? Forms that are used by a template cannot be deleted.
+            Are you sure you want to delete {deleteIds.length} property detail(s)? Property details that are used by a template cannot be deleted.
           </Typography>
         </DialogContent>
         <DialogActions>
