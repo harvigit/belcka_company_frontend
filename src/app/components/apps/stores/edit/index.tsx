@@ -98,6 +98,9 @@ const EditStore: React.FC<EditStoreProps> = ({
   >(formData.address || "");
   const [inputValue, setInputValue] = useState(formData.address || "");
   const [data, setData] = useState<any[]>([]);
+  // Products load a page at a time from the server; the selection is kept across pages.
+  const [productPagination, setProductPagination] = useState({ pageIndex: 0, pageSize: 50 });
+  const [productTotal, setProductTotal] = useState(0);
   const [fetchProject, setFetchProject] = useState<boolean>(false);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -165,10 +168,11 @@ const EditStore: React.FC<EditStoreProps> = ({
     setFetchProject(true);
     try {
       const res: AxiosResponse<any> = await api.get(
-        `products/get?company_id=${companyId}&is_products=true`,
+        `products/get?company_id=${companyId}&is_products=true&page=${productPagination.pageIndex + 1}&limit=${productPagination.pageSize}`,
       );
       if (res.data) {
-        setData(res.data.info);
+        setData(res.data.info || []);
+        setProductTotal(res.data.data?.totalItems ?? (res.data.info || []).length);
       }
     } catch (err) {
       console.error("Failed to fetch clients", err);
@@ -181,7 +185,6 @@ const EditStore: React.FC<EditStoreProps> = ({
   useEffect(() => {
     if (!open) return;
     fetchUsers();
-    fetchProducts();
   }, [open]);
 
   useEffect(() => {
@@ -230,10 +233,11 @@ const EditStore: React.FC<EditStoreProps> = ({
         });
         setSelectedAddress(data.address || "");
         setInputValue(data.address || "");
-        if (data.product_ids) {
-          const productIds = data.product_ids.split(",").map(Number);
-          setSelectedRowIds(new Set(productIds));
-        }
+        // Always replace the selection, so a store without products does not keep the
+        // previous store's ticks.
+        setSelectedRowIds(
+          new Set(data.product_ids ? data.product_ids.split(",").map(Number) : []),
+        );
         setPostcodeQuery(data.postcode);
       }
     } catch (err) {
@@ -263,6 +267,24 @@ const EditStore: React.FC<EditStoreProps> = ({
     });
   }, [data]);
 
+  useEffect(() => {
+    if (open) fetchProducts();
+  }, [open, productPagination.pageIndex, productPagination.pageSize]);
+
+  // Start from the first page next time the drawer opens.
+  useEffect(() => {
+    if (!open) {
+      setProductPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
+    }
+  }, [open]);
+
+  // Every selection change is saved to product_ids, including select-all.
+  const updateSelection = (next: Set<number>) => {
+    setSelectedRowIds(next);
+    setFormData((prev) => ({ ...prev, product_ids: Array.from(next).join(",") }));
+  };
+  const pageSelectedCount = filteredData.filter((row) => selectedRowIds.has(row.id)).length;
+
   const columnHelper = createColumnHelper<any>();
   const columns = [
     columnHelper.accessor("image_url", {
@@ -272,24 +294,24 @@ const EditStore: React.FC<EditStoreProps> = ({
           <CustomCheckbox
             className="header-checkbox"
             checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
+              filteredData.length > 0 &&
+              pageSelectedCount === filteredData.length
             }
             indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
+              pageSelectedCount > 0 &&
+              pageSelectedCount < filteredData.length
             }
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
               e.stopPropagation();
-              e.preventDefault();
               const isChecked = e.target.checked;
 
-              if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
-              } else {
-                setSelectedRowIds(new Set());
-              }
+              // Select or clear this page only; other pages keep their selection.
+              const next = new Set(selectedRowIds);
+              filteredData.forEach((row) =>
+                isChecked ? next.add(row.id) : next.delete(row.id),
+              );
+              updateSelection(next);
             }}
           />
           <Typography variant="subtitle2" fontWeight="inherit">
@@ -317,19 +339,13 @@ const EditStore: React.FC<EditStoreProps> = ({
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
                 e.stopPropagation();
-                e.preventDefault();
                 const newSelected = new Set(selectedRowIds);
                 if (isChecked) {
                   newSelected.delete(item.id);
                 } else {
                   newSelected.add(item.id);
                 }
-                setSelectedRowIds(newSelected);
-                const ids = Array.from(newSelected);
-                setFormData({
-                  ...formData,
-                  product_ids: ids.join(","),
-                });
+                updateSelection(newSelected);
               }}
               sx={{
                 opacity: showCheckbox ? 1 : 0,
@@ -382,18 +398,16 @@ const EditStore: React.FC<EditStoreProps> = ({
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: { columnFilters, sorting },
+    state: { columnFilters, sorting, pagination: productPagination },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
+    manualPagination: true,
+    pageCount: Math.max(1, Math.ceil(productTotal / productPagination.pageSize)),
+    onPaginationChange: setProductPagination,
   });
 
   useEffect(() => {
@@ -881,7 +895,7 @@ const EditStore: React.FC<EditStoreProps> = ({
             >
               <Box display="flex" alignItems="center" gap={1}>
                 <Typography color="textSecondary" className="f-14">
-                  {table.getPrePaginationRowModel().rows.length} Rows
+                  {productTotal} Rows
                 </Typography>
               </Box>
               <Box
