@@ -1032,6 +1032,15 @@ const Certificates = () => {
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 value={users.find((item) => item.id === tempUserId) || null}
                 onChange={(_, value) => setTempUserId(value ? value.id : 0)}
+                // Two users can share a name, so key options by id (MUI keys them by label).
+                renderOption={(props, option) => {
+                  const { key, ...optionProps } = props as any;
+                  return (
+                    <li key={option.id} {...optionProps}>
+                      {option.name}
+                    </li>
+                  );
+                }}
                 renderInput={(params) => (
                   <TextField {...params} label="User" fullWidth />
                 )}
