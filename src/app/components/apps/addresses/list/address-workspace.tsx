@@ -464,9 +464,7 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
   const [casesByParent, setCasesByParent] = useState<Record<number, CaseRow[]>>(
     {},
   );
-  const [casePages, setCasePages] = useState<Record<number, CasePageState>>({});
-  const casePagesRef = useRef(casePages);
-  casePagesRef.current = casePages;
+  const [caseTotals, setCaseTotals] = useState<Record<number, number>>({});
   const [casesLoading, setCasesLoading] = useState<Record<number, boolean>>({});
   const [view, setView] = useState<"list" | "map">("list");
   const [mapAddressId, setMapAddressId] = useState<number | null>(null);
