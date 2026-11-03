@@ -33,7 +33,15 @@ export default function NavItem({
   const theme = useTheme();
   const { t } = useTranslation();
   const isSelected = Boolean(
-    item?.href && (pathDirect === item.href || pathDirect.startsWith(`${item.href}/`)),
+    item?.href && (
+      pathDirect === item.href ||
+      pathDirect.startsWith(`${item.href}/`) ||
+      (item.href === "/apps/surveys/list" &&
+        (pathDirect.startsWith("/apps/surveys") || pathDirect.startsWith("/surveys"))) ||
+      item.matchRoutes?.some(
+        (route) => pathDirect === route || pathDirect.startsWith(`${route}/`),
+      )
+    ),
   );
 
   const itemIcon = Icon ? (

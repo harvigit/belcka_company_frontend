@@ -20,7 +20,11 @@ import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
+import {
+  GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
+  consumePlacesSessionToken,
+  getPlacesSessionToken,
+} from "@/utils/googleMaps";
 import {
   Circle,
   GoogleMap,
@@ -164,7 +168,7 @@ export default function CaseEditDrawer({
     }
 
     const service = new google.maps.places.AutocompleteService();
-    service.getPlacePredictions({ input: query }, (results, status) => {
+    service.getPlacePredictions({ input: query, sessionToken: getPlacesSessionToken() }, (results, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && results) {
         setPredictions(
           results.map((r) => ({
@@ -184,7 +188,11 @@ export default function CaseEditDrawer({
     const service = new google.maps.places.PlacesService(
       document.createElement("div"),
     );
-    service.getDetails({ placeId: item.place_id }, (place, status) => {
+    service.getDetails({
+      placeId: item.place_id,
+      fields: ["formatted_address", "geometry"],
+      sessionToken: consumePlacesSessionToken(),
+    }, (place, status) => {
       if (
         status === google.maps.places.PlacesServiceStatus.OK &&
         place?.geometry?.location
