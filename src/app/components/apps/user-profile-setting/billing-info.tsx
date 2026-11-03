@@ -373,7 +373,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
         mb={2}
         justifyContent={"space-between"}
       >
-        <Typography color="#487bb3ff" fontSize="16px !important">
+        <Typography component="div" color="#487bb3ff" fontSize="16px !important">
           General Information
           {billingInfo?.supervisor_name && (
             <Chip

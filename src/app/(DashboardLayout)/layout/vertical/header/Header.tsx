@@ -30,6 +30,38 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import Cookies from "js-cookie";
 
+// Defined at module level: creating these inside Header gave them a new
+// component identity on every render, remounting the whole header (and
+// re-firing its API calls) whenever the sidebar was toggled.
+const AppBarStyled = styled(AppBar)(({ theme }) => ({
+  boxShadow: "none",
+  background: theme.palette.background.default,
+  justifyContent: "center",
+  backdropFilter: "blur(4px)",
+  [theme.breakpoints.up("lg")]: {
+    minHeight: config.topbarHeight,
+  },
+}));
+
+const ToolbarStyled = styled(Toolbar)(({ theme }) => ({
+  width: "100%",
+  color: theme.palette.text.primary,
+  paddingLeft: "16px !important",
+  paddingRight: "16px !important",
+}));
+
+const CollpaseMenubar = styled(Box)(({ theme }) => ({
+  position: "absolute",
+  left: "4px",
+  top: "4px",
+  right: "4px",
+  padding: "7px 15px",
+  background: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  zIndex: 1,
+  borderRadius: "7px",
+}));
+
 const Header = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const lgDown = useMediaQuery((theme) => theme.breakpoints.down("lg"));
@@ -45,39 +77,6 @@ const Header = () => {
     isMobileSidebar,
     setIsMobileSidebar,
   } = useContext(CustomizerContext);
-  const TopbarHeight = config.topbarHeight;
-
-  const theme = useTheme();
-  const borderColor = theme.palette.divider;
-
-  const AppBarStyled = styled(AppBar)(({ theme }) => ({
-    boxShadow: "none",
-    background: theme.palette.background.default,
-    justifyContent: "center",
-    backdropFilter: "blur(4px)",
-    [theme.breakpoints.up("lg")]: {
-      minHeight: TopbarHeight,
-    },
-  }));
-  const ToolbarStyled = styled(Toolbar)(({ theme }) => ({
-    width: "100%",
-    color: theme.palette.text.primary,
-    paddingLeft: "16px !important",
-    paddingRight: "16px !important",
-  }));
-
-  const CollpaseMenubar = styled(Box)(({ theme }) => ({
-    position: "absolute",
-    left: "4px",
-    top: "4px",
-    right: "4px",
-    padding: "7px 15px",
-    background: theme.palette.background.paper,
-    border: `1px solid ${borderColor}`,
-    zIndex: 1,
-    borderRadius: "7px",
-  }));
-
   const [isVisible, setIsVisible] = useState(false);
 
   return (
@@ -157,7 +156,7 @@ const Header = () => {
             <CollpaseMenubar>
               <Stack direction="row" justifyContent="space-between" spacing={1}>
                 <Box display="flex" gap={1}>
-                  <Company />
+                  <Company isPanelCopy />
                   <Search />
                 </Box>
                 <IconButton

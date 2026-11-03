@@ -112,6 +112,7 @@ const Sidebar = () => {
           open={isMobileSidebar}
           onClose={() => setIsMobileSidebar(false)}
           variant="temporary"
+          ModalProps={{ keepMounted: true }}
           slotProps={{
             paper: {
               sx: {

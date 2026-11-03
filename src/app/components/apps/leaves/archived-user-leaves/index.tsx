@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Autocomplete,
     Avatar,
@@ -165,12 +165,6 @@ const ArchivedUserLeavesDrawer: React.FC<ArchivedUserLeavesDrawerProps> = ({
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    useEffect(() => {
-        if (open) {
-            setPageIndex(0);
-        }
-    }, [debouncedSearch, startDate, endDate, filters, open]);
-
     const formatDateParam = (date: Date | null) => {
         if (!date) return '';
         const day = String(date.getDate()).padStart(2, '0');
@@ -227,7 +221,13 @@ const ArchivedUserLeavesDrawer: React.FC<ArchivedUserLeavesDrawerProps> = ({
         }
     }, [open, loadFilterOptions]);
 
+    // Only the latest request may update the table, so a slow earlier response
+    // can't overwrite newer results.
+    const latestRequestId = useRef(0);
+
     const fetchArchivedLeaves = useCallback(async () => {
+        const requestId = ++latestRequestId.current;
+        const isStale = () => requestId !== latestRequestId.current;
         try {
             setLoading(true);
             setError(null);
@@ -248,6 +248,7 @@ const ArchivedUserLeavesDrawer: React.FC<ArchivedUserLeavesDrawerProps> = ({
             if (filters.leaveTypes.length) params.set('leave_type', filters.leaveTypes.join(','));
 
             const res = await api.get(`user-leaves/archive-list?${params.toString()}`);
+            if (isStale()) return;
             if (res.data?.IsSuccess) {
                 setData(Array.isArray(res.data.data) ? res.data.data : []);
                 const pagination = res.data.pagination;
@@ -265,6 +266,7 @@ const ArchivedUserLeavesDrawer: React.FC<ArchivedUserLeavesDrawerProps> = ({
                 toast.error(res.data?.message || 'Failed to load archived leaves');
             }
         } catch (err: any) {
+            if (isStale()) return;
             setData([]);
             const message =
                 err?.response?.data?.message ||
@@ -273,15 +275,29 @@ const ArchivedUserLeavesDrawer: React.FC<ArchivedUserLeavesDrawerProps> = ({
             setError(message);
             toast.error(message);
         } finally {
-            setLoading(false);
+            if (!isStale()) setLoading(false);
         }
     }, [debouncedSearch, endDate, filters, pageIndex, pageSize, startDate]);
 
+    // Opening the drawer or changing search / dates / filters goes back to
+    // page 1. If we're on another page, only reset the page here; the
+    // pageIndex change re-runs this effect and fetches page 1 once.
+    const queryKey = JSON.stringify({ debouncedSearch, startDate, endDate, filters });
+    const lastQuery = useRef<{ open: boolean; queryKey: string } | null>(null);
+
     useEffect(() => {
-        if (open) {
-            fetchArchivedLeaves();
+        const previous = lastQuery.current;
+        lastQuery.current = { open, queryKey };
+        if (!open) return;
+
+        const queryChanged =
+            !previous || !previous.open || previous.queryKey !== queryKey;
+        if (queryChanged && pageIndex !== 0) {
+            setPageIndex(0);
+            return;
         }
-    }, [open, fetchArchivedLeaves]);
+        fetchArchivedLeaves();
+    }, [open, queryKey, pageIndex, fetchArchivedLeaves]);
 
     const handleDateRangeChange = (range: { from: Date | null; to: Date | null }) => {
         setStartDate(range.from);

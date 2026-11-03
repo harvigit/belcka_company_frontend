@@ -140,7 +140,7 @@ const EditTeam: React.FC<Props> = ({
     };
 
     useEffect(() => {
-        fetchUsers();
+        if (open) fetchUsers();
     }, [open]);
 
     useEffect(() => {
