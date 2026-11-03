@@ -155,9 +155,11 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
     }
   };
 
+  // The drawer stays mounted on the list; load the parent options only when it opens.
   useEffect(() => {
+    if (!open) return;
     fetchCategories();
-    if (open) setPreview(null);
+    setPreview(null);
   }, [open]);
 
   return (

@@ -1199,6 +1199,12 @@ const CategoryList = () => {
           }}
         >
           <TableContainer ref={tableContainerRef}>
+            {/* DndContext renders hidden accessibility <div>s, so it must sit outside <table>. */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -1272,11 +1278,6 @@ const CategoryList = () => {
                   </TableRow>
                 ))}
               </TableHead>
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
                 <TableBody>
                   {fetchCategory ? (
                     <SkeletonLoader
@@ -1341,8 +1342,8 @@ const CategoryList = () => {
                     </SortableContext>
                   )}
                 </TableBody>
-              </DndContext>
             </Table>
+            </DndContext>
           </TableContainer>
           {data.length ? <Divider /> : <></>}
         </Box>
