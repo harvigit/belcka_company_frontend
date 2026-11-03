@@ -386,6 +386,28 @@ const ProductList = () => {
     }
   };
 
+  // Category and supplier filters are chosen by name; the loaded lists map them to ids.
+  const filterIdsQuery = useMemo(() => {
+    let query = "";
+    if (filters.category && filters.category !== "All") {
+      const categoryId = categories.find(
+        (c) => c.name === filters.category,
+      )?.id;
+      if (categoryId) {
+        query += `&category_ids=${categoryId}`;
+      }
+    }
+    if (filters.supplier && filters.supplier !== "All") {
+      const supplierObj = suppliers.find((s) => s.name === filters.supplier);
+      if (supplierObj) {
+        query += `&supplier_ids=${supplierObj.id}`;
+      } else {
+        query += `&supplier=${encodeURIComponent(filters.supplier)}`;
+      }
+    }
+    return query;
+  }, [filters.category, filters.supplier, categories, suppliers]);
+
   // Fetch data
   const fetchProducts = async (restorePage?: number) => {
     if (!user?.company_id || !isTableStateReady) return;
@@ -395,22 +417,7 @@ const ProductList = () => {
       if (searchTerm) {
         url += `&search=${searchTerm}`;
       }
-      if (filters.category && filters.category !== "All") {
-        const categoryId = categories.find(
-          (c) => c.name === filters.category,
-        )?.id;
-        if (categoryId) {
-          url += `&category_ids=${categoryId}`;
-        }
-      }
-      if (filters.supplier && filters.supplier !== "All") {
-        const supplierObj = suppliers.find((s) => s.name === filters.supplier);
-        if (supplierObj) {
-          url += `&supplier_ids=${supplierObj.id}`;
-        } else {
-          url += `&supplier=${encodeURIComponent(filters.supplier)}`;
-        }
-      }
+      url += filterIdsQuery;
       if (filters.projects && filters.projects.length > 0) {
         const projectIds = filters.projects.map((p: any) => p.id).join(",");
         url += `&project_ids=${projectIds}`;
@@ -2197,9 +2204,8 @@ const ProductList = () => {
       filters,
       user?.company_id,
       isTableStateReady,
-      categories.length,
-      suppliers.length,
-      projects.length,
+      // Refetch when the loaded lists resolve a saved filter, not every time they load.
+      filterIdsQuery,
     ],
     state: { columnVisibility },
     onColumnVisibilityChange,

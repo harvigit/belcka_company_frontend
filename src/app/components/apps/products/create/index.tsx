@@ -458,9 +458,6 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
     setFetchStore(false);
   };
 
-  useEffect(() => {
-    fetchResources();
-  }, [api]);
   const mainDropzone = useDropzone({
     accept: {
       "image/*": [".jpg", ".jpeg", ".png"],
