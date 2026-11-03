@@ -33,7 +33,7 @@ import {
   ContractSummary,
   downloadContractPdf,
   UserCompanyContract,
-} from "@/app/components/apps/settings/contracts/contracts-api";
+} from "@/app/components/apps/contracts/contracts-api";
 
 interface Props {
   userId: number;
