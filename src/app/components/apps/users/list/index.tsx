@@ -63,6 +63,7 @@ import {
     IconSettings,
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
+import { isHiddenPermission } from '@/lib/permissions';
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -802,6 +803,7 @@ const TablePagination = () => {
             new Map(
                 selectedUserPermissions.permissions
                     .filter((p) =>
+                        !isHiddenPermission(p) &&
                         p.name.toLowerCase().includes(permissionSearch.toLowerCase()),
                     )
                     .map((p) => [p.id, p]),

@@ -28,10 +28,11 @@ import {
   IconReceipt,
   IconChartPie,
   IconCertificate,
+  // IconClipboardCheck, // used by the hidden Survey menu item
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
-import { IconSettings } from "@tabler/icons-react";
+import { IconSettings, IconFileText, IconFileCheck } from "@tabler/icons-react";
 import { IconBox } from "@tabler/icons-react";
 import { IconPoint } from "@tabler/icons-react";
 
@@ -103,6 +104,15 @@ const MenuItems: NavGroup[] = [
     icon: IconChartPie,
     href: "/apps/project/list",
   },
+  // Survey is hidden on live for now; the pages still open by URL.
+  // {
+  //   id: uniqueId(),
+  //   title: "Survey",
+  //   slug: "surveys",
+  //   icon: IconClipboardCheck,
+  //   href: "/apps/surveys/list",
+  //   matchRoutes: ["/apps/surveys", "/surveys"],
+  // },
   {
     id: uniqueId(),
     title: "Map",
@@ -172,6 +182,22 @@ const MenuItems: NavGroup[] = [
     slug: "forms",
     icon: IconForms,
     href: "/apps/forms",
+  },
+  {
+    id: uniqueId(),
+    title: "Contracts",
+    // Shown to admins and to users given the Contracts permission.
+    slug: "contracts",
+    icon: IconFileText,
+    href: "/apps/contracts",
+  },
+  {
+    id: uniqueId(),
+    title: "Contract Approvals",
+    // Shown to admins and to users given the Contract Approvals permission.
+    slug: "contract_approvals",
+    icon: IconFileCheck,
+    href: "/apps/contract-approvals",
   },
   {
     id: uniqueId(),

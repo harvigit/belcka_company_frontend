@@ -30,6 +30,11 @@ import {
 } from "@react-google-maps/api";
 import { IconArrowLeft } from "@tabler/icons-react";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import {
+  consumePlacesSessionToken,
+  getPlacesSessionToken,
+  PLACES_AUTOCOMPLETE_DEBOUNCE_MS,
+} from "@/utils/googleMaps";
 
 interface EditZoneProps {
   zone: any;
@@ -454,12 +459,16 @@ const EditZone = ({
   };
 
   // ── Search helpers ───────────────────────────────────────────────────────
+  const predictionTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const fetchPredictions = (input: string) => {
+    clearTimeout(predictionTimerRef.current);
     if (!input) return setPredictions([]);
-    new google.maps.places.AutocompleteService().getPlacePredictions(
-      { input },
-      (p) => setPredictions(p || []),
-    );
+    predictionTimerRef.current = setTimeout(() => {
+      new google.maps.places.AutocompleteService().getPlacePredictions(
+        { input, sessionToken: getPlacesSessionToken() },
+        (p) => setPredictions(p || []),
+      );
+    }, PLACES_AUTOCOMPLETE_DEBOUNCE_MS);
   };
 
   const resetMapFromClearedSearch = () => {
@@ -488,6 +497,7 @@ const EditZone = ({
     const value = e.target.value;
     setAddress(value);
     if (!value.trim()) {
+      clearTimeout(predictionTimerRef.current);
       resetMapFromClearedSearch();
       return;
     }
@@ -499,7 +509,11 @@ const EditZone = ({
     new google.maps.places.PlacesService(
       document.createElement("div"),
     ).getDetails(
-      { placeId, fields: ["formatted_address", "name", "geometry"] },
+      {
+        placeId,
+        fields: ["formatted_address", "name", "geometry"],
+        sessionToken: consumePlacesSessionToken(),
+      },
       (place, status) => {
         if (status !== google.maps.places.PlacesServiceStatus.OK || !place) {
           setTypedAddress(false);
