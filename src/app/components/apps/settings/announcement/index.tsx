@@ -26,7 +26,10 @@ import {
   IconFileDownload,
   IconMessage,
   IconPdf,
+  IconPin,
+  IconPinFilled,
   IconPlus,
+  IconTrash,
 } from "@tabler/icons-react";
 import ThumbUpAltIcon from "@mui/icons-material/ThumbUpAlt";
 import ThumbUpOffAltIcon from "@mui/icons-material/ThumbUpOffAlt";
@@ -48,6 +51,21 @@ const wrappedText = {
   wordBreak: "break-word",
 } as const;
 
+function sortAnnouncements(items: any[]) {
+  return [...items].sort((a, b) => {
+    const aPinned = Boolean(a?.is_pinned);
+    const bPinned = Boolean(b?.is_pinned);
+    if (aPinned !== bPinned) return aPinned ? -1 : 1;
+    if (aPinned && bPinned) {
+      return (
+        new Date(b.pinned_at || 0).getTime() -
+        new Date(a.pinned_at || 0).getTime()
+      );
+    }
+    return 0;
+  });
+}
+
 function CommentRow({
   name,
   image,
@@ -59,6 +77,8 @@ function CommentRow({
   likeCount,
   likedBy = [],
   onLike,
+  onDelete,
+  deleteLabel,
 }: {
   name?: string;
   image?: string;
@@ -70,6 +90,8 @@ function CommentRow({
   likeCount?: number;
   likedBy?: { user_id: number; user_name: string }[];
   onLike?: () => void;
+  onDelete?: () => void;
+  deleteLabel?: string;
 }) {
   return (
     <Stack
@@ -162,6 +184,20 @@ function CommentRow({
               </Stack>
             </Tooltip>
           ) : null}
+          {onDelete ? (
+            <IconButton
+              size="small"
+              aria-label={deleteLabel || "Delete comment"}
+              onClick={onDelete}
+              sx={{
+                p: 0.25,
+                color: "text.secondary",
+                "&:hover": { color: "error.main" },
+              }}
+            >
+              <IconTrash size={14} stroke={1.75} />
+            </IconButton>
+          ) : null}
         </Stack>
       </Box>
     </Stack>
@@ -227,6 +263,12 @@ export default function AnnouncementsList({
   const session = useSession();
   const user = session.data?.user as User & { id?: number | null };
   const limit = 20;
+  const [announcementRows, setAnnouncementRows] = useState<any[]>(
+    announcement ?? [],
+  );
+  useEffect(() => {
+    setAnnouncementRows(sortAnnouncements(announcement ?? []));
+  }, [announcement]);
   const markAsRead = async () => {
     try {
       const payload = {
@@ -363,14 +405,12 @@ export default function AnnouncementsList({
     try {
       const response = await api.post("announcements/settings", payload);
       if (response.data?.IsSuccess === false) {
-        toast.error(response.data.message);
         fetchAnnouncementDetails(announcementId);
         return;
       }
       onUpdate?.();
     } catch (error) {
       console.error("Failed to save announcement settings:", error);
-      toast.error(t("Failed to save announcement settings."));
       fetchAnnouncementDetails(announcementId);
     }
   };
@@ -467,6 +507,125 @@ export default function AnnouncementsList({
     }
   };
 
+  const canDeleteComment = (comment: any) =>
+    Number(roleId) === 1 ||
+    Number(comment?.user_id) === Number(userId) ||
+    Number(announcementDetails?.user_id) === Number(userId);
+
+  const handleAnnouncementPin = async (item: any) => {
+    if (!item?.id || Number(roleId) !== 1) return;
+    const nextPinned = !Boolean(item.is_pinned);
+    const pinnedAt = nextPinned ? new Date().toISOString() : null;
+    const pinnedBy = nextPinned
+      ? { user_id: Number(userId), user_name: currentUserName }
+      : null;
+    const previousRows = announcementRows;
+    const previousDetails = announcementDetails;
+    const applyPin = (row: any) => {
+      if (!row?.id) return row;
+      if (Number(row.id) === Number(item.id)) {
+        return {
+          ...row,
+          is_pinned: nextPinned,
+          pinned_at: pinnedAt,
+          pinned_by: pinnedBy,
+        };
+      }
+      return row;
+    };
+    setAnnouncementRows((current) => sortAnnouncements(current.map(applyPin)));
+    setAnnouncementDetails((current: any) =>
+      current?.id ? applyPin(current) : current,
+    );
+    try {
+      const response = await api.post("announcements/pin", {
+        announcement_id: item.id,
+        company_id: companyId,
+        is_pinned: nextPinned,
+      });
+      if (response.data?.IsSuccess === false) {
+        setAnnouncementRows(previousRows);
+        setAnnouncementDetails(previousDetails);
+        toast.error(response.data.message);
+        return;
+      }
+      const info = response.data?.info;
+      const unpinned = new Set(
+        (info?.unpinned_announcement_ids ?? []).map(Number),
+      );
+      const applyServer = (row: any) => {
+        if (!row?.id) return row;
+        if (Number(row.id) === Number(info?.announcement_id ?? item.id)) {
+          return {
+            ...row,
+            is_pinned: Boolean(info?.is_pinned),
+            pinned_at: info?.pinned_at ?? null,
+            pinned_by: info?.pinned_by ?? null,
+          };
+        }
+        if (unpinned.has(Number(row.id))) {
+          return { ...row, is_pinned: false, pinned_at: null, pinned_by: null };
+        }
+        return row;
+      };
+      setAnnouncementRows((current) =>
+        sortAnnouncements(current.map(applyServer)),
+      );
+      setAnnouncementDetails((current: any) =>
+        current?.id ? applyServer(current) : current,
+      );
+      onUpdate?.();
+    } catch (error) {
+      setAnnouncementRows(previousRows);
+      setAnnouncementDetails(previousDetails);
+      console.error("Failed to pin announcement:", error);
+      toast.error(t("Failed to pin the announcement."));
+    }
+  };
+
+  const handleCommentDelete = async (comment: any) => {
+    let previous: any[] = [];
+    setComments((current) => {
+      previous = current;
+      return current.flatMap((item) => {
+        if (item.id === comment.id) return [];
+        if (!item.replies?.length) return [item];
+        return [
+          {
+            ...item,
+            replies: item.replies.filter((reply: any) => reply.id !== comment.id),
+          },
+        ];
+      });
+    });
+    setReplyTo((current) => {
+      if (!current) return current;
+      if (current.id === comment.id) return null;
+      const removedReply = (comment.replies ?? []).some(
+        (reply: any) => reply.id === current.id,
+      );
+      return removedReply ? null : current;
+    });
+    try {
+      const response = await api.post("announcements/comment-delete", {
+        comment_id: comment.id,
+        announcement_id: announcementDetails?.id,
+        // user_id: userId,
+        company_id: companyId,
+      });
+      if (response.data?.IsSuccess === false) {
+        setComments(previous);
+        toast.error(response.data.message);
+        return;
+      }
+      onUpdate?.();
+    } catch (error) {
+      setComments(previous);
+      console.error("Failed to delete comment:", error);
+      toast.error(t("Failed to delete the comment."));
+    }
+  };
+
   const submitComment = async () => {
     const text = commentText.trim();
     if (!text || !announcementDetails?.id) return;
@@ -533,7 +692,7 @@ export default function AnnouncementsList({
       active = false;
     };
   }, []);
-  const paginatedAnnouncement = announcement?.slice(0, page * limit) || [];
+  const paginatedAnnouncement = announcementRows.slice(0, page * limit);
 
   return (
     <Box>
@@ -774,6 +933,39 @@ export default function AnnouncementsList({
                             alignItems="center"
                             sx={{ ml: "auto" }}
                           >
+                            {Number(roleId) === 1 && (
+                            <Tooltip
+                              arrow
+                              placement="top"
+                              title={
+                                it.is_pinned && it.pinned_by?.user_name
+                                  ? `${t("Pinned by")} ${it.pinned_by.user_name}`
+                                  : it.is_pinned
+                                    ? t("Unpin")
+                                    : t("Pin")
+                              }
+                            >
+                              <IconButton
+                                size="small"
+                                aria-label={t("Pin")}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleAnnouncementPin(it);
+                                }}
+                                sx={{
+                                  color: it.is_pinned
+                                    ? "#1e4db7"
+                                    : "text.secondary",
+                                }}
+                              >
+                                {it.is_pinned ? (
+                                  <IconPinFilled size={18} />
+                                ) : (
+                                  <IconPin size={18} stroke={1.75} />
+                                )}
+                              </IconButton>
+                            </Tooltip>
+                            )}
                             {it.allow_comments !== false && (
                               <Stack
                                 direction="row"
@@ -1078,6 +1270,36 @@ export default function AnnouncementsList({
               <Typography variant="h6" color="inherit" fontWeight={700} sx={{ flex: 1 }}>
                 {t("Announcement Details")}
               </Typography>
+              {announcementDetails?.id && Number(roleId) === 1 ? (
+                <Tooltip
+                  arrow
+                  placement="top"
+                  title={
+                    announcementDetails.is_pinned &&
+                    announcementDetails.pinned_by?.user_name
+                      ? `${t("Pinned by")} ${announcementDetails.pinned_by.user_name}`
+                      : announcementDetails.is_pinned
+                        ? t("Unpin")
+                        : t("Pin")
+                  }
+                >
+                  <IconButton
+                    aria-label={t("Pin")}
+                    onClick={() => handleAnnouncementPin(announcementDetails)}
+                    sx={{
+                      color: announcementDetails.is_pinned
+                        ? "#1e4db7"
+                        : "text.secondary",
+                    }}
+                  >
+                    {announcementDetails.is_pinned ? (
+                      <IconPinFilled size={18} />
+                    ) : (
+                      <IconPin size={18} stroke={1.75} />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              ) : null}
               {(roleId == 1 ||
                 Number(announcementDetails?.user_id) === Number(userId)) && (
                 <IconButton
@@ -1323,6 +1545,12 @@ export default function AnnouncementsList({
                                   : []
                               }
                               onLike={() => handleCommentLike(comment)}
+                              onDelete={
+                                canDeleteComment(comment)
+                                  ? () => handleCommentDelete(comment)
+                                  : undefined
+                              }
+                              deleteLabel={t("Delete")}
                             />
                             {(comment.replies ?? []).length > 0 && (
                               <Stack
@@ -1353,6 +1581,12 @@ export default function AnnouncementsList({
                                         : []
                                     }
                                     onLike={() => handleCommentLike(reply)}
+                                    onDelete={
+                                      canDeleteComment(reply)
+                                        ? () => handleCommentDelete(reply)
+                                        : undefined
+                                    }
+                                    deleteLabel={t("Delete")}
                                   />
                                 ))}
                               </Stack>

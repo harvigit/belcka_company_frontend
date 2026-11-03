@@ -32,7 +32,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { createColumnHelper } from "@tanstack/react-table";
-import {flexRender} from "@/utils/flexRender";
+import { flexRender } from "@/utils/flexRender";
 import {
   IconChevronRight,
   IconEye,
@@ -280,7 +280,7 @@ const PurchaseProductList: React.FC<Props> = ({
         company_id: user.company_id,
         page: String(pagination.pageIndex + 1),
         limit: String(pagination.pageSize),
-        is_all_product: isSearching,
+        // is_all_product: isSearching,
       };
 
       if (isSearching) {
@@ -306,8 +306,8 @@ const PurchaseProductList: React.FC<Props> = ({
       }
       if (filters.lowStock && !isSearching) {
         params.low_stock = true;
-        params.is_all_product = true;
       }
+      params.is_all_product = true;
       const response = await api.get("purchase-orders/orders", { params });
       if (seq !== fetchSeqRef.current) return;
 
@@ -320,15 +320,23 @@ const PurchaseProductList: React.FC<Props> = ({
           (filters.address && filters.address !== "All");
         const listFilterActive =
           !isSearching && (nameFilterActive || filters.lowStock);
+        const listFilterKey = [
+          filters.supplier || "",
+          filters.project || "",
+          filters.address || "",
+          filters.lowStock ? "1" : "0",
+          String(searchTerm).trim(),
+        ].join("|");
+        const filterChanged = listFilterKey !== listFilterKeyRef.current;
         setData((prevData) => {
-          if (listFilterActive) {
-            const prevById = new Map(prevData.map((item) => [item.id, item]));
-            return fetchedItems.map(
-              (item: any) => prevById.get(item.id) ?? item,
-            );
-          }
+          const prevById = new Map(prevData.map((item) => [item.id, item]));
+          const mergedFetched = fetchedItems.map(
+            (item: any) => prevById.get(item.id) ?? item,
+          );
           const currentSelected = selectedRowIdsRef.current;
-          const pinnedItems = prevData.filter(
+          const pinnedItems = (
+            listFilterActive && filterChanged ? [] : prevData
+          ).filter(
             (item) =>
               currentSelected.has(item.id) || Number(item.total_qty) > 0,
           );
@@ -339,24 +347,18 @@ const PurchaseProductList: React.FC<Props> = ({
           if (isSearching) {
             return [...fetchedItems, ...pinnedNotInFetch];
           }
-          const pinnedIds = new Set(pinnedItems.map((item) => item.id));
-          const newItems = fetchedItems.filter(
-            (item: any) => !pinnedIds.has(item.id),
-          );
-          return [...pinnedItems, ...newItems];
+          // Show only this page's rows. Selections on other pages stay in
+          return mergedFetched.map((item: any) => {
+            const snapshot = selectedProductSnapshotsRef.current.get(item.id);
+            return snapshot && !prevById.has(item.id)
+              ? { ...item, total_qty: snapshot.qty }
+              : item;
+          });
         });
         const fetchedIdSet = new Set<number>(
           fetchedItems.map((item: any) => item.id),
         );
         setLatestFetchedIds(fetchedIdSet);
-        const listFilterKey = [
-          filters.supplier || "",
-          filters.project || "",
-          filters.address || "",
-          filters.lowStock ? "1" : "0",
-          String(searchTerm).trim(),
-        ].join("|");
-        const filterChanged = listFilterKey !== listFilterKeyRef.current;
         const resetSelection = selectionResetRef.current;
         listFilterKeyRef.current = listFilterKey;
         selectionResetRef.current = false;
@@ -1467,7 +1469,6 @@ const PurchaseProductList: React.FC<Props> = ({
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
-
             <Button
               variant="contained"
               startIcon={<IconFileImport width={18} />}

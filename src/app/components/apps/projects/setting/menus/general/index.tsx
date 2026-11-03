@@ -61,7 +61,9 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSaveSuccess }) => {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 400, height: "100%", display: "flex", flexDirection: "column" }}>
+    <Box
+      sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}
+    >
       <Typography variant="h6" mb={3}>
         General Settings
       </Typography>
@@ -71,6 +73,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSaveSuccess }) => {
       ) : (
         <Box display="flex" flexDirection="column" gap={2}>
           <TextField
+            sx={{ width: "11%" }}
             label="Location Radius (Meters)"
             type="number"
             value={locationRadius}
@@ -99,7 +102,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSaveSuccess }) => {
           color="primary"
           onClick={handleSave}
           disabled={saving}
-          sx={{ borderRadius: 3 }}
+          sx={{ borderRadius: 3, width: "10% !important" }}
           className="drawer_buttons"
         >
           {saving ? "Saving..." : "Save"}

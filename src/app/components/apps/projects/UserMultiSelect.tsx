@@ -18,6 +18,7 @@ type ProjectUserMultiSelectProps = {
   onChange: (ids: string) => void;
   helperText?: string;
   hideLabel?: boolean;
+  hideTags?: boolean;
   size?: "small" | "medium";
   limitTags?: number;
   labelMt?: number;
@@ -40,6 +41,7 @@ const ProjectUserMultiSelect: React.FC<ProjectUserMultiSelectProps> = ({
   onChange,
   helperText,
   hideLabel = false,
+  hideTags = false,
   size = "medium",
   limitTags,
   labelMt = 2,
@@ -94,6 +96,7 @@ const ProjectUserMultiSelect: React.FC<ProjectUserMultiSelectProps> = ({
         getOptionLabel={(option) => option.name}
         getOptionKey={(option) => option.id}
         isOptionEqualToValue={(option, value) => option.id === value.id}
+        renderTags={hideTags ? () => null : undefined}
         renderOption={(props, option) => {
           const { key, ...optionProps } = props as typeof props & {
             key?: React.Key;

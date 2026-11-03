@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   TableContainer,
   Table,
@@ -196,6 +196,7 @@ const TablePagination = () => {
   });
   const [historyPage, setHistoryPage] = useState<number>(1);
   const historyLimit = 20;
+  const [historyTotal, setHistoryTotal] = useState<number>(0);
   const [historyLoading, setHistoryLoading] = useState<boolean>(false);
   const [capRequestAction, setCapRequestAction] = useState<
     "approve" | "reject" | null
@@ -447,9 +448,16 @@ const TablePagination = () => {
     }
   };
 
+  // useServerTable already loads the member list on mount; only refetch here
+  // when the team changes afterwards.
+  const isFirstTeamLoad = useRef(true);
   useEffect(() => {
     fetchUniqueUsers();
-    fetchData();
+    if (isFirstTeamLoad.current) {
+      isFirstTeamLoad.current = false;
+    } else {
+      fetchData();
+    }
     if (teamId == "null") {
       router.push("/apps/teams/list");
     }
@@ -476,15 +484,19 @@ const TablePagination = () => {
     setModelOpen(false);
   };
 
-  const fetchTeamHistory = async () => {
+  // Server filters to this team (record_id) and paginates; "See More" appends the next page.
+  const fetchTeamHistory = async (page = 1) => {
     if (!teamId) return;
     setHistoryLoading(true);
     try {
       const res = await api.get(
-        `requests/get-history?company_id=${id.company_id}&type=109,147`,
+        `requests/get-history?company_id=${id.company_id}&type=109,147&record_id=${teamId}&page=${page}&limit=${historyLimit}`,
       );
       if (res.data?.info) {
-        setHistory(res.data.info || []);
+        const items = res.data.info || [];
+        setHistory((prev) => (page === 1 ? items : [...prev, ...items]));
+        setHistoryTotal(Number(res.data?.data?.totalItems ?? items.length));
+        setHistoryPage(page);
       }
     } catch (err) {
       console.error("Failed to fetch team history:", err);
@@ -492,19 +504,10 @@ const TablePagination = () => {
     setHistoryLoading(false);
   };
 
-  const filteredHistory =
-    history?.filter(
-      (item) =>
-        (item.request_type === 109 || item.request_type === 147) &&
-        String(item.record_id) === String(teamId),
-    ) || [];
-  const paginatedHistory = filteredHistory.slice(0, historyPage * historyLimit);
-
   const handleOpenTeamHistory = () => {
     close();
     setOpenTeamHistory(true);
-    setHistoryPage(1);
-    fetchTeamHistory();
+    fetchTeamHistory(1);
   };
 
   const handleCloseTeamHistory = () => {
@@ -1970,16 +1973,16 @@ const TablePagination = () => {
               <Box sx={{ flex: 1, overflowY: "auto" }}>
                 <Box
                   sx={{
-                    maxHeight: paginatedHistory.length > 3 ? "auto" : "auto",
-                    overflow: paginatedHistory.length > 3 ? "auto" : "visible",
+                    maxHeight: history.length > 3 ? "auto" : "auto",
+                    overflow: history.length > 3 ? "auto" : "visible",
                     pr: 0,
                   }}
                 >
-                  {paginatedHistory.map((item: any, index: number) => {
+                  {history.map((item: any, index: number) => {
                     return (
                       <Box
                         key={item.id ?? index}
-                        mb={index === paginatedHistory.length - 1 ? 0 : 2}
+                        mb={index === history.length - 1 ? 0 : 2}
                         pl={2}
                         pr={2}
                         mt={2}
@@ -2040,7 +2043,7 @@ const TablePagination = () => {
                   })}
                 </Box>
 
-                {paginatedHistory.length < filteredHistory.length && (
+                {history.length < historyTotal && (
                   <Box display="flex" justifyContent="center" my={2}>
                     <Button
                       variant="outlined"
@@ -2049,7 +2052,7 @@ const TablePagination = () => {
                           <CircularProgress size={16} color="inherit" />
                         ) : null
                       }
-                      onClick={() => setHistoryPage((prev) => prev + 1)}
+                      onClick={() => fetchTeamHistory(historyPage + 1)}
                       disabled={historyLoading}
                     >
                       See More

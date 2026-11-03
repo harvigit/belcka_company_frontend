@@ -291,7 +291,6 @@ const ExpenseList = ({
     const [isRejecting, setIsRejecting] = useState(false);
     const [preferencesHydrated, setPreferencesHydrated] = useState(false);
     const restoredPreferencesKeyRef = useRef('');
-    const loadedFilterCompanyIdRef = useRef<number | null>(null);
     const skipNextDependencyPageResetRef = useRef(false);
 
     useEffect(() => {
@@ -397,30 +396,6 @@ const ExpenseList = ({
             setAmountInputValue('');
         }
     };
-
-    useEffect(() => {
-        const fetchFilterOptions = async () => {
-            if (!user?.company_id || projectId) return;
-            if (loadedFilterCompanyIdRef.current === Number(user.company_id)) return;
-
-            loadedFilterCompanyIdRef.current = Number(user.company_id);
-            try {
-                const res = await api.get('expense/list-filters');
-                const info = res.data?.info || {};
-                setProjects(info.projects || []);
-                setAddresses(info.addresses || []);
-                setCategories(info.categories || []);
-                setUsers(info.users || []);
-                setTeams(info.teams || []);
-                setTrades(info.trades || []);
-            } catch (error) {
-                loadedFilterCompanyIdRef.current = null;
-                console.error('Failed to load expense filter options', error);
-            }
-        };
-
-        fetchFilterOptions();
-    }, [user?.company_id, projectId]);
 
     const columns = [
         {
@@ -894,6 +869,7 @@ const ExpenseList = ({
             if (filters.trade_id) url += `&trade_id=${filters.trade_id}`;
             if (filters.team_id) url += `&team_id=${filters.team_id}`;
             if (activeTab !== 'all') url += `&status=${activeTab}`;
+            if (!projectId) url += '&filters_for=expense_list';
 
             const activeSorting = sorting[0] ?? getDefaultExpenseSorting()[0];
             url += `&sort_by=${activeSorting.id}&sort_order=${activeSorting.desc ? 'desc' : 'asc'}`;
@@ -902,6 +878,16 @@ const ExpenseList = ({
             if (res.data) {
                 const responseData = Array.isArray(res.data.info) ? res.data.info : [];
                 setData(responseData);
+
+                if (!projectId && res.data.filters) {
+                    const listFilters = res.data.filters;
+                    setUsers(listFilters.users || []);
+                    setProjects(listFilters.projects || []);
+                    setAddresses(listFilters.addresses || []);
+                    setCategories(listFilters.categories || []);
+                    setTeams(listFilters.teams || []);
+                    setTrades(listFilters.trades || []);
+                }
 
                 if (projectId) {
                     const apiFilterOptions = res.data.filter_options || {};
@@ -2715,10 +2701,7 @@ const ExpenseList = ({
             <ExpenseAttachmentsDrawer
                 open={detailOpen}
                 expenseId={selectedExpenseId}
-                onClose={() => {
-                    closeExpenseDetail();
-                    fetchExpenses();
-                }}
+                onClose={closeExpenseDetail}
             />
         </Box>
     );

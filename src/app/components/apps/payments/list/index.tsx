@@ -36,6 +36,7 @@ const PaymentList = () => {
           active={value === 0}
           userId={Number(userId)}
           isShow={true}
+          skipPermissionGuard
         />
       </Box>
     </PermissionGuard>

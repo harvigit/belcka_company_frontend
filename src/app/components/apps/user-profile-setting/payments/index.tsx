@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Box, Tabs, Tab, Divider } from "@mui/material";
 import PayslipsList from "./components/payslips/index";
 import InvoicesList from "./components/invoices/index";
@@ -15,14 +15,24 @@ interface PayslipListingProps {
   isShow: boolean;
   disableDateFilter?: boolean;
   readOnly?: boolean;
+  // Set when the parent page already wraps this in the same PermissionGuard.
+  skipPermissionGuard?: boolean;
 }
 
-const Payments: React.FC<PayslipListingProps> = ({companyId, active, userId, isShow, disableDateFilter = false, readOnly = false}) => {
+const Payments: React.FC<PayslipListingProps> = ({companyId, active, userId, isShow, disableDateFilter = false, readOnly = false, skipPermissionGuard = false}) => {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState(0);
+    // On the user details page every tab is mounted up front and hidden; wait
+    // until this one is first opened before loading its guard and lists.
+    const [hasBeenActive, setHasBeenActive] = useState(active);
 
-    return (
-        <PermissionGuard permission={userId && !Number.isNaN(userId) ? "Users" : "Payments"}>
+    useEffect(() => {
+        if (active) setHasBeenActive(true);
+    }, [active]);
+
+    if (!hasBeenActive) return null;
+
+    const content = (
             <Box>
                 <Tabs
                     className="user-tabs"
@@ -52,6 +62,13 @@ const Payments: React.FC<PayslipListingProps> = ({companyId, active, userId, isS
                     {activeTab === 2 && <InvoicesList userId={userId} isShow={isShow} disableDateFilter={disableDateFilter} readOnly={readOnly} />}
                 </Box>
             </Box>
+    );
+
+    if (skipPermissionGuard) return content;
+
+    return (
+        <PermissionGuard permission={userId && !Number.isNaN(userId) ? "Users" : "Payments"}>
+            {content}
         </PermissionGuard>
     );
 };

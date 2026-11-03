@@ -19,46 +19,42 @@ import { IconCategory2, IconMenu2, IconMoon, IconShoppingCart, IconSun, IconX } 
 
 import { useTheme } from '@mui/material/styles';
 
+// Defined at module level so the header isn't remounted on every render.
+const AppBarStyled = styled(AppBar)(({ theme }) => ({
+  background: theme.palette.background.paper,
+  justifyContent: "center",
+  backdropFilter: "blur(4px)",
+
+  [theme.breakpoints.up("lg")]: {
+    minHeight: config.topbarHeight,
+  },
+}));
+
+const ToolbarStyled = styled(Toolbar)(({ theme }) => ({
+  margin: "0 auto",
+  width: "100%",
+  color: `${theme.palette.text.primary} !important`,
+  paddingLeft: "16px !important",
+  paddingRight: "16px !important"
+}));
+
+const CollpaseMenubar = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  left: '4px',
+  top: '4px',
+  right: '4px',
+  padding: '7px 15px',
+  background: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  zIndex: 1,
+  borderRadius: '7px'
+}));
+
 const Header = () => {
   const lgDown = useMediaQuery((theme: Theme) => theme.breakpoints.down("lg"));
   const lgUp = useMediaQuery((theme: Theme) => theme.breakpoints.up("lg"));
 
   const { isLayout, setIsMobileSidebar, isMobileSidebar, activeMode, setActiveMode } = React.useContext(CustomizerContext);
-  const TopbarHeight = config.topbarHeight;
-
-  const theme = useTheme();
-  const borderColor = theme.palette.divider;
-
-  const AppBarStyled = styled(AppBar)(({ theme }) => ({
-    background: theme.palette.background.paper,
-    justifyContent: "center",
-    backdropFilter: "blur(4px)",
-
-    [theme.breakpoints.up("lg")]: {
-      minHeight: TopbarHeight,
-    },
-  }));
-
-  const ToolbarStyled = styled(Toolbar)(({ theme }) => ({
-    margin: "0 auto",
-    width: "100%",
-    color: `${theme.palette.text.primary} !important`,
-    paddingLeft: "16px !important",
-    paddingRight: "16px !important"
-  }));
-
-  const CollpaseMenubar = styled(Box)(({ theme }) => ({
-    position: 'absolute',
-    left: '4px',
-    top: '4px',
-    right: '4px',
-    padding: '7px 15px',
-    background: theme.palette.background.paper,
-    border: `1px solid ${borderColor}`,
-    zIndex: 1,
-    borderRadius: '7px'
-  }));
-
   const [isVisible, setIsVisible] = React.useState(false);
 
   return (

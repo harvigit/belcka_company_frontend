@@ -522,7 +522,7 @@ const HolidayList = () => {
                             "&:hover .hoverIcon": { opacity: 1 },
                           }}
                         >
-                          <Typography variant="subtitle2">
+                          <Typography variant="subtitle2" component="div">
                             {flexRender(
                               header.column.columnDef.header,
                               header.getContext(),

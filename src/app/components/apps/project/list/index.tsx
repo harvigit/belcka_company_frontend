@@ -77,7 +77,6 @@ import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import toast from "react-hot-toast";
-import PermissionGuard from "@/app/auth/PermissionGuard";
 import { useRouter } from "next/navigation";
 import { IconSettings } from "@tabler/icons-react";
 import { Grid } from "@mui/system";
@@ -599,6 +598,20 @@ const ProjectDashboard = () => {
     () => getProjectDashboardStateKey(user?.id, user?.company_id),
     [user?.id, user?.company_id],
   );
+  // Start the table on the saved page/size. Restoring it after mount changes
+  // pagination, which fetches once immediately and again from the debounce.
+  const [initialProjectPagination] = useState(() => {
+    const saved = readProjectDashboardCookie(projectDashboardStateKey).pagination;
+    if (
+      typeof saved?.pageIndex === "number" &&
+      saved.pageIndex >= 0 &&
+      typeof saved?.pageSize === "number" &&
+      saved.pageSize > 0
+    ) {
+      return { pageIndex: saved.pageIndex, pageSize: saved.pageSize };
+    }
+    return undefined;
+  });
   const { columnVisibility, onColumnVisibilityChange } =
     usePersistentColumnVisibility({
       storageKey: `cv_${user?.company_id}_${user?.id}_project_dashboard`,
@@ -1309,6 +1322,7 @@ const ProjectDashboard = () => {
     data,
     columns,
     fetchData: fetchProjects,
+    initialPagination: initialProjectPagination,
     debounceDependencies: [
       searchTerm,
       user?.company_id,
@@ -1460,8 +1474,8 @@ const ProjectDashboard = () => {
     [exportExtraColumns.join(",")],
   );
 
+  // Permission is checked once by the page (app/(DashboardLayout)/apps/project/list/page.tsx).
   return (
-    <PermissionGuard permission="Project">
       <Box
         sx={{
           height: "calc(100vh - 100px)",
@@ -2091,6 +2105,12 @@ const ProjectDashboard = () => {
             overflowY: "auto",
           }}
         >
+          {/* DndContext renders hidden accessibility <div>s, so it must sit outside <table>. */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleSectionDragEnd}
+          >
           <Table stickyHeader>
             <TableHead>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -2154,11 +2174,6 @@ const ProjectDashboard = () => {
                 </TableRow>
               ))}
             </TableHead>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleSectionDragEnd}
-            >
               <TableBody>
                 {loading ? (
                   <SkeletonLoader
@@ -2309,8 +2324,8 @@ const ProjectDashboard = () => {
                   ))
                 )}
               </TableBody>
-            </DndContext>
           </Table>
+          </DndContext>
         </TableContainer>
 
         <TablePaginationFooter
@@ -2319,7 +2334,6 @@ const ProjectDashboard = () => {
           selectedCount={selectedRowIds.size}
         />
       </Box>
-    </PermissionGuard>
   );
 };
 
