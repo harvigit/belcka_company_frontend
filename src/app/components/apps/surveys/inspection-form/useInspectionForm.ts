@@ -34,7 +34,7 @@ export type InspectionFormData = {
 
 const errorMessage = (error: any, fallback: string) => error?.response?.data?.message || fallback;
 
-/** Loads and saves a survey's inspection form (GET / PUT surveys/:id/form). */
+/** Loads and saves a survey's property detail (GET / PUT surveys/:id/form). */
 export default function useInspectionForm(surveyId: number | string | null | undefined) {
   const [data, setData] = useState<InspectionFormData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -66,13 +66,13 @@ export default function useInspectionForm(surveyId: number | string | null | und
         const res = await api.put(`surveys/${surveyId}/form`, { answers });
         if (res.data?.IsSuccess) {
           setData(res.data.info);
-          toast.success(res.data.message || "Inspection form saved");
+          toast.success(res.data.message || "Property detail saved");
           return true;
         }
-        toast.error(res.data?.message || "Failed to save the inspection form");
+        toast.error(res.data?.message || "Failed to save the property detail");
       } catch (error) {
         console.error(error);
-        toast.error(errorMessage(error, "Failed to save the inspection form"));
+        toast.error(errorMessage(error, "Failed to save the property detail"));
       } finally {
         setSaving(false);
       }

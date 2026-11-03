@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -20,7 +20,14 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { IconClipboardList, IconDeviceFloppy, IconDownload } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconChevronRight,
+  IconCircleCheckFilled,
+  IconClipboardList,
+  IconDeviceFloppy,
+  IconDownload,
+} from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import { InspectionFormData, InspectionFormField } from "./useInspectionForm";
@@ -31,7 +38,16 @@ type Props = {
   /** Read-only view (survey details); the form is also read-only when the API says it is not editable. */
   readOnly?: boolean;
   onSave?: (answers: Record<string, unknown>) => Promise<boolean>;
+  /** Open section, when the page controls it (e.g. from a section list). undefined = not chosen yet. */
+  openSection?: string | null;
+  onOpenSection?: (id: string | null) => void;
+  /** Live required counts per section, for a section list outside the panel. */
+  onSectionStats?: (stats: FormSectionStat[]) => void;
+  /** Scroll the sections inside the panel (desktop), so the header with Save stays in view. */
+  scrollBody?: boolean;
 };
+
+export type FormSectionStat = { id: string; label: string; required: number; done: number };
 
 const NOT_ANSWERABLE = new Set(["Group", "Description", "Formula"]);
 
@@ -73,6 +89,35 @@ function calculateFormulas(fields: InspectionFormField[], values: Record<string,
   return result;
 }
 
+// Top-level groups are the sections; fields outside any group form a "General" section first.
+export function formSections(fields: InspectionFormField[]): InspectionFormField[] {
+  const loose = (fields || []).filter((f) => f.type !== "Group");
+  return [
+    ...(loose.length ? [{ id: "__general", label: "General", type: "Group", fields: loose }] : []),
+    ...(fields || []).filter((f) => f.type === "Group"),
+  ];
+}
+
+// Required fields per section, sub-sections included.
+export function formSectionStats(
+  fields: InspectionFormField[],
+  values: Record<string, unknown>,
+): FormSectionStat[] {
+  return formSections(fields).map((section) => {
+    const required = flatten(section.fields || []).filter((f) => f.required && !NOT_ANSWERABLE.has(f.type));
+    return {
+      id: section.id,
+      label: section.label || "Section",
+      required: required.length,
+      done: required.filter((f) => !isBlank(values[f.id])).length,
+    };
+  });
+}
+
+// The page layout clips overflow, so CSS sticky does not work there; the panel scrolls its own
+// sections instead and keeps the header (progress, PDF, Save) in view.
+const SCROLL_BODY_SX = { maxHeight: { md: "calc(100vh - 320px)" }, overflowY: { md: "auto" }, pr: { md: 0.5 } };
+
 const SOURCE_LABEL: Record<string, string> = {
   "survey.address": "From survey address",
   "survey.postcode": "From survey address",
@@ -81,8 +126,17 @@ const SOURCE_LABEL: Record<string, string> = {
   "survey.damp": "Damp recorded in inspection",
 };
 
-// Inspection form of a survey: sections of fields filled in on site (or shown read-only).
-export default function InspectionFormPanel({ data, saving = false, readOnly = false, onSave }: Props) {
+// Property detail of a survey: sections of fields filled in on site (or shown read-only).
+export default function InspectionFormPanel({
+  data,
+  saving = false,
+  readOnly = false,
+  onSave,
+  openSection,
+  onOpenSection,
+  onSectionStats,
+  scrollBody = false,
+}: Props) {
   const fields = data.form?.fields || [];
   const editable = !readOnly && data.editable && Boolean(onSave);
   const [values, setValues] = useState<Record<string, unknown>>({});
@@ -97,13 +151,34 @@ export default function InspectionFormPanel({ data, saving = false, readOnly = f
 
   const formulas = useMemo(() => calculateFormulas(fields, values), [fields, values]);
 
-  const sections = useMemo(() => {
-    const loose = fields.filter((f) => f.type !== "Group");
-    return [
-      ...(loose.length ? [{ id: "__general", label: "General", type: "Group", fields: loose }] : []),
-      ...fields.filter((f) => f.type === "Group"),
-    ];
-  }, [fields]);
+  const sections = useMemo(() => formSections(fields), [fields]);
+  const stats = useMemo(() => formSectionStats(fields, values), [fields, values]);
+
+  // One section open at a time; the page may control which (left-hand section list).
+  const [ownSection, setOwnSection] = useState<string | null | undefined>(undefined);
+  const currentSection = onOpenSection ? openSection : ownSection;
+  const setSection = onOpenSection ?? setOwnSection;
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const previousSection = useRef<string | null | undefined | "__mount">("__mount");
+
+  useEffect(() => {
+    onSectionStats?.(stats);
+  }, [stats, onSectionStats]);
+
+  // Start on the first section that still has required fields to fill in.
+  useEffect(() => {
+    if (currentSection !== undefined || !stats.length) return;
+    setSection((stats.find((stat) => stat.done < stat.required) ?? stats[0]).id);
+  }, [currentSection, stats, setSection]);
+
+  // Bring a section into view when it is opened, but not for the automatic first choice.
+  useEffect(() => {
+    const previous = previousSection.current;
+    previousSection.current = currentSection;
+    if (!currentSection || previous === undefined) return;
+    const node = sectionRefs.current[currentSection];
+    if (node) requestAnimationFrame(() => node.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, [currentSection]);
 
   const answerable = useMemo(() => flatten(fields).filter((f) => !NOT_ANSWERABLE.has(f.type)), [fields]);
   const required = answerable.filter((f) => f.required);
@@ -123,6 +198,9 @@ export default function InspectionFormPanel({ data, saving = false, readOnly = f
     for (const field of answerable) answers[field.id] = isBlank(values[field.id]) ? null : values[field.id];
     setShowMissing(true);
     if (await onSave(answers)) setDirty(false);
+    // Take the surveyor to the first section that still has required fields to fill in.
+    const firstMissing = stats.find((stat) => stat.done < stat.required);
+    if (firstMissing) setSection(firstMissing.id);
   };
 
   const downloadPdf = async () => {
@@ -314,7 +392,7 @@ export default function InspectionFormPanel({ data, saving = false, readOnly = f
   if (!data.form) {
     return (
       <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, textAlign: "center" }}>
-        <Typography color="text.secondary">This survey has no inspection form.</Typography>
+        <Typography color="text.secondary">This survey has no property detail.</Typography>
       </Paper>
     );
   }
@@ -332,7 +410,7 @@ export default function InspectionFormPanel({ data, saving = false, readOnly = f
               <Typography fontSize={13} color="text.secondary">
                 {editable
                   ? "Fill in the form for this property. Fields marked * are needed to submit the survey."
-                  : "Inspection form answers (read-only)."}
+                  : "Property detail answers (read-only)."}
               </Typography>
             </Box>
           </Stack>
@@ -386,55 +464,94 @@ export default function InspectionFormPanel({ data, saving = false, readOnly = f
         )}
       </Paper>
 
-      <Stack spacing={2}>
-        {sections.map((section) => {
+      <Stack spacing={1.5} sx={scrollBody ? SCROLL_BODY_SX : undefined}>
+        {sections.map((section, index) => {
           const sectionFields = section.fields || [];
-          const sectionRequired = sectionFields.filter((f) => f.required && !NOT_ANSWERABLE.has(f.type));
-          const sectionDone = sectionRequired.filter((f) => !missingIds.has(f.id)).length;
+          const stat = stats[index];
+          const complete = stat.required > 0 && stat.done === stat.required;
+          const open = currentSection === section.id;
+          const next = sections[index + 1];
           return (
-            <Paper key={section.id} variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+            <Paper
+              key={section.id}
+              ref={(node: HTMLDivElement | null) => {
+                sectionRefs.current[section.id] = node;
+              }}
+              variant="outlined"
+              sx={{
+                borderRadius: 2,
+                overflow: "hidden",
+                flex: "none",
+                borderColor: open ? "primary.main" : "divider",
+              }}
+            >
               <Stack
                 direction="row"
                 justifyContent="space-between"
                 alignItems="center"
                 px={2}
                 py={1.25}
-                sx={{ bgcolor: "grey.50", borderBottom: "1px solid", borderColor: "divider" }}
+                onClick={() => setSection(open ? null : section.id)}
+                sx={{
+                  cursor: "pointer",
+                  bgcolor: open ? "primary.light" : "grey.50",
+                  borderBottom: open ? "1px solid" : "none",
+                  borderColor: "divider",
+                  "&:hover": { bgcolor: open ? "primary.light" : "grey.100" },
+                }}
               >
-                <Typography fontWeight={700}>{section.label}</Typography>
-                {sectionRequired.length > 0 && (
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                  {open ? <IconChevronDown size={18} /> : <IconChevronRight size={18} />}
+                  <Typography fontWeight={700} color={open ? "primary.main" : "text.primary"} noWrap>
+                    {section.label}
+                  </Typography>
+                  {complete && <IconCircleCheckFilled size={18} color="#13DEB9" />}
+                </Stack>
+                {stat.required > 0 && (
                   <Typography
                     fontSize={12.5}
                     fontWeight={700}
-                    color={sectionDone === sectionRequired.length ? "success.main" : "text.secondary"}
+                    color={complete ? "success.main" : "text.secondary"}
+                    sx={{ flex: "none", ml: 1 }}
                   >
-                    {sectionDone}/{sectionRequired.length} required
+                    {stat.done}/{stat.required} required
                   </Typography>
                 )}
               </Stack>
-              <Box
-                sx={{
-                  p: 2,
-                  display: "grid",
-                  gap: 2,
-                  gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-                }}
-              >
-                {sectionFields.map((field) =>
-                  field.type === "Group" ? (
-                    <Box key={field.id} sx={{ gridColumn: "1 / -1" }}>
-                      <Typography fontWeight={700} mb={1}>
-                        {field.label}
-                      </Typography>
-                      <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
-                        {(field.fields || []).map(renderField)}
-                      </Box>
-                    </Box>
-                  ) : (
-                    renderField(field)
-                  ),
-                )}
-              </Box>
+              {open && (
+                <>
+                  <Box
+                    sx={{
+                      p: 2,
+                      display: "grid",
+                      gap: 2,
+                      gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                    }}
+                  >
+                    {sectionFields.map((field) =>
+                      field.type === "Group" ? (
+                        <Box key={field.id} sx={{ gridColumn: "1 / -1" }}>
+                          <Typography fontWeight={700} mb={1}>
+                            {field.label}
+                          </Typography>
+                          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
+                            {(field.fields || []).map(renderField)}
+                          </Box>
+                        </Box>
+                      ) : (
+                        renderField(field)
+                      ),
+                    )}
+                  </Box>
+                  {next && (
+                    <Stack direction="row" justifyContent="flex-end" px={2} pb={2}>
+                      <Button size="small" endIcon={<IconChevronRight size={16} />} onClick={() => setSection(next.id)}>
+                        Next: {next.label}
+                      </Button>
+                    </Stack>
+                  )}
+                </>
+              )}
             </Paper>
           );
         })}

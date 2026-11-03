@@ -234,7 +234,7 @@ export default function Step2Template({
                           <Stack direction="row" alignItems="center" spacing={0.5} mt={0.5}>
                             <IconClipboardList size={16} color="#666" />
                             <Typography variant="caption" color="text.secondary" fontWeight={600} noWrap>
-                              Inspection form: {tpl.form.name}
+                              Property detail: {tpl.form.name}
                             </Typography>
                           </Stack>
                         )}
@@ -300,7 +300,7 @@ export default function Step2Template({
             <TextField
               select
               size="small"
-              label="Inspection form (optional)"
+              label="Property detail (optional)"
               value={selectedFormId ?? ""}
               onChange={(event) => onSelectForm(event.target.value ? Number(event.target.value) : null)}
               helperText="The surveyor fills in this form during the inspection."

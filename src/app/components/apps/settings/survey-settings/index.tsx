@@ -23,7 +23,7 @@ const menuItems = [
   { icon: <IconComponents size={18} />, label: "Elements" },
   { icon: <IconStack2 size={18} />, label: "Groups" },
   { icon: <IconTemplate size={18} />, label: "Templates" },
-  { icon: <IconForms size={18} />, label: "Inspection forms" },
+  { icon: <IconForms size={18} />, label: "Property details" },
   { icon: <IconAlertTriangle size={18} />, label: "Damage types" },
   { icon: <IconBox size={18} />, label: "Materials" },
 ];
@@ -121,7 +121,7 @@ const SurveySettings: React.FC<SurveySettingsProps> = ({ open, onClose }) => {
           {activeMenuItem === "Elements" && <SurveyElements />}
           {activeMenuItem === "Groups" && <SurveyGroups />}
           {activeMenuItem === "Templates" && <SurveyTemplates />}
-          {activeMenuItem === "Inspection forms" && <SurveyForms />}
+          {activeMenuItem === "Property details" && <SurveyForms />}
           {activeMenuItem === "Damage types" && <SurveyDamageTypes />}
           {activeMenuItem === "Materials" && <SurveyMaterials />}
         </Box>

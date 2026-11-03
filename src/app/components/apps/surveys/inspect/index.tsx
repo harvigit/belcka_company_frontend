@@ -55,7 +55,10 @@ import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import useSurveyAccess from "../useSurveyAccess";
 import useInspectionForm from "../inspection-form/useInspectionForm";
-import InspectionFormPanel from "../inspection-form/InspectionFormPanel";
+import InspectionFormPanel, {
+  FormSectionStat,
+  formSectionStats,
+} from "../inspection-form/InspectionFormPanel";
 import BlankCard from "@/app/components/shared/BlankCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import {
@@ -210,10 +213,22 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   // Active selection
   const [activeRoomId, setActiveRoomId] = useState<string | number | null>(null);
   const [activeItemId, setActiveItemId] = useState<string | number | null>(null);
-  // The survey's inspection form is shown in the right panel instead of an element when selected.
+  // The survey's property detail is shown in the right panel instead of an element when selected.
   const [formOpen, setFormOpen] = useState(false);
   const inspectionForm = useInspectionForm(id);
   const formProgress = inspectionForm.data?.progress;
+  // Open form section, shared by the section list on the left and the form panel.
+  const [formSection, setFormSection] = useState<string | null | undefined>(undefined);
+  // Live counts from the panel while it is open; saved values otherwise.
+  const [liveSectionStats, setLiveSectionStats] = useState<FormSectionStat[] | null>(null);
+  const sectionStats = useMemo(
+    () =>
+      liveSectionStats ??
+      (inspectionForm.data?.form
+        ? formSectionStats(inspectionForm.data.form.fields, inspectionForm.data.values || {})
+        : []),
+    [liveSectionStats, inspectionForm.data],
+  );
 
   // Room accordion expanded states
   const [expandedRooms, setExpandedRooms] = useState<Record<string, boolean>>({});
@@ -953,7 +968,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                   >
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Typography variant="subtitle2" fontWeight={700} color={formOpen ? "primary.main" : "text.primary"}>
-                        📋 Inspection Form
+                        📋 Property Detail
                       </Typography>
                       {formProgress && formProgress.required_total > 0 && (
                         <Typography
@@ -972,6 +987,58 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                     <Typography variant="caption" color="text.secondary" noWrap display="block">
                       {inspectionForm.data.form.name}
                     </Typography>
+                  </Box>
+                )}
+                {inspectionForm.data?.form && formOpen && sectionStats.length > 1 && (
+                  <Box mb={1.5} ml={1} pl={1} sx={{ borderLeft: "2px solid", borderColor: "divider" }}>
+                    {sectionStats.map((section) => {
+                      const active = formSection === section.id;
+                      const complete = section.required > 0 && section.done === section.required;
+                      return (
+                        <Stack
+                          key={section.id}
+                          direction="row"
+                          alignItems="center"
+                          spacing={1}
+                          onClick={() => setFormSection(section.id)}
+                          sx={{
+                            px: 1,
+                            py: 0.75,
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            bgcolor: active ? "primary.light" : "transparent",
+                            "&:hover": { bgcolor: active ? "primary.light" : "grey.50" },
+                          }}
+                        >
+                          {complete ? (
+                            <IconCircleCheck size={16} color="#13DEB9" />
+                          ) : (
+                            <Box sx={{ width: 16, height: 16, flex: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: active ? "primary.main" : "grey.400" }} />
+                            </Box>
+                          )}
+                          <Typography
+                            variant="body2"
+                            fontWeight={active ? 700 : 500}
+                            color={active ? "primary.main" : "text.primary"}
+                            noWrap
+                            sx={{ flex: 1, minWidth: 0 }}
+                          >
+                            {section.label}
+                          </Typography>
+                          {section.required > 0 && (
+                            <Typography
+                              variant="caption"
+                              fontWeight={600}
+                              color={complete ? "success.main" : "text.secondary"}
+                              sx={{ flex: "none" }}
+                            >
+                              {section.done}/{section.required}
+                            </Typography>
+                          )}
+                        </Stack>
+                      );
+                    })}
                   </Box>
                 )}
                 {survey.rooms.map((room, rIdx) => {
@@ -1134,6 +1201,10 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
               data={inspectionForm.data}
               saving={inspectionForm.saving}
               onSave={inspectionForm.save}
+              openSection={formSection}
+              onOpenSection={setFormSection}
+              onSectionStats={setLiveSectionStats}
+              scrollBody
             />
           ) : activeItem ? (
             <BlankCard>

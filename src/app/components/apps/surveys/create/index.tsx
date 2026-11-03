@@ -78,7 +78,7 @@ export default function CreateSurveyWizard() {
   // Step 2 Creation Method Data
   const [method, setMethod] = useState<SurveyCreationMethod>("template");
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
-  // Inspection form for a blank survey; a template brings its own form.
+  // Property detail for a blank survey; a template brings its own form.
   const [blankFormId, setBlankFormId] = useState<number | null>(null);
 
   // Step 3 Rooms & Elements Data
@@ -161,7 +161,7 @@ export default function CreateSurveyWizard() {
           setElements(rawElements);
         }
 
-        // Active inspection forms, offered for blank surveys
+        // Active property details, offered for blank surveys
         if (resForms.status === "fulfilled" && resForms.value.data) {
           const rawForms = Array.isArray(resForms.value.data.info) ? resForms.value.data.info : [];
           setInspectionForms(

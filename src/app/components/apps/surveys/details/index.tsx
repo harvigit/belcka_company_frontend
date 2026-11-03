@@ -1000,7 +1000,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
               <Tab
                 label={
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <span>Inspection Form</span>
+                    <span>Property Detail</span>
                     {inspectionForm.data.progress.required_total > 0 && (
                       <Chip
                         size="small"
