@@ -174,13 +174,15 @@ const CreateStore: React.FC<CreateStoreProps> = ({
     }
   };
 
+  // The drawer stays mounted on the stores list; load and reset only when it opens.
   useEffect(() => {
+    if (!open) return;
     fetchUsers();
     fetchProducts();
     setPhone("");
     setNationalPhone("");
     setPostcodeQuery("");
-  }, [open == true]);
+  }, [open]);
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       // const search = searchTerm.toLowerCase();

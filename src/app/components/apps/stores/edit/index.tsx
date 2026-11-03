@@ -177,10 +177,12 @@ const EditStore: React.FC<EditStoreProps> = ({
     }
   };
 
+  // The drawer stays mounted on the stores list; load only when it opens.
   useEffect(() => {
+    if (!open) return;
     fetchUsers();
     fetchProducts();
-  }, [open == true]);
+  }, [open]);
 
   useEffect(() => {
     if (open && formData.postcode) {
