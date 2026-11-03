@@ -40,6 +40,7 @@ interface SupplierFormData {
   contact_person_name?: string;
   contact_person_phone?: string;
   contact_person_extension?: string;
+  default_lead_time_days?: number | string | null;
 }
 
 interface CreateSupplierProps {
@@ -184,6 +185,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
               </Typography>
               <CustomTextField
                 fullWidth
+                inputProps={{ maxLength: 50 }}
                 name="email"
                 value={formData.email || ""}
                 onChange={handleChange}
@@ -194,6 +196,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
               </Typography>
               <CustomTextField
                 fullWidth
+                inputProps={{ maxLength: 50 }}
                 name="company_name"
                 value={formData.company_name || ""}
                 onChange={(e: any) => {
@@ -211,6 +214,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
 
               <CustomTextField
                 fullWidth
+                inputProps={{ maxLength: 50 }}
                 name="account_number"
                 value={formData.account_number || ""}
                 onChange={(e: any) => {
@@ -228,6 +232,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
 
               <CustomTextField
                 fullWidth
+                inputProps={{ maxLength: 50 }}
                 name="contact_person_name"
                 value={formData.contact_person_name || ""}
                 onChange={(e: any) => {
@@ -247,6 +252,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
               <CustomTextField
                 fullWidth
                 type="email"
+                inputProps={{ maxLength: 50 }}
                 name="contact_person_email"
                 value={formData.contact_person_email || ""}
                 onChange={handleChange}
@@ -275,7 +281,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                   width: "100%",
                   height: "47px",
                   borderColor: "#c0d1dc9c",
-                  backgroundColor:"transparent"
+                  backgroundColor: "transparent",
                 }}
                 enableSearch
                 inputProps={{ required: true }}
@@ -285,6 +291,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
               </Typography>
               <CustomTextField
                 fullWidth
+                inputProps={{ maxLength: 50 }}
                 name="street"
                 value={formData.street || ""}
                 onChange={handleChange}
@@ -295,6 +302,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
 
               <CustomTextField
                 fullWidth
+                inputProps={{ maxLength: 50 }}
                 name="location"
                 value={formData.location || ""}
                 onChange={handleChange}
@@ -305,16 +313,38 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
               </Typography>
               <CustomTextField
                 fullWidth
+                inputProps={{ maxLength: 50 }}
                 name="town"
                 value={formData.town || ""}
                 onChange={handleChange}
               />
+
+              {/* <Typography variant="body2" mt={2}>
+                Default lead time (days)
+              </Typography>
+              <CustomTextField
+                fullWidth
+                name="default_lead_time_days"
+                placeholder="Used for new supplier items"
+                value={formData.default_lead_time_days ?? ""}
+                onChange={(e: any) => {
+                  const value = e.target.value;
+                  // Whole days only, max 999
+                  if (!/^\d{0,3}$/.test(value)) return;
+                  setFormData((prev) => ({
+                    ...prev,
+                    default_lead_time_days: value,
+                  }));
+                }}
+                inputProps={{ inputMode: "numeric" }}
+              /> */}
 
               <Typography variant="body2" mt={2}>
                 Postcode
               </Typography>
               <CustomTextField
                 fullWidth
+                inputProps={{ maxLength: 50 }}
                 name="postcode"
                 value={formData.postcode || ""}
                 onChange={(e: any) => {
@@ -346,7 +376,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                   width: "100%",
                   height: "47px",
                   borderColor: "#c0d1dc9c",
-                  backgroundColor:"transparent"
+                  backgroundColor: "transparent",
                 }}
                 enableSearch
                 inputProps={{ required: true }}
