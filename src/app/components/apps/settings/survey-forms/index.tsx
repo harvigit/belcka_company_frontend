@@ -374,7 +374,7 @@ const SurveyForms = () => {
         <DialogTitle>Confirm delete</DialogTitle>
         <DialogContent>
           <Typography color="text.secondary">
-            Are you sure you want to delete {deleteIds.length} inspection form(s)? Forms that are used by a template can't be deleted.
+            Are you sure you want to delete {deleteIds.length} inspection form(s)? Forms that are used by a template cannot be deleted.
           </Typography>
         </DialogContent>
         <DialogActions>
