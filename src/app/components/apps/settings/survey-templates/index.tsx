@@ -35,22 +35,26 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import { surveyInputAlignSx } from "@/app/components/apps/settings/survey-settings/input-align";
 
 type SurveyGroupOption = { id: number; name: string };
+type SurveyFormOption = { id: number; name: string };
 
 type SurveyTemplate = {
   id: number;
   name: string;
   status: boolean | number;
   groups: SurveyGroupOption[];
+  form_id?: number | null;
+  form?: SurveyFormOption | null;
 };
 
-const emptyForm = { id: 0, name: "", groupIds: [] as number[] };
+const emptyForm = { id: 0, name: "", groupIds: [] as number[], formId: null as number | null };
 
 const isActive = (status: boolean | number) =>
   status === true || Number(status) === 1;
 
 const columnWidth = (id: string) => {
   if (id === "select") return 64;
-  if (id === "name") return "28%";
+  if (id === "name") return "24%";
+  if (id === "form") return "20%";
   if (id === "status") return 120;
   if (id === "actions") return 120;
   return undefined;
@@ -62,6 +66,7 @@ const errorMessage = (error: any, fallback: string) =>
 const SurveyTemplates = () => {
   const [data, setData] = useState<SurveyTemplate[]>([]);
   const [groupOptions, setGroupOptions] = useState<SurveyGroupOption[]>([]);
+  const [formOptions, setFormOptions] = useState<SurveyFormOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
@@ -117,10 +122,33 @@ const SurveyTemplates = () => {
     }
   };
 
+  // Active inspection forms for the required single-select; a template's current form stays listed even if inactive.
+  const loadForms = async (current?: SurveyFormOption | null) => {
+    try {
+      const res = await api.get("survey-forms/get");
+      const rows = Array.isArray(res.data?.info) ? res.data.info : [];
+      const active = rows
+        .filter(
+          (row: SurveyFormOption & { status?: boolean | number }) =>
+            row?.id && row?.name && (row.status === true || Number(row.status) === 1),
+        )
+        .map((row: SurveyFormOption) => ({ id: row.id, name: row.name }));
+      setFormOptions(
+        current && !active.some((row: SurveyFormOption) => row.id === current.id)
+          ? [current, ...active]
+          : active,
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error(errorMessage(error, "Failed to load inspection forms"));
+    }
+  };
+
   const openCreate = () => {
     setFormData(emptyForm);
     setDialogOpen(true);
     void loadGroups();
+    void loadForms();
   };
 
   const openEdit = (template: SurveyTemplate) => {
@@ -128,9 +156,11 @@ const SurveyTemplates = () => {
       id: template.id,
       name: template.name || "",
       groupIds: (template.groups || []).map((group) => group.id),
+      formId: template.form?.id ?? template.form_id ?? null,
     });
     setDialogOpen(true);
     void loadGroups();
+    void loadForms(template.form ?? null);
   };
 
   const saveTemplate = async (event: React.FormEvent) => {
@@ -143,11 +173,16 @@ const SurveyTemplates = () => {
       toast.error("Select at least one group!");
       return;
     }
+    if (!formData.formId) {
+      toast.error("Select an inspection form!");
+      return;
+    }
     setIsSaving(true);
     try {
       const payload = {
         name: formData.name.trim(),
         group_ids: formData.groupIds,
+        form_id: formData.formId,
       };
       const res = formData.id
         ? await api.put("survey-templates/update", { id: formData.id, ...payload })
@@ -227,6 +262,8 @@ const SurveyTemplates = () => {
     .map((id) => groupOptions.find((group) => group.id === id))
     .filter((group): group is SurveyGroupOption => Boolean(group));
 
+  const selectedForm = formOptions.find((form) => form.id === formData.formId) || null;
+
   const columns = useMemo(
     () => [
       {
@@ -290,6 +327,16 @@ const SurveyTemplates = () => {
             </Stack>
           );
         },
+      },
+      {
+        id: "form",
+        header: () => <Typography variant="body2">Inspection form</Typography>,
+        cell: ({ row }: { row: { original: SurveyTemplate } }) =>
+          row.original.form ? (
+            <Chip label={row.original.form.name} size="small" color="primary" variant="outlined" />
+          ) : (
+            <Typography color="text.secondary">-</Typography>
+          ),
       },
       {
         id: "status",
@@ -492,6 +539,23 @@ const SurveyTemplates = () => {
                     placeholder={
                       groupOptions.length ? "Select active groups" : "No active groups"
                     }
+                  />
+                )}
+              />
+              <Autocomplete
+                options={formOptions}
+                value={selectedForm}
+                getOptionLabel={(option) => option.name}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                onChange={(_, value) =>
+                  setFormData((current) => ({ ...current, formId: value ? value.id : null }))
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Inspection form"
+                    required
+                    placeholder={formOptions.length ? "Select an inspection form" : "No active inspection forms"}
                   />
                 )}
               />
