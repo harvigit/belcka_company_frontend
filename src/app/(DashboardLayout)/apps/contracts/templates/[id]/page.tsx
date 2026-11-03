@@ -4,7 +4,7 @@ import React, { useRef } from "react";
 import { useParams } from "next/navigation";
 import PageContainer from "@/app/components/container/PageContainer";
 import PermissionGuard from "@/app/auth/PermissionGuard";
-import TemplateEditor from "@/app/components/apps/settings/contracts/TemplateEditor";
+import TemplateEditor from "@/app/components/apps/contracts/TemplateEditor";
 
 const ContractTemplatePage = () => {
   const params = useParams<{ id: string }>();
