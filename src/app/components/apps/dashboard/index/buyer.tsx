@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Card,
   Typography,
@@ -122,6 +122,7 @@ const BuyerDashboard = () => {
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
+    fetchProjects();
   };
   const handleClose = () => {
     setAnchorEl(null);
@@ -309,7 +310,12 @@ const BuyerDashboard = () => {
     }
   };
 
+  // Lists for the report dialog only. They do not depend on the dates, so load them once,
+  // when the Reports menu is first opened.
+  const modulesRequestedRef = useRef(false);
   const fetchProjects = async () => {
+    if (modulesRequestedRef.current) return;
+    modulesRequestedRef.current = true;
     try {
       const res = await api.get(
         `get-modules?company_id=${user.company_id}&is_web=true`,
@@ -325,9 +331,15 @@ const BuyerDashboard = () => {
         setItems(res.data.items);
       }
     } catch (err) {
+      modulesRequestedRef.current = false;
       console.error("Failed to fetch projects", err);
     }
   };
+
+  // Another company needs its own lists on the next Reports open.
+  useEffect(() => {
+    modulesRequestedRef.current = false;
+  }, [user?.company_id]);
 
   useEffect(() => {
     if (user?.company_id) {
@@ -335,7 +347,6 @@ const BuyerDashboard = () => {
       fetchOrders();
       fetchInvoices();
       fetchInternalOrders();
-      fetchProjects();
     }
   }, [user?.company_id, startDate, endDate]);
 
