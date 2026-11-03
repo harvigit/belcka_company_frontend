@@ -10,8 +10,27 @@ export const GOOGLE_MAPS_SHARED_LOADER_OPTIONS: {
 } = {
     id: 'script-loader',
     language: 'en',
-    region: 'US',
+    region: 'GB',
     libraries: GOOGLE_MAP_LIBRARIES,
+};
+
+// Delay before firing a Places autocomplete request while the user is still typing
+export const PLACES_AUTOCOMPLETE_DEBOUNCE_MS = 300;
+
+// Places Autocomplete session token: reused across keystrokes so predictions + the
+// following getDetails call are billed as one session. Only one search box is active at a time.
+let placesSessionToken: google.maps.places.AutocompleteSessionToken | null = null;
+
+export const getPlacesSessionToken = (): google.maps.places.AutocompleteSessionToken => {
+    if (!placesSessionToken) placesSessionToken = new google.maps.places.AutocompleteSessionToken();
+    return placesSessionToken;
+};
+
+// Use for the getDetails call that ends the session; the next search starts a new one.
+export const consumePlacesSessionToken = (): google.maps.places.AutocompleteSessionToken => {
+    const token = getPlacesSessionToken();
+    placesSessionToken = null;
+    return token;
 };
 
 export type GeofenceShape = {

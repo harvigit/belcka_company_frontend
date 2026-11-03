@@ -46,14 +46,16 @@ const getFirebaseConfig = async (): Promise<FirebaseClientConfig | null> => {
                 });
 
                 if (!response.ok) {
-                    console.error('❌ Failed to fetch Firebase config');
                     return null;
                 }
 
                 const config = await response.json();
 
+                if (config?.configured === false) {
+                    return null;
+                }
+
                 if (!hasRequiredConfigFields(config)) {
-                    console.error('❌ Invalid Firebase config received');
                     return null;
                 }
 

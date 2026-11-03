@@ -32,6 +32,11 @@ import { User } from "next-auth";
 import api from "@/utils/axios";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import toast from "react-hot-toast";
+import {
+  consumePlacesSessionToken,
+  getPlacesSessionToken,
+  PLACES_AUTOCOMPLETE_DEBOUNCE_MS,
+} from "@/utils/googleMaps";
 import { AxiosResponse } from "axios";
 
 const containerStyle = { width: "100%", height: "100%" };
@@ -116,19 +121,26 @@ export default function WorkZone({
       ? `${addressInput.trim()}`
       : addressInput;
 
-    service.getPlacePredictions({ input }, (results, status) => {
-      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-        setPredictions(results);
-      } else {
-        setPredictions([]);
-      }
-    });
+    const timer = setTimeout(() => {
+      service.getPlacePredictions({ input, sessionToken: getPlacesSessionToken() }, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+          setPredictions(results);
+        } else {
+          setPredictions([]);
+        }
+      });
+    }, PLACES_AUTOCOMPLETE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
   }, [addressInput, typedAddress, isLoaded]);
 
   const selectPrediction = (placeId: string) => {
     if (!map || !isLoaded) return;
     const service = new google.maps.places.PlacesService(map);
-    service.getDetails({ placeId }, (place, status) => {
+    service.getDetails({
+      placeId: placeId,
+      fields: ["formatted_address", "geometry"],
+      sessionToken: consumePlacesSessionToken(),
+    }, (place, status) => {
       if (
         status === google.maps.places.PlacesServiceStatus.OK &&
         place?.geometry?.location

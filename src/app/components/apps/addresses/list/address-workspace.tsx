@@ -68,7 +68,11 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
-import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
+import {
+  GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
+  consumePlacesSessionToken,
+  getPlacesSessionToken,
+} from "@/utils/googleMaps";
 import ArchiveParentAddress from "./archive-parent-address-list";
 import ExcelImportModal from "@/app/components/common/ExcelImportModal";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
@@ -341,7 +345,7 @@ async function searchPlaces(
 
   return new Promise((resolve) => {
     const service = new google.maps.places.AutocompleteService();
-    service.getPlacePredictions({ input: trimmed }, (results, status) => {
+    service.getPlacePredictions({ input: trimmed, sessionToken: getPlacesSessionToken() }, (results, status) => {
       if (status !== google.maps.places.PlacesServiceStatus.OK || !results) {
         resolve([]);
         return;
@@ -373,7 +377,11 @@ function resolvePrediction(item: Prediction): Promise<{
       const service = new google.maps.places.PlacesService(
         document.createElement("div"),
       );
-      service.getDetails({ placeId: item.placeId! }, (place, status) => {
+      service.getDetails({
+        placeId: item.placeId!,
+        fields: ["formatted_address", "geometry", "address_components"],
+        sessionToken: consumePlacesSessionToken(),
+      }, (place, status) => {
         if (
           status !== google.maps.places.PlacesServiceStatus.OK ||
           !place?.geometry?.location
@@ -1156,8 +1164,6 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                       visibleAddresses.map((address) => {
                         const expanded = expandedIds.has(address.id);
                         const cases = casesByParent[address.id] || [];
-                        const caseTotal =
-                          caseTotals[address.id] ?? cases.length;
                         const casesBusy = Boolean(casesLoading[address.id]);
                         return (
                           <React.Fragment key={address.id}>

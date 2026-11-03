@@ -18,11 +18,13 @@ async function initMessaging() {
       });
 
       if (!response.ok) {
-        console.error("Failed to fetch Firebase config in service worker");
         return;
       }
 
       const firebaseConfig = await response.json();
+      if (!firebaseConfig || firebaseConfig.configured === false) {
+        return;
+      }
       firebase.initializeApp(firebaseConfig);
 
       const messaging = firebase.messaging();

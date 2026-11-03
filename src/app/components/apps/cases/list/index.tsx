@@ -471,10 +471,13 @@ const CasesList = ({
     project_id: projectId ? String(projectId) : "",
   });
 
+  // Shows the clear (X) button when search or any filter (status, project, type) is applied.
   const hasActiveFilters = Boolean(
+    search.trim() ||
     (filters.status && filters.status !== "All") ||
     // filters.parent_address_id ||
-    (!projectId && filters.project_id),
+    (!projectId && filters.project_id) ||
+    filters.type,
   );
 
   useEffect(() => {
@@ -1366,10 +1369,14 @@ const CasesList = ({
     pagination.pageSize,
   ]);
 
-  const handleClearAppliedFilters = (event?: React.MouseEvent) => {
+  const handleClearAppliedFilters = (
+    event?: React.MouseEvent,
+    keepSearch = false,
+  ) => {
     event?.stopPropagation();
     skipNextDependencyPageResetRef.current = false;
     const nextFilters = getClearedFilters();
+    if (!keepSearch) setSearch("");
     setTempFilters(nextFilters);
     setFilters(nextFilters);
     setPagination((prev) =>
@@ -1882,7 +1889,7 @@ const CasesList = ({
               <DialogActions>
                 <Button
                   onClick={() => {
-                    handleClearAppliedFilters();
+                    handleClearAppliedFilters(undefined, true);
                     setOpen(false);
                   }}
                   color="inherit"
