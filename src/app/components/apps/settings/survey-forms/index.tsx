@@ -191,7 +191,7 @@ const SurveyForms = () => {
       },
       {
         id: "groups",
-        header: () => <Typography variant="body2">Groups</Typography>,
+        header: () => <Typography variant="body2">Sections</Typography>,
         cell: ({ row }: { row: { original: SurveyFormRecord } }) => (
           <Typography color="text.secondary">{row.original.group_count ?? 0}</Typography>
         ),
