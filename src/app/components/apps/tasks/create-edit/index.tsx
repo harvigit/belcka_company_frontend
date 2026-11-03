@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Drawer,
   Box,
@@ -48,6 +48,8 @@ interface TaskAddEditProps {
   isSaving: boolean;
   isEdit?: boolean;
   taskId?: number | null;
+  /** Units already loaded by the list page, used until the drawer opens. */
+  listUnits?: any[];
 }
 
 type GalleryImage = {
@@ -56,6 +58,21 @@ type GalleryImage = {
   thumb?: string;
   isExisting?: boolean;
   type?: string;
+};
+
+// The list page keeps its Add and Edit drawers mounted; they share one preload request.
+const pendingResources = new Map<string, Promise<any>>();
+const loadTaskResources = (companyId: number | null) => {
+  const key = String(companyId);
+  let request = pendingResources.get(key);
+  if (!request) {
+    request = api
+      .get(`tasks/get-resources?company_id=${companyId}`)
+      .then((res) => res.data)
+      .finally(() => pendingResources.delete(key));
+    pendingResources.set(key, request);
+  }
+  return request;
 };
 
 const SHIFT_TYPE_OPTIONS = [
@@ -74,6 +91,7 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
   companyId,
   isEdit,
   taskId,
+  listUnits,
 }) => {
   const [categories, setCategories] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
@@ -234,30 +252,40 @@ const TaskAddEdit: React.FC<TaskAddEditProps> = ({
     }
   };
 
-  const fetchResources = async () => {
+  // On mount the lists are preloaded (units come from the list page); on open they are refreshed.
+  const fetchResources = async (refresh: boolean) => {
     setFetchStore(true);
 
     try {
-      let url = `tasks/get-resources?company_id=${companyId}`;
-      const res = await api.get(url);
-      if (res.data) {
-        setCategories(res.data.categories);
-        setSubCategories(res.data.subCategories);
-        setTrades(res.data.trades);
-        setProjects(res.data.projects || []);
+      const data = await loadTaskResources(companyId);
+      if (data) {
+        setCategories(data.categories);
+        setSubCategories(data.subCategories);
+        setTrades(data.trades);
+        setProjects(data.projects || []);
       }
 
-      const unitsRes = await api.get(`units/get?company_id=${companyId}`);
-      setUnits(unitsRes.data?.info || []);
+      if (refresh || !listUnits) {
+        const unitsRes = await api.get(`units/get?company_id=${companyId}`);
+        setUnits(unitsRes.data?.info || []);
+      }
     } catch (err) {
       console.error("Failed to fetch inventory resources", err);
     }
     setFetchStore(false);
   };
 
+  // Preload once on mount and refresh on every open; closing needs nothing.
+  const preloadedRef = useRef(false);
   useEffect(() => {
-    fetchResources();
+    if (!open && preloadedRef.current) return;
+    fetchResources(preloadedRef.current);
+    preloadedRef.current = true;
   }, [open]);
+
+  useEffect(() => {
+    if (listUnits && !open) setUnits(listUnits);
+  }, [listUnits]);
 
   const galleryDropzone = useDropzone({
     accept: { "image/*": [], "application/pdf": [".pdf"] },
