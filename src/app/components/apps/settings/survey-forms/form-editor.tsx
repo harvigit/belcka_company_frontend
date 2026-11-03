@@ -47,6 +47,8 @@ export type InspectionField = {
   options?: string[];
   multipleSelection?: boolean;
   formulaExpression?: string;
+  /** Survey value that fills this field when the survey's form is opened. */
+  source?: string;
   fields?: InspectionField[];
 };
 
@@ -76,6 +78,15 @@ const FIELD_TYPES: { value: string; label: string }[] = [
   { value: "Date", label: "Date" },
   { value: "Formula", label: "Formula (calculated)" },
   { value: "Description", label: "Info text" },
+];
+
+// Survey values a field can be filled from, per field type.
+const SOURCES: { value: string; label: string; types: string[] }[] = [
+  { value: "survey.address", label: "Survey property address", types: ["Open ended", "Text area"] },
+  { value: "survey.postcode", label: "Post code (from the survey address)", types: ["Open ended"] },
+  { value: "survey.date", label: "Survey date", types: ["Date"] },
+  { value: "survey.notes", label: "Survey notes", types: ["Open ended", "Text area"] },
+  { value: "survey.damp", label: "\"Yes\" when damp is recorded in the inspection", types: ["Yes/No", "Dropdown"] },
 ];
 
 const OPERATORS = [
@@ -194,6 +205,9 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
       patch.multipleSelection = undefined;
     }
     if (type !== "Formula") patch.formulaExpression = undefined;
+    if (field.source && !SOURCES.some((s) => s.value === field.source && s.types.includes(type))) {
+      patch.source = undefined;
+    }
     if (type === "Description" || type === "Formula") patch.required = false;
     updateField(sectionId, field.id, patch);
   };
@@ -364,6 +378,29 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
         <Typography fontSize={12} color="text.secondary">
           Answer options: Yes / No
         </Typography>
+      );
+    }
+    const sources = SOURCES.filter((s) => s.types.includes(field.type));
+    if (sources.length) {
+      return (
+        <TextField
+          select
+          size="small"
+          label="Fill automatically from the survey"
+          value={field.source || ""}
+          onChange={(event) => updateField(sectionId, field.id, { source: event.target.value || undefined })}
+          helperText="The surveyor sees this value filled in and can still change it."
+          sx={{ width: { xs: "100%", sm: 360 } }}
+        >
+          <MenuItem value="">
+            <em>No, the surveyor fills it in</em>
+          </MenuItem>
+          {sources.map((s) => (
+            <MenuItem key={s.value} value={s.value}>
+              {s.label}
+            </MenuItem>
+          ))}
+        </TextField>
       );
     }
     return null;

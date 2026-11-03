@@ -54,6 +54,8 @@ import {
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import useSurveyAccess from "../useSurveyAccess";
+import useInspectionForm from "../inspection-form/useInspectionForm";
+import InspectionFormPanel from "../inspection-form/InspectionFormPanel";
 import BlankCard from "@/app/components/shared/BlankCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import {
@@ -208,6 +210,10 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   // Active selection
   const [activeRoomId, setActiveRoomId] = useState<string | number | null>(null);
   const [activeItemId, setActiveItemId] = useState<string | number | null>(null);
+  // The survey's inspection form is shown in the right panel instead of an element when selected.
+  const [formOpen, setFormOpen] = useState(false);
+  const inspectionForm = useInspectionForm(id);
+  const formProgress = inspectionForm.data?.progress;
 
   // Room accordion expanded states
   const [expandedRooms, setExpandedRooms] = useState<Record<string, boolean>>({});
@@ -931,10 +937,47 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
               </Box>
 
               <Box p={1.5} sx={{ maxHeight: "calc(100vh - 280px)", overflowY: "auto" }}>
+                {inspectionForm.data?.form && (
+                  <Box
+                    onClick={() => setFormOpen(true)}
+                    sx={{
+                      mb: 1,
+                      p: 1.25,
+                      borderRadius: "8px",
+                      border: "1px solid",
+                      borderColor: formOpen ? "primary.main" : "divider",
+                      bgcolor: formOpen ? "primary.light" : "background.paper",
+                      cursor: "pointer",
+                      "&:hover": { bgcolor: "grey.50" },
+                    }}
+                  >
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Typography variant="subtitle2" fontWeight={700} color={formOpen ? "primary.main" : "text.primary"}>
+                        📋 Inspection Form
+                      </Typography>
+                      {formProgress && formProgress.required_total > 0 && (
+                        <Typography
+                          variant="caption"
+                          fontWeight={600}
+                          color={
+                            formProgress.required_answered === formProgress.required_total
+                              ? "success.main"
+                              : "text.secondary"
+                          }
+                        >
+                          {formProgress.required_answered}/{formProgress.required_total}
+                        </Typography>
+                      )}
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary" noWrap display="block">
+                      {inspectionForm.data.form.name}
+                    </Typography>
+                  </Box>
+                )}
                 {survey.rooms.map((room, rIdx) => {
                   const roomItems = room.items || [];
                   const roomInspected = roomItems.filter((i) => i.is_inspected).length;
-                  const isRoomActive = activeRoom?.id === room.id;
+                  const isRoomActive = !formOpen && activeRoom?.id === room.id;
                   const isExpanded = expandedRooms[room.id] ?? true;
                   const isRoomComplete = roomInspected === roomItems.length && roomItems.length > 0;
 
@@ -959,6 +1002,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                           "&:hover": { bgcolor: "grey.50" },
                         }}
                         onClick={() => {
+                          setFormOpen(false);
                           setActiveRoomId(room.id);
                           if (roomItems.length > 0 && !roomItems.some((i) => i.id === activeItemId)) {
                             setActiveItemId(roomItems[0].id);
@@ -1002,13 +1046,14 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                           borderColor="divider"
                         >
                           {roomItems.map((item) => {
-                            const isItemActive = activeItem?.id === item.id;
+                            const isItemActive = !formOpen && activeItem?.id === item.id;
                             const photoCount = item.photos?.length || 0;
 
                             return (
                               <Box
                                 key={item.id}
                                 onClick={() => {
+                                  setFormOpen(false);
                                   setActiveRoomId(room.id);
                                   setActiveItemId(item.id);
                                 }}
@@ -1084,7 +1129,13 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
 
         {/* Right Column: Active Element Inspector Workspace */}
         <Grid size={{ xs: 12, md: 8, lg: 8.5 }}>
-          {activeItem ? (
+          {formOpen && inspectionForm.data?.form ? (
+            <InspectionFormPanel
+              data={inspectionForm.data}
+              saving={inspectionForm.saving}
+              onSave={inspectionForm.save}
+            />
+          ) : activeItem ? (
             <BlankCard>
               {/* Element Header */}
               <Box p={{ xs: 2, sm: 2.5 }} borderBottom="1px solid" borderColor="divider">

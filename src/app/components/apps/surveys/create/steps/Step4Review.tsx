@@ -43,6 +43,8 @@ interface Step4ReviewProps {
   };
   method: SurveyCreationMethod;
   templateName?: string;
+  /** Inspection form the survey gets from its template. */
+  formName?: string;
   rooms: SurveyRoom[];
 }
 
@@ -50,6 +52,7 @@ export default function Step4Review({
   formData,
   method,
   templateName,
+  formName,
   rooms,
 }: Step4ReviewProps) {
   const totalElements = rooms.reduce((acc, r) => acc + r.items.length, 0);
@@ -183,6 +186,17 @@ export default function Step4Review({
                     )}
                   </Box>
                 </Box>
+
+                {formName && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      Inspection Form
+                    </Typography>
+                    <Box mt={0.5}>
+                      <Chip label={formName} variant="outlined" color="primary" size="small" sx={{ fontWeight: 600 }} />
+                    </Box>
+                  </Box>
+                )}
 
                 <Stack direction="row" spacing={2} pt={1}>
                   <Box p={1.5} bgcolor="#f8fafc" borderRadius={1} flex={1} textAlign="center">
