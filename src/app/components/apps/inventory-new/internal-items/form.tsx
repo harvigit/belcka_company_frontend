@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Autocomplete,
   Box,
@@ -15,10 +15,11 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import Image from "next/image";
 import { useDropzone } from "react-dropzone";
 import { IconLock, IconPhoto, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
-import api from "@/utils/axios";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import QuickAddCategory from "../shared/QuickAddCategory";
+import { cleanUuidInput, useItemUuid } from "../shared/useItemUuid";
+import toast from "react-hot-toast";
 import {
   InventoryOption,
   InventoryOptions,
@@ -26,6 +27,8 @@ import {
 
 export interface InternalItemForm {
   id?: number;
+  // empty on add generates one (INT-0001)
+  uuid: string;
   code: string;
   name: string;
   description: string;
@@ -35,18 +38,14 @@ export interface InternalItemForm {
   is_sub_qty: boolean;
   issue_pack_qty: string;
   issue_pack_unit_id: number | "";
-  // Inventory 1 product this item replaces (migration link)
-  legacy_product_id: number | null;
-  legacy_product_label: string | null;
-  // read-only, worked out from purchases and issues
   base_price: number | null;
-  // photo: a newly picked file, the saved image url, or a request to remove it
   image_file: File | null;
   image_url: string | null;
   remove_image: boolean;
 }
 
 export const emptyInternalItem: InternalItemForm = {
+  uuid: "",
   code: "",
   name: "",
   description: "",
@@ -56,26 +55,11 @@ export const emptyInternalItem: InternalItemForm = {
   is_sub_qty: false,
   issue_pack_qty: "",
   issue_pack_unit_id: "",
-  legacy_product_id: null,
-  legacy_product_label: null,
   base_price: null,
   image_file: null,
   image_url: null,
   remove_image: false,
 };
-
-interface LegacyProduct {
-  id: number;
-  uuid: string;
-  name: string;
-  market_price: number | null;
-  image_url: string | null;
-  is_sub_qty: boolean;
-  issue_pack_qty: number | null;
-  issue_pack_unit_id: number | null;
-  category_id: number | null;
-  linked_internal_item: { id: number; code: string } | null;
-}
 
 interface InternalItemDrawerProps {
   open: boolean;
@@ -86,14 +70,9 @@ interface InternalItemDrawerProps {
   isSaving: boolean;
   options: InventoryOptions;
   companyId?: number | null;
-  // reloads the dropdown data, so a category added here can be picked
   onOptionsChanged?: () => Promise<void> | void;
 }
 
-const legacyLabel = (p: { uuid: string; name: string }) =>
-  `${p.uuid} · ${p.name}`;
-
-// Add / edit an internal item, laid out like the Add Product drawer.
 const InternalItemDrawer: React.FC<InternalItemDrawerProps> = ({
   open,
   onClose,
@@ -109,6 +88,22 @@ const InternalItemDrawer: React.FC<InternalItemDrawerProps> = ({
   const [quickCategoryOpen, setQuickCategoryOpen] = useState(false);
   const set = (name: keyof InternalItemForm, value: any) =>
     setFormData((prev) => ({ ...prev, [name]: value }));
+  const { uuidError, uuidChecking } = useItemUuid(
+    "internal",
+    open,
+    companyId,
+    formData.id,
+    formData.uuid,
+    (uuid) => set("uuid", uuid),
+  );
+  const submit = (e: React.FormEvent) => {
+    if (uuidError) {
+      e.preventDefault();
+      toast.error(uuidError);
+      return;
+    }
+    onSubmit(e);
+  };
 
   // ---- image (same dropzone as the product form) ----
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -134,81 +129,6 @@ const InternalItemDrawer: React.FC<InternalItemDrawerProps> = ({
         }));
     },
   });
-
-  // ---- Inventory 1 product search ----
-  const [legacySearch, setLegacySearch] = useState("");
-  const [legacyOptions, setLegacyOptions] = useState<LegacyProduct[]>([]);
-  const [legacyLoading, setLegacyLoading] = useState(false);
-  useEffect(() => {
-    if (!open || !companyId) return;
-    const timer = setTimeout(async () => {
-      setLegacyLoading(true);
-      try {
-        const res = await api.get(
-          `inventory-new/internal-items/legacy-products?company_id=${companyId}&search=${encodeURIComponent(legacySearch)}`,
-        );
-        setLegacyOptions(res.data?.info ?? []);
-      } catch (err) {
-        setLegacyOptions([]);
-      }
-      setLegacyLoading(false);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [open, companyId, legacySearch]);
-
-  const selectedLegacy = useMemo<LegacyProduct | null>(() => {
-    if (!formData.legacy_product_id) return null;
-    return (
-      legacyOptions.find((p) => p.id === formData.legacy_product_id) ?? {
-        id: formData.legacy_product_id,
-        uuid: "",
-        name: formData.legacy_product_label ?? "",
-        market_price: null,
-        image_url: null,
-        is_sub_qty: false,
-        issue_pack_qty: null,
-        issue_pack_unit_id: null,
-        category_id: null,
-        linked_internal_item: null,
-      }
-    );
-  }, [
-    formData.legacy_product_id,
-    formData.legacy_product_label,
-    legacyOptions,
-  ]);
-
-  // Picking an Inventory 1 product fills the fields that are still empty.
-  const pickLegacy = (p: LegacyProduct | null) =>
-    setFormData((prev) => {
-      if (!p)
-        return { ...prev, legacy_product_id: null, legacy_product_label: null };
-      const fillSubQty = !prev.is_sub_qty && p.is_sub_qty;
-      return {
-        ...prev,
-        legacy_product_id: p.id,
-        legacy_product_label: legacyLabel(p),
-        name: prev.name || p.name,
-        market_price:
-          prev.market_price ||
-          (p.market_price !== null ? String(p.market_price) : ""),
-        category_id:
-          prev.category_id ||
-          (p.category_id &&
-          options.categories.some((c) => c.id === p.category_id)
-            ? p.category_id
-            : ""),
-        ...(fillSubQty && {
-          is_sub_qty: true,
-          issue_pack_qty: String(p.issue_pack_qty ?? ""),
-          issue_pack_unit_id:
-            p.issue_pack_unit_id &&
-            options.units.some((u) => u.id === p.issue_pack_unit_id)
-              ? p.issue_pack_unit_id
-              : "",
-        }),
-      };
-    });
 
   const optionById = (list: InventoryOption[], id: number | "") =>
     list.find((o) => o.id === id) ?? null;
@@ -264,7 +184,7 @@ const InternalItemDrawer: React.FC<InternalItemDrawerProps> = ({
 
         <Box
           component="form"
-          onSubmit={onSubmit}
+          onSubmit={submit}
           sx={{
             flex: 1,
             display: "flex",
@@ -356,76 +276,31 @@ const InternalItemDrawer: React.FC<InternalItemDrawerProps> = ({
               </Box>
 
               <Grid container spacing={2.5} flex={1} alignContent="flex-start">
-                <Grid size={{ xs: 12, md: 8 }}>
+                <Grid size={{ xs: 12, md: 4 }}>
                   <Typography variant="body2" gutterBottom>
-                    Select Product
+                    UUID
                   </Typography>
-                  <Autocomplete
+                  <CustomTextField
                     className="product_input"
-                    options={legacyOptions}
-                    loading={legacyLoading}
-                    value={selectedLegacy}
-                    onChange={(_, value) => pickLegacy(value)}
-                    onInputChange={(_, value, reason) => {
-                      if (reason === "input") setLegacySearch(value);
-                      if (reason === "clear") setLegacySearch("");
-                    }}
-                    filterOptions={(x) => x}
-                    getOptionLabel={(o) => (o.uuid ? legacyLabel(o) : o.name)}
-                    isOptionEqualToValue={(o, v) => o.id === v.id}
-                    getOptionDisabled={(o) =>
-                      !!o.linked_internal_item &&
-                      o.linked_internal_item.id !== formData.id
-                    }
-                    renderOption={(props, o) => (
-                      <li {...props} key={o.id}>
-                        <Stack
-                          direction="row"
-                          spacing={1.5}
-                          alignItems="center"
-                          width="100%"
-                        >
-                          <Image
-                            src={o.image_url || "/images/products/product.svg"}
-                            alt={o.name}
-                            width={32}
-                            height={32}
-                            style={{ objectFit: "cover", borderRadius: 4 }}
-                          />
-                          <Box flex={1} minWidth={0}>
-                            <Typography variant="body2" noWrap>
-                              {o.name}
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              {o.uuid}
-                              {o.is_sub_qty &&
-                                ` · ${o.issue_pack_qty} per pack`}
-                              {o.linked_internal_item &&
-                                o.linked_internal_item.id !== formData.id &&
-                                ` · linked to ${o.linked_internal_item.code}`}
-                            </Typography>
-                          </Box>
-                        </Stack>
-                      </li>
-                    )}
-                    renderInput={(params) => (
-                      <CustomTextField
-                        {...params}
-                        placeholder="Search by name or UUID (optional)"
-                      />
-                    )}
+                    placeholder="e.g. INT-0001"
+                    inputProps={{ maxLength: 50 }}
+                    fullWidth
+                    value={formData.uuid}
+                    error={!!uuidError}
+                    onChange={(e: any) => set("uuid", cleanUuidInput(e.target.value))}
                   />
                   <Typography
                     variant="caption"
-                    color="textSecondary"
+                    color={uuidError ? "error" : "textSecondary"}
                     display="block"
                     mt={0.5}
                   >
-                    The old product this item replaces. Picking one fills the
-                    empty fields from it.
+                    {uuidError ??
+                      (isEdit
+                        ? "Unique in the company."
+                        : "Generated for you; you can change it. Must be unique in the company.")}
                   </Typography>
                 </Grid>
-                <Grid size={{ xs: 12, md: 4 }}></Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
                   <Typography variant="body2" gutterBottom>
                     Name
@@ -661,7 +536,7 @@ const InternalItemDrawer: React.FC<InternalItemDrawerProps> = ({
               variant="contained"
               size="large"
               type="submit"
-              disabled={isSaving}
+              disabled={isSaving || uuidChecking}
               sx={{ borderRadius: 3, minWidth: 120 }}
             >
               {isSaving

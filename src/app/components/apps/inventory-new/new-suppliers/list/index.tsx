@@ -198,6 +198,23 @@ const SupplierList = () => {
     setDrawerOpen(true);
   };
 
+  // empty form; used after a successful save and when the drawer is closed (not on an error)
+  const resetForm = () =>
+    setFormData({
+      id: 0,
+      name: "",
+      status: true,
+      company_id: user.company_id,
+      phone: "",
+      contact_person_phone: "",
+      contact_person_email: "",
+      contact_person_name: "",
+      email: "",
+      postcode: "",
+      street: "",
+      location: "",
+    });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -213,26 +230,12 @@ const SupplierList = () => {
         toast.success(result.data.message);
 
         setDrawerOpen(false);
+        resetForm();
         fetchSuppliers();
-      } else {
       }
     } catch (error) {
       console.log(error, "error");
     } finally {
-      setFormData({
-        id: 0,
-        name: "",
-        status: true,
-        company_id: user.company_id,
-        phone: "",
-        contact_person_phone: "",
-        contact_person_email: "",
-        contact_person_name: "",
-        email: "",
-        postcode: "",
-        street: "",
-        location: "",
-      });
       setIsSaving(false);
     }
     setIsSaving(false);
@@ -253,26 +256,12 @@ const SupplierList = () => {
         toast.success(result.data.message);
 
         setEditDrawerOpen(false);
+        resetForm();
         fetchSuppliers();
-      } else {
       }
     } catch (error) {
       console.log(error, "error");
     } finally {
-      setFormData({
-        id: 0,
-        name: "",
-        status: true,
-        company_id: user.company_id,
-        phone: "",
-        contact_person_phone: "",
-        contact_person_email: "",
-        contact_person_name: "",
-        email: "",
-        postcode: "",
-        street: "",
-        location: "",
-      });
       setIsSaving(false);
     }
   };
@@ -1418,7 +1407,10 @@ const SupplierList = () => {
         {/* Add supplier */}
         <SupplierForm
           open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
+          onClose={() => {
+            setDrawerOpen(false);
+            resetForm();
+          }}
           formData={formData}
           setFormData={setFormData}
           onSubmit={handleSubmit}
@@ -1429,7 +1421,10 @@ const SupplierList = () => {
         {/* Edit supplier */}
         <SupplierForm
           open={editDrawerOpen}
-          onClose={() => setEditDrawerOpen(false)}
+          onClose={() => {
+            setEditDrawerOpen(false);
+            resetForm();
+          }}
           supplierId={selectedTaskId}
           formData={formData}
           setFormData={setFormData}

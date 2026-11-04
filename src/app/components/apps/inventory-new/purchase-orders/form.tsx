@@ -21,7 +21,10 @@ import { InventoryOptions, money } from "../shared/useInventoryOptions";
 import { isoDate, splitQty } from "../shared/orderUtils";
 
 interface OrderableItem {
+  // "supplierItemId:internalItemId": a supplier item linked to several internal items shows once per internal item
+  key: string;
   id: number;
+  internal_item_id: number;
   supplier_code: string;
   name: string;
   internal_item_code: string;
@@ -35,6 +38,8 @@ interface OrderableItem {
 
 interface Line {
   supplier_item_id: number;
+  // the internal item this line is stocked as
+  internal_item_id: number;
   packs: string;
   units: string;
 }
@@ -80,6 +85,7 @@ const PurchaseOrderDrawer: React.FC<PurchaseOrderDrawerProps> = ({
           : { packs: l.qty_packs, units: 0 };
         return {
           supplier_item_id: l.supplier_item_id,
+          internal_item_id: l.internal_item_id,
           packs: String(q.packs),
           units: q.units ? String(q.units) : "",
         };
@@ -100,7 +106,8 @@ const PurchaseOrderDrawer: React.FC<PurchaseOrderDrawerProps> = ({
       .catch(() => setItems([]));
   }, [open, companyId, supplierId, storeId]);
 
-  const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  const itemByKey = useMemo(() => new Map(items.map((i) => [i.key, i])), [items]);
+  const lineKey = (l: Line) => `${l.supplier_item_id}:${l.internal_item_id}`;
 
   const lineBase = (line: Line, item?: OrderableItem) =>
     item
@@ -112,7 +119,7 @@ const PurchaseOrderDrawer: React.FC<PurchaseOrderDrawerProps> = ({
       ? lineBase(line, item) * (item.pack_price / item.pack_qty)
       : 0;
   const total = lines.reduce(
-    (t, l) => t + lineTotal(l, itemById.get(l.supplier_item_id)),
+    (t, l) => t + lineTotal(l, itemByKey.get(lineKey(l))),
     0,
   );
 
@@ -144,6 +151,7 @@ const PurchaseOrderDrawer: React.FC<PurchaseOrderDrawerProps> = ({
         place_order: placeOrder,
         lines: lines.map((l) => ({
           supplier_item_id: l.supplier_item_id,
+          internal_item_id: l.internal_item_id,
           qty_packs: Number(l.packs || 0),
           qty_units: Number(l.units || 0),
         })),
@@ -165,6 +173,7 @@ const PurchaseOrderDrawer: React.FC<PurchaseOrderDrawerProps> = ({
     }
   };
 
+  // a supplier item goes on the order once (for one of its internal items)
   const available = items.filter(
     (i) => !lines.some((l) => l.supplier_item_id === i.id),
   );
@@ -289,12 +298,17 @@ const PurchaseOrderDrawer: React.FC<PurchaseOrderDrawerProps> = ({
             if (value)
               setLines((prev) => [
                 ...prev,
-                { supplier_item_id: value.id, packs: "1", units: "" },
+                {
+                  supplier_item_id: value.id,
+                  internal_item_id: value.internal_item_id,
+                  packs: "1",
+                  units: "",
+                },
               ]);
           }}
           getOptionLabel={(o) => `${o.supplier_code} · ${o.name}`}
           renderOption={(props, o) => (
-            <li {...props} key={o.id}>
+            <li {...props} key={o.key}>
               <Box>
                 <Typography variant="body2">
                   {o.supplier_code} · {o.name}
@@ -319,11 +333,11 @@ const PurchaseOrderDrawer: React.FC<PurchaseOrderDrawerProps> = ({
       )}
 
       {lines.map((line, index) => {
-        const item = itemById.get(line.supplier_item_id);
+        const item = itemByKey.get(lineKey(line));
         const base = lineBase(line, item);
         return (
           <Box
-            key={line.supplier_item_id}
+            key={lineKey(line)}
             sx={{
               border: "1px solid #eef2f7",
               borderRadius: 1,

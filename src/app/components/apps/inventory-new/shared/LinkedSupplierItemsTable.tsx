@@ -75,7 +75,9 @@ const LinkedSupplierItemsTable: React.FC<LinkedSupplierItemsTableProps> = ({
             </TableCell>
             <TableCell>
               <Typography variant="body2">
-                {qty(s.pack_qty)} {s.pack_unit_name ?? ""}
+                {s.is_pack === false
+                  ? "Single unit"
+                  : `${qty(s.pack_qty)} ${s.pack_unit_name ?? ""}`}
               </Typography>
             </TableCell>
             <TableCell>

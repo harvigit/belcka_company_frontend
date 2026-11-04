@@ -13,6 +13,8 @@ export interface InternalItemOption extends InventoryOption {
   issue_pack_qty?: number | null;
   issue_pack_unit_name?: string | null;
   unit_name: string | null;
+  // supplier items linked to it
+  supplier_items_count?: number;
 }
 
 export interface InventoryOptions {
