@@ -189,17 +189,10 @@ const InternalItemDetails: React.FC<InternalItemDetailsProps> = ({
               </Box>
             )}
             <Stack spacing={1.5} mb={3}>
+              <DetailRow label="UUID" value={item.uuid} />
               <DetailRow label="Code" value={item.code} />
               <DetailRow label="Name" value={item.name} />
               <DetailRow label="Category" value={item.category_name ?? "-"} />
-              <DetailRow
-                label="Inventory 1 product"
-                value={
-                  item.legacy_product_id
-                    ? `${item.legacy_product_uuid} · ${item.legacy_product_name}`
-                    : "-"
-                }
-              />
               <DetailRow
                 label="Base price"
                 value={

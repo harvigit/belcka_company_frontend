@@ -48,7 +48,10 @@ const QuickAddCategory: React.FC<QuickAddCategoryProps> = ({ open, onClose, comp
   return (
     <CategoryForm
       open={open}
-      onClose={onClose}
+      onClose={() => {
+        setFormData(emptyCategory(companyId));
+        onClose();
+      }}
       formData={formData}
       setFormData={setFormData}
       onSubmit={handleSubmit}

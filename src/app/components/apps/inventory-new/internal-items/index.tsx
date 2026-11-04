@@ -21,6 +21,8 @@ import {
   IconChevronRight,
   IconDotsVertical,
   IconEdit,
+  IconFileExport,
+  IconFileImport,
   IconPlus,
   IconSearch,
   IconStarFilled,
@@ -38,9 +40,11 @@ import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibi
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
+import ExcelImportModal from "@/app/components/common/ExcelImportModal";
 import InventoryTable from "../shared/InventoryTable";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import LinkedSupplierItemsTable from "../shared/LinkedSupplierItemsTable";
+import LinkSupplierItemsDialog from "../shared/LinkSupplierItemsDialog";
 import ColumnVisibilityButton from "../shared/ColumnVisibilityButton";
 import FilterButton from "../shared/FilterButton";
 import { keepVisibleSelection, selectColumn } from "../shared/selectColumn";
@@ -82,14 +86,12 @@ const InternalItemList: React.FC = () => {
   const [toDelete, setToDelete] = useState<number[]>([]);
   const [switchLoading, setSwitchLoading] = useState(false);
   const [viewItemId, setViewItemId] = useState<number | null>(null);
-  // ?id= (from a notification) shows just that item and opens its details once
   const [focusId, setFocusId] = useState<number | null>(
     Number(searchParams?.get("id")) || null,
   );
   const openFocusRef = useRef(!!focusId);
   const router = useRouter();
   const pathname = usePathname();
-  // leaving the notification view also takes ?id= out of the URL
   const clearFocus = () => {
     if (!focusId) return;
     setFocusId(null);
@@ -140,7 +142,6 @@ const InternalItemList: React.FC = () => {
           setViewItemId(focusId);
         }
         openFocusRef.current = false;
-        // a new page, search or filter drops selected rows that are no longer shown
         setSelectedRowIds(keepVisibleSelection(rows));
         setPageCount(res.data.data?.totalPages || 0);
         setTotalRows(res.data.data?.totalItems || 0);
@@ -159,6 +160,7 @@ const InternalItemList: React.FC = () => {
   const openEdit = (item: any) => {
     setFormData({
       id: item.id,
+      uuid: item.uuid ?? "",
       code: item.code ?? "",
       name: item.name ?? "",
       description: item.description ?? "",
@@ -170,10 +172,6 @@ const InternalItemList: React.FC = () => {
       issue_pack_unit_id: item.issue_pack_unit_id ?? "",
       image_file: null,
       image_url: item.image_url ?? null,
-      legacy_product_id: item.legacy_product_id ?? null,
-      legacy_product_label: item.legacy_product_id
-        ? `${item.legacy_product_uuid ?? ""} · ${item.legacy_product_name ?? ""}`
-        : null,
       base_price: item.base_price ?? null,
       remove_image: false,
     });
@@ -181,11 +179,20 @@ const InternalItemList: React.FC = () => {
     setDrawerOpen(true);
   };
 
+  const [linkFor, setLinkFor] = useState<number | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const openLinkSupplierItem = (item: any) => {
+    setLinkFor(item.id);
+    setLinkOpen(true);
+  };
+
+  const openNewSupplierItem = (internalItemId: number | null) => {
+    const item = options.internal_items.find((i) => i.id === internalItemId);
     setSupplierForm({
       ...emptySupplierItem,
-      internal_item_id: item.id,
-      name: item.name ?? "",
+      internal_item_ids: internalItemId ? [internalItemId] : [],
+      name: item?.name ?? "",
     });
     setSupplierDrawerOpen(true);
   };
@@ -194,16 +201,8 @@ const InternalItemList: React.FC = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      // multipart so the photo can go with the form
-      // image fields go separately; label and base price are display only
-      const {
-        image_file,
-        image_url,
-        remove_image,
-        legacy_product_label,
-        base_price,
-        ...fields
-      } = formData;
+      const { image_file, image_url, remove_image, base_price, ...fields } =
+        formData;
       const payload = new FormData();
       Object.entries({ ...fields, company_id: companyId }).forEach(
         ([key, value]) => {
@@ -227,7 +226,6 @@ const InternalItemList: React.FC = () => {
         reloadOptions();
       }
     } catch (error) {
-      // the api interceptor already shows the error message
     } finally {
       setIsSaving(false);
     }
@@ -245,9 +243,9 @@ const InternalItemList: React.FC = () => {
         toast.success(result.data.message);
         setSupplierDrawerOpen(false);
         fetchItems();
+        reloadOptions();
       }
     } catch (error) {
-      // the api interceptor already shows the error message
     } finally {
       setIsSaving(false);
     }
@@ -264,7 +262,6 @@ const InternalItemList: React.FC = () => {
       fetchItems();
       reloadOptions();
     } catch (error) {
-      // the api interceptor already shows the error message
     } finally {
       setToDelete([]);
     }
@@ -296,6 +293,33 @@ const InternalItemList: React.FC = () => {
     }
   };
 
+  const downloadExcel = async (
+    url: string,
+    companyId: number | null | undefined,
+    ids: number[],
+    fileName: string,
+  ) => {
+    try {
+      const res = await api.post(
+        url,
+        { company_id: companyId, ids: ids.join(",") },
+        { responseType: "blob" },
+      );
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const href = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(href);
+    } catch (err) {
+      console.error("Export failed", err);
+    }
+  };
   const columnHelper = createColumnHelper<any>();
   const columns = [
     selectColumn(data, selectedRowIds, setSelectedRowIds),
@@ -348,6 +372,14 @@ const InternalItemList: React.FC = () => {
         </Stack>
       ),
     }),
+    columnHelper.accessor("uuid", {
+      header: "UUID",
+      cell: ({ row }) => (
+        <Typography className="f-14" ml={1} whiteSpace="nowrap">
+          {row.original.uuid}
+        </Typography>
+      ),
+    }),
     columnHelper.accessor("code", {
       header: "Code",
       cell: ({ row }) => (
@@ -383,22 +415,6 @@ const InternalItemList: React.FC = () => {
           </Typography>
         </Tooltip>
       ),
-    }),
-    columnHelper.accessor("legacy_product_uuid", {
-      id: "legacyProduct",
-      header: "Inventory 1 Product",
-      cell: ({ row }) =>
-        row.original.legacy_product_id ? (
-          <Tooltip title={row.original.legacy_product_name ?? ""}>
-            <Typography className="f-14" ml={1} whiteSpace="nowrap">
-              {row.original.legacy_product_uuid}
-            </Typography>
-          </Tooltip>
-        ) : (
-          <Typography className="f-14" ml={1}>
-            -
-          </Typography>
-        ),
     }),
     columnHelper.accessor("category_name", {
       header: "Category",
@@ -627,7 +643,42 @@ const InternalItemList: React.FC = () => {
                 <IconX size={18} />
               </Button>
             )}
+            <Button
+              variant="contained"
+              onClick={() =>
+                downloadExcel(
+                  "inventory-new/internal-items/export",
+                  companyId,
+                  Array.from(selectedRowIds),
+                  "internal_items.xlsx",
+                )
+              }
+              sx={{ mt: { xs: 1, sm: 0 } }}
+            >
+              <IconFileExport width={18} /> Export
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<IconFileImport width={18} />}
+              onClick={() => setImportOpen(true)}
+            >
+              Import
+            </Button>
           </Grid>
+          <ExcelImportModal
+            open={importOpen}
+            onClose={() => setImportOpen(false)}
+            importUrl="inventory-new/internal-items/import"
+            sampleHref="/files/internal_items_import.xlsx"
+            extraFormData={{
+              company_id: companyId,
+              selected_type: "addEditRecord",
+            }}
+            onSuccess={() => {
+              fetchItems();
+              reloadOptions();
+            }}
+          />
 
           <Stack
             mb={2}
@@ -713,6 +764,19 @@ const InternalItemList: React.FC = () => {
           onClose={() => setViewItemId(null)}
           onEdit={openEdit}
           onAddSupplierItem={openLinkSupplierItem}
+        />
+
+        <LinkSupplierItemsDialog
+          open={linkOpen}
+          onClose={() => setLinkOpen(false)}
+          companyId={companyId}
+          options={options}
+          internalItemId={linkFor}
+          onLinked={() => {
+            fetchItems();
+            reloadOptions();
+          }}
+          onCreateNew={openNewSupplierItem}
         />
 
         <SupplierItemDrawer

@@ -138,6 +138,8 @@ const ReorderPlanner: React.FC<ReorderPlannerProps> = ({
         .map((part) => ({
           store_id: r.store_id,
           supplier_item_id: part.supplier_item_id,
+          // a supplier item can serve several internal items: say which one this is for
+          internal_item_id: r.internal_item_id,
           packs: Number(part.packs),
         }));
     });

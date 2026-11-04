@@ -54,7 +54,10 @@ const QuickAddSupplier: React.FC<QuickAddSupplierProps> = ({ open, onClose, comp
   return (
     <SupplierForm
       open={open}
-      onClose={onClose}
+      onClose={() => {
+        setFormData(emptySupplier(companyId));
+        onClose();
+      }}
       formData={formData}
       setFormData={setFormData}
       onSubmit={handleSubmit}
