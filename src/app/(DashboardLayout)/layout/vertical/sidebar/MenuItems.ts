@@ -338,14 +338,14 @@ const MenuItems: NavGroup[] = [
   {
     id: uniqueId(),
     title: "Suppliers",
-    slug: "supplier-products",
+    slug: "new-suppliers",
     icon: IconTruck,
     href: "/apps/inventory-new/suppliers/list",
   },
   {
     id: uniqueId(),
     title: "Categories",
-    slug: "internal-products",
+    slug: "new-categories",
     icon: IconKeyframes,
     href: "/apps/inventory-new/categories/list",
   },

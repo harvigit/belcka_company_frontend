@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   Drawer,
+  Fab,
   Grid,
   IconButton,
   Stack,
@@ -13,10 +14,11 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import Image from "next/image";
 import { useDropzone } from "react-dropzone";
-import { IconLock, IconPhoto, IconTrash, IconX } from "@tabler/icons-react";
+import { IconLock, IconPhoto, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import QuickAddCategory from "../shared/QuickAddCategory";
 import {
   InventoryOption,
   InventoryOptions,
@@ -84,6 +86,8 @@ interface InternalItemDrawerProps {
   isSaving: boolean;
   options: InventoryOptions;
   companyId?: number | null;
+  // reloads the dropdown data, so a category added here can be picked
+  onOptionsChanged?: () => Promise<void> | void;
 }
 
 const legacyLabel = (p: { uuid: string; name: string }) =>
@@ -99,8 +103,10 @@ const InternalItemDrawer: React.FC<InternalItemDrawerProps> = ({
   isSaving,
   options,
   companyId,
+  onOptionsChanged,
 }) => {
   const isEdit = !!formData.id;
+  const [quickCategoryOpen, setQuickCategoryOpen] = useState(false);
   const set = (name: keyof InternalItemForm, value: any) =>
     setFormData((prev) => ({ ...prev, [name]: value }));
 
@@ -450,20 +456,33 @@ const InternalItemDrawer: React.FC<InternalItemDrawerProps> = ({
                   <Typography variant="body2" gutterBottom>
                     Category
                   </Typography>
-                  <Autocomplete
-                    className="product_selection"
-                    options={options.categories}
-                    value={optionById(options.categories, formData.category_id)}
-                    onChange={(_, value) => set("category_id", value?.id ?? "")}
-                    getOptionLabel={(o) => o.name}
-                    isOptionEqualToValue={(o, v) => o.id === v.id}
-                    renderInput={(params) => (
-                      <CustomTextField
-                        {...params}
-                        placeholder="Select category"
-                      />
-                    )}
-                  />
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Autocomplete
+                      className="product_selection"
+                      fullWidth
+                      options={options.categories}
+                      value={optionById(options.categories, formData.category_id)}
+                      onChange={(_, value) => set("category_id", value?.id ?? "")}
+                      getOptionLabel={(o) => o.name}
+                      isOptionEqualToValue={(o, v) => o.id === v.id}
+                      renderInput={(params) => (
+                        <CustomTextField
+                          {...params}
+                          placeholder="Select category"
+                        />
+                      )}
+                    />
+                    <Tooltip title="Add category">
+                      <Fab
+                        color="primary"
+                        size="small"
+                        sx={{ flexShrink: 0 }}
+                        onClick={() => setQuickCategoryOpen(true)}
+                      >
+                        <IconPlus size={14} />
+                      </Fab>
+                    </Tooltip>
+                  </Box>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6, md:4 }}>
                   <Typography variant="body2" gutterBottom>
@@ -669,6 +688,16 @@ const InternalItemDrawer: React.FC<InternalItemDrawerProps> = ({
           </Box>
         </Box>
       </Box>
+
+      <QuickAddCategory
+        open={quickCategoryOpen}
+        onClose={() => setQuickCategoryOpen(false)}
+        companyId={companyId ?? null}
+        onCreated={async (id) => {
+          await onOptionsChanged?.();
+          set("category_id", id);
+        }}
+      />
     </Drawer>
   );
 };

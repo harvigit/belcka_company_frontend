@@ -55,7 +55,7 @@ const SupplierItemList: React.FC = () => {
       storageKey: `cv_${user?.company_id}_${user?.id}_inventory_new_supplier_items`,
       enabled: !!user?.id,
     });
-  const { options } = useInventoryOptions(companyId);
+  const { options, reload: reloadOptions } = useInventoryOptions(companyId);
 
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -492,6 +492,8 @@ const SupplierItemList: React.FC = () => {
           onSubmit={handleSubmit}
           isSaving={isSaving}
           options={options}
+          companyId={companyId}
+          onOptionsChanged={reloadOptions}
         />
 
         <ConfirmDialog

@@ -806,7 +806,7 @@ const CategoryList = () => {
   }, [searchTerm]);
 
   return (
-    <PermissionGuard permission="Internal Products">
+    <PermissionGuard permission="New Categories">
       <Box
         sx={{
           height: "calc(100vh - 100px)",
