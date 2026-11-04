@@ -704,6 +704,7 @@ const InternalItemList: React.FC = () => {
           isSaving={isSaving}
           options={options}
           companyId={companyId}
+          onOptionsChanged={reloadOptions}
         />
 
         <InternalItemDetails
@@ -722,6 +723,8 @@ const InternalItemList: React.FC = () => {
           onSubmit={handleSupplierSubmit}
           isSaving={isSaving}
           options={options}
+          companyId={companyId}
+          onOptionsChanged={reloadOptions}
         />
 
         <ConfirmDialog

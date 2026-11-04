@@ -955,7 +955,7 @@ const SupplierList = () => {
   }));
 
   return (
-    <PermissionGuard permission="Supplier Products">
+    <PermissionGuard permission="New Suppliers">
       <Box
         sx={{
           height: "calc(100vh - 100px)",

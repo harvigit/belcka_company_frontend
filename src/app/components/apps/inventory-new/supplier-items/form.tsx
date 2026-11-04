@@ -1,16 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Autocomplete,
+  Box,
+  Fab,
   FormControlLabel,
   MenuItem,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
+import { IconPlus } from "@tabler/icons-react";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import FormDrawer from "../shared/FormDrawer";
 import FormField from "../shared/FormField";
 import { InventoryOptions } from "../shared/useInventoryOptions";
+import QuickAddSupplier from "../shared/QuickAddSupplier";
 
 export interface SupplierItemForm {
   id?: number;
@@ -45,6 +50,9 @@ interface SupplierItemDrawerProps {
   onSubmit: (e: React.FormEvent) => void;
   isSaving: boolean;
   options: InventoryOptions;
+  companyId?: number | null;
+  // reloads the dropdown data, so a supplier added here can be picked
+  onOptionsChanged?: () => Promise<void> | void;
 }
 
 const SupplierItemDrawer: React.FC<SupplierItemDrawerProps> = ({
@@ -55,7 +63,10 @@ const SupplierItemDrawer: React.FC<SupplierItemDrawerProps> = ({
   onSubmit,
   isSaving,
   options,
+  companyId,
+  onOptionsChanged,
 }) => {
+  const [quickSupplierOpen, setQuickSupplierOpen] = useState(false);
   const set = (name: keyof SupplierItemForm, value: any) =>
     setFormData((prev) => ({ ...prev, [name]: value }));
   const internalItem =
@@ -78,24 +89,45 @@ const SupplierItemDrawer: React.FC<SupplierItemDrawerProps> = ({
       isSaving={isSaving}
     >
       <FormField label="Supplier">
-        <CustomTextField
-          select
-          value={formData.supplier_id}
-          onChange={(e: any) => set("supplier_id", e.target.value)}
-          fullWidth
-          size="small"
-          slotProps={{ select: { displayEmpty: true } }}
-        >
-          <MenuItem value="" disabled>
-            Select supplier
-          </MenuItem>
-          {options.suppliers.map((s) => (
-            <MenuItem key={s.id} value={s.id}>
-              {s.name}
+        <Box display="flex" alignItems="center" gap={1}>
+          <CustomTextField
+            select
+            value={formData.supplier_id}
+            onChange={(e: any) => set("supplier_id", e.target.value)}
+            fullWidth
+            size="small"
+            slotProps={{ select: { displayEmpty: true } }}
+          >
+            <MenuItem value="" disabled>
+              Select supplier
             </MenuItem>
-          ))}
-        </CustomTextField>
+            {options.suppliers.map((s) => (
+              <MenuItem key={s.id} value={s.id}>
+                {s.name}
+              </MenuItem>
+            ))}
+          </CustomTextField>
+          <Tooltip title="Add supplier">
+            <Fab
+              color="primary"
+              size="small"
+              sx={{ flexShrink: 0 }}
+              onClick={() => setQuickSupplierOpen(true)}
+            >
+              <IconPlus size={14} />
+            </Fab>
+          </Tooltip>
+        </Box>
       </FormField>
+      <QuickAddSupplier
+        open={quickSupplierOpen}
+        onClose={() => setQuickSupplierOpen(false)}
+        companyId={companyId ?? null}
+        onCreated={async (id) => {
+          await onOptionsChanged?.();
+          set("supplier_id", id);
+        }}
+      />
 
       <FormField
         label="Supplier code"
