@@ -33,7 +33,7 @@ import {
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
 import { IconSettings, IconFileText, IconFileCheck } from "@tabler/icons-react";
-import { IconBox } from "@tabler/icons-react";
+import { IconBox, IconTruck } from "@tabler/icons-react";
 import { IconPoint } from "@tabler/icons-react";
 
 const MenuItems: NavGroup[] = [
@@ -334,6 +334,20 @@ const MenuItems: NavGroup[] = [
     slug: "supplier-products",
     icon: IconBox,
     href: "/apps/inventory-new/supplier-items/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Suppliers",
+    slug: "supplier-products",
+    icon: IconTruck,
+    href: "/apps/inventory-new/suppliers/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Categories",
+    slug: "internal-products",
+    icon: IconKeyframes,
+    href: "/apps/inventory-new/categories/list",
   },
   // Settings stays last: SidebarItems pins the "settings" slug to the bottom of the sidebar.
   {
