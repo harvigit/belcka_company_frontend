@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import api from '@/utils/axios';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
-import type {ContractFormField} from '@/app/components/apps/settings/contracts/contracts-api';
+import type {ContractFormField} from '@/app/components/apps/contracts/contracts-api';
 
 type MissingUserField = { key: string; label: string; fillable: boolean };
 

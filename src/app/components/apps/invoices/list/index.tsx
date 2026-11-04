@@ -314,6 +314,13 @@ const InvoiceList = () => {
     setCreateOpen(true);
   };
 
+  // The view drawer already loaded this invoice's detail, so edit it without fetching again.
+  const editViewedInvoice = (invoice: InvoiceRow) => {
+    setSelectedInvoice(invoice);
+    setFormMode("edit");
+    setCreateOpen(true);
+  };
+
   const closeInvoiceForm = () => {
     setCreateOpen(false);
     setSelectedInvoice(null);
@@ -1262,9 +1269,7 @@ Team Belcka
           invoiceId={viewInvoiceId}
           companyId={companyId}
           onClose={closeInvoiceView}
-          onEdit={(invoice) => {
-            openEditInvoice(invoice);
-          }}
+          onEdit={editViewedInvoice}
         />
 
         <AttachmentLightbox

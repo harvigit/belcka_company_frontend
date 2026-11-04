@@ -57,7 +57,7 @@ import {
   ContractApproval,
   ContractApprovalsResponse,
   downloadContractPdf,
-} from "@/app/components/apps/settings/contracts/contracts-api";
+} from "@/app/components/apps/contracts/contracts-api";
 
 const TABS: {
   value: ApprovalTab;

@@ -107,7 +107,9 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
     setSelectedTaskId(null);
   };
   // Fetch data
+  // The drawer stays mounted on the products list; load sets only while it is open.
   const fetchSets = async () => {
+    if (!openDrawer) return;
     setFetchSet(true);
     try {
       let url = `products/get-sets?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
@@ -128,6 +130,7 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
 
   useEffect(() => {
     setUsersToDelete([]);
+    if (openDrawer) fetchSets();
   }, [openDrawer]);
 
   const filteredData = useMemo(() => {
@@ -319,7 +322,7 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
     data: filteredData,
     columns,
     fetchData: fetchSets,
-    debounceDependencies: [searchTerm, user?.company_id, openDrawer],
+    debounceDependencies: [searchTerm, user?.company_id],
     state: { columnVisibility },
     onColumnVisibilityChange,
   });

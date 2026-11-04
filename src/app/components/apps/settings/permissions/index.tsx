@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { Box } from '@mui/system';
 import api from '@/utils/axios';
+import { isHiddenPermission } from '@/lib/permissions';
 import toast from 'react-hot-toast';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
 import Image from 'next/image';
@@ -72,7 +73,9 @@ export default function PermissionSettings() {
             });
 
             if (res.data?.IsSuccess) {
-                const normalizedPermissions = res.data.permissions.map((perm: any) => {
+                const normalizedPermissions = res.data.permissions
+                    .filter((perm: any) => !isHiddenPermission(perm))
+                    .map((perm: any) => {
                     const { is_web_enabled, is_app_enabled } = statusToFlags(perm.status);
 
                     return {
