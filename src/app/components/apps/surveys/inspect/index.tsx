@@ -25,6 +25,9 @@ import {
   InputAdornment,
   Collapse,
   InputBase,
+  Menu,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import {
   IconArrowLeft,
@@ -50,6 +53,9 @@ import {
   IconRuler,
   IconDoor,
   IconX,
+  IconDots,
+  IconHome,
+  IconMapPinPlus,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -60,6 +66,7 @@ import InspectionFormPanel, {
   formSectionStats,
 } from "../inspection-form/InspectionFormPanel";
 import BlankCard from "@/app/components/shared/BlankCard";
+import { AddElementDialog, AddRoomDialog } from "./SiteAdditionsDialogs";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import {
   Survey,
@@ -203,6 +210,15 @@ function calculateQuantity(
   return "";
 }
 
+// Compact marker for the navigator, where the full "Added on site" chip doesn't fit.
+const AddedOnSiteMark = () => (
+  <Tooltip title="Added on site">
+    <Box component="span" sx={{ display: "inline-flex", verticalAlign: "middle", ml: 0.5, color: "info.main" }}>
+      <IconMapPinPlus size={14} />
+    </Box>
+  </Tooltip>
+);
+
 export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   const router = useRouter();
   const access = useSurveyAccess();
@@ -268,6 +284,171 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   // Only the assigned surveyor or a user with the Surveys permission may record inspection evidence.
   const canRecordInspection = access.is_admin || Boolean(survey && survey.surveyor_id === access.user_id);
   const isReadOnly = isStatusLocked || !canRecordInspection;
+  // Rooms and elements can be added on site while the inspection is open (the API's inspection statuses).
+  const canAddOnSite = Boolean(
+    survey && !isReadOnly && !isUnassigned && ["draft", "assigned", "in_progress"].includes(survey.status),
+  );
+  const [optionsAnchor, setOptionsAnchor] = useState<HTMLElement | null>(null);
+  const [addElementOpen, setAddElementOpen] = useState(false);
+  const [addRoomOpen, setAddRoomOpen] = useState(false);
+
+  // The property detail is step 1: open it first while it still has required fields to fill in.
+  const formOpenedOnLoad = useRef(false);
+  useEffect(() => {
+    const data = inspectionForm.data;
+    if (formOpenedOnLoad.current || !data) return;
+    formOpenedOnLoad.current = true;
+    if (data.form && data.progress.required_answered < data.progress.required_total) {
+      setFormOpen(true);
+    }
+  }, [inspectionForm.data]);
+
+  // Photo grid of the active element, uploading new photos with the given type.
+  const renderPhotoGrid = (photos: SurveyItemPhoto[], photoType: "general" | "damage", emptyText: string) =>
+    photos.length === 0 ? (
+      <Box
+        component="label"
+        sx={{
+          p: 3,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: "8px",
+          border: "1px dashed",
+          borderColor: "divider",
+          bgcolor: "grey.50",
+          cursor: isReadOnly || isUnassigned ? "default" : "pointer",
+          "&:hover": {
+            borderColor: isReadOnly || isUnassigned ? "divider" : "primary.main",
+          },
+        }}
+      >
+        <input
+          type="file"
+          hidden
+          accept="image/*"
+          capture="environment"
+          disabled={uploadingPhoto || isReadOnly || isUnassigned}
+          onChange={handlePhotoUpload(photoType)}
+        />
+        <IconCamera size={28} color="#94a3b8" />
+        <Typography variant="body2" color="text.secondary" mt={0.5}>
+          {emptyText}
+        </Typography>
+      </Box>
+    ) : (
+      <Grid container spacing={1.5}>
+        {photos.map((photo: SurveyItemPhoto, pIdx: number) => (
+          <Grid size={{ xs: 6, sm: 4, md: 3 }} key={photo.id}>
+            <Paper
+              variant="outlined"
+              sx={{
+                borderRadius: "8px",
+                overflow: "hidden",
+                position: "relative",
+                borderColor: "divider",
+                "&:hover .photo-overlay": { opacity: 1 },
+              }}
+            >
+              <Box
+                component="img"
+                src={getImageUrl(photo.file_path)}
+                alt={photo.file_name || `Evidence ${pIdx + 1}`}
+                sx={{
+                  width: "100%",
+                  height: 110,
+                  objectFit: "cover",
+                  display: "block",
+                  cursor: "pointer",
+                }}
+                onClick={() => setPreviewPhotoUrl(getImageUrl(photo.file_path))}
+              />
+              {photo.photo_type === "damage" && photoType === "general" && (
+                <Chip
+                  label="Damage"
+                  color="error"
+                  size="small"
+                  sx={{ position: "absolute", top: 6, left: 6, height: 20, fontSize: "0.65rem", fontWeight: 700 }}
+                />
+              )}
+
+              {/* Hover overlay with zoom & delete */}
+              <Stack
+                className="photo-overlay"
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                justifyContent="center"
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  bgcolor: "rgba(0,0,0,0.5)",
+                  opacity: 0,
+                  transition: "opacity 0.2s ease",
+                }}
+              >
+                <Tooltip title="View Full Photo">
+                  <IconButton
+                    size="small"
+                    sx={{ color: "white", bgcolor: "rgba(255,255,255,0.2)" }}
+                    onClick={() => setPreviewPhotoUrl(getImageUrl(photo.file_path))}
+                  >
+                    <IconEye size={16} />
+                  </IconButton>
+                </Tooltip>
+
+                {!isReadOnly && !isUnassigned && (
+                  <Tooltip title="Delete Photo">
+                    <IconButton
+                      size="small"
+                      sx={{ color: "white", bgcolor: "rgba(239,68,68,0.8)" }}
+                      onClick={() => handleDeletePhoto(photo.id)}
+                    >
+                      <IconTrash size={16} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Stack>
+            </Paper>
+          </Grid>
+        ))}
+
+        {/* Add more photo card */}
+        {!isReadOnly && !isUnassigned && (
+          <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+            <Box
+              component="label"
+              sx={{
+                height: 110,
+                borderRadius: "8px",
+                border: "1px dashed",
+                borderColor: "divider",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                "&:hover": { borderColor: "primary.main" },
+              }}
+            >
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                capture="environment"
+                disabled={uploadingPhoto}
+                onChange={handlePhotoUpload(photoType)}
+              />
+              <IconPlus size={20} color="#64748b" />
+              <Typography variant="caption" color="text.secondary" mt={0.5}>
+                Add Photo
+              </Typography>
+            </Box>
+          </Grid>
+        )}
+      </Grid>
+    );
 
   const handleSubmitInspection = async () => {
     if (!survey) return;
@@ -370,6 +551,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
     if (!activeRoom?.items) return null;
     return activeRoom.items.find((i) => String(i.id) === String(activeItemId)) || activeRoom.items[0] || null;
   }, [activeRoom, activeItemId]);
+  const activePhotos = activeItem?.photos || [];
 
   // Expand active room
   useEffect(() => {
@@ -666,8 +848,8 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
     }
   };
 
-  // Photo upload
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Photo upload; "damage" photos are taken for a damaged element's defect.
+  const handlePhotoUpload = (photoType: "general" | "damage") => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !survey || !activeItem) return;
 
@@ -686,6 +868,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
       formData.append("file", file);
       formData.append("survey_id", String(survey.id));
       formData.append("item_id", String(activeItem.id));
+      formData.append("photo_type", photoType);
 
       const res = await api.post("surveys/upload-photo", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -945,10 +1128,50 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                       Rooms & Areas
                     </Typography>
                   </Stack>
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                    {survey.rooms.length} {survey.rooms.length === 1 ? "room" : "rooms"}
-                  </Typography>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      {survey.rooms.length} {survey.rooms.length === 1 ? "room" : "rooms"}
+                    </Typography>
+                    {canAddOnSite && (
+                      <Tooltip title="Inspection options">
+                        <IconButton size="small" onClick={(e) => setOptionsAnchor(e.currentTarget)}>
+                          <IconDots size={18} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Stack>
                 </Stack>
+                <Menu
+                  anchorEl={optionsAnchor}
+                  open={Boolean(optionsAnchor)}
+                  onClose={() => setOptionsAnchor(null)}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                  transformOrigin={{ vertical: "top", horizontal: "right" }}
+                >
+                  <MenuItem
+                    disabled={!survey.rooms.length}
+                    onClick={() => {
+                      setOptionsAnchor(null);
+                      setAddElementOpen(true);
+                    }}
+                  >
+                    <ListItemIcon>
+                      <IconPlus size={18} />
+                    </ListItemIcon>
+                    <ListItemText primary="Add element" secondary="Pick a room, then choose from the element library" />
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      setOptionsAnchor(null);
+                      setAddRoomOpen(true);
+                    }}
+                  >
+                    <ListItemIcon>
+                      <IconHome size={18} />
+                    </ListItemIcon>
+                    <ListItemText primary="Add room" secondary="Choose a room type; its default elements are added" />
+                  </MenuItem>
+                </Menu>
               </Box>
 
               <Box p={1.5} sx={{ maxHeight: "calc(100vh - 280px)", overflowY: "auto" }}>
@@ -1084,6 +1307,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                             color={isRoomActive ? "primary.main" : "text.primary"}
                           >
                             {rIdx + 1}. {room.name}
+                            {room.added_on_site && <AddedOnSiteMark />}
                           </Typography>
 
                           <Stack direction="row" alignItems="center" spacing={1}>
@@ -1149,6 +1373,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                                       noWrap
                                     >
                                       {item.name}
+                                      {item.added_on_site && !room.added_on_site && <AddedOnSiteMark />}
                                     </Typography>
                                   </Stack>
 
@@ -1566,6 +1791,45 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                           />
                         </Grid>
                       </Grid>
+
+                      {/* Damage photos sit with the defect so the QS sees them together. */}
+                      {condition === "damaged" && (
+                        <Box mt={2.5}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                            <Box>
+                              <Typography variant="subtitle2" fontWeight={700}>
+                                Damage Photos
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Photos of the damage for the QS (optional)
+                              </Typography>
+                            </Box>
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              component="label"
+                              startIcon={uploadingPhoto ? <CircularProgress size={14} /> : <IconCamera size={16} />}
+                              disabled={uploadingPhoto || isReadOnly || isUnassigned}
+                              size="small"
+                            >
+                              {uploadingPhoto ? "Uploading..." : "Add Damage Photo"}
+                              <input
+                                type="file"
+                                hidden
+                                accept="image/*"
+                                capture="environment"
+                                disabled={uploadingPhoto || isReadOnly || isUnassigned}
+                                onChange={handlePhotoUpload("damage")}
+                              />
+                            </Button>
+                          </Stack>
+                          {renderPhotoGrid(
+                            activePhotos.filter((p) => p.photo_type === "damage"),
+                            "damage",
+                            "No damage photos yet. Click to add one.",
+                          )}
+                        </Box>
+                      )}
                     </Box>
                   </>
                 )}
@@ -1627,147 +1891,15 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                         accept="image/*"
                         capture="environment"
                         disabled={uploadingPhoto || isReadOnly || isUnassigned}
-                        onChange={handlePhotoUpload}
+                        onChange={handlePhotoUpload("general")}
                       />
                     </Button>
                   </Stack>
 
-                  {/* Photo Cards Grid */}
-                  {(!activeItem.photos || activeItem.photos.length === 0) ? (
-                    <Box
-                      component="label"
-                      sx={{
-                        p: 3,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderRadius: "8px",
-                        border: "1px dashed",
-                        borderColor: "divider",
-                        bgcolor: "grey.50",
-                        cursor: isReadOnly || isUnassigned ? "default" : "pointer",
-                        "&:hover": {
-                          borderColor: isReadOnly || isUnassigned ? "divider" : "primary.main",
-                        },
-                      }}
-                    >
-                      <input
-                        type="file"
-                        hidden
-                        accept="image/*"
-                        capture="environment"
-                        disabled={uploadingPhoto || isReadOnly || isUnassigned}
-                        onChange={handlePhotoUpload}
-                      />
-                      <IconCamera size={28} color="#94a3b8" />
-                      <Typography variant="body2" color="text.secondary" mt={0.5}>
-                        No photos attached. Click to upload site evidence.
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <Grid container spacing={1.5}>
-                      {activeItem.photos.map((photo: SurveyItemPhoto, pIdx: number) => (
-                        <Grid size={{ xs: 6, sm: 4, md: 3 }} key={photo.id}>
-                          <Paper
-                            variant="outlined"
-                            sx={{
-                              borderRadius: "8px",
-                              overflow: "hidden",
-                              position: "relative",
-                              borderColor: "divider",
-                              "&:hover .photo-overlay": { opacity: 1 },
-                            }}
-                          >
-                            <Box
-                              component="img"
-                              src={getImageUrl(photo.file_path)}
-                              alt={photo.file_name || `Evidence ${pIdx + 1}`}
-                              sx={{
-                                width: "100%",
-                                height: 110,
-                                objectFit: "cover",
-                                display: "block",
-                                cursor: "pointer",
-                              }}
-                              onClick={() => setPreviewPhotoUrl(getImageUrl(photo.file_path))}
-                            />
-
-                            {/* Hover overlay with zoom & delete */}
-                            <Stack
-                              className="photo-overlay"
-                              direction="row"
-                              spacing={1}
-                              alignItems="center"
-                              justifyContent="center"
-                              sx={{
-                                position: "absolute",
-                                inset: 0,
-                                bgcolor: "rgba(0,0,0,0.5)",
-                                opacity: 0,
-                                transition: "opacity 0.2s ease",
-                              }}
-                            >
-                              <Tooltip title="View Full Photo">
-                                <IconButton
-                                  size="small"
-                                  sx={{ color: "white", bgcolor: "rgba(255,255,255,0.2)" }}
-                                  onClick={() => setPreviewPhotoUrl(getImageUrl(photo.file_path))}
-                                >
-                                  <IconEye size={16} />
-                                </IconButton>
-                              </Tooltip>
-
-                              {!isReadOnly && !isUnassigned && (
-                                <Tooltip title="Delete Photo">
-                                  <IconButton
-                                    size="small"
-                                    sx={{ color: "white", bgcolor: "rgba(239,68,68,0.8)" }}
-                                    onClick={() => handleDeletePhoto(photo.id)}
-                                  >
-                                    <IconTrash size={16} />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                            </Stack>
-                          </Paper>
-                        </Grid>
-                      ))}
-
-                      {/* Add more photo card */}
-                      {!isReadOnly && !isUnassigned && (
-                        <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                          <Box
-                            component="label"
-                            sx={{
-                              height: 110,
-                              borderRadius: "8px",
-                              border: "1px dashed",
-                              borderColor: "divider",
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              cursor: "pointer",
-                              "&:hover": { borderColor: "primary.main" },
-                            }}
-                          >
-                            <input
-                              type="file"
-                              hidden
-                              accept="image/*"
-                              capture="environment"
-                              disabled={uploadingPhoto}
-                              onChange={handlePhotoUpload}
-                            />
-                            <IconPlus size={20} color="#64748b" />
-                            <Typography variant="caption" color="text.secondary" mt={0.5}>
-                              Add Photo
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      )}
-                    </Grid>
+                  {renderPhotoGrid(
+                    condition === "damaged" ? activePhotos.filter((p) => p.photo_type !== "damage") : activePhotos,
+                    "general",
+                    "No photos attached. Click to upload site evidence.",
                   )}
                 </Box>
 
@@ -1926,6 +2058,16 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Rooms and elements added on site */}
+      <AddElementDialog
+        open={addElementOpen}
+        survey={survey}
+        defaultRoomId={activeRoom?.id}
+        onClose={() => setAddElementOpen(false)}
+        onAdded={loadSurvey}
+      />
+      <AddRoomDialog open={addRoomOpen} survey={survey} onClose={() => setAddRoomOpen(false)} onAdded={loadSurvey} />
 
       {/* ================================================================== */}
       {/* 5. PHOTO FULL PREVIEW MODAL                                        */}

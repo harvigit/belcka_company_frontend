@@ -76,6 +76,7 @@ import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import useSurveyAccess from "../useSurveyAccess";
 import useInspectionForm from "../inspection-form/useInspectionForm";
+import AddedOnSiteChip from "../AddedOnSiteChip";
 import InspectionFormPanel from "../inspection-form/InspectionFormPanel";
 import BlankCard from "@/app/components/shared/BlankCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
@@ -523,6 +524,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
     score?: number | null,
     condition?: string | null,
     photoCount?: number,
+    damagePhotoCount?: number,
   ) => {
     if (condition) {
       const map: Record<
@@ -552,6 +554,18 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
               variant="outlined"
               sx={{ fontWeight: 600, fontSize: "0.7rem", height: 22 }}
             />
+          ) : null}
+          {damagePhotoCount && damagePhotoCount > 0 ? (
+            <Tooltip title="Damage photos taken for the defect">
+              <Chip
+                size="small"
+                icon={<IconCamera size={14} />}
+                label={`${damagePhotoCount} damage`}
+                color="error"
+                variant="outlined"
+                sx={{ fontWeight: 600, fontSize: "0.7rem", height: 22 }}
+              />
+            </Tooltip>
           ) : null}
         </Stack>
       );
@@ -1110,9 +1124,12 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                             sx={{ fontWeight: 700, borderRadius: "6px", height: 24 }}
                           />
                           <Box flex={1}>
-                            <Typography variant="subtitle1" fontWeight={700}>
-                              {room.name}
-                            </Typography>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Typography variant="subtitle1" fontWeight={700}>
+                                {room.name}
+                              </Typography>
+                              {room.added_on_site && <AddedOnSiteChip />}
+                            </Stack>
                             {room.notes && (
                               <Typography variant="caption" color="text.secondary">
                                 {room.notes}
@@ -1193,6 +1210,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                           <Typography variant="body2" fontWeight={700}>
                                             {item.name}
                                           </Typography>
+                                          {/* A room added on site is already badged; its elements don't repeat it. */}
+                                          {item.added_on_site && !room.added_on_site && <AddedOnSiteChip />}
                                         </Stack>
                                       </TableCell>
 
@@ -1249,7 +1268,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                         {renderConditionScore(
                                           item.condition_score,
                                           item.condition,
-                                          item.photos?.length,
+                                          item.photos?.filter((p) => p.photo_type !== "damage").length,
+                                          item.photos?.filter((p) => p.photo_type === "damage").length,
                                         )}
                                       </TableCell>
 

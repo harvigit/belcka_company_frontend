@@ -22,6 +22,8 @@ export interface SurveyItemPhoto {
   file_size?: number;
   caption?: string | null;
   created_at?: string;
+  // "damage" photos are taken for a damaged element's defect.
+  photo_type?: "general" | "damage";
 }
 
 export interface SurveyElementDetails {
@@ -76,6 +78,9 @@ export interface SurveyItem {
   inspected_at?: string | null;
   photos?: SurveyItemPhoto[];
   element?: SurveyElementDetails | null;
+  // Added by the surveyor during the inspection rather than when the survey was created.
+  added_on_site?: boolean;
+  added_by?: number | null;
 }
 
 export interface SurveyRoom {
@@ -85,6 +90,8 @@ export interface SurveyRoom {
   sort_order: number;
   notes?: string;
   items: SurveyItem[];
+  added_on_site?: boolean;
+  added_by?: number | null;
 }
 
 export interface Survey {
@@ -125,6 +132,8 @@ export interface Survey {
     inspected: number;
     percentage: number;
   };
+  // Required property detail fields answered; null when the survey has no form yet.
+  form_progress?: { required_total: number; required_answered: number } | null;
   total_rooms?: number;
   created_at: string;
   updated_at: string;
@@ -233,6 +242,7 @@ export interface SurveyEvidenceItem {
   output_unit?: string | null;
   dimensions: { name?: string; unit?: string; value?: number }[];
   photos: SurveyItemPhoto[];
+  added_on_site?: boolean;
 }
 
 export interface SurveyScopeData {
