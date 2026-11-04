@@ -72,6 +72,17 @@ export async function getUserPermissions(
     return request;
 }
 
+// Permissions kept out of permission lists for now (the Survey module is not launched on live yet).
+// Their saved values are untouched; remove a slug here to show it again.
+const HIDDEN_PERMISSION_KEYS = ['surveys', 'survey'];
+
+export function isHiddenPermission(perm?: { slug?: string | null; name?: string | null } | null): boolean {
+    if (!perm) return false;
+    return [perm.slug, perm.name].some(
+        (value) => typeof value === 'string' && HIDDEN_PERMISSION_KEYS.includes(value.trim().toLowerCase()),
+    );
+}
+
 export function isWebPermissionGranted(perm?: Permission | null): boolean {
     if (!perm) return false;
 

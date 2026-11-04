@@ -307,6 +307,40 @@ const TaskLists = () => {
 
     const [formData, setFormData] = useState<any>(initialFormData);
 
+    // Filters are chosen by name; the list response's filter options map them to ids.
+    const filterIdsQuery = useMemo(() => {
+        let query = '';
+        if (filters.category && filters.category !== 'All') {
+            const categoryId = categories.find(
+                (c) => c.name === filters.category,
+            )?.id;
+            if (categoryId) {
+                query += `&category_ids=${categoryId}`;
+            }
+        }
+        if (filters.trade && filters.trade !== 'All') {
+            const tradeObj = trades.find((s) => s.name === filters.trade);
+            if (tradeObj) {
+                query += `&trade_ids=${tradeObj.id}`;
+            }
+        }
+        if (filters.shift && filters.shift !== 'All') {
+            const shiftObj = shifts.find((s) => s.name === filters.shift);
+            if (shiftObj) {
+                query += `&shift_ids=${shiftObj.id}`;
+            }
+        }
+        if (filters.subCategory && filters.subCategory !== 'All') {
+            const subCategoryObj = subCategories.find(
+                (s) => s.name === filters.subCategory,
+            );
+            if (subCategoryObj) {
+                query += `&subcategory_ids=${subCategoryObj.id}`;
+            }
+        }
+        return query;
+    }, [filters, categories, trades, shifts, subCategories]);
+
     const fetchTasks = async () => {
         if (!user?.company_id || !isTableStateReady) return;
         try {
@@ -315,36 +349,9 @@ const TaskLists = () => {
             if (searchTerm) {
                 url += `&search=${encodeURIComponent(searchTerm)}`;
             }
-            if (filters.category && filters.category !== 'All') {
-                const categoryId = categories.find(
-                    (c) => c.name === filters.category,
-                )?.id;
-                if (categoryId) {
-                    url += `&category_ids=${categoryId}`;
-                }
-            }
-            if (filters.trade && filters.trade !== 'All') {
-                const tradeObj = trades.find((s) => s.name === filters.trade);
-                if (tradeObj) {
-                    url += `&trade_ids=${tradeObj.id}`;
-                }
-            }
-            if (filters.shift && filters.shift !== 'All') {
-                const shiftObj = shifts.find((s) => s.name === filters.shift);
-                if (shiftObj) {
-                    url += `&shift_ids=${shiftObj.id}`;
-                }
-            }
+            url += filterIdsQuery;
             if (filters.shiftType && filters.shiftType !== 'All') {
                 url += `&shift_type=${encodeURIComponent(filters.shiftType)}`;
-            }
-            if (filters.subCategory && filters.subCategory !== 'All') {
-                const subCategoryObj = subCategories.find(
-                    (s) => s.name === filters.subCategory,
-                );
-                if (subCategoryObj) {
-                    url += `&subcategory_ids=${subCategoryObj.id}`;
-                }
             }
 
             url = appendTableSortQuery(url, sorting, TASKS_TABLE_SORT_MAP);
@@ -1094,10 +1101,8 @@ const TaskLists = () => {
             filters,
             user?.company_id,
             isTableStateReady,
-            categories.length,
-            trades.length,
-            shifts.length,
-            subCategories.length,
+            // Refetch when the filter options resolve a saved filter, not every time they load.
+            filterIdsQuery,
         ],
         state: {columnVisibility},
         onColumnVisibilityChange,
@@ -1789,6 +1794,7 @@ const TaskLists = () => {
                     handleSubmit={handleSubmit}
                     isSaving={isSaving}
                     companyId={user?.company_id ?? null}
+                    listUnits={units}
                 />
 
                 <TaskAddEdit
@@ -1801,6 +1807,7 @@ const TaskLists = () => {
                     handleSubmit={editTask}
                     isSaving={loading}
                     companyId={user?.company_id ?? null}
+                    listUnits={units}
                 />
 
                 {/* Archive Task List */}

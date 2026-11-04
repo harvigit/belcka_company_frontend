@@ -327,9 +327,9 @@ const ToolsList = () => {
       { expires: 365 },
     );
 
+    // activeStore is read from the cookie on render, so the table reloads for the new store.
+    // Fetching here would still use the previous store.
     setStoreId(selectedStore.id);
-
-    fetchProducts();
 
     setStoreAnchorEl(null);
   };
@@ -845,7 +845,12 @@ const ToolsList = () => {
                 }}
               >
                 {item.short_name ? item.short_name : ""}
-                <Typography color="textSecondary" className="f-14">
+                <Typography
+                  component="span"
+                  display="block"
+                  color="textSecondary"
+                  className="f-14"
+                >
                   {item.name ? item.name : ""}
                 </Typography>
               </Typography>

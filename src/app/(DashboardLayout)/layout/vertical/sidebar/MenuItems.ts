@@ -28,7 +28,7 @@ import {
   IconReceipt,
   IconChartPie,
   IconCertificate,
-  IconClipboardCheck,
+  // IconClipboardCheck, // used by the hidden Survey menu item
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
@@ -104,14 +104,15 @@ const MenuItems: NavGroup[] = [
     icon: IconChartPie,
     href: "/apps/project/list",
   },
-  {
-    id: uniqueId(),
-    title: "Survey",
-    slug: "surveys",
-    icon: IconClipboardCheck,
-    href: "/apps/surveys/list",
-    matchRoutes: ["/apps/surveys", "/surveys"],
-  },
+  // Survey is hidden on live for now; the pages still open by URL.
+  // {
+  //   id: uniqueId(),
+  //   title: "Survey",
+  //   slug: "surveys",
+  //   icon: IconClipboardCheck,
+  //   href: "/apps/surveys/list",
+  //   matchRoutes: ["/apps/surveys", "/surveys"],
+  // },
   {
     id: uniqueId(),
     title: "Map",

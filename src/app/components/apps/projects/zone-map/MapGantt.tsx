@@ -1048,21 +1048,28 @@ export default function MapGantt({
     if (addZoneOpen || selected?.mode === "edit") loadAddressList();
   }, [addZoneOpen, selected]);
 
-  const resourceDay = `${filterDateTime.getFullYear()}-${filterDateTime.getMonth()}-${filterDateTime.getDate()}`;
-
+  // get-resources only sends company_id (its date params are disabled), so
+  // changing the date doesn't need a refetch.
   useEffect(() => {
     if (open) {
       setActiveProjectId(projectId);
       fetchResources();
     }
-  }, [open, projectId, resourceDay]);
+  }, [open, projectId]);
 
+  // Zones/addresses don't depend on the date, and user locations don't depend
+  // on the tab, so each only refetches when its own inputs change.
   useEffect(() => {
     if (open && activeProjectId === projectId) {
       fetchProjectDetail(activeProjectId);
+    }
+  }, [open, activeProjectId, activeTab, projectId]);
+
+  useEffect(() => {
+    if (open && activeProjectId === projectId) {
       fetchUserLocationsWithFilters(filters);
     }
-  }, [open, activeProjectId, activeTab, apiDateTime, projectId]);
+  }, [open, activeProjectId, apiDateTime, projectId]);
 
   const handleOpenUsers = () => {
     setUsersDrawerOpen(true);
