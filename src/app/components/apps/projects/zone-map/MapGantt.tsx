@@ -885,6 +885,7 @@ export default function MapGantt({
         //   (p: any) => p.type == "location",
         // );
         const mapped = responseData
+          .filter((p: any) => Number(p.status) !== 4)
           .map((p: any) => {
             let radius = 150;
             if (p.boundary) {
@@ -1537,7 +1538,9 @@ export default function MapGantt({
                     <Box display="flex" alignItems="center" gap={0.5}>
                       <b>Action</b>
                       <Tooltip
-                        title={allZonesHidden ? "Show all zones" : "Hide all zones"}
+                        title={
+                          allZonesHidden ? "Show all zones" : "Hide all zones"
+                        }
                         arrow
                       >
                         <span>
@@ -2357,8 +2360,7 @@ const UserClusterMarker = ({
   const color = workingCount > 0 ? "#1976d2" : "#fc4b6c";
   const names = members
     .map(
-      (m) =>
-        m.user_name || `${m.first_name ?? ""} ${m.last_name ?? ""}`.trim(),
+      (m) => m.user_name || `${m.first_name ?? ""} ${m.last_name ?? ""}`.trim(),
     )
     .filter(Boolean);
 
