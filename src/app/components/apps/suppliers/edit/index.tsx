@@ -61,7 +61,6 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
   companyId,
   supplierId,
 }) => {
-  const [units, setUnits] = useState<any[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [phone, setPhone] = useState("");
@@ -151,19 +150,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const fetchUnits = async () => {
-    try {
-      const res = await api.get(`units/get?company_id=${companyId}&type=2`);
-      if (res.data) {
-        setUnits(res.data.info);
-      }
-    } catch (err) {
-      console.error("Failed to fetch units", err);
-    }
-  };
-
   useEffect(() => {
-    fetchUnits();
     if (open == true) {
       setPreview(null);
     }

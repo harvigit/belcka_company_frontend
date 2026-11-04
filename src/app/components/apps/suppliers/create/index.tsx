@@ -12,7 +12,6 @@ import {
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
-import api from "@/utils/axios";
 import { useDropzone } from "react-dropzone";
 import toast from "react-hot-toast";
 import "react-phone-input-2/lib/material.css";
@@ -61,7 +60,6 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
   isSaving,
   companyId,
 }) => {
-  const [units, setUnits] = useState<any[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [phone, setPhone] = useState("");
@@ -96,19 +94,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const fetchUnits = async () => {
-    try {
-      const res = await api.get(`units/get?company_id=${companyId}&type=2`);
-      if (res.data) {
-        setUnits(res.data.info);
-      }
-    } catch (err) {
-      console.error("Failed to fetch units", err);
-    }
-  };
-
   useEffect(() => {
-    fetchUnits();
     if (open == true) {
       setPhone("");
       setPhone1("");
