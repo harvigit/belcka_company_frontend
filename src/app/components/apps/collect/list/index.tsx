@@ -59,7 +59,6 @@ import { usePersistentColumnVisibility } from "@/hooks/usePersistentColumnVisibi
 import Link from "next/link";
 import CollectAddEdit from "./create-edit";
 import CollectViewDetails from "./view-details";
-import PermissionGuard from "@/app/auth/PermissionGuard";
 import CollectConflictList, {
   CollectConflict,
 } from "@/app/components/apps/conflicts/sections/collect-conflicts";
@@ -268,7 +267,6 @@ const CollectList = () => {
           setPageCount(1);
         }
       }
-      await fetchCollectConflicts();
     } catch (err) {
       console.error(err);
     } finally {
@@ -845,8 +843,8 @@ const CollectList = () => {
     width: "auto",
   }));
 
+  // The page (apps/collect/list/page.tsx) already wraps this list in PermissionGuard.
   return (
-    <PermissionGuard permission="Collect">
       <Box
         sx={{
           height: "calc(100vh - 100px)",
@@ -1034,7 +1032,8 @@ const CollectList = () => {
                       );
                       toast.success(response.data.message);
                       setSelectedRowIds(new Set());
-                      await fetchCollects();
+                      // Conflicts do not depend on the list filters; reload them only when records change.
+                      await Promise.all([fetchCollects(), fetchCollectConflicts()]);
                     } catch (error) {
                     } finally {
                       setConfirmOpen(false);
@@ -1096,8 +1095,7 @@ const CollectList = () => {
                   <CollectConflictList
                     data={collectConflicts}
                     onResolved={async () => {
-                      await fetchCollectConflicts();
-                      await fetchCollects();
+                      await Promise.all([fetchCollectConflicts(), fetchCollects()]);
                     }}
                     onEdit={(id) => {
                       setConflictOpen(false);
@@ -1462,6 +1460,7 @@ const CollectList = () => {
           collectId={selectedViewId}
           onSuccess={() => {
             fetchCollects();
+            fetchCollectConflicts();
           }}
           onEdit={(id) => {
             setViewDrawerOpen(false);
@@ -1471,7 +1470,6 @@ const CollectList = () => {
           }}
         />
       </Box>
-    </PermissionGuard>
   );
 };
 
