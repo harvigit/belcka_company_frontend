@@ -372,6 +372,7 @@ export default function SurveyList() {
         cell: ({ row }: { row: { original: Survey } }) => {
           const status = row.original.status || "draft";
           const progress = (row.original as any).progress;
+          const formProgress = row.original.form_progress;
           return (
             <Box>
               <Chip
@@ -380,6 +381,12 @@ export default function SurveyList() {
                 color={statusColorMap[status] || "default"}
                 sx={{ fontWeight: 600, textTransform: "capitalize" }}
               />
+              {/* Property detail is step 1 of the inspection, so it is listed first. */}
+              {formProgress && formProgress.required_total > 0 && (
+                <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
+                  Property detail {formProgress.required_answered}/{formProgress.required_total}
+                </Typography>
+              )}
               {progress && progress.total > 0 && (
                 <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
                   {progress.inspected}/{progress.total} inspected ({progress.percentage}%)
