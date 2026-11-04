@@ -1294,14 +1294,14 @@ function AddressWorkspace({ embedded = false }: AddressWorkspaceProps) {
                                         No cases yet. Create one to allocate
                                         this address to a project.
                                       </Typography>
-                                      <Button
+                                      {/* <Button
                                         size="small"
                                         onClick={() =>
                                           openCreatePanel([address.id])
                                         }
                                       >
                                         Create case
-                                      </Button>
+                                      </Button> */}
                                     </Stack>
                                   ) : (
                                     <Box sx={{ opacity: casesBusy ? 0.6 : 1 }}>
@@ -2467,8 +2467,8 @@ function AddAddressDialog({
     .join("\n");
 
   useEffect(() => {
-    if (!open || mode !== "group") return;
-    const ready = sites.filter((site) => site.street.trim());
+    if (!open) return;
+    const ready = draftsToShow(mode, sites).filter((site) => site.street.trim());
     if (!ready.length) {
       setSites((current) =>
         current.map((site) =>
@@ -2590,7 +2590,7 @@ function AddAddressDialog({
           short_name: site.siteName.trim(),
           pin_code: site.postcode.trim(),
           type: "address",
-          allow_duplicate: mode === "group" && site.allowDuplicate,
+          allow_duplicate: site.allowDuplicate,
           latitude: site.lat,
           longitude: site.lng,
           boundary: hasPoint(site.lat, site.lng)
@@ -2614,6 +2614,33 @@ function AddAddressDialog({
       setSaving(false);
     }
   };
+
+  // Shown when the address already exists in the company (or twice in the group).
+  const renderDuplicateSwitch = (site: DraftSite) =>
+    site.duplicate?.exists ? (
+      <Tooltip arrow placement="top" title={duplicateTooltip(site.duplicate)}>
+        <FormControlLabel
+          sx={{ mt: 0.5, ml: 0 }}
+          onClick={(event) => event.stopPropagation()}
+          control={
+            <Switch
+              size="small"
+              checked={site.allowDuplicate}
+              onChange={(_event, checked) => {
+                if (checked) {
+                  setDuplicatePromptKey(site.key);
+                  return;
+                }
+                patchSite(site.key, {
+                  allowDuplicate: false,
+                });
+              }}
+            />
+          }
+          label="Allow duplicate"
+        />
+      </Tooltip>
+    ) : null;
 
   const renderSiteFields = (site: DraftSite) => (
     <Stack spacing={1.25}>
@@ -2733,9 +2760,12 @@ function AddAddressDialog({
                 />
               ) : null}
             </Stack>
-            {mode === "single" && visibleSites[0]
-              ? renderSiteFields(visibleSites[0])
-              : null}
+            {mode === "single" && visibleSites[0] ? (
+              <>
+                {renderSiteFields(visibleSites[0])}
+                {renderDuplicateSwitch(visibleSites[0])}
+              </>
+            ) : null}
             {mode === "group"
               ? visibleSites.map((site) => {
                   const selected = site.key === active?.key;
@@ -2773,34 +2803,7 @@ function AddAddressDialog({
                           >
                             {summary || "Search to set this location"}
                           </Typography>
-                          {site.duplicate?.exists ? (
-                            <Tooltip
-                              arrow
-                              placement="top"
-                              title={duplicateTooltip(site.duplicate)}
-                            >
-                              <FormControlLabel
-                                sx={{ mt: 0.5, ml: 0 }}
-                                onClick={(event) => event.stopPropagation()}
-                                control={
-                                  <Switch
-                                    size="small"
-                                    checked={site.allowDuplicate}
-                                    onChange={(_event, checked) => {
-                                      if (checked) {
-                                        setDuplicatePromptKey(site.key);
-                                        return;
-                                      }
-                                      patchSite(site.key, {
-                                        allowDuplicate: false,
-                                      });
-                                    }}
-                                  />
-                                }
-                                label="Allow duplicate"
-                              />
-                            </Tooltip>
-                          ) : null}
+                          {renderDuplicateSwitch(site)}
                         </Box>
                         {visibleSites.length > 1 ? (
                           <IconButton
