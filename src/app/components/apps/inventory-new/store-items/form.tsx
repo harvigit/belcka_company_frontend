@@ -95,7 +95,8 @@ const StoreItemDrawer: React.FC<StoreItemDrawerProps> = ({
       <FormField label="Internal item">
         <Autocomplete
           size="small"
-          options={options.internal_items}
+          // inactive items can't be added to a store
+          options={options.internal_items.filter((i) => i.status !== false)}
           value={internalItem}
           disabled={isEdit}
           onChange={(_, value) => set("internal_item_id", value?.id ?? null)}

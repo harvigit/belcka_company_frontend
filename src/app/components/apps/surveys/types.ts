@@ -107,6 +107,13 @@ export interface Survey {
   surveyor_id: number | null;
   surveyor_name?: string;
   surveyor?: { id: number; first_name: string; last_name: string; email?: string } | null;
+  // Who assigned the current surveyor, and when; empty for surveys assigned before this was recorded.
+  assigned_by?: number | null;
+  assigned_by_name?: string | null;
+  assigned_at?: string | null;
+  // The property's map position (a flat uses its building's when it has none).
+  property_latitude?: number | null;
+  property_longitude?: number | null;
   survey_date: string;
   creation_method: SurveyCreationMethod;
   template_id?: number | null;

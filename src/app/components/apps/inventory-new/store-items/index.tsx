@@ -128,6 +128,10 @@ const StoreItemList: React.FC = () => {
       toast.error("Please select a store and an internal item!");
       return;
     }
+    if (Number(formData.max_qty || 0) < Number(formData.min_qty || 0)) {
+      toast.error("Max qty can't be less than min qty!");
+      return;
+    }
     setIsSaving(true);
     try {
       const payload = { ...formData, company_id: companyId };

@@ -232,6 +232,10 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   // The survey's property detail is shown in the right panel instead of an element when selected.
   const [formOpen, setFormOpen] = useState(false);
   const inspectionForm = useInspectionForm(id);
+  // Unsaved property detail changes; leaving the form asks first so they are not lost.
+  const [formDirty, setFormDirty] = useState(false);
+  const canLeaveForm = () =>
+    !formOpen || !formDirty || window.confirm("The property detail has unsaved changes. Leave without saving them?");
   const formProgress = inspectionForm.data?.progress;
   // Open form section, shared by the section list on the left and the form panel.
   const [formSection, setFormSection] = useState<string | null | undefined>(undefined);
@@ -981,6 +985,9 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                 <IconButton
                   component={Link}
                   href={`/apps/surveys/view/${id}`}
+                  onClick={(e: React.MouseEvent) => {
+                    if (!canLeaveForm()) e.preventDefault();
+                  }}
                   size="small"
                   sx={{
                     border: "1px solid",
@@ -1292,6 +1299,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                           "&:hover": { bgcolor: "grey.50" },
                         }}
                         onClick={() => {
+                          if (!canLeaveForm()) return;
                           setFormOpen(false);
                           setActiveRoomId(room.id);
                           if (roomItems.length > 0 && !roomItems.some((i) => i.id === activeItemId)) {
@@ -1344,6 +1352,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
                               <Box
                                 key={item.id}
                                 onClick={() => {
+                                  if (!canLeaveForm()) return;
                                   setFormOpen(false);
                                   setActiveRoomId(room.id);
                                   setActiveItemId(item.id);
@@ -1429,6 +1438,7 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
               openSection={formSection}
               onOpenSection={setFormSection}
               onSectionStats={setLiveSectionStats}
+              onDirtyChange={setFormDirty}
               scrollBody
             />
           ) : activeItem ? (
