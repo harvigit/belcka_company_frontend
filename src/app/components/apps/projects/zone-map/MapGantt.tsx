@@ -786,6 +786,8 @@ export default function MapGantt({
   const [addresses, setAddresses] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState(0);
+  // Zone picked in the list or on the map: its row is highlighted and its pin enlarged.
+  const [activeZoneId, setActiveZoneId] = useState<number | null>(null);
 
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
   const [hiddenZoneIds, setHiddenZoneIds] = useState<Set<number>>(new Set());
@@ -1034,6 +1036,7 @@ export default function MapGantt({
   const handleTabChange = (_: any, v: number) => {
     setActiveTab(v);
     setSelected(null);
+    setActiveZoneId(null);
   };
 
   const handleCloseUsers = () => {
@@ -1101,6 +1104,25 @@ export default function MapGantt({
     return filterData.slice(start, start + zonePageSize);
   }, [filterData, zonePage, zonePageSize]);
 
+  // A zone picked on the map: open its page in the list and bring its row into view.
+  const [scrollToZoneId, setScrollToZoneId] = useState<number | null>(null);
+  const selectZoneFromMap = (id: number) => {
+    setActiveZoneId(id);
+    const index = filterData.findIndex((z) => z.id === id);
+    if (index >= 0) setZonePage(Math.floor(index / zonePageSize));
+    setScrollToZoneId(id);
+  };
+  useEffect(() => {
+    if (scrollToZoneId == null) return;
+    const row = document.querySelector(
+      `[data-zone-row="${scrollToZoneId}"]`,
+    ) as HTMLElement | null;
+    if (row) {
+      row.scrollIntoView({ block: "center", behavior: "smooth" });
+      setScrollToZoneId(null);
+    }
+  }, [scrollToZoneId, paginatedZones]);
+
   const totalZonePages = Math.max(
     1,
     Math.ceil(filterData.length / zonePageSize),
@@ -1136,6 +1158,7 @@ export default function MapGantt({
     }
     flyToZone(mainMapRef.current, zone);
     setSelected(null);
+    setActiveZoneId(zone.id);
   };
 
   const filteredUserLocations = useMemo(() => {
@@ -1510,33 +1533,37 @@ export default function MapGantt({
               overflow: "auto",
             }}
           >
-            <Table stickyHeader aria-label="sticky table">
+            <Table
+              stickyHeader
+              size="small"
+              aria-label="sticky table"
+              sx={{
+                "& .MuiTableCell-root": { py: 0.9, px: 1.5 },
+                "& .MuiTableCell-head": {
+                  height: 36,
+                  py: 0.5,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  color: "#64748b",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  backgroundColor: "#f8fafc",
+                  borderBottom: "1px solid #e2e8f0",
+                },
+              }}
+            >
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ background: "#f5f5f5" }}>
-                    <b>Name</b>
-                  </TableCell>
+                  <TableCell>Name</TableCell>
                   {activeTab == 0 && (
-                    <TableCell
-                      sx={{
-                        width: 88,
-                        minWidth: 88,
-                        background: "#f5f5f5",
-                      }}
-                      align="right"
-                    >
-                      <b>Projects</b>
+                    <TableCell sx={{ width: 76, minWidth: 76 }} align="right">
+                      Projects
                     </TableCell>
                   )}
-                  <TableCell
-                    sx={{
-                      width: 152,
-                      minWidth: 152,
-                      background: "#f5f5f5",
-                    }}
-                  >
+                  <TableCell sx={{ width: 136, minWidth: 136 }}>
                     <Box display="flex" alignItems="center" gap={0.5}>
-                      <b>Action</b>
+                      Action
                       <Tooltip
                         title={
                           allZonesHidden ? "Show all zones" : "Hide all zones"
@@ -1546,14 +1573,21 @@ export default function MapGantt({
                         <span>
                           <IconButton
                             size="small"
+                            sx={{
+                              p: 0.25,
+                              width: 22,
+                              height: 22,
+                              minWidth: 0,
+                              minHeight: 0,
+                            }}
                             color={allZonesHidden ? "default" : "success"}
                             onClick={toggleAllZones}
                             disabled={filterData.length === 0}
                           >
                             {allZonesHidden ? (
-                              <IconEyeOff size={18} />
+                              <IconEyeOff size={16} />
                             ) : (
-                              <IconEye size={18} />
+                              <IconEye size={16} />
                             )}
                           </IconButton>
                         </span>
@@ -1572,28 +1606,53 @@ export default function MapGantt({
                 ) : (
                   paginatedZones.map((z) => {
                     const isHidden = hiddenZoneIds.has(z.id);
+                    const isActive = activeZoneId === z.id;
                     return (
                       <TableRow
                         key={z.id}
+                        data-zone-row={z.id}
                         hover
+                        selected={isActive}
                         onClick={() => zoomToZone(z)}
-                        sx={{ cursor: "pointer" }}
+                        sx={{
+                          cursor: "pointer",
+                          "& > td:first-of-type": {
+                            borderLeft: "3px solid transparent",
+                          },
+                          "&.Mui-selected, &.Mui-selected:hover": {
+                            backgroundColor: "rgba(37, 99, 235, 0.08)",
+                          },
+                          "&.Mui-selected > td:first-of-type": {
+                            borderLeftColor: "#2563eb",
+                          },
+                        }}
                       >
-                        <TableCell>
+                        {/* maxWidth 0: the name column takes the space left, so the actions never overflow. */}
+                        <TableCell sx={{ maxWidth: 0, width: "100%" }}>
                           <Typography
-                            sx={{ color: "text.primary", fontWeight: 600 }}
+                            sx={{
+                              color: isActive ? "#1d4ed8" : "text.primary",
+                              fontWeight: 600,
+                              fontSize: 13.5,
+                              lineHeight: 1.35,
+                            }}
                           >
                             {z.name}
                           </Typography>
                           <Tooltip title={z.address_name || z.address} arrow>
                             <Typography
-                              variant="body2"
                               sx={{
-                                color: "text.disabled",
-                                maxWidth: 250,
-                                whiteSpace: "nowrap",
+                                color: "text.secondary",
+                                fontSize: 12,
+                                lineHeight: 1.4,
+                                mt: 0.25,
+                                maxWidth: "100%",
+                                // Up to two lines, then "…" (full address in the tooltip).
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
                                 overflow: "hidden",
-                                textOverflow: "ellipsis",
+                                wordBreak: "break-word",
                                 cursor: "pointer",
                               }}
                             >
@@ -1604,7 +1663,7 @@ export default function MapGantt({
                         {activeTab == 0 && (
                           <TableCell
                             align="right"
-                            sx={{ width: 88, minWidth: 88 }}
+                            sx={{ width: 76, minWidth: 76 }}
                           >
                             <Tooltip
                               title={
@@ -1617,7 +1676,11 @@ export default function MapGantt({
                               arrow
                             >
                               <Typography
-                                sx={{ fontWeight: 600, cursor: "pointer" }}
+                                sx={{
+                                  fontWeight: 600,
+                                  fontSize: 13,
+                                  cursor: "pointer",
+                                }}
                               >
                                 {Number(
                                   z.project_count || z.project_ids?.length || 0,
@@ -1627,11 +1690,12 @@ export default function MapGantt({
                           </TableCell>
                         )}
                         <TableCell
-                          sx={{ width: 152, minWidth: 152 }}
+                          sx={{ width: 136, minWidth: 136 }}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <Box display="flex" gap={0.5} flexWrap="nowrap">
+                          <Box display="flex" gap={0.25} flexWrap="nowrap">
                             <IconButton
+                              size="small"
                               color={isHidden ? "default" : "success"}
                               onClick={() => {
                                 setHiddenZoneIds((prev) => {
@@ -1643,38 +1707,41 @@ export default function MapGantt({
                               }}
                             >
                               {isHidden ? (
-                                <IconEyeOff size={20} />
+                                <IconEyeOff size={18} />
                               ) : (
-                                <IconEye size={20} />
+                                <IconEye size={18} />
                               )}
                             </IconButton>
 
                             <IconButton
+                              size="small"
                               color="primary"
                               onClick={() => zoomToZone(z)}
                               title="Zoom to zone on map"
                             >
-                              <IconMapPin size={20} />
+                              <IconMapPin size={18} />
                             </IconButton>
 
                             <IconButton
+                              size="small"
                               color="primary"
                               onClick={() => {
                                 setAddZoneOpen(false);
                                 setSelected({ ...z, mode: "edit" });
                               }}
                             >
-                              <IconEdit size={20} />
+                              <IconEdit size={18} />
                             </IconButton>
 
                             <IconButton
+                              size="small"
                               color="error"
                               onClick={() => {
                                 setDeleteId(z.id);
                                 setDeleteConfirmOpen(true);
                               }}
                             >
-                              <IconTrash size={20} />
+                              <IconTrash size={18} />
                             </IconButton>
                           </Box>
                         </TableCell>
@@ -1694,13 +1761,12 @@ export default function MapGantt({
                 alignItems="center"
                 justifyContent="space-between"
                 px={1.5}
-                pt={1}
-                pb={0.5}
+                py={0.75}
                 flexShrink={0}
                 flexWrap="wrap"
                 gap={0.5}
               >
-                <Typography color="textSecondary" fontSize={13}>
+                <Typography color="textSecondary" fontSize={12.5}>
                   {filterData.length} Zones
                 </Typography>
 
@@ -1712,12 +1778,25 @@ export default function MapGantt({
                 >
                   <Typography
                     color="textSecondary"
-                    fontSize={13}
-                    sx={{ whiteSpace: "nowrap" }}
+                    fontSize={12.5}
+                    sx={{ whiteSpace: "nowrap", mr: 0.5 }}
                   >
-                    Pg {zonePage + 1}/{totalZonePages} |
+                    Page {zonePage + 1} of {totalZonePages}
                   </Typography>
                   <CustomSelect
+                    size="small"
+                    sx={{
+                      height: 28,
+                      minWidth: 62,
+                      fontSize: 12.5,
+                      borderRadius: "6px",
+                      "& .MuiSelect-select": {
+                        py: 0.25,
+                        pl: 1,
+                        pr: "24px !important",
+                      },
+                      "& .MuiSvgIcon-root": { fontSize: 18, right: 4 },
+                    }}
                     value={zonePageSize}
                     onChange={(e: { target: { value: any } }) => {
                       setZonePageSize(Number(e.target.value));
@@ -1732,21 +1811,21 @@ export default function MapGantt({
                   </CustomSelect>
                   <IconButton
                     size="small"
-                    sx={{ width: 30 }}
+                    sx={{ width: 28, height: 28 }}
                     onClick={() => setZonePage((p) => p - 1)}
                     disabled={zonePage === 0}
                   >
-                    <IconChevronLeft />
+                    <IconChevronLeft size={18} />
                   </IconButton>
                   <IconButton
                     size="small"
-                    sx={{ width: 30 }}
+                    sx={{ width: 28, height: 28 }}
                     onClick={() => setZonePage((p) => p + 1)}
                     disabled={
                       (zonePage + 1) * zonePageSize >= filterData.length
                     }
                   >
-                    <IconChevronRight />
+                    <IconChevronRight size={18} />
                   </IconButton>
                 </Box>
               </Stack>
@@ -1778,6 +1857,9 @@ export default function MapGantt({
               zones={visibleZones}
               fitZones={filterData}
               isLoaded={isLoaded}
+              markerMode={activeTab === 1 ? "pin" : "label"}
+              activeZoneId={activeZoneId}
+              onZoneSelect={selectZoneFromMap}
               userLocations={usersOnMapVisible ? usersWithLocation : []}
               focusedUserId={focusedUserId}
               onFocusedUserChange={setFocusedUserId}
@@ -2432,6 +2514,481 @@ const fitMapToZones = (map: google.maps.Map, zones: any[]) => {
   map.fitBounds(bounds);
 };
 
+// Where a zone's pin sits: the circle's centre, the polygon's centroid or the line's midpoint.
+const zoneAnchor = (zone: any): google.maps.LatLngLiteral | null => {
+  if (zone.type === "circle") {
+    const lat = Number(zone.latitude);
+    const lng = Number(zone.longitude);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  }
+  const path = Array.isArray(zone.coordinates) ? zone.coordinates : [];
+  if (!path.length) return null;
+  if (zone.type === "polyline") {
+    const mid = path[Math.floor(path.length / 2)];
+    return { lat: Number(mid.lat), lng: Number(mid.lng) };
+  }
+  return {
+    lat:
+      path.reduce((sum: number, p: any) => sum + Number(p.lat), 0) /
+      path.length,
+    lng:
+      path.reduce((sum: number, p: any) => sum + Number(p.lng), 0) /
+      path.length,
+  };
+};
+
+const PIN_RED = "#e53935";
+const PIN_RED_DARK = "#b71c1c";
+
+// One case on the map (Case tab): a red map pin; its name and address show on hover.
+// The selected case's pin is larger, darker and has a soft ring at its tip.
+// A colour with transparency when it is a plain #rrggbb value.
+const withAlpha = (color: string, alpha: string) =>
+  /^#[0-9a-f]{6}$/i.test(color) ? `${color}${alpha}` : "rgba(0, 0, 0, 0.15)";
+
+const ZonePin = ({
+  zone,
+  position,
+  active,
+  onClick,
+  onHover,
+  color,
+}: {
+  zone: any;
+  position: google.maps.LatLngLiteral;
+  active: boolean;
+  onClick: () => void;
+  onHover: (hovered: boolean) => void;
+  /** Pin colour; cases use red, project zones their own colour. */
+  color?: string;
+}) => {
+  const w = active ? 34 : 26;
+  const h = Math.round(w * 1.33);
+  const base = color || PIN_RED;
+  const fill = active && !color ? PIN_RED_DARK : base;
+  const projectCount = Number(
+    zone.project_count || zone.project_ids?.length || 0,
+  );
+  return (
+    <OverlayView
+      position={position}
+      mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: 0,
+          height: 0,
+          zIndex: active ? 3 : 1,
+        }}
+      >
+        {active && (
+          <Box
+            sx={{
+              position: "absolute",
+              left: -14,
+              top: -7,
+              width: 28,
+              height: 14,
+              borderRadius: "50%",
+              backgroundColor: withAlpha(base, "40"),
+              border: `1.5px solid ${base}`,
+            }}
+          />
+        )}
+        <Tooltip
+          arrow
+          placement="top"
+          title={
+            <Box sx={{ py: 0.25 }}>
+              <Typography
+                sx={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.3 }}
+              >
+                {zone.name}
+              </Typography>
+              {(zone.address_name || zone.address) && (
+                <Typography
+                  sx={{ fontSize: 11.5, opacity: 0.85, lineHeight: 1.3 }}
+                >
+                  {zone.address_name || zone.address}
+                </Typography>
+              )}
+              {projectCount > 0 && (
+                <Typography
+                  sx={{ fontSize: 11.5, opacity: 0.85, lineHeight: 1.3 }}
+                >
+                  {projectCount} project{projectCount === 1 ? "" : "s"}
+                </Typography>
+              )}
+            </Box>
+          }
+        >
+          <Box
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            onMouseEnter={() => onHover(true)}
+            onMouseLeave={() => onHover(false)}
+            sx={{
+              position: "absolute",
+              left: -w / 2,
+              top: -h,
+              width: w,
+              height: h,
+              cursor: "pointer",
+              lineHeight: 0,
+              transformOrigin: "50% 100%",
+              transition: "transform 0.15s ease",
+              filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.35))",
+              "&:hover": { transform: "scale(1.15)" },
+            }}
+          >
+            <svg width={w} height={h} viewBox="0 0 24 32" aria-hidden="true">
+              <path d={PIN_PATH} fill={fill} stroke="#fff" strokeWidth="1.5" />
+              <circle cx="12" cy="12" r="4.6" fill="#fff" />
+            </svg>
+          </Box>
+        </Tooltip>
+      </div>
+    </OverlayView>
+  );
+};
+
+type ZonePoint = { zone: any; latitude: number; longitude: number };
+
+const PIN_PATH =
+  "M12 0C5.37 0 0 5.37 0 12c0 8.4 10.2 18.6 11.2 19.6a1.1 1.1 0 0 0 1.6 0C13.8 30.6 24 20.4 24 12 24 5.37 18.63 0 12 0z";
+
+const pointsCentre = (members: ZonePoint[]) => ({
+  lat: members.reduce((s, m) => s + m.latitude, 0) / members.length,
+  lng: members.reduce((s, m) => s + m.longitude, 0) / members.length,
+});
+
+// Largest distance (metres) between any member and the group's centre.
+const pointsSpread = (members: ZonePoint[]) => {
+  const c = pointsCentre(members);
+  return Math.max(
+    ...members.map((m) => {
+      const dLat = (m.latitude - c.lat) * 111320;
+      const dLng =
+        (m.longitude - c.lng) * 111320 * Math.cos((c.lat * Math.PI) / 180);
+      return Math.sqrt(dLat * dLat + dLng * dLng);
+    }),
+  );
+};
+
+// Several cases at (almost) the same place: the same red pin as a single case, with a count badge.
+const ZoneClusterMarker = ({
+  members,
+  open,
+  active,
+  onClick,
+}: {
+  members: ZonePoint[];
+  open: boolean;
+  /** Holds the selected case: darker, larger, with a ring at the tip. */
+  active: boolean;
+  onClick: () => void;
+}) => {
+  const position = pointsCentre(members);
+  const w = active ? 34 : 30;
+  const h = Math.round(w * 1.33);
+  const names = members.map((m) => m.zone.name).filter(Boolean);
+  const label = members.length > 99 ? "99+" : String(members.length);
+  return (
+    <OverlayView
+      position={position}
+      mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: 0,
+          height: 0,
+          zIndex: open || active ? 4 : 2,
+        }}
+      >
+        {(active || open) && (
+          <Box
+            sx={{
+              position: "absolute",
+              left: -14,
+              top: -7,
+              width: 28,
+              height: 14,
+              borderRadius: "50%",
+              // Selected case: red ring. Group whose list is open: blue ring.
+              backgroundColor: active ? `${PIN_RED}40` : "#2563eb33",
+              border: `1.5px solid ${active ? PIN_RED : "#2563eb"}`,
+            }}
+          />
+        )}
+        <Tooltip
+          arrow
+          placement="top"
+          disableHoverListener={open}
+          title={
+            open ? (
+              ""
+            ) : (
+              <Box
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                sx={{ cursor: "pointer" }}
+              >
+                <Typography sx={{ fontSize: 12, fontWeight: 700, mb: 0.25 }}>
+                  {members.length} cases here
+                </Typography>
+                {names.slice(0, 5).map((n, i) => (
+                  <Typography key={i} variant="caption" display="block">
+                    {n}
+                  </Typography>
+                ))}
+                {names.length > 5 && (
+                  <Typography
+                    variant="caption"
+                    display="block"
+                    sx={{ opacity: 0.8 }}
+                  >
+                    +{names.length - 5} more
+                  </Typography>
+                )}
+                <Box
+                  sx={{
+                    mt: 0.75,
+                    px: 1,
+                    py: 0.4,
+                    borderRadius: 1,
+                    backgroundColor: "rgba(255,255,255,0.16)",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    textAlign: "center",
+                    "&:hover": { backgroundColor: "rgba(255,255,255,0.28)" },
+                  }}
+                >
+                  View all {members.length} cases ›
+                </Box>
+              </Box>
+            )
+          }
+        >
+          <Box
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            sx={{
+              position: "absolute",
+              left: -w / 2,
+              top: -h,
+              width: w,
+              height: h,
+              cursor: "pointer",
+              lineHeight: 0,
+              transformOrigin: "50% 100%",
+              transition: "transform 0.15s ease",
+              filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.35))",
+              "&:hover": { transform: "scale(1.12)" },
+            }}
+          >
+            <svg width={w} height={h} viewBox="0 0 24 32" aria-hidden="true">
+              <path
+                d={PIN_PATH}
+                fill={active ? PIN_RED_DARK : PIN_RED}
+                stroke="#fff"
+                strokeWidth="1.5"
+              />
+              <circle cx="12" cy="12" r="4.6" fill="#fff" />
+            </svg>
+            <Box
+              sx={{
+                position: "absolute",
+                top: -7,
+                right: -12,
+                minWidth: 20,
+                height: 20,
+                px: 0.6,
+                borderRadius: "10px",
+                backgroundColor: open ? "#2563eb" : "#fff",
+                color: open ? "#fff" : PIN_RED_DARK,
+                border: `1.5px solid ${open ? "#2563eb" : PIN_RED}`,
+                fontSize: 11,
+                fontWeight: 800,
+                lineHeight: "17px",
+                textAlign: "center",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+              }}
+            >
+              {label}
+            </Box>
+          </Box>
+        </Tooltip>
+      </div>
+    </OverlayView>
+  );
+};
+
+// The cases at one place (e.g. the flats of one building), to pick one.
+const ZoneClusterList = ({
+  members,
+  activeZoneId,
+  onPick,
+  onClose,
+}: {
+  members: ZonePoint[];
+  activeZoneId: number | null;
+  onPick: (zone: any) => void;
+  onClose: () => void;
+}) => {
+  const position = pointsCentre(members);
+  const address =
+    members[0]?.zone.address_name || members[0]?.zone.address || "";
+  const listRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    // The overlay mounts its content a moment after this component renders.
+    const timer = setTimeout(() => {
+      const list = listRef.current;
+      const el = list?.querySelector(
+        '[data-active="true"]',
+      ) as HTMLElement | null;
+      if (list && el) list.scrollTop = el.offsetTop - 60;
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [activeZoneId]);
+  const sorted = [...members].sort((a, b) =>
+    String(a.zone.name || "").localeCompare(
+      String(b.zone.name || ""),
+      undefined,
+      { numeric: true },
+    ),
+  );
+  return (
+    <OverlayView position={position} mapPaneName={OverlayView.FLOAT_PANE}>
+      <Paper
+        elevation={8}
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+        sx={{
+          position: "absolute",
+          left: -150,
+          bottom: 52,
+          width: 300,
+          borderRadius: 2,
+          overflow: "hidden",
+          cursor: "default",
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 1,
+            px: 1.5,
+            py: 1,
+            borderBottom: "1px solid #e2e8f0",
+            backgroundColor: "#fef2f2",
+          }}
+        >
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              sx={{ fontSize: 13, fontWeight: 700, color: PIN_RED_DARK }}
+            >
+              {members.length} cases at this location
+            </Typography>
+            <Typography sx={{ fontSize: 11, color: "text.secondary" }}>
+              Click a case to select it
+            </Typography>
+            {address && (
+              <Typography
+                sx={{
+                  fontSize: 11.5,
+                  color: "text.secondary",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {address}
+              </Typography>
+            )}
+          </Box>
+          <IconButton
+            size="small"
+            sx={{ p: 0.25, mt: -0.25 }}
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <IconX size={16} />
+          </IconButton>
+        </Box>
+        <Box
+          ref={listRef}
+          sx={{
+            maxHeight: 260,
+            overflowY: "auto",
+            py: 0.5,
+            position: "relative",
+          }}
+        >
+          {sorted.map((m) => {
+            const isActive = m.zone.id === activeZoneId;
+            return (
+              <Box
+                key={m.zone.id}
+                data-active={isActive ? "true" : "false"}
+                data-case-item="true"
+                onClick={() => onPick(m.zone)}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 1.5,
+                  py: 0.75,
+                  cursor: "pointer",
+                  backgroundColor: isActive
+                    ? "rgba(37, 99, 235, 0.08)"
+                    : "transparent",
+                  "&:hover": {
+                    backgroundColor: isActive
+                      ? "rgba(37, 99, 235, 0.12)"
+                      : "#f8fafc",
+                  },
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    backgroundColor: isActive ? "#2563eb" : PIN_RED,
+                  }}
+                />
+                <Typography
+                  sx={{
+                    fontSize: 12.5,
+                    fontWeight: isActive ? 700 : 500,
+                    color: isActive ? "#1d4ed8" : "text.primary",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {m.zone.name}
+                </Typography>
+              </Box>
+            );
+          })}
+        </Box>
+      </Paper>
+    </OverlayView>
+  );
+};
+
 const AllZonesMap = ({
   zones,
   fitZones,
@@ -2440,6 +2997,9 @@ const AllZonesMap = ({
   focusedUserId,
   onFocusedUserChange,
   onMapLoad,
+  markerMode = "label",
+  activeZoneId = null,
+  onZoneSelect,
 }: {
   zones: any[];
   fitZones?: any[];
@@ -2448,6 +3008,10 @@ const AllZonesMap = ({
   focusedUserId?: number | string | null;
   onFocusedUserChange?: (id: number | string | null) => void;
   onMapLoad?: (map: google.maps.Map) => void;
+  /** "pin": a red pin per zone with the name on hover; "label": the name box on the map. */
+  markerMode?: "label" | "pin";
+  activeZoneId?: number | null;
+  onZoneSelect?: (id: number) => void;
 }) => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const ignoreNextMapClickRef = useRef(false);
@@ -2473,6 +3037,7 @@ const AllZonesMap = ({
 
   const onZoneClick = (zone: any) => {
     if (mapRef.current) flyToZone(mapRef.current, zone);
+    onZoneSelect?.(zone.id);
   };
 
   const userClusters = useMemo(() => {
@@ -2482,6 +3047,50 @@ const AllZonesMap = ({
     const rest = userLocations.filter((u) => !focused.includes(u));
     return [...clusterUsers(rest, zoom), ...focused.map((u) => [u])];
   }, [userLocations, zoom, focusedUserId]);
+
+  // Case tab: pins grouped by screen distance. A group holding the selected case is highlighted.
+  const [hoveredZoneId, setHoveredZoneId] = useState<number | null>(null);
+  // Cases listed in a popup: a group at one place (same building) or one seen at full zoom.
+  const [listedCluster, setListedCluster] = useState<ZonePoint[] | null>(null);
+  useEffect(() => setListedCluster(null), [markerMode]);
+  // A click on a pin or group may or may not also reach the map; ignore it only for a moment so
+  // it never swallows the next real map click.
+  const ignoreMapClickBriefly = () => {
+    ignoreNextMapClickRef.current = true;
+    setTimeout(() => {
+      ignoreNextMapClickRef.current = false;
+    }, 300);
+  };
+  const onZoneClusterClick = (members: ZonePoint[]) => {
+    ignoreMapClickBriefly();
+    const atOnePlace = pointsSpread(members) < 25;
+    if (atOnePlace || (mapRef.current?.getZoom() ?? 0) >= 18) {
+      setListedCluster(members);
+      // Bring the group below the middle so the list above it is fully in view.
+      const map = mapRef.current;
+      if (map) {
+        map.panTo(pointsCentre(members));
+        map.panBy(0, -150);
+      }
+    } else {
+      setListedCluster(null);
+      onClusterClick(members);
+    }
+  };
+  const zoneClusters = useMemo(() => {
+    if (markerMode !== "pin") return [];
+    const points = zones
+      .map((zone) => {
+        const at = zoneAnchor(zone);
+        return at ? { zone, latitude: at.lat, longitude: at.lng } : null;
+      })
+      .filter(Boolean) as ZonePoint[];
+    return clusterUsers(points, zoom) as ZonePoint[][];
+  }, [markerMode, zones, zoom]);
+  const outlinedZones =
+    markerMode === "pin"
+      ? zones.filter((z) => z.id === activeZoneId || z.id === hoveredZoneId)
+      : [];
 
   const onClusterClick = (members: any[]) => {
     const map = mapRef.current;
@@ -2520,6 +3129,7 @@ const AllZonesMap = ({
         onZoomChanged={() => {
           const z = mapRef.current?.getZoom();
           if (z != null) setZoom(z);
+          setListedCluster(null);
         }}
         onClick={() => {
           if (ignoreNextMapClickRef.current) {
@@ -2527,179 +3137,193 @@ const AllZonesMap = ({
             return;
           }
           onFocusedUserChange?.(null);
+          setListedCluster(null);
         }}
       >
-        {zones.map((zone) => {
-          const color = zone.color || "#1976d2";
+        {markerMode !== "pin" &&
+          zones.map((zone) => {
+            const color = zone.color || "#1976d2";
 
-          if (zone.type === "circle") {
-            const center = {
-              lat: Number(zone.latitude),
-              lng: Number(zone.longitude),
-            };
-            return (
-              <React.Fragment key={zone.id}>
-                <OverlayView
-                  position={center}
-                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                >
-                  <Box
+            if (zone.type === "circle") {
+              const center = {
+                lat: Number(zone.latitude),
+                lng: Number(zone.longitude),
+              };
+              return (
+                <React.Fragment key={zone.id}>
+                  <ZonePin
+                    zone={zone}
+                    position={center}
+                    color={color}
+                    active={activeZoneId === zone.id}
                     onClick={() => onZoneClick(zone)}
-                    sx={{
-                      cursor: "pointer",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      transform: "translate(-50%, -100%)",
-                      width: "max-content",
+                    onHover={() => {}}
+                  />
+                  <Circle
+                    center={center}
+                    radius={Number(zone.radius)}
+                    options={{ strokeColor: color, fillColor: color + "33" }}
+                    onClick={() => onZoneClick(zone)}
+                  />
+                </React.Fragment>
+              );
+            }
+
+            if (zone.type === "polygon") {
+              if (
+                !Array.isArray(zone.coordinates) ||
+                zone.coordinates.length < 3
+              )
+                return null;
+              const path = zone.coordinates.map((p: any) => ({
+                lat: Number(p.lat),
+                lng: Number(p.lng),
+              }));
+              const centroid = {
+                lat:
+                  path.reduce((s: number, p: any) => s + p.lat, 0) /
+                  path.length,
+                lng:
+                  path.reduce((s: number, p: any) => s + p.lng, 0) /
+                  path.length,
+              };
+              return (
+                <React.Fragment key={zone.id}>
+                  <ZonePin
+                    zone={zone}
+                    position={centroid}
+                    color={color}
+                    active={activeZoneId === zone.id}
+                    onClick={() => onZoneClick(zone)}
+                    onHover={() => {}}
+                  />
+                  <Polygon
+                    paths={path}
+                    options={{
+                      strokeColor: color,
+                      fillColor: color + "33",
+                      strokeWeight: 2,
                     }}
-                  >
-                    <Box
-                      sx={{
-                        backgroundColor: "#fff",
-                        border: `2px solid ${color}`,
-                        borderRadius: "4px",
-                        px: 1.25,
-                        py: 0.35,
-                        boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-                        mb: 0,
-                      }}
-                    >
-                      <Typography
-                        sx={{
-                          fontSize: 12,
-                          fontWeight: 700,
-                          color: "#111",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {zone.name}
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        width: "2px",
-                        height: "20px",
-                        backgroundColor: color,
-                      }}
-                    />
-                  </Box>
-                </OverlayView>
-                <Circle
-                  center={center}
-                  radius={Number(zone.radius)}
-                  options={{ strokeColor: color, fillColor: color + "33" }}
-                  onClick={() => onZoneClick(zone)}
-                />
-              </React.Fragment>
-            );
-          }
-
-          if (zone.type === "polygon") {
-            if (!Array.isArray(zone.coordinates) || zone.coordinates.length < 3)
-              return null;
-            const path = zone.coordinates.map((p: any) => ({
-              lat: Number(p.lat),
-              lng: Number(p.lng),
-            }));
-            const centroid = {
-              lat:
-                path.reduce((s: number, p: any) => s + p.lat, 0) / path.length,
-              lng:
-                path.reduce((s: number, p: any) => s + p.lng, 0) / path.length,
-            };
-            return (
-              <React.Fragment key={zone.id}>
-                <OverlayView
-                  position={centroid}
-                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                >
-                  <Box
                     onClick={() => onZoneClick(zone)}
-                    sx={{
-                      cursor: "pointer",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      transform: "translate(-50%, -100%)",
-                      width: "max-content",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        backgroundColor: "#fff",
-                        border: `2px solid ${color}`,
-                        borderRadius: "4px",
-                        px: 1.25,
-                        py: 0.35,
-                        boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-                        mb: 0,
-                      }}
-                    >
-                      <Typography
-                        sx={{
-                          fontSize: 12,
-                          fontWeight: 700,
-                          color: "#111",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {zone.name}
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        width: "2px",
-                        height: "20px",
-                        backgroundColor: color,
-                      }}
-                    />
-                  </Box>
-                </OverlayView>
-                <Polygon
-                  paths={path}
-                  options={{
-                    strokeColor: color,
-                    fillColor: color + "33",
-                    strokeWeight: 2,
-                  }}
-                  onClick={() => onZoneClick(zone)}
-                />
-              </React.Fragment>
-            );
-          }
+                  />
+                </React.Fragment>
+              );
+            }
 
-          if (zone.type === "polyline") {
-            const path = zone.coordinates.map((p: any) => ({
-              lat: Number(p.lat),
-              lng: Number(p.lng),
-            }));
-            const midpoint = path[Math.floor(path.length / 2)];
-            return (
-              <React.Fragment key={zone.id}>
-                <OverlayView
-                  position={midpoint}
-                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                >
-                  <Box
+            if (zone.type === "polyline") {
+              const path = zone.coordinates.map((p: any) => ({
+                lat: Number(p.lat),
+                lng: Number(p.lng),
+              }));
+              const midpoint = path[Math.floor(path.length / 2)];
+              return (
+                <React.Fragment key={zone.id}>
+                  <ZonePin
+                    zone={zone}
+                    position={midpoint}
+                    color={color}
+                    active={activeZoneId === zone.id}
                     onClick={() => onZoneClick(zone)}
-                    sx={{ cursor: "pointer", color, width: "max-content" }}
-                    className="map-site-label"
-                  >
-                    <Typography>{zone.name}</Typography>
-                  </Box>
-                </OverlayView>
-                <Polyline
-                  path={path}
-                  options={{ strokeColor: color, strokeWeight: 3 }}
-                  onClick={() => onZoneClick(zone)}
-                />
-              </React.Fragment>
-            );
-          }
+                    onHover={() => {}}
+                  />
+                  <Polyline
+                    path={path}
+                    options={{ strokeColor: color, strokeWeight: 3 }}
+                    onClick={() => onZoneClick(zone)}
+                  />
+                </React.Fragment>
+              );
+            }
 
+            return null;
+          })}
+
+        {outlinedZones.map((zone) => {
+          const shape = {
+            strokeColor: PIN_RED,
+            strokeWeight: 1.5,
+            fillColor: PIN_RED,
+            fillOpacity: zone.id === activeZoneId ? 0.12 : 0.06,
+            clickable: false,
+          };
+          if (zone.type === "circle")
+            return (
+              <Circle
+                key={`outline-${zone.id}`}
+                center={{
+                  lat: Number(zone.latitude),
+                  lng: Number(zone.longitude),
+                }}
+                radius={Number(zone.radius)}
+                options={shape}
+              />
+            );
+          const path = (zone.coordinates || []).map((p: any) => ({
+            lat: Number(p.lat),
+            lng: Number(p.lng),
+          }));
+          if (zone.type === "polygon" && path.length >= 3)
+            return (
+              <Polygon
+                key={`outline-${zone.id}`}
+                paths={path}
+                options={shape}
+              />
+            );
+          if (zone.type === "polyline" && path.length >= 2)
+            return (
+              <Polyline
+                key={`outline-${zone.id}`}
+                path={path}
+                options={{
+                  strokeColor: PIN_RED,
+                  strokeWeight: 3,
+                  clickable: false,
+                }}
+              />
+            );
           return null;
         })}
+
+        {zoneClusters.map((members) =>
+          members.length === 1 ? (
+            <ZonePin
+              key={`pin-${members[0].zone.id}`}
+              zone={members[0].zone}
+              position={{ lat: members[0].latitude, lng: members[0].longitude }}
+              active={members[0].zone.id === activeZoneId}
+              onClick={() => {
+                ignoreMapClickBriefly();
+                onZoneClick(members[0].zone);
+              }}
+              onHover={(on) => setHoveredZoneId(on ? members[0].zone.id : null)}
+            />
+          ) : (
+            <ZoneClusterMarker
+              key={`zone-cluster-${members.map((m) => m.zone.id).join("-")}`}
+              members={members}
+              open={
+                !!listedCluster &&
+                listedCluster.length === members.length &&
+                listedCluster.every((m, i) => m.zone.id === members[i].zone.id)
+              }
+              active={members.some((m) => m.zone.id === activeZoneId)}
+              onClick={() => onZoneClusterClick(members)}
+            />
+          ),
+        )}
+
+        {markerMode === "pin" && listedCluster && (
+          <ZoneClusterList
+            members={listedCluster}
+            activeZoneId={activeZoneId}
+            onClose={() => setListedCluster(null)}
+            onPick={(zone) => {
+              setListedCluster(null);
+              onZoneClick(zone);
+            }}
+          />
+        )}
 
         {userClusters.map((members) =>
           members.length === 1 ? (
