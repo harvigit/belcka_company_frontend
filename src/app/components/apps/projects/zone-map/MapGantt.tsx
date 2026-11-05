@@ -2542,22 +2542,33 @@ const PIN_RED_DARK = "#b71c1c";
 
 // One case on the map (Case tab): a red map pin; its name and address show on hover.
 // The selected case's pin is larger, darker and has a soft ring at its tip.
+// A colour with transparency when it is a plain #rrggbb value.
+const withAlpha = (color: string, alpha: string) =>
+  /^#[0-9a-f]{6}$/i.test(color) ? `${color}${alpha}` : "rgba(0, 0, 0, 0.15)";
+
 const ZonePin = ({
   zone,
   position,
   active,
   onClick,
   onHover,
+  color,
 }: {
   zone: any;
   position: google.maps.LatLngLiteral;
   active: boolean;
   onClick: () => void;
   onHover: (hovered: boolean) => void;
+  /** Pin colour; cases use red, project zones their own colour. */
+  color?: string;
 }) => {
   const w = active ? 34 : 26;
   const h = Math.round(w * 1.33);
-  const fill = active ? PIN_RED_DARK : PIN_RED;
+  const base = color || PIN_RED;
+  const fill = active && !color ? PIN_RED_DARK : base;
+  const projectCount = Number(
+    zone.project_count || zone.project_ids?.length || 0,
+  );
   return (
     <OverlayView
       position={position}
@@ -2580,8 +2591,8 @@ const ZonePin = ({
               width: 28,
               height: 14,
               borderRadius: "50%",
-              backgroundColor: `${PIN_RED}40`,
-              border: `1.5px solid ${PIN_RED}`,
+              backgroundColor: withAlpha(base, "40"),
+              border: `1.5px solid ${base}`,
             }}
           />
         )}
@@ -2600,6 +2611,13 @@ const ZonePin = ({
                   sx={{ fontSize: 11.5, opacity: 0.85, lineHeight: 1.3 }}
                 >
                   {zone.address_name || zone.address}
+                </Typography>
+              )}
+              {projectCount > 0 && (
+                <Typography
+                  sx={{ fontSize: 11.5, opacity: 0.85, lineHeight: 1.3 }}
+                >
+                  {projectCount} project{projectCount === 1 ? "" : "s"}
                 </Typography>
               )}
             </Box>
@@ -3133,53 +3151,14 @@ const AllZonesMap = ({
               };
               return (
                 <React.Fragment key={zone.id}>
-                  <OverlayView
+                  <ZonePin
+                    zone={zone}
                     position={center}
-                    mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                  >
-                    <Box
-                      onClick={() => onZoneClick(zone)}
-                      sx={{
-                        cursor: "pointer",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        transform: "translate(-50%, -100%)",
-                        width: "max-content",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          backgroundColor:
-                            activeZoneId === zone.id ? "#eff6ff" : "#fff",
-                          border: `${activeZoneId === zone.id ? 3 : 2}px solid ${color}`,
-                          borderRadius: "4px",
-                          px: 1.25,
-                          py: 0.35,
-                          boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-                          mb: 0,
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontSize: 12,
-                            fontWeight: 700,
-                            color: "#111",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {zone.name}
-                        </Typography>
-                      </Box>
-                      <Box
-                        sx={{
-                          width: "2px",
-                          height: "20px",
-                          backgroundColor: color,
-                        }}
-                      />
-                    </Box>
-                  </OverlayView>
+                    color={color}
+                    active={activeZoneId === zone.id}
+                    onClick={() => onZoneClick(zone)}
+                    onHover={() => {}}
+                  />
                   <Circle
                     center={center}
                     radius={Number(zone.radius)}
@@ -3210,53 +3189,14 @@ const AllZonesMap = ({
               };
               return (
                 <React.Fragment key={zone.id}>
-                  <OverlayView
+                  <ZonePin
+                    zone={zone}
                     position={centroid}
-                    mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                  >
-                    <Box
-                      onClick={() => onZoneClick(zone)}
-                      sx={{
-                        cursor: "pointer",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        transform: "translate(-50%, -100%)",
-                        width: "max-content",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          backgroundColor:
-                            activeZoneId === zone.id ? "#eff6ff" : "#fff",
-                          border: `${activeZoneId === zone.id ? 3 : 2}px solid ${color}`,
-                          borderRadius: "4px",
-                          px: 1.25,
-                          py: 0.35,
-                          boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-                          mb: 0,
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontSize: 12,
-                            fontWeight: 700,
-                            color: "#111",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {zone.name}
-                        </Typography>
-                      </Box>
-                      <Box
-                        sx={{
-                          width: "2px",
-                          height: "20px",
-                          backgroundColor: color,
-                        }}
-                      />
-                    </Box>
-                  </OverlayView>
+                    color={color}
+                    active={activeZoneId === zone.id}
+                    onClick={() => onZoneClick(zone)}
+                    onHover={() => {}}
+                  />
                   <Polygon
                     paths={path}
                     options={{
@@ -3278,18 +3218,14 @@ const AllZonesMap = ({
               const midpoint = path[Math.floor(path.length / 2)];
               return (
                 <React.Fragment key={zone.id}>
-                  <OverlayView
+                  <ZonePin
+                    zone={zone}
                     position={midpoint}
-                    mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                  >
-                    <Box
-                      onClick={() => onZoneClick(zone)}
-                      sx={{ cursor: "pointer", color, width: "max-content" }}
-                      className="map-site-label"
-                    >
-                      <Typography>{zone.name}</Typography>
-                    </Box>
-                  </OverlayView>
+                    color={color}
+                    active={activeZoneId === zone.id}
+                    onClick={() => onZoneClick(zone)}
+                    onHover={() => {}}
+                  />
                   <Polyline
                     path={path}
                     options={{ strokeColor: color, strokeWeight: 3 }}
