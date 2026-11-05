@@ -127,11 +127,11 @@ const StockList: React.FC = () => {
       header: "Store",
       cell: ({ row }) => text(row.original.store_name ?? "-"),
     }),
-    columnHelper.accessor("code", {
-      header: "Code",
+    columnHelper.accessor("uuid", {
+      header: "UUID",
       cell: ({ row }) => (
         <Typography className="f-14" fontWeight={600} ml={1}>
-          {row.original.code}
+          {row.original.uuid}
         </Typography>
       ),
     }),

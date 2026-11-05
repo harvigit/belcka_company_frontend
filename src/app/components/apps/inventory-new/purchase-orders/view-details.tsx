@@ -230,7 +230,7 @@ const PurchaseOrderDetails: React.FC<PurchaseOrderDetailsProps> = ({
                             {l.supplier_code} · {l.supplier_item_name}
                           </Typography>
                           <Typography variant="caption" color="textSecondary">
-                            {l.internal_item_code} {l.internal_item_name} ·{" "}
+                            {l.internal_item_uuid} {l.internal_item_name} ·{" "}
                             {money(l.pack_price)} per {l.pack_qty}{" "}
                             {l.unit_name ?? "unit"}
                           </Typography>

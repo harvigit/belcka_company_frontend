@@ -26,7 +26,7 @@ interface SupplierItemRow {
   supplier_code: string;
   name: string;
   // internal items it is already linked to (a supplier item can have several)
-  internal_items: { id: number; code: string; name: string }[];
+  internal_items: { id: number; uuid: string; name: string }[];
 }
 
 interface LinkSupplierItemsDialogProps {
@@ -81,7 +81,7 @@ const LinkSupplierItemsDialog: React.FC<LinkSupplierItemsDialogProps> = ({
     !!internalId && (s.internal_items ?? []).some((i) => i.id === internalId);
   // its other internal items (it stays linked to them too)
   const otherLinks = (s: SupplierItemRow) =>
-    (s.internal_items ?? []).filter((i) => i.id !== internalId).map((i) => i.code);
+    (s.internal_items ?? []).filter((i) => i.id !== internalId).map((i) => i.uuid);
 
   const submit = async () => {
     if (!internalId) {
@@ -128,7 +128,7 @@ const LinkSupplierItemsDialog: React.FC<LinkSupplierItemsDialogProps> = ({
                   prev.filter((s) => !value || !(s.internal_items ?? []).some((i) => i.id === value.id)),
                 );
               }}
-              getOptionLabel={(o) => `${o.code} · ${o.name}`}
+              getOptionLabel={(o) => `${o.uuid} · ${o.name}`}
               isOptionEqualToValue={(o, v) => o.id === v.id}
               renderInput={(params) => <CustomTextField {...params} placeholder="Search internal item..." />}
             />

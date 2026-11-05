@@ -282,14 +282,14 @@ const SupplierItemList: React.FC = () => {
         </Typography>
       ),
     }),
-    columnHelper.accessor((row) => (row.internal_items ?? []).map((i: any) => i.code).join(", "), {
+    columnHelper.accessor((row) => (row.internal_items ?? []).map((i: any) => i.uuid).join(", "), {
       id: "internal_items",
       header: "Internal items",
       cell: ({ row }) => {
         const item = row.original;
         const links: any[] = item.internal_items ?? [];
         const label = links.length
-          ? links.map((i) => `${i.code} · ${i.name}`).join(", ")
+          ? links.map((i) => `${i.uuid} · ${i.name}`).join(", ")
           : "Unlinked";
         return (
           <Stack
@@ -328,7 +328,7 @@ const SupplierItemList: React.FC = () => {
               <Tooltip
                 title={`Preferred supplier for ${links
                   .filter((i) => i.is_preferred)
-                  .map((i) => i.code)
+                  .map((i) => i.uuid)
                   .join(", ")}`}
               >
                 <Box

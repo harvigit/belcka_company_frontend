@@ -22,7 +22,7 @@ import { packsText, splitQty } from "../shared/orderUtils";
 
 interface IssuableItem {
   internal_item_id: number;
-  code: string;
+  uuid: string;
   name: string;
   unit_name: string | null;
   is_sub_qty: boolean;
@@ -279,13 +279,13 @@ const InternalOrderDrawer: React.FC<InternalOrderDrawerProps> = ({
                 },
               ]);
           }}
-          getOptionLabel={(o) => `${o.code} · ${o.name}`}
+          getOptionLabel={(o) => `${o.uuid} · ${o.name}`}
           getOptionDisabled={(o) => o.on_hand <= 0}
           renderOption={(props, o) => (
             <li {...props} key={o.internal_item_id}>
               <Box>
                 <Typography variant="body2">
-                  {o.code} · {o.name}
+                  {o.uuid} · {o.name}
                 </Typography>
                 <Typography
                   variant="caption"
@@ -334,7 +334,7 @@ const InternalOrderDrawer: React.FC<InternalOrderDrawerProps> = ({
             >
               <Box>
                 <Typography variant="body2" fontWeight={600}>
-                  {item ? `${item.code} · ${item.name}` : "Loading..."}
+                  {item ? `${item.uuid} · ${item.name}` : "Loading..."}
                 </Typography>
                 {item && (
                   <Typography

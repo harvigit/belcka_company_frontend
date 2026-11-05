@@ -189,7 +189,7 @@ const AdjustmentsList: React.FC<AdjustmentsListProps> = ({
                       </TableCell>
                       <TableCell>
                         <Typography className="f-14" fontWeight={600}>
-                          {r.code} · {r.name}
+                          {r.uuid} · {r.name}
                         </Typography>
                       </TableCell>
                       <TableCell>

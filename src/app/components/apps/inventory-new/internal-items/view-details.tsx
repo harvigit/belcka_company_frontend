@@ -190,7 +190,6 @@ const InternalItemDetails: React.FC<InternalItemDetailsProps> = ({
             )}
             <Stack spacing={1.5} mb={3}>
               <DetailRow label="UUID" value={item.uuid} />
-              <DetailRow label="Code" value={item.code} />
               <DetailRow label="Name" value={item.name} />
               <DetailRow label="Category" value={item.category_name ?? "-"} />
               <DetailRow

@@ -305,7 +305,7 @@ const ReorderPlanner: React.FC<ReorderPlannerProps> = ({
                   <TableRow key={r.key}>
                     <TableCell>
                       <Typography variant="body2" fontWeight={600}>
-                        {r.code} · {r.name}
+                        {r.uuid} · {r.name}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
                         {r.store_name}

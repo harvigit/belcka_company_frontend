@@ -172,7 +172,7 @@ const InternalOrderDetails: React.FC<InternalOrderDetailsProps> = ({
                     <TableRow key={l.id}>
                       <TableCell>
                         <Typography variant="body2" fontWeight={600}>
-                          {l.internal_item_code} · {l.internal_item_name}
+                          {l.internal_item_uuid} · {l.internal_item_name}
                         </Typography>
                       </TableCell>
                       <TableCell>

@@ -98,7 +98,7 @@ const InternalItemPickDialog: React.FC<InternalItemPickDialogProps> = ({
               options={options.internal_items}
               value={value}
               onChange={(_, v) => setPickedIds([...new Set(v.map((o) => o.id))])}
-              getOptionLabel={(o) => `${o.code} · ${o.name}`}
+              getOptionLabel={(o) => `${o.uuid} · ${o.name}`}
               isOptionEqualToValue={(o, v) => o.id === v.id}
               renderInput={(params) => (
                 <CustomTextField {...params} placeholder={value.length ? "" : "Select internal items"} />

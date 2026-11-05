@@ -223,7 +223,7 @@ const SupplierItemDrawer: React.FC<SupplierItemDrawerProps> = ({
                 is_preferred: ids.length ? prev.is_preferred : false,
               }));
             }}
-            getOptionLabel={(o) => `${o.code} · ${o.name}`}
+            getOptionLabel={(o) => `${o.uuid} · ${o.name}`}
             isOptionEqualToValue={(o, v) => o.id === v.id}
             renderInput={(params) => (
               <CustomTextField
