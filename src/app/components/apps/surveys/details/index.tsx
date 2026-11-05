@@ -940,6 +940,13 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                   </Typography>
                 )}
               </Typography>
+              {/* Recorded only for surveys assigned since this was added. */}
+              {survey.surveyor_id && survey.assigned_by_name && (
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  Assigned by {survey.assigned_by_name}
+                  {survey.assigned_at ? ` on ${new Date(survey.assigned_at).toLocaleDateString("en-GB")}` : ""}
+                </Typography>
+              )}
             </CardContent>
           </BlankCard>
         </Grid>
