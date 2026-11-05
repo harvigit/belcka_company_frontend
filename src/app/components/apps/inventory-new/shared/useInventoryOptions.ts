@@ -8,7 +8,7 @@ export interface InventoryOption {
 }
 
 export interface InternalItemOption extends InventoryOption {
-  code: string;
+  uuid: string;
   status?: boolean;
   is_sub_qty: boolean;
   issue_pack_qty?: number | null;

@@ -104,7 +104,7 @@ const AdjustDialog: React.FC<AdjustDialogProps> = ({
         Adjust stock
         {row && (
           <Typography variant="body2" color="textSecondary">
-            {row.code} · {row.name} at {row.store_name} ·{" "}
+            {row.uuid} · {row.name} at {row.store_name} ·{" "}
             {packsText(
               row.on_hand,
               sub ? row.issue_pack_qty : null,

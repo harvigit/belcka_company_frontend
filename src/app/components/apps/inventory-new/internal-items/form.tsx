@@ -29,7 +29,6 @@ export interface InternalItemForm {
   id?: number;
   // empty on add generates one (INT-0001)
   uuid: string;
-  code: string;
   name: string;
   description: string;
   category_id: number | "";
@@ -46,7 +45,6 @@ export interface InternalItemForm {
 
 export const emptyInternalItem: InternalItemForm = {
   uuid: "",
-  code: "",
   name: "",
   description: "",
   category_id: "",
@@ -312,19 +310,6 @@ const InternalItemDrawer: React.FC<InternalItemDrawerProps> = ({
                     fullWidth
                     value={formData.name}
                     onChange={(e: any) => set("name", e.target.value)}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <Typography variant="body2" gutterBottom>
-                    Code
-                  </Typography>
-                  <CustomTextField
-                    className="product_input"
-                    placeholder="e.g. COM-0001"
-                    inputProps={{ maxLength: 50 }}
-                    fullWidth
-                    value={formData.code}
-                    onChange={(e: any) => set("code", e.target.value)}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6, md: 4 }}>

@@ -218,11 +218,11 @@ const StoreItemList: React.FC = () => {
         </Typography>
       ),
     }),
-    columnHelper.accessor("internal_item_code", {
+    columnHelper.accessor("internal_item_uuid", {
       header: "Internal item",
       cell: ({ row }) => (
         <Typography className="f-14" sx={{ pl: 1 }}>
-          <b>{row.original.internal_item_code}</b> ·{" "}
+          <b>{row.original.internal_item_uuid}</b> ·{" "}
           {row.original.internal_item_name}
         </Typography>
       ),

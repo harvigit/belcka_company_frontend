@@ -100,7 +100,7 @@ const StoreItemDrawer: React.FC<StoreItemDrawerProps> = ({
           value={internalItem}
           disabled={isEdit}
           onChange={(_, value) => set("internal_item_id", value?.id ?? null)}
-          getOptionLabel={(o) => `${o.code} · ${o.name}`}
+          getOptionLabel={(o) => `${o.uuid} · ${o.name}`}
           isOptionEqualToValue={(o, v) => o.id === v.id}
           renderInput={(params) => (
             <CustomTextField

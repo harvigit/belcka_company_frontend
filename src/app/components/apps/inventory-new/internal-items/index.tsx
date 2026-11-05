@@ -161,7 +161,6 @@ const InternalItemList: React.FC = () => {
     setFormData({
       id: item.id,
       uuid: item.uuid ?? "",
-      code: item.code ?? "",
       name: item.name ?? "",
       description: item.description ?? "",
       category_id: item.category_id ?? "",
@@ -375,23 +374,16 @@ const InternalItemList: React.FC = () => {
     columnHelper.accessor("uuid", {
       header: "UUID",
       cell: ({ row }) => (
-        <Typography className="f-14" ml={1} whiteSpace="nowrap">
-          {row.original.uuid}
-        </Typography>
-      ),
-    }),
-    columnHelper.accessor("code", {
-      header: "Code",
-      cell: ({ row }) => (
         <Typography
           className="f-14"
           color="primary"
           fontWeight={600}
           ml={1}
+          whiteSpace="nowrap"
           onClick={() => setViewItemId(row.original.id)}
-          sx={{ "&:hover": { textDecoration: "underline" } }}
+          sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
         >
-          {row.original.code}
+          {row.original.uuid}
         </Typography>
       ),
     }),

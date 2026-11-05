@@ -27,7 +27,7 @@ interface OrderableItem {
   internal_item_id: number;
   supplier_code: string;
   name: string;
-  internal_item_code: string;
+  internal_item_uuid: string;
   internal_item_name: string;
   unit_name: string | null;
   pack_qty: number;
@@ -314,7 +314,7 @@ const PurchaseOrderDrawer: React.FC<PurchaseOrderDrawerProps> = ({
                   {o.supplier_code} · {o.name}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
-                  {o.internal_item_code} {o.internal_item_name} · {o.pack_qty}{" "}
+                  {o.internal_item_uuid} {o.internal_item_name} · {o.pack_qty}{" "}
                   {o.unit_name ?? "unit"} per pack · {money(o.pack_price)}
                   {o.is_sub_qty ? " · Sub qty" : ""}
                 </Typography>
@@ -367,7 +367,7 @@ const PurchaseOrderDrawer: React.FC<PurchaseOrderDrawerProps> = ({
                 </Typography>
                 {item && (
                   <Typography variant="caption" color="textSecondary">
-                    {item.internal_item_code} {item.internal_item_name} ·{" "}
+                    {item.internal_item_uuid} {item.internal_item_name} ·{" "}
                     {item.pack_qty} {item.unit_name ?? "unit"} per pack at{" "}
                     {money(item.pack_price)}
                   </Typography>

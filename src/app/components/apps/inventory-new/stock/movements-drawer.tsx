@@ -74,7 +74,7 @@ const MovementsDrawer: React.FC<MovementsDrawerProps> = ({
               </Typography>
               {row && (
                 <Typography variant="body2" color="textSecondary">
-                  {row.code} · {row.name} at {row.store_name}
+                  {row.uuid} · {row.name} at {row.store_name}
                 </Typography>
               )}
             </Box>
