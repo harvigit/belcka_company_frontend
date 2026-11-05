@@ -1949,8 +1949,10 @@ const TimeTracking: React.FC<Props> = () => {
 
     const handleStopWork = useCallback(async () => {
         if (!clockInfo.user_worklog_id || clockActionInProgressRef.current) return;
+        
         clockActionInProgressRef.current = true;
         setClockLoading(true);
+        
         try {
             // IP lookup and location (GPS + geocode) are independent, so run them together instead of back to back.
             const locationPromise = (async (): Promise<{ latitude: string; longitude: string; address?: string } | null> => {
@@ -1962,13 +1964,15 @@ const TimeTracking: React.FC<Props> = () => {
                             maximumAge: 0
                         })
                     );
+                    
                     const address = await getAddressFromCoordinates(pos.coords.latitude, pos.coords.longitude);
+                    
                     return {
                         latitude: String(pos.coords.latitude),
                         longitude: String(pos.coords.longitude),
                         ...(address ? {address} : {}),
                     };
-                } catch { /* location not available */
+                } catch {
                     return null;
                 }
             })();
