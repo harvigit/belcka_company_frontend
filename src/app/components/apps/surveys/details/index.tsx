@@ -1645,6 +1645,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                 const wo = survey.work_order || (survey.work_orders && survey.work_orders[0]);
                 const vos: SurveyVariationOrder[] = survey.variation_orders || (wo?.variation_orders) || [];
                 const approvedVos = vos.filter((v) => v.status === "approved");
+                // A pending variation can't be decided after the work order is completed.
+                const pendingVoCount = vos.filter((v) => v.status === "pending").length;
                 const totalApprovedVoAmount = approvedVos.reduce((sum, v) => sum + Number(v.amount || 0), 0);
                 const currentTotal = Number(wo?.total_amount ?? ((Number(wo?.baseline_total || survey.baseline_total || 0)) + totalApprovedVoAmount));
 
@@ -1727,7 +1729,9 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                 title={
                                   (wo.progress?.completed ?? 0) < (wo.progress?.total ?? 0)
                                     ? `All ${wo.progress?.total} items must be marked complete before completing the work order (${(wo.progress?.completed ?? 0)}/${wo.progress?.total ?? 0} done)`
-                                    : "Mark all works completed and finish work order"
+                                    : pendingVoCount > 0
+                                      ? `Approve or reject the ${pendingVoCount} pending variation order(s) before completing the work order`
+                                      : "Mark all works completed and finish work order"
                                 }
                               >
                                 <span>
@@ -1737,7 +1741,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                     size="small"
                                     startIcon={<IconCheck size={16} />}
                                     onClick={() => handleUpdateWoStatus("completed")}
-                                    disabled={updatingWoStatus || ((wo.progress?.completed ?? 0) < (wo.progress?.total ?? 0))}
+                                    disabled={updatingWoStatus || ((wo.progress?.completed ?? 0) < (wo.progress?.total ?? 0)) || pendingVoCount > 0}
                                     sx={{ fontWeight: 700, borderRadius: "8px", textTransform: "none" }}
                                   >
                                     Complete Work Order
