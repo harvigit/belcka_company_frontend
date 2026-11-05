@@ -34,7 +34,7 @@ export type InspectionFormData = {
 
 const errorMessage = (error: any, fallback: string) => error?.response?.data?.message || fallback;
 
-/** Loads and saves a survey's property detail (GET / PUT surveys/:id/form). */
+/** Loads and saves a survey's property detail (GET / PATCH surveys/:id/form). */
 export default function useInspectionForm(surveyId: number | string | null | undefined) {
   const [data, setData] = useState<InspectionFormData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -63,7 +63,8 @@ export default function useInspectionForm(surveyId: number | string | null | und
       if (!surveyId) return false;
       setSaving(true);
       try {
-        const res = await api.put(`surveys/${surveyId}/form`, { answers });
+        // PATCH merges these answers (e.g. one section) into the saved ones and keeps the rest.
+        const res = await api.patch(`surveys/${surveyId}/form`, { answers });
         if (res.data?.IsSuccess) {
           setData(res.data.info);
           toast.success(res.data.message || "Property detail saved");

@@ -45,6 +45,8 @@ type Props = {
   onSectionStats?: (stats: FormSectionStat[]) => void;
   /** Scroll the sections inside the panel (desktop), so the header with Save stays in view. */
   scrollBody?: boolean;
+  /** Told whether there are unsaved changes, so the page can warn before closing the form. */
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 export type FormSectionStat = { id: string; label: string; required: number; done: number };
@@ -136,23 +138,64 @@ export default function InspectionFormPanel({
   onOpenSection,
   onSectionStats,
   scrollBody = false,
+  onDirtyChange,
 }: Props) {
   const fields = data.form?.fields || [];
   const editable = !readOnly && data.editable && Boolean(onSave);
-  const [values, setValues] = useState<Record<string, unknown>>({});
-  const [dirty, setDirty] = useState(false);
+  // Changes not saved yet, by field id. Saved answers come from `data`, so saving one section
+  // keeps the unsaved changes in the others.
+  const [edits, setEdits] = useState<Record<string, unknown>>({});
+  const values = useMemo(() => ({ ...data.prefill, ...data.answers, ...edits }), [data, edits]);
   const [showMissing, setShowMissing] = useState(false);
+  // Sections saved at least once in this visit; their missing required fields are highlighted.
+  const [checkedSections, setCheckedSections] = useState<Set<string>>(new Set());
+  const [savingSection, setSavingSection] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
-
-  useEffect(() => {
-    setValues({ ...data.prefill, ...data.answers });
-    setDirty(false);
-  }, [data]);
 
   const formulas = useMemo(() => calculateFormulas(fields, values), [fields, values]);
 
   const sections = useMemo(() => formSections(fields), [fields]);
   const stats = useMemo(() => formSectionStats(fields, values), [fields, values]);
+  // Answerable field ids of each section, and the section each field belongs to.
+  const sectionFieldIds = useMemo(
+    () =>
+      Object.fromEntries(
+        sections.map((section) => [
+          section.id,
+          flatten(section.fields || [])
+            .filter((f) => !NOT_ANSWERABLE.has(f.type))
+            .map((f) => f.id),
+        ]),
+      ) as Record<string, string[]>,
+    [sections],
+  );
+  const sectionOfField = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(sectionFieldIds).flatMap(([sectionId, ids]) => ids.map((id) => [id, sectionId])),
+      ) as Record<string, string>,
+    [sectionFieldIds],
+  );
+  const dirtySections = useMemo(
+    () => sections.filter((s) => sectionFieldIds[s.id].some((id) => id in edits)).map((s) => s.id),
+    [sections, sectionFieldIds, edits],
+  );
+  const dirty = dirtySections.length > 0;
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
+  // Warn before a refresh or closing the tab while a section is unsaved.
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
   // One section open at a time; the page may control which (left-hand section list).
   const [ownSection, setOwnSection] = useState<string | null | undefined>(undefined);
@@ -184,20 +227,43 @@ export default function InspectionFormPanel({
   const required = answerable.filter((f) => f.required);
   const missingIds = new Set(required.filter((f) => isBlank(values[f.id])).map((f) => f.id));
   const answeredRequired = required.length - missingIds.size;
+  // Highlight a missing required field after a full save, or after its own section was saved.
+  const isMissingShown = (id: string) =>
+    missingIds.has(id) && (showMissing || checkedSections.has(sectionOfField[id]));
   const percent = required.length ? Math.round((answeredRequired / required.length) * 100) : 100;
 
   const setValue = (id: string, value: unknown) => {
-    setValues((current) => ({ ...current, [id]: value }));
-    setDirty(true);
+    setEdits((current) => ({ ...current, [id]: value }));
   };
 
-  const save = async () => {
-    if (!onSave) return;
-    // Every field the surveyor sees is sent, so prefilled values are kept as answers.
+  // Saves the given sections only; the API keeps every other saved answer. Every field of a section
+  // is sent, so its prefilled values are kept as answers.
+  const saveSections = async (sectionIds: string[]) => {
+    if (!onSave || !sectionIds.length) return false;
+    const ids = sectionIds.flatMap((sectionId) => sectionFieldIds[sectionId] || []);
     const answers: Record<string, unknown> = {};
-    for (const field of answerable) answers[field.id] = isBlank(values[field.id]) ? null : values[field.id];
+    for (const id of ids) answers[id] = isBlank(values[id]) ? null : values[id];
+    const saved = await onSave(answers);
+    if (saved) {
+      setEdits((current) => Object.fromEntries(Object.entries(current).filter(([id]) => !ids.includes(id))));
+      setCheckedSections((current) => new Set([...current, ...sectionIds]));
+    }
+    return saved;
+  };
+
+  const saveSection = async (sectionId: string) => {
+    setSavingSection(sectionId);
+    try {
+      await saveSections([sectionId]);
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  // Saves every section with unsaved changes, then shows what is still missing across the form.
+  const save = async () => {
+    await saveSections(dirtySections);
     setShowMissing(true);
-    if (await onSave(answers)) setDirty(false);
     // Take the surveyor to the first section that still has required fields to fill in.
     const firstMissing = stats.find((stat) => stat.done < stat.required);
     if (firstMissing) setSection(firstMissing.id);
@@ -223,7 +289,7 @@ export default function InspectionFormPanel({
   const renderInput = (field: InspectionFormField) => {
     const value = values[field.id];
     const disabled = !editable;
-    const error = showMissing && missingIds.has(field.id);
+    const error = isMissingShown(field.id);
     const options = field.type === "Yes/No" && !field.options?.length ? ["Yes", "No"] : field.options || [];
 
     switch (field.type) {
@@ -369,7 +435,7 @@ export default function InspectionFormPanel({
     }
     const fromSurvey =
       field.source && !isBlank(data.prefill[field.id]) && values[field.id] === data.prefill[field.id];
-    const missing = showMissing && missingIds.has(field.id);
+    const missing = isMissingShown(field.id);
     return (
       <Box key={field.id} sx={{ gridColumn: isWide(field) ? "1 / -1" : undefined }}>
         <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
@@ -454,7 +520,8 @@ export default function InspectionFormPanel({
         </Stack>
         {editable && dirty && (
           <Alert severity="info" sx={{ mt: 1.5, py: 0 }}>
-            You have unsaved changes.
+            Unsaved changes in {dirtySections.length} section{dirtySections.length === 1 ? "" : "s"}. Save each
+            section, or use Save form to save them all.
           </Alert>
         )}
         {showMissing && missingIds.size > 0 && (
@@ -471,6 +538,8 @@ export default function InspectionFormPanel({
           const complete = stat.required > 0 && stat.done === stat.required;
           const open = currentSection === section.id;
           const next = sections[index + 1];
+          const sectionDirty = dirtySections.includes(section.id);
+          const hasAnswers = sectionFieldIds[section.id].length > 0;
           return (
             <Paper
               key={section.id}
@@ -506,6 +575,9 @@ export default function InspectionFormPanel({
                     {section.label}
                   </Typography>
                   {complete && <IconCircleCheckFilled size={18} color="#13DEB9" />}
+                  {editable && sectionDirty && (
+                    <Chip size="small" color="warning" variant="outlined" label="Unsaved" sx={{ height: 20, fontSize: 11 }} />
+                  )}
                 </Stack>
                 {stat.required > 0 && (
                   <Typography
@@ -543,11 +615,30 @@ export default function InspectionFormPanel({
                       ),
                     )}
                   </Box>
-                  {next && (
-                    <Stack direction="row" justifyContent="flex-end" px={2} pb={2}>
-                      <Button size="small" endIcon={<IconChevronRight size={16} />} onClick={() => setSection(next.id)}>
-                        Next: {next.label}
-                      </Button>
+                  {((editable && hasAnswers) || next) && (
+                    <Stack direction="row" justifyContent="flex-end" spacing={1} px={2} pb={2}>
+                      {editable && hasAnswers && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={
+                            savingSection === section.id ? (
+                              <CircularProgress size={14} color="inherit" />
+                            ) : (
+                              <IconDeviceFloppy size={16} />
+                            )
+                          }
+                          onClick={() => void saveSection(section.id)}
+                          disabled={saving || !sectionDirty}
+                        >
+                          {savingSection === section.id ? "Saving..." : "Save section"}
+                        </Button>
+                      )}
+                      {next && (
+                        <Button size="small" endIcon={<IconChevronRight size={16} />} onClick={() => setSection(next.id)}>
+                          Next: {next.label}
+                        </Button>
+                      )}
                     </Stack>
                   )}
                 </>
