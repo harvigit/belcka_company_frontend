@@ -57,6 +57,7 @@ import {
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import useSurveyAccess from "../useSurveyAccess";
+import AddedOnSiteChip from "../AddedOnSiteChip";
 import BlankCard from "@/app/components/shared/BlankCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import {
@@ -1375,6 +1376,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                           sx={{ height: 20, fontSize: "0.7rem" }}
                         />
                       )}
+                      {activeEvidence.added_on_site && <AddedOnSiteChip />}
                     </Stack>
                   </Box>
 
@@ -1467,6 +1469,14 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                                   objectFit: "cover",
                                 }}
                               />
+                              {photo.photo_type === "damage" && (
+                                <Chip
+                                  label="Damage"
+                                  color="error"
+                                  size="small"
+                                  sx={{ position: "absolute", top: 6, left: 6, height: 20, fontSize: "0.65rem", fontWeight: 700 }}
+                                />
+                              )}
                             </Box>
                           </Grid>
                         ))}
@@ -1528,7 +1538,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
               <MenuItem value="">None / Custom line</MenuItem>
               {scopeData.evidence_items.map((ei) => (
                 <MenuItem key={ei.id} value={ei.id}>
-                  {ei.room_name} • {ei.element_name} ({ei.condition || "uninspected"})
+                  {ei.room_name} • {ei.element_name} ({ei.condition || "uninspected"}){ei.added_on_site ? " · added on site" : ""}
                 </MenuItem>
               ))}
             </CustomTextField>

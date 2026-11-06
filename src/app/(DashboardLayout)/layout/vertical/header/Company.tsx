@@ -573,6 +573,15 @@ const Company = ({ isPanelCopy = false }: CompanyProps) => {
 
       return url;
     },
+    // Inventory New: open the item; a removed one only has the list left to show
+    "Internal Product": (_userId, recordId) =>
+      recordId
+        ? `/apps/inventory-new/internal-items/list?id=${recordId}`
+        : `/apps/inventory-new/internal-items/list`,
+    "Supplier Product": (_userId, recordId) =>
+      recordId
+        ? `/apps/inventory-new/supplier-items/list?id=${recordId}`
+        : `/apps/inventory-new/supplier-items/list`,
   };
 
   useEffect(() => {
@@ -1023,6 +1032,18 @@ const Company = ({ isPanelCopy = false }: CompanyProps) => {
                                 router.push(routeFn(item.team_id));
                               } else if (item.request_name === "User") {
                                 router.push(routeFn(item.user_id));
+                              } else if (
+                                item.request_name === "Internal Product" ||
+                                item.request_name === "Supplier Product"
+                              ) {
+                                router.push(
+                                  routeFn(
+                                    undefined,
+                                    item.action === "delete"
+                                      ? undefined
+                                      : item.record_id,
+                                  ),
+                                );
                               } else if (item.request_name === "Project") {
                                 router.push(
                                   routeFn(item.project_id ?? item.record_id),

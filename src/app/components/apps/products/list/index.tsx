@@ -1429,6 +1429,34 @@ const ProductList = () => {
       },
     }),
 
+    // columnHelper.accessor((row) => row?.inventory_new_item?.code, {
+    //   id: "inventoryNew",
+    //   header: () => "Inventory New",
+    //   cell: ({ row }) => {
+    //     const linked = row.original.inventory_new_item;
+    //     if (!linked) {
+    //       return (
+    //         <Typography className="f-14" color="textSecondary" px={1}>
+    //           -
+    //         </Typography>
+    //       );
+    //     }
+    //     return (
+    //       <Tooltip title={`${linked.code} · ${linked.name}`}>
+    //         <Link
+    //           href={`/apps/inventory-new/internal-items/list?search=${encodeURIComponent(linked.code)}`}
+    //           onClick={(e) => e.stopPropagation()}
+    //           style={{ textDecoration: "none" }}
+    //         >
+    //           <Typography className="f-14" color="primary" fontWeight={600} px={1} whiteSpace="nowrap">
+    //             {linked.code}
+    //           </Typography>
+    //         </Link>
+    //       </Tooltip>
+    //     );
+    //   },
+    // }),
+    
     columnHelper.accessor("qr_code_url", {
       id: "QR",
       header: () => (
