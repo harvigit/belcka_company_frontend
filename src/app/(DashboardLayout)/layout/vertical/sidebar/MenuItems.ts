@@ -335,20 +335,20 @@ const MenuItems: NavGroup[] = [
     icon: IconBox,
     href: "/apps/inventory-new/supplier-items/list",
   },
-  // {
-  //   id: uniqueId(),
-  //   title: "Suppliers",
-  //   slug: "new-suppliers",
-  //   icon: IconTruck,
-  //   href: "/apps/inventory-new/suppliers/list",
-  // },
-  // {
-  //   id: uniqueId(),
-  //   title: "Categories",
-  //   slug: "new-categories",
-  //   icon: IconKeyframes,
-  //   href: "/apps/inventory-new/categories/list",
-  // },
+  {
+    id: uniqueId(),
+    title: "Suppliers",
+    slug: "new-suppliers",
+    icon: IconTruck,
+    href: "/apps/inventory-new/suppliers/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Categories",
+    slug: "new-categories",
+    icon: IconKeyframes,
+    href: "/apps/inventory-new/categories/list",
+  },
   // Settings stays last: SidebarItems pins the "settings" slug to the bottom of the sidebar.
   {
     id: uniqueId(),
