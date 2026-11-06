@@ -75,6 +75,9 @@ import {
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import useSurveyAccess from "../useSurveyAccess";
+import useInspectionForm from "../inspection-form/useInspectionForm";
+import AddedOnSiteChip from "../AddedOnSiteChip";
+import InspectionFormPanel from "../inspection-form/InspectionFormPanel";
 import BlankCard from "@/app/components/shared/BlankCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import {
@@ -128,6 +131,7 @@ interface SurveyDetailsProps {
 }
 
 export default function SurveyDetails({ id }: SurveyDetailsProps) {
+  const inspectionForm = useInspectionForm(id);
   const router = useRouter();
   const access = useSurveyAccess();
   const isAdmin = access.is_admin;
@@ -520,6 +524,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
     score?: number | null,
     condition?: string | null,
     photoCount?: number,
+    damagePhotoCount?: number,
   ) => {
     if (condition) {
       const map: Record<
@@ -549,6 +554,18 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
               variant="outlined"
               sx={{ fontWeight: 600, fontSize: "0.7rem", height: 22 }}
             />
+          ) : null}
+          {damagePhotoCount && damagePhotoCount > 0 ? (
+            <Tooltip title="Damage photos taken for the defect">
+              <Chip
+                size="small"
+                icon={<IconCamera size={14} />}
+                label={`${damagePhotoCount} damage`}
+                color="error"
+                variant="outlined"
+                sx={{ fontWeight: 600, fontSize: "0.7rem", height: 22 }}
+              />
+            </Tooltip>
           ) : null}
         </Stack>
       );
@@ -923,6 +940,13 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                   </Typography>
                 )}
               </Typography>
+              {/* Recorded only for surveys assigned since this was added. */}
+              {survey.surveyor_id && survey.assigned_by_name && (
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  Assigned by {survey.assigned_by_name}
+                  {survey.assigned_at ? ` on ${new Date(survey.assigned_at).toLocaleDateString("en-GB")}` : ""}
+                </Typography>
+              )}
             </CardContent>
           </BlankCard>
         </Grid>
@@ -993,6 +1017,27 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
               }
             />
             <Tab label="Survey Details & Metadata" />
+            {inspectionForm.data?.form && (
+              <Tab
+                label={
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <span>Property Detail</span>
+                    {inspectionForm.data.progress.required_total > 0 && (
+                      <Chip
+                        size="small"
+                        label={`${inspectionForm.data.progress.required_answered}/${inspectionForm.data.progress.required_total}`}
+                        color={
+                          inspectionForm.data.progress.required_answered === inspectionForm.data.progress.required_total
+                            ? "success"
+                            : "default"
+                        }
+                        sx={{ height: 20, fontSize: "0.72rem", fontWeight: 700 }}
+                      />
+                    )}
+                  </Stack>
+                }
+              />
+            )}
           </Tabs>
 
           {tabValue === 0 && (survey.rooms || []).length > 0 && (
@@ -1086,9 +1131,12 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                             sx={{ fontWeight: 700, borderRadius: "6px", height: 24 }}
                           />
                           <Box flex={1}>
-                            <Typography variant="subtitle1" fontWeight={700}>
-                              {room.name}
-                            </Typography>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Typography variant="subtitle1" fontWeight={700}>
+                                {room.name}
+                              </Typography>
+                              {room.added_on_site && <AddedOnSiteChip />}
+                            </Stack>
                             {room.notes && (
                               <Typography variant="caption" color="text.secondary">
                                 {room.notes}
@@ -1169,6 +1217,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                           <Typography variant="body2" fontWeight={700}>
                                             {item.name}
                                           </Typography>
+                                          {/* A room added on site is already badged; its elements don't repeat it. */}
+                                          {item.added_on_site && !room.added_on_site && <AddedOnSiteChip />}
                                         </Stack>
                                       </TableCell>
 
@@ -1225,7 +1275,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                         {renderConditionScore(
                                           item.condition_score,
                                           item.condition,
-                                          item.photos?.length,
+                                          item.photos?.filter((p) => p.photo_type !== "damage").length,
+                                          item.photos?.filter((p) => p.photo_type === "damage").length,
                                         )}
                                       </TableCell>
 
@@ -1594,6 +1645,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                 const wo = survey.work_order || (survey.work_orders && survey.work_orders[0]);
                 const vos: SurveyVariationOrder[] = survey.variation_orders || (wo?.variation_orders) || [];
                 const approvedVos = vos.filter((v) => v.status === "approved");
+                // A pending variation can't be decided after the work order is completed.
+                const pendingVoCount = vos.filter((v) => v.status === "pending").length;
                 const totalApprovedVoAmount = approvedVos.reduce((sum, v) => sum + Number(v.amount || 0), 0);
                 const currentTotal = Number(wo?.total_amount ?? ((Number(wo?.baseline_total || survey.baseline_total || 0)) + totalApprovedVoAmount));
 
@@ -1676,7 +1729,9 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                 title={
                                   (wo.progress?.completed ?? 0) < (wo.progress?.total ?? 0)
                                     ? `All ${wo.progress?.total} items must be marked complete before completing the work order (${(wo.progress?.completed ?? 0)}/${wo.progress?.total ?? 0} done)`
-                                    : "Mark all works completed and finish work order"
+                                    : pendingVoCount > 0
+                                      ? `Approve or reject the ${pendingVoCount} pending variation order(s) before completing the work order`
+                                      : "Mark all works completed and finish work order"
                                 }
                               >
                                 <span>
@@ -1686,7 +1741,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                                     size="small"
                                     startIcon={<IconCheck size={16} />}
                                     onClick={() => handleUpdateWoStatus("completed")}
-                                    disabled={updatingWoStatus || ((wo.progress?.completed ?? 0) < (wo.progress?.total ?? 0))}
+                                    disabled={updatingWoStatus || ((wo.progress?.completed ?? 0) < (wo.progress?.total ?? 0)) || pendingVoCount > 0}
                                     sx={{ fontWeight: 700, borderRadius: "8px", textTransform: "none" }}
                                   >
                                     Complete Work Order
@@ -2102,6 +2157,12 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
         })()}
 
         {/* Tab 2: Survey Metadata & Audit */}
+        {tabValue === 3 && inspectionForm.data?.form && (
+          <Box p={{ xs: 2, sm: 2.5 }}>
+            <InspectionFormPanel data={inspectionForm.data} readOnly />
+          </Box>
+        )}
+
         {tabValue === 2 && (
           <Box p={3}>
             <Grid container spacing={3}>

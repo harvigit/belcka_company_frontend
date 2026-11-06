@@ -22,6 +22,8 @@ export interface SurveyItemPhoto {
   file_size?: number;
   caption?: string | null;
   created_at?: string;
+  // "damage" photos are taken for a damaged element's defect.
+  photo_type?: "general" | "damage";
 }
 
 export interface SurveyElementDetails {
@@ -76,6 +78,9 @@ export interface SurveyItem {
   inspected_at?: string | null;
   photos?: SurveyItemPhoto[];
   element?: SurveyElementDetails | null;
+  // Added by the surveyor during the inspection rather than when the survey was created.
+  added_on_site?: boolean;
+  added_by?: number | null;
 }
 
 export interface SurveyRoom {
@@ -85,6 +90,8 @@ export interface SurveyRoom {
   sort_order: number;
   notes?: string;
   items: SurveyItem[];
+  added_on_site?: boolean;
+  added_by?: number | null;
 }
 
 export interface Survey {
@@ -100,6 +107,13 @@ export interface Survey {
   surveyor_id: number | null;
   surveyor_name?: string;
   surveyor?: { id: number; first_name: string; last_name: string; email?: string } | null;
+  // Who assigned the current surveyor, and when; empty for surveys assigned before this was recorded.
+  assigned_by?: number | null;
+  assigned_by_name?: string | null;
+  assigned_at?: string | null;
+  // The property's map position (a flat uses its building's when it has none).
+  property_latitude?: number | null;
+  property_longitude?: number | null;
   survey_date: string;
   creation_method: SurveyCreationMethod;
   template_id?: number | null;
@@ -125,6 +139,8 @@ export interface Survey {
     inspected: number;
     percentage: number;
   };
+  // Required property detail fields answered; null when the survey has no form yet.
+  form_progress?: { required_total: number; required_answered: number } | null;
   total_rooms?: number;
   created_at: string;
   updated_at: string;
@@ -155,6 +171,8 @@ export interface SurveyTemplateOption {
   id: number;
   name: string;
   status: boolean;
+  /** Property detail copied onto surveys created from this template. */
+  form?: { id: number; name: string } | null;
   groups: {
     id: number;
     name: string;
@@ -231,6 +249,7 @@ export interface SurveyEvidenceItem {
   output_unit?: string | null;
   dimensions: { name?: string; unit?: string; value?: number }[];
   photos: SurveyItemPhoto[];
+  added_on_site?: boolean;
 }
 
 export interface SurveyScopeData {

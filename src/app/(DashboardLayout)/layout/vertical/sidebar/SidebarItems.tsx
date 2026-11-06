@@ -38,13 +38,15 @@ const SidebarItems = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";
 
+  // The settings item ("Admin Panel") is always shown last, pinned below every section.
+  const isSettingsItem = (item: any) =>
+    item.slug === "settings" || item.title === "Settings";
+
   const mainMenuItems = filteredMenuItems.filter(
-    (item: any) => item.title !== "Settings",
+    (item: any) => !isSettingsItem(item),
   );
 
-  const bottomMenuItems = filteredMenuItems.filter(
-    (item: any) => item.title === "Settings",
-  );
+  const bottomMenuItems = filteredMenuItems.filter(isSettingsItem);
 
   return (
     <Box

@@ -79,6 +79,7 @@ interface SupplierFormData {
   contact_person_name?: string;
   contact_person_phone?: string;
   contact_person_extension?: string;
+  default_lead_time_days?: number | string | null;
 }
 
 interface TableRow {

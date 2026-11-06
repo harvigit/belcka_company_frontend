@@ -307,11 +307,11 @@ const AdminProjects = () => {
         ),
       },
       {
-        id: "start_date",
+        id: "formatted_start_date",
         header: () => <Typography variant="body2">Start Date</Typography>,
         cell: ({ row }: { row: { original: any } }) => (
           <Typography className="f-14">
-            {row.original.start_date ?? "-"}
+            {row.original.formatted_start_date ?? "-"}
           </Typography>
         ),
       },

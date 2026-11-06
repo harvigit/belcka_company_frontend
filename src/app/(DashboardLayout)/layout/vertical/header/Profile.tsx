@@ -13,6 +13,7 @@ import { setAccessToken } from "@/lib/authToken";
 import Link from "next/link";
 import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 import { useTranslation } from "react-i18next";
+import { useBillingContact } from "@/hooks/useBillingContact";
 
 const Profile = () => {
   const { t } = useTranslation();
@@ -30,6 +31,8 @@ const Profile = () => {
     last_name?: string | null;
   } & { trade_name: string | null } & { company_id?: number | null };
   const [loading] = useState(false);
+  // Name and email shown from billing info when the user has one, else the session values.
+  const contact = useBillingContact();
 
   const userLogout = async () => {
     toast.success(t("Logged out successfully!!"));
@@ -57,7 +60,7 @@ const Profile = () => {
       >
         <Avatar
           src={user?.user_image || "/default-avatar.png"}
-          alt={user?.first_name || "User"}
+          alt={contact.first_name || "User"}
           sx={{
             width: 30,
             height: 30,
@@ -96,7 +99,7 @@ const Profile = () => {
               ml: 1,
             }}
           >
-            {user?.first_name} {user?.last_name}
+            {contact.name}
           </Typography>
           <IconChevronDown width="20" height="20" />
         </Box>
@@ -133,7 +136,7 @@ const Profile = () => {
           <Link href={getUserDetailsHref(user.id)} passHref>
             <Avatar
               src={user?.user_image || "/default-avatar.png"}
-              alt={user?.first_name || "User"}
+              alt={contact.first_name || "User"}
               sx={{
                 width: { xs: 70, sm: 85 },
                 height: { xs: 70, sm: 85 },
@@ -156,7 +159,7 @@ const Profile = () => {
                   "&:hover": { color: "#173f98" },
                 }}
               >
-                {user?.first_name} {user?.last_name}
+                {contact.name}
               </Typography>
               <Typography
                 variant="body1"
@@ -170,7 +173,7 @@ const Profile = () => {
               </Typography>
             </Link>
 
-            {user?.email && (
+            {contact.email && (
               <Box
                 display="flex"
                 alignItems="center"
@@ -192,7 +195,7 @@ const Profile = () => {
                     wordBreak: "break-word",
                   }}
                 >
-                  {user.email}
+                  {contact.email}
                 </Typography>
               </Box>
             )}

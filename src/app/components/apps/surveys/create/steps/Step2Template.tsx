@@ -13,6 +13,8 @@ import {
   Radio,
   CircularProgress,
   Divider,
+  TextField,
+  MenuItem,
 } from "@mui/material";
 import {
   IconTemplate,
@@ -20,6 +22,7 @@ import {
   IconCheck,
   IconFolder,
   IconLayersIntersect,
+  IconClipboardList,
 } from "@tabler/icons-react";
 import {
   SurveyCreationMethod,
@@ -32,6 +35,9 @@ interface Step2TemplateProps {
   setMethod: (method: SurveyCreationMethod) => void;
   selectedTemplateId: number | null;
   onSelectTemplate: (templateId: number | null) => void;
+  inspectionForms: { id: number; name: string }[];
+  selectedFormId: number | null;
+  onSelectForm: (formId: number | null) => void;
   templates: SurveyTemplateOption[];
   groups: SurveyGroupOption[];
   loadingTemplates: boolean;
@@ -42,6 +48,9 @@ export default function Step2Template({
   setMethod,
   selectedTemplateId,
   onSelectTemplate,
+  inspectionForms,
+  selectedFormId,
+  onSelectForm,
   templates,
   groups,
   loadingTemplates,
@@ -221,6 +230,15 @@ export default function Step2Template({
                           )}
                         </Stack>
 
+                        {tpl.form && (
+                          <Stack direction="row" alignItems="center" spacing={0.5} mt={0.5}>
+                            <IconClipboardList size={16} color="#666" />
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} noWrap>
+                              Property detail: {tpl.form.name}
+                            </Typography>
+                          </Stack>
+                        )}
+
                         <Stack direction="row" spacing={2} my={1.5}>
                           <Stack direction="row" alignItems="center" spacing={0.5}>
                             <IconFolder size={16} color="#666" />
@@ -277,6 +295,27 @@ export default function Step2Template({
           <Typography variant="body2" color="text.secondary">
             In the next step (Configure Rooms & Elements), you can freely add custom rooms or choose from standard survey groups, and add any elements from the library.
           </Typography>
+
+          {inspectionForms.length > 0 && (
+            <TextField
+              select
+              size="small"
+              label="Property detail (optional)"
+              value={selectedFormId ?? ""}
+              onChange={(event) => onSelectForm(event.target.value ? Number(event.target.value) : null)}
+              helperText="The surveyor fills in this form during the inspection."
+              sx={{ mt: 2.5, width: { xs: "100%", sm: 360 }, bgcolor: "background.paper" }}
+              SelectProps={{ displayEmpty: true }}
+              InputLabelProps={{ shrink: true }}
+            >
+              <MenuItem value="">No form</MenuItem>
+              {inspectionForms.map((form) => (
+                <MenuItem key={form.id} value={form.id}>
+                  {form.name}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
         </Box>
       )}
     </Box>

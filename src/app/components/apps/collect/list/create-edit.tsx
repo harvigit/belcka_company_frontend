@@ -204,13 +204,13 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const projectCases = useMemo(
     () =>
-      formData.project_id
+      formData.address_id
         ? addresses.filter(
             (address) =>
-              Number(address.project_id) === Number(formData.project_id),
+              Number(address.id) === Number(formData.address_id),
           )
         : [],
-    [addresses, formData.project_id],
+    [addresses, formData.address_id],
   );
 
   const [file, setFile] = useState<File | null>(null);
