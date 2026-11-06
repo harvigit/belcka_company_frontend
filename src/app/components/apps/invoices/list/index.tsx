@@ -246,6 +246,8 @@ const InvoiceList = () => {
   const [isTableStateReady, setIsTableStateReady] = useState(false);
   const restoredTableStateKeyRef = useRef("");
   const skipNextDependencyPageResetRef = useRef(false);
+  // Several fetches can overlap (mount, restored page / filters, debounce); only the newest may set rows.
+  const latestFetchIdRef = useRef(0);
 
   const handleSelectAllRows = (checked: boolean) => {
     if (checked) {
@@ -702,7 +704,10 @@ Team Belcka
   }));
 
   const fetchInvoices = async () => {
+    const fetchId = ++latestFetchIdRef.current;
+    const isLatest = () => fetchId === latestFetchIdRef.current;
     if (!companyId || !isTableStateReady) {
+      setLoading(false);
       setData([]);
       setTotalRows(0);
       setPageCount(1);
@@ -732,6 +737,8 @@ Team Belcka
       }
 
       const res = await api.get(`po-invoices/list?${params.toString()}`);
+      // a newer request was started meanwhile: its result wins
+      if (!isLatest()) return;
       if (res.data?.IsSuccess) {
         const rows = (res.data.info || []).map(mapInvoiceApiRow);
         setData(rows);
@@ -748,13 +755,14 @@ Team Belcka
         toast.error(res.data?.message || "Failed to load invoices");
       }
     } catch (error: any) {
+      if (!isLatest()) return;
       console.error(error);
       setData([]);
       setTotalRows(0);
       setPageCount(1);
       toast.error(error?.response?.data?.message || "Failed to load invoices");
     } finally {
-      setLoading(false);
+      if (isLatest()) setLoading(false);
     }
   };
 

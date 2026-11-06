@@ -53,6 +53,7 @@ import {
   IconX,
   IconEyeOff,
   IconFilter,
+  IconBulb,
 } from "@tabler/icons-react";
 import { AxiosResponse } from "axios";
 import { User } from "next-auth";
@@ -60,7 +61,10 @@ import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import { tableFilterOptions } from "@/utils/uniqueFilterOptions";
-import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
+import {
+  GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
+  MAP_ZOOM_BUTTONS,
+} from "@/utils/googleMaps";
 
 import AddZone from "./AddZone";
 import EditZone from "./EditZone";
@@ -788,6 +792,13 @@ export default function MapGantt({
   const [activeTab, setActiveTab] = useState(0);
   // Zone picked in the list or on the map: its row is highlighted and its pin enlarged.
   const [activeZoneId, setActiveZoneId] = useState<number | null>(null);
+  // Hint that a row's actions open on hover. Closing it hides it only until the user
+  // switches the Project / Case tab or opens the map page again.
+  const [showRowActionsHint, setShowRowActionsHint] = useState(true);
+  useEffect(() => {
+    setShowRowActionsHint(true);
+  }, [activeTab]);
+  const dismissRowActionsHint = () => setShowRowActionsHint(false);
 
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
   const [hiddenZoneIds, setHiddenZoneIds] = useState<Set<number>>(new Set());
@@ -1526,6 +1537,37 @@ export default function MapGantt({
             height: { xs: 360, md: "100%" },
           }}
         >
+          {showRowActionsHint && filterData.length > 0 && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mb: 1,
+                px: 1.25,
+                py: 0.75,
+                borderRadius: 1.5,
+                fontSize: 12.5,
+                lineHeight: 1.4,
+                color: "#1e3a8a",
+                backgroundColor: "rgba(37, 99, 235, 0.07)",
+                border: "1px solid rgba(37, 99, 235, 0.18)",
+              }}
+            >
+              <IconBulb size={16} style={{ flexShrink: 0 }} />
+              <Box sx={{ flex: 1 }}>
+                Hover over a row (or tap it) to show, edit or delete the zone.
+              </Box>
+              <IconButton
+                size="small"
+                aria-label="Dismiss tip"
+                onClick={dismissRowActionsHint}
+                sx={{ p: 0.25, color: "inherit" }}
+              >
+                <IconX size={14} />
+              </IconButton>
+            </Box>
+          )}
           <TableContainer
             sx={{
               flex: 1,
@@ -1555,18 +1597,29 @@ export default function MapGantt({
             >
               <TableHead>
                 <TableRow>
-                  <TableCell>Name</TableCell>
-                  {activeTab == 0 && (
-                    <TableCell sx={{ width: 76, minWidth: 76 }} align="right">
-                      Projects
-                    </TableCell>
-                  )}
-                  <TableCell sx={{ width: 136, minWidth: 136 }}>
-                    <Box display="flex" alignItems="center" gap={0.5}>
-                      Action
+                  <TableCell>
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      gap={1}
+                    >
+                      <span>
+                        Name
+                        {activeTab == 0 && (
+                          <Box
+                            component="span"
+                            sx={{ ml: 1, fontWeight: 500, color: "#94a3b8" }}
+                          >
+                            · Projects
+                          </Box>
+                        )}
+                      </span>
                       <Tooltip
                         title={
-                          allZonesHidden ? "Show all zones" : "Hide all zones"
+                          allZonesHidden
+                            ? "Show all on map"
+                            : "Hide all from map"
                         }
                         arrow
                       >
@@ -1599,7 +1652,7 @@ export default function MapGantt({
               <TableBody>
                 {filterData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                    <TableCell align="center" sx={{ py: 4 }}>
                       No zones found.
                     </TableCell>
                   </TableRow>
@@ -1607,6 +1660,13 @@ export default function MapGantt({
                   paginatedZones.map((z) => {
                     const isHidden = hiddenZoneIds.has(z.id);
                     const isActive = activeZoneId === z.id;
+                    const projectCount = Number(
+                      z.project_count || z.project_ids?.length || 0,
+                    );
+                    const projectNames =
+                      (z.project_names || []).filter(Boolean).join(", ") ||
+                      z.project_name ||
+                      "No projects";
                     return (
                       <TableRow
                         key={z.id}
@@ -1625,21 +1685,80 @@ export default function MapGantt({
                           "&.Mui-selected > td:first-of-type": {
                             borderLeftColor: "#2563eb",
                           },
+                          // Actions appear on hover, on keyboard focus and on the selected row
+                          // (a tap selects the row, so touch screens get them too).
+                          "&:hover .zone-row-actions, &:has(:focus-visible) .zone-row-actions, &.Mui-selected .zone-row-actions":
+                            {
+                              opacity: 1,
+                              transform: "translateY(-50%)",
+                              pointerEvents: "auto",
+                            },
                         }}
                       >
-                        {/* maxWidth 0: the name column takes the space left, so the actions never overflow. */}
-                        <TableCell sx={{ maxWidth: 0, width: "100%" }}>
-                          <Typography
-                            sx={{
-                              color: isActive ? "#1d4ed8" : "text.primary",
-                              fontWeight: 600,
-                              fontSize: 13.5,
-                              lineHeight: 1.35,
-                            }}
-                          >
-                            {z.name}
-                          </Typography>
-                          <Tooltip title={z.address_name || z.address} arrow>
+                        {/* maxWidth 0 keeps long names inside the panel; the cell gets the full width. */}
+                        <TableCell
+                          sx={{
+                            maxWidth: 0,
+                            width: "100%",
+                            position: "relative",
+                          }}
+                        >
+                          <Box sx={{ opacity: isHidden ? 0.55 : 1 }}>
+                            <Box display="flex" alignItems="center" gap={0.75}>
+                              <Typography
+                                sx={{
+                                  flex: 1,
+                                  minWidth: 0,
+                                  color: isActive ? "#1d4ed8" : "text.primary",
+                                  fontWeight: 600,
+                                  fontSize: 13.5,
+                                  lineHeight: 1.35,
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {z.name}
+                              </Typography>
+                              {isHidden && (
+                                <Tooltip title="Hidden from map" arrow>
+                                  <Box
+                                    component="span"
+                                    sx={{
+                                      display: "inline-flex",
+                                      color: "#94a3b8",
+                                    }}
+                                  >
+                                    <IconEyeOff size={15} />
+                                  </Box>
+                                </Tooltip>
+                              )}
+                              {activeTab == 0 && (
+                                <Tooltip title={projectNames} arrow>
+                                  <Box
+                                    component="span"
+                                    sx={{
+                                      flexShrink: 0,
+                                      minWidth: 22,
+                                      height: 20,
+                                      px: 0.75,
+                                      borderRadius: 10,
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      fontSize: 11.5,
+                                      fontWeight: 700,
+                                      color: projectCount
+                                        ? "#1d4ed8"
+                                        : "#94a3b8",
+                                      backgroundColor: projectCount
+                                        ? "rgba(37, 99, 235, 0.1)"
+                                        : "#f1f5f9",
+                                    }}
+                                  >
+                                    {projectCount}
+                                  </Box>
+                                </Tooltip>
+                              )}
+                            </Box>
                             <Typography
                               sx={{
                                 color: "text.secondary",
@@ -1647,102 +1766,108 @@ export default function MapGantt({
                                 lineHeight: 1.4,
                                 mt: 0.25,
                                 maxWidth: "100%",
-                                // Up to two lines, then "…" (full address in the tooltip).
+                                // Up to two lines, then "…" so a very long address never makes the row tall.
                                 display: "-webkit-box",
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: "vertical",
                                 overflow: "hidden",
                                 wordBreak: "break-word",
-                                cursor: "pointer",
                               }}
                             >
                               {z.address_name || z.address}
                             </Typography>
-                          </Tooltip>
-                        </TableCell>
-                        {activeTab == 0 && (
-                          <TableCell
-                            align="right"
-                            sx={{ width: 76, minWidth: 76 }}
+                          </Box>
+
+                          {/* Floating actions, shown on row hover / focus / selection. */}
+                          <Box
+                            className="zone-row-actions"
+                            onClick={(e) => e.stopPropagation()}
+                            sx={{
+                              position: "absolute",
+                              right: 8,
+                              top: "50%",
+                              transform: "translate(4px, -50%)",
+                              opacity: 0,
+                              pointerEvents: "none",
+                              transition:
+                                "opacity 120ms ease, transform 120ms ease",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 0.25,
+                              p: 0.375,
+                              borderRadius: 2,
+                              backgroundColor: "background.paper",
+                              border: "1px solid #e2e8f0",
+                              boxShadow: "0 4px 14px rgba(15, 23, 42, 0.12)",
+                              zIndex: 1,
+                              "& .MuiIconButton-root": {
+                                width: 30,
+                                height: 30,
+                                minWidth: 0,
+                                minHeight: 0,
+                                p: 0.5,
+                              },
+                            }}
                           >
                             <Tooltip
-                              title={
-                                (z.project_names || [])
-                                  .filter(Boolean)
-                                  .join(", ") ||
-                                z.project_name ||
-                                "Unassigned"
-                              }
+                              title={isHidden ? "Show on map" : "Hide from map"}
                               arrow
                             >
-                              <Typography
-                                sx={{
-                                  fontWeight: 600,
-                                  fontSize: 13,
-                                  cursor: "pointer",
+                              <IconButton
+                                size="small"
+                                color={isHidden ? "default" : "success"}
+                                onClick={() => {
+                                  setHiddenZoneIds((prev) => {
+                                    const newSet = new Set(prev);
+                                    if (isHidden) newSet.delete(z.id);
+                                    else newSet.add(z.id);
+                                    return newSet;
+                                  });
                                 }}
                               >
-                                {Number(
-                                  z.project_count || z.project_ids?.length || 0,
+                                {isHidden ? (
+                                  <IconEyeOff size={18} />
+                                ) : (
+                                  <IconEye size={18} />
                                 )}
-                              </Typography>
+                              </IconButton>
                             </Tooltip>
-                          </TableCell>
-                        )}
-                        <TableCell
-                          sx={{ width: 136, minWidth: 136 }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Box display="flex" gap={0.25} flexWrap="nowrap">
-                            <IconButton
-                              size="small"
-                              color={isHidden ? "default" : "success"}
-                              onClick={() => {
-                                setHiddenZoneIds((prev) => {
-                                  const newSet = new Set(prev);
-                                  if (isHidden) newSet.delete(z.id);
-                                  else newSet.add(z.id);
-                                  return newSet;
-                                });
-                              }}
-                            >
-                              {isHidden ? (
-                                <IconEyeOff size={18} />
-                              ) : (
-                                <IconEye size={18} />
-                              )}
-                            </IconButton>
 
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => zoomToZone(z)}
-                              title="Zoom to zone on map"
-                            >
-                              <IconMapPin size={18} />
-                            </IconButton>
+                            <Tooltip title="Show on map" arrow>
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => zoomToZone(z)}
+                              >
+                                <IconMapPin size={18} />
+                              </IconButton>
+                            </Tooltip>
 
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => {
-                                setAddZoneOpen(false);
-                                setSelected({ ...z, mode: "edit" });
-                              }}
-                            >
-                              <IconEdit size={18} />
-                            </IconButton>
+                            <Tooltip title="Edit" arrow>
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => {
+                                  setAddZoneOpen(false);
+                                  setSelected({ ...z, mode: "edit" });
+                                }}
+                              >
+                                <IconEdit size={18} />
+                              </IconButton>
+                            </Tooltip>
 
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => {
-                                setDeleteId(z.id);
-                                setDeleteConfirmOpen(true);
-                              }}
-                            >
-                              <IconTrash size={18} />
-                            </IconButton>
+                            <Tooltip title="Delete" arrow>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => {
+                                  setDeleteId(z.id);
+                                  setDeleteConfirmOpen(true);
+                                }}
+                              >
+                                <IconTrash size={18} />
+                              </IconButton>
+                            </Tooltip>
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -3124,7 +3249,7 @@ const AllZonesMap = ({
         mapContainerStyle={{ width: "100%", height: "100%", minHeight: 400 }}
         zoom={12}
         center={LONDON_CENTER}
-        options={{ gestureHandling: "greedy" }}
+        options={{ ...MAP_ZOOM_BUTTONS, gestureHandling: "greedy" }}
         onLoad={handleMapLoad}
         onZoomChanged={() => {
           const z = mapRef.current?.getZoom();
@@ -3402,6 +3527,7 @@ const ViewZoneMap = ({ zone, isLoaded }: { zone: any; isLoaded: boolean }) => {
         mapContainerStyle={{ width: "100%", height: "100%" }}
         zoom={DEFAULT_ZOOM}
         center={markerPosition}
+        options={MAP_ZOOM_BUTTONS}
         onLoad={handleMapLoad}
       >
         <Marker

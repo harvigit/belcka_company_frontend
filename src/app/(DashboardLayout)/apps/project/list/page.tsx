@@ -8,7 +8,7 @@ import ProjectDashboard from "@/app/components/apps/project/list";
 const ProjectDashboardPage = () => {
   return (
     <PageContainer title="Project" description="Project dashboard">
-      <PermissionGuard permission="Project">
+      <PermissionGuard permission="Commercial">
         <BlankCard>
           <ProjectDashboard />
         </BlankCard>

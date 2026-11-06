@@ -34,6 +34,7 @@ import {
   consumePlacesSessionToken,
   getPlacesSessionToken,
   PLACES_AUTOCOMPLETE_DEBOUNCE_MS,
+  MAP_ZOOM_BUTTONS,
 } from "@/utils/googleMaps";
 
 interface EditZoneProps {
@@ -346,6 +347,8 @@ const EditZone = ({
 }: EditZoneProps) => {
   const [name, setName] = useState(zone.name);
   const [color, setColor] = useState(zone.color || "#1976d2");
+  // Case zones are drawn in the same red as their pins on the main map; projects keep their own colour.
+  const shapeColor = activeTab === 1 ? "#e53935" : color;
   const [address, setAddress] = useState(zone.address);
   const [radius, setRadius] = useState(Number(zone.radius || 10000));
   const [isSaving, setIsSaving] = useState(false);
@@ -1143,6 +1146,7 @@ const EditZone = ({
                       setMapReady(true);
                     }}
                     options={{
+                      ...MAP_ZOOM_BUTTONS,
                       clickableIcons: false,
                       disableDoubleClickZoom: true,
                       draggableCursor: isDrawingActive ? "crosshair" : "",
@@ -1160,8 +1164,8 @@ const EditZone = ({
                           center={location}
                           radius={radius}
                           options={{
-                            fillColor: color + "33",
-                            strokeColor: color,
+                            fillColor: shapeColor + "33",
+                            strokeColor: shapeColor,
                             editable: true,
                             draggable: true,
                           }}
@@ -1180,8 +1184,8 @@ const EditZone = ({
                         <Polygon
                           paths={drawPath}
                           options={{
-                            fillColor: color + "33",
-                            strokeColor: color,
+                            fillColor: shapeColor + "33",
+                            strokeColor: shapeColor,
                             strokeWeight: 2,
                             editable:
                               !boundaryFromSearch || drawMode === "polygon",
@@ -1202,7 +1206,7 @@ const EditZone = ({
                         <Polyline
                           path={previewPath}
                           options={{
-                            strokeColor: nearStart ? "#ff5722" : color,
+                            strokeColor: nearStart ? "#ff5722" : shapeColor,
                             strokeWeight: 2.5,
                             strokeOpacity: 0.85,
                             clickable: false,
@@ -1229,7 +1233,7 @@ const EditZone = ({
                                 : i === drawPath.length - 1
                                   ? 6
                                   : 5,
-                              fillColor: isFirst ? "#ff5722" : color,
+                              fillColor: isFirst ? "#ff5722" : shapeColor,
                               fillOpacity: 1,
                               strokeColor: "#fff",
                               strokeWeight: 2,
