@@ -350,3 +350,42 @@ export function fallbackDiffsFromPayload(
   return diffs;
 }
 
+// Billing info fields in the same order as the billing form. The billing tab's request
+// drawer and the Requests page both list requested changes in this order.
+export const BILLING_FIELD_ORDER = [
+  "first_name",
+  "middle_name",
+  "last_name",
+  "email",
+  "post_code",
+  "address",
+  "extension",
+  "phone",
+  "utr_number",
+  "name_on_utr",
+  "nin_number",
+  "cis",
+  "bank_name",
+  "name_on_account",
+  "short_code",
+  "account_no",
+];
+
+const sameBillingValue = (a: any, b: any) =>
+  String(a ?? "").trim() === String(b ?? "").trim();
+
+// Billing request diffs in form order, without the fields that did not change.
+// The server sends an unchanged field as { old: value, new: null }; a cleared field keeps new = "".
+// Fields not in the form list keep their order, after the form fields.
+export function orderBillingDiffs(diffs?: DiffEntry[] | null): DiffEntry[] {
+  if (!diffs?.length) return [];
+  const rank = (key: string) => {
+    const i = BILLING_FIELD_ORDER.indexOf(key);
+    return i === -1 ? BILLING_FIELD_ORDER.length : i;
+  };
+  return diffs
+    .filter((d) => d?.new !== null && !sameBillingValue(d?.old, d?.new))
+    .map((diff, index) => ({ diff, index }))
+    .sort((a, b) => rank(a.diff.key) - rank(b.diff.key) || a.index - b.index)
+    .map(({ diff }) => diff);
+}
