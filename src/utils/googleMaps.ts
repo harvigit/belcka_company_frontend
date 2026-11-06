@@ -14,6 +14,13 @@ export const GOOGLE_MAPS_SHARED_LOADER_OPTIONS: {
     libraries: GOOGLE_MAP_LIBRARIES,
 };
 
+// Plain + / - zoom buttons (bottom right). Newer Maps versions show a camera control instead,
+// which hides zoom behind a click, so it is switched off where these are used.
+export const MAP_ZOOM_BUTTONS: google.maps.MapOptions = {
+    zoomControl: true,
+    cameraControl: false,
+};
+
 // Delay before firing a Places autocomplete request while the user is still typing
 export const PLACES_AUTOCOMPLETE_DEBOUNCE_MS = 300;
 
