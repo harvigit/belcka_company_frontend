@@ -317,24 +317,24 @@ const MenuItems: NavGroup[] = [
     href: "/apps/collect/list",
   },
 
-  // {
-  //   navlabel: true,
-  //   subheader: "Inventory New",
-  // },
-  // {
-  //   id: uniqueId(),
-  //   title: "Internal Items",
-  //   slug: "internal-products",
-  //   icon: IconDatabase,
-  //   href: "/apps/inventory-new/internal-items/list",
-  // },
-  // {
-  //   id: uniqueId(),
-  //   title: "Supplier Items",
-  //   slug: "supplier-products",
-  //   icon: IconBox,
-  //   href: "/apps/inventory-new/supplier-items/list",
-  // },
+  {
+    navlabel: true,
+    subheader: "Inventory New",
+  },
+  {
+    id: uniqueId(),
+    title: "Internal Items",
+    slug: "internal-products",
+    icon: IconDatabase,
+    href: "/apps/inventory-new/internal-items/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Supplier Items",
+    slug: "supplier-products",
+    icon: IconBox,
+    href: "/apps/inventory-new/supplier-items/list",
+  },
   // {
   //   id: uniqueId(),
   //   title: "Suppliers",
