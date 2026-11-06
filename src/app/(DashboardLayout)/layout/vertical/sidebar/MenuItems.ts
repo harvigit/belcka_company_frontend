@@ -317,38 +317,38 @@ const MenuItems: NavGroup[] = [
     href: "/apps/collect/list",
   },
 
-  // {
-  //   navlabel: true,
-  //   subheader: "Inventory New",
-  // },
-  // {
-  //   id: uniqueId(),
-  //   title: "Internal Items",
-  //   slug: "internal-products",
-  //   icon: IconDatabase,
-  //   href: "/apps/inventory-new/internal-items/list",
-  // },
-  // {
-  //   id: uniqueId(),
-  //   title: "Supplier Items",
-  //   slug: "supplier-products",
-  //   icon: IconBox,
-  //   href: "/apps/inventory-new/supplier-items/list",
-  // },
-  // {
-  //   id: uniqueId(),
-  //   title: "Suppliers",
-  //   slug: "new-suppliers",
-  //   icon: IconTruck,
-  //   href: "/apps/inventory-new/suppliers/list",
-  // },
-  // {
-  //   id: uniqueId(),
-  //   title: "Categories",
-  //   slug: "new-categories",
-  //   icon: IconKeyframes,
-  //   href: "/apps/inventory-new/categories/list",
-  // },
+  {
+    navlabel: true,
+    subheader: "Inventory New",
+  },
+  {
+    id: uniqueId(),
+    title: "Internal Items",
+    slug: "internal-products",
+    icon: IconDatabase,
+    href: "/apps/inventory-new/internal-items/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Supplier Items",
+    slug: "supplier-products",
+    icon: IconBox,
+    href: "/apps/inventory-new/supplier-items/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Suppliers",
+    slug: "new-suppliers",
+    icon: IconTruck,
+    href: "/apps/inventory-new/suppliers/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Categories",
+    slug: "new-categories",
+    icon: IconKeyframes,
+    href: "/apps/inventory-new/categories/list",
+  },
   // Settings stays last: SidebarItems pins the "settings" slug to the bottom of the sidebar.
   {
     id: uniqueId(),
