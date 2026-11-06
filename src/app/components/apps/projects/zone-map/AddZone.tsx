@@ -35,6 +35,7 @@ import {
   consumePlacesSessionToken,
   getPlacesSessionToken,
   PLACES_AUTOCOMPLETE_DEBOUNCE_MS,
+  MAP_ZOOM_BUTTONS,
 } from "@/utils/googleMaps";
 
 const LONDON_CENTER = { lat: 51.5074, lng: -0.1278 };
@@ -316,6 +317,8 @@ const AddZone = ({
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [color, setColor] = useState("#1976d2");
+  // Case zones are drawn in the same red as their pins on the main map; projects keep their own colour.
+  const shapeColor = activeTab === 1 ? "#e53935" : color;
   const [radius, setRadius] = useState(200);
   const [isSaving, setIsSaving] = useState(false);
   const [location, setLocation] = useState(LONDON_CENTER);
@@ -1008,6 +1011,7 @@ const AddZone = ({
                       mapRef.current = map;
                     }}
                     options={{
+                      ...MAP_ZOOM_BUTTONS,
                       clickableIcons: false,
                       disableDoubleClickZoom: true,
                       draggableCursor: isDrawingActive ? "crosshair" : "",
@@ -1024,8 +1028,8 @@ const AddZone = ({
                           center={location}
                           radius={radius}
                           options={{
-                            strokeColor: color,
-                            fillColor: color + "33",
+                            strokeColor: shapeColor,
+                            fillColor: shapeColor + "33",
                             editable: true,
                             draggable: true,
                           }}
@@ -1055,8 +1059,8 @@ const AddZone = ({
                         <Polygon
                           paths={drawPath}
                           options={{
-                            strokeColor: color,
-                            fillColor: color + "33",
+                            strokeColor: shapeColor,
+                            fillColor: shapeColor + "33",
                             strokeWeight: 2,
                             editable: !boundaryFromSearch || drawMode === "polygon",
                             draggable: !boundaryFromSearch || drawMode === "polygon",
@@ -1075,7 +1079,7 @@ const AddZone = ({
                         <Polyline
                           path={previewPath}
                           options={{
-                            strokeColor: nearStart ? "#ff5722" : color,
+                            strokeColor: nearStart ? "#ff5722" : shapeColor,
                             strokeWeight: 2.5,
                             strokeOpacity: 0.85,
                             clickable: false,
@@ -1102,7 +1106,7 @@ const AddZone = ({
                                 : i === drawPath.length - 1
                                   ? 6
                                   : 5,
-                              fillColor: isFirst ? "#ff5722" : color,
+                              fillColor: isFirst ? "#ff5722" : shapeColor,
                               fillOpacity: 1,
                               strokeColor: "#fff",
                               strokeWeight: 2,
@@ -1146,7 +1150,8 @@ const AddZone = ({
               </Box>
             </Card>
 
-            {/* Zone Color Card */}
+            {/* Zone Color Card (projects only: case zones are always red) */}
+            {activeTab === 0 && (
             <Card sx={{ p: 2, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
               <Typography
                 variant="caption"
@@ -1204,6 +1209,7 @@ const AddZone = ({
                 />
               </Box>
             </Card>
+            )}
           </Grid>
         </Grid>
       </Box>
