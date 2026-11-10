@@ -1859,7 +1859,7 @@ const TimeClock = ({queryParams}: Props) => {
                         groupId={row.group_id ?? null}
                         groupName={row.group_name ?? null}
                         groups={companyGroups}
-                        canEdit={user?.user_role_id === 1}
+                        canEdit
                         onUpdated={handleUserGroupUpdated}
                     />
                 );
