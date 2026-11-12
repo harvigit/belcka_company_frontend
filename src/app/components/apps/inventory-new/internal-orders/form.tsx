@@ -19,6 +19,7 @@ import FormField from "../shared/FormField";
 import QtyInput from "../shared/QtyInput";
 import { InventoryOptions, money } from "../shared/useInventoryOptions";
 import { packsText, splitQty } from "../shared/orderUtils";
+import { useActiveStoreId } from "../shared/useActiveStore";
 
 interface IssuableItem {
   internal_item_id: number;
@@ -59,6 +60,8 @@ const InternalOrderDrawer: React.FC<InternalOrderDrawerProps> = ({
   onSaved,
 }) => {
   const [storeId, setStoreId] = useState<number | "">("");
+  // a new order starts on the store activated on the Stores page; it can be changed
+  const activeStoreId = useActiveStoreId(options);
   const [projectId, setProjectId] = useState<number | "">("");
   const [requestedFor, setRequestedFor] = useState<number | "">("");
   const [note, setNote] = useState("");
@@ -68,7 +71,7 @@ const InternalOrderDrawer: React.FC<InternalOrderDrawerProps> = ({
 
   useEffect(() => {
     if (!open) return;
-    setStoreId(order?.store_id ?? "");
+    setStoreId(order ? order.store_id ?? "" : activeStoreId ?? "");
     setProjectId(order?.project_id ?? "");
     setRequestedFor(order?.requested_for ?? "");
     setNote(order?.note ?? "");
