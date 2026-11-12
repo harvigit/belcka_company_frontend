@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   Button,
+  CircularProgress,
   Divider,
   Grid,
   IconButton,
@@ -86,6 +87,37 @@ const InternalItemList: React.FC = () => {
   const [toDelete, setToDelete] = useState<number[]>([]);
   const [switchLoading, setSwitchLoading] = useState(false);
   const [viewItemId, setViewItemId] = useState<number | null>(null);
+  // inline name edit (hover the name, click to edit; Enter / leaving the field saves, Esc cancels)
+  const [editingNameId, setEditingNameId] = useState<number | null>(null);
+  const [nameInput, setNameInput] = useState("");
+  const [savingNameId, setSavingNameId] = useState<number | null>(null);
+
+  const saveName = async (item: any) => {
+    const next = nameInput.trim();
+    setEditingNameId(null);
+    if (next === String(item.name ?? "").trim()) return;
+    if (!next) {
+      toast.error("Name is required!");
+      return;
+    }
+    setSavingNameId(item.id);
+    try {
+      const res = await api.post("inventory-new/internal-items/update", {
+        company_id: companyId,
+        id: item.id,
+        name: next,
+      });
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        setData((prev) => prev.map((d) => (d.id === item.id ? { ...d, name: next } : d)));
+        reloadOptions();
+      }
+    } catch (error) {
+      // the api interceptor already shows the error message
+    } finally {
+      setSavingNameId(null);
+    }
+  };
   const [focusId, setFocusId] = useState<number | null>(
     Number(searchParams?.get("id")) || null,
   );
@@ -389,24 +421,67 @@ const InternalItemList: React.FC = () => {
     }),
     columnHelper.accessor("name", {
       header: "Name",
-      cell: ({ row }) => (
-        <Tooltip title={row.original.name ?? ""}>
-          <Typography
-            className="f-14"
-            ml={1}
-            onClick={() => setViewItemId(row.original.id)}
-            sx={{
-              display: "-webkit-box",
-              WebkitBoxOrient: "vertical",
-              WebkitLineClamp: 1,
-              overflow: "hidden",
-              maxWidth: 220,
-            }}
-          >
-            {row.original.name}
-          </Typography>
-        </Tooltip>
-      ),
+      cell: ({ row }) => {
+        const item = row.original;
+        if (savingNameId === item.id) return <CircularProgress size={16} sx={{ ml: 1 }} />;
+        if (editingNameId === item.id)
+          return (
+            <TextField
+              className="f-14"
+              size="small"
+              variant="standard"
+              autoFocus
+              value={nameInput}
+              sx={{ width: 220, ml: 1 }}
+              slotProps={{ htmlInput: { maxLength: 50 } }}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => setNameInput(e.target.value)}
+              onBlur={() => saveName(item)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  saveName(item);
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setEditingNameId(null);
+                }
+              }}
+            />
+          );
+        return (
+          <Tooltip title={item.name ?? ""}>
+            <Typography
+              className="f-14"
+              component="div"
+              ml={0.5}
+              onClick={(e) => {
+                e.stopPropagation();
+                setNameInput(item.name ?? "");
+                setEditingNameId(item.id);
+              }}
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                maxWidth: 220,
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                "&:hover": { border: "1px solid #1976d2" },
+              }}
+            >
+              {item.name || "-"}
+            </Typography>
+          </Tooltip>
+        );
+      },
     }),
     columnHelper.accessor("category_name", {
       header: "Category",
