@@ -25,7 +25,6 @@ import {
     IconAlertTriangle,
     IconBeach,
     IconBriefcase,
-    IconClockEdit,
     IconClockPlus,
     IconCoin,
     IconCreditCard,
@@ -51,7 +50,7 @@ import toast from 'react-hot-toast';
 // Every request type an admin can give view / approve permission for.
 const REQUEST_TYPES = [
     { name: 'Add Timesheet', slug: 'timesheet_request', icon: IconClockPlus },
-    { name: 'Edit Timesheet', slug: 'timesheet_approve', icon: IconClockEdit },
+    // 'Edit Timesheet' (timesheet_approve) is managed in Time Clock → Settings → Bookkeeper Setting.
     { name: 'Leave request', slug: 'leave_request', icon: IconBeach },
     { name: 'Pricework request', slug: 'pricework_request', icon: IconHammer },
     { name: 'Adjustment request', slug: 'adjustment_request', icon: IconAdjustments },
