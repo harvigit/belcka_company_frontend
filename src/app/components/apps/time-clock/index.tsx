@@ -743,7 +743,9 @@ const TimeClock = ({queryParams}: Props) => {
 
         try {
             const response = await api.get(`get-notification-count?company_id=${user.company_id}`);
-            setRequestCount(Number(response.data?.request_count || 0));
+            // Bookkeeper shows only the request types the user can view (Request Settings);
+            // request_count is kept for older APIs.
+            setRequestCount(Number(response.data?.bookkeeper_request_count ?? response.data?.request_count ?? 0));
         } catch (error) {
             console.error('Failed to fetch pending request count:', error);
         }
