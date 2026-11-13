@@ -1390,7 +1390,7 @@ const CasesList = ({
     embedded ? (
       <>{children}</>
     ) : (
-      <PermissionGuard permission="Project">{children}</PermissionGuard>
+      <PermissionGuard permission="Commercial">{children}</PermissionGuard>
     );
 
   return withPermissionGuard(
