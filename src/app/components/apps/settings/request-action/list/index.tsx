@@ -37,7 +37,7 @@ const REQUEST_TYPES = [
     { name: 'Rate request', slug: 'rate_request' },
     { name: 'Expense request', slug: 'expense_request' },
     { name: 'Penalty request', slug: 'penalty_request' },
-    { name: 'Edit Timesheet', slug: 'timesheet_approve' },
+    // 'Edit Timesheet' (timesheet_approve) is managed in Time Clock → Settings → Bookkeeper Setting.
 ];
 
 export interface RequestAction {
