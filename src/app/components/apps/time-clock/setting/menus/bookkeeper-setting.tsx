@@ -467,7 +467,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
                       sx={{ textTransform: "none", px: 1.5, gap: 0.5, "&.Mui-selected": { color: "success.main" } }}
                     >
                       <IconCircleCheck size={15} />
-                      {t("Can approve")}
+                      {t("View & approve")}
                     </ToggleButton>
                   </ToggleButtonGroup>
                   <Tooltip title={t("Remove")}>
@@ -490,7 +490,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
 
         <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
           <Typography variant="caption" color="text.secondary">
-            {t("{{approve}} can approve · {{view}} view only", { approve: approveCount, view: viewOnlyCount })}
+            {t("{{approve}} view & approve · {{view}} view only", { approve: approveCount, view: viewOnlyCount })}
             {adminCount > 0 && ` · ${t("Admins always have access")}`}
           </Typography>
           {selectedAccessUsers.length > 0 && (
@@ -643,9 +643,9 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
                   <Box display="flex" alignItems="center" gap={0.75} sx={{ color: "success.main" }}>
                     <IconCircleCheck size={15} />
                     <Typography variant="caption" color="text.secondary">
-                      <Box component="span" fontWeight={600} color="text.primary">{t('Can approve')}</Box>
+                      <Box component="span" fontWeight={600} color="text.primary">{t('View & approve')}</Box>
                       {' — '}
-                      {t('lock, unlock, mark as paid and edit locked timesheet entries')}
+                      {t('sees requests and notifications, plus lock, unlock, mark as paid and edit locked timesheet entries')}
                     </Typography>
                   </Box>
                   <Box display="flex" alignItems="center" gap={0.75} sx={{ color: "info.main" }}>
