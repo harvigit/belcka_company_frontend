@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+    Alert,
     Avatar,
     Box,
     Button,
@@ -9,41 +10,62 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
-    Divider,
-    MenuItem,
+    IconButton,
+    InputAdornment,
+    Skeleton,
     Stack,
     Typography,
-    IconButton,
     TextField,
+    Tooltip,
     Paper,
 } from '@mui/material';
 
-import {IconChevronLeft, IconChevronRight, IconSearch} from '@tabler/icons-react';
+import {
+    IconAdjustments,
+    IconAlertTriangle,
+    IconBeach,
+    IconBriefcase,
+    IconClockEdit,
+    IconClockPlus,
+    IconCoin,
+    IconCreditCard,
+    IconEdit,
+    IconEye,
+    IconGavel,
+    IconHammer,
+    IconInfoCircle,
+    IconLink,
+    IconReceipt,
+    IconSearch,
+    IconShieldCheck,
+    IconUserEdit,
+    IconUsersGroup,
+} from '@tabler/icons-react';
 import api from '@/utils/axios';
-import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import { useSession } from 'next-auth/react';
 import { User } from "next-auth";
 import PermissionGuard from '@/app/auth/PermissionGuard';
 import { AxiosResponse } from 'axios';
-import SkeletonLoader from '@/app/components/SkeletonLoader';
 import toast from 'react-hot-toast';
 
 // Every request type an admin can give view / approve permission for.
 const REQUEST_TYPES = [
-    { name: 'Add Timesheet', slug: 'timesheet_request' },
-    { name: 'Edit Timesheet', slug: 'timesheet_approve' },
-    { name: 'Leave request', slug: 'leave_request' },
-    { name: 'Pricework request', slug: 'pricework_request' },
-    { name: 'Adjustment request', slug: 'adjustment_request' },
-    { name: 'Personal detail request', slug: 'personal_detail_request' },
-    { name: 'Billing Info Request', slug: 'billing_info_request' },
-    { name: 'Rate request', slug: 'rate_request' },
-    { name: 'Expense request', slug: 'expense_request' },
-    { name: 'Penalty request', slug: 'penalty_request' },
-    { name: 'Penalty appeal request', slug: 'penalty_appeal_request' },
-    { name: 'Team cap increase request', slug: 'team_cap_request' },
-    { name: 'Project limit increase request', slug: 'project_cap_request' },
+    { name: 'Add Timesheet', slug: 'timesheet_request', icon: IconClockPlus },
+    { name: 'Edit Timesheet', slug: 'timesheet_approve', icon: IconClockEdit },
+    { name: 'Leave request', slug: 'leave_request', icon: IconBeach },
+    { name: 'Pricework request', slug: 'pricework_request', icon: IconHammer },
+    { name: 'Adjustment request', slug: 'adjustment_request', icon: IconAdjustments },
+    { name: 'Personal detail request', slug: 'personal_detail_request', icon: IconUserEdit },
+    { name: 'Billing Info Request', slug: 'billing_info_request', icon: IconCreditCard },
+    { name: 'Rate request', slug: 'rate_request', icon: IconCoin },
+    { name: 'Expense request', slug: 'expense_request', icon: IconReceipt },
+    { name: 'Penalty request', slug: 'penalty_request', icon: IconAlertTriangle },
+    { name: 'Penalty appeal request', slug: 'penalty_appeal_request', icon: IconGavel },
+    { name: 'Team cap increase request', slug: 'team_cap_request', icon: IconUsersGroup },
+    { name: 'Project limit increase request', slug: 'project_cap_request', icon: IconBriefcase },
 ];
+
+const LIST_COLUMNS = { xs: '1fr', md: 'minmax(240px, 1fr) minmax(220px, 1.3fr) minmax(200px, 1fr) 48px' };
 
 export interface RequestAction {
     id: number;
@@ -74,8 +96,6 @@ export interface UserData {
     can_approve: boolean;
     can_reject: boolean;
 }
-
-const PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 
 const toNumber = (value: unknown): number | null => {
     const numericValue = Number(value);
@@ -121,8 +141,6 @@ const RequestActionList = () => {
     const [savedData, setSavedData] = useState<RequestAction[]>([]);
     const [fetchLoading, setFetchLoading] = useState<boolean>(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [pageIndex, setPageIndex] = useState(0);
-    const [pageSize, setPageSize] = useState(50);
 
     // Edit dialog state
     const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -136,6 +154,8 @@ const RequestActionList = () => {
         selected_users: [] as number[],
     });
     const [searchFilter, setSearchFilter] = useState('');
+    // Users when the dialog opened, to know whether anything changed.
+    const [initialFormUsers, setInitialFormUsers] = useState({ view_users: [] as number[], selected_users: [] as number[] });
 
     const [users, setUsers] = useState<UserData[]>([]);
 
@@ -216,6 +236,8 @@ const RequestActionList = () => {
         return new Map(users.map((u) => [u.id, u.name]));
     }, [users]);
 
+    const userDetailsById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
+
     // Get display names for selected users
     const getSelectedUserNames = (selectedIds: number[] | string) => {
         const ids = Array.isArray(selectedIds) ? selectedIds : parseSelectedUserIds(selectedIds);
@@ -248,10 +270,6 @@ const RequestActionList = () => {
         );
     }, [mergedRows, searchTerm, usersById]);
 
-    useEffect(() => { setPageIndex(0); }, [searchTerm]);
-
-    const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize));
-    const paginatedRows = filteredRows.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
 
     const handleEditClick = (row: RequestRow) => {
         setEditingRow(row);
@@ -259,12 +277,14 @@ const RequestActionList = () => {
         const approveUserIds = parseSelectedUserIds(row.saved?.selected_users);
         const viewOnlyUserIds = parseSelectedUserIds(row.saved?.view_users);
 
+        const viewUsers = [...new Set([...approveUserIds, ...viewOnlyUserIds])];
         setEditFormData({
             request_name: row.request_name,
             slug: row.slug,
-            view_users: [...new Set([...approveUserIds, ...viewOnlyUserIds])],
+            view_users: viewUsers,
             selected_users: approveUserIds,
         });
+        setInitialFormUsers({ view_users: viewUsers, selected_users: approveUserIds });
         setEditDialogOpen(true);
     };
 
@@ -294,8 +314,23 @@ const RequestActionList = () => {
     };
 
     const savedId = editingRow?.saved?.inherited_from ? 0 : editingRow?.saved?.id ?? 0;
+    const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((id) => b.includes(id));
+    // Saving without a change would only turn an inherited type into its own setting, so it is not allowed.
+    const hasChanges =
+        !sameIds(editFormData.view_users, initialFormUsers.view_users) ||
+        !sameIds(editFormData.selected_users, initialFormUsers.selected_users);
     // A type without its own setting needs at least one user; a saved setting can be cleared.
-    const canSave = editFormData.view_users.length > 0 || savedId > 0;
+    const canSave = hasChanges && (editFormData.view_users.length > 0 || savedId > 0);
+
+    // (b) Inheritance notes for the dialog.
+    const editingInheritedFrom = editingRow?.saved?.inherited_from
+        ? REQUEST_TYPES.find((type) => type.slug === editingRow.saved?.inherited_from)?.name ?? null
+        : null;
+    const editingFollowers = editingRow
+        ? REQUEST_TYPES.filter((type) =>
+              savedData.some((d) => d.slug === type.slug && d.inherited_from === editingRow.slug),
+          ).map((type) => type.name)
+        : [];
 
     const handleSaveEdit = async () => {
         if (!canSave) {
@@ -342,138 +377,271 @@ const RequestActionList = () => {
         );
     }, [users, searchFilter]);
 
+    // One line per column: a coloured count and the names; full list in the tooltip.
+    const renderUsers = (ids: number[], tone: 'approve' | 'view') => {
+        const names = ids
+            .map((id) => userDetailsById.get(id)?.name)
+            .filter((name): name is string => Boolean(name));
+        if (names.length === 0) {
+            return (
+                <Typography variant="body2" color="text.disabled">
+                    {tone === 'approve' ? 'Admins only' : 'None'}
+                </Typography>
+            );
+        }
+        const color = tone === 'approve' ? 'success' : 'info';
+        return (
+            <Tooltip
+                arrow
+                placement="top-start"
+                title={
+                    <Box sx={{ py: 0.5 }}>
+                        {names.map((name) => (
+                            <Typography key={name} variant="caption" display="block">
+                                {name}
+                            </Typography>
+                        ))}
+                    </Box>
+                }
+            >
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0, width: 'fit-content', maxWidth: '100%' }}>
+                    <Box
+                        component="span"
+                        sx={{
+                            minWidth: 24,
+                            height: 22,
+                            px: 0.75,
+                            borderRadius: 11,
+                            flexShrink: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            bgcolor: `${color}.light`,
+                            color: `${color}.main`,
+                        }}
+                    >
+                        {names.length}
+                    </Box>
+                    <Typography variant="body2" color="text.primary" noWrap sx={{ minWidth: 0 }}>
+                        {names.join(', ')}
+                    </Typography>
+                </Stack>
+            </Tooltip>
+        );
+    };
+
     return (
         <PermissionGuard permission="RequestActions">
-            <Box px={1} sx={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
-                {/* Column header */}
-                <Box
-                    sx={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr 1fr auto',
-                        px: 2,
-                        py: 1.2,
-                        backgroundColor: '#e8eef7',
-                        borderBottom: '2px solid #d0d7eb',
-                    }}
+            <Box px={1} sx={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {/* Intro + search */}
+                <Stack
+                    direction={{ xs: 'column', md: 'row' }}
+                    spacing={2}
+                    alignItems={{ xs: 'stretch', md: 'center' }}
+                    justifyContent="space-between"
+                    sx={{ pt: 1 }}
                 >
-                    <Typography variant="subtitle2" fontWeight={600}>Request</Typography>
-                    <Typography variant="subtitle2" fontWeight={600}>Can View</Typography>
-                    <Typography variant="subtitle2" fontWeight={600}>Can Approve / Reject</Typography>
-                    <Typography variant="subtitle2" fontWeight={600} sx={{ minWidth: 80, textAlign: 'right' }}>Action</Typography>
-                </Box>
-
-                {/* List body */}
-                <Box sx={{ flex: 1, overflowY: 'auto' }}>
-                    {fetchLoading ? (
-                        <Box sx={{ p: 2 }}>
-                            <SkeletonLoader
-                                columns={[{ name: 'request_name'}, { name: 'view_users'}, { name: 'selected_users'}, { name: 'actions'}]}
-                                rowCount={6}
-                            />
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                        <Box sx={{ color: 'primary.main', display: 'flex', flexShrink: 0 }}>
+                            <IconInfoCircle size={18} />
                         </Box>
-                    ) : (
-                        paginatedRows.map((row) => {
-                            const approveIds = parseSelectedUserIds(row.saved?.selected_users);
-                            const viewOnlyIds = parseSelectedUserIds(row.saved?.view_users).filter((id) => !approveIds.includes(id));
-                            const inheritedFrom = row.saved?.inherited_from
-                                ? REQUEST_TYPES.find((type) => type.slug === row.saved?.inherited_from)?.name
-                                : null;
-                            const userNamesSx = {
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                pr: 2,
-                            };
-                            return (
-                                <Box key={row.slug}>
+                        <Typography variant="body2" color="text.secondary">
+                            Approvers can also view. Admins can always view and approve every request.
+                        </Typography>
+                    </Stack>
+                    <TextField
+                        size="small"
+                        placeholder="Search request or user"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        sx={{ minWidth: { md: 280 } }}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <IconSearch size={16} />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
+                </Stack>
+
+                <Paper
+                    variant="outlined"
+                    sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 2 }}
+                >
+                    {/* Column header */}
+                    <Box
+                        sx={{
+                            display: { xs: 'none', md: 'grid' },
+                            gridTemplateColumns: LIST_COLUMNS.md,
+                            columnGap: 2,
+                            px: 2.5,
+                            py: 1.25,
+                            bgcolor: 'grey.100',
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                        }}
+                    >
+                        <Typography variant="subtitle2" fontWeight={600}>Request type</Typography>
+                        <Stack direction="row" spacing={0.75} alignItems="center">
+                            <IconShieldCheck size={16} />
+                            <Typography variant="subtitle2" fontWeight={600}>Can approve / reject</Typography>
+                        </Stack>
+                        <Stack direction="row" spacing={0.75} alignItems="center">
+                            <IconEye size={16} />
+                            <Typography variant="subtitle2" fontWeight={600}>View only</Typography>
+                        </Stack>
+                        <Box />
+                    </Box>
+
+                    {/* List body */}
+                    <Box sx={{ flex: 1, overflowY: 'auto' }}>
+                        {fetchLoading ? (
+                            // Placeholder rows in the same grid as the list (not table rows: this is not a table)
+                            Array.from({ length: 6 }).map((_, index) => (
+                                <Box
+                                    key={index}
+                                    sx={{
+                                        display: 'grid',
+                                        gridTemplateColumns: LIST_COLUMNS,
+                                        columnGap: 2,
+                                        rowGap: 1,
+                                        alignItems: 'center',
+                                        px: 2.5,
+                                        py: 1.5,
+                                        borderBottom: '1px solid',
+                                        borderColor: 'divider',
+                                    }}
+                                >
+                                    <Stack direction="row" spacing={1.5} alignItems="center">
+                                        <Skeleton variant="rounded" width={36} height={36} />
+                                        <Skeleton variant="text" width="60%" />
+                                    </Stack>
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <Skeleton variant="circular" width={28} height={28} />
+                                        <Skeleton variant="circular" width={28} height={28} />
+                                        <Skeleton variant="text" width="50%" />
+                                    </Stack>
+                                    <Skeleton variant="text" width="55%" />
+                                    <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+                                        <Skeleton variant="rounded" width={72} height={30} />
+                                    </Box>
+                                </Box>
+                            ))
+                        ) : filteredRows.length === 0 ? (
+                            <Box sx={{ p: 6, textAlign: 'center' }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    No request types or users match &ldquo;{searchTerm}&rdquo;
+                                </Typography>
+                            </Box>
+                        ) : (
+                            filteredRows.map((row) => {
+                                const approveIds = parseSelectedUserIds(row.saved?.selected_users);
+                                const viewOnlyIds = parseSelectedUserIds(row.saved?.view_users).filter((id) => !approveIds.includes(id));
+                                const inheritedFrom = row.saved?.inherited_from
+                                    ? REQUEST_TYPES.find((type) => type.slug === row.saved?.inherited_from)?.name
+                                    : null;
+                                const TypeIcon = REQUEST_TYPES.find((type) => type.slug === row.slug)?.icon ?? IconInfoCircle;
+                                return (
                                     <Box
+                                        key={row.slug}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => handleEditClick(row)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                handleEditClick(row);
+                                            }
+                                        }}
                                         sx={{
                                             display: 'grid',
-                                            gridTemplateColumns: '1fr 1fr 1fr auto',
+                                            gridTemplateColumns: LIST_COLUMNS,
+                                            columnGap: 2,
+                                            rowGap: 1,
                                             alignItems: 'center',
-                                            px: 2,
-                                            py: 1.5,
-                                            '&:hover': { backgroundColor: '#f8f9fc' },
+                                            px: 2.5,
+                                            py: 1.25,
+                                            minHeight: 60,
+                                            cursor: 'pointer',
+                                            borderBottom: '1px solid',
+                                            borderColor: 'divider',
+                                            transition: 'background-color 120ms',
+                                            '&:last-of-type': { borderBottom: 'none' },
+                                            '&:hover': { bgcolor: 'action.hover' },
+                                            '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 },
                                         }}
                                     >
-                                        <Box>
-                                            <Typography variant="body2" color="textPrimary">
-                                                {row.request_name}
-                                            </Typography>
-                                            {inheritedFrom && (
-                                                <Typography variant="caption" color="textSecondary">
-                                                    Same users as {inheritedFrom} until saved
+                                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+                                            <Box
+                                                sx={{
+                                                    width: 36,
+                                                    height: 36,
+                                                    borderRadius: 1.5,
+                                                    flexShrink: 0,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    bgcolor: 'primary.light',
+                                                    color: 'primary.main',
+                                                }}
+                                            >
+                                                <TypeIcon size={18} />
+                                            </Box>
+                                            <Box sx={{ minWidth: 0 }}>
+                                                <Typography variant="body2" fontWeight={600} color="text.primary" noWrap>
+                                                    {row.request_name}
                                                 </Typography>
-                                            )}
+                                                {inheritedFrom && (
+                                                    <Tooltip arrow title={`Uses the ${inheritedFrom} users until you save this request type.`}>
+                                                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: 'text.secondary', width: 'fit-content' }}>
+                                                            <IconLink size={13} />
+                                                            <Typography variant="caption" color="text.secondary" noWrap>
+                                                                Uses {inheritedFrom} users
+                                                            </Typography>
+                                                        </Stack>
+                                                    </Tooltip>
+                                                )}
+                                            </Box>
+                                        </Stack>
+
+                                        <Box sx={{ minWidth: 0 }}>
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: { md: 'none' } }}>
+                                                Can approve / reject
+                                            </Typography>
+                                            {renderUsers(approveIds, 'approve')}
                                         </Box>
 
-                                        {/* View-only users (approve users can view as well) */}
-                                        <Typography variant="body2" color={viewOnlyIds.length ? 'textPrimary' : 'textSecondary'} sx={userNamesSx}>
-                                            {getSelectedUserNames(viewOnlyIds) || '—'}
-                                        </Typography>
+                                        <Box sx={{ minWidth: 0 }}>
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: { md: 'none' } }}>
+                                                View only
+                                            </Typography>
+                                            {renderUsers(viewOnlyIds, 'view')}
+                                        </Box>
 
-                                        <Typography variant="body2" color={approveIds.length ? 'textPrimary' : 'textSecondary'} sx={userNamesSx}>
-                                            {getSelectedUserNames(approveIds) || 'Admins only'}
-                                        </Typography>
-
-                                        <Button
-                                            size="small"
-                                            variant="contained"
-                                            color="primary"
-                                            onClick={() => handleEditClick(row)}
-                                            sx={{
-                                                px: 3,
-                                                py: 0.75,
-                                                textTransform: 'capitalize',
-                                                fontWeight: 600,
-                                                minWidth: 80,
-                                            }}
-                                        >
-                                            Edit
-                                        </Button>
+                                        <Box sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+                                            <Tooltip arrow title={`Edit ${row.request_name}`}>
+                                                <IconButton
+                                                    size="small"
+                                                    color="primary"
+                                                    aria-label={`Edit ${row.request_name}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditClick(row);
+                                                    }}
+                                                >
+                                                    <IconEdit size={18} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Box>
                                     </Box>
-                                    <Divider />
-                                </Box>
-                            );
-                        })
-                    )}
-                </Box>
-
-                <Divider />
-
-                {/* Pagination */}
-                <Box sx={{ padding: '16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2 }}>
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                        <Typography color="textSecondary" className="f-14">Entries:</Typography>
-                        <CustomSelect
-                            className="custom-select"
-                            value={pageSize}
-                            onChange={(e: { target: { value: any } }) => {
-                                setPageSize(Number(e.target.value));
-                                setPageIndex(0);
-                            }}
-                            sx={{ minWidth: '80px' }}
-                        >
-                            {PAGE_SIZE_OPTIONS.map((size) => (
-                                <MenuItem key={size} value={size}>{size}</MenuItem>
-                            ))}
-                        </CustomSelect>
-                    </Stack>
-
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                        <Typography color="textSecondary" className="f-14">
-                            Page {pageIndex + 1} of {pageCount}
-                        </Typography>
-                        <IconButton size="small" onClick={() => setPageIndex((p) => p - 1)} disabled={pageIndex === 0}>
-                            <IconChevronLeft size={18} />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => setPageIndex((p) => p + 1)} disabled={pageIndex >= pageCount - 1}>
-                            <IconChevronRight size={18} />
-                        </IconButton>
-                    </Stack>
-                </Box>
-
-                <Divider />
+                                );
+                            })
+                        )}
+                    </Box>
+                </Paper>
 
                 {/* Edit Dialog */}
                 <Dialog
@@ -491,6 +659,19 @@ const RequestActionList = () => {
                                 <b>Can View</b>: sees these requests and their details. <b>Can Approve / Reject</b>: can also
                                 approve or reject them. Admins can always see and approve every request.
                             </Typography>
+
+                            {editingInheritedFrom && (
+                                <Alert severity="info" sx={{ py: 0.5 }}>
+                                    {editingRow?.request_name} uses the <b>{editingInheritedFrom}</b> users right now. When you
+                                    save, it gets its own users and will no longer change when {editingInheritedFrom} changes.
+                                </Alert>
+                            )}
+                            {editingFollowers.length > 0 && (
+                                <Alert severity="info" sx={{ py: 0.5 }}>
+                                    Changes here also apply to <b>{editingFollowers.join(', ')}</b>, because they use these
+                                    users until they are saved separately.
+                                </Alert>
+                            )}
 
                             {/* Search Box */}
                             <Box>
@@ -637,7 +818,7 @@ const RequestActionList = () => {
                             variant="contained"
                             color="primary"
                         >
-                            {editLoading ? 'Saving...' : 'Save Changes'}
+                            {editLoading ? 'Saving...' : hasChanges ? 'Save Changes' : 'No changes'}
                         </Button>
                     </DialogActions>
                 </Dialog>
