@@ -13,9 +13,21 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  IconButton,
   Skeleton,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
 } from "@mui/material";
-import { IconLock, IconLockOpen, IconCash, IconShieldCheck } from "@tabler/icons-react";
+import {
+  IconCash,
+  IconCircleCheck,
+  IconEye,
+  IconLock,
+  IconLockOpen,
+  IconShieldCheck,
+  IconX,
+} from "@tabler/icons-react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
 import api from "@/utils/axios";
@@ -25,8 +37,9 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { useTranslation } from "react-i18next";
 import { useSession } from "next-auth/react";
 
-// Users listed under this request-action slug can Lock, Unlock and mark
-// timesheets as Paid (checked in the backend by validateTimesheetActionAccess).
+// Approve users of this request-action slug can Lock, Unlock and mark timesheets
+// as Paid (checked in the backend by validateTimesheetActionAccess). View users
+// only see the requests and get notified.
 const TIMESHEET_ACTION_SLUG = "timesheet_approve";
 const TIMESHEET_ACTION_NAME = "Edit Timesheet";
 
@@ -103,8 +116,10 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
   const [approverOptions, setApproverOptions] = useState<ApproverOption[]>([]);
   const [adminCount, setAdminCount] = useState(0);
   const [requestActionId, setRequestActionId] = useState<number | null>(null);
-  const [savedApproverIds, setSavedApproverIds] = useState<number[]>([]);
-  const [selectedApproverIds, setSelectedApproverIds] = useState<number[]>([]);
+  // viewIds = everyone with access (approve users included); approveIds = who can Lock / Unlock / Pay.
+  const [saved, setSaved] = useState<{ view: number[]; approve: number[] }>({ view: [], approve: [] });
+  const [viewIds, setViewIds] = useState<number[]>([]);
+  const [approveIds, setApproveIds] = useState<number[]>([]);
 
   const updateSettings = (updates: Partial<SettingsState>) => {
     setSettings((prev) => ({ ...prev, ...updates }));
@@ -183,15 +198,23 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
       // Keep only users that still exist in the picker, so saving never sends
       // removed/inactive users (the backend rejects those).
       const optionIds = new Set(options.map((o) => o.id));
-      const savedIds = parseUserIds(action?.user_ids ?? action?.selected_users).filter((id) =>
+      const savedApprove = parseUserIds(action?.user_ids ?? action?.selected_users).filter((id) =>
         optionIds.has(id),
       );
+      // view_user_ids holds view-only users; approve users can always view too.
+      const savedView = [
+        ...new Set([
+          ...savedApprove,
+          ...parseUserIds(action?.view_user_ids ?? action?.view_users).filter((id) => optionIds.has(id)),
+        ]),
+      ];
 
       setApproverOptions(options);
       setAdminCount(admins);
-      setRequestActionId(action ? Number(action.id) : null);
-      setSavedApproverIds(savedIds);
-      setSelectedApproverIds(savedIds);
+      setRequestActionId(action?.id ? Number(action.id) : null);
+      setSaved({ view: savedView, approve: savedApprove });
+      setViewIds(savedView);
+      setApproveIds(savedApprove);
       setApproverLoadState("ready");
     } catch (error) {
       console.error("Error fetching timesheet access users:", error);
@@ -204,22 +227,42 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
     fetchApprovers();
   }, [fetchApprovers, session.status]);
 
-  const selectedApprovers = useMemo(() => {
+  const selectedAccessUsers = useMemo(() => {
     const byId = new Map(approverOptions.map((o) => [o.id, o]));
-    return selectedApproverIds
+    return viewIds
       .map((id) => byId.get(id))
       .filter((o): o is ApproverOption => Boolean(o));
-  }, [approverOptions, selectedApproverIds]);
+  }, [approverOptions, viewIds]);
+
+  // New users get approve access by default, since this section is about Lock / Unlock / Paid.
+  const handleAccessUsersChange = (ids: number[]) => {
+    const added = ids.filter((id) => !viewIds.includes(id));
+    setViewIds(ids);
+    setApproveIds((prev) => [...prev.filter((id) => ids.includes(id)), ...added]);
+  };
+
+  const setUserAccess = (userId: number, canApprove: boolean) => {
+    setApproveIds((prev) =>
+      canApprove ? [...new Set([...prev, userId])] : prev.filter((id) => id !== userId),
+    );
+  };
+
+  const removeAccessUser = (userId: number) => {
+    setViewIds((prev) => prev.filter((id) => id !== userId));
+    setApproveIds((prev) => prev.filter((id) => id !== userId));
+  };
 
   const approversChanged =
-    approverLoadState === "ready" && !sameIds(savedApproverIds, selectedApproverIds);
+    approverLoadState === "ready" &&
+    (!sameIds(saved.view, viewIds) || !sameIds(saved.approve, approveIds));
 
   // Returns true when there was nothing to save or the save succeeded.
   const saveApprovers = async (): Promise<boolean> => {
     if (!approversChanged) return true;
 
     try {
-      if (selectedApproverIds.length === 0) {
+      if (viewIds.length === 0) {
+        // No users left: only admins can lock, unlock or pay timesheets.
         if (requestActionId) {
           await api.delete(`request-action/${requestActionId}`);
         }
@@ -228,7 +271,8 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
         const payload = {
           request_name: TIMESHEET_ACTION_NAME,
           request_slug: TIMESHEET_ACTION_SLUG,
-          selected_users: selectedApproverIds.join(","),
+          selected_users: approveIds.join(","),
+          view_users: viewIds.join(","),
         };
         if (requestActionId) {
           await api.put(`request-action/edit/${requestActionId}`, payload);
@@ -238,7 +282,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
           if (Number.isFinite(newId)) setRequestActionId(newId);
         }
       }
-      setSavedApproverIds(selectedApproverIds);
+      setSaved({ view: viewIds, approve: approveIds });
       return true;
     } catch (error) {
       // The axios interceptor already shows the server's error message.
@@ -316,18 +360,22 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
       );
     }
 
+    const approveCount = selectedAccessUsers.filter((u) => approveIds.includes(u.id)).length;
+    const viewOnlyCount = selectedAccessUsers.length - approveCount;
+
     return (
       <>
         <Autocomplete
           multiple
           disableCloseOnSelect
           options={approverOptions}
-          value={selectedApprovers}
-          onChange={(_, value) => setSelectedApproverIds(value.map((o) => o.id))}
+          value={selectedAccessUsers}
+          onChange={(_, value) => handleAccessUsersChange(value.map((o) => o.id))}
           getOptionLabel={(option) => option.name}
           isOptionEqualToValue={(option, value) => option.id === value.id}
           noOptionsText={t("No users found")}
           disabled={settings.isSaving}
+          disableClearable
           renderOption={(props, option, { selected }) => {
             const { key, ...optionProps } = props as any;
             return (
@@ -349,45 +397,110 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
               </li>
             );
           }}
-          renderValue={(value, getItemProps) =>
-            value.map((option, index) => {
-              const { key, ...itemProps } = getItemProps({ index }) as any;
-              return (
-                <Chip
-                  key={option.id}
-                  {...itemProps}
-                  size="small"
-                  label={option.name}
-                  avatar={
-                    <Avatar src={option.image ?? undefined}>
-                      {getInitials(option.name)}
-                    </Avatar>
-                  }
-                />
-              );
-            })
-          }
+          // Selected users are listed below with their access level, so no chips here.
+          renderValue={() => null}
           renderInput={(params) => (
             <TextField
               {...params}
               size="small"
-              placeholder={selectedApprovers.length ? "" : t("Search and select users")}
+              placeholder={t("Search and add users")}
             />
           )}
         />
 
+        {selectedAccessUsers.length > 0 && (
+          <Box
+            sx={{
+              mt: 1.5,
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 2,
+              overflow: "hidden",
+            }}
+          >
+            {selectedAccessUsers.map((option, index) => {
+              const canApprove = approveIds.includes(option.id);
+              return (
+                <Box
+                  key={option.id}
+                  display="flex"
+                  alignItems="center"
+                  gap={1.5}
+                  sx={{
+                    px: 1.5,
+                    py: 1,
+                    borderTop: index === 0 ? "none" : "1px solid",
+                    borderColor: "divider",
+                    flexWrap: { xs: "wrap", sm: "nowrap" },
+                  }}
+                >
+                  <Avatar src={option.image ?? undefined} sx={{ width: 32, height: 32, fontSize: 13 }}>
+                    {getInitials(option.name)}
+                  </Avatar>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography variant="body2" noWrap>
+                      {option.name}
+                    </Typography>
+                    {option.subtitle && (
+                      <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                        {option.subtitle}
+                      </Typography>
+                    )}
+                  </Box>
+                  <ToggleButtonGroup
+                    exclusive
+                    size="small"
+                    value={canApprove ? "approve" : "view"}
+                    onChange={(_, value) => value && setUserAccess(option.id, value === "approve")}
+                    disabled={settings.isSaving}
+                    aria-label={t("Access level")}
+                  >
+                    <ToggleButton
+                      value="view"
+                      sx={{ textTransform: "none", px: 1.5, gap: 0.5, "&.Mui-selected": { color: "info.main" } }}
+                    >
+                      <IconEye size={15} />
+                      {t("View only")}
+                    </ToggleButton>
+                    <ToggleButton
+                      value="approve"
+                      sx={{ textTransform: "none", px: 1.5, gap: 0.5, "&.Mui-selected": { color: "success.main" } }}
+                    >
+                      <IconCircleCheck size={15} />
+                      {t("Can approve")}
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                  <Tooltip title={t("Remove")}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={() => removeAccessUser(option.id)}
+                        disabled={settings.isSaving}
+                        aria-label={t("Remove")}
+                      >
+                        <IconX size={16} />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
+              );
+            })}
+          </Box>
+        )}
+
         <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
           <Typography variant="caption" color="text.secondary">
-            {selectedApprovers.length === 1
-              ? t("1 user selected")
-              : t("{{count}} users selected", { count: selectedApprovers.length })}
+            {t("{{approve}} can approve · {{view}} view only", { approve: approveCount, view: viewOnlyCount })}
             {adminCount > 0 && ` · ${t("Admins always have access")}`}
           </Typography>
-          {selectedApprovers.length > 0 && (
+          {selectedAccessUsers.length > 0 && (
             <Button
               size="small"
               color="inherit"
-              onClick={() => setSelectedApproverIds([])}
+              onClick={() => {
+                setViewIds([]);
+                setApproveIds([]);
+              }}
               disabled={settings.isSaving}
               sx={{ textTransform: "none", color: "text.secondary" }}
             >
@@ -396,7 +509,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
           )}
         </Box>
 
-        {selectedApprovers.length === 0 && (
+        {approveCount === 0 && (
           <Alert severity="info" sx={{ mt: 1.5 }}>
             {t("No users selected — only Admins can lock, unlock or mark timesheets as paid")}
           </Alert>
@@ -521,10 +634,28 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
                 <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5, mb: 1 }}>
                   {t('Choose who can lock, unlock and mark timesheets as paid in Time Clock — they can also edit locked timesheet entries')}
                 </Typography>
-                <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
+                <Box display="flex" flexWrap="wrap" gap={1} mb={1.5}>
                   <Chip size="small" variant="outlined" icon={<IconLock size={14} />} label={t('Lock')} />
                   <Chip size="small" variant="outlined" icon={<IconLockOpen size={14} />} label={t('Unlock')} />
                   <Chip size="small" variant="outlined" icon={<IconCash size={14} />} label={t('Paid')} />
+                </Box>
+                <Box display="flex" flexDirection="column" gap={0.5} mb={2}>
+                  <Box display="flex" alignItems="center" gap={0.75} sx={{ color: "success.main" }}>
+                    <IconCircleCheck size={15} />
+                    <Typography variant="caption" color="text.secondary">
+                      <Box component="span" fontWeight={600} color="text.primary">{t('Can approve')}</Box>
+                      {' — '}
+                      {t('lock, unlock, mark as paid and edit locked timesheet entries')}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" alignItems="center" gap={0.75} sx={{ color: "info.main" }}>
+                    <IconEye size={15} />
+                    <Typography variant="caption" color="text.secondary">
+                      <Box component="span" fontWeight={600} color="text.primary">{t('View only')}</Box>
+                      {' — '}
+                      {t('sees timesheet requests and gets notifications')}
+                    </Typography>
+                  </Box>
                 </Box>
 
                 {renderApproverPicker()}
