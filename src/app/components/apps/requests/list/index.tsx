@@ -994,7 +994,8 @@ export default function UserRequests({
                               </Typography>
                             </Box>
                           )}
-                        {showRequestActions && isPendingRequest(work) && (
+                        {/* can_approve comes from Admin Settings > Request Settings (missing = older API, keep showing) */}
+                        {showRequestActions && isPendingRequest(work) && work.can_approve !== false && (
                           <Box display="flex" justifyContent="flex-end" gap={1}>
                             <Button
                               variant="outlined"

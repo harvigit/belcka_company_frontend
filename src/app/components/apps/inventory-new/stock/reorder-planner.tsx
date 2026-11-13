@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -7,19 +7,15 @@ import {
   Divider,
   MenuItem,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
-import Image from "next/image";
+import { createColumnHelper } from "@tanstack/react-table";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
-import SkeletonLoader from "@/app/components/SkeletonLoader";
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import InventoryTable from "../shared/InventoryTable";
 import FilterButton from "../shared/FilterButton";
 import { InventoryOptions, money, qty } from "../shared/useInventoryOptions";
 
@@ -32,7 +28,6 @@ interface ReorderPlannerProps {
 type Part = { supplier_item_id: number | ""; packs: string };
 type Plan = Record<string, { urgent: Part; bulk: Part }>;
 
-const headCell = { fontWeight: 600, whiteSpace: "nowrap" } as const;
 
 const optionLabel = (o: any) =>
   `${o.supplier_name} · ${o.pack_qty} per pack · £${o.unit_price.toFixed(4)} each · ${
@@ -55,8 +50,14 @@ const ReorderPlanner: React.FC<ReorderPlannerProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [filters, setFilters] = useState({ store_id: "" });
 
-  const load = async () => {
+  // The plan covers every item below min (Create draft POs and the totals use all rows), so the rows are
+  // loaded once per filter and paged in the browser; changing page keeps the edits.
+  const loadedKey = useRef<string | null>(null);
+  const load = async (force = false) => {
     if (!companyId) return;
+    const key = `${companyId}|${filters.store_id}`;
+    if (!force && key === loadedKey.current) return;
+    loadedKey.current = key;
     setLoading(true);
     try {
       let url = `inventory-new/stock/reorder?company_id=${companyId}`;
@@ -87,11 +88,6 @@ const ReorderPlanner: React.FC<ReorderPlannerProps> = ({
     }
     setLoading(false);
   };
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyId, filters]);
 
   const optionOf = (row: any, id: number | "") =>
     row.options.find((o: any) => o.supplier_item_id === id);
@@ -155,7 +151,7 @@ const ReorderPlanner: React.FC<ReorderPlannerProps> = ({
       );
       if (result.data.IsSuccess) {
         toast.success(result.data.message);
-        load();
+        load(true);
         onCreated();
       }
     } catch (error) {
@@ -213,6 +209,83 @@ const ReorderPlanner: React.FC<ReorderPlannerProps> = ({
     );
   };
 
+  const columnHelper = createColumnHelper<any>();
+  const columns = [
+    columnHelper.accessor("name", {
+      header: "Item",
+      cell: ({ row }) => (
+        <Box ml={1}>
+          <Typography variant="body2" fontWeight={600}>
+            {row.original.uuid} · {row.original.name}
+          </Typography>
+          <Typography variant="caption" color="textSecondary">
+            {row.original.store_name}
+          </Typography>
+        </Box>
+      ),
+    }),
+    columnHelper.accessor("available", {
+      header: "On hand + on order",
+      cell: ({ row }) => {
+        const r = row.original;
+        return (
+          <Typography variant="body2" ml={1} whiteSpace="nowrap">
+            {qty(r.on_hand)} + {qty(r.on_order)} = <b>{qty(r.available)}</b> {r.unit_name ?? ""}
+          </Typography>
+        );
+      },
+    }),
+    columnHelper.accessor("min_qty", {
+      header: "Min / Max",
+      cell: ({ row }) => {
+        const r = row.original;
+        return (
+          <Box ml={1}>
+            <Typography variant="body2" whiteSpace="nowrap">
+              {qty(r.min_qty)} / {qty(r.max_qty)}
+            </Typography>
+            <Typography variant="caption" color="error">
+              needs {qty(r.to_min)} to min
+            </Typography>
+          </Box>
+        );
+      },
+    }),
+    columnHelper.display({
+      id: "urgent",
+      header: "Urgent: up to min (fastest)",
+      cell: ({ row }) =>
+        row.original.options.length ? (
+          renderPart(row.original, "urgent")
+        ) : (
+          <Alert severity="warning" sx={{ py: 0 }}>
+            No active supplier item with a price is linked to this item.
+          </Alert>
+        ),
+    }),
+    columnHelper.display({
+      id: "bulk",
+      header: "Bulk: up to max (cheapest)",
+      cell: ({ row }) => (row.original.options.length ? renderPart(row.original, "bulk") : null),
+    }),
+  ];
+
+  const { table, pagination, setPageCount, totalRows, setTotalRows } = useServerTable({
+    data: rows,
+    columns,
+    fetchData: () => load(),
+    debounceDependencies: [filters, companyId],
+    manualPagination: false,
+    enableSorting: false,
+    getRowId: (row: any) => row.key,
+  });
+
+  // paged in the browser: page count and total follow the loaded rows and page size
+  useEffect(() => {
+    setTotalRows(rows.length);
+    setPageCount(Math.max(1, Math.ceil(rows.length / Math.max(pagination.pageSize, 1))));
+  }, [rows.length, pagination.pageSize, setTotalRows, setPageCount]);
+
   return (
     <Box
       sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
@@ -260,91 +333,9 @@ const ReorderPlanner: React.FC<ReorderPlannerProps> = ({
       </Stack>
       <Divider />
 
-      <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-        {loading ? (
-          <SkeletonLoader
-            columns={[{ name: "" }, { name: "" }, { name: "" }, { name: "" }]}
-            rowCount={5}
-          />
-        ) : !rows.length ? (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "calc(50vh - 100px)",
-            }}
-          >
-            <Image
-              src="/images/no-data.png"
-              alt="No data"
-              width={200}
-              height={200}
-            />
-            <Typography color="textSecondary">Nothing is below min.</Typography>
-          </Box>
-        ) : (
-          <TableContainer>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={headCell}>Item</TableCell>
-                  <TableCell sx={headCell}>On hand + on order</TableCell>
-                  <TableCell sx={headCell}>Min / Max</TableCell>
-                  <TableCell sx={headCell}>
-                    Urgent: up to min (fastest)
-                  </TableCell>
-                  <TableCell sx={headCell}>
-                    Bulk: up to max (cheapest)
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.key}>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={600}>
-                        {r.uuid} · {r.name}
-                      </Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        {r.store_name}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" whiteSpace="nowrap">
-                        {qty(r.on_hand)} + {qty(r.on_order)} ={" "}
-                        <b>{qty(r.available)}</b> {r.unit_name ?? ""}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" whiteSpace="nowrap">
-                        {qty(r.min_qty)} / {qty(r.max_qty)}
-                      </Typography>
-                      <Typography variant="caption" color="error">
-                        needs {qty(r.to_min)} to min
-                      </Typography>
-                    </TableCell>
-                    {r.options.length ? (
-                      <>
-                        <TableCell>{renderPart(r, "urgent")}</TableCell>
-                        <TableCell>{renderPart(r, "bulk")}</TableCell>
-                      </>
-                    ) : (
-                      <TableCell colSpan={2}>
-                        <Alert severity="warning" sx={{ py: 0 }}>
-                          No active supplier item with a price is linked to this
-                          item.
-                        </Alert>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </Box>
+      <InventoryTable table={table} loading={loading} rowCount={rows.length} />
+      <Divider />
+      <TablePaginationFooter table={table} totalRows={totalRows} />
     </Box>
   );
 };

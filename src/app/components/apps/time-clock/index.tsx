@@ -548,6 +548,10 @@ const TimeClock = ({queryParams}: Props) => {
     const user = session.data?.user as User & { company_id: number; id?: string } & { user_role_id: number; };
     const {permissions} = usePermissions();
     const canViewGroupReport = user?.user_role_id === 1 || hasPermission(permissions, 'group-report');
+    const isCompanyAdmin = user?.user_role_id === 1;
+    // Same access as the old Request Action page: Admins, or users with the
+    // "RequestActions" web permission, can manage who may Lock/Unlock/Pay timesheets.
+    const canManageTimesheetAccess = isCompanyAdmin || hasPermission(permissions, 'RequestActions');
     const [companyGroups, setCompanyGroups] = useState<{ id: number; name: string }[]>([]);
 
     useEffect(() => {
@@ -743,7 +747,9 @@ const TimeClock = ({queryParams}: Props) => {
 
         try {
             const response = await api.get(`get-notification-count?company_id=${user.company_id}`);
-            setRequestCount(Number(response.data?.request_count || 0));
+            // Bookkeeper shows only the request types the user can view (Request Settings);
+            // request_count is kept for older APIs.
+            setRequestCount(Number(response.data?.bookkeeper_request_count ?? response.data?.request_count ?? 0));
         } catch (error) {
             console.error('Failed to fetch pending request count:', error);
         }
@@ -3064,7 +3070,7 @@ const TimeClock = ({queryParams}: Props) => {
                                 </IconButton>
                             </Tooltip>
 
-                            {user.user_role_id === 1 && (
+                            {canManageTimesheetAccess && (
                             <Tooltip title={t('Settings')}>
                                 <IconButton onClick={handleSettingOpen} color="primary" size="small">
                                     <IconSettings size={20}/>
@@ -3081,6 +3087,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     }}
                                     initialActiveMenuItem={settingsInitialMenu}
                                     initialProjectId={settingsInitialProjectId}
+                                    limitedAccess={!isCompanyAdmin}
                                 />
                             )}
 

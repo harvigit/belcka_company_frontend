@@ -6,7 +6,6 @@ import {
     Badge,
     Box,
     Button,
-    Chip,
     Dialog,
     DialogActions,
     DialogContent,
@@ -30,7 +29,16 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import {IconArrowLeft, IconEye, IconHelpCircle, IconLock, IconSearch, IconX} from '@tabler/icons-react';
+import {
+    IconArrowLeft,
+    IconDeviceMobile,
+    IconEye,
+    IconHelpCircle,
+    IconLock,
+    IconSearch,
+    IconWorld,
+    IconX,
+} from '@tabler/icons-react';
 import {createColumnHelper} from '@tanstack/react-table';
 import {flexRender} from '@/utils/flexRender';
 import Image from 'next/image';
@@ -79,6 +87,13 @@ type CheckinTaskUser = {
     permissions: Permission[];
     permission_count: number;
 };
+
+// Same rules as the Manage Permissions drawer toggles:
+// status 1 = Web + App, 2 = Web only, 3 = App only, 0 = none.
+const countPermissionsByPlatform = (permissions: Permission[] = []) => ({
+    web: permissions.filter((p) => p.is_web !== false && (p.status === 1 || p.status === 2)).length,
+    app: permissions.filter((p) => p.is_app !== false && (p.status === 1 || p.status === 3)).length,
+});
 
 type GeofenceField =
     | 'is_autostop_work_penalty'
@@ -755,32 +770,69 @@ const TaskUserCheckinSettings: React.FC = () => {
             cell: ({row}: any) => {
                 const item = row.original;
                 const canAccess = canAccessPermissions();
+                const counts = countPermissionsByPlatform(item.permissions);
+                const segments = [
+                    {key: 'web', label: t('Web'), count: counts.web, Icon: IconWorld},
+                    {key: 'app', label: t('App'), count: counts.app, Icon: IconDeviceMobile},
+                ];
 
                 return (
-                    <Chip
-                        size="small"
-                        onClick={canAccess ? () => handleOpenPermissionsDrawer(item) : undefined}
-                        label={
-                            item.permission_count === 0
-                                ? t('Select')
-                                : t('permissions.count', {count: item.permission_count})
-                        }
-                        sx={{
-                            backgroundColor: (theme) => theme.palette.primary.light,
-                            color: (theme) => theme.palette.primary.main,
-                            fontWeight: 500,
-                            borderRadius: '10px',
-                            px: 1.5,
-                            cursor: canAccess ? 'pointer' : 'not-allowed',
-                            opacity: canAccess ? 1 : 0.6,
-                            transition: 'all 0.2s ease',
-                            minWidth: 120,
-                            '&:hover': {
-                                transform: canAccess ? 'translateY(-2px)' : 'none',
-                                boxShadow: canAccess ? '0 4px 8px rgba(0,0,0,0.15)' : 'none',
-                            },
-                        }}
-                    />
+                    <Tooltip
+                        arrow
+                        placement="top"
+                        title={`${t('Web')}: ${counts.web} · ${t('App')}: ${counts.app}${canAccess ? ` — ${t('Manage Permissions')}` : ''}`}
+                    >
+                        <Box
+                            role={canAccess ? 'button' : undefined}
+                            tabIndex={canAccess ? 0 : -1}
+                            onClick={canAccess ? () => handleOpenPermissionsDrawer(item) : undefined}
+                            onKeyDown={(e) => {
+                                if (canAccess && (e.key === 'Enter' || e.key === ' ')) {
+                                    e.preventDefault();
+                                    handleOpenPermissionsDrawer(item);
+                                }
+                            }}
+                            sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                border: (theme) => `1px solid ${theme.palette.divider}`,
+                                borderRadius: '10px',
+                                overflow: 'hidden',
+                                cursor: canAccess ? 'pointer' : 'not-allowed',
+                                opacity: canAccess ? 1 : 0.6,
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                    borderColor: (theme) => (canAccess ? theme.palette.primary.main : theme.palette.divider),
+                                    transform: canAccess ? 'translateY(-2px)' : 'none',
+                                    boxShadow: canAccess ? '0 4px 8px rgba(0,0,0,0.15)' : 'none',
+                                },
+                            }}
+                        >
+                            {segments.map(({key, label, count, Icon}, index) => (
+                                <Stack
+                                    key={key}
+                                    direction="row"
+                                    alignItems="center"
+                                    spacing={0.75}
+                                    sx={{
+                                        px: 1.25,
+                                        py: 0.5,
+                                        borderLeft: (theme) => (index > 0 ? `1px solid ${theme.palette.divider}` : 'none'),
+                                        backgroundColor: (theme) => (count > 0 ? theme.palette.primary.light : 'transparent'),
+                                        color: (theme) => (count > 0 ? theme.palette.primary.main : theme.palette.text.disabled),
+                                    }}
+                                >
+                                    <Icon size={16} />
+                                    <Typography variant="body2" sx={{fontWeight: 500, color: 'inherit'}}>
+                                        {label}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{fontWeight: 700, color: 'inherit', minWidth: 12, textAlign: 'center'}}>
+                                        {count}
+                                    </Typography>
+                                </Stack>
+                            ))}
+                        </Box>
+                    </Tooltip>
                 );
             },
         }),

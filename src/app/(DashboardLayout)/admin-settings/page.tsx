@@ -163,7 +163,7 @@ const AdminSetting = () => {
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconFileAlert size="20" />}
-                                        label="Request Approvel"
+                                        label="Request Settings"
                                         {...a11yProps(6)}
                                     />
                                     <Tab

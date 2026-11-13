@@ -44,12 +44,16 @@ const menuItems = [
     { icon: <IconCategoryPlus size={18} />, label: "Expense Category" },
 ];
 
+const LIMITED_MENU_ITEM = "Bookkeeper Setting";
+
 interface SettingsProps {
     settingOpen: boolean;
     onClose: () => void;
     onSaved?: () => void;
     initialActiveMenuItem?: string | null;
     initialProjectId?: number | null;
+    /** Non-admins only get the Bookkeeper Setting menu (timesheet access users). */
+    limitedAccess?: boolean;
 }
 
 const Inex: React.FC<SettingsProps> = ({
@@ -58,16 +62,22 @@ const Inex: React.FC<SettingsProps> = ({
     onSaved,
     initialActiveMenuItem = null,
     initialProjectId = null,
+    limitedAccess = false,
 }) => {
     const { t } = useTranslation();
-    const [activeMenuItem, setActiveMenuItem] = useState<string>("General");
+    const visibleMenuItems = limitedAccess ? menuItems.filter((item) => item.label === LIMITED_MENU_ITEM) : menuItems;
+    const [activeMenuItem, setActiveMenuItem] = useState<string>(limitedAccess ? LIMITED_MENU_ITEM : "General");
     const [openSnackbar, setOpenSnackbar] = useState(false);
 
     useEffect(() => {
+        if (limitedAccess) {
+            setActiveMenuItem(LIMITED_MENU_ITEM);
+            return;
+        }
         if (settingOpen && initialActiveMenuItem) {
             setActiveMenuItem(initialActiveMenuItem);
         }
-    }, [settingOpen, initialActiveMenuItem]);
+    }, [settingOpen, initialActiveMenuItem, limitedAccess]);
 
     const handleMenuItemClick = (label: string) => {
         setActiveMenuItem(label);
@@ -143,7 +153,7 @@ const Inex: React.FC<SettingsProps> = ({
                             },
                         }}
                     >
-                        {menuItems.map((item, i) => (
+                        {visibleMenuItems.map((item, i) => (
                             <Box
                                 key={i}
                                 sx={{
@@ -202,7 +212,7 @@ const Inex: React.FC<SettingsProps> = ({
                             <PenaltySettings />
                         )}
                         {activeMenuItem === "Bookkeeper Setting" && (
-                            <BookkeeperSetting onSaveSuccess={handleSaveSuccess}/>
+                            <BookkeeperSetting onSaveSuccess={handleSaveSuccess} limitedAccess={limitedAccess}/>
                         )}
                         {/* {activeMenuItem === 'Geolocation' && (
                             <Geofence onSaveSuccess={handleSaveSuccess} />
