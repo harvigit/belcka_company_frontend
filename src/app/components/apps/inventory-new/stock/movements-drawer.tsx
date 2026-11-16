@@ -1,20 +1,12 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import {
-  Box,
-  Drawer,
-  IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-} from "@mui/material";
+import React, { useState } from "react";
+import { Box, Divider, Drawer, IconButton, Typography } from "@mui/material";
+import { createColumnHelper } from "@tanstack/react-table";
 import { IconArrowLeft, IconX } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import SkeletonLoader from "@/app/components/SkeletonLoader";
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import InventoryTable from "../shared/InventoryTable";
 import { dateText, MOVEMENT_TEXT } from "../shared/orderUtils";
 import { money, qty } from "../shared/useInventoryOptions";
 
@@ -25,9 +17,13 @@ interface MovementsDrawerProps {
   onClose: () => void;
 }
 
-const headCell = { fontWeight: 600, py: 1, whiteSpace: "nowrap" } as const;
+const text = (value: React.ReactNode) => (
+  <Typography className="f-14" ml={1} whiteSpace="nowrap">
+    {value}
+  </Typography>
+);
 
-// Stock ledger of one item in one store, newest first.
+// Stock ledger of one item in one store, newest first (server paginated).
 const MovementsDrawer: React.FC<MovementsDrawerProps> = ({
   open,
   row,
@@ -37,17 +33,90 @@ const MovementsDrawer: React.FC<MovementsDrawerProps> = ({
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const fetchMovements = async () => {
     if (!open || !row || !companyId) return;
     setLoading(true);
-    api
-      .get(
-        `inventory-new/stock/movements?company_id=${companyId}&store_id=${row.store_id}&internal_item_id=${row.internal_item_id}&page=1&limit=200`,
-      )
-      .then((res) => setRows(res.data?.info ?? []))
-      .catch(() => setRows([]))
-      .finally(() => setLoading(false));
-  }, [open, row, companyId]);
+    try {
+      const res = await api.get(
+        `inventory-new/stock/movements?company_id=${companyId}&store_id=${row.store_id}&internal_item_id=${row.internal_item_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`,
+      );
+      setRows(res.data?.info ?? []);
+      setPageCount(res.data?.data?.totalPages || 0);
+      setTotalRows(res.data?.data?.totalItems || 0);
+    } catch (err) {
+      setRows([]);
+    }
+    setLoading(false);
+  };
+
+  const columnHelper = createColumnHelper<any>();
+  const columns = [
+    columnHelper.accessor("created_at", {
+      header: "Date",
+      cell: ({ row: r }) => text(dateText(r.original.created_at)),
+    }),
+    columnHelper.accessor("type", {
+      header: "Type",
+      cell: ({ row: r }) => text(MOVEMENT_TEXT[r.original.type] ?? r.original.type),
+    }),
+    columnHelper.accessor("qty", {
+      header: "Qty",
+      cell: ({ row: r }) => {
+        const m = r.original;
+        return (
+          <Typography
+            className="f-14"
+            ml={1}
+            fontWeight={600}
+            color={m.qty > 0 ? "success.main" : m.qty < 0 ? "error.main" : "textSecondary"}
+          >
+            {m.qty > 0 ? "+" : ""}
+            {qty(m.qty)}
+          </Typography>
+        );
+      },
+    }),
+    columnHelper.accessor("rate", {
+      header: "Rate",
+      cell: ({ row: r }) => text(r.original.rate === null ? "-" : `£${r.original.rate.toFixed(4)}`),
+    }),
+    columnHelper.accessor("value", {
+      header: "Value",
+      cell: ({ row: r }) => text(r.original.value ? money(r.original.value) : "-"),
+    }),
+    columnHelper.accessor("base_price_after", {
+      header: "Base after",
+      cell: ({ row: r }) =>
+        text(r.original.base_price_after === null ? "-" : `£${r.original.base_price_after.toFixed(4)}`),
+    }),
+    columnHelper.accessor("store_balance_after", {
+      header: "Balance",
+      cell: ({ row: r }) => text(qty(r.original.store_balance_after)),
+    }),
+    columnHelper.accessor("action_by_name", {
+      header: "By / note",
+      cell: ({ row: r }) => (
+        <Box ml={1}>
+          <Typography className="f-14">{r.original.action_by_name ?? "-"}</Typography>
+          {r.original.note && (
+            <Typography variant="caption" color="textSecondary">
+              {r.original.note}
+            </Typography>
+          )}
+        </Box>
+      ),
+    }),
+  ];
+
+  // opening the drawer for another item reloads from page 1
+  const { table, pagination, setPageCount, totalRows, setTotalRows } = useServerTable({
+    data: rows,
+    columns,
+    fetchData: fetchMovements,
+    debounceDependencies: [open, row?.store_id, row?.internal_item_id, companyId],
+    debounceTimeMs: 0,
+    enableSorting: false,
+  });
 
   return (
     <Drawer
@@ -84,97 +153,10 @@ const MovementsDrawer: React.FC<MovementsDrawerProps> = ({
           </IconButton>
         </Box>
 
-        <Box flex={1} overflow="auto" mt={2}>
-          {loading ? (
-            <SkeletonLoader columns={[{ name: "" }]} rowCount={5} />
-          ) : !rows.length ? (
-            <Typography variant="body2" color="textSecondary">
-              No movements yet.
-            </Typography>
-          ) : (
-            <TableContainer
-              sx={{ border: "1px solid #eef2f7", borderRadius: 1 }}
-            >
-              <Table size="small" stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={headCell}>Date</TableCell>
-                    <TableCell sx={headCell}>Type</TableCell>
-                    <TableCell sx={headCell}>Qty</TableCell>
-                    <TableCell sx={headCell}>Rate</TableCell>
-                    <TableCell sx={headCell}>Value</TableCell>
-                    <TableCell sx={headCell}>Base after</TableCell>
-                    <TableCell sx={headCell}>Balance</TableCell>
-                    <TableCell sx={headCell}>By / note</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rows.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell>
-                        <Typography variant="body2" whiteSpace="nowrap">
-                          {dateText(m.created_at)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" whiteSpace="nowrap">
-                          {MOVEMENT_TEXT[m.type] ?? m.type}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          fontWeight={600}
-                          color={
-                            m.qty > 0
-                              ? "success.main"
-                              : m.qty < 0
-                                ? "error.main"
-                                : "textSecondary"
-                          }
-                        >
-                          {m.qty > 0 ? "+" : ""}
-                          {qty(m.qty)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {m.rate === null ? "-" : `£${m.rate.toFixed(4)}`}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {m.value ? money(m.value) : "-"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {m.base_price_after === null
-                            ? "-"
-                            : `£${m.base_price_after.toFixed(4)}`}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {qty(m.store_balance_after)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {m.action_by_name ?? "-"}
-                        </Typography>
-                        {m.note && (
-                          <Typography variant="caption" color="textSecondary">
-                            {m.note}
-                          </Typography>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+        <Box flex={1} overflow="auto" mt={2} display="flex" flexDirection="column">
+          <InventoryTable table={table} loading={loading} rowCount={rows.length} />
+          <Divider />
+          <TablePaginationFooter table={table} totalRows={totalRows} />
         </Box>
       </Box>
     </Drawer>

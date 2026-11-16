@@ -19,6 +19,7 @@ import FormField from "../shared/FormField";
 import QtyInput from "../shared/QtyInput";
 import { InventoryOptions, money } from "../shared/useInventoryOptions";
 import { isoDate, splitQty } from "../shared/orderUtils";
+import { useActiveStoreId } from "../shared/useActiveStore";
 
 interface OrderableItem {
   // "supplierItemId:internalItemId": a supplier item linked to several internal items shows once per internal item
@@ -63,6 +64,8 @@ const PurchaseOrderDrawer: React.FC<PurchaseOrderDrawerProps> = ({
 }) => {
   const [supplierId, setSupplierId] = useState<number | "">("");
   const [storeId, setStoreId] = useState<number | "">("");
+  // a new order starts on the store activated on the Stores page; it can be changed
+  const activeStoreId = useActiveStoreId(options);
   const [expectedDate, setExpectedDate] = useState("");
   const [note, setNote] = useState("");
   const [projectId, setProjectId] = useState<number | "">("");
@@ -74,7 +77,7 @@ const PurchaseOrderDrawer: React.FC<PurchaseOrderDrawerProps> = ({
   useEffect(() => {
     if (!open) return;
     setSupplierId(order?.supplier_id ?? "");
-    setStoreId(order?.store_id ?? "");
+    setStoreId(order ? order.store_id ?? "" : activeStoreId ?? "");
     setExpectedDate(isoDate(order?.expected_date));
     setNote(order?.note ?? "");
     setProjectId(order?.project_id ?? "");

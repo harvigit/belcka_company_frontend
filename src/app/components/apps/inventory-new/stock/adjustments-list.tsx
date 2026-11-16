@@ -1,24 +1,13 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import {
-  Box,
-  Divider,
-  IconButton,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import React, { useState } from "react";
+import { Box, Divider, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { createColumnHelper } from "@tanstack/react-table";
 import { IconCheck, IconX } from "@tabler/icons-react";
-import Image from "next/image";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
-import SkeletonLoader from "@/app/components/SkeletonLoader";
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import InventoryTable from "../shared/InventoryTable";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import FilterButton from "../shared/FilterButton";
@@ -46,7 +35,11 @@ const TYPE_TEXT: Record<string, string> = {
   found: "Found",
 };
 
-const headCell = { fontWeight: 600, whiteSpace: "nowrap" } as const;
+const text = (value: React.ReactNode) => (
+  <Typography className="f-14" ml={1} whiteSpace="nowrap">
+    {value}
+  </Typography>
+);
 
 // Missing / damaged / found reports. Stock only changes once an admin approves a report.
 const AdjustmentsList: React.FC<AdjustmentsListProps> = ({
@@ -57,7 +50,7 @@ const AdjustmentsList: React.FC<AdjustmentsListProps> = ({
   const [rows, setRows] = useState<any[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ status: "pending", store_id: "" });
+  const [filters, setFilters] = useState({ status: "", store_id: "" });
   const [rejecting, setRejecting] = useState<any | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
@@ -65,22 +58,19 @@ const AdjustmentsList: React.FC<AdjustmentsListProps> = ({
     if (!companyId) return;
     setLoading(true);
     try {
-      let url = `inventory-new/stock/adjustments?company_id=${companyId}&page=1&limit=200`;
+      let url = `inventory-new/stock/adjustments?company_id=${companyId}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (filters.status) url += `&status=${filters.status}`;
       if (filters.store_id) url += `&store_id=${filters.store_id}`;
       const res = await api.get(url);
       setRows(res.data?.info ?? []);
       setIsAdmin(!!res.data?.is_admin);
+      setPageCount(res.data?.data?.totalPages || 0);
+      setTotalRows(res.data?.data?.totalItems || 0);
     } catch (err) {
       console.error("Failed to fetch stock adjustments", err);
     }
     setLoading(false);
   };
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyId, filters]);
 
   const decide = async (row: any, approve: boolean, reason?: string) => {
     try {
@@ -101,6 +91,105 @@ const AdjustmentsList: React.FC<AdjustmentsListProps> = ({
       return false;
     }
   };
+
+  const columnHelper = createColumnHelper<any>();
+  const columns = [
+    columnHelper.accessor("created_at", {
+      header: "Date",
+      cell: ({ row }) => text(dateText(row.original.created_at)),
+    }),
+    columnHelper.accessor("name", {
+      header: "Item",
+      cell: ({ row }) => (
+        <Typography className="f-14" ml={1} fontWeight={600}>
+          {row.original.uuid} · {row.original.name}
+        </Typography>
+      ),
+    }),
+    columnHelper.accessor("store_name", {
+      header: "Store",
+      cell: ({ row }) => text(row.original.store_name ?? "-"),
+    }),
+    columnHelper.accessor("type", {
+      header: "Type",
+      cell: ({ row }) => text(TYPE_TEXT[row.original.type] ?? row.original.type),
+    }),
+    columnHelper.accessor("qty", {
+      header: "Qty",
+      cell: ({ row }) => {
+        const r = row.original;
+        return (
+          <Typography
+            className="f-14"
+            ml={1}
+            whiteSpace="nowrap"
+            color={r.type === "found" ? "success.main" : "error.main"}
+          >
+            {r.type === "found" ? "+" : "-"}
+            {qty(r.qty)} {r.unit_name ?? ""}
+          </Typography>
+        );
+      },
+    }),
+    columnHelper.accessor("reason", {
+      header: "Reason",
+      cell: ({ row }) => (
+        <Typography className="f-14" ml={1}>
+          {row.original.reason ?? "-"}
+        </Typography>
+      ),
+    }),
+    columnHelper.accessor("reported_by_name", {
+      header: "Reported by",
+      cell: ({ row }) => text(row.original.reported_by_name ?? "-"),
+    }),
+    columnHelper.accessor("status", {
+      header: "Status",
+      cell: ({ row }) => {
+        const r = row.original;
+        const status = STATUS[r.status] ?? STATUS.pending;
+        return (
+          <Tooltip title={r.status === "rejected" && r.reject_reason ? `Reason: ${r.reject_reason}` : ""}>
+            <Box component="span" ml={1}>
+              <StatusText label={status.label} tone={status.tone} />
+            </Box>
+          </Tooltip>
+        );
+      },
+    }),
+    // approve / reject: admins only
+    ...(isAdmin
+      ? [
+          columnHelper.display({
+            id: "actions",
+            header: "Actions",
+            cell: ({ row }) =>
+              row.original.status === "pending" ? (
+                <Stack direction="row" spacing={0.5}>
+                  <Tooltip title="Approve">
+                    <IconButton color="success" onClick={() => decide(row.original, true)}>
+                      <IconCheck size={18} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Reject">
+                    <IconButton color="error" onClick={() => setRejecting(row.original)}>
+                      <IconX size={18} />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+              ) : null,
+          }),
+        ]
+      : []),
+  ];
+
+  const { table, pagination, setPageCount, totalRows, setTotalRows } = useServerTable({
+    data: rows,
+    columns,
+    fetchData: load,
+    debounceDependencies: [filters, companyId],
+    enableSorting: false,
+  });
 
   return (
     <Box
@@ -139,138 +228,9 @@ const AdjustmentsList: React.FC<AdjustmentsListProps> = ({
       </Stack>
       <Divider />
 
-      <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-        {loading ? (
-          <SkeletonLoader
-            columns={[{ name: "" }, { name: "" }, { name: "" }, { name: "" }]}
-            rowCount={5}
-          />
-        ) : !rows.length ? (
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "calc(50vh - 100px)",
-            }}
-          >
-            <Image
-              src="/images/no-data.png"
-              alt="No data"
-              width={200}
-              height={200}
-            />
-          </Box>
-        ) : (
-          <TableContainer>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={headCell}>Date</TableCell>
-                  <TableCell sx={headCell}>Item</TableCell>
-                  <TableCell sx={headCell}>Store</TableCell>
-                  <TableCell sx={headCell}>Type</TableCell>
-                  <TableCell sx={headCell}>Qty</TableCell>
-                  <TableCell sx={headCell}>Reason</TableCell>
-                  <TableCell sx={headCell}>Reported by</TableCell>
-                  <TableCell sx={headCell}>Status</TableCell>
-                  {isAdmin && <TableCell sx={headCell}>Actions</TableCell>}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map((r) => {
-                  const status = STATUS[r.status] ?? STATUS.pending;
-                  return (
-                    <TableRow key={r.id} hover>
-                      <TableCell>
-                        <Typography className="f-14">
-                          {dateText(r.created_at)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography className="f-14" fontWeight={600}>
-                          {r.uuid} · {r.name}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography className="f-14">
-                          {r.store_name ?? "-"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography className="f-14">
-                          {TYPE_TEXT[r.type] ?? r.type}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          className="f-14"
-                          color={
-                            r.type === "found" ? "success.main" : "error.main"
-                          }
-                        >
-                          {r.type === "found" ? "+" : "-"}
-                          {qty(r.qty)} {r.unit_name ?? ""}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography className="f-14">
-                          {r.reason ?? "-"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography className="f-14">
-                          {r.reported_by_name ?? "-"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Tooltip
-                          title={
-                            r.status === "rejected" && r.reject_reason
-                              ? `Reason: ${r.reject_reason}`
-                              : ""
-                          }
-                        >
-                          <span>
-                            <StatusText
-                              label={status.label}
-                              tone={status.tone}
-                            />
-                          </span>
-                        </Tooltip>
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell>
-                          {r.status === "pending" && (
-                            <Stack direction="row" spacing={0.5}>
-                              <Tooltip title="Approve">
-                                <IconButton
-                                  color="success"
-                                  onClick={() => decide(r, true)}
-                                >
-                                  <IconCheck size={18} />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Reject">
-                                <IconButton
-                                  color="error"
-                                  onClick={() => setRejecting(r)}
-                                >
-                                  <IconX size={18} />
-                                </IconButton>
-                              </Tooltip>
-                            </Stack>
-                          )}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </Box>
+      <InventoryTable table={table} loading={loading} rowCount={rows.length} />
+      <Divider />
+      <TablePaginationFooter table={table} totalRows={totalRows} />
 
       <ConfirmDialog
         open={!!rejecting}

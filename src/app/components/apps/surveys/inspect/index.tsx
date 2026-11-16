@@ -481,8 +481,9 @@ export default function SurveyInspectWorkspace({ id }: SurveyInspectProps) {
   const loadSurvey = useCallback(async () => {
     try {
       const res = await api.get(`surveys/${id}`);
-      if (res.data?.IsSuccess && res.data.data) {
-        const s: Survey = res.data.data;
+      const loaded: Survey | undefined = res.data?.info || res.data?.data;
+      if (res.data?.IsSuccess && loaded) {
+        const s: Survey = loaded;
         setSurvey(s);
 
         // Auto-select first room and element if not set

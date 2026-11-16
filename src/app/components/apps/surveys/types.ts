@@ -155,6 +155,10 @@ export interface SurveyAddressOption {
   id: number;
   project_id: number;
   name: string;
+  /** The property's own full address. */
+  full_name?: string;
+  /** Its parent address's name, when it has one that differs from the full address. */
+  parent_name?: string | null;
   parentAddress?: {
     short_name?: string;
     name?: string;

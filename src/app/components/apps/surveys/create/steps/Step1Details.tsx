@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import {
+  Autocomplete,
   Grid,
   MenuItem,
   Typography,
@@ -156,47 +157,91 @@ export default function Step1Details({
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <CustomTextField
-            select
-            fullWidth
-            required
-            label="Property / Property Address"
-            value={formData.addressId || ""}
-            onChange={(e: any) =>
+          <Autocomplete
+            options={availableAddresses}
+            value={addresses.find((a) => a.id === formData.addressId) || null}
+            onChange={(_, addr) =>
               setFormData((prev: any) => ({
                 ...prev,
-                addressId: Number(e.target.value) || null,
+                addressId: addr ? addr.id : null,
+                // Picking an address without a project fills in the address's project.
+                projectId: prev.projectId || (addr ? addr.project_id : null),
               }))
             }
-            error={Boolean(errors.addressId)}
-            helperText={
-              errors.addressId ||
-              (formData.projectId
-                ? `${availableAddresses.length} address(es) for selected project`
-                : "Select project first to filter addresses")
-            }
-            InputProps={{
-              startAdornment: (
-                <Box mr={1} color="text.secondary" display="flex">
-                  <IconMapPin size={18} />
-                </Box>
-              ),
+            getOptionLabel={(addr) => addr.full_name || addr.name}
+            isOptionEqualToValue={(a, b) => a.id === b.id}
+            // Search the full address and the parent address name.
+            filterOptions={(options, { inputValue }) => {
+              const words = inputValue.toLowerCase().split(/\s+/).filter(Boolean);
+              if (!words.length) return options;
+              return options.filter((addr) => {
+                const text = `${addr.full_name || addr.name} ${addr.parent_name || ""}`.toLowerCase();
+                return words.every((w) => text.includes(w));
+              });
             }}
-          >
-            {availableAddresses.length === 0 ? (
-              <MenuItem disabled value="">
-                {formData.projectId ? "No addresses in this project" : "Select a project first"}
-              </MenuItem>
-            ) : (
-              availableAddresses.map((addr) => (
-                <MenuItem key={addr.id} value={addr.id}>
-                  {addr.parentAddress?.short_name
-                    ? `[${addr.parentAddress.short_name}] ${addr.name}`
-                    : addr.name}
-                </MenuItem>
-              ))
-            )}
-          </CustomTextField>
+            noOptionsText={
+              formData.projectId ? "No matching address in this project" : "No matching address"
+            }
+            ListboxProps={{ style: { maxHeight: 360 } }}
+            // Keep long addresses clear of the clear (×) and open (▾) buttons.
+            sx={{ "& .MuiAutocomplete-inputRoot": { paddingRight: "72px !important" } }}
+            renderOption={(props, addr) => {
+              const { key, ...optionProps } = props as any;
+              return (
+                <Box
+                  component="li"
+                  key={addr.id}
+                  {...optionProps}
+                  sx={{ display: "flex", alignItems: "flex-start", gap: 1.25, py: "10px !important" }}
+                >
+                  <Box color="text.secondary" display="flex" pt={0.25}>
+                    <IconMapPin size={16} />
+                  </Box>
+                  <Box minWidth={0}>
+                    <Typography variant="body2" fontWeight={600} sx={{ wordBreak: "break-word" }}>
+                      {addr.full_name || addr.name}
+                    </Typography>
+                    {addr.parent_name && (
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        {addr.parent_name}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              );
+            }}
+            renderInput={(params) => {
+              const selected = addresses.find((a) => a.id === formData.addressId);
+              return (
+                <CustomTextField
+                  {...params}
+                  required
+                  label="Property / Property Address"
+                  placeholder="Search by street, postcode or building"
+                  error={Boolean(errors.addressId)}
+                  helperText={
+                    errors.addressId ||
+                    (selected?.parent_name
+                      ? `Under ${selected.parent_name}`
+                      : formData.projectId
+                        ? `${availableAddresses.length} address(es) for selected project`
+                        : "Select a project to narrow the list, or search all addresses")
+                  }
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <>
+                        <Box ml={0.5} mr={0.5} color="text.secondary" display="flex">
+                          <IconMapPin size={18} />
+                        </Box>
+                        {params.InputProps.startAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              );
+            }}
+          />
         </Grid>
 
         {/* Surveyor & Date */}

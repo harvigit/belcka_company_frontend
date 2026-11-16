@@ -34,6 +34,7 @@ import {
     IconDeviceMobile,
     IconEye,
     IconHelpCircle,
+    IconHistory,
     IconLock,
     IconSearch,
     IconWorld,
@@ -54,6 +55,7 @@ import CustomTextField from '@/app/components/forms/theme-elements/CustomTextFie
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import api from '@/utils/axios';
+import PermissionHistoryDrawer from '@/app/components/apps/settings/permissions/PermissionHistoryDrawer';
 import {getUserDetailsHref} from '@/utils/userDetailsRoute';
 import {useServerTable} from '@/hooks/useServerTable';
 import {readListingTableState, writeListingTableState} from '@/utils/listingTableStateStorage';
@@ -129,6 +131,7 @@ const GEOFENCE_SETTINGS: {
 
 const TaskUserCheckinSettings: React.FC = () => {
     const {t} = useTranslation();
+    const [permissionHistoryOpen, setPermissionHistoryOpen] = useState(false);
     const {data: session, update} = useSession();
     const user = session?.user as User & {
         id: number;
@@ -1091,7 +1094,14 @@ const TaskUserCheckinSettings: React.FC = () => {
                         fullWidth
                     />
                 </Box>
-                <Box display="flex" alignItems="center" justifyContent="flex-end">
+                <Box display="flex" alignItems="center" justifyContent="flex-end" gap={1}>
+                    <Button
+                        variant="outlined"
+                        startIcon={<IconHistory size={18}/>}
+                        onClick={() => setPermissionHistoryOpen(true)}
+                    >
+                        {t('History')}
+                    </Button>
                     <Tooltip title={t('Show / hide columns')} arrow>
                         <IconButton color="primary" onClick={(event) => setColumnsAnchorEl(event.currentTarget)}>
                             <IconEye/>
@@ -1720,6 +1730,10 @@ const TaskUserCheckinSettings: React.FC = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+            <PermissionHistoryDrawer
+                open={permissionHistoryOpen}
+                onClose={() => setPermissionHistoryOpen(false)}
+            />
         </Box>
     );
 };

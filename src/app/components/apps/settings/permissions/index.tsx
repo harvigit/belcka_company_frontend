@@ -22,7 +22,8 @@ import toast from 'react-hot-toast';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
 import Image from 'next/image';
 import SkeletonLoader from "@/app/components/SkeletonLoader"; 
-import { IconAlertTriangle } from '@tabler/icons-react';
+import { IconAlertTriangle, IconHistory } from '@tabler/icons-react';
+import PermissionHistoryDrawer from './PermissionHistoryDrawer';
 
 const statusToFlags = (status: number) => ({
     is_web_enabled: status === 1 || status === 2,
@@ -54,6 +55,7 @@ export default function PermissionSettings() {
     const [fetchPermission, setFetchPermission] = useState<boolean>(true);
     const [hasChanges, setHasChanges] = useState<boolean>(false);
     const [openDialog, setOpenDialog] = useState<boolean>(false);
+    const [historyOpen, setHistoryOpen] = useState<boolean>(false);
 
     const columnVisibility = useMemo(() => {
         const hasWebSupport = originalPermissions.some(p => p.is_web);
@@ -175,15 +177,24 @@ export default function PermissionSettings() {
         <Box>
             <Box display="flex" justifyContent="space-between" mb={1} p={2} pb={0}>
                 <Typography fontWeight={500} ml={2}>Permission Settings</Typography>
-                {permissions.length > 0 && (
+                <Box display="flex" gap={1}>
                     <Button
-                        onClick={() => setOpenDialog(true)}
-                        disabled={fetchPermission || !hasChanges}
-                        variant="contained"
+                        onClick={() => setHistoryOpen(true)}
+                        variant="outlined"
+                        startIcon={<IconHistory size={18} />}
                     >
-                        {fetchPermission ? 'Updating...' : 'Update'}
+                        History
                     </Button>
-                )}
+                    {permissions.length > 0 && (
+                        <Button
+                            onClick={() => setOpenDialog(true)}
+                            disabled={fetchPermission || !hasChanges}
+                            variant="contained"
+                        >
+                            {fetchPermission ? 'Updating...' : 'Update'}
+                        </Button>
+                    )}
+                </Box>
             </Box>
 
             <TableContainer component={Paper} sx={{ p: 2, pt: 0, height: "calc(95vh - 130px)"}}>
@@ -325,6 +336,8 @@ export default function PermissionSettings() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <PermissionHistoryDrawer open={historyOpen} onClose={() => setHistoryOpen(false)} />
         </Box>
     );
 }
