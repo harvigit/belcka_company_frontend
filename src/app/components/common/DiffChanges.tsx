@@ -58,6 +58,7 @@ function DiffChangeRows({ rows }: { rows: DisplayDiff[] }) {
       {rows.map((diff, i) => (
         <Typography
           key={`${diff.key}-${i}`}
+          component="div"
           fontSize={11}
           color="text.secondary"
           mt={i > 0 ? 0.75 : 0}
