@@ -149,3 +149,41 @@ export const exportSurveyReportToPdf = async (
 };
 
 export const exportWorkOrderJobPackToPdf = exportSurveyReportToPdf;
+
+/**
+ * Prints only the given element: copies it, with the page's styles, into a hidden iframe and
+ * opens the browser's print dialog there, so the rest of the app is not printed.
+ */
+export const printElement = async (element: HTMLElement, title = "Survey report"): Promise<void> => {
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  Object.assign(frame.style, { position: "fixed", right: "0", bottom: "0", width: "0", height: "0", border: "0" });
+  document.body.appendChild(frame);
+
+  const doc = frame.contentDocument;
+  const win = frame.contentWindow;
+  if (!doc || !win) {
+    frame.remove();
+    return;
+  }
+
+  const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+    .map((node) => node.outerHTML)
+    .join("\n");
+  doc.open();
+  doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/</g, "&lt;")}</title>${styles}
+<style>
+  @page { size: A4; margin: 12mm; }
+  html, body { margin: 0; background: #fff; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  [${PDF_PAGE_BLOCK_ATTR}="true"] { break-inside: avoid; page-break-inside: avoid; }
+  #print-root > * { width: auto !important; padding: 0 !important; }
+</style></head><body><div id="print-root">${element.outerHTML}</div></body></html>`);
+  doc.close();
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  await waitForPdfImages(doc.body as HTMLElement);
+  win.focus();
+  win.print();
+  setTimeout(() => frame.remove(), 1000);
+};
