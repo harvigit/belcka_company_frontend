@@ -1059,7 +1059,7 @@ const TablePagination = () => {
                         groupId={row.group_id ?? null}
                         groupName={row.group_name ?? null}
                         groups={companyGroups}
-                        canEdit={isAdmin}
+                        canEdit
                         onUpdated={handleUserGroupUpdated}
                     />
                 );

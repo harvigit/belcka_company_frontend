@@ -8,11 +8,9 @@ import PermissionGuard from "@/app/auth/PermissionGuard";
 const CheckinsListing = () => {
   return (
     <PageContainer title="Checkins List" description="This is Checkins List">
-      <PermissionGuard permission="Check ins">
-        <BlankCard>
-          <CheckinsList />
-        </BlankCard>
-      </PermissionGuard>
+      <BlankCard>
+        <CheckinsList />
+      </BlankCard>
     </PageContainer>
   );
 };

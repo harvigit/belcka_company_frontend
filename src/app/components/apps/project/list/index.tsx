@@ -178,9 +178,10 @@ const PROJECT_MODULE_BUTTONS: {
   label: string;
   permission: string;
 }[] = [
-  { key: "addresses", label: "Addresses", permission: "Addresses" },
-  { key: "cases", label: "Cases", permission: "Cases" },
-  { key: "checkins", label: "Check ins", permission: "Check ins" },
+  // All three come with the Commercial permission (slug "project"); without it none show.
+  { key: "addresses", label: "Addresses", permission: "project" },
+  { key: "cases", label: "Cases", permission: "project" },
+  { key: "checkins", label: "Check ins", permission: "project" },
 ];
 
 const getProjectDashboardStateKey = (

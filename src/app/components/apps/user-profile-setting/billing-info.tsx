@@ -93,6 +93,7 @@ const emptyBillingInfo: BillingFormData = {
   diff_data: {},
 };
 
+// Same order as the fields on the billing form; the request drawer lists changes in this order.
 const ALLOWED_BILLING_FIELDS = [
   "first_name",
   "middle_name",
@@ -102,15 +103,18 @@ const ALLOWED_BILLING_FIELDS = [
   "address",
   "extension",
   "phone",
-  "name_on_utr",
   "utr_number",
+  "name_on_utr",
   "nin_number",
-  "name_on_account",
-  "bank_name",
-  "account_no",
-  "short_code",
   "cis",
+  "bank_name",
+  "name_on_account",
+  "short_code",
+  "account_no",
 ];
+
+const sameValue = (a: any, b: any) =>
+  String(a ?? "").trim() === String(b ?? "").trim();
 
 const BillingInfo: React.FC<ProjectListingProps> = ({
   companyId,
@@ -239,6 +243,13 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
   }, [billingInfo, userId, companyId, hasBillingInfo, fetchBillingInfo]);
 
   /* Helpers */
+  // Requested changes in form order, leaving out fields whose value did not change.
+  const requestedChanges = ALLOWED_BILLING_FIELDS.filter(
+    (key) =>
+      billingInfo?.diff_data?.hasOwnProperty(key) &&
+      !sameValue(billingInfo.diff_data[key]?.old, billingInfo.diff_data[key]?.new),
+  ).map((key) => [key, billingInfo!.diff_data[key]] as const);
+
   const isDisabledNewData =
     billingInfo?.status === 3 &&
     (!billingInfo?.old_data ||
@@ -443,17 +454,12 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 action.
               </Typography>
 
-              {billingInfo?.diff_data &&
-                Object.keys(billingInfo.diff_data).filter((key) =>
-                  ALLOWED_BILLING_FIELDS.includes(key),
-                ).length > 0 && (
+              {requestedChanges.length > 0 && (
                   <Box sx={{ mb: 2, flexGrow: 1, overflowY: "auto", pr: 1 }}>
                     <Typography variant="subtitle1" fontWeight={600} mb={1.5}>
                       Requested Changes:
                     </Typography>
-                    {Object.entries(billingInfo.diff_data)
-                      .filter(([key]) => ALLOWED_BILLING_FIELDS.includes(key))
-                      .map(([key, value]) => (
+                    {requestedChanges.map(([key, value]) => (
                         <Box
                           key={key}
                           sx={{
@@ -631,17 +637,12 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 </Typography>
               </Box>
 
-              {billingInfo?.diff_data &&
-                Object.keys(billingInfo.diff_data).filter((key) =>
-                  ALLOWED_BILLING_FIELDS.includes(key),
-                ).length > 0 && (
+              {requestedChanges.length > 0 && (
                   <Box sx={{ flexGrow: 1, overflowY: "auto", pr: 1 }}>
                     <Typography variant="subtitle1" fontWeight={600} mb={1.5}>
                       Requested Changes:
                     </Typography>
-                    {Object.entries(billingInfo.diff_data)
-                      .filter(([key]) => ALLOWED_BILLING_FIELDS.includes(key))
-                      .map(([key, value]) => (
+                    {requestedChanges.map(([key, value]) => (
                         <Box
                           key={key}
                           sx={{

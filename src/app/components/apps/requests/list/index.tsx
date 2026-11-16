@@ -35,6 +35,7 @@ import {
 import { format, parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import DiffChanges from "@/app/components/common/DiffChanges";
+import { orderBillingDiffs } from "@/utils/diffDisplay";
 import RejectReasonDialog from "@/app/components/common/RejectReasonDialog";
 import { useRouter } from "next/navigation";
 import { getUserDetailsHref } from "@/utils/userDetailsRoute";
@@ -949,7 +950,11 @@ export default function UserRequests({
                           {work.diff_data && work.diff_data.length > 0 && (
                             <Box ml={5.5} mt={0.5}>
                               <DiffChanges
-                                diffs={work.diff_data}
+                                diffs={
+                                  isBillingInfoRequest(work)
+                                    ? orderBillingDiffs(work.diff_data)
+                                    : work.diff_data
+                                }
                                 date={work.date}
                               />
                             </Box>

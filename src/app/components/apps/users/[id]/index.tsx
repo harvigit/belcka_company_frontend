@@ -47,6 +47,7 @@ import PermissionGuard from "@/app/auth/PermissionGuard";
 
 import UserActivity from "../../user-profile-setting/activity";
 import UserContracts from "../../user-profile-setting/contracts";
+import LoginDetails from "../../user-profile-setting/login-details";
 import { usePermissions } from "@/hooks/usePermissions";
 import { hasPermission } from "@/lib/permissions";
 import {
@@ -113,6 +114,7 @@ const TablePagination = () => {
     "Notification Settings",
     "Payments",
     "Contracts",
+    "Login Details",
   ];
 
   const { data: session, update } = useSession();
@@ -137,6 +139,8 @@ const TablePagination = () => {
         label === "Billing Info",
     )
     : allTabs.filter((label) => label !== "Contracts" || canManageContracts);
+  // found by label: its position shifts when the Contracts tab is hidden
+  const loginDetailsTab = visibleTabs.indexOf("Login Details");
 
   const [phone, setPhone] = useState("");
   const [openIdCard, setOpenIdCard] = useState(false);
@@ -1149,6 +1153,13 @@ const TablePagination = () => {
                         userId={Number(userId)}
                         active={value === 7 && canManageContracts}
                         canEdit={canModifyUserDetails}
+                      />
+                    </Box>
+                    <Box hidden={loginDetailsTab < 0 || value !== loginDetailsTab}>
+                      <LoginDetails
+                        userId={Number(userId)}
+                        companyId={Number(user.company_id)}
+                        active={value === loginDetailsTab}
                       />
                     </Box>
                   </>
