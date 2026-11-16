@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -22,12 +22,6 @@ import {
   CircularProgress,
   Tooltip,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Select,
   FormControl,
   InputLabel,
@@ -45,6 +39,8 @@ import {
   IconSparkles,
   IconRotateClockwise,
   IconDeviceFloppy,
+  IconCircleCheck,
+  IconArrowRight,
   IconCalculator,
   IconBuilding,
   IconMapPin,
@@ -94,7 +90,8 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
   const access = useSurveyAccess();
 
   const [loading, setLoading] = useState<boolean>(true);
-  const [savingItem, setSavingItem] = useState<number | null>(null);
+  // Save state per work line: lines save on their own when the user leaves a field.
+  const [lineStatus, setLineStatus] = useState<Record<number, "saving" | "saved" | "error">>({});
   const [savingAdjustments, setSavingAdjustments] = useState<boolean>(false);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
 
@@ -111,7 +108,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
   // Whole Scope Adjustment State
   const [adjustSign, setAdjustSign] = useState<number>(1);
   const [adjustType, setAdjustType] = useState<string>("percent");
-  const [adjustValue, setAdjustValue] = useState<number>(0);
+  const [adjustValue, setAdjustValue] = useState<number | "">(0);
   const [durationDays, setDurationDays] = useState<number | string>("");
 
   // Modal States
@@ -129,9 +126,10 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
     element_name: string;
     item_code: string;
     description: string;
-    quantity: number;
+    // "" while the user has cleared the field to type a new number.
+    quantity: number | "";
     unit: string;
-    unit_rate: number;
+    unit_rate: number | "";
     notes: string;
   }>({
     survey_item_id: "",
@@ -147,6 +145,21 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
 
   // Local Edits Tracker for Work Items: { [itemId]: Partial<SurveyScopeItem> }
   const [editedLines, setEditedLines] = useState<Record<number, Partial<SurveyScopeItem>>>({});
+  // Latest edits for the save handlers, which can run from a blur right after a change.
+  const editedLinesRef = useRef(editedLines);
+  editedLinesRef.current = editedLines;
+  const savedTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  // Warn before leaving the page with line edits that have not been saved yet.
+  useEffect(() => {
+    if (!Object.keys(editedLines).length) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [editedLines]);
 
   // ----------------------------------------------------
   // Load Scope Data
@@ -294,57 +307,113 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
     }));
   };
 
-  const handleSaveLine = async (item: SurveyScopeItem) => {
-    if (isLocked) return;
-    const pendingChanges = editedLines[item.id];
-    if (!pendingChanges || Object.keys(pendingChanges).length === 0) return;
+  // Saves one work line's pending edits. Called when the user leaves a line's field, and for every
+  // pending line from "Save Adjustments". Returns false when the save failed.
+  const handleSaveLine = async (item: SurveyScopeItem): Promise<boolean> => {
+    if (isLocked) return true;
+    const pendingChanges = editedLinesRef.current[item.id];
+    if (!pendingChanges || Object.keys(pendingChanges).length === 0) return true;
 
+    const payload = {
+      description: pendingChanges.description !== undefined ? pendingChanges.description : item.description,
+      item_code: pendingChanges.item_code !== undefined ? pendingChanges.item_code : item.item_code,
+      quantity: pendingChanges.quantity !== undefined ? Number(pendingChanges.quantity) || 0 : item.quantity,
+      unit: pendingChanges.unit !== undefined ? pendingChanges.unit : item.unit,
+      unit_rate: pendingChanges.unit_rate !== undefined ? Number(pendingChanges.unit_rate) || 0 : item.unit_rate,
+      notes: pendingChanges.notes !== undefined ? pendingChanges.notes : item.notes,
+      is_reviewed: pendingChanges.is_reviewed !== undefined ? pendingChanges.is_reviewed : item.is_reviewed,
+    };
+
+    clearTimeout(savedTimers.current[item.id]);
+    setLineStatus((prev) => ({ ...prev, [item.id]: "saving" }));
     try {
-      setSavingItem(item.id);
-      const payload = {
-        description: pendingChanges.description !== undefined ? pendingChanges.description : item.description,
-        item_code: pendingChanges.item_code !== undefined ? pendingChanges.item_code : item.item_code,
-        quantity: pendingChanges.quantity !== undefined ? Number(pendingChanges.quantity) : item.quantity,
-        unit: pendingChanges.unit !== undefined ? pendingChanges.unit : item.unit,
-        unit_rate: pendingChanges.unit_rate !== undefined ? Number(pendingChanges.unit_rate) : item.unit_rate,
-        notes: pendingChanges.notes !== undefined ? pendingChanges.notes : item.notes,
-        is_reviewed: pendingChanges.is_reviewed !== undefined ? pendingChanges.is_reviewed : item.is_reviewed,
-      };
-
       const res = await api.put(`surveys/${id}/scope-items/${item.id}`, payload);
-      if (res.data?.IsSuccess) {
-        toast.success("Work line updated");
-        setEditedLines((prev) => {
-          const next = { ...prev };
-          delete next[item.id];
-          return next;
+      if (!res.data?.IsSuccess) throw new Error(res.data?.message || "Failed to update item");
+
+      // Update the line in place instead of reloading the page, so other edits and the
+      // selected evidence stay as they are.
+      setScopeData((prev) =>
+        prev
+          ? {
+              ...prev,
+              scope_items: prev.scope_items.map((line) =>
+                line.id === item.id
+                  ? { ...line, ...payload, total_amount: (Number(payload.quantity) || 0) * (Number(payload.unit_rate) || 0) }
+                  : line,
+              ),
+            }
+          : prev,
+      );
+      // Drop only the edits that were sent; anything typed while saving stays pending.
+      setEditedLines((prev) => {
+        const current = prev[item.id];
+        if (!current) return prev;
+        const left: Partial<SurveyScopeItem> = {};
+        (Object.keys(current) as (keyof SurveyScopeItem)[]).forEach((key) => {
+          if (current[key] !== pendingChanges[key]) (left as any)[key] = current[key];
         });
-        await fetchScopeData();
-      } else {
-        toast.error(res.data?.message || "Failed to update item");
-      }
+        const next = { ...prev };
+        if (Object.keys(left).length) next[item.id] = left;
+        else delete next[item.id];
+        return next;
+      });
+      markLineSaved(item.id);
+      return true;
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to update item");
-    } finally {
-      setSavingItem(null);
+      setLineStatus((prev) => ({ ...prev, [item.id]: "error" }));
+      toast.error(err?.response?.data?.message || err?.message || "Failed to update item");
+      return false;
     }
   };
 
+  // Saves every line with pending edits (used before saving the adjustments).
+  const saveAllPendingLines = async () => {
+    const items = scopeData?.scope_items || [];
+    const pendingIds = Object.keys(editedLinesRef.current).map(Number);
+    let ok = true;
+    for (const lineId of pendingIds) {
+      const item = items.find((line) => line.id === lineId);
+      if (item && !(await handleSaveLine(item))) ok = false;
+    }
+    return ok;
+  };
+
+  const markLineSaved = (lineId: number) => {
+    clearTimeout(savedTimers.current[lineId]);
+    setLineStatus((prev) => ({ ...prev, [lineId]: "saved" }));
+    savedTimers.current[lineId] = setTimeout(() => {
+      setLineStatus((prev) => {
+        if (prev[lineId] !== "saved") return prev;
+        const next = { ...prev };
+        delete next[lineId];
+        return next;
+      });
+    }, 2500);
+  };
+
+  // Marks a line reviewed (or back to pending). Unsaved edits on the line are saved first.
   const handleToggleReviewed = async (item: SurveyScopeItem) => {
     if (isLocked) return;
+    if (editedLinesRef.current[item.id] && !(await handleSaveLine(item))) return;
+    const newStatus = !item.is_reviewed;
+    setLineStatus((prev) => ({ ...prev, [item.id]: "saving" }));
     try {
-      const newStatus = !item.is_reviewed;
-      const res = await api.put(`surveys/${id}/scope-items/${item.id}`, {
-        is_reviewed: newStatus,
-      });
-      if (res.data?.IsSuccess) {
-        toast.success(newStatus ? "Line marked reviewed" : "Line marked pending review");
-        await fetchScopeData();
-      } else {
-        toast.error(res.data?.message || "Failed to update review status");
-      }
+      const res = await api.put(`surveys/${id}/scope-items/${item.id}`, { is_reviewed: newStatus });
+      if (!res.data?.IsSuccess) throw new Error(res.data?.message || "Failed to update review status");
+      setScopeData((prev) =>
+        prev
+          ? {
+              ...prev,
+              scope_items: prev.scope_items.map((line) =>
+                line.id === item.id ? { ...line, is_reviewed: newStatus } : line,
+              ),
+            }
+          : prev,
+      );
+      markLineSaved(item.id);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to update status");
+      setLineStatus((prev) => ({ ...prev, [item.id]: "error" }));
+      toast.error(err?.response?.data?.message || err?.message || "Failed to update status");
     }
   };
 
@@ -370,6 +439,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
     if (isLocked) return;
     try {
       setSavingAdjustments(true);
+      if (!(await saveAllPendingLines())) return;
       const res = await api.put(`surveys/${id}/scope-adjustments`, {
         scope_adjust_sign: Number(adjustSign),
         scope_adjust_type: adjustType,
@@ -412,6 +482,10 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
   // Add Custom Work Item Dialog Handler
   const handleAddWorkItem = async () => {
     if (isLocked) return;
+    if (newItemData.quantity === "" || Number(newItemData.quantity) <= 0) {
+      toast.error("Enter a quantity greater than 0.");
+      return;
+    }
     if (!newItemData.description.trim()) {
       toast.error("Work item description is required");
       return;
@@ -863,7 +937,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                     {liveTotals.adjust_amount >= 0 ? `+${formatMoney(liveTotals.adjust_amount)}` : `-${formatMoney(Math.abs(liveTotals.adjust_amount))}`}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {adjustType === "percent" ? `${adjustSign > 0 ? "+" : "-"}${adjustValue}% global markup` : "Fixed adjustment"}
+                    {adjustType === "percent" ? `${adjustSign > 0 ? "+" : "-"}${adjustValue || 0}% global markup` : "Fixed adjustment"}
                   </Typography>
                 </Box>
                 <Box
@@ -922,13 +996,224 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
       </Grid>
 
       {/* ================================================================== */}
+      {/* 3b. QS FLOW GUIDE: what to do next, step by step                   */}
+      {/* ================================================================== */}
+      {!isLocked && (() => {
+        const items = scopeData.scope_items;
+        const priced = items.filter((line) => {
+          const edits = editedLines[line.id];
+          const qty = Number(edits?.quantity !== undefined ? edits.quantity : line.quantity) || 0;
+          const rate = Number(edits?.unit_rate !== undefined ? edits.unit_rate : line.unit_rate) || 0;
+          return qty > 0 && rate > 0;
+        }).length;
+        const lineValue = (line: SurveyScopeItem, field: "quantity" | "unit_rate") => {
+          const edits = editedLines[line.id];
+          return Number(edits?.[field] !== undefined ? edits[field] : line[field]) || 0;
+        };
+        const firstUnpriced = items.find((line) => !(lineValue(line, "quantity") > 0 && lineValue(line, "unit_rate") > 0));
+        const firstUnreviewed = items.find((line) => !line.is_reviewed);
+        // Shows a line card (clearing room/search filters that hide it) and optionally focuses its rate.
+        const goToLine = (line: SurveyScopeItem | undefined, focusRate = false) => {
+          if (!line) return;
+          setSelectedRoom("All");
+          setSearchQuery("");
+          if (line.survey_item_id) setSelectedEvidenceId(line.survey_item_id);
+          setTimeout(() => {
+            document.getElementById(`qs-line-${line.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+            if (focusRate) {
+              document.querySelector<HTMLInputElement>(`[data-qs-rate="${line.id}"]`)?.focus({ preventScroll: true });
+            }
+          }, 60);
+        };
+        const savedAdjustment =
+          Number(survey.scope_adjust_value) > 0 ||
+          (survey.estimated_duration_days !== null && survey.estimated_duration_days !== undefined);
+        const canLock = liveTotals.total_count > 0 && liveTotals.pending_count === 0;
+        const steps = [
+          {
+            title: "Create work lines",
+            hint: items.length
+              ? `${items.length} line(s) created`
+              : "Use Auto-generate (from the surveyor's defects) or Add Work Line",
+            cta: items.length ? "View lines" : "Go to lines",
+            status: items.length ? `${items.length} line${items.length === 1 ? "" : "s"}` : "None yet",
+            done: items.length > 0,
+            action: () =>
+              items.length
+                ? goToLine(items[0])
+                : document.getElementById("qs-lines")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+          },
+          {
+            title: "Price each line",
+            hint: items.length
+              ? `${priced} of ${items.length} priced. Enter Qty and Rate on each line; it saves on its own`
+              : "Enter Qty and Rate on each line",
+            cta: items.length && priced < items.length ? "Enter rates" : "View lines",
+            status: `${priced}/${items.length} priced`,
+            done: items.length > 0 && priced === items.length,
+            action: () => goToLine(firstUnpriced || items[0], true),
+          },
+          {
+            title: "Mark lines reviewed",
+            hint: items.length
+              ? `${liveTotals.reviewed_count} of ${items.length} reviewed. Check each line, then press "Mark reviewed"`
+              : "Press \"Mark reviewed\" on each priced line",
+            cta: liveTotals.pending_count > 0 ? "Review lines" : "View lines",
+            status: `${liveTotals.reviewed_count}/${items.length} reviewed`,
+            done: items.length > 0 && liveTotals.pending_count === 0,
+            action: () => goToLine(firstUnreviewed || items[0]),
+          },
+          {
+            title: "Adjustment (optional)",
+            hint: savedAdjustment
+              ? "Saved. You can change it any time before locking"
+              : "Add margin, discount or duration, then press \"Save Adjustments\". Skip if not needed",
+            cta: savedAdjustment ? "Change adjustment" : "Add adjustment",
+            status: savedAdjustment ? "Saved" : "Optional",
+            done: savedAdjustment,
+            optional: true,
+            action: () => {
+              document.getElementById("qs-adjustment")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              setTimeout(() => document.querySelector<HTMLInputElement>("[data-qs-adjust]")?.focus({ preventScroll: true }), 400);
+            },
+          },
+          {
+            title: "Lock baseline & approve",
+            hint: canLock
+              ? "All lines reviewed. Lock to freeze the scope and total"
+              : "Available after every line is reviewed",
+            cta: canLock ? "Lock & approve" : "See what's left",
+            status: canLock ? "Ready" : "After review",
+            done: false,
+            action: () => {
+              if (canLock) setLockModalOpen(true);
+              else {
+                toast.error(
+                  liveTotals.total_count === 0
+                    ? "Add at least one work line first."
+                    : `Mark the remaining ${liveTotals.pending_count} line(s) reviewed first.`,
+                );
+                goToLine(firstUnreviewed);
+              }
+            },
+          },
+        ];
+        const current = steps.findIndex((step) => !step.done && !step.optional);
+        return (
+          <BlankCard sx={{ mb: 2.5 }}>
+            <Box px={{ xs: 1.5, md: 2 }} py={1.5}>
+              <Stack direction="row" alignItems="baseline" spacing={1} mb={1} px={0.5}>
+                <Typography variant="subtitle2" fontWeight={700}>
+                  QS review steps
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Click a step to go to it · hover for help
+                </Typography>
+              </Stack>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems="stretch">
+                {steps.map((step, i) => {
+                  const active = i === current;
+                  return (
+                    <Tooltip
+                      key={step.title}
+                      arrow
+                      title={
+                        <Box>
+                          <div>{step.hint}</div>
+                          <Box mt={0.5} fontWeight={700}>Click: {step.cta}</Box>
+                        </Box>
+                      }
+                    >
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`${step.title}: ${step.cta}`}
+                        onClick={step.action}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            step.action();
+                          }
+                        }}
+                        sx={{
+                          flex: 1,
+                          minWidth: 0,
+                          px: 1.25,
+                          py: 0.75,
+                          borderRadius: "8px",
+                          border: "1px solid",
+                          borderColor: active ? "primary.main" : "divider",
+                          bgcolor: active ? "primary.light" : "transparent",
+                          cursor: "pointer",
+                          transition: "border-color .15s, background-color .15s",
+                          "&:hover": { borderColor: "primary.main", bgcolor: "action.hover" },
+                          "&:hover .qs-step-go": { opacity: 1, transform: "translateX(2px)" },
+                          "&:focus-visible": { outline: "2px solid", outlineColor: "primary.main" },
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 22,
+                            height: 22,
+                            flexShrink: 0,
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            bgcolor: step.done ? "success.main" : active ? "primary.main" : "grey.200",
+                            color: step.done || active ? "#fff" : "text.secondary",
+                          }}
+                        >
+                          {step.done ? <IconCheck size={13} /> : i + 1}
+                        </Box>
+                        <Box minWidth={0} flex={1}>
+                          <Typography
+                            variant="body2"
+                            fontWeight={700}
+                            noWrap
+                            fontSize="0.8rem"
+                            color={active ? "primary.main" : "text.primary"}
+                          >
+                            {step.title}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" noWrap display="block" lineHeight={1.3}>
+                            {step.status}
+                          </Typography>
+                        </Box>
+                        <Box
+                          className="qs-step-go"
+                          sx={{
+                            display: "flex",
+                            color: "primary.main",
+                            opacity: active ? 1 : 0.45,
+                            transition: "opacity .15s, transform .15s",
+                          }}
+                        >
+                          <IconArrowRight size={15} />
+                        </Box>
+                      </Stack>
+                    </Tooltip>
+                  );
+                })}
+              </Stack>
+            </Box>
+          </BlankCard>
+        );
+      })()}
+
+      {/* ================================================================== */}
       {/* 4. MAIN DUAL-PANE WORKSPACE                                        */}
       {/* ================================================================== */}
       <Grid container spacing={2.5}>
         {/* LEFT PANE: Schedule of Rates Table */}
         <Grid size={{ xs: 12, xl: 8 }}>
           <BlankCard>
-            <Box p={{ xs: 2, md: 2.5 }}>
+            <Box id="qs-lines" p={{ xs: 2, md: 2.5 }} sx={{ scrollMarginTop: 96 }}>
               {/* Header toolbar */}
               <Stack
                 direction={{ xs: "column", sm: "row" }}
@@ -942,7 +1227,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                     Work Items & Schedule of Rates
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    Match surveyed defects to commercial rate lines. Survey evidence remains separate.
+                    Enter a quantity and rate for each line, then mark it reviewed. Changes save automatically.
                   </Typography>
                 </Box>
 
@@ -979,277 +1264,258 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                 </Stack>
               </Stack>
 
-              {/* Table of Scope Items */}
-              <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: "8px", borderColor: "divider" }}>
-                <Table size="small" sx={{ minWidth: 900 }}>
-                  <TableHead sx={{ bgcolor: "grey.50" }}>
-                    <TableRow>
-                      <TableCell width={50} align="center">
-                        <Typography variant="caption" fontWeight={700} color="text.secondary">
-                          Review
-                        </Typography>
-                      </TableCell>
-                      <TableCell width={150}>
-                        <Typography variant="caption" fontWeight={700} color="text.secondary">
-                          Area / Element
-                        </Typography>
-                      </TableCell>
-                      <TableCell width={80}>
-                        <Typography variant="caption" fontWeight={700} color="text.secondary">
-                          Code
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="caption" fontWeight={700} color="text.secondary">
-                          Work Description
-                        </Typography>
-                      </TableCell>
-                      <TableCell width={75} align="right">
-                        <Typography variant="caption" fontWeight={700} color="text.secondary">
-                          Qty
-                        </Typography>
-                      </TableCell>
-                      <TableCell width={50} align="center">
-                        <Typography variant="caption" fontWeight={700} color="text.secondary">
-                          Unit
-                        </Typography>
-                      </TableCell>
-                      <TableCell width={85} align="right">
-                        <Typography variant="caption" fontWeight={700} color="text.secondary">
-                          Rate (£)
-                        </Typography>
-                      </TableCell>
-                      <TableCell width={95} align="right">
-                        <Typography variant="caption" fontWeight={700} color="text.secondary">
-                          Amount (£)
-                        </Typography>
-                      </TableCell>
-                      <TableCell width={80} align="center">
-                        <Typography variant="caption" fontWeight={700} color="text.secondary">
-                          Actions
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredItems.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9} align="center" sx={{ py: 5 }}>
-                          <Typography variant="body2" color="text.secondary" mb={1}>
-                            No commercial work items found
-                          </Typography>
-                          {!isLocked && (
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              startIcon={<IconSparkles size={15} />}
-                              onClick={handleAutoGenerate}
-                            >
-                              Auto-generate lines from defects
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredItems.map((item) => {
-                        const hasChanges = !!editedLines[item.id];
-                        const lineQty = editedLines[item.id]?.quantity !== undefined ? editedLines[item.id]!.quantity : item.quantity;
-                        const lineRate = editedLines[item.id]?.unit_rate !== undefined ? editedLines[item.id]!.unit_rate : item.unit_rate;
-                        const lineAmount = (Number(lineQty) || 0) * (Number(lineRate) || 0);
+              {/* Work lines: one card per line, so nothing is hidden behind a sideways scroll. */}
+              {filteredItems.length === 0 ? (
+                <Box
+                  sx={{
+                    textAlign: "center",
+                    py: 5,
+                    px: 2,
+                    border: "1px dashed",
+                    borderColor: "divider",
+                    borderRadius: "8px",
+                  }}
+                >
+                  <Typography variant="body2" fontWeight={600} mb={0.5}>
+                    {scopeData.scope_items.length ? "No work lines match this filter" : "No work lines yet"}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" mb={1.5}>
+                    {scopeData.scope_items.length
+                      ? "Change the room or search to see other lines."
+                      : "Create lines from the surveyor's defects, or add a line yourself."}
+                  </Typography>
+                  {!isLocked && !scopeData.scope_items.length && (
+                    <Stack direction="row" spacing={1} justifyContent="center">
+                      <Button variant="contained" size="small" startIcon={<IconSparkles size={15} />} onClick={handleAutoGenerate}>
+                        Auto-generate lines from defects
+                      </Button>
+                      <Button variant="outlined" size="small" startIcon={<IconPlus size={15} />} onClick={() => setAddModalOpen(true)}>
+                        Add work line
+                      </Button>
+                    </Stack>
+                  )}
+                </Box>
+              ) : (
+                <Stack spacing={1.5}>
+                  {filteredItems.map((item, index) => {
+                    const edits = editedLines[item.id];
+                    const hasChanges = !!edits;
+                    const lineQty = edits?.quantity !== undefined ? edits.quantity : item.quantity;
+                    const lineRate = edits?.unit_rate !== undefined ? edits.unit_rate : item.unit_rate;
+                    const lineAmount = (Number(lineQty) || 0) * (Number(lineRate) || 0);
+                    const isPriced = (Number(lineQty) || 0) > 0 && (Number(lineRate) || 0) > 0;
+                    const isSelectedEvidence = Boolean(item.survey_item_id && selectedEvidenceId === item.survey_item_id);
+                    const status = lineStatus[item.id];
 
-                        const isSelectedEvidence = Boolean(item.survey_item_id && selectedEvidenceId === item.survey_item_id);
-
-                        return (
-                          <TableRow
-                            key={item.id}
-                            hover
-                            onClick={() => {
-                              if (item.survey_item_id) {
-                                setSelectedEvidenceId(item.survey_item_id);
-                              }
-                            }}
-                            sx={{
-                              cursor: item.survey_item_id ? "pointer" : "default",
-                              bgcolor: isSelectedEvidence ? "grey.50" : undefined,
-                              borderLeft: isSelectedEvidence ? "3px solid #1e4db7" : "3px solid transparent",
-                            }}
-                          >
-                            {/* Review Checkbox / Toggle */}
-                            <TableCell align="center">
-                              <Tooltip title={item.is_reviewed ? "Reviewed & verified" : "Click to mark reviewed"}>
-                                <span>
-                                  <IconButton
-                                    size="small"
-                                    color={item.is_reviewed ? "success" : "default"}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleToggleReviewed(item);
-                                    }}
-                                    disabled={isLocked}
-                                  >
-                                    {item.is_reviewed ? <IconCheck size={16} /> : <IconClock size={16} />}
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                            </TableCell>
-
-                            {/* Area / Element */}
-                            <TableCell>
-                              <Typography variant="subtitle2" fontWeight={600} noWrap>
+                    return (
+                      <Paper
+                        key={item.id}
+                        id={`qs-line-${item.id}`}
+                        variant="outlined"
+                        onClick={() => item.survey_item_id && setSelectedEvidenceId(item.survey_item_id)}
+                        sx={{
+                          p: { xs: 1.5, md: 2 },
+                          borderRadius: "10px",
+                          cursor: item.survey_item_id ? "pointer" : "default",
+                          borderColor: isSelectedEvidence ? "primary.main" : "divider",
+                          borderLeft: "4px solid",
+                          borderLeftColor: item.is_reviewed ? "success.main" : isPriced ? "primary.main" : "warning.main",
+                          boxShadow: isSelectedEvidence ? (theme) => `0 0 0 1px ${theme.palette.primary.main}` : "none",
+                          transition: "box-shadow .15s, border-color .15s",
+                          scrollMarginTop: 96,
+                        }}
+                      >
+                        {/* Top row: what the line is, and its actions */}
+                        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1} mb={1.5}>
+                          <Box minWidth={0}>
+                            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" rowGap={0.5}>
+                              <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                                #{index + 1}
+                              </Typography>
+                              <Typography variant="subtitle2" fontWeight={700} noWrap>
                                 {item.room_name || "General"}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" noWrap display="block">
-                                {item.element_name || "Scope"}
-                              </Typography>
-                            </TableCell>
-
-                            {/* Code */}
-                            <TableCell>
-                              {isLocked ? (
-                                <Typography variant="caption" fontWeight={600}>
-                                  {item.item_code || "—"}
+                                <Typography component="span" variant="subtitle2" color="text.secondary" fontWeight={500}>
+                                  {" "}· {item.element_name || "Scope"}
                                 </Typography>
-                              ) : (
-                                <CustomTextField
-                                  size="small"
-                                  value={editedLines[item.id]?.item_code !== undefined ? editedLines[item.id]!.item_code : item.item_code || ""}
-                                  onChange={(e: any) => handleLineFieldChange(item.id, "item_code", e.target.value)}
-                                  placeholder="Code"
-                                  sx={{ width: 96 }}
-                                />
-                              )}
-                            </TableCell>
-
-                            {/* Work Description */}
-                            <TableCell>
-                              {isLocked ? (
-                                <Typography variant="body2">{item.description}</Typography>
-                              ) : (
-                                <CustomTextField
-                                  size="small"
-                                  fullWidth
-                                  multiline
-                                  maxRows={3}
-                                  value={editedLines[item.id]?.description !== undefined ? editedLines[item.id]!.description : item.description}
-                                  onChange={(e: any) => handleLineFieldChange(item.id, "description", e.target.value)}
-                                  sx={{ minWidth: 220 }}
-                                />
-                              )}
-                            </TableCell>
-
-                            {/* Quantity */}
-                            <TableCell align="right">
-                              {isLocked ? (
-                                <Typography variant="body2" fontWeight={600}>
-                                  {item.quantity}
-                                </Typography>
-                              ) : (
-                                <CustomTextField
-                                  size="small"
-                                  type="number"
-                                  inputProps={{ min: 0, step: "any" }}
-                                  value={lineQty}
-                                  onChange={(e: any) => handleLineFieldChange(item.id, "quantity", e.target.value)}
-                                  sx={{ width: 90 }}
-                                />
-                              )}
-                            </TableCell>
-
-                            {/* Unit */}
-                            <TableCell align="center">
-                              <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                {item.unit}
                               </Typography>
-                            </TableCell>
-
-                            {/* Unit Rate */}
-                            <TableCell align="right">
-                              {isLocked ? (
-                                <Typography variant="body2" fontWeight={600}>
-                                  {formatMoney(item.unit_rate)}
-                                </Typography>
+                              {item.is_reviewed ? (
+                                <Chip size="small" color="success" icon={<IconCheck size={13} />} label="Reviewed" sx={{ height: 22, fontWeight: 600 }} />
+                              ) : !isPriced ? (
+                                <Chip size="small" color="warning" variant="outlined" label="Needs price" sx={{ height: 22, fontWeight: 600 }} />
                               ) : (
-                                <CustomTextField
-                                  size="small"
-                                  type="number"
-                                  inputProps={{ min: 0, step: "any" }}
-                                  value={lineRate}
-                                  onChange={(e: any) => handleLineFieldChange(item.id, "unit_rate", e.target.value)}
-                                  sx={{ width: 80 }}
-                                />
+                                <Chip size="small" variant="outlined" label="Pending review" sx={{ height: 22, fontWeight: 600 }} />
                               )}
-                            </TableCell>
+                            </Stack>
+                          </Box>
 
-                            {/* Amount */}
-                            <TableCell align="right">
-                              <Typography variant="subtitle2" fontWeight={700}>
+                          <Stack direction="row" spacing={0.5} alignItems="center" flexShrink={0} onClick={(e) => e.stopPropagation()}>
+                            {!isLocked && (
+                              <Box sx={{ minWidth: 72, display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+                                {status === "saving" ? (
+                                  <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
+                                    <CircularProgress size={12} color="inherit" />
+                                    <Typography variant="caption">Saving</Typography>
+                                  </Stack>
+                                ) : status === "error" ? (
+                                  <Button size="small" color="error" startIcon={<IconAlertTriangle size={14} />} onClick={() => void handleSaveLine(item)} sx={{ minWidth: 0, px: 0.75 }}>
+                                    Retry
+                                  </Button>
+                                ) : hasChanges ? (
+                                  <Stack direction="row" spacing={0.5} alignItems="center" color="warning.main">
+                                    <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: "warning.main" }} />
+                                    <Typography variant="caption" fontWeight={600}>Unsaved</Typography>
+                                  </Stack>
+                                ) : status === "saved" ? (
+                                  <Stack direction="row" spacing={0.5} alignItems="center" color="success.main">
+                                    <IconCircleCheck size={14} />
+                                    <Typography variant="caption" fontWeight={600}>Saved</Typography>
+                                  </Stack>
+                                ) : null}
+                              </Box>
+                            )}
+                            {item.survey_item_id && (
+                              <Tooltip title="Show the surveyor's evidence for this line">
+                                <IconButton
+                                  size="small"
+                                  color={isSelectedEvidence ? "primary" : "default"}
+                                  onClick={() => setSelectedEvidenceId(item.survey_item_id!)}
+                                >
+                                  <IconEye size={17} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {!isLocked && (
+                              <Tooltip title="Delete line">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleDeleteLine(item.id)}
+                                  sx={{ "&:hover": { color: "error.main" } }}
+                                >
+                                  <IconTrash size={17} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                          </Stack>
+                        </Stack>
+
+                        {/* Description */}
+                        {isLocked ? (
+                          <Typography variant="body2" mb={1.5}>
+                            {item.description}
+                          </Typography>
+                        ) : (
+                          <CustomTextField
+                            size="small"
+                            fullWidth
+                            multiline
+                            maxRows={4}
+                            label="Work description"
+                            value={edits?.description !== undefined ? edits.description : item.description}
+                            onClick={(e: any) => e.stopPropagation()}
+                            onChange={(e: any) => handleLineFieldChange(item.id, "description", e.target.value)}
+                            onBlur={() => void handleSaveLine(item)}
+                            sx={{ mb: 1.5 }}
+                          />
+                        )}
+
+                        {/* Pricing: Code · Qty × Rate = Amount */}
+                        <Stack
+                          direction={{ xs: "column", sm: "row" }}
+                          spacing={1.5}
+                          alignItems={{ xs: "stretch", sm: "center" }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {isLocked ? (
+                            <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+                              {item.item_code || "—"} · {item.quantity} {item.unit} × {formatMoney(item.unit_rate)}
+                            </Typography>
+                          ) : (
+                            <>
+                              <CustomTextField
+                                size="small"
+                                label="Code"
+                                value={edits?.item_code !== undefined ? edits.item_code : item.item_code || ""}
+                                onChange={(e: any) => handleLineFieldChange(item.id, "item_code", e.target.value)}
+                                onBlur={() => void handleSaveLine(item)}
+                                sx={{ width: { sm: 130 } }}
+                              />
+                              <CustomTextField
+                                size="small"
+                                type="number"
+                                label="Qty"
+                                inputProps={{ min: 0, step: "any" }}
+                                value={lineQty}
+                                onChange={(e: any) => handleLineFieldChange(item.id, "quantity", e.target.value)}
+                                onBlur={() => void handleSaveLine(item)}
+                                InputProps={{
+                                  endAdornment: <InputAdornment position="end">{item.unit}</InputAdornment>,
+                                }}
+                                sx={{ width: { sm: 140 } }}
+                              />
+                              <Typography color="text.secondary" display={{ xs: "none", sm: "block" }}>×</Typography>
+                              <CustomTextField
+                                size="small"
+                                type="number"
+                                label="Rate"
+                                inputProps={{ min: 0, step: "any", "data-qs-rate": item.id }}
+                                value={lineRate}
+                                onChange={(e: any) => handleLineFieldChange(item.id, "unit_rate", e.target.value)}
+                                onBlur={() => void handleSaveLine(item)}
+                                error={!isPriced}
+                                InputProps={{
+                                  startAdornment: <InputAdornment position="start">£</InputAdornment>,
+                                }}
+                                sx={{ width: { sm: 140 } }}
+                              />
+                            </>
+                          )}
+                          <Box sx={{ flex: 1 }} />
+                          <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+                            <Box textAlign={{ xs: "left", sm: "right" }}>
+                              <Typography variant="caption" color="text.secondary" display="block">
+                                Amount
+                              </Typography>
+                              <Typography variant="h6" fontWeight={700}>
                                 {formatMoney(lineAmount)}
                               </Typography>
-                            </TableCell>
-
-                            {/* Actions */}
-                            <TableCell align="center">
-                              <Stack direction="row" spacing={0.25} justifyContent="center" alignItems="center">
-                                {item.survey_item_id && (
-                                  <Tooltip title="View site evidence">
-                                    <IconButton
-                                      size="small"
-                                      color={selectedEvidenceId === item.survey_item_id ? "primary" : "default"}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedEvidenceId(item.survey_item_id!);
-                                      }}
-                                    >
-                                      <IconEye size={16} />
-                                    </IconButton>
-                                  </Tooltip>
-                                )}
-
-                                {!isLocked && hasChanges && (
-                                  <Tooltip title="Save changes">
-                                    <IconButton
-                                      size="small"
-                                      color="primary"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleSaveLine(item);
-                                      }}
-                                      disabled={savingItem === item.id}
-                                    >
-                                      {savingItem === item.id ? <CircularProgress size={14} /> : <IconDeviceFloppy size={16} />}
-                                    </IconButton>
-                                  </Tooltip>
-                                )}
-
-                                {!isLocked && (
-                                  <Tooltip title="Delete line">
-                                    <IconButton
-                                      size="small"
-                                      color="default"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteLine(item.id);
-                                      }}
-                                      sx={{ "&:hover": { color: "error.main" } }}
-                                    >
-                                      <IconTrash size={16} />
-                                    </IconButton>
-                                  </Tooltip>
-                                )}
-                              </Stack>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                            </Box>
+                            {!isLocked && (
+                              <Tooltip
+                                title={
+                                  item.is_reviewed
+                                    ? "Move this line back to pending review"
+                                    : !isPriced
+                                      ? "Enter a quantity and rate first"
+                                      : "Confirm this line's description, quantity and rate"
+                                }
+                              >
+                                <span>
+                                  <Button
+                                    size="small"
+                                    variant={item.is_reviewed ? "outlined" : "contained"}
+                                    color={item.is_reviewed ? "inherit" : "success"}
+                                    startIcon={item.is_reviewed ? <IconRotateClockwise size={15} /> : <IconCheck size={15} />}
+                                    disabled={status === "saving" || (!item.is_reviewed && !isPriced)}
+                                    onClick={() => void handleToggleReviewed(item)}
+                                    sx={{ whiteSpace: "nowrap", borderRadius: "8px", fontWeight: 600, minWidth: 136 }}
+                                  >
+                                    {item.is_reviewed ? "Undo review" : "Mark reviewed"}
+                                  </Button>
+                                </span>
+                              </Tooltip>
+                            )}
+                          </Stack>
+                        </Stack>
+                      </Paper>
+                    );
+                  })}
+                </Stack>
+              )}
 
               {/* ------------------------------------------------------------ */}
               {/* Whole-Scope Commercial Adjustment Panel                      */}
               {/* ------------------------------------------------------------ */}
-              <Box sx={{ mt: 3, p: 2, borderRadius: "8px", bgcolor: "grey.50", border: "1px solid", borderColor: "divider" }}>
+              <Box id="qs-adjustment" sx={{ mt: 3, p: 2, borderRadius: "8px", bgcolor: "grey.50", border: "1px solid", borderColor: "divider", scrollMarginTop: 96 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
                   <Box>
                     <Typography variant="subtitle2" fontWeight={700}>
@@ -1300,9 +1566,9 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                       type="number"
                       label="Adjustment Value"
                       disabled={isLocked}
-                      inputProps={{ min: 0, step: "any" }}
+                      inputProps={{ min: 0, step: "any", "data-qs-adjust": true }}
                       value={adjustValue}
-                      onChange={(e: any) => setAdjustValue(Number(e.target.value))}
+                      onChange={(e: any) => setAdjustValue(e.target.value === "" ? "" : Number(e.target.value))}
                     />
                   </Grid>
 
@@ -1613,7 +1879,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                   label="Commercial Quantity *"
                   inputProps={{ min: 0, step: "any" }}
                   value={newItemData.quantity}
-                  onChange={(e: any) => setNewItemData({ ...newItemData, quantity: Number(e.target.value) })}
+                  onChange={(e: any) => setNewItemData({ ...newItemData, quantity: e.target.value === "" ? "" : Number(e.target.value) })}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
@@ -1624,14 +1890,14 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                   label="Unit Rate (£) *"
                   inputProps={{ min: 0, step: "any" }}
                   value={newItemData.unit_rate}
-                  onChange={(e: any) => setNewItemData({ ...newItemData, unit_rate: Number(e.target.value) })}
+                  onChange={(e: any) => setNewItemData({ ...newItemData, unit_rate: e.target.value === "" ? "" : Number(e.target.value) })}
                 />
               </Grid>
             </Grid>
 
             <Box sx={{ p: 1.5, bgcolor: "grey.50", borderRadius: "6px" }}>
               <Typography variant="subtitle2" fontWeight={600}>
-                Line Total: {formatMoney(newItemData.quantity * newItemData.unit_rate)}
+                Line Total: {formatMoney((Number(newItemData.quantity) || 0) * (Number(newItemData.unit_rate) || 0))}
               </Typography>
             </Box>
           </Stack>
