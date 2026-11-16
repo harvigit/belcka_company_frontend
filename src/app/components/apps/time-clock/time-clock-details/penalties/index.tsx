@@ -28,6 +28,7 @@ import {
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS, findZoneForPoint, getDistanceToZone } from "@/utils/googleMaps";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import { EvidenceFile, EvidenceFileList } from '@/app/components/common/EvidenceFilesDrawer';
 
 interface ChecklogsPageProps {
     worklogId: number;
@@ -39,6 +40,7 @@ interface ChecklogsPageProps {
 
 interface PenaltyItem {
     appeal_note: string;
+    files?: EvidenceFile[];
     penalty_id?: number;
     payable_hours?: string | number | null;
     formatted_start_time?: string;
@@ -881,6 +883,18 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
                                     </Typography>
                                 </Box>
                             </Box>
+
+                            {(penalty.files?.length ?? 0) > 0 && (
+                                <Box
+                                    sx={{
+                                        p: 1.25,
+                                        borderRadius: 2,
+                                        border: '1px solid #e2e8f0',
+                                    }}
+                                >
+                                    <EvidenceFileList files={penalty.files ?? []} variant="grid" />
+                                </Box>
+                            )}
 
                             {penalty.is_penalty_appeal && penalty.appeal_note && (
                                 <Box
