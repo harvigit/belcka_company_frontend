@@ -126,31 +126,54 @@ function RequestNoteIcon({ note }: { note: string }) {
         </Typography>
       }
     >
-      <IconButton
-        size="small"
+      {/* Span pill, not IconButton: the theme's IconButton size stretches it. Same style
+          as the evidence chip next to it. */}
+      <Box
+        component="span"
+        role="button"
+        tabIndex={0}
         aria-label="Request note"
-        onClick={(e) => {
+        onClick={(e: React.MouseEvent) => {
           e.preventDefault();
           e.stopPropagation();
           setOpen((prev) => !prev);
         }}
-        onMouseDown={(e) => {
+        onMouseDown={(e: React.MouseEvent) => {
           e.preventDefault();
           e.stopPropagation();
         }}
+        onKeyDown={(e: React.KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen((prev) => !prev);
+          }
+        }}
         sx={{
-          p: 0.25,
-          ml: 0.5,
-          width: "auto",
-          height: "auto",
-          minWidth: 0,
-          color: "text.secondary",
-          alignItems: "start",
-          "&:hover": { color: "primary.main", bgcolor: "transparent" },
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          ml: 0.75,
+          mt: "1px",
+          width: 26,
+          height: 20,
+          borderRadius: "10px",
+          cursor: "pointer",
+          color: "primary.main",
+          bgcolor: "#EEF2FF",
+          border: "1px solid #D6DEFA",
+          flexShrink: 0,
+          transition: "background-color 0.15s, color 0.15s",
+          "&:hover, &:focus-visible": {
+            bgcolor: "primary.main",
+            color: "#fff",
+            borderColor: "primary.main",
+            outline: "none",
+          },
         }}
       >
-        <IconNotes size={16} />
-      </IconButton>
+        <IconNotes size={12} stroke={2.2} />
+      </Box>
     </Tooltip>
   );
 }
