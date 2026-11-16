@@ -1160,6 +1160,17 @@ const TablePagination = () => {
                         userId={Number(userId)}
                         companyId={Number(user.company_id)}
                         active={value === loginDetailsTab}
+                        canEdit={canModifyUserDetails}
+                        isSelf={Number(userId) === Number(user?.id)}
+                        onPhoneUpdated={async (phone) => {
+                          fetchData();
+                          if (Number(userId) === Number(user?.id)) {
+                            await update({
+                              ...session,
+                              user: { ...session?.user, phone },
+                            });
+                          }
+                        }}
                       />
                     </Box>
                   </>
