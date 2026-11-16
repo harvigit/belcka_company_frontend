@@ -122,6 +122,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [singleDate, setSingleDate] = useState<Date | undefined>(new Date());
     const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+    const [evidenceError, setEvidenceError] = useState(false);
     const open = Boolean(anchorEl);
 
     // On Time Tracking a non-admin's worklog becomes a request, so files can go with it
@@ -321,6 +322,13 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
 
         if (!singleDate) {
             toast.error("Please select a valid date");
+            return;
+        }
+
+        // Evidence is required on web when the worklog becomes a request (non-admin, Time Tracking).
+        if (canAddEvidence && evidenceFiles.length === 0) {
+            setEvidenceError(true);
+            toast.error("Please add evidence");
             return;
         }
 
@@ -1026,8 +1034,12 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                                 </Typography>
                                 <EvidenceFilePicker
                                     files={evidenceFiles}
-                                    onChange={setEvidenceFiles}
+                                    onChange={(files) => {
+                                        setEvidenceFiles(files);
+                                        if (files.length) setEvidenceError(false);
+                                    }}
                                     disabled={loading}
+                                    error={evidenceError}
                                 />
                             </>
                         )}

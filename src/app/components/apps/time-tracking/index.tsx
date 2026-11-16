@@ -1304,6 +1304,7 @@ const TimeTracking: React.FC<Props> = () => {
     const [worklogEditNote, setWorklogEditNote] = useState('');
     const [worklogEditNoteError, setWorklogEditNoteError] = useState(false);
     const [worklogEditFiles, setWorklogEditFiles] = useState<File[]>([]);
+    const [worklogEditFilesError, setWorklogEditFilesError] = useState(false);
 
     const latestTodayClockRequestRef = useRef(0);
     const mapRef = useRef<google.maps.Map | null>(null);
@@ -1884,6 +1885,7 @@ const TimeTracking: React.FC<Props> = () => {
             setWorklogEditNote('');
             setWorklogEditNoteError(false);
             setWorklogEditFiles([]);
+            setWorklogEditFilesError(false);
         } catch (error: any) {
             showToast(error?.response?.data?.message || 'Failed to save changes', 'error');
         } finally {
@@ -1927,6 +1929,7 @@ const TimeTracking: React.FC<Props> = () => {
         setWorklogEditNote('');
         setWorklogEditNoteError(false);
         setWorklogEditFiles([]);
+        setWorklogEditFilesError(false);
     }, [editingWorklogs, isRecordLocked, cancelEditingField, validateAndFormatTime, sanitizeDateTime, isAdmin, savingWorklogs, submitWorklogEdit]);
 
     const closeWorklogEditNoteDialog = useCallback(() => {
@@ -1937,6 +1940,7 @@ const TimeTracking: React.FC<Props> = () => {
         setWorklogEditNote('');
         setWorklogEditNoteError(false);
         setWorklogEditFiles([]);
+        setWorklogEditFilesError(false);
     }, [pendingWorklogEdit, cancelEditingField]);
 
     const submitWorklogEditRequest = useCallback(async () => {
@@ -1946,6 +1950,11 @@ const TimeTracking: React.FC<Props> = () => {
 
         if (!note) {
             setWorklogEditNoteError(true);
+            return;
+        }
+
+        if (worklogEditFiles.length === 0) {
+            setWorklogEditFilesError(true);
             return;
         }
 
@@ -2642,7 +2651,11 @@ const TimeTracking: React.FC<Props> = () => {
                         </Typography>
                         <EvidenceFilePicker
                             files={worklogEditFiles}
-                            onChange={setWorklogEditFiles}
+                            onChange={(files) => {
+                                setWorklogEditFiles(files);
+                                if (files.length) setWorklogEditFilesError(false);
+                            }}
+                            error={worklogEditFilesError}
                             disabled={pendingWorklogEdit ? savingWorklogs.has(pendingWorklogEdit.worklogId) : false}
                         />
                     </DialogContent>
@@ -2655,6 +2668,7 @@ const TimeTracking: React.FC<Props> = () => {
                             onClick={submitWorklogEditRequest}
                             disabled={
                                 !worklogEditNote.trim() ||
+                                worklogEditFiles.length === 0 ||
                                 (pendingWorklogEdit ? savingWorklogs.has(pendingWorklogEdit.worklogId) : false)
                             }
                         >
