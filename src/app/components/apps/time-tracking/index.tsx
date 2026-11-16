@@ -82,6 +82,7 @@ import {loadColumnVisibilityCookie, saveColumnVisibilityCookie} from '@/utils/co
 
 // Drawer contents are only rendered when opened, so load them on demand to keep this page's bundle small.
 const AddExpense = dynamic(() => import('@/app/components/apps/time-clock/time-clock-details/expenses/add-expense'), {ssr: false});
+import EvidenceFilePicker from '@/app/components/common/EvidenceFilePicker';
 const AddWorklog = dynamic(() => import('@/app/components/apps/time-clock/time-clock-details/worklog/add-worklog'), {ssr: false});
 const AddPricework = dynamic(() => import('@/app/components/apps/time-clock/time-clock-details/pricework/add-pricework'), {ssr: false});
 const PriceworkDetails = dynamic(() => import('@/app/components/apps/time-clock/time-clock-details/pricework/pricework-details'), {ssr: false});
@@ -1302,6 +1303,8 @@ const TimeTracking: React.FC<Props> = () => {
     const [pendingWorklogEdit, setPendingWorklogEdit] = useState<PendingWorklogEdit | null>(null);
     const [worklogEditNote, setWorklogEditNote] = useState('');
     const [worklogEditNoteError, setWorklogEditNoteError] = useState(false);
+    const [worklogEditFiles, setWorklogEditFiles] = useState<File[]>([]);
+    const [worklogEditFilesError, setWorklogEditFilesError] = useState(false);
 
     const latestTodayClockRequestRef = useRef(0);
     const mapRef = useRef<google.maps.Map | null>(null);
@@ -1841,7 +1844,7 @@ const TimeTracking: React.FC<Props> = () => {
     });
 
     // ── Handlers ──
-    const submitWorklogEdit = useCallback(async (edit: PendingWorklogEdit, note?: string) => {
+    const submitWorklogEdit = useCallback(async (edit: PendingWorklogEdit, note?: string, files: File[] = []) => {
         const {worklogId, originalLog, startTime, endTime} = edit;
 
         setSavingWorklogs((p) => new Set(p).add(worklogId));
@@ -1854,11 +1857,35 @@ const TimeTracking: React.FC<Props> = () => {
                 source_screen: 'time-tracking',
                 ...(note ? {note} : {}),
             });
+
+            // Evidence files go to the change request just created (user-worklog/add-request-files).
+            // The request already exists, so an upload failure only warns.
+            const requestId = (res.data as any)?.request_id;
+            let filesFailed = false;
+            if (requestId && files.length > 0) {
+                const formData = new FormData();
+                formData.append('request_id', String(requestId));
+                files.forEach((file) => formData.append('files', file));
+                try {
+                    await api.post('/user-worklog/add-request-files', formData, {
+                        headers: {'Content-Type': 'multipart/form-data'},
+                    });
+                } catch (uploadError: any) {
+                    filesFailed = true;
+                    showToast(
+                        `Request created, but evidence files were not uploaded: ${uploadError?.response?.data?.message || 'please try again'}`,
+                        'error',
+                    );
+                }
+            }
+
             await fetchTimeClockData(startDate, endDate);
-            showToast(res.data?.message || 'Worklog updated successfully!', 'success');
+            if (!filesFailed) showToast(res.data?.message || 'Worklog updated successfully!', 'success');
             setPendingWorklogEdit(null);
             setWorklogEditNote('');
             setWorklogEditNoteError(false);
+            setWorklogEditFiles([]);
+            setWorklogEditFilesError(false);
         } catch (error: any) {
             showToast(error?.response?.data?.message || 'Failed to save changes', 'error');
         } finally {
@@ -1901,6 +1928,8 @@ const TimeTracking: React.FC<Props> = () => {
         setPendingWorklogEdit(edit);
         setWorklogEditNote('');
         setWorklogEditNoteError(false);
+        setWorklogEditFiles([]);
+        setWorklogEditFilesError(false);
     }, [editingWorklogs, isRecordLocked, cancelEditingField, validateAndFormatTime, sanitizeDateTime, isAdmin, savingWorklogs, submitWorklogEdit]);
 
     const closeWorklogEditNoteDialog = useCallback(() => {
@@ -1910,6 +1939,8 @@ const TimeTracking: React.FC<Props> = () => {
         setPendingWorklogEdit(null);
         setWorklogEditNote('');
         setWorklogEditNoteError(false);
+        setWorklogEditFiles([]);
+        setWorklogEditFilesError(false);
     }, [pendingWorklogEdit, cancelEditingField]);
 
     const submitWorklogEditRequest = useCallback(async () => {
@@ -1922,8 +1953,13 @@ const TimeTracking: React.FC<Props> = () => {
             return;
         }
 
-        await submitWorklogEdit(pendingWorklogEdit, note);
-    }, [pendingWorklogEdit, worklogEditNote, submitWorklogEdit]);
+        if (worklogEditFiles.length === 0) {
+            setWorklogEditFilesError(true);
+            return;
+        }
+
+        await submitWorklogEdit(pendingWorklogEdit, note, worklogEditFiles);
+    }, [pendingWorklogEdit, worklogEditNote, worklogEditFiles, submitWorklogEdit]);
 
     const handleDeleteRecord = useCallback(async (id: string, type: string) => {
         const endpoints: Record<string, string> = {
@@ -2610,6 +2646,18 @@ const TimeTracking: React.FC<Props> = () => {
                             error={worklogEditNoteError}
                             helperText={worklogEditNoteError ? 'Note is required to create request.' : ''}
                         />
+                        <Typography variant="body2" fontWeight={600} sx={{mt: 2, mb: 1}}>
+                            Evidence
+                        </Typography>
+                        <EvidenceFilePicker
+                            files={worklogEditFiles}
+                            onChange={(files) => {
+                                setWorklogEditFiles(files);
+                                if (files.length) setWorklogEditFilesError(false);
+                            }}
+                            error={worklogEditFilesError}
+                            disabled={pendingWorklogEdit ? savingWorklogs.has(pendingWorklogEdit.worklogId) : false}
+                        />
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={closeWorklogEditNoteDialog}>
@@ -2620,6 +2668,7 @@ const TimeTracking: React.FC<Props> = () => {
                             onClick={submitWorklogEditRequest}
                             disabled={
                                 !worklogEditNote.trim() ||
+                                worklogEditFiles.length === 0 ||
                                 (pendingWorklogEdit ? savingWorklogs.has(pendingWorklogEdit.worklogId) : false)
                             }
                         >

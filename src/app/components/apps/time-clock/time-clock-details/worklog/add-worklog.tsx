@@ -26,6 +26,8 @@ import { endOfWeek, format, startOfWeek } from "date-fns";
 import { DayPicker } from "react-day-picker";
 import { styled } from "@mui/material/styles";
 import { AxiosResponse } from "axios";
+import { useSession } from "next-auth/react";
+import EvidenceFilePicker from "@/app/components/common/EvidenceFilePicker";
 
 interface User {
     id: number;
@@ -119,7 +121,15 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
     const [projects, setProjects] = useState<Project[]>([]);
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [singleDate, setSingleDate] = useState<Date | undefined>(new Date());
+    const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+    const [evidenceError, setEvidenceError] = useState(false);
     const open = Boolean(anchorEl);
+
+    // On Time Tracking a non-admin's worklog becomes a request, so files can go with it
+    // (user-worklog/add-request-files). Admins add directly, with no request to attach files to.
+    const { data: session } = useSession();
+    const isCompanyAdmin = Number((session?.user as any)?.user_role_id) === 1;
+    const canAddEvidence = sourceScreen === "time-tracking" && !isCompanyAdmin;
 
     const fetchTimeClockResources = async (): Promise<void> => {
         try {
@@ -315,6 +325,13 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
             return;
         }
 
+        // Evidence is required on web when the worklog becomes a request (non-admin, Time Tracking).
+        if (canAddEvidence && evidenceFiles.length === 0) {
+            setEvidenceError(true);
+            toast.error("Please add evidence");
+            return;
+        }
+
         const params: any = {
             user_id: Number(newRecord.userId),
             device_type: 3,
@@ -341,6 +358,11 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
             if (response.data.IsSuccess) {
                 toast.success(response.data.message);
 
+                const requestId = response.data.request_id;
+                if (canAddEvidence && requestId && evidenceFiles.length > 0) {
+                    await uploadEvidenceFiles(requestId);
+                }
+
                 if (onDataRefresh) {
                     await onDataRefresh();
                 }
@@ -352,6 +374,23 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
             toast.error(error.response?.data?.message || "Failed to add worklog");
         } finally {
             setLoading(false);
+        }
+    };
+
+    // The worklog request already exists at this point, so an upload failure only warns.
+    const uploadEvidenceFiles = async (requestId: number) => {
+        const formData = new FormData();
+        formData.append("request_id", String(requestId));
+        evidenceFiles.forEach((file) => formData.append("files", file));
+
+        try {
+            await api.post("/user-worklog/add-request-files", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+        } catch (error: any) {
+            toast.error(
+                `Request added, but evidence files were not uploaded: ${error.response?.data?.message || "please try again"}`,
+            );
         }
     };
 
@@ -967,20 +1006,43 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                             htmlFor="worklog-comment"
                             sx={{ pt: 1 }}
                         >
-                            Comment
+                            Note
                         </Typography>
                         <TextField
                             id="worklog-comment"
                             name="comment"
                             value={newRecord.comment}
                             onChange={handleChange("comment")}
-                            placeholder="Enter comment"
+                            placeholder="Enter note"
                             required
                             multiline
                             minRows={3}
                             fullWidth
                             size="small"
                         />
+
+                        {canAddEvidence && (
+                            <>
+                                <Typography
+                                    variant="body2"
+                                    fontWeight={600}
+                                    color="#1a1a1a"
+                                    component="div"
+                                    sx={{ pt: 1.5 }}
+                                >
+                                    Evidence
+                                </Typography>
+                                <EvidenceFilePicker
+                                    files={evidenceFiles}
+                                    onChange={(files) => {
+                                        setEvidenceFiles(files);
+                                        if (files.length) setEvidenceError(false);
+                                    }}
+                                    disabled={loading}
+                                    error={evidenceError}
+                                />
+                            </>
+                        )}
                     </Box>
                 </Box>
             </Box>

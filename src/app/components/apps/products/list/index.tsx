@@ -413,7 +413,8 @@ const ProductList = () => {
     if (!user?.company_id || !isTableStateReady) return;
     setFetchProduct(true);
     try {
-      let url = `products/get?company_id=${user.company_id}&is_products=true&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      // all_products: every company product, not only those a project has as favourite.
+      let url = `products/get?company_id=${user.company_id}&is_products=true&all_products=true&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
       if (searchTerm) {
         url += `&search=${searchTerm}`;
       }
