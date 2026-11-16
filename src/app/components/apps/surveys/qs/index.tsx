@@ -81,6 +81,14 @@ const statusColorMap: Record<string, "default" | "primary" | "secondary" | "erro
   frozen: "default",
 };
 
+// Survey photos are stored as paths on the API server (e.g. /static/uploads/surveys/x.jpg).
+const surveyPhotoUrl = (path?: string | null) => {
+  if (!path) return "";
+  if (/^https?:\/\//.test(path)) return path;
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "");
+  return `${baseUrl}/${path.replace(/^\/+/, "")}`;
+};
+
 export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
   const router = useRouter();
   const access = useSurveyAccess();
@@ -1458,7 +1466,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                             >
                               <Box
                                 component="img"
-                                src={photo.file_path.startsWith("http") ? photo.file_path : `http://localhost:3001/${photo.file_path.replace(/^\/+/, "")}`}
+                                src={surveyPhotoUrl(photo.file_path)}
                                 alt={photo.caption || "Inspection photo"}
                                 sx={{
                                   position: "absolute",
@@ -1756,7 +1764,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
           {previewPhoto && (
             <Box
               component="img"
-              src={previewPhoto.file_path.startsWith("http") ? previewPhoto.file_path : `http://localhost:3001/${previewPhoto.file_path.replace(/^\/+/, "")}`}
+              src={surveyPhotoUrl(previewPhoto.file_path)}
               alt={previewPhoto.caption || "Inspection Photo"}
               sx={{
                 maxWidth: "100%",
