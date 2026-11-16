@@ -100,6 +100,9 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
 
   // Selected Evidence Item for Right-hand Inspector Pane
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<number | null>(null);
+  // A manually added line (no surveyed element) picked in the list; the right panel then explains
+  // that it has no site evidence instead of showing another line's photos.
+  const [manualLineId, setManualLineId] = useState<number | null>(null);
 
   // Room & Search Filters
   const [selectedRoom, setSelectedRoom] = useState<string>("All");
@@ -239,6 +242,45 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
     if (!scopeData?.evidence_items || !selectedEvidenceId) return null;
     return scopeData.evidence_items.find((e) => e.id === selectedEvidenceId) || null;
   }, [scopeData, selectedEvidenceId]);
+
+  // The work line whose evidence is open, and its number in the list.
+  const manualLine = useMemo(
+    () => (manualLineId ? scopeData?.scope_items.find((line) => line.id === manualLineId) || null : null),
+    [scopeData, manualLineId],
+  );
+
+  const evidenceLineNo = useMemo(() => {
+    if (!scopeData?.scope_items) return null;
+    const index = manualLine
+      ? scopeData.scope_items.findIndex((line) => line.id === manualLine.id)
+      : selectedEvidenceId
+        ? scopeData.scope_items.findIndex((line) => line.survey_item_id === selectedEvidenceId)
+        : -1;
+    return index >= 0 ? index + 1 : null;
+  }, [scopeData, selectedEvidenceId, manualLine]);
+
+  // Opens a line's evidence. Below the xl breakpoint the evidence panel sits under the lines,
+  // so scroll to it; on wide screens it is already beside them.
+  const scrollToEvidence = () => {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1535.98px)").matches) {
+      setTimeout(() => document.getElementById("qs-evidence")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    }
+  };
+  const showEvidence = (surveyItemId: number, scroll = false) => {
+    setManualLineId(null);
+    setSelectedEvidenceId(surveyItemId);
+    if (scroll) scrollToEvidence();
+  };
+  // Selects a line in the list: its survey evidence, or the "added manually" note for lines
+  // that are not linked to a surveyed element.
+  const selectLine = (line: SurveyScopeItem, scroll = false) => {
+    if (line.survey_item_id) {
+      showEvidence(line.survey_item_id, scroll);
+      return;
+    }
+    setManualLineId(line.id);
+    if (scroll) scrollToEvidence();
+  };
 
   // Format currency helper
   const formatMoney = (val: number | string | null | undefined) => {
@@ -1017,7 +1059,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
           if (!line) return;
           setSelectedRoom("All");
           setSearchQuery("");
-          if (line.survey_item_id) setSelectedEvidenceId(line.survey_item_id);
+          selectLine(line);
           setTimeout(() => {
             document.getElementById(`qs-line-${line.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
             if (focusRate) {
@@ -1304,7 +1346,9 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                     const lineRate = edits?.unit_rate !== undefined ? edits.unit_rate : item.unit_rate;
                     const lineAmount = (Number(lineQty) || 0) * (Number(lineRate) || 0);
                     const isPriced = (Number(lineQty) || 0) > 0 && (Number(lineRate) || 0) > 0;
-                    const isSelectedEvidence = Boolean(item.survey_item_id && selectedEvidenceId === item.survey_item_id);
+                    const isSelectedEvidence = item.survey_item_id
+                      ? !manualLine && selectedEvidenceId === item.survey_item_id
+                      : manualLineId === item.id;
                     const status = lineStatus[item.id];
 
                     return (
@@ -1312,11 +1356,11 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                         key={item.id}
                         id={`qs-line-${item.id}`}
                         variant="outlined"
-                        onClick={() => item.survey_item_id && setSelectedEvidenceId(item.survey_item_id)}
+                        onClick={() => selectLine(item)}
                         sx={{
                           p: { xs: 1.5, md: 2 },
                           borderRadius: "10px",
-                          cursor: item.survey_item_id ? "pointer" : "default",
+                          cursor: "pointer",
                           borderColor: isSelectedEvidence ? "primary.main" : "divider",
                           borderLeft: "4px solid",
                           borderLeftColor: item.is_reviewed ? "success.main" : isPriced ? "primary.main" : "warning.main",
@@ -1330,7 +1374,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                           <Box minWidth={0}>
                             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" rowGap={0.5}>
                               <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                                #{index + 1}
+                                #{scopeData.scope_items.findIndex((line) => line.id === item.id) + 1}
                               </Typography>
                               <Typography variant="subtitle2" fontWeight={700} noWrap>
                                 {item.room_name || "General"}
@@ -1373,16 +1417,43 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                                 ) : null}
                               </Box>
                             )}
-                            {item.survey_item_id && (
-                              <Tooltip title="Show the surveyor's evidence for this line">
-                                <IconButton
-                                  size="small"
-                                  color={isSelectedEvidence ? "primary" : "default"}
-                                  onClick={() => setSelectedEvidenceId(item.survey_item_id!)}
-                                >
-                                  <IconEye size={17} />
-                                </IconButton>
-                              </Tooltip>
+                            {item.survey_item_id ? (
+                              // The highlighted line's evidence is already open, so only other
+                              // linked lines get the button.
+                              !isSelectedEvidence && (
+                                <Tooltip title="Show this line's site photos and defect details in Original Survey Evidence">
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="primary"
+                                    startIcon={<IconEye size={15} />}
+                                    onClick={() => showEvidence(item.survey_item_id!, true)}
+                                    sx={{ whiteSpace: "nowrap", borderRadius: "8px", fontWeight: 600 }}
+                                  >
+                                    View evidence
+                                  </Button>
+                                </Tooltip>
+                              )
+                            ) : (
+                              !isSelectedEvidence && (
+                                <Tooltip title="Added manually, not linked to a surveyed element. Click to see the line's details">
+                                  <Button
+                                    size="small"
+                                    variant="text"
+                                    color="inherit"
+                                    onClick={() => selectLine(item, true)}
+                                    sx={{
+                                      whiteSpace: "nowrap",
+                                      color: "text.secondary",
+                                      fontWeight: 600,
+                                      textDecoration: "underline dotted",
+                                      textUnderlineOffset: 3,
+                                    }}
+                                  >
+                                    No survey evidence
+                                  </Button>
+                                </Tooltip>
+                              )
                             )}
                             {!isLocked && (
                               <Tooltip title="Delete line">
@@ -1609,20 +1680,72 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
         {/* RIGHT PANE: Original Survey Evidence (Read-Only) */}
         <Grid size={{ xs: 12, xl: 4 }}>
           <BlankCard>
-            <Box p={{ xs: 2, md: 2.5 }}>
+            <Box id="qs-evidence" p={{ xs: 2, md: 2.5 }} sx={{ scrollMarginTop: 96 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                 <Box>
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    Original Survey Evidence
-                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      Original Survey Evidence
+                    </Typography>
+                    {evidenceLineNo && (
+                      <Chip size="small" color="primary" label={`Line #${evidenceLineNo}`} sx={{ height: 20, fontWeight: 700, fontSize: "0.7rem" }} />
+                    )}
+                  </Stack>
                   <Typography variant="caption" color="text.secondary">
-                    Immutable surveyor site data
+                    What the surveyor recorded on site. Press &quot;View evidence&quot; on a line to switch.
                   </Typography>
                 </Box>
                 <Chip label="Read Only" size="small" variant="outlined" sx={{ height: 20, fontSize: "0.7rem" }} />
               </Stack>
 
-              {activeEvidence ? (
+              {manualLine ? (
+                <Stack spacing={2}>
+                  <Box sx={{ p: 1.5, bgcolor: "grey.50", borderRadius: "8px", border: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      {manualLine.room_name || "General"} • {manualLine.element_name || "Scope"}
+                    </Typography>
+                    <Stack direction="row" spacing={0.75} sx={{ mt: 0.75 }}>
+                      <Chip label="ADDED BY QS" size="small" variant="outlined" sx={{ fontWeight: 600, height: 20, fontSize: "0.7rem" }} />
+                    </Stack>
+                  </Box>
+
+                  <Alert severity="info" icon={<IconCamera size={18} />} sx={{ borderRadius: "8px" }}>
+                    <strong>No site evidence for this line.</strong> It was added manually in QS review and is not
+                    linked to an element the surveyor inspected, so there are no site photos, measurements or defect
+                    notes.
+                  </Alert>
+
+                  <Box>
+                    <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase">
+                      Line details
+                    </Typography>
+                    <Box sx={{ mt: 0.75, p: 1.5, borderRadius: "8px", border: "1px solid", borderColor: "divider" }}>
+                      <Typography variant="body2" mb={1}>
+                        {manualLine.description || "No description"}
+                      </Typography>
+                      <Stack direction="row" spacing={2} flexWrap="wrap" rowGap={0.5}>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Code:</strong> {manualLine.item_code || "—"}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Qty:</strong> {manualLine.quantity} {manualLine.unit}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Rate:</strong> {formatMoney(manualLine.unit_rate)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Amount:</strong> {formatMoney((Number(manualLine.quantity) || 0) * (Number(manualLine.unit_rate) || 0))}
+                        </Typography>
+                      </Stack>
+                      {manualLine.notes && (
+                        <Typography variant="body2" color="text.secondary" mt={1} fontStyle="italic">
+                          &ldquo;{manualLine.notes}&rdquo;
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                </Stack>
+              ) : activeEvidence ? (
                 <Stack spacing={2}>
                   {/* Element & Condition Summary */}
                   <Box sx={{ p: 1.5, bgcolor: "grey.50", borderRadius: "8px", border: "1px solid", borderColor: "divider" }}>
@@ -1766,7 +1889,7 @@ export default function SurveyQSWorkspace({ id }: SurveyQSWorkspaceProps) {
                 <Box sx={{ py: 6, textAlign: "center" }}>
                   <IconCamera size={32} color="#94a3b8" />
                   <Typography variant="body2" color="text.secondary" mt={1}>
-                    Select a line in the schedule to view its verified site facts and photo evidence.
+                    Press &quot;View evidence&quot; on a work line to see the surveyor&apos;s photos and defect details here.
                   </Typography>
                 </Box>
               )}
