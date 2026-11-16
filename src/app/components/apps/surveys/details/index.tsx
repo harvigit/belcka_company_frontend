@@ -92,6 +92,7 @@ import {
 import { exportSurveyReportToPdf, exportWorkOrderJobPackToPdf } from "./pdf/surveyPdfExport";
 import SurveyPrintableReport from "./pdf/SurveyPrintableReport";
 import WorkOrderJobPackReport from "./pdf/WorkOrderJobPackReport";
+import ReportPreviewDialog from "./pdf/ReportPreviewDialog";
 
 const statusColorMap: Record<
   SurveyStatus,
@@ -2268,64 +2269,18 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       </BlankCard>
 
       {/* Report Preview Modal Dialog */}
-      <Dialog
+      <ReportPreviewDialog
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: "12px", maxHeight: "90vh" },
-        }}
+        title="Survey report preview"
+        subtitle={`${survey.reference || `Survey #${survey.id}`} · Inspection & commercial scope`}
+        icon={<IconFileDescription size={22} />}
+        printTargetId="survey-printable-report"
+        onDownload={handleExportPdf}
+        downloading={exportingPdf}
       >
-        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1.5 }}>
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <IconFileDescription size={22} />
-            <Typography variant="h6" fontWeight={700}>
-              Survey Inspection & Commercial Report Preview
-            </Typography>
-          </Stack>
-          <IconButton size="small" onClick={() => setPreviewOpen(false)}>
-            <IconX size={20} />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ bgcolor: "#f1f5f9", p: 3, display: "flex", justifyContent: "center" }}>
-          <Box
-            sx={{
-              boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
-              bgcolor: "#ffffff",
-              maxWidth: "100%",
-              overflowX: "auto",
-            }}
-          >
-            <SurveyPrintableReport survey={survey} />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, justifyContent: "space-between" }}>
-          <Button
-            variant="outlined"
-            color="inherit"
-            startIcon={<IconPrinter size={18} />}
-            onClick={() => window.print()}
-          >
-            Print
-          </Button>
-          <Stack direction="row" spacing={1.5}>
-            <Button variant="outlined" onClick={() => setPreviewOpen(false)}>
-              Close
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={exportingPdf ? <CircularProgress size={16} color="inherit" /> : <IconDownload size={18} />}
-              onClick={handleExportPdf}
-              disabled={exportingPdf}
-              sx={{ fontWeight: 700 }}
-            >
-              {exportingPdf ? "Generating PDF..." : "Download PDF"}
-            </Button>
-          </Stack>
-        </DialogActions>
-      </Dialog>
+        <SurveyPrintableReport survey={survey} />
+      </ReportPreviewDialog>
 
       {/* Work Order Handoff Dialog */}
       <Dialog
@@ -2673,53 +2628,25 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       </Dialog>
 
       {/* Contractor Job Pack PDF Preview Dialog */}
-      <Dialog
+      <ReportPreviewDialog
         open={woPreviewOpen}
         onClose={() => setWoPreviewOpen(false)}
-        maxWidth="lg"
-        fullWidth
+        title="Work order job pack preview"
+        subtitle={activeWorkOrder ? `${activeWorkOrder.reference} · ${survey.reference || `Survey #${survey.id}`}` : undefined}
+        icon={<IconBriefcase size={22} />}
+        printTargetId="work-order-job-pack-report"
+        onDownload={handleExportWoJobPackPdf}
+        downloading={exportingWoPdf}
+        downloadLabel="Download job pack"
       >
-        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <IconBriefcase size={22} />
-            <Typography variant="h6" fontWeight={700}>
-              Contractor Work Order Job Pack Preview
-            </Typography>
-          </Stack>
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="contained"
-              color="primary"
-              size="small"
-              startIcon={<IconDownload size={16} />}
-              onClick={handleExportWoJobPackPdf}
-              disabled={exportingWoPdf}
-            >
-              {exportingWoPdf ? "Downloading..." : "Download Job Pack PDF"}
-            </Button>
-            <IconButton size="small" onClick={() => setWoPreviewOpen(false)}>
-              <IconX size={18} />
-            </IconButton>
-          </Stack>
-        </DialogTitle>
-        <DialogContent dividers sx={{ bgcolor: "grey.100", p: 3, display: "flex", justifyContent: "center" }}>
-          {activeWorkOrder ? (
-            <Box sx={{ width: "794px", bgcolor: "#fff", boxShadow: 3, borderRadius: 1, overflow: "hidden" }}>
-              <WorkOrderJobPackReport
-                survey={survey}
-                workOrder={activeWorkOrder}
-              />
-            </Box>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              No work order data available to preview.
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setWoPreviewOpen(false)}>Close Preview</Button>
-        </DialogActions>
-      </Dialog>
+        {activeWorkOrder ? (
+          <WorkOrderJobPackReport survey={survey} workOrder={activeWorkOrder} />
+        ) : (
+          <Typography variant="body2" color="text.secondary" sx={{ p: 4, textAlign: "center" }}>
+            No work order data available to preview.
+          </Typography>
+        )}
+      </ReportPreviewDialog>
 
       {/* Off-screen render container for PDF export generator */}
       <Box
