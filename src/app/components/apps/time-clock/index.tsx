@@ -528,6 +528,12 @@ const TimeClock = ({queryParams}: Props) => {
     const [typeFilter, setTypeFilter] = useState('all_data');
     const [tempTypeFilter, setTempTypeFilter] = useState('all_data');
     const [filtersHydrated, setFiltersHydrated] = useState(false);
+    // Request view: the page was opened from a request / notification link (user_id + open=true).
+    // That link must show exactly that request, so the saved list filters are not applied until
+    // the user clears the view (the saved filters stay stored and come back on clear).
+    const requestViewRef = useRef(false);
+    // True when that link also carried the request dates (they then win over the saved range).
+    const requestDatesRef = useRef(false);
     const [filterOptions, setFilterOptions] = useState<{
         teams: FilterOption[];
         statuses: FilterOption[];
@@ -690,6 +696,16 @@ const TimeClock = ({queryParams}: Props) => {
             isArchived = isArchivedUserParam === 'true' || isArchivedUserParam === '1';
             userId = urlUserId;
 
+            if (urlUserId && searchParams.get('open') === 'true') {
+                requestViewRef.current = true;
+                requestDatesRef.current = Boolean(searchParams.get('start_date') && searchParams.get('end_date'));
+                setFilters(EMPTY_TIME_CLOCK_FILTERS);
+                setTempFilters(EMPTY_TIME_CLOCK_FILTERS);
+                setTypeFilter('all_data');
+                setTempTypeFilter('all_data');
+                setSearchTerm('');
+            }
+
             sessionStorage.setItem(
                 'timesheet_sensitive_params',
                 JSON.stringify({
@@ -772,37 +788,48 @@ const TimeClock = ({queryParams}: Props) => {
         );
     }, [timeClockFiltersCookieKey]);
 
+    // Saved list filters (cookie) as filter state, or null when nothing valid is saved.
+    const readStoredTimeClockFilters = useCallback(() => {
+        if (!timeClockFiltersCookieKey) return null;
+        try {
+            const stored = readListingTableState(timeClockFiltersCookieKey);
+            if (!stored) return null;
+            const parsed = JSON.parse(stored) as TimeClockStoredFilters;
+            const nextFilters: TimeClockFilterState = {
+                teams: normalizeStoredNumberFilter(parsed.filters?.teams),
+                groups: normalizeStoredNumberFilter(parsed.filters?.groups, true),
+                statuses: normalizeStoredStringFilter(parsed.filters?.statuses),
+                users: normalizeStoredNumberFilter(parsed.filters?.users),
+                projects: normalizeStoredNumberFilter(parsed.filters?.projects),
+            };
+            const nextTypeFilter = isValidTimeClockTypeFilter(parsed.typeFilter)
+                ? parsed.typeFilter
+                : 'all_data';
+            return {filters: nextFilters, typeFilter: nextTypeFilter};
+        } catch (error) {
+            console.error('Failed to load time-clock filters cookie:', error);
+            removeListingTableState(timeClockFiltersCookieKey);
+            return null;
+        }
+    }, [timeClockFiltersCookieKey]);
+
     useEffect(() => {
         if (!timeClockFiltersCookieKey) return;
 
         try {
-            const stored = readListingTableState(timeClockFiltersCookieKey);
+            // Request view keeps empty filters; the saved ones are restored when it is cleared.
+            const stored = requestViewRef.current ? null : readStoredTimeClockFilters();
             if (stored) {
-                const parsed = JSON.parse(stored) as TimeClockStoredFilters;
-                const nextFilters: TimeClockFilterState = {
-                    teams: normalizeStoredNumberFilter(parsed.filters?.teams),
-                    groups: normalizeStoredNumberFilter(parsed.filters?.groups, true),
-                    statuses: normalizeStoredStringFilter(parsed.filters?.statuses),
-                    users: normalizeStoredNumberFilter(parsed.filters?.users),
-                    projects: normalizeStoredNumberFilter(parsed.filters?.projects),
-                };
-                const nextTypeFilter = isValidTimeClockTypeFilter(parsed.typeFilter)
-                    ? parsed.typeFilter
-                    : 'all_data';
-
-                setFilters(nextFilters);
-                setTempFilters(nextFilters);
-                setTypeFilter(nextTypeFilter);
-                setTempTypeFilter(nextTypeFilter);
+                setFilters(stored.filters);
+                setTempFilters(stored.filters);
+                setTypeFilter(stored.typeFilter);
+                setTempTypeFilter(stored.typeFilter);
             }
-        } catch (error) {
-            console.error('Failed to load time-clock filters cookie:', error);
-            removeListingTableState(timeClockFiltersCookieKey);
         } finally {
             skipNextDependencyPageResetRef.current = true;
             setFiltersHydrated(true);
         }
-    }, [timeClockFiltersCookieKey]);
+    }, [timeClockFiltersCookieKey, readStoredTimeClockFilters]);
 
     const [isFilteredView, setIsFilteredView] = useState(false);
     useEffect(() => {
@@ -826,6 +853,8 @@ const TimeClock = ({queryParams}: Props) => {
 
     useEffect(() => {
         if (!startDate || !endDate) return;
+        // The request date is only for this view; keep the user's own saved range.
+        if (requestViewRef.current) return;
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
     }, [startDate, endDate, columnVisibility]);
 
@@ -1017,6 +1046,29 @@ const TimeClock = ({queryParams}: Props) => {
         queryParamsRef.current = nextQueryParams;
         setResolvedQueryParams(nextQueryParams);
 
+        // Leaving a request view: bring back the user's saved filters and date range. The list
+        // reloads through the filter / date / user dependencies, so no direct fetch here (it would
+        // use the old filters and could finish after the right one).
+        if (requestViewRef.current) {
+            requestViewRef.current = false;
+            requestDatesRef.current = false;
+
+            const storedFilters = readStoredTimeClockFilters();
+            const nextFilters = storedFilters?.filters ?? EMPTY_TIME_CLOCK_FILTERS;
+            const nextTypeFilter = storedFilters?.typeFilter ?? 'all_data';
+            setFilters(nextFilters);
+            setTempFilters(nextFilters);
+            setTypeFilter(nextTypeFilter);
+            setTempTypeFilter(nextTypeFilter);
+
+            const storedRange = loadDateRangeFromStorage();
+            if (storedRange?.startDate && storedRange?.endDate) {
+                setStartDate(storedRange.startDate);
+                setEndDate(storedRange.endDate);
+            }
+            return;
+        }
+
         const s = startDate || defaultStart;
         const e = endDate || defaultEnd;
         fetchData(s, e);
@@ -1060,13 +1112,19 @@ const TimeClock = ({queryParams}: Props) => {
                     to = defaultEnd;
                 }
 
-                setStartDate(from);
-                setEndDate(to);
-                saveDateRangeToStorage(from, to, stored?.columnVisibility ?? columnVisibility);
+                // In request view the request date is set from the link; this async load must not
+                // replace it with the saved / payroll range when it finishes later.
+                if (!requestDatesRef.current) {
+                    setStartDate(from);
+                    setEndDate(to);
+                    saveDateRangeToStorage(from, to, stored?.columnVisibility ?? columnVisibility);
+                }
             } catch (error) {
                 console.error('Error fetching payroll cycle:', error);
-                setStartDate(defaultStart);
-                setEndDate(defaultEnd);
+                if (!requestDatesRef.current) {
+                    setStartDate(defaultStart);
+                    setEndDate(defaultEnd);
+                }
             } finally {
                 setCycleReady(true);
             }
@@ -2383,6 +2441,8 @@ const TimeClock = ({queryParams}: Props) => {
 
     useEffect(() => {
         if (!startDate || !endDate) return;
+        // The request date is only for this view; keep the user's own saved range.
+        if (requestViewRef.current) return;
         saveDateRangeToStorage(startDate, endDate, columnVisibility, pagination);
     }, [startDate, endDate, columnVisibility, pagination.pageIndex, pagination.pageSize]);
 
