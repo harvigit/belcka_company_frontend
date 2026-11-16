@@ -28,6 +28,7 @@ import {capitalize} from 'lodash';
 import {useSearchParams} from 'next/navigation';
 import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import Link from 'next/link';
+import EvidenceFilesDrawer, { EvidenceButton } from '@/app/components/common/EvidenceFilesDrawer';
 
 dayjs.extend(customParseFormat);
 
@@ -112,6 +113,7 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
     const initialDates = getInitialDates();
 
     const [data, setData] = useState<any[]>([]);
+    const [evidenceLeave, setEvidenceLeave] = useState<any | null>(null);
     const [leaveTypes, setLeaveTypes] = useState<any[]>([]);
     const [summaryRows, setSummaryRows] = useState<any[]>([]);
     const [selectedSummaryFilter, setSelectedSummaryFilter] = useState<{
@@ -662,6 +664,12 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
                                                 </Typography>
                                             </Box>
                                         )}
+
+                                        {(work.files?.length ?? 0) > 0 && (
+                                            <Box display="flex" justifyContent="flex-end" mt={1}>
+                                                <EvidenceButton count={work.files.length} onClick={() => setEvidenceLeave(work)} />
+                                            </Box>
+                                        )}
                                     </Box>
                                 </Link>
                             </Grid>
@@ -679,6 +687,14 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
                 )}
             </Box>
 
+            <EvidenceFilesDrawer
+                open={Boolean(evidenceLeave)}
+                onClose={() => setEvidenceLeave(null)}
+                files={evidenceLeave?.files ?? []}
+                userName={evidenceLeave?.user_name}
+                userImage={evidenceLeave?.user_thumb_image || evidenceLeave?.user_image}
+                date={evidenceLeave ? `${evidenceLeave.leave_date ?? ''}${evidenceLeave.leave_name ? ` · ${evidenceLeave.leave_name}` : ''}` : undefined}
+            />
         </Drawer>
     );
 }

@@ -51,6 +51,7 @@ import {
     IconEye,
     IconHistory,
     IconNotes,
+    IconPaperclip,
     IconSearch,
     IconSettings,
     IconX,
@@ -81,6 +82,7 @@ import DateRangePickerBox from "../../common/DateRangePickerBox";
 import AddLeave from "../time-clock/time-clock-details/leaves/add-leave";
 import LeaveSetting from "./leave-settings/leave-setting";
 import { useSearchParams } from "next/navigation";
+import EvidenceFilesDrawer from "@/app/components/common/EvidenceFilesDrawer";
 
 interface UserLeaveProps {
     active: boolean;
@@ -218,6 +220,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
     const [actionType, setActionType] = useState<"approve" | "reject" | null>(null);
     const [note, setNote] = useState("");
     const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [evidenceLeave, setEvidenceLeave] = useState<any | null>(null);
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const [history, setHistory] = useState<any[]>([]);
@@ -615,8 +618,26 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                 const item = row.original;
                 const isDeleteRequest = item.status === 3 && item.is_delete_request === true;
 
+                const fileCount = Array.isArray(item.files) ? item.files.length : 0;
+
                 return (
                     <Stack direction="row" spacing={1} alignItems="center">
+                        {fileCount > 0 && (
+                            <Tooltip title="View evidence">
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEvidenceLeave(item);
+                                    }}
+                                    startIcon={<IconPaperclip size={16} />}
+                                    sx={{ textTransform: "none", fontWeight: 500, borderRadius: 2, whiteSpace: "nowrap", minWidth: 0 }}
+                                >
+                                    Evidence ({fileCount})
+                                </Button>
+                            </Tooltip>
+                        )}
                         {isDeleteRequest && (
                             <Tooltip title="Delete Leave Request">
                                 <Chip
@@ -1731,6 +1752,15 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                             companyId={companyId}
                         />
                     </Drawer>
+
+                    <EvidenceFilesDrawer
+                        open={Boolean(evidenceLeave)}
+                        onClose={() => setEvidenceLeave(null)}
+                        files={evidenceLeave?.files ?? []}
+                        userName={evidenceLeave?.user_name}
+                        userImage={evidenceLeave?.user_thumb_image || evidenceLeave?.user_image}
+                        date={evidenceLeave ? `${evidenceLeave.leave_date ?? ""}${evidenceLeave.leave_name ? ` · ${evidenceLeave.leave_name}` : ""}` : undefined}
+                    />
                 </Box>
             ) : (
                 <Box mt={4} display={"flex"} height={"450px"} justifyContent={"center"}>
