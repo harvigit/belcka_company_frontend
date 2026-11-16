@@ -452,7 +452,7 @@ export default function CreateSurveyWizard() {
               formData={{
                 ...formData,
                 projectName: selectedProject?.name,
-                propertyName: selectedAddress?.name,
+                propertyName: selectedAddress?.full_name || selectedAddress?.name,
                 surveyorName: selectedSurveyor?.name,
               }}
               method={method}
