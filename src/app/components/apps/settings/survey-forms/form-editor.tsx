@@ -22,6 +22,7 @@ import {
   Typography,
 } from "@mui/material";
 import {
+  IconAlertCircle,
   IconArrowDown,
   IconArrowUp,
   IconCopy,
@@ -129,6 +130,12 @@ const move = <T,>(items: T[], index: number, delta: number) => {
   return next;
 };
 
+const InlineError = ({ message }: { message: string }) => (
+  <Typography fontSize={12} color="error.main" mt={0.75} ml={1.75}>
+    {message}
+  </Typography>
+);
+
 // Property detail builder: sections on the left, the selected section's fields on the right.
 const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProps) => {
   const [name, setName] = useState("");
@@ -137,6 +144,10 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
   const [deleteSectionId, setDeleteSectionId] = useState<string | null>(null);
   const [preview, setPreview] = useState<PdfPreviewSource | null>(null);
   const [saving, setSaving] = useState(false);
+  // Problems are shown inline only after the first Save attempt, then update live as they are fixed.
+  const [showErrors, setShowErrors] = useState(false);
+  // Newly added section or field whose name input gets the focus.
+  const [focusId, setFocusId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -144,6 +155,8 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
     setName(form?.name || "");
     setSections(loaded);
     setActiveSectionId(loaded[0]?.id ?? null);
+    setShowErrors(false);
+    setFocusId(null);
   }, [open, form]);
 
   const activeSection = sections.find((s) => s.id === activeSectionId) || null;
@@ -174,6 +187,7 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
     const section: InspectionField = { id: newId("grp"), label: "", type: "Group", fields: [] };
     setSections((current) => [...current, section]);
     setActiveSectionId(section.id);
+    setFocusId(section.id);
   };
 
   const removeSection = (sectionId: string) => {
@@ -186,11 +200,11 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
     setDeleteSectionId(null);
   };
 
-  const addField = (sectionId: string) =>
-    updateFields(sectionId, (fields) => [
-      ...fields,
-      { id: newId("fld"), label: "", type: "Open ended", required: false },
-    ]);
+  const addField = (sectionId: string) => {
+    const field: InspectionField = { id: newId("fld"), label: "", type: "Open ended", required: false };
+    updateFields(sectionId, (fields) => [...fields, field]);
+    setFocusId(field.id);
+  };
 
   const changeFieldType = (sectionId: string, field: InspectionField, type: string) => {
     const patch: Partial<InspectionField> = { type };
@@ -219,38 +233,79 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
       return [...fields.slice(0, index + 1), copy, ...fields.slice(index + 1)];
     });
 
-  const validate = (): string | null => {
-    if (!name.trim()) return "Please enter the form name.";
-    if (!sections.length) return "Add at least one section.";
+  // Every problem in the form, keyed by where it is shown:
+  // "form:name", "form:sections", "section:<id>:label", "section:<id>:empty",
+  // "field:<id>:label", "field:<id>:options", "field:<id>:formula".
+  const issues = useMemo(() => {
+    const list: { key: string; sectionId?: string; message: string }[] = [];
+    if (!name.trim()) list.push({ key: "form:name", message: "Enter a form name" });
+    if (!sections.length) list.push({ key: "form:sections", message: "Add at least one section" });
     const ids = new Set(sections.flatMap((s) => (s.fields || []).map((f) => f.id)));
     for (const section of sections) {
-      if (!section.label.trim()) return "Every section needs a name.";
-      const title = section.label.trim();
-      if (!(section.fields || []).length) return `Section "${title}" has no fields.`;
+      const sectionId = section.id;
+      if (!section.label.trim()) {
+        list.push({ key: `section:${sectionId}:label`, sectionId, message: "Enter a section name" });
+      }
+      if (!(section.fields || []).length) {
+        list.push({ key: `section:${sectionId}:empty`, sectionId, message: "Add at least one field to this section" });
+      }
       for (const field of section.fields || []) {
         if (!field.label.trim()) {
-          return field.type === "Description"
-            ? `Info text in "${title}" is empty.`
-            : `A field in "${title}" has no name.`;
+          list.push({
+            key: `field:${field.id}:label`,
+            sectionId,
+            message: field.type === "Description" ? "Enter the info text" : "Enter a field name",
+          });
         }
         if (field.type === "Dropdown" && !(field.options || []).some((o) => o.trim())) {
-          return `Dropdown "${field.label}" needs at least one option.`;
+          list.push({ key: `field:${field.id}:options`, sectionId, message: "Add at least one option" });
         }
         if (field.type === "Formula") {
           const formula = parseFormula(field.formulaExpression);
           if (!formula || !ids.has(formula.left) || !ids.has(formula.right)) {
-            return `Formula "${field.label}" needs two fields to calculate from.`;
+            list.push({ key: `field:${field.id}:formula`, sectionId, message: "Pick two fields to calculate from" });
           }
         }
       }
     }
-    return null;
+    return list;
+  }, [name, sections]);
+
+  const issueMap = useMemo(
+    () => Object.fromEntries(issues.map((i) => [i.key, i.message])) as Record<string, string>,
+    [issues],
+  );
+  const sectionIssueCount = useMemo(() => {
+    const counts: Record<string, number> = {};
+    issues.forEach((i) => {
+      if (i.sectionId) counts[i.sectionId] = (counts[i.sectionId] || 0) + 1;
+    });
+    return counts;
+  }, [issues]);
+  /** Inline message for a spot in the form, once the user has tried to save. */
+  const errorFor = (key: string) => (showErrors ? issueMap[key] : undefined);
+
+  // Opens the section with the first problem and scrolls its first invalid input into view.
+  const revealFirstIssue = () => {
+    const first = issues.find((i) => i.sectionId) || issues[0];
+    if (first?.sectionId) setActiveSectionId(first.sectionId);
+    setTimeout(() => {
+      const target = document.querySelector<HTMLElement>("[data-form-editor] [data-invalid='true']");
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.querySelector<HTMLElement>("input, textarea")?.focus({ preventScroll: true });
+    }, 80);
   };
 
   const save = async () => {
-    const error = validate();
-    if (error) {
-      toast.error(error);
+    if (issues.length) {
+      setShowErrors(true);
+      toast.error(
+        issues.length === 1
+          ? `${issues[0].message} before saving.`
+          : `Please fix ${issues.length} highlighted items before saving.`,
+      );
+      revealFirstIssue();
       return;
     }
     setSaving(true);
@@ -304,7 +359,15 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
               ))
             }
             renderInput={(params) => (
-              <TextField {...params} size="small" label="Options" placeholder="Type an option and press Enter" />
+              <TextField
+                {...params}
+                size="small"
+                label="Options"
+                placeholder="Type an option and press Enter"
+                error={Boolean(errorFor(`field:${field.id}:options`))}
+                helperText={errorFor(`field:${field.id}:options`)}
+                data-invalid={Boolean(errorFor(`field:${field.id}:options`))}
+              />
             )}
           />
           <FormControlLabel
@@ -337,6 +400,7 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
           select
           size="small"
           label="Field"
+          error={Boolean(errorFor(`field:${field.id}:formula`)) && !options.some((o) => o.id === value)}
           value={options.some((o) => o.id === value) ? value : ""}
           onChange={(event) => onChange(event.target.value)}
           sx={{ flex: 1, minWidth: 180 }}
@@ -348,7 +412,9 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
           ))}
         </TextField>
       );
+      const formulaError = errorFor(`field:${field.id}:formula`);
       return options.length ? (
+        <Box data-invalid={Boolean(formulaError)}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
           {operandSelect(formula.left, (id) => setFormula({ left: id }))}
           <TextField
@@ -366,10 +432,14 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
           </TextField>
           {operandSelect(formula.right, (id) => setFormula({ right: id }))}
         </Stack>
+        {formulaError && <InlineError message={formulaError} />}
+        </Box>
       ) : (
-        <Typography fontSize={12} color="text.secondary">
-          Add Number fields first, then pick two of them to calculate this value.
-        </Typography>
+        <Box data-invalid={Boolean(formulaError)}>
+          <Typography fontSize={12} color={formulaError ? "error.main" : "text.secondary"}>
+            Add Number fields first, then pick two of them to calculate this value.
+          </Typography>
+        </Box>
       );
     }
 
@@ -409,8 +479,21 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
   const renderField = (sectionId: string, field: InspectionField, index: number, total: number) => {
     const isInfo = field.type === "Description";
     const settings = renderTypeSettings(sectionId, field);
+    const labelError = errorFor(`field:${field.id}:label`);
+    const hasError = Boolean(
+      labelError || errorFor(`field:${field.id}:options`) || errorFor(`field:${field.id}:formula`),
+    );
     return (
-      <Paper key={field.id} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+      <Paper
+        key={field.id}
+        variant="outlined"
+        sx={{
+          p: 2,
+          borderRadius: 2,
+          borderColor: hasError ? "error.main" : undefined,
+          boxShadow: hasError ? (theme) => `0 0 0 1px ${theme.palette.error.main}` : "none",
+        }}
+      >
         <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "flex-start" }}>
           <Typography fontSize={12} fontWeight={700} color="text.secondary" sx={{ minWidth: 24, pt: { md: 1.25 } }}>
             {index + 1}.
@@ -422,6 +505,11 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
             minRows={isInfo ? 2 : undefined}
             label={isInfo ? "Info text" : "Field name"}
             placeholder={isInfo ? "Text shown to the inspector" : "e.g. Meter Reading"}
+            required
+            autoFocus={focusId === field.id}
+            error={Boolean(labelError)}
+            helperText={labelError}
+            data-invalid={Boolean(labelError)}
             value={field.label}
             onChange={(event) => updateField(sectionId, field.id, { label: event.target.value })}
             sx={{ flex: 1 }}
@@ -504,7 +592,10 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
       open={open}
       onClose={() => !saving && onClose()}
       fullScreen
-      PaperProps={{ sx: { display: "flex", flexDirection: "column", bgcolor: "#f8fafc" } }}
+      PaperProps={{
+        "data-form-editor": true,
+        sx: { display: "flex", flexDirection: "column", bgcolor: "#f8fafc" },
+      } as any}
     >
       {/* Header */}
       <Stack
@@ -522,12 +613,27 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
           size="small"
           label="Form name"
           placeholder="e.g. Void Repairs Specification"
+          required
+          error={Boolean(errorFor("form:name"))}
+          helperText={errorFor("form:name")}
+          data-invalid={Boolean(errorFor("form:name"))}
           value={name}
           onChange={(event) => setName(event.target.value)}
           sx={{ flex: 1, maxWidth: { sm: 480 } }}
         />
         <Box sx={{ flex: 1, display: { xs: "none", sm: "block" } }} />
         <Stack direction="row" spacing={1} alignItems="center">
+          {showErrors && issues.length > 0 && (
+            <Button
+              color="error"
+              size="small"
+              startIcon={<IconAlertCircle size={16} />}
+              onClick={revealFirstIssue}
+              sx={{ whiteSpace: "nowrap" }}
+            >
+              {issues.length} {issues.length === 1 ? "item" : "items"} to fix
+            </Button>
+          )}
           <Tooltip title={sections.length ? "See how this form will look as a PDF" : "Add a section first"}>
             <span>
               <Button
@@ -578,13 +684,21 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
           <Divider />
           <Box sx={{ flex: 1, overflowY: "auto", p: 1 }}>
             {sections.length === 0 && (
-              <Typography fontSize={13} color="text.secondary" textAlign="center" py={4} px={2}>
+              <Typography
+                fontSize={13}
+                color={errorFor("form:sections") ? "error.main" : "text.secondary"}
+                textAlign="center"
+                py={4}
+                px={2}
+                data-invalid={Boolean(errorFor("form:sections"))}
+              >
                 Start by adding a section, e.g. &quot;Property details&quot; or &quot;Gas&quot;.
               </Typography>
             )}
             {sections.map((section, index) => {
               const active = section.id === activeSectionId;
               const count = (section.fields || []).length;
+              const problems = showErrors ? sectionIssueCount[section.id] || 0 : 0;
               return (
                 <Stack
                   key={section.id}
@@ -599,16 +713,29 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
                     borderRadius: 1.5,
                     cursor: "pointer",
                     bgcolor: active ? "#eaf5ff" : "transparent",
+                    border: "1px solid",
+                    borderColor: problems ? "error.light" : "transparent",
                     "&:hover": { bgcolor: active ? "#eaf5ff" : "#f6f7f7" },
                   }}
                 >
-                  <IconLayoutList size={16} color={active ? "#1e5fcb" : "#7D92A9"} />
+                  {problems ? (
+                    <IconAlertCircle size={16} color="#fc4b6c" />
+                  ) : (
+                    <IconLayoutList size={16} color={active ? "#1e5fcb" : "#7D92A9"} />
+                  )}
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography fontSize={14} fontWeight={active ? 600 : 500} noWrap>
+                    <Typography
+                      fontSize={14}
+                      fontWeight={active ? 600 : 500}
+                      noWrap
+                      color={section.label ? "text.primary" : "text.secondary"}
+                      fontStyle={section.label ? "normal" : "italic"}
+                    >
                       {section.label || "Untitled section"}
                     </Typography>
-                    <Typography fontSize={12} color="text.secondary">
+                    <Typography fontSize={12} color={problems ? "error.main" : "text.secondary"}>
                       {count} {count === 1 ? "field" : "fields"}
+                      {problems ? ` · ${problems} to fix` : ""}
                     </Typography>
                   </Box>
                   <IconButton
@@ -640,11 +767,17 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
         <Box sx={{ flex: 1, minWidth: 0, overflowY: "auto", p: { xs: 2, sm: 3 } }}>
           {activeSection ? (
             <Box sx={{ maxWidth: 1100, mx: "auto" }}>
-              <Stack direction="row" spacing={1.5} alignItems="center" mb={2.5}>
+              <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={2.5}>
                 <TextField
+                  key={activeSection.id}
                   size="small"
                   label="Section name"
                   placeholder="e.g. Gas"
+                  required
+                  autoFocus={focusId === activeSection.id}
+                  error={Boolean(errorFor(`section:${activeSection.id}:label`))}
+                  helperText={errorFor(`section:${activeSection.id}:label`)}
+                  data-invalid={Boolean(errorFor(`section:${activeSection.id}:label`))}
                   value={activeSection.label}
                   onChange={(event) => updateSection(activeSection.id, { label: event.target.value })}
                   sx={{ flex: 1, bgcolor: "#fff" }}
@@ -668,9 +801,27 @@ const SurveyFormEditor = ({ open, form, onClose, onSaved }: SurveyFormEditorProp
                   renderField(activeSection.id, field, index, all.length),
                 )}
                 {(activeSection.fields || []).length === 0 && (
-                  <Typography fontSize={13} color="text.secondary" textAlign="center" py={3}>
-                    No fields in this section yet.
-                  </Typography>
+                  <Box
+                    data-invalid={Boolean(errorFor(`section:${activeSection.id}:empty`))}
+                    sx={{
+                      textAlign: "center",
+                      py: 3,
+                      borderRadius: 2,
+                      border: "1px dashed",
+                      borderColor: errorFor(`section:${activeSection.id}:empty`) ? "error.main" : "divider",
+                      bgcolor: "#fff",
+                    }}
+                  >
+                    <Typography
+                      fontSize={13}
+                      color={errorFor(`section:${activeSection.id}:empty`) ? "error.main" : "text.secondary"}
+                    >
+                      {errorFor(`section:${activeSection.id}:empty`) || "No fields in this section yet."}
+                    </Typography>
+                    <Typography fontSize={12} color="text.secondary" mt={0.5}>
+                      Use &quot;Add field&quot; below to add the first question.
+                    </Typography>
+                  </Box>
                 )}
                 <Button
                   variant="outlined"
