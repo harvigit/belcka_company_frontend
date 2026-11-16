@@ -31,12 +31,14 @@ import {
   IconFilter,
   IconNotes,
   IconCheck,
+  IconPaperclip,
 } from "@tabler/icons-react";
 import { format, parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import DiffChanges from "@/app/components/common/DiffChanges";
 import { orderBillingDiffs } from "@/utils/diffDisplay";
 import RejectReasonDialog from "@/app/components/common/RejectReasonDialog";
+import EvidenceFilesDrawer from "@/app/components/common/EvidenceFilesDrawer";
 import { useRouter } from "next/navigation";
 import { getUserDetailsHref } from "@/utils/userDetailsRoute";
 import Link from "next/link";
@@ -138,6 +140,10 @@ function RequestNoteIcon({ note }: { note: string }) {
         }}
         sx={{
           p: 0.25,
+          ml: 0.5,
+          width: "auto",
+          height: "auto",
+          minWidth: 0,
           color: "text.secondary",
           alignItems: "start",
           "&:hover": { color: "primary.main", bgcolor: "transparent" },
@@ -145,6 +151,68 @@ function RequestNoteIcon({ note }: { note: string }) {
       >
         <IconNotes size={16} />
       </IconButton>
+    </Tooltip>
+  );
+}
+
+// Small "📎 n" pill next to the user name: shows a request has evidence without making the
+// card taller. Stops the click so the card link does not open; only the evidence drawer opens.
+function RequestEvidenceChip({
+  count,
+  onClick,
+}: {
+  count: number;
+  onClick: () => void;
+}) {
+  if (!count) return null;
+  return (
+    <Tooltip title={`View evidence (${count})`} placement="top">
+      <Box
+        component="span"
+        role="button"
+        tabIndex={0}
+        aria-label={`View evidence (${count})`}
+        onClick={(e: React.MouseEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onClick();
+        }}
+        onKeyDown={(e: React.KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            onClick();
+          }
+        }}
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 0.25,
+          ml: 0.75,
+          mt: "1px",
+          px: 0.75,
+          height: 20,
+          borderRadius: "10px",
+          fontSize: 11,
+          fontWeight: 600,
+          lineHeight: 1,
+          cursor: "pointer",
+          color: "primary.main",
+          bgcolor: "#EEF2FF",
+          border: "1px solid #D6DEFA",
+          flexShrink: 0,
+          transition: "background-color 0.15s, color 0.15s",
+          "&:hover, &:focus-visible": {
+            bgcolor: "primary.main",
+            color: "#fff",
+            borderColor: "primary.main",
+            outline: "none",
+          },
+        }}
+      >
+        <IconPaperclip size={12} stroke={2.2} />
+        {count}
+      </Box>
     </Tooltip>
   );
 }
@@ -201,6 +269,7 @@ export default function UserRequests({
     "approve" | "reject" | null
   >(null);
   const [rejectTarget, setRejectTarget] = useState<any | null>(null);
+  const [evidenceRequest, setEvidenceRequest] = useState<any | null>(null);
   const session = useSession();
   const user = session.data?.user as User & {
     company_id?: string | null;
@@ -909,6 +978,10 @@ export default function UserRequests({
                                   {work.request_note ? (
                                     <RequestNoteIcon note={work.request_note} />
                                   ) : null}
+                                  <RequestEvidenceChip
+                                    count={work.files?.length ?? 0}
+                                    onClick={() => setEvidenceRequest(work)}
+                                  />
                                 </Box>
                                 <Typography
                                   variant="caption"
@@ -1060,6 +1133,23 @@ export default function UserRequests({
           </Box>
         </Box>
       </Drawer>
+
+      <EvidenceFilesDrawer
+        open={Boolean(evidenceRequest)}
+        onClose={() => setEvidenceRequest(null)}
+        files={evidenceRequest?.files ?? []}
+        userName={evidenceRequest?.user_name}
+        userImage={
+          evidenceRequest?.user_thumb_image || evidenceRequest?.user_image
+        }
+        date={
+          evidenceRequest
+            ? [evidenceRequest.type_name, evidenceRequest.date]
+                .filter(Boolean)
+                .join(" · ")
+            : undefined
+        }
+      />
 
       <RejectReasonDialog
         open={Boolean(rejectTarget)}
