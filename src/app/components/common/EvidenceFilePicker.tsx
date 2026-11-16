@@ -21,10 +21,13 @@ type Props = {
     files: File[];
     onChange: (files: File[]) => void;
     disabled?: boolean;
+    // Shows the field as invalid (red border + message), e.g. when Evidence is required and empty.
+    error?: boolean;
+    errorText?: string;
 };
 
 /** Pick evidence files before upload: images, PDFs and videos, up to 20, with a small preview and remove. */
-const EvidenceFilePicker: React.FC<Props> = ({ files, onChange, disabled = false }) => {
+const EvidenceFilePicker: React.FC<Props> = ({ files, onChange, disabled = false, error = false, errorText = 'Evidence is required.' }) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
 
     // Object URLs for image/video previews, revoked when the list changes or the picker unmounts.
@@ -85,14 +88,14 @@ const EvidenceFilePicker: React.FC<Props> = ({ files, onChange, disabled = false
                     width: '100%',
                     py: 1.5,
                     px: 2,
-                    border: '1px dashed #bdbdbd',
+                    border: `1px dashed ${error ? '#d32f2f' : '#bdbdbd'}`,
                     borderRadius: 2,
                     display: 'flex',
                     gap: 1,
                     justifyContent: 'center',
                     color: isFull ? 'text.disabled' : '#1e4db7',
-                    bgcolor: '#fafbff',
-                    '&:hover': { borderColor: '#1e4db7' },
+                    bgcolor: error ? '#fff5f5' : '#fafbff',
+                    '&:hover': { borderColor: error ? '#d32f2f' : '#1e4db7' },
                 }}
             >
                 <IconUpload size={18} />
@@ -100,8 +103,8 @@ const EvidenceFilePicker: React.FC<Props> = ({ files, onChange, disabled = false
                     {isFull ? 'Maximum files added' : 'Add files'}
                 </Typography>
             </ButtonBase>
-            <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
-                Images, PDF or videos · {files.length}/{EVIDENCE_MAX_FILES}
+            <Typography variant="caption" color={error ? 'error' : 'text.secondary'} display="block" mt={0.5}>
+                {error ? errorText : `Images, PDF or videos · ${files.length}/${EVIDENCE_MAX_FILES}`}
             </Typography>
 
             {previews.length > 0 && (

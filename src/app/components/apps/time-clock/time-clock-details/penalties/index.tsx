@@ -454,6 +454,7 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
     const [appealNote, setAppealNote] = useState('');
     const [appealNoteError, setAppealNoteError] = useState(false);
     const [appealFiles, setAppealFiles] = useState<File[]>([]);
+    const [appealFilesError, setAppealFilesError] = useState(false);
     const [processingAppealId, setProcessingAppealId] = useState<number | null>(null);
 
     // Admin note dialog state
@@ -642,6 +643,7 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
         setAppealNote('');
         setAppealNoteError(false);
         setAppealFiles([]);
+        setAppealFilesError(false);
     };
 
     const closeAppealDialog = () => {
@@ -650,6 +652,7 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
         setAppealNote('');
         setAppealNoteError(false);
         setAppealFiles([]);
+        setAppealFilesError(false);
     };
 
     const handleAppealPenaltyRemove = async () => {
@@ -659,6 +662,11 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
         const note = appealNote.trim();
         if (!note) {
             setAppealNoteError(true);
+            return;
+        }
+
+        if (appealFiles.length === 0) {
+            setAppealFilesError(true);
             return;
         }
 
@@ -694,6 +702,7 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
                 setAppealPenalty(null);
                 setAppealNote('');
                 setAppealFiles([]);
+                setAppealFilesError(false);
                 await fetchPenalties();
                 await onMutated?.();
             } else {
@@ -1005,7 +1014,15 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
                     <Typography variant="body2" fontWeight={600} sx={{mt: 2, mb: 1}}>
                         Evidence
                     </Typography>
-                    <EvidenceFilePicker files={appealFiles} onChange={setAppealFiles} disabled={isAppealingPenalty}/>
+                    <EvidenceFilePicker
+                        files={appealFiles}
+                        onChange={(files) => {
+                            setAppealFiles(files);
+                            if (files.length) setAppealFilesError(false);
+                        }}
+                        disabled={isAppealingPenalty}
+                        error={appealFilesError}
+                    />
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={closeAppealDialog} disabled={isAppealingPenalty}>
@@ -1014,7 +1031,7 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
                     <Button
                         variant="contained"
                         onClick={handleAppealPenaltyRemove}
-                        disabled={!appealNote.trim() || isAppealingPenalty}
+                        disabled={!appealNote.trim() || appealFiles.length === 0 || isAppealingPenalty}
                     >
                         {isAppealingPenalty ? <CircularProgress size={20} sx={{color: 'white'}}/> : 'Submit'}
                     </Button>
