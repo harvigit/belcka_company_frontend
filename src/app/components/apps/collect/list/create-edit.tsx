@@ -209,7 +209,7 @@ const CollectAddEdit: React.FC<CollectAddEditProps> = ({
             (address) =>
               Number(address.id) === Number(formData.address_id),
           )
-        : [],
+        : addresses,
     [addresses, formData.address_id],
   );
 

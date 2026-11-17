@@ -310,6 +310,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
 
   const userLogout = async () => {
     toast.success("Logged out successfully!!");
+    setShowCompanyPopup(false);
     Cookies.remove(`user_store_${user.id}_${user.company_id}`);
     clearUserPermissionsCache();
     setAccessToken(null);

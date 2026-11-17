@@ -29,6 +29,7 @@ import {
   IconChartPie,
   IconCertificate,
   IconClipboardCheck,
+  IconBuildingWarehouse,
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
@@ -317,38 +318,66 @@ const MenuItems: NavGroup[] = [
     href: "/apps/collect/list",
   },
 
-  {
-    navlabel: true,
-    subheader: "Inventory New",
-  },
-  {
-    id: uniqueId(),
-    title: "Internal Items",
-    slug: "internal-products",
-    icon: IconDatabase,
-    href: "/apps/inventory-new/internal-items/list",
-  },
-  {
-    id: uniqueId(),
-    title: "Supplier Items",
-    slug: "supplier-products",
-    icon: IconBox,
-    href: "/apps/inventory-new/supplier-items/list",
-  },
-  {
-    id: uniqueId(),
-    title: "Suppliers",
-    slug: "new-suppliers",
-    icon: IconTruck,
-    href: "/apps/inventory-new/suppliers/list",
-  },
-  {
-    id: uniqueId(),
-    title: "Categories",
-    slug: "new-categories",
-    icon: IconKeyframes,
-    href: "/apps/inventory-new/categories/list",
-  },
+  // {
+  //   navlabel: true,
+  //   subheader: "Inventory New",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Internal Items",
+  //   slug: "internal-products",
+  //   icon: IconDatabase,
+  //   href: "/apps/inventory-new/internal-items/list",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Supplier Items",
+  //   slug: "supplier-products",
+  //   icon: IconBox,
+  //   href: "/apps/inventory-new/supplier-items/list",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Suppliers",
+  //   slug: "new-suppliers",
+  //   icon: IconTruck,
+  //   href: "/apps/inventory-new/suppliers/list",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Categories",
+  //   slug: "new-categories",
+  //   icon: IconKeyframes,
+  //   href: "/apps/inventory-new/categories/list",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Store Items",
+  //   slug: "store-items",
+  //   icon: IconBuildingWarehouse,
+  //   href: "/apps/inventory-new/store-items/list",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Purchase Orders",
+  //   slug: "purchasing",
+  //   icon: IconShoppingBag,
+  //   href: "/apps/inventory-new/purchase-orders/list",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Internal Orders",
+  //   slug: "purchasing",
+  //   icon: IconBasket,
+  //   href: "/apps/inventory-new/internal-orders/list",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Stock & Reorder",
+  //   slug: "stock",
+  //   icon: IconServer,
+  //   href: "/apps/inventory-new/stock/list",
+  // },
   // Settings stays last: SidebarItems pins the "settings" slug to the bottom of the sidebar.
   {
     id: uniqueId(),
