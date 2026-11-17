@@ -24,6 +24,7 @@ import {
     IconAlertTriangle,
     IconBeach,
     IconBriefcase,
+    IconClockEdit,
     IconClockPlus,
     IconCoin,
     IconCreditCard,
@@ -44,16 +45,63 @@ import { AxiosResponse } from 'axios';
 import toast from 'react-hot-toast';
 
 // Every request type an admin can give view / approve permission for.
+// `name` is what admins see; `slug` is the key the backend and mobile app use, so it never changes.
 const REQUEST_TYPES = [
-    { name: 'Add Timesheet', slug: 'timesheet_request', icon: IconClockPlus },
-    // 'Edit Timesheet' (timesheet_approve) is managed in Time Clock → Settings → Bookkeeper Setting.
-    { name: 'Leave request', slug: 'leave_request', icon: IconBeach },
-    { name: 'Billing Info Request', slug: 'billing_info_request', icon: IconCreditCard },
-    { name: 'Rate request', slug: 'rate_request', icon: IconCoin },
-    { name: 'Penalty request', slug: 'penalty_request', icon: IconAlertTriangle },
-    { name: 'Penalty appeal request', slug: 'penalty_appeal_request', icon: IconGavel },
-    { name: 'Team cap increase request', slug: 'team_cap_request', icon: IconUsersGroup },
-    { name: 'Project limit increase request', slug: 'project_cap_request', icon: IconBriefcase },
+    {
+        name: 'Timesheet changes',
+        description: 'A user adds or edits hours, pricework or adjustments on a timesheet',
+        slug: 'timesheet_request',
+        icon: IconClockPlus,
+    },
+    {
+        name: 'Edit timesheet',
+        description: 'Edit hours directly in Time Clock and approve or reject timesheet edit requests',
+        slug: 'timesheet_approve',
+        icon: IconClockEdit,
+    },
+    // Lock, Unlock, Paid and Delete on Time Clock are managed in Time Clock → Settings → Bookkeeper Setting.
+    {
+        name: 'Leave',
+        description: 'A user applies for leave or changes a leave',
+        slug: 'leave_request',
+        icon: IconBeach,
+    },
+    {
+        name: 'Bank & billing details',
+        description: 'A user changes their bank or billing details',
+        slug: 'billing_info_request',
+        icon: IconCreditCard,
+    },
+    {
+        name: 'Pay rate change',
+        description: "A change to a user's pay rate",
+        slug: 'rate_request',
+        icon: IconCoin,
+    },
+    {
+        name: 'Penalties',
+        description: 'See penalties on timesheets, act on them and get penalty notifications',
+        slug: 'penalty_request',
+        icon: IconAlertTriangle,
+    },
+    {
+        name: 'Penalty appeals',
+        description: 'A user disputes a penalty they received',
+        slug: 'penalty_appeal_request',
+        icon: IconGavel,
+    },
+    {
+        name: 'Team size increase',
+        description: "A request to raise a team's member limit",
+        slug: 'team_cap_request',
+        icon: IconUsersGroup,
+    },
+    {
+        name: 'Project capacity change',
+        description: "A request to change a project's capacity limit",
+        slug: 'project_cap_request',
+        icon: IconBriefcase,
+    },
 ];
 
 const LIST_COLUMNS = { xs: '1fr', md: 'minmax(240px, 1fr) minmax(220px, 1.3fr) minmax(200px, 1fr) 48px' };
@@ -534,7 +582,8 @@ const RequestActionList = () => {
                                 const inheritedFrom = row.saved?.inherited_from
                                     ? REQUEST_TYPES.find((type) => type.slug === row.saved?.inherited_from)?.name
                                     : null;
-                                const TypeIcon = REQUEST_TYPES.find((type) => type.slug === row.slug)?.icon ?? IconInfoCircle;
+                                const requestType = REQUEST_TYPES.find((type) => type.slug === row.slug);
+                                const TypeIcon = requestType?.icon ?? IconInfoCircle;
                                 return (
                                     <Box
                                         key={row.slug}
@@ -585,12 +634,17 @@ const RequestActionList = () => {
                                                 <Typography variant="body2" fontWeight={600} color="text.primary" noWrap>
                                                     {row.request_name}
                                                 </Typography>
+                                                {requestType?.description && (
+                                                    <Typography variant="caption" color="text.secondary" component="div">
+                                                        {requestType.description}
+                                                    </Typography>
+                                                )}
                                                 {inheritedFrom && (
                                                     <Tooltip arrow title={`Uses the ${inheritedFrom} users until you save this request type.`}>
                                                         <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: 'text.secondary', width: 'fit-content' }}>
                                                             <IconLink size={13} />
                                                             <Typography variant="caption" color="text.secondary" noWrap>
-                                                                Uses {inheritedFrom} users
+                                                                Same users as {inheritedFrom}
                                                             </Typography>
                                                         </Stack>
                                                     </Tooltip>
@@ -643,6 +697,11 @@ const RequestActionList = () => {
                 >
                     <DialogTitle sx={{ fontWeight: 600, fontSize: '1.2rem', pb: 1 }}>
                         {editingRow?.request_name}
+                        {REQUEST_TYPES.find((type) => type.slug === editingRow?.slug)?.description && (
+                            <Typography variant="body2" color="text.secondary" component="span" sx={{ display: 'block', mt: 0.5, fontWeight: 400 }}>
+                                {REQUEST_TYPES.find((type) => type.slug === editingRow?.slug)?.description}
+                            </Typography>
+                        )}
                     </DialogTitle>
                     <DialogContent sx={{ pt: 2 }}>
                         <Stack spacing={2}>
