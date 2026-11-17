@@ -18,26 +18,28 @@ import {
     TextField,
     Tooltip,
     Paper,
+    ToggleButton,
+    ToggleButtonGroup,
 } from '@mui/material';
 
 import {
-    IconAdjustments,
     IconAlertTriangle,
     IconBeach,
+    IconCircleCheck,
+    IconLayoutList,
     IconBriefcase,
+    IconClockEdit,
     IconClockPlus,
     IconCoin,
     IconCreditCard,
     IconEdit,
     IconEye,
     IconGavel,
-    IconHammer,
     IconInfoCircle,
     IconLink,
-    IconReceipt,
     IconSearch,
     IconShieldCheck,
-    IconUserEdit,
+    IconUser,
     IconUsersGroup,
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
@@ -48,23 +50,94 @@ import { AxiosResponse } from 'axios';
 import toast from 'react-hot-toast';
 
 // Every request type an admin can give view / approve permission for.
+// `name` is what admins see; `slug` is the key the backend and mobile app use, so it never changes.
 const REQUEST_TYPES = [
-    { name: 'Add Timesheet', slug: 'timesheet_request', icon: IconClockPlus },
-    // 'Edit Timesheet' (timesheet_approve) is managed in Time Clock → Settings → Bookkeeper Setting.
-    { name: 'Leave request', slug: 'leave_request', icon: IconBeach },
-    { name: 'Pricework request', slug: 'pricework_request', icon: IconHammer },
-    { name: 'Adjustment request', slug: 'adjustment_request', icon: IconAdjustments },
-    { name: 'Personal detail request', slug: 'personal_detail_request', icon: IconUserEdit },
-    { name: 'Billing Info Request', slug: 'billing_info_request', icon: IconCreditCard },
-    { name: 'Rate request', slug: 'rate_request', icon: IconCoin },
-    { name: 'Expense request', slug: 'expense_request', icon: IconReceipt },
-    { name: 'Penalty request', slug: 'penalty_request', icon: IconAlertTriangle },
-    { name: 'Penalty appeal request', slug: 'penalty_appeal_request', icon: IconGavel },
-    { name: 'Team cap increase request', slug: 'team_cap_request', icon: IconUsersGroup },
-    { name: 'Project limit increase request', slug: 'project_cap_request', icon: IconBriefcase },
+    {
+        name: 'Timesheet changes',
+        description: 'A user adds or edits hours, pricework or adjustments on a timesheet',
+        slug: 'timesheet_request',
+        group: 'time',
+        icon: IconClockPlus,
+    },
+    {
+        name: 'Edit timesheet',
+        description: 'Edit hours directly in Time Clock and approve or reject timesheet edit requests',
+        slug: 'timesheet_approve',
+        group: 'time',
+        icon: IconClockEdit,
+    },
+    // Lock, Unlock, Paid and Delete on Time Clock are managed in Time Clock → Settings → Bookkeeper Setting.
+    {
+        name: 'Leave',
+        description: 'A user applies for leave or changes a leave',
+        slug: 'leave_request',
+        group: 'time',
+        icon: IconBeach,
+    },
+    {
+        name: 'Bank & billing details',
+        description: 'A user changes their bank or billing details',
+        slug: 'billing_info_request',
+        group: 'user',
+        icon: IconCreditCard,
+    },
+    {
+        name: 'Pay rate change',
+        description: "A change to a user's pay rate",
+        slug: 'rate_request',
+        group: 'user',
+        icon: IconCoin,
+    },
+    {
+        name: 'Penalties',
+        description: 'See penalties on timesheets, act on them and get penalty notifications',
+        slug: 'penalty_request',
+        group: 'penalty',
+        icon: IconAlertTriangle,
+    },
+    {
+        name: 'Penalty appeals',
+        description: 'A user disputes a penalty they received',
+        slug: 'penalty_appeal_request',
+        group: 'penalty',
+        icon: IconGavel,
+    },
+    {
+        name: 'Team size increase',
+        description: "A request to raise a team's member limit",
+        slug: 'team_cap_request',
+        group: 'limits',
+        icon: IconUsersGroup,
+    },
+    {
+        name: 'Project capacity change',
+        description: "A request to change a project's capacity limit",
+        slug: 'project_cap_request',
+        group: 'limits',
+        icon: IconBriefcase,
+    },
 ];
 
-const LIST_COLUMNS = { xs: '1fr', md: 'minmax(240px, 1fr) minmax(220px, 1.3fr) minmax(200px, 1fr) 48px' };
+// Sections on the "By request type" view, in this order.
+const REQUEST_GROUPS = [
+    { key: 'time', label: 'Time & leave' },
+    { key: 'user', label: 'User details' },
+    { key: 'penalty', label: 'Penalties' },
+    { key: 'limits', label: 'Limits' },
+];
+
+const LIST_COLUMNS = { xs: '1fr', md: 'minmax(260px, 1.3fr) minmax(200px, 1fr) minmax(160px, 0.8fr) 48px' };
+
+// Avatars shown before "+N" in the Approvers / Viewers columns.
+const MAX_AVATARS = 4;
+
+const getInitials = (name: string) =>
+    name
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase())
+        .join('');
 
 export interface RequestAction {
     id: number;
@@ -140,6 +213,8 @@ const RequestActionList = () => {
     const [savedData, setSavedData] = useState<RequestAction[]>([]);
     const [fetchLoading, setFetchLoading] = useState<boolean>(false);
     const [searchTerm, setSearchTerm] = useState('');
+    // "type" lists request types with their users; "user" lists users with their access per type.
+    const [viewMode, setViewMode] = useState<'type' | 'user'>('type');
 
     // Edit dialog state
     const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -376,65 +451,301 @@ const RequestActionList = () => {
         );
     }, [users, searchFilter]);
 
-    // One line per column: a coloured count and the names; full list in the tooltip.
-    const renderUsers = (ids: number[], tone: 'approve' | 'view') => {
-        const names = ids
-            .map((id) => userDetailsById.get(id)?.name)
-            .filter((name): name is string => Boolean(name));
-        if (names.length === 0) {
-            return (
-                <Typography variant="body2" color="text.disabled">
-                    {tone === 'approve' ? 'Admins only' : 'None'}
-                </Typography>
+    // Avatars (up to MAX_AVATARS, then "+N"); hover shows every name. `dim` marks users
+    // that come from another request type (not saved for this one yet).
+    const renderUsers = (ids: number[], tone: 'approve' | 'view', dim = false) => {
+        const people = ids
+            .map((id) => userDetailsById.get(id))
+            .filter((u): u is UserData => Boolean(u));
+
+        if (people.length === 0) {
+            return tone === 'approve' ? (
+                <Tooltip arrow title="No approvers picked, so only admins can see and approve these requests.">
+                    <Stack
+                        direction="row"
+                        spacing={0.5}
+                        alignItems="center"
+                        sx={{
+                            width: 'fit-content',
+                            px: 1,
+                            py: 0.25,
+                            borderRadius: 5,
+                            bgcolor: 'grey.100',
+                            color: 'text.secondary',
+                        }}
+                    >
+                        <IconShieldCheck size={14} />
+                        <Typography variant="caption" fontWeight={600} color="inherit">
+                            Only admins
+                        </Typography>
+                    </Stack>
+                </Tooltip>
+            ) : (
+                <Tooltip arrow title="No viewers. Approvers can already see these requests, so add viewers only for people who should just watch.">
+                    <Typography variant="body2" color="text.disabled" sx={{ width: 'fit-content' }}>
+                        —
+                    </Typography>
+                </Tooltip>
             );
         }
-        const color = tone === 'approve' ? 'success' : 'info';
+
+        const shown = people.slice(0, MAX_AVATARS);
+        const extra = people.length - shown.length;
         return (
             <Tooltip
                 arrow
                 placement="top-start"
                 title={
                     <Box sx={{ py: 0.5 }}>
-                        {names.map((name) => (
-                            <Typography key={name} variant="caption" display="block">
-                                {name}
+                        <Typography variant="caption" fontWeight={700} display="block" sx={{ mb: 0.5 }}>
+                            {tone === 'approve' ? 'Approvers' : 'Viewers'} ({people.length})
+                        </Typography>
+                        {people.map((person) => (
+                            <Typography key={person.id} variant="caption" display="block">
+                                {person.name}
                             </Typography>
                         ))}
                     </Box>
                 }
             >
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0, width: 'fit-content', maxWidth: '100%' }}>
-                    <Box
-                        component="span"
-                        sx={{
-                            minWidth: 24,
-                            height: 22,
-                            px: 0.75,
-                            borderRadius: 11,
-                            flexShrink: 0,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 12,
-                            fontWeight: 700,
-                            bgcolor: `${color}.light`,
-                            color: `${color}.main`,
-                        }}
-                    >
-                        {names.length}
-                    </Box>
-                    <Typography variant="body2" color="text.primary" noWrap sx={{ minWidth: 0 }}>
-                        {names.join(', ')}
+                <Stack direction="row" alignItems="center" sx={{ width: 'fit-content', opacity: dim ? 0.55 : 1 }}>
+                    {shown.map((person, index) => (
+                        <Avatar
+                            key={person.id}
+                            src={person.user_image || undefined}
+                            alt={person.name}
+                            sx={{
+                                width: 30,
+                                height: 30,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                ml: index === 0 ? 0 : -0.75,
+                                border: '2px solid',
+                                borderColor: 'background.paper',
+                                bgcolor: 'primary.light',
+                                color: 'primary.main',
+                            }}
+                        >
+                            {getInitials(person.name)}
+                        </Avatar>
+                    ))}
+                    {extra > 0 && (
+                        <Avatar
+                            sx={{
+                                width: 30,
+                                height: 30,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                ml: -0.75,
+                                border: '2px solid',
+                                borderColor: 'background.paper',
+                                bgcolor: 'grey.100',
+                                color: 'text.secondary',
+                            }}
+                        >
+                            +{extra}
+                        </Avatar>
+                    )}
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1.25 }} noWrap>
+                        {people.length === 1 ? people[0].name : `${people.length} users`}
                     </Typography>
                 </Stack>
             </Tooltip>
         );
     };
 
+    // "By user": every user with access to at least one request type, and their access per type.
+    const userAccessRows = useMemo(() => {
+        const access = new Map<number, Record<string, 'approve' | 'view'>>();
+        for (const row of mergedRows) {
+            const approveIds = parseSelectedUserIds(row.saved?.selected_users);
+            const viewIds = parseSelectedUserIds(row.saved?.view_users);
+            for (const id of viewIds) {
+                if (!access.has(id)) access.set(id, {});
+                access.get(id)![row.slug] = 'view';
+            }
+            for (const id of approveIds) {
+                if (!access.has(id)) access.set(id, {});
+                access.get(id)![row.slug] = 'approve';
+            }
+        }
+        const s = searchTerm.trim().toLowerCase();
+        return [...access.entries()]
+            .map(([id, perType]) => ({ user: userDetailsById.get(id), perType }))
+            .filter((item): item is { user: UserData; perType: Record<string, 'approve' | 'view'> } => Boolean(item.user))
+            .filter((item) => !s || item.user.name.toLowerCase().includes(s))
+            .sort((x, y) => x.user.name.localeCompare(y.user.name));
+    }, [mergedRows, userDetailsById, searchTerm]);
+
+    const renderTypeRow = (row: RequestRow) => {
+        const approveIds = parseSelectedUserIds(row.saved?.selected_users);
+        const viewOnlyIds = parseSelectedUserIds(row.saved?.view_users).filter((id) => !approveIds.includes(id));
+        const inheritedFrom = row.saved?.inherited_from
+            ? REQUEST_TYPES.find((type) => type.slug === row.saved?.inherited_from)?.name
+            : null;
+        const requestType = REQUEST_TYPES.find((type) => type.slug === row.slug);
+        const TypeIcon = requestType?.icon ?? IconInfoCircle;
+        return (
+            <Box
+                key={row.slug}
+                role="button"
+                tabIndex={0}
+                onClick={() => handleEditClick(row)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleEditClick(row);
+                    }
+                }}
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: LIST_COLUMNS,
+                    columnGap: 2,
+                    rowGap: 1,
+                    alignItems: 'center',
+                    px: 2.5,
+                    py: 1.25,
+                    minHeight: 64,
+                    cursor: 'pointer',
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    transition: 'background-color 120ms',
+                    '&:hover': { bgcolor: 'action.hover' },
+                    '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 },
+                }}
+            >
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+                    <Box
+                        sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 1.5,
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            bgcolor: 'primary.light',
+                            color: 'primary.main',
+                        }}
+                    >
+                        <TypeIcon size={18} />
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="body2" fontWeight={600} color="text.primary" noWrap>
+                            {row.request_name}
+                        </Typography>
+                        {requestType?.description && (
+                            <Typography variant="caption" color="text.secondary" component="div">
+                                {requestType.description}
+                            </Typography>
+                        )}
+                        {inheritedFrom && (
+                            <Tooltip arrow title={`Uses the ${inheritedFrom} users until you save this request type.`}>
+                                <Stack
+                                    direction="row"
+                                    spacing={0.5}
+                                    alignItems="center"
+                                    sx={{
+                                        mt: 0.5,
+                                        px: 0.75,
+                                        py: 0.125,
+                                        borderRadius: 1,
+                                        width: 'fit-content',
+                                        bgcolor: 'grey.100',
+                                        color: 'text.secondary',
+                                    }}
+                                >
+                                    <IconLink size={12} />
+                                    <Typography variant="caption" color="inherit" noWrap>
+                                        Same users as {inheritedFrom}
+                                    </Typography>
+                                </Stack>
+                            </Tooltip>
+                        )}
+                    </Box>
+                </Stack>
+
+                <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: { md: 'none' } }}>
+                        Approvers
+                    </Typography>
+                    {renderUsers(approveIds, 'approve', Boolean(inheritedFrom))}
+                </Box>
+
+                <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: { md: 'none' } }}>
+                        Viewers
+                    </Typography>
+                    {renderUsers(viewOnlyIds, 'view', Boolean(inheritedFrom))}
+                </Box>
+
+                <Box sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+                    <Tooltip arrow title={`Edit ${row.request_name}`}>
+                        <IconButton
+                            size="small"
+                            color="primary"
+                            aria-label={`Edit ${row.request_name}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditClick(row);
+                            }}
+                        >
+                            <IconEdit size={18} />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
+            </Box>
+        );
+    };
+
+    const renderColumnHeader = (icon: React.ReactNode, label: string, help: string) => (
+        <Tooltip arrow title={help}>
+            <Stack direction="row" spacing={0.75} alignItems="center" sx={{ width: 'fit-content', cursor: 'help' }}>
+                {icon}
+                <Typography variant="subtitle2" fontWeight={600}>{label}</Typography>
+                <IconInfoCircle size={14} style={{ opacity: 0.5 }} />
+            </Stack>
+        </Tooltip>
+    );
+
+    // One cell on the "By user" view: approve, view or nothing. Clicking opens that type's editor.
+    const renderAccessCell = (row: RequestRow, level: 'approve' | 'view' | undefined) => (
+        <Tooltip
+            key={row.slug}
+            arrow
+            title={`${row.request_name}: ${level === 'approve' ? 'can approve or reject' : level === 'view' ? 'can view only' : 'no access'}. Click to edit.`}
+        >
+            <Box
+                role="button"
+                tabIndex={0}
+                onClick={() => handleEditClick(row)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleEditClick(row);
+                    }
+                }}
+                sx={{
+                    height: '100%',
+                    minHeight: 48,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    borderRadius: 1,
+                    '&:hover': { bgcolor: 'action.hover' },
+                    color: level === 'approve' ? 'primary.main' : level === 'view' ? 'text.secondary' : 'text.disabled',
+                }}
+            >
+                {level === 'approve' ? <IconCircleCheck size={20} /> : level === 'view' ? <IconEye size={20} /> : '—'}
+            </Box>
+        </Tooltip>
+    );
+
     return (
         <PermissionGuard permission="RequestActions">
             <Box px={1} sx={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {/* Intro + search */}
+                {/* View switch + search */}
                 <Stack
                     direction={{ xs: 'column', md: 'row' }}
                     spacing={2}
@@ -442,17 +753,30 @@ const RequestActionList = () => {
                     justifyContent="space-between"
                     sx={{ pt: 1 }}
                 >
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-                        <Box sx={{ color: 'primary.main', display: 'flex', flexShrink: 0 }}>
-                            <IconInfoCircle size={18} />
-                        </Box>
-                        <Typography variant="body2" color="text.secondary">
-                            Approvers can also view. Admins can always view and approve every request.
-                        </Typography>
-                    </Stack>
+                    <ToggleButtonGroup
+                        exclusive
+                        size="small"
+                        value={viewMode}
+                        onChange={(_, value) => value && setViewMode(value)}
+                        aria-label="View"
+                        sx={{
+                            '& .MuiToggleButton-root': { textTransform: 'none', gap: 0.75, px: 2, color: 'text.secondary' },
+                            '& .Mui-selected': { bgcolor: 'primary.light', color: 'primary.main', fontWeight: 600 },
+                            '& .Mui-selected:hover': { bgcolor: 'primary.light' },
+                        }}
+                    >
+                        <ToggleButton value="type">
+                            <IconLayoutList size={16} />
+                            By request type
+                        </ToggleButton>
+                        <ToggleButton value="user">
+                            <IconUser size={16} />
+                            By user
+                        </ToggleButton>
+                    </ToggleButtonGroup>
                     <TextField
                         size="small"
-                        placeholder="Search request or user"
+                        placeholder={viewMode === 'type' ? 'Search request or user' : 'Search user'}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         sx={{ minWidth: { md: 280 } }}
@@ -470,176 +794,245 @@ const RequestActionList = () => {
                     variant="outlined"
                     sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 2 }}
                 >
-                    {/* Column header */}
-                    <Box
+                    {/* Who can do what */}
+                    <Stack
+                        direction={{ xs: 'column', md: 'row' }}
+                        spacing={{ xs: 0.5, md: 3 }}
                         sx={{
-                            display: { xs: 'none', md: 'grid' },
-                            gridTemplateColumns: LIST_COLUMNS.md,
-                            columnGap: 2,
                             px: 2.5,
-                            py: 1.25,
-                            bgcolor: 'grey.100',
+                            py: 1,
                             borderBottom: '1px solid',
                             borderColor: 'divider',
+                            color: 'text.secondary',
                         }}
                     >
-                        <Typography variant="subtitle2" fontWeight={600}>Request type</Typography>
                         <Stack direction="row" spacing={0.75} alignItems="center">
-                            <IconShieldCheck size={16} />
-                            <Typography variant="subtitle2" fontWeight={600}>Can approve / reject</Typography>
+                            <IconShieldCheck size={15} />
+                            <Typography variant="caption"><b>Admin</b> always sees and approves everything</Typography>
                         </Stack>
                         <Stack direction="row" spacing={0.75} alignItems="center">
-                            <IconEye size={16} />
-                            <Typography variant="subtitle2" fontWeight={600}>View only</Typography>
+                            <IconCircleCheck size={15} />
+                            <Typography variant="caption"><b>Approver</b> sees, approves or rejects, and gets notified</Typography>
                         </Stack>
-                        <Box />
-                    </Box>
+                        <Stack direction="row" spacing={0.75} alignItems="center">
+                            <IconEye size={15} />
+                            <Typography variant="caption"><b>Viewer</b> sees and gets notified, but can&apos;t approve</Typography>
+                        </Stack>
+                    </Stack>
 
-                    {/* List body */}
-                    <Box sx={{ flex: 1, overflowY: 'auto' }}>
-                        {fetchLoading ? (
-                            // Placeholder rows in the same grid as the list (not table rows: this is not a table)
-                            Array.from({ length: 6 }).map((_, index) => (
-                                <Box
-                                    key={index}
-                                    sx={{
-                                        display: 'grid',
-                                        gridTemplateColumns: LIST_COLUMNS,
-                                        columnGap: 2,
-                                        rowGap: 1,
-                                        alignItems: 'center',
-                                        px: 2.5,
-                                        py: 1.5,
-                                        borderBottom: '1px solid',
-                                        borderColor: 'divider',
-                                    }}
-                                >
-                                    <Stack direction="row" spacing={1.5} alignItems="center">
-                                        <Skeleton variant="rounded" width={36} height={36} />
-                                        <Skeleton variant="text" width="60%" />
-                                    </Stack>
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Skeleton variant="circular" width={28} height={28} />
-                                        <Skeleton variant="circular" width={28} height={28} />
-                                        <Skeleton variant="text" width="50%" />
-                                    </Stack>
-                                    <Skeleton variant="text" width="55%" />
-                                    <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
-                                        <Skeleton variant="rounded" width={72} height={30} />
-                                    </Box>
-                                </Box>
-                            ))
-                        ) : filteredRows.length === 0 ? (
-                            <Box sx={{ p: 6, textAlign: 'center' }}>
-                                <Typography variant="body2" color="text.secondary">
-                                    No request types or users match &ldquo;{searchTerm}&rdquo;
-                                </Typography>
+                    {viewMode === 'type' ? (
+                        <>
+                            {/* Column header */}
+                            <Box
+                                sx={{
+                                    display: { xs: 'none', md: 'grid' },
+                                    gridTemplateColumns: LIST_COLUMNS.md,
+                                    columnGap: 2,
+                                    px: 2.5,
+                                    py: 1.25,
+                                    bgcolor: 'grey.100',
+                                    borderBottom: '1px solid',
+                                    borderColor: 'divider',
+                                }}
+                            >
+                                <Typography variant="subtitle2" fontWeight={600}>Request type</Typography>
+                                {renderColumnHeader(
+                                    <Box sx={{ color: 'text.secondary', display: 'flex' }}><IconCircleCheck size={16} /></Box>,
+                                    'Approvers',
+                                    'See these requests, approve or reject them, and get notified.',
+                                )}
+                                {renderColumnHeader(
+                                    <Box sx={{ color: 'text.secondary', display: 'flex' }}><IconEye size={16} /></Box>,
+                                    'Viewers',
+                                    'See these requests and get notified, but can’t approve or reject. Approvers don’t need to be added here.',
+                                )}
+                                <Box />
                             </Box>
-                        ) : (
-                            filteredRows.map((row) => {
-                                const approveIds = parseSelectedUserIds(row.saved?.selected_users);
-                                const viewOnlyIds = parseSelectedUserIds(row.saved?.view_users).filter((id) => !approveIds.includes(id));
-                                const inheritedFrom = row.saved?.inherited_from
-                                    ? REQUEST_TYPES.find((type) => type.slug === row.saved?.inherited_from)?.name
-                                    : null;
-                                const TypeIcon = REQUEST_TYPES.find((type) => type.slug === row.slug)?.icon ?? IconInfoCircle;
-                                return (
-                                    <Box
-                                        key={row.slug}
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={() => handleEditClick(row)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                e.preventDefault();
-                                                handleEditClick(row);
-                                            }
-                                        }}
-                                        sx={{
-                                            display: 'grid',
-                                            gridTemplateColumns: LIST_COLUMNS,
-                                            columnGap: 2,
-                                            rowGap: 1,
-                                            alignItems: 'center',
-                                            px: 2.5,
-                                            py: 1.25,
-                                            minHeight: 60,
-                                            cursor: 'pointer',
-                                            borderBottom: '1px solid',
-                                            borderColor: 'divider',
-                                            transition: 'background-color 120ms',
-                                            '&:last-of-type': { borderBottom: 'none' },
-                                            '&:hover': { bgcolor: 'action.hover' },
-                                            '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 },
-                                        }}
-                                    >
-                                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
-                                            <Box
-                                                sx={{
-                                                    width: 36,
-                                                    height: 36,
-                                                    borderRadius: 1.5,
-                                                    flexShrink: 0,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    bgcolor: 'primary.light',
-                                                    color: 'primary.main',
-                                                }}
-                                            >
-                                                <TypeIcon size={18} />
-                                            </Box>
-                                            <Box sx={{ minWidth: 0 }}>
-                                                <Typography variant="body2" fontWeight={600} color="text.primary" noWrap>
-                                                    {row.request_name}
-                                                </Typography>
-                                                {inheritedFrom && (
-                                                    <Tooltip arrow title={`Uses the ${inheritedFrom} users until you save this request type.`}>
-                                                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: 'text.secondary', width: 'fit-content' }}>
-                                                            <IconLink size={13} />
-                                                            <Typography variant="caption" color="text.secondary" noWrap>
-                                                                Uses {inheritedFrom} users
-                                                            </Typography>
-                                                        </Stack>
-                                                    </Tooltip>
-                                                )}
-                                            </Box>
-                                        </Stack>
 
-                                        <Box sx={{ minWidth: 0 }}>
-                                            <Typography variant="caption" color="text.secondary" sx={{ display: { md: 'none' } }}>
-                                                Can approve / reject
-                                            </Typography>
-                                            {renderUsers(approveIds, 'approve')}
+                            {/* List body */}
+                            <Box sx={{ flex: 1, overflowY: 'auto' }}>
+                                {fetchLoading ? (
+                                    Array.from({ length: 6 }).map((_, index) => (
+                                        <Box
+                                            key={index}
+                                            sx={{
+                                                display: 'grid',
+                                                gridTemplateColumns: LIST_COLUMNS,
+                                                columnGap: 2,
+                                                rowGap: 1,
+                                                alignItems: 'center',
+                                                px: 2.5,
+                                                py: 1.5,
+                                                borderBottom: '1px solid',
+                                                borderColor: 'divider',
+                                            }}
+                                        >
+                                            <Stack direction="row" spacing={1.5} alignItems="center">
+                                                <Skeleton variant="rounded" width={36} height={36} />
+                                                <Skeleton variant="text" width="60%" />
+                                            </Stack>
+                                            <Stack direction="row" spacing={0.5} alignItems="center">
+                                                <Skeleton variant="circular" width={30} height={30} />
+                                                <Skeleton variant="circular" width={30} height={30} />
+                                                <Skeleton variant="circular" width={30} height={30} />
+                                            </Stack>
+                                            <Skeleton variant="text" width="30%" />
+                                            <Box />
                                         </Box>
-
-                                        <Box sx={{ minWidth: 0 }}>
-                                            <Typography variant="caption" color="text.secondary" sx={{ display: { md: 'none' } }}>
-                                                View only
-                                            </Typography>
-                                            {renderUsers(viewOnlyIds, 'view')}
-                                        </Box>
-
-                                        <Box sx={{ textAlign: { xs: 'left', md: 'right' } }}>
-                                            <Tooltip arrow title={`Edit ${row.request_name}`}>
-                                                <IconButton
-                                                    size="small"
-                                                    color="primary"
-                                                    aria-label={`Edit ${row.request_name}`}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleEditClick(row);
+                                    ))
+                                ) : filteredRows.length === 0 ? (
+                                    <Box sx={{ p: 6, textAlign: 'center' }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            No request types or users match &ldquo;{searchTerm}&rdquo;
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    REQUEST_GROUPS.map((group) => {
+                                        const rows = filteredRows.filter(
+                                            (row) => REQUEST_TYPES.find((type) => type.slug === row.slug)?.group === group.key,
+                                        );
+                                        if (rows.length === 0) return null;
+                                        return (
+                                            <Box key={group.key}>
+                                                <Box
+                                                    sx={{
+                                                        px: 2.5,
+                                                        py: 0.75,
+                                                        bgcolor: 'grey.50',
+                                                        borderBottom: '1px solid',
+                                                        borderColor: 'divider',
+                                                        position: 'sticky',
+                                                        top: 0,
+                                                        zIndex: 1,
                                                     }}
                                                 >
-                                                    <IconEdit size={18} />
-                                                </IconButton>
+                                                    <Typography
+                                                        variant="caption"
+                                                        fontWeight={700}
+                                                        color="text.secondary"
+                                                        sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}
+                                                    >
+                                                        {group.label}
+                                                    </Typography>
+                                                </Box>
+                                                {rows.map(renderTypeRow)}
+                                            </Box>
+                                        );
+                                    })
+                                )}
+                            </Box>
+                        </>
+                    ) : (
+                        // By user: one row per user, one column per request type.
+                        <Box sx={{ flex: 1, overflow: 'auto' }}>
+                            <Box sx={{ minWidth: 200 + REQUEST_TYPES.length * 72 }}>
+                                <Box
+                                    sx={{
+                                        display: 'grid',
+                                        gridTemplateColumns: `minmax(200px, 1.5fr) repeat(${REQUEST_TYPES.length}, minmax(64px, 1fr))`,
+                                        alignItems: 'end',
+                                        px: 2,
+                                        py: 1,
+                                        bgcolor: 'grey.100',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'divider',
+                                        position: 'sticky',
+                                        top: 0,
+                                        zIndex: 2,
+                                    }}
+                                >
+                                    <Typography variant="subtitle2" fontWeight={600}>User</Typography>
+                                    {mergedRows.map((row) => {
+                                        const type = REQUEST_TYPES.find((t) => t.slug === row.slug);
+                                        const Icon = type?.icon ?? IconInfoCircle;
+                                        return (
+                                            <Tooltip key={row.slug} arrow title={type?.description ?? row.request_name}>
+                                                <Stack alignItems="center" spacing={0.25} sx={{ px: 0.5, textAlign: 'center' }}>
+                                                    <Icon size={16} />
+                                                    <Typography variant="caption" fontWeight={600} sx={{ lineHeight: 1.2 }}>
+                                                        {row.request_name}
+                                                    </Typography>
+                                                </Stack>
                                             </Tooltip>
+                                        );
+                                    })}
+                                </Box>
+
+                                {/* Admins: always every request type */}
+                                <Box
+                                    sx={{
+                                        display: 'grid',
+                                        gridTemplateColumns: `minmax(200px, 1.5fr) repeat(${REQUEST_TYPES.length}, minmax(64px, 1fr))`,
+                                        alignItems: 'center',
+                                        px: 2,
+                                        borderBottom: '1px solid',
+                                        borderColor: 'divider',
+                                        bgcolor: 'grey.50',
+                                    }}
+                                >
+                                    <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 1 }}>
+                                        <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.light', color: 'primary.main' }}>
+                                            <IconShieldCheck size={18} />
+                                        </Avatar>
+                                        <Box>
+                                            <Typography variant="body2" fontWeight={600}>All admins</Typography>
+                                            <Typography variant="caption" color="text.secondary">Always every request type</Typography>
                                         </Box>
+                                    </Stack>
+                                    {mergedRows.map((row) => (
+                                        <Box key={row.slug} sx={{ display: 'flex', justifyContent: 'center', color: 'primary.main', opacity: 0.5 }}>
+                                            <IconCircleCheck size={20} />
+                                        </Box>
+                                    ))}
+                                </Box>
+
+                                {fetchLoading ? (
+                                    Array.from({ length: 5 }).map((_, index) => (
+                                        <Box key={index} sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                                            <Skeleton variant="text" width="40%" />
+                                        </Box>
+                                    ))
+                                ) : userAccessRows.length === 0 ? (
+                                    <Box sx={{ p: 6, textAlign: 'center' }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {searchTerm
+                                                ? <>No users match &ldquo;{searchTerm}&rdquo;</>
+                                                : 'No users have been given access yet. Only admins handle requests.'}
+                                        </Typography>
                                     </Box>
-                                );
-                            })
-                        )}
-                    </Box>
+                                ) : (
+                                    userAccessRows.map(({ user: person, perType }) => (
+                                        <Box
+                                            key={person.id}
+                                            sx={{
+                                                display: 'grid',
+                                                gridTemplateColumns: `minmax(200px, 1.5fr) repeat(${REQUEST_TYPES.length}, minmax(64px, 1fr))`,
+                                                alignItems: 'center',
+                                                px: 2,
+                                                borderBottom: '1px solid',
+                                                borderColor: 'divider',
+                                                '&:hover': { bgcolor: 'grey.50' },
+                                            }}
+                                        >
+                                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 1, minWidth: 0 }}>
+                                                <Avatar src={person.user_image || undefined} sx={{ width: 32, height: 32, fontSize: 13 }}>
+                                                    {getInitials(person.name)}
+                                                </Avatar>
+                                                <Box sx={{ minWidth: 0 }}>
+                                                    <Typography variant="body2" fontWeight={500} noWrap>{person.name}</Typography>
+                                                    <Typography variant="caption" color="text.secondary" noWrap display="block">
+                                                        {Object.values(perType).filter((v) => v === 'approve').length} approve ·{' '}
+                                                        {Object.values(perType).filter((v) => v === 'view').length} view
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
+                                            {mergedRows.map((row) => renderAccessCell(row, perType[row.slug]))}
+                                        </Box>
+                                    ))
+                                )}
+                            </Box>
+                        </Box>
+                    )}
                 </Paper>
 
                 {/* Edit Dialog */}
@@ -651,12 +1044,17 @@ const RequestActionList = () => {
                 >
                     <DialogTitle sx={{ fontWeight: 600, fontSize: '1.2rem', pb: 1 }}>
                         {editingRow?.request_name}
+                        {REQUEST_TYPES.find((type) => type.slug === editingRow?.slug)?.description && (
+                            <Typography variant="body2" color="text.secondary" component="span" sx={{ display: 'block', mt: 0.5, fontWeight: 400 }}>
+                                {REQUEST_TYPES.find((type) => type.slug === editingRow?.slug)?.description}
+                            </Typography>
+                        )}
                     </DialogTitle>
                     <DialogContent sx={{ pt: 2 }}>
                         <Stack spacing={2}>
                             <Typography variant="body2" color="textSecondary">
-                                <b>Can View</b>: sees these requests and their details. <b>Can Approve / Reject</b>: can also
-                                approve or reject them. Admins can always see and approve every request.
+                                <b>Viewer</b>: sees these requests and gets notified. <b>Approver</b>: also approves or
+                                rejects them. Admins can always see and approve every request.
                             </Typography>
 
                             {editingInheritedFrom && (
@@ -708,14 +1106,14 @@ const RequestActionList = () => {
                                     }}
                                 >
                                     <Typography variant="caption" sx={{ flex: 1, fontWeight: 600, color: '#666' }}>
-                                        Users ({filteredUsers.length}) · {editFormData.view_users.length} can view ·{' '}
-                                        {editFormData.selected_users.length} can approve / reject
+                                        Users ({filteredUsers.length}) · {editFormData.selected_users.length} approvers ·{' '}
+                                        {editFormData.view_users.length - editFormData.selected_users.length} viewers
                                     </Typography>
                                     <Typography variant="caption" sx={{ width: 64, textAlign: 'center', fontWeight: 600, color: '#666' }}>
-                                        Can View
+                                        View
                                     </Typography>
                                     <Typography variant="caption" sx={{ width: 96, textAlign: 'center', fontWeight: 600, color: '#666' }}>
-                                        Can Approve / Reject
+                                        Approve
                                     </Typography>
                                 </Box>
                                 <Paper

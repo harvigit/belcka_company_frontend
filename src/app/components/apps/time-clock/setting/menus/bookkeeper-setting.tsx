@@ -10,22 +10,20 @@ import {
   TextField,
   Button,
   Checkbox,
-  Chip,
   CircularProgress,
   Divider,
   IconButton,
   Skeleton,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
 } from "@mui/material";
 import {
+  IconAlertTriangle,
   IconCash,
-  IconCircleCheck,
-  IconEye,
   IconLock,
   IconLockOpen,
   IconShieldCheck,
+  IconTrash,
+  IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import PhoneInput from "react-phone-input-2";
@@ -37,11 +35,29 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { useTranslation } from "react-i18next";
 import { useSession } from "next-auth/react";
 
-// Approve users of this request-action slug can Lock, Unlock and mark timesheets
-// as Paid (checked in the backend by validateTimesheetActionAccess). View users
-// only see the requests and get notified.
-const TIMESHEET_ACTION_SLUG = "timesheet_approve";
-const TIMESHEET_ACTION_NAME = "Edit Timesheet";
+// Who can run each Time Clock action. Saved per action in request_actions
+// (timesheet_lock, timesheet_unlock, timesheet_paid, timesheet_delete) and checked by the backend.
+// Separate from Request Settings: with no users saved, only admins can run the action.
+const TIMESHEET_ACTIONS = [
+  { key: "lock", label: "Lock", icon: IconLock },
+  { key: "unlock", label: "Unlock", icon: IconLockOpen },
+  { key: "paid", label: "Paid", icon: IconCash },
+  { key: "delete", label: "Delete", icon: IconTrash },
+] as const;
+
+type TimesheetActionKey = (typeof TIMESHEET_ACTIONS)[number]["key"];
+type ActionAccess = Record<TimesheetActionKey, boolean>;
+interface AccessRow extends ActionAccess {
+  id: number;
+}
+
+// New users can lock, unlock and mark as paid. Delete is left off because it can't be undone.
+const NEW_USER_ACCESS: ActionAccess = { lock: true, unlock: true, paid: true, delete: false };
+
+const hasAnyAction = (row: ActionAccess) => TIMESHEET_ACTIONS.some((action) => row[action.key]);
+
+const sameRows = (a: AccessRow[], b: AccessRow[]) =>
+  JSON.stringify(a.filter(hasAnyAction)) === JSON.stringify(b.filter(hasAnyAction));
 
 interface SettingsState {
   phone: string;
@@ -67,23 +83,6 @@ interface ApproverOption {
 }
 
 type ApproverLoadState = "loading" | "ready" | "error";
-
-const parseUserIds = (value: unknown): number[] => {
-  if (Array.isArray(value)) {
-    return value.map(Number).filter((id) => Number.isFinite(id) && id > 0);
-  }
-  if (value === null || value === undefined) return [];
-  return String(value)
-    .split(",")
-    .map((id) => Number(id.trim()))
-    .filter((id) => Number.isFinite(id) && id > 0);
-};
-
-const sameIds = (a: number[], b: number[]) => {
-  if (a.length !== b.length) return false;
-  const set = new Set(a);
-  return b.every((id) => set.has(id));
-};
 
 const getInitials = (name: string) =>
   name
@@ -111,15 +110,12 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
     is_billing_days: false,
   });
 
-  // Timesheet action access (Lock / Unlock / Paid)
+  // Time Clock action access (Lock / Unlock / Paid / Delete)
   const [approverLoadState, setApproverLoadState] = useState<ApproverLoadState>("loading");
   const [approverOptions, setApproverOptions] = useState<ApproverOption[]>([]);
   const [adminCount, setAdminCount] = useState(0);
-  const [requestActionId, setRequestActionId] = useState<number | null>(null);
-  // viewIds = everyone with access (approve users included); approveIds = who can Lock / Unlock / Pay.
-  const [saved, setSaved] = useState<{ view: number[]; approve: number[] }>({ view: [], approve: [] });
-  const [viewIds, setViewIds] = useState<number[]>([]);
-  const [approveIds, setApproveIds] = useState<number[]>([]);
+  const [savedRows, setSavedRows] = useState<AccessRow[]>([]);
+  const [accessRows, setAccessRows] = useState<AccessRow[]>([]);
 
   const updateSettings = (updates: Partial<SettingsState>) => {
     setSettings((prev) => ({ ...prev, ...updates }));
@@ -168,7 +164,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
     setApproverLoadState("loading");
     try {
       const [actionsRes, usersRes] = await Promise.all([
-        api.get("request-action/list", { skipToast: true } as any),
+        api.get("request-action/timesheet-actions", { skipToast: true } as any),
         api.get("user/list", { params: { company_id: companyId }, skipToast: true } as any),
       ]);
 
@@ -178,7 +174,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
       for (const u of rawUsers) {
         const id = Number(u.id);
         if (!Number.isFinite(id)) continue;
-        // Admins always have access, so they are not offered in the picker.
+        // Admins can always run every action, so they are not offered in the picker.
         if (u.trade_name === "Admin") {
           admins += 1;
           continue;
@@ -191,33 +187,27 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
         });
       }
 
-      const actions: any[] = actionsRes.data?.info || [];
-      const action = actions.find(
-        (item) => String(item.request_slug ?? item.slug ?? "").trim() === TIMESHEET_ACTION_SLUG,
-      );
+      const info = actionsRes.data?.info ?? {};
       // Keep only users that still exist in the picker, so saving never sends
       // removed/inactive users (the backend rejects those).
       const optionIds = new Set(options.map((o) => o.id));
-      const savedApprove = parseUserIds(action?.user_ids ?? action?.selected_users).filter((id) =>
-        optionIds.has(id),
-      );
-      // view_user_ids holds view-only users; approve users can always view too.
-      const savedView = [
-        ...new Set([
-          ...savedApprove,
-          ...parseUserIds(action?.view_user_ids ?? action?.view_users).filter((id) => optionIds.has(id)),
-        ]),
-      ];
+      const rows: AccessRow[] = (Array.isArray(info.users) ? info.users : [])
+        .map((u: any) => ({
+          id: Number(u.user_id),
+          lock: Boolean(u.lock),
+          unlock: Boolean(u.unlock),
+          paid: Boolean(u.paid),
+          delete: Boolean(u.delete),
+        }))
+        .filter((row: AccessRow) => optionIds.has(row.id));
 
       setApproverOptions(options);
       setAdminCount(admins);
-      setRequestActionId(action?.id ? Number(action.id) : null);
-      setSaved({ view: savedView, approve: savedApprove });
-      setViewIds(savedView);
-      setApproveIds(savedApprove);
+      setSavedRows(rows);
+      setAccessRows(rows);
       setApproverLoadState("ready");
     } catch (error) {
-      console.error("Error fetching timesheet access users:", error);
+      console.error("Error fetching timesheet action users:", error);
       setApproverLoadState("error");
     }
   }, [companyId]);
@@ -227,66 +217,53 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
     fetchApprovers();
   }, [fetchApprovers, session.status]);
 
-  const selectedAccessUsers = useMemo(() => {
-    const byId = new Map(approverOptions.map((o) => [o.id, o]));
-    return viewIds
-      .map((id) => byId.get(id))
-      .filter((o): o is ApproverOption => Boolean(o));
-  }, [approverOptions, viewIds]);
+  const optionsById = useMemo(() => new Map(approverOptions.map((o) => [o.id, o])), [approverOptions]);
 
-  // New users get approve access by default, since this section is about Lock / Unlock / Paid.
+  const selectedAccessUsers = useMemo(
+    () => accessRows.map((row) => optionsById.get(row.id)).filter((o): o is ApproverOption => Boolean(o)),
+    [accessRows, optionsById],
+  );
+
   const handleAccessUsersChange = (ids: number[]) => {
-    const added = ids.filter((id) => !viewIds.includes(id));
-    setViewIds(ids);
-    setApproveIds((prev) => [...prev.filter((id) => ids.includes(id)), ...added]);
+    setAccessRows((prev) => {
+      const kept = prev.filter((row) => ids.includes(row.id));
+      const added = ids
+        .filter((id) => !prev.some((row) => row.id === id))
+        .map((id) => ({ id, ...NEW_USER_ACCESS }));
+      return [...kept, ...added];
+    });
   };
 
-  const setUserAccess = (userId: number, canApprove: boolean) => {
-    setApproveIds((prev) =>
-      canApprove ? [...new Set([...prev, userId])] : prev.filter((id) => id !== userId),
-    );
+  const toggleAction = (userId: number, key: TimesheetActionKey, value: boolean) => {
+    setAccessRows((prev) => prev.map((row) => (row.id === userId ? { ...row, [key]: value } : row)));
+  };
+
+  const setActionForAll = (key: TimesheetActionKey, value: boolean) => {
+    setAccessRows((prev) => prev.map((row) => ({ ...row, [key]: value })));
   };
 
   const removeAccessUser = (userId: number) => {
-    setViewIds((prev) => prev.filter((id) => id !== userId));
-    setApproveIds((prev) => prev.filter((id) => id !== userId));
+    setAccessRows((prev) => prev.filter((row) => row.id !== userId));
   };
 
-  const approversChanged =
-    approverLoadState === "ready" &&
-    (!sameIds(saved.view, viewIds) || !sameIds(saved.approve, approveIds));
+  const approversChanged = approverLoadState === "ready" && !sameRows(savedRows, accessRows);
 
   // Returns true when there was nothing to save or the save succeeded.
   const saveApprovers = async (): Promise<boolean> => {
     if (!approversChanged) return true;
 
     try {
-      if (viewIds.length === 0) {
-        // No users left: only admins can lock, unlock or pay timesheets.
-        if (requestActionId) {
-          await api.delete(`request-action/${requestActionId}`);
-        }
-        setRequestActionId(null);
-      } else {
-        const payload = {
-          request_name: TIMESHEET_ACTION_NAME,
-          request_slug: TIMESHEET_ACTION_SLUG,
-          selected_users: approveIds.join(","),
-          view_users: viewIds.join(","),
-        };
-        if (requestActionId) {
-          await api.put(`request-action/edit/${requestActionId}`, payload);
-        } else {
-          const res = await api.post("request-action/create", payload);
-          const newId = Number(res.data?.info?.id);
-          if (Number.isFinite(newId)) setRequestActionId(newId);
-        }
-      }
-      setSaved({ view: viewIds, approve: approveIds });
+      // Users with no action ticked are dropped.
+      const rows = accessRows.filter(hasAnyAction);
+      await api.post("request-action/timesheet-actions", {
+        users: rows.map(({ id, ...access }) => ({ user_id: id, ...access })),
+      });
+      setSavedRows(rows);
+      setAccessRows(rows);
       return true;
     } catch (error) {
       // The axios interceptor already shows the server's error message.
-      console.error("Error saving timesheet access users:", error);
+      console.error("Error saving timesheet action users:", error);
       return false;
     }
   };
@@ -360,8 +337,16 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
       );
     }
 
-    const approveCount = selectedAccessUsers.filter((u) => approveIds.includes(u.id)).length;
-    const viewOnlyCount = selectedAccessUsers.length - approveCount;
+    const anyDelete = accessRows.some((row) => row.delete);
+    const activeCount = accessRows.filter(hasAnyAction).length;
+    // Header, user rows and the "Select all" row share these columns so everything lines up.
+    const tableColumns = `minmax(0, 1fr) repeat(${TIMESHEET_ACTIONS.length}, 84px) 44px`;
+    const tableRowSx = {
+      display: "grid",
+      gridTemplateColumns: { xs: "minmax(0, 1fr) 44px", sm: tableColumns },
+      alignItems: "center",
+      px: 2,
+    } as const;
 
     return (
       <>
@@ -397,126 +382,220 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
               </li>
             );
           }}
-          // Selected users are listed below with their access level, so no chips here.
+          // Selected users are listed below with their actions, so no chips here.
           renderValue={() => null}
           renderInput={(params) => (
-            <TextField
-              {...params}
-              size="small"
-              placeholder={t("Search and add users")}
-            />
+            <TextField {...params} size="small" placeholder={t("Search and add users")} />
           )}
         />
 
-        {selectedAccessUsers.length > 0 && (
+        {selectedAccessUsers.length === 0 ? (
           <Box
             sx={{
               mt: 1.5,
-              border: "1px solid",
+              py: 3,
+              px: 2,
+              border: "1px dashed",
               borderColor: "divider",
               borderRadius: 2,
-              overflow: "hidden",
+              textAlign: "center",
             }}
           >
+            <IconUsers size={22} style={{ opacity: 0.5 }} />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {t("No users added, only Admins can lock, unlock, mark as paid or delete timesheets")}
+            </Typography>
+          </Box>
+        ) : (
+          <Box sx={{ mt: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+            {/* Column headers (wide screens) */}
+            <Box
+              sx={{
+                ...tableRowSx,
+                display: { xs: "none", sm: "grid" },
+                py: 1.25,
+                bgcolor: "grey.50",
+                borderBottom: "1px solid",
+                borderColor: "divider",
+              }}
+            >
+              <Typography variant="caption" fontWeight={600} color="text.secondary">
+                {t("User")}
+              </Typography>
+              {TIMESHEET_ACTIONS.map((action) => (
+                <Box
+                  key={action.key}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  gap={0.5}
+                  sx={{ color: action.key === "delete" ? "error.main" : "text.secondary" }}
+                >
+                  <action.icon size={14} />
+                  <Typography variant="caption" fontWeight={600} color="inherit">
+                    {t(action.label)}
+                  </Typography>
+                </Box>
+              ))}
+              <span />
+            </Box>
+
             {selectedAccessUsers.map((option, index) => {
-              const canApprove = approveIds.includes(option.id);
+              const row = accessRows.find((r) => r.id === option.id)!;
+              const noAction = !hasAnyAction(row);
               return (
                 <Box
                   key={option.id}
-                  display="flex"
-                  alignItems="center"
-                  gap={1.5}
                   sx={{
-                    px: 1.5,
+                    ...tableRowSx,
                     py: 1,
                     borderTop: index === 0 ? "none" : "1px solid",
                     borderColor: "divider",
-                    flexWrap: { xs: "wrap", sm: "nowrap" },
+                    transition: "background-color 120ms",
+                    "&:hover": { bgcolor: "action.hover" },
                   }}
                 >
-                  <Avatar src={option.image ?? undefined} sx={{ width: 32, height: 32, fontSize: 13 }}>
-                    {getInitials(option.name)}
-                  </Avatar>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography variant="body2" noWrap>
-                      {option.name}
-                    </Typography>
-                    {option.subtitle && (
-                      <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                        {option.subtitle}
+                  <Box display="flex" alignItems="center" gap={1.5} sx={{ minWidth: 0, opacity: noAction ? 0.6 : 1 }}>
+                    <Avatar src={option.image ?? undefined} sx={{ width: 34, height: 34, fontSize: 13 }}>
+                      {getInitials(option.name)}
+                    </Avatar>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" fontWeight={500} noWrap>
+                        {option.name}
                       </Typography>
-                    )}
-                  </Box>
-                  <ToggleButtonGroup
-                    exclusive
-                    size="small"
-                    value={canApprove ? "approve" : "view"}
-                    onChange={(_, value) => value && setUserAccess(option.id, value === "approve")}
-                    disabled={settings.isSaving}
-                    aria-label={t("Access level")}
-                  >
-                    <ToggleButton
-                      value="view"
-                      sx={{ textTransform: "none", px: 1.5, gap: 0.5, "&.Mui-selected": { color: "info.main" } }}
-                    >
-                      <IconEye size={15} />
-                      {t("View only")}
-                    </ToggleButton>
-                    <ToggleButton
-                      value="approve"
-                      sx={{ textTransform: "none", px: 1.5, gap: 0.5, "&.Mui-selected": { color: "success.main" } }}
-                    >
-                      <IconCircleCheck size={15} />
-                      {t("View & approve")}
-                    </ToggleButton>
-                  </ToggleButtonGroup>
-                  <Tooltip title={t("Remove")}>
-                    <span>
-                      <IconButton
-                        size="small"
-                        onClick={() => removeAccessUser(option.id)}
-                        disabled={settings.isSaving}
-                        aria-label={t("Remove")}
+                      <Typography
+                        variant="caption"
+                        color={noAction ? "warning.dark" : "text.secondary"}
+                        display="block"
+                        noWrap
                       >
-                        <IconX size={16} />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
+                        {noAction ? t("No actions, removed when you save") : option.subtitle}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* Wide screens: one checkbox per column. Small screens: labelled checkboxes under the name. */}
+                  <Box
+                    sx={{
+                      display: { xs: "flex", sm: "contents" },
+                      flexWrap: "wrap",
+                      columnGap: 1.5,
+                      gridColumn: { xs: "1 / -1", sm: "auto" },
+                      gridRow: { xs: 2, sm: "auto" },
+                      ml: { xs: 5.5, sm: 0 },
+                    }}
+                  >
+                    {TIMESHEET_ACTIONS.map((action) => (
+                      <Box
+                        key={action.key}
+                        component="label"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        sx={{ cursor: "pointer" }}
+                      >
+                        <Checkbox
+                          size="small"
+                          checked={row[action.key]}
+                          onChange={(e) => toggleAction(option.id, action.key, e.target.checked)}
+                          disabled={settings.isSaving}
+                          inputProps={{ "aria-label": `${option.name} ${t(action.label)}` }}
+                        />
+                        <Typography variant="caption" sx={{ display: { xs: "inline", sm: "none" } }}>
+                          {t(action.label)}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+
+                  <Box display="flex" justifyContent="center">
+                    <Tooltip title={t("Remove")}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={() => removeAccessUser(option.id)}
+                          disabled={settings.isSaving}
+                          aria-label={t("Remove")}
+                          sx={{ color: "text.disabled", "&:hover": { color: "error.main" } }}
+                        >
+                          <IconX size={16} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Box>
                 </Box>
               );
             })}
+
+            {/* Tick or clear a whole column (wide screens, more than one user) */}
+            {selectedAccessUsers.length > 1 && (
+              <Box
+                sx={{
+                  ...tableRowSx,
+                  display: { xs: "none", sm: "grid" },
+                  py: 0.25,
+                  bgcolor: "grey.50",
+                  borderTop: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                  {t("Select all")}
+                </Typography>
+                {TIMESHEET_ACTIONS.map((action) => {
+                  const ticked = accessRows.filter((row) => row[action.key]).length;
+                  return (
+                    <Box key={action.key} display="flex" justifyContent="center">
+                      <Checkbox
+                        size="small"
+                        checked={ticked === accessRows.length}
+                        indeterminate={ticked > 0 && ticked < accessRows.length}
+                        onChange={(e) => setActionForAll(action.key, e.target.checked)}
+                        disabled={settings.isSaving}
+                        inputProps={{ "aria-label": `${t("Select all")} ${t(action.label)}` }}
+                      />
+                    </Box>
+                  );
+                })}
+                <span />
+              </Box>
+            )}
           </Box>
         )}
 
-        <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
-          <Typography variant="caption" color="text.secondary">
-            {t("{{approve}} view & approve · {{view}} view only", { approve: approveCount, view: viewOnlyCount })}
-            {adminCount > 0 && ` · ${t("Admins always have access")}`}
-          </Typography>
-          {selectedAccessUsers.length > 0 && (
+        {selectedAccessUsers.length > 0 && (
+          <Box display="flex" justifyContent="space-between" alignItems="center" mt={1} px={0.5}>
+            <Typography variant="caption" color="text.secondary">
+              {t("{{count}} users", { count: activeCount })}
+              {adminCount > 0 && ` · ${t("Admins can always do everything")}`}
+            </Typography>
             <Button
               size="small"
               color="inherit"
-              onClick={() => {
-                setViewIds([]);
-                setApproveIds([]);
-              }}
+              onClick={() => setAccessRows([])}
               disabled={settings.isSaving}
-              sx={{ textTransform: "none", color: "text.secondary" }}
+              sx={{ textTransform: "none", color: "text.secondary", fontSize: 12, minWidth: 0, px: 1 }}
             >
               {t("Clear all")}
             </Button>
-          )}
-        </Box>
+          </Box>
+        )}
 
-        {approveCount === 0 && (
-          <Alert severity="info" sx={{ mt: 1.5 }}>
-            {t("No users selected — only Admins can lock, unlock or mark timesheets as paid")}
-          </Alert>
+        {anyDelete && (
+          <Box display="flex" alignItems="center" gap={0.75} mt={1} px={0.5} sx={{ color: "warning.dark" }}>
+            <IconAlertTriangle size={14} />
+            <Typography variant="caption" color="inherit">
+              {/* Two keys: i18n keys can't contain "." */}
+              {t("Delete removes all hours, pricework, expenses and penalties in the selected date range")}
+              {". "}
+              {t("Paid records can't be deleted, and there is no undo")}
+              {"."}
+            </Typography>
+          </Box>
         )}
 
         {approversChanged && (
-          <Typography variant="caption" color="warning.main" sx={{ display: "block", mt: 1 }}>
+          <Typography variant="caption" color="warning.main" sx={{ display: "block", mt: 1, px: 0.5 }}>
             {t("Unsaved changes — click Save changes to apply them")}
           </Typography>
         )}
@@ -623,40 +702,17 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
               </>
               )}
 
-              {/* Timesheet access: Lock / Unlock / Paid */}
+              {/* Time Clock actions: Lock / Unlock / Paid / Delete */}
               <Box>
                 <Box display="flex" alignItems="center" gap={1}>
                   <IconShieldCheck size={18} />
                   <Typography variant="body2" fontWeight={600}>
-                    {t('Timesheet lock & payment access')}
+                    {t('Timesheet actions')}
                   </Typography>
                 </Box>
-                <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5, mb: 1 }}>
-                  {t('Choose who can lock, unlock and mark timesheets as paid in Time Clock — they can also edit locked timesheet entries')}
+                <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5, mb: 1.5 }}>
+                  {t('Choose who can lock, unlock, mark as paid and delete timesheets in Time Clock')}
                 </Typography>
-                <Box display="flex" flexWrap="wrap" gap={1} mb={1.5}>
-                  <Chip size="small" variant="outlined" icon={<IconLock size={14} />} label={t('Lock')} />
-                  <Chip size="small" variant="outlined" icon={<IconLockOpen size={14} />} label={t('Unlock')} />
-                  <Chip size="small" variant="outlined" icon={<IconCash size={14} />} label={t('Paid')} />
-                </Box>
-                <Box display="flex" flexDirection="column" gap={0.5} mb={2}>
-                  <Box display="flex" alignItems="center" gap={0.75} sx={{ color: "success.main" }}>
-                    <IconCircleCheck size={15} />
-                    <Typography variant="caption" color="text.secondary">
-                      <Box component="span" fontWeight={600} color="text.primary">{t('View & approve')}</Box>
-                      {' — '}
-                      {t('sees requests and notifications, plus lock, unlock, mark as paid and edit locked timesheet entries')}
-                    </Typography>
-                  </Box>
-                  <Box display="flex" alignItems="center" gap={0.75} sx={{ color: "info.main" }}>
-                    <IconEye size={15} />
-                    <Typography variant="caption" color="text.secondary">
-                      <Box component="span" fontWeight={600} color="text.primary">{t('View only')}</Box>
-                      {' — '}
-                      {t('sees timesheet requests and gets notifications')}
-                    </Typography>
-                  </Box>
-                </Box>
 
                 {renderApproverPicker()}
               </Box>

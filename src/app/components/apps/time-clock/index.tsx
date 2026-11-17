@@ -558,6 +558,36 @@ const TimeClock = ({queryParams}: Props) => {
     // Same access as the old Request Action page: Admins, or users with the
     // "RequestActions" web permission, can manage who may Lock/Unlock/Pay timesheets.
     const canManageTimesheetAccess = isCompanyAdmin || hasPermission(permissions, 'RequestActions');
+    // Which toolbar actions the signed-in user can run (Bookkeeper Setting). Admins can run all.
+    const [timesheetActionAccess, setTimesheetActionAccess] = useState({
+        lock: false,
+        unlock: false,
+        paid: false,
+        delete: false,
+    });
+    const loadTimesheetActionAccess = useCallback(async () => {
+        if (!user?.company_id) return;
+        if (isCompanyAdmin) {
+            setTimesheetActionAccess({lock: true, unlock: true, paid: true, delete: true});
+            return;
+        }
+        try {
+            const res = await api.get('request-action/timesheet-actions', {skipToast: true} as any);
+            const my = res.data?.info?.my_actions ?? {};
+            setTimesheetActionAccess({
+                lock: Boolean(my.lock),
+                unlock: Boolean(my.unlock),
+                paid: Boolean(my.paid),
+                delete: Boolean(my.delete),
+            });
+        } catch (error) {
+            console.error('Failed to load timesheet action access:', error);
+        }
+    }, [user?.company_id, isCompanyAdmin]);
+
+    useEffect(() => {
+        loadTimesheetActionAccess();
+    }, [loadTimesheetActionAccess]);
     const [companyGroups, setCompanyGroups] = useState<{ id: number; name: string }[]>([]);
 
     useEffect(() => {
@@ -3144,6 +3174,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     onClose={handleSettingClose}
                                     onSaved={() => {
                                         settingsSavedRef.current = true;
+                                        loadTimesheetActionAccess();
                                     }}
                                     initialActiveMenuItem={settingsInitialMenu}
                                     initialProjectId={settingsInitialProjectId}
@@ -3430,6 +3461,7 @@ const TimeClock = ({queryParams}: Props) => {
                             <Box sx={{flexGrow: 1}}/>
 
                             <Stack direction="row" spacing={1.5}>
+                                {timesheetActionAccess.lock && (
                                 <Button
                                     startIcon={<IconLock size={15}/>}
                                     variant="outlined"
@@ -3441,7 +3473,9 @@ const TimeClock = ({queryParams}: Props) => {
                                 >
                                     {t('Lock')}
                                 </Button>
+                                )}
 
+                                {timesheetActionAccess.unlock && (
                                 <Button
                                     startIcon={<IconLockOpen size={15}/>}
                                     variant="outlined"
@@ -3453,7 +3487,9 @@ const TimeClock = ({queryParams}: Props) => {
                                 >
                                     {t('Unlock')}
                                 </Button>
+                                )}
 
+                                {timesheetActionAccess.paid && (
                                 <Button
                                     variant="contained"
                                     color="primary"
@@ -3476,7 +3512,9 @@ const TimeClock = ({queryParams}: Props) => {
                                 >
                                     {t('Paid')}
                                 </Button>
+                                )}
 
+                                {timesheetActionAccess.delete && (
                                 <Button
                                     startIcon={<IconTrash size={15}/>}
                                     variant="outlined"
@@ -3488,6 +3526,7 @@ const TimeClock = ({queryParams}: Props) => {
                                 >
                                     {t('Delete')}
                                 </Button>
+                                )}
 
                                 <Button
                                     size="small"
