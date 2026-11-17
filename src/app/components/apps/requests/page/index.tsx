@@ -365,7 +365,7 @@ function WorklogSystemInfoCard({ requestId }: { requestId: number }) {
 export default function RequestsPage() {
   const { t } = useTranslation();
   // List and detail side by side from lg; below that one panel at a time.
-  const splitView = useMediaQuery((theme: Theme) => theme.breakpoints.up("lg"));
+  const splitView = useMediaQuery((theme: Theme) => theme.breakpoints.up("md"));
   const session = useSession();
   const companyId = Number(
     (session.data?.user as { company_id?: string | number | null } | undefined)
@@ -774,9 +774,8 @@ export default function RequestsPage() {
           <Box
             display="grid"
             gridTemplateColumns={{
+              // One column while the list sits beside it; two once there's room.
               xs: "1fr",
-              md: "minmax(0, 7fr) minmax(0, 5fr)",
-              lg: "1fr",
               xl: "minmax(0, 7fr) minmax(0, 5fr)",
             }}
             gap={2}
@@ -1160,14 +1159,14 @@ export default function RequestsPage() {
         display: "flex",
         flexDirection: "column",
         gap: 2,
-        height: { lg: "calc(100vh - 140px)" },
-        minHeight: { lg: 560 },
+        height: { md: "calc(100vh - 140px)" },
+        minHeight: { md: 560 },
       }}
     >
-      {/* Toolbar: title + tabs on the left, search / dates / filters on the right; wraps on smaller screens. */}
+      {/* Toolbar: tabs on the left, search / dates / filters on the right, on one line; on phones tabs on top, search / dates / filters below. */}
       <Box
         display="flex"
-        flexWrap="wrap"
+        flexWrap={{ xs: "wrap", md: "nowrap" }}
         alignItems="center"
         justifyContent="space-between"
         columnGap={2}
@@ -1180,11 +1179,8 @@ export default function RequestsPage() {
           rowGap={1}
           flexWrap="wrap"
           minWidth={0}
-          sx={{ flex: { xs: "1 1 100%", md: "0 1 auto" } }}
+          sx={{ flex: { xs: "1 1 100%", md: "0 0 auto" } }}
         >
-          <Typography variant="h4" fontWeight={700} whiteSpace="nowrap">
-            {t("Requests")}
-          </Typography>
           {/* Tabs stay on one line and scroll sideways when there is no room. */}
           <Box
             display="flex"
@@ -1221,19 +1217,22 @@ export default function RequestsPage() {
                   }}
                 >
                   {t(tab.label)}
-                  <Box
-                    component="span"
-                    sx={{
-                      ml: 1,
-                      px: 0.75,
-                      borderRadius: "8px",
-                      fontSize: 11,
-                      lineHeight: "18px",
-                      bgcolor: active ? "rgba(255,255,255,0.25)" : "grey.100",
-                    }}
-                  >
-                    {counts[tab.key]}
-                  </Box>
+                  {/* Only Pending shows how many are waiting. */}
+                  {tab.key === "pending" && (
+                    <Box
+                      component="span"
+                      sx={{
+                        ml: 1,
+                        px: 0.75,
+                        borderRadius: "8px",
+                        fontSize: 11,
+                        lineHeight: "18px",
+                        bgcolor: active ? "rgba(255,255,255,0.25)" : "grey.100",
+                      }}
+                    >
+                      {counts.pending}
+                    </Box>
+                  )}
                 </Button>
               );
             })}
@@ -1242,20 +1241,19 @@ export default function RequestsPage() {
 
         <Box
           display="flex"
-          flexWrap="wrap"
           alignItems="center"
           justifyContent="flex-end"
-          gap={1.5}
+          gap={1}
           minWidth={0}
-          sx={{ flex: { xs: "1 1 100%", md: "1 1 auto" } }}
+          sx={{ flex: { xs: "1 1 100%", md: "1 1 0" } }}
         >
           <TextField
             placeholder={t("Search...")}
             size="small"
             sx={{
-              flex: { xs: "1 1 100%", sm: "1 1 200px" },
-              minWidth: { sm: 180 },
-              maxWidth: { sm: 300 },
+              flex: "1 1 0",
+              minWidth: 0,
+              maxWidth: { md: 300 },
             }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -1269,11 +1267,10 @@ export default function RequestsPage() {
           />
           <Box
             sx={{
-              flex: { xs: "1 1 auto", sm: "0 0 auto" },
+              flex: "0 0 auto",
               "& .MuiButton-root": {
                 whiteSpace: "nowrap",
                 height: 40,
-                width: { xs: "100%", sm: "auto" },
               },
             }}
           >
@@ -1281,6 +1278,9 @@ export default function RequestsPage() {
               from={startDate}
               to={endDate}
               onChange={handleDateRangeChange}
+              labelFormat="dd MMM"
+              buttonMinWidth={0}
+              buttonLabelAlign="left"
             />
           </Box>
           <Button
@@ -1290,10 +1290,11 @@ export default function RequestsPage() {
               setTempFilters(filters);
               setFilterOpen(true);
             }}
-            startIcon={<IconFilter size={18} />}
-            sx={{ flexShrink: 0, minWidth: 110, height: 40 }}
+            aria-label={t("Filters")}
+            title={t("Filters")}
+            sx={{ flexShrink: 0, minWidth: 40, width: 40, height: 40, p: 0 }}
           >
-            {t("Filters")}
+            <IconFilter size={18} />
           </Button>
         </Box>
       </Box>
@@ -1303,6 +1304,7 @@ export default function RequestsPage() {
         display="grid"
         gridTemplateColumns={{
           xs: "1fr",
+          md: "minmax(280px, 5fr) minmax(0, 7fr)",
           lg: "minmax(300px, 4fr) minmax(0, 8fr)",
           xl: "minmax(340px, 3fr) minmax(0, 8fr)",
         }}
@@ -1310,12 +1312,12 @@ export default function RequestsPage() {
         sx={{ flex: 1, minHeight: 0 }}
       >
         {showList && (
-          <Box minHeight={0} sx={{ height: { xs: "70vh", lg: "100%" } }}>
+          <Box minHeight={0} sx={{ height: { xs: "70vh", md: "100%" } }}>
             {listPanel}
           </Box>
         )}
         {showDetail && (
-          <Box minHeight={0} sx={{ height: { xs: "auto", lg: "100%" } }}>
+          <Box minHeight={0} sx={{ height: { xs: "auto", md: "100%" } }}>
             {selected ? renderDetail(selected) : emptyDetail}
           </Box>
         )}
