@@ -128,6 +128,15 @@ const TemplateEditor = ({templateId}: Props) => {
     const latest = template?.versions.find((v) => v.is_current) ?? null;
     const nextVersion = (latest?.version_no ?? 0) + 1;
     const formFields = useMemo(() => extractFormFields(body), [body]);
+    // Shown in the editor in place of their {{key}} tokens. The version is the one this wording will publish as.
+    const shownVersion = latest && !dirty && !template?.has_unpublished_changes ? latest.version_no : nextVersion;
+    const fieldValues = useMemo(
+        () => ({
+            ...(user?.company_name ? {company_name: user.company_name} : {}),
+            version: `v${shownVersion}`,
+        }),
+        [user?.company_name, shownVersion],
+    );
     const usedKeys = useMemo(() => new Set([...body.matchAll(/\{\{\s*([a-z_]+)\s*\}\}/g)].map((m) => m[1])), [body]);
 
     /** Saves the draft. Returns the template id (new templates get one here). */
@@ -286,6 +295,7 @@ const TemplateEditor = ({templateId}: Props) => {
                         <ContractEditor
                             value={body}
                             fields={fields}
+                            fieldValues={fieldValues}
                             onChange={(html) => {
                                 setBody(html);
                                 setDirty(true);

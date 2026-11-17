@@ -16,11 +16,12 @@ import {
 import {alpha, useTheme} from '@mui/material/styles';
 import {
     IconArrowLeft,
-    IconArrowRight,
     IconChevronDown,
     IconChevronUp,
+    IconDeviceMobile,
     IconSearch,
     IconUsers,
+    IconWorld,
 } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -43,6 +44,7 @@ interface HistoryItem {
     id: number;
     user_name: string | null;
     user_image: string | null;
+    affected_user_image?: string | null;
     action_by: string | null;
     message: string | null;
     date: string;
@@ -51,16 +53,30 @@ interface HistoryItem {
     new_data: Record<string, any> | null;
 }
 
-type ChangeKind = 'added' | 'changed' | 'removed';
+// on = every toggled switch was turned on, off = every toggled switch was turned off, mixed = both
+type ChangeKind = 'on' | 'off' | 'mixed';
+type Channel = 'web' | 'app';
+
+interface SwitchState {
+    old: boolean;
+    new: boolean;
+}
 
 interface PermissionChange {
     name: string;
-    old: string;
-    new: string;
+    web: SwitchState;
+    app: SwitchState;
     kind: ChangeKind;
 }
 
-const KIND_ORDER: Record<ChangeKind, number> = {changed: 0, added: 1, removed: 2};
+const CHANNELS: Channel[] = ['web', 'app'];
+const KIND_ORDER: Record<ChangeKind, number> = {on: 0, mixed: 1, off: 2};
+
+// Status labels saved by the backend map back to the Web / App switches on the settings screens.
+const toSwitches = (label: string) => ({
+    web: label === 'Web' || label === 'Web & App',
+    app: label === 'App' || label === 'Web & App',
+});
 
 const getChanges = (item: HistoryItem): PermissionChange[] => {
     const oldData = item.old_data ?? {};
@@ -68,12 +84,19 @@ const getChanges = (item: HistoryItem): PermissionChange[] => {
     return Object.keys(newData)
         .filter((key) => !META_KEYS.has(key) && typeof newData[key] === 'string')
         .map((key) => {
-            const oldValue = typeof oldData[key] === 'string' ? oldData[key] : 'Off';
-            const newValue = newData[key];
-            const kind: ChangeKind =
-                oldValue === 'Off' ? 'added' : newValue === 'Off' ? 'removed' : 'changed';
-            return {name: key, old: oldValue, new: newValue, kind};
+            const before = toSwitches(typeof oldData[key] === 'string' ? oldData[key] : 'Off');
+            const after = toSwitches(newData[key]);
+            const web = {old: before.web, new: after.web};
+            const app = {old: before.app, new: after.app};
+            const toggled = [web, app].filter((state) => state.old !== state.new);
+            const kind: ChangeKind = toggled.every((state) => state.new)
+                ? 'on'
+                : toggled.every((state) => !state.new)
+                    ? 'off'
+                    : 'mixed';
+            return {name: key, web, app, kind};
         })
+        .filter((change) => change.web.old !== change.web.new || change.app.old !== change.app.new)
         .sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.name.localeCompare(b.name));
 };
 
@@ -106,16 +129,9 @@ export default function PermissionHistoryDrawer({open, onClose}: Props) {
     const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
     const kindColor: Record<ChangeKind, string> = {
-        added: theme.palette.success.main,
-        changed: theme.palette.primary.main,
-        removed: theme.palette.error.main,
-    };
-
-    const statusColor = (label: string) => {
-        if (label === 'Web & App') return theme.palette.success.main;
-        if (label === 'Web') return theme.palette.primary.main;
-        if (label === 'App') return theme.palette.info.main;
-        return theme.palette.text.secondary;
+        on: theme.palette.success.main,
+        off: theme.palette.error.main,
+        mixed: theme.palette.primary.main,
     };
 
     useEffect(() => {
@@ -192,39 +208,70 @@ export default function PermissionHistoryDrawer({open, onClose}: Props) {
             return next;
         });
 
-    const StatusBadge = ({label, faded}: {label: string; faded?: boolean}) => {
-        const color = statusColor(label);
+    const MiniSwitch = ({checked, muted}: {checked: boolean; muted?: boolean}) => (
+        <Box
+            component="span"
+            sx={{
+                position: 'relative',
+                display: 'inline-block',
+                flexShrink: 0,
+                width: 30,
+                height: 17,
+                borderRadius: 9,
+                bgcolor: checked ? 'primary.main' : theme.palette.grey[300],
+                opacity: muted ? 0.4 : 1,
+                transition: 'background-color .2s',
+                '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 2,
+                    left: checked ? 15 : 2,
+                    width: 13,
+                    height: 13,
+                    borderRadius: '50%',
+                    bgcolor: '#fff',
+                    boxShadow: '0 1px 2px rgba(0,0,0,.25)',
+                },
+            }}
+        />
+    );
+
+    const SwitchCell = ({channel, state}: {channel: Channel; state: SwitchState}) => {
+        const changed = state.old !== state.new;
+        const color = state.new ? theme.palette.success.main : theme.palette.error.main;
+        const Icon = channel === 'web' ? IconWorld : IconDeviceMobile;
         return (
-            <Box
-                component="span"
+            <Stack
+                direction="row"
+                alignItems="center"
+                gap={0.75}
                 sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: 68,
-                    height: 22,
-                    px: 1,
-                    borderRadius: '6px',
-                    fontSize: 11.5,
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                    color,
-                    bgcolor: alpha(color, faded ? 0.06 : 0.12),
-                    opacity: faded ? 0.8 : 1,
+                    width: 112,
+                    px: 0.75,
+                    py: 0.5,
+                    borderRadius: 1.5,
+                    bgcolor: changed ? alpha(color, 0.08) : 'transparent',
+                    border: '1px solid',
+                    borderColor: changed ? alpha(color, 0.35) : 'transparent',
                 }}
+                title={`${channel === 'web' ? 'Web' : 'App'}: ${state.old ? 'On' : 'Off'} → ${state.new ? 'On' : 'Off'}`}
             >
-                {label}
-            </Box>
+                <Icon size={14} color={changed ? color : theme.palette.text.disabled}/>
+                <MiniSwitch checked={state.new} muted={!changed}/>
+                <Typography
+                    fontSize={11}
+                    fontWeight={700}
+                    color={changed ? color : 'text.disabled'}
+                    noWrap
+                >
+                    {changed ? (state.new ? t('Turned on') : t('Turned off')) : state.new ? t('On') : t('Off')}
+                </Typography>
+            </Stack>
         );
     };
 
-    const SummaryPill = ({kind, count}: {kind: ChangeKind; count: number}) => {
+    const SummaryPill = ({kind, count}: {kind: 'on' | 'off'; count: number}) => {
         if (!count) return null;
-        const labels: Record<ChangeKind, string> = {
-            added: t('added'),
-            changed: t('changed'),
-            removed: t('removed'),
-        };
         return (
             <Box
                 component="span"
@@ -241,7 +288,7 @@ export default function PermissionHistoryDrawer({open, onClose}: Props) {
                     bgcolor: alpha(kindColor[kind], 0.1),
                 }}
             >
-                {count} {labels[kind]}
+                {count} {kind === 'on' ? t('switched on') : t('switched off')}
             </Box>
         );
     };
@@ -254,10 +301,14 @@ export default function PermissionHistoryDrawer({open, onClose}: Props) {
         const isExpanded = expanded.has(item.id);
         const visibleChanges = isExpanded ? changes : changes.slice(0, COLLAPSED_CHANGE_COUNT);
         const hiddenCount = changes.length - visibleChanges.length;
-        const counts = changes.reduce(
-            (acc, change) => ({...acc, [change.kind]: acc[change.kind] + 1}),
-            {added: 0, changed: 0, removed: 0} as Record<ChangeKind, number>,
-        );
+        // Count individual switch flips, the same way the admin toggled them on the settings screen.
+        const counts = {on: 0, off: 0};
+        for (const change of changes) {
+            for (const channel of CHANNELS) {
+                const state = change[channel];
+                if (state.old !== state.new) counts[state.new ? 'on' : 'off'] += 1;
+            }
+        }
 
         return (
             <Box key={item.id} display="flex" gap={2}>
@@ -299,6 +350,11 @@ export default function PermissionHistoryDrawer({open, onClose}: Props) {
                     >
                         <Stack direction="row" alignItems="center" gap={1.5} minWidth={0}>
                             <Avatar
+                                src={
+                                    isCompanyWide
+                                        ? undefined
+                                        : (affectedUser ? item.affected_user_image : item.user_image) ?? undefined
+                                }
                                 sx={{
                                     width: 38,
                                     height: 38,
@@ -317,7 +373,7 @@ export default function PermissionHistoryDrawer({open, onClose}: Props) {
                                         : affectedUser ?? t('Permission update')}
                                 </Typography>
                                 <Stack direction="row" alignItems="center" gap={0.75} mt={0.25}>
-                                    <Avatar src={item.user_image ?? ''} sx={{width: 18, height: 18, fontSize: 10}}>
+                                    <Avatar src={item.user_image ?? undefined} sx={{width: 20, height: 20, fontSize: 10}}>
                                         {initials(changedBy)}
                                     </Avatar>
                                     <Typography fontSize={12.5} color="text.secondary" noWrap>
@@ -334,9 +390,11 @@ export default function PermissionHistoryDrawer({open, onClose}: Props) {
 
                         {changes.length > 0 && (
                             <Stack direction="row" gap={0.75} flexWrap="wrap">
-                                <SummaryPill kind="changed" count={counts.changed}/>
-                                <SummaryPill kind="added" count={counts.added}/>
-                                <SummaryPill kind="removed" count={counts.removed}/>
+                                <Typography fontSize={12} color="text.secondary" sx={{alignSelf: 'center'}}>
+                                    {changes.length} {changes.length === 1 ? t('permission') : t('permissions')}
+                                </Typography>
+                                <SummaryPill kind="on" count={counts.on}/>
+                                <SummaryPill kind="off" count={counts.off}/>
                             </Stack>
                         )}
                     </Stack>
@@ -355,7 +413,7 @@ export default function PermissionHistoryDrawer({open, onClose}: Props) {
                             <Box
                                 sx={{
                                     display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 380px), 1fr))',
                                     gap: 1,
                                 }}
                             >
@@ -368,8 +426,8 @@ export default function PermissionHistoryDrawer({open, onClose}: Props) {
                                         gap={1}
                                         sx={{
                                             pl: 1.25,
-                                            pr: 1,
-                                            py: 0.75,
+                                            pr: 0.75,
+                                            py: 0.5,
                                             borderRadius: 1.5,
                                             bgcolor: 'background.paper',
                                             border: '1px solid',
@@ -381,9 +439,9 @@ export default function PermissionHistoryDrawer({open, onClose}: Props) {
                                             {change.name}
                                         </Typography>
                                         <Stack direction="row" alignItems="center" gap={0.5} flexShrink={0}>
-                                            <StatusBadge label={change.old} faded/>
-                                            <IconArrowRight size={13} color={theme.palette.text.disabled}/>
-                                            <StatusBadge label={change.new}/>
+                                            {CHANNELS.map((channel) => (
+                                                <SwitchCell key={channel} channel={channel} state={change[channel]}/>
+                                            ))}
                                         </Stack>
                                     </Stack>
                                 ))}
@@ -465,11 +523,15 @@ export default function PermissionHistoryDrawer({open, onClose}: Props) {
 
                 <Stack direction="row" alignItems="center" gap={2}>
                     <Stack direction="row" gap={1.5} sx={{display: {xs: 'none', lg: 'flex'}}}>
-                        {(['changed', 'added', 'removed'] as ChangeKind[]).map((kind) => (
+                        {([
+                            ['on', t('Switched on')],
+                            ['off', t('Switched off')],
+                            ['mixed', t('On & off')],
+                        ] as Array<[ChangeKind, string]>).map(([kind, label]) => (
                             <Stack key={kind} direction="row" alignItems="center" gap={0.5}>
                                 <Box sx={{width: 10, height: 10, borderRadius: '3px', bgcolor: kindColor[kind]}}/>
-                                <Typography fontSize={12} color="text.secondary" textTransform="capitalize">
-                                    {t(kind)}
+                                <Typography fontSize={12} color="text.secondary">
+                                    {label}
                                 </Typography>
                             </Stack>
                         ))}

@@ -33,14 +33,26 @@ import {
   IconCheck,
   IconPaperclip,
 } from "@tabler/icons-react";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import DiffChanges from "@/app/components/common/DiffChanges";
 import { orderBillingDiffs } from "@/utils/diffDisplay";
 import RejectReasonDialog from "@/app/components/common/RejectReasonDialog";
 import EvidenceFilesDrawer from "@/app/components/common/EvidenceFilesDrawer";
 import { useRouter } from "next/navigation";
-import { getUserDetailsHref } from "@/utils/userDetailsRoute";
+import {
+  REQUEST_MESSAGE_TRANSLATION_KEYS,
+  loadDateRangeFromStorage,
+  saveDateRangeToStorage,
+  STATUS_COLOR,
+  TYPE_COLOR,
+  getRequestHref,
+  isBillingInfoRequest,
+  isPendingRequest,
+  isProjectCapacityRequest,
+  needsRejectReason,
+  postRequestAction,
+} from "@/app/components/apps/requests/requestUtils";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
@@ -62,49 +74,6 @@ const defaultFilters = {
   users: "" as string | number,
   status: "" as string | number,
   types: "" as string | number,
-};
-
-const STORAGE_KEY = "request-date-range";
-
-const REQUEST_MESSAGE_TRANSLATION_KEYS = [
-  "Requested to add leave on",
-  "Requested to change timesheet hours from",
-  "hours to",
-  "hours on",
-  "Rate change has been requested",
-  "User requested to create billing info",
-  "Requested to update billing information",
-];
-
-const loadDateRangeFromStorage = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return {
-        startDate: parsed.startDate ? new Date(parsed.startDate) : null,
-        endDate: parsed.endDate ? new Date(parsed.endDate) : null,
-      };
-    }
-  } catch (error) {
-    console.error("Error loading date range from localStorage:", error);
-  }
-  return null;
-};
-
-const saveDateRangeToStorage = (
-  startDate: Date | null,
-  endDate: Date | null,
-) => {
-  try {
-    const dateRange = {
-      startDate: startDate ? startDate.toDateString() : null,
-      endDate: endDate ? endDate.toDateString() : null,
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dateRange));
-  } catch (error) {
-    console.error("Error saving date range to localStorage:", error);
-  }
 };
 
 function RequestNoteIcon({ note }: { note: string }) {
@@ -418,145 +387,6 @@ export default function UserRequests({
     }
   };
 
-  const isPendingRequest = (work: any) => {
-    const statusText = String(work?.status_text || "").toLowerCase();
-    if (statusText === "pending") return true;
-    return Number(work?.status) === 3;
-  };
-
-  const getRequestTypeKey = (work: any) =>
-    String(work?.type_name || "")
-      .trim()
-      .toLowerCase();
-
-  const getRequestTableName = (work: any) =>
-    String(work?.table_name || "")
-      .trim()
-      .toLowerCase();
-
-  const isPenaltyAppealRequest = (work: any) => {
-    const type = getRequestTypeKey(work);
-    const message =
-      `${work?.message || ""} ${work?.short_message || ""}`.toLowerCase();
-    return type === "penalty appeal" || message.includes("appeal");
-  };
-
-  // Billing info requests cannot be rejected without a rejection note.
-  const isBillingInfoRequest = (work: any) =>
-    getRequestTableName(work) === "billing_infos" ||
-    getRequestTypeKey(work) === "billing info";
-
-  const isProjectCapacityRequest = (work: any) =>
-    getRequestTypeKey(work) === "project capacity" ||
-    Number(work?.request_type) === 149;
-
-  const needsRejectReason = (work: any) =>
-    isBillingInfoRequest(work) || isProjectCapacityRequest(work);
-
-  const postGenericRequestAction = (
-    work: any,
-    action: "approve" | "reject",
-    reason?: string,
-  ) => {
-    const endpoint =
-      action === "approve"
-        ? "/requests/approve-request"
-        : "/requests/reject-request";
-    const payload: { log_id: number; user_id: number; reason?: string } = {
-      log_id: Number(work?.id),
-      user_id: Number(work?.user_id),
-    };
-    if (action === "reject" && reason) {
-      payload.reason = reason;
-    }
-    return api.post(endpoint, payload);
-  };
-
-  const postTimesheetRequestAction = (
-    work: any,
-    action: "approve" | "reject",
-  ) => {
-    const endpoint =
-      action === "approve"
-        ? "/timesheet/web-request-approve"
-        : "/timesheet/web-request-reject";
-    const payload: {
-      ids: string;
-      userId: number;
-      reason?: string;
-    } = {
-      ids: String(work?.id),
-      userId: Number(work?.user_id),
-    };
-    if (action === "reject") {
-      payload.reason = "";
-    }
-    return api.post(endpoint, payload);
-  };
-
-  const postLeaveRequestAction = (work: any, action: "approve" | "reject") => {
-    const leaveId = Number(work?.leave_id ?? work?.record_id);
-    const endpoint =
-      action === "approve" ? "/user-leaves/approve" : "/user-leaves/reject";
-    return api.post(`${endpoint}?user_leave_id=${leaveId}`);
-  };
-
-  const postPenaltyAppealAction = async (
-    work: any,
-    action: "approve" | "reject",
-  ) => {
-    const penaltyId = Number(work?.penalty_id ?? work?.record_id);
-    const details = await api.get(
-      `/time-clock/penalty-details?penalty_id=${penaltyId}`,
-    );
-    const appealId = Number(details.data?.info?.appeal_id);
-    if (!appealId) {
-      throw new Error(t("Appeal ID not found"));
-    }
-    return api.post("/time-clock/appeal-action", {
-      appeal_id: appealId,
-      status: action === "approve" ? 5 : 12,
-      admin_note: null,
-    });
-  };
-
-  const postRequestAction = async (
-    work: any,
-    action: "approve" | "reject",
-    reason?: string,
-  ) => {
-    const type = getRequestTypeKey(work);
-    const table = getRequestTableName(work);
-
-    if (table === "user_leaves" || type === "leave") {
-      return postLeaveRequestAction(work, action);
-    }
-
-    if (
-      table === "penalty_appeals" ||
-      type === "penalty appeal" ||
-      isPenaltyAppealRequest(work)
-    ) {
-      return postPenaltyAppealAction(work, action);
-    }
-
-    if (table === "penalty_details" || type === "penalty") {
-      return postTimesheetRequestAction(work, action);
-    }
-
-    if (
-      table === "user_worklogs" ||
-      type === "work log" ||
-      type === "worklog"
-    ) {
-      return postTimesheetRequestAction(work, action);
-    }
-
-    // Billing info, rate, trade, company, timesheet, and any other
-    // pending request types use the generic request approve/reject APIs.
-    return postGenericRequestAction(work, action, reason);
-  };
-
   const handleRequestAction = async (
     work: any,
     action: "approve" | "reject",
@@ -590,137 +420,6 @@ export default function UserRequests({
       setActioningId(null);
       setActioningType(null);
     }
-  };
-
-  // Helper to parse leave date from work record
-  const getLeaveDate = (work: any): string | undefined => {
-    // Try dedicated leave date fields first
-    if (work.start_date) {
-      try {
-        // If already in yyyy-MM-dd format
-        if (/^\d{4}-\d{2}-\d{2}$/.test(work.start_date)) {
-          return work.start_date;
-        }
-        // If in dd/MM/yyyy format
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(work.start_date)) {
-          const parsed = parse(work.start_date, "dd/MM/yyyy", new Date());
-          return format(parsed, "yyyy-MM-dd");
-        }
-      } catch {}
-    }
-
-    if (work.leave_date) {
-      try {
-        if (/^\d{4}-\d{2}-\d{2}$/.test(work.leave_date)) {
-          return work.leave_date;
-        }
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(work.leave_date)) {
-          const parsed = parse(work.leave_date, "dd/MM/yyyy", new Date());
-          return format(parsed, "yyyy-MM-dd");
-        }
-      } catch {}
-    }
-
-    // Fallback: parse from date_added (creation date - less accurate)
-    if (work.date_added) {
-      try {
-        const parsed = parse(work.date_added, "d MMMM yyyy HH:mm", new Date());
-        return format(parsed, "yyyy-MM-dd");
-      } catch {}
-    }
-
-    return undefined;
-  };
-
-  const REQUEST_ROUTE_MAP: Record<
-    string,
-    (recordId?: number, startDate?: string, endDate?: string) => string
-  > = {
-    Shift: (recordId, startDate, endDate) => {
-      let url = `/apps/time-clock/list`;
-      const params: any[] = [];
-      if (recordId) params.push(`user_id=${recordId}`);
-      if (startDate) params.push(`start_date=${startDate}`);
-      if (endDate) params.push(`end_date=${endDate}`);
-      params.push("type=shift");
-      params.push(`open=true`);
-      if (params.length > 0) url += `?${params.join("&")}`;
-      return url;
-    },
-    "Billing Info": (id) => getUserDetailsHref(id, { tab: "billing" }),
-    Company: (id) => getUserDetailsHref(id, { tab: "rate" }),
-    Rate: (id) => getUserDetailsHref(id, { tab: "rate" }),
-    Trade: (id) => getUserDetailsHref(id, { tab: "rate" }),
-    Comapny: (id) => getUserDetailsHref(id, { tab: "billing" }),
-    Project: (id) => `/apps/projects/index?id=${id}`,
-    "Project Capacity": (id) => `/apps/project/list/${id}`,
-    Team: (id) => `/apps/teams/team?team_id=${id}`,
-    "Team Cap Increase": (id) => `/apps/teams/team?team_id=${id}`,
-    Penalty: (recordId, startDate, endDate) => {
-      let url = `/apps/time-clock/list`;
-      const params: any[] = [];
-      if (recordId) params.push(`user_id=${recordId}`);
-      if (startDate) params.push(`start_date=${startDate}`);
-      if (endDate) params.push(`end_date=${endDate}`);
-      params.push("type=penalty");
-      params.push(`open=true`);
-      if (params.length > 0) url += `?${params.join("&")}`;
-      return url;
-    },
-    "Work log": (recordId, startDate, endDate) => {
-      let url = `/apps/time-clock/list`;
-      const params: any[] = [];
-      if (recordId) params.push(`user_id=${recordId}`);
-      if (startDate) params.push(`start_date=${startDate}`);
-      if (endDate) params.push(`end_date=${endDate}`);
-      params.push("type=worklog");
-      params.push(`open=true`);
-      if (params.length > 0) url += `?${params.join("&")}`;
-      return url;
-    },
-    Worklog: (recordId, startDate, endDate) => {
-      let url = `/apps/time-clock/list`;
-      const params: any[] = [];
-      if (recordId) params.push(`user_id=${recordId}`);
-      if (startDate) params.push(`start_date=${startDate}`);
-      if (endDate) params.push(`end_date=${endDate}`);
-      params.push("type=worklog");
-      params.push(`open=true`);
-      if (params.length > 0) url += `?${params.join("&")}`;
-      return url;
-    },
-    // Pass leave dates directly in URL params - no localStorage needed
-    Leave: (recordId, startDate, endDate) => {
-      return getUserDetailsHref(recordId, {
-        tab: "leave",
-        leave_start: startDate,
-        leave_end: endDate,
-      });
-    },
-  };
-
-  const STATUS_COLOR: Record<string, string> = {
-    pending: "#FF7F00",
-    approved: "#4CBC6D",
-    rejected: "#FF484B",
-  };
-
-  const TYPE_COLOR: Record<string, string> = {
-    Shift: "#FF7F00",
-    "Billing Info": "#4CBC6D",
-    Company: "#f5c21bf8",
-    Rate: "#f5c21bf8",
-    Trade: "#f5c21bf8",
-    Leave: "#949090ff",
-    "Work log": "#FF7F00",
-    Worklog: "#FF7F00",
-    Timesheet: "#FFFF7F00",
-    "User Account": "#FF3F51B5",
-    Penalty: "#ff3737ff",
-    Adjustment: "#0066ffff",
-    "Team Cap Increase": "#2276FF",
-    Team: "#2276FF",
-    "Project Capacity": "#2276FF",
   };
 
   const translateRequestText = (value?: string | null) => {
@@ -849,50 +548,7 @@ export default function UserRequests({
             ) : data.length > 0 ? (
               <Grid container spacing={3} marginTop={2}>
                 {data.map((work, idx) => {
-                  const href = (() => {
-                    const routeFn = REQUEST_ROUTE_MAP[work.type_name];
-                    if (!routeFn) return "";
-                    if (
-                      ["Shift", "Penalty", "Work log", "Worklog"].includes(
-                        work.type_name,
-                      )
-                    ) {
-                      const dateAdded = work.date_added
-                        ? parse(
-                            work.date_added,
-                            "d MMMM yyyy HH:mm",
-                            new Date(),
-                          )
-                        : undefined;
-                      const formattedDate = dateAdded
-                        ? format(dateAdded, "yyyy-MM-dd")
-                        : undefined;
-                      return routeFn(
-                        work.user_id,
-                        formattedDate,
-                        formattedDate,
-                      );
-                    } else if (work.type_name === "Leave") {
-                      const leaveDate = getLeaveDate(work);
-                      return routeFn(
-                        work.user_id ?? work.record_id,
-                        leaveDate,
-                        leaveDate,
-                      );
-                    } else if (
-                      work.type_name === "Team" ||
-                      work.type_name === "Team Cap Increase"
-                    ) {
-                      return routeFn(work.team_id ?? work.record_id);
-                    } else if (
-                      work.type_name === "Project" ||
-                      work.type_name === "Project Capacity"
-                    ) {
-                      return routeFn(work?.project_id ?? work?.record_id);
-                    } else {
-                      return routeFn(work.user_id);
-                    }
-                  })();
+                  const href = getRequestHref(work);
 
                   return (
                     <Grid
