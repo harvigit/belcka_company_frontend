@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Box, Typography } from "@mui/material";
+import { useSession } from "next-auth/react";
 
 // Shared building blocks for the printable survey documents (survey report, job pack), so both
 // look like one family. Fixed colours rather than theme tokens: these pages are printed and
@@ -50,53 +51,132 @@ export function Pill({ tone = "neutral", children }: { tone?: Tone; children: Re
   );
 }
 
-/** Top of a document: brand line, title, reference, status and generated date. */
+export type ReportBrand = { name: string; logo: string | null };
+
+// Logos are inlined as data URLs so html2canvas can draw them (a cross-origin <img> would taint
+// the canvas). One fetch per URL for the whole session; null when the image can't be read.
+const logoCache = new Map<string, Promise<string | null>>();
+const logoDataUrl = (url: string) => {
+  if (!logoCache.has(url)) {
+    logoCache.set(
+      url,
+      fetch(url)
+        .then((res) => (res.ok ? res.blob() : Promise.reject(new Error(String(res.status)))))
+        .then(
+          (blob) =>
+            new Promise<string | null>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result));
+              reader.onerror = () => resolve(null);
+              reader.readAsDataURL(blob);
+            }),
+        )
+        .catch(() => null),
+    );
+  }
+  return logoCache.get(url)!;
+};
+
+/** The signed-in company's name and logo, shown in the header of every survey document. */
+export function useReportBrand(): ReportBrand {
+  const { data } = useSession();
+  const user = data?.user as { company_name?: string | null; company_image?: string | null } | undefined;
+  const image = user?.company_image || null;
+  const [logo, setLogo] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    setLogo(null);
+    if (image) void logoDataUrl(image).then((value) => active && setLogo(value));
+    return () => {
+      active = false;
+    };
+  }, [image]);
+  return { name: user?.company_name || "Belcka", logo };
+}
+
+/**
+ * Common top of every survey document: company logo, document type and reference in a brand bar,
+ * then the title, status and key facts.
+ */
 export function ReportHeader({
+  brand,
   documentType,
+  reference,
   title,
   subtitle,
   status,
   statusTone = "brand",
   meta,
 }: {
+  brand: ReportBrand;
   documentType: string;
-  title: string;
+  reference: string;
+  title: React.ReactNode;
   subtitle?: React.ReactNode;
   status: string;
   statusTone?: Tone;
   meta: { label: string; value: React.ReactNode }[];
 }) {
   return (
-    <Box sx={{ pb: 2.5, borderBottom: `2px solid ${REPORT.brand}`, borderRadius: 0 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-        <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
-          <Typography sx={{ fontWeight: 800, letterSpacing: "0.32em", fontSize: 18, color: REPORT.ink }}>
-            BELCKA
-          </Typography>
-          <Typography sx={{ fontSize: 11, fontWeight: 600, color: REPORT.muted, textTransform: "uppercase", letterSpacing: 1 }}>
-            {documentType}
-          </Typography>
-        </Box>
-        <Pill tone={statusTone}>{status}</Pill>
-      </Box>
-
-      <Typography sx={{ fontSize: 24, fontWeight: 800, color: REPORT.ink, lineHeight: 1.2 }}>{title}</Typography>
-      {subtitle && (
-        <Typography sx={{ fontSize: 13, color: REPORT.muted, mt: 0.5 }}>{subtitle}</Typography>
-      )}
-
+    <Box>
+      {/* Brand bar */}
       <Box
         sx={{
-          mt: 2,
-          display: "grid",
-          gridTemplateColumns: `repeat(${meta.length}, 1fr)`,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
           gap: 2,
+          pb: 1.75,
+          borderBottom: `1px solid ${REPORT.line}`,
+          borderRadius: 0,
+          minHeight: 56,
         }}
       >
-        {meta.map((m) => (
-          <Box key={m.label} sx={{ minWidth: 0 }}>
+        {brand.logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={brand.logo} alt={brand.name} style={{ maxHeight: 40, maxWidth: 180, objectFit: "contain", display: "block" }} />
+        ) : (
+          <Typography sx={{ fontSize: 17, fontWeight: 800, color: REPORT.ink }}>{brand.name}</Typography>
+        )}
+        <Box sx={{ textAlign: "right" }}>
+          <Typography sx={{ fontSize: 10.5, fontWeight: 700, color: REPORT.brand, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            {documentType}
+          </Typography>
+          <Typography sx={{ fontSize: 11, color: REPORT.muted, mt: 0.25 }}>
+            {reference} · Generated {reportDate(new Date())}
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Title and status */}
+      <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 2 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontSize: 24, fontWeight: 800, color: REPORT.ink, lineHeight: 1.25 }}>{title}</Typography>
+          {subtitle && <Typography sx={{ fontSize: 13, color: REPORT.muted, mt: 0.75 }}>{subtitle}</Typography>}
+        </Box>
+        <Box sx={{ flexShrink: 0, pt: 0.5 }}>
+          <Pill tone={statusTone}>{status}</Pill>
+        </Box>
+      </Box>
+
+      {/* Key facts */}
+      <Box
+        sx={{
+          mt: 2.5,
+          display: "grid",
+          gridTemplateColumns: `repeat(${meta.length}, 1fr)`,
+          border: `1px solid ${REPORT.line}`,
+          borderRadius: "8px",
+          overflow: "hidden",
+        }}
+      >
+        {meta.map((m, index) => (
+          <Box
+            key={m.label}
+            sx={{ minWidth: 0, px: 1.75, py: 1.25, borderLeft: index ? `1px solid ${REPORT.line}` : "none", borderRadius: 0 }}
+          >
             <Label>{m.label}</Label>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: REPORT.ink, mt: 0.25, wordBreak: "break-word" }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: REPORT.ink, mt: 0.375, wordBreak: "break-word" }}>
               {m.value}
             </Typography>
           </Box>
@@ -105,6 +185,36 @@ export function ReportHeader({
     </Box>
   );
 }
+
+/**
+ * Common bottom of every survey document on screen and in print. The downloaded PDF draws the same
+ * line on each page (with the page number) instead, so this block is not part of the PDF.
+ */
+export function ReportFooter({ brand, documentType, reference }: { brand: ReportBrand; documentType: string; reference: string }) {
+  return (
+    <Box
+      sx={{
+        mt: 3,
+        pt: 1.5,
+        borderTop: `1px solid ${REPORT.line}`,
+        borderRadius: 0,
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 2,
+        fontSize: 10.5,
+        color: REPORT.muted,
+      }}
+    >
+      <span>
+        <strong style={{ color: REPORT.ink }}>{brand.name}</strong> · {documentType}
+      </span>
+      <span style={{ whiteSpace: "nowrap" }}>{reference}</span>
+    </Box>
+  );
+}
+
+export const reportDate = (value: string | Date | null | undefined) =>
+  value ? new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
 export function Label({ children }: { children: React.ReactNode }) {
   return (

@@ -52,6 +52,9 @@ import {
   IconDotsVertical,
   IconCopy,
   IconColumns,
+  IconAlertTriangle,
+  IconCalendarEvent,
+  IconArrowBackUp,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -122,6 +125,15 @@ function Badge({ tone, label, icon }: { tone: ToneColor; label: string; icon?: R
   );
 }
 
+// Summary cards above the list. Each one is a quick filter (the API's `focus` parameter).
+type FocusKey = "overdue" | "due_soon" | "rework" | "with_qs";
+const FOCUS_CARDS: { key: FocusKey; label: string; hint: string; tone: ToneColor; icon: React.ReactNode }[] = [
+  { key: "overdue", label: "Overdue", hint: "Date passed, not submitted", tone: "error", icon: <IconAlertTriangle size={20} /> },
+  { key: "due_soon", label: "Due in 7 days", hint: "Upcoming survey dates", tone: "info", icon: <IconCalendarEvent size={20} /> },
+  { key: "rework", label: "Rework requested", hint: "Sent back by the QS", tone: "warning", icon: <IconArrowBackUp size={20} /> },
+  { key: "with_qs", label: "With QS", hint: "Submitted or being priced", tone: "secondary", icon: <IconCalculator size={20} /> },
+];
+
 const formatDate = (value?: string | null) =>
   value
     ? new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
@@ -156,6 +168,9 @@ export default function SurveyList() {
   // Search & Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Active summary card; it replaces the status tab while set.
+  const [focusFilter, setFocusFilter] = useState<FocusKey | null>(null);
+  const [stats, setStats] = useState<Record<FocusKey, number> | null>(null);
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [surveyorFilter, setSurveyorFilter] = useState<string>("all");
 
@@ -324,6 +339,7 @@ export default function SurveyList() {
         limit: pagination.pageSize,
       };
       if (statusFilter !== "all") params.status = statusFilter;
+      if (focusFilter) params.focus = focusFilter;
 
       // The API counts per status within the given filters, so with a status tab selected the
       // other tabs' counts come from a second, one-row request without the status filter.
@@ -344,6 +360,7 @@ export default function SurveyList() {
             ? res.data.data?.statusCounts ?? null
             : countsRes?.data?.data?.statusCounts ?? null,
         );
+        setStats(res.data.data?.stats ?? null);
         const filterOptions = res.data.filter_options || {};
         setProjectOptions((prev) => tableFilterOptions(filterOptions.projects, rows, "project_id", "project_name", prev));
         setSurveyorOptions((prev) => tableFilterOptions(filterOptions.surveyors, rows, "surveyor_id", "surveyor_name", prev));
@@ -386,6 +403,7 @@ export default function SurveyList() {
   const hasActiveFilters = Boolean(
     search.trim() ||
     statusFilter !== "all" ||
+    focusFilter ||
     projectFilter !== "all" ||
     surveyorFilter !== "all"
   );
@@ -393,6 +411,7 @@ export default function SurveyList() {
   const handleClearFilters = () => {
     setSearch("");
     setStatusFilter("all");
+    setFocusFilter(null);
     setProjectFilter("all");
     setSurveyorFilter("all");
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
@@ -758,7 +777,7 @@ export default function SurveyList() {
     data,
     columns,
     fetchData: fetchSurveys,
-    debounceDependencies: [search, statusFilter, projectFilter, surveyorFilter],
+    debounceDependencies: [search, statusFilter, focusFilter, projectFilter, surveyorFilter],
     initialPagination: { pageIndex: 0, pageSize: 50 },
     state: { columnVisibility },
     onColumnVisibilityChange,
@@ -767,7 +786,7 @@ export default function SurveyList() {
   // Reset to first page when search or filters change
   useEffect(() => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [search, statusFilter, projectFilter, surveyorFilter, setPagination]);
+  }, [search, statusFilter, focusFilter, projectFilter, surveyorFilter, setPagination]);
 
   const allCount = statusCounts
     ? Object.values(statusCounts).reduce((sum, n) => sum + (n || 0), 0)
@@ -789,7 +808,7 @@ export default function SurveyList() {
         justifyContent="space-between"
         alignItems={{ xs: "flex-start", sm: "center" }}
         spacing={2}
-        mb={3}
+        mb={2.5}
       >
         <Box>
           <Typography variant="h4" fontWeight={700}>
@@ -826,11 +845,93 @@ export default function SurveyList() {
         </Stack>
       </Stack>
 
+      {/* Summary cards: click one to filter the list, click it again to clear */}
+      <Grid container spacing={2} mb={2.5}>
+        {FOCUS_CARDS.map((card) => {
+          const active = focusFilter === card.key;
+          const count = stats?.[card.key];
+          return (
+            <Grid key={card.key} size={{ xs: 6, md: 3 }}>
+              <Box
+                component="button"
+                type="button"
+                aria-pressed={active}
+                onClick={() => {
+                  setFocusFilter(active ? null : card.key);
+                  setStatusFilter("all");
+                }}
+                sx={(theme) => ({
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  p: 1.75,
+                  textAlign: "left",
+                  font: "inherit",
+                  color: "inherit",
+                  cursor: "pointer",
+                  borderRadius: "12px",
+                  border: "1px solid",
+                  borderColor: active ? theme.palette.primary.main : theme.palette.divider,
+                  bgcolor: active ? alpha(theme.palette.primary.main, 0.06) : theme.palette.background.paper,
+                  boxShadow: active ? `0 0 0 1px ${theme.palette.primary.main}` : "none",
+                  transition: "border-color .15s, background-color .15s",
+                  "&:hover": { borderColor: active ? theme.palette.primary.main : theme.palette.text.disabled },
+                  "&:focus-visible": { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2 },
+                })}
+              >
+                <Box
+                  sx={[
+                    {
+                      width: 40,
+                      height: 40,
+                      flexShrink: 0,
+                      borderRadius: "10px",
+                      display: { xs: "none", sm: "flex" },
+                      alignItems: "center",
+                      justifyContent: "center",
+                    },
+                    toneSx(card.tone),
+                  ]}
+                >
+                  {card.icon}
+                </Box>
+                <Box minWidth={0}>
+                  <Stack direction="row" alignItems="baseline" spacing={1}>
+                    <Typography
+                      component="span"
+                      sx={{ fontSize: "1.375rem", fontWeight: 700, lineHeight: 1.2, color: count ? "text.primary" : "text.disabled" }}
+                    >
+                      {count ?? "–"}
+                    </Typography>
+                    <Typography
+                      component="span"
+                      variant="body2"
+                      fontWeight={600}
+                      sx={{ whiteSpace: { sm: "nowrap" }, lineHeight: 1.3 }}
+                    >
+                      {card.label}
+                    </Typography>
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ display: { xs: "none", sm: "block" } }}>
+                    {card.hint}
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>
+          );
+        })}
+      </Grid>
+
       <BlankCard>
-        {/* Status tabs with counts */}
+        {/* Status tabs with counts; no tab is selected while a summary card filters the list */}
         <Tabs
-          value={statusFilter}
-          onChange={(_, value) => setStatusFilter(value)}
+          value={focusFilter ? false : statusFilter}
+          onChange={(_, value) => {
+            setFocusFilter(null);
+            setStatusFilter(value);
+          }}
           variant="scrollable"
           scrollButtons="auto"
           sx={{
@@ -895,7 +996,7 @@ export default function SurveyList() {
                 </InputAdornment>
               ),
             }}
-            sx={{ flex: 1, minWidth: { md: 280 }, maxWidth: { md: 420 } }}
+            sx={{ flex: { xs: "none", md: "0 0 360px" }, width: { xs: "100%", md: 360 } }}
           />
 
           <CustomTextField

@@ -5,7 +5,23 @@ import { Box, Typography } from "@mui/material";
 import dayjs from "dayjs";
 import { Survey, SurveyItem } from "../../types";
 import { PDF_PAGE_BLOCK_ATTR } from "./surveyPdfExport";
-import { REPORT, Pill, Tone, ReportHeader, SectionTitle, Stat, Label, tableSx, money, humanize } from "./ReportParts";
+import {
+  REPORT,
+  Pill,
+  Tone,
+  ReportHeader,
+  ReportFooter,
+  SectionTitle,
+  Stat,
+  Label,
+  tableSx,
+  money,
+  humanize,
+  reportDate,
+  useReportBrand,
+} from "./ReportParts";
+
+export const SURVEY_REPORT_TYPE = "Inspection & commercial scope report";
 
 interface SurveyPrintableReportProps {
   survey: Survey;
@@ -49,6 +65,8 @@ const measurementsText = (item: SurveyItem) => {
 };
 
 export default function SurveyPrintableReport({ survey, containerRef }: SurveyPrintableReportProps) {
+  const brand = useReportBrand();
+  const reference = survey.reference || `Survey #${survey.id}`;
   const getImageUrl = (path?: string) => {
     if (!path) return "";
     if (path.startsWith("http://") || path.startsWith("https://")) return path;
@@ -86,6 +104,9 @@ export default function SurveyPrintableReport({ survey, containerRef }: SurveyPr
 
   let section = 0;
   const next = () => (section += 1);
+  const defectsSection = defects.length > 0 ? next() : 0;
+  const roomsSection = rooms.length > 0 ? next() : 0;
+  const scopeSection = scopeItems.length > 0 ? next() : 0;
 
   return (
     <Box
@@ -106,27 +127,23 @@ export default function SurveyPrintableReport({ survey, containerRef }: SurveyPr
       }}
     >
       {/* 1. Header and summary */}
-      <Box {...block} sx={{ mb: 3.5 }}>
+      <Box {...block} sx={{ mb: 4 }}>
         <ReportHeader
-          documentType="Survey Studio"
-          title="Inspection & Commercial Scope Report"
-          subtitle={
-            <>
-              <strong style={{ color: REPORT.ink }}>{survey.reference}</strong>
-              {survey.title ? ` · ${survey.title}` : ""}
-            </>
-          }
+          brand={brand}
+          documentType={SURVEY_REPORT_TYPE}
+          reference={reference}
+          title={survey.property_name || survey.address?.name || "Property not set"}
+          subtitle={survey.title && survey.title !== survey.reference ? survey.title : undefined}
           status={humanize(survey.status)}
           statusTone={STATUS_TONE[survey.status] || "neutral"}
           meta={[
-            { label: "Property address", value: survey.property_name || survey.address?.name || "—" },
             { label: "Project", value: survey.project_name || survey.project?.name || "—" },
             { label: "Surveyor", value: surveyorName },
-            { label: "Inspection date", value: survey.survey_date ? dayjs(survey.survey_date).format("DD MMM YYYY") : "—" },
+            { label: "Survey date", value: reportDate(survey.survey_date) },
           ]}
         />
 
-        <Box sx={{ mt: 2.5, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1.5 }}>
+        <Box sx={{ mt: 2, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1.25 }}>
           <Stat label="Rooms / areas" value={rooms.length} hint={`${totalElements} element${totalElements === 1 ? "" : "s"}`} />
           <Stat
             label="Inspected"
@@ -142,16 +159,12 @@ export default function SurveyPrintableReport({ survey, containerRef }: SurveyPr
           />
           <Stat label={totalLabel} value={money(baselineTotal)} hint={isLocked ? "Locked by QS" : "Pending QS lock"} valueColor={REPORT.brand} />
         </Box>
-
-        <Typography sx={{ fontSize: 10.5, color: REPORT.faint, mt: 1.25, textAlign: "right" }}>
-          Generated {dayjs().format("DD MMM YYYY, HH:mm")}
-        </Typography>
       </Box>
 
       {/* 2. Defect schedule */}
       {defects.length > 0 && (
-        <Box {...block} sx={{ mb: 3.5 }}>
-          <SectionTitle number={next()} title="Defect schedule" aside={<Pill tone="danger">{defects.length} to remedy</Pill>} />
+        <Box {...block} sx={{ mb: 4 }}>
+          <SectionTitle number={defectsSection} title="Defect schedule" aside={<Pill tone="danger">{defects.length} to remedy</Pill>} />
           <Box sx={{ border: `1px solid ${REPORT.line}`, borderRadius: "8px", overflow: "hidden" }}>
             <Box component="table" sx={tableSx}>
               <thead>
@@ -192,19 +205,15 @@ export default function SurveyPrintableReport({ survey, containerRef }: SurveyPr
 
       {/* 3. Room-by-room inspection */}
       {rooms.length > 0 && (
-        <Box sx={{ mb: 1 }}>
-          <Box {...block}>
-            <SectionTitle number={next()} title="Room-by-room inspection" />
-          </Box>
+        <Box sx={{ mb: 2 }}>
           {rooms.map((room, rIdx) => {
             const items = room.items || [];
             const photos = items.flatMap((i) => (i.photos || []).map((p) => ({ item: i, photo: p })));
+            // The section title travels with the first room, so it never ends a page on its own.
             return (
-              <Box
-                key={room.id}
-                {...block}
-                sx={{ mb: 2, border: `1px solid ${REPORT.line}`, borderRadius: "8px", overflow: "hidden" }}
-              >
+              <Box key={room.id} {...block} sx={{ mb: 2 }}>
+                {rIdx === 0 && <SectionTitle number={roomsSection} title="Room-by-room inspection" />}
+                <Box sx={{ border: `1px solid ${REPORT.line}`, borderRadius: "8px", overflow: "hidden" }}>
                 <Box
                   sx={{
                     px: 1.5,
@@ -298,6 +307,7 @@ export default function SurveyPrintableReport({ survey, containerRef }: SurveyPr
                     </Box>
                   </Box>
                 )}
+                </Box>
               </Box>
             );
           })}
@@ -306,9 +316,9 @@ export default function SurveyPrintableReport({ survey, containerRef }: SurveyPr
 
       {/* 4. Commercial scope */}
       {scopeItems.length > 0 && (
-        <Box {...block} sx={{ mb: 3.5 }}>
+        <Box {...block} sx={{ mb: 4 }}>
           <SectionTitle
-            number={next()}
+            number={scopeSection}
             title="Commercial scope & schedule of rates"
             aside={<Pill tone={isLocked ? "success" : "brand"}>{isLocked ? "Baseline locked" : "In QS review"}</Pill>}
           />
@@ -415,30 +425,8 @@ export default function SurveyPrintableReport({ survey, containerRef }: SurveyPr
         </Box>
       )}
 
-      {/* 5. Footer */}
-      <Box
-        {...block}
-        sx={{
-          mt: 2,
-          pt: 1.5,
-          borderTop: `1px solid ${REPORT.line}`,
-          borderRadius: 0,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 2,
-          fontSize: 10.5,
-          color: REPORT.muted,
-        }}
-      >
-        <span>
-          <strong style={{ color: REPORT.ink }}>Belcka</strong> · Confidential inspection document. Site evidence and
-          costing are recorded and audited.
-        </span>
-        <span style={{ whiteSpace: "nowrap" }}>
-          Doc SVY-{survey.id} · {survey.reference}
-        </span>
-      </Box>
+      {/* Footer (screen and print; the PDF draws it on every page) */}
+      <ReportFooter brand={brand} documentType={SURVEY_REPORT_TYPE} reference={reference} />
     </Box>
   );
 }
