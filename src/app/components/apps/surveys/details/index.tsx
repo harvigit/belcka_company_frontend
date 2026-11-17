@@ -93,8 +93,9 @@ import {
   SurveyVariationOrder,
 } from "../types";
 import { exportSurveyReportToPdf, exportWorkOrderJobPackToPdf } from "./pdf/surveyPdfExport";
-import SurveyPrintableReport from "./pdf/SurveyPrintableReport";
-import WorkOrderJobPackReport from "./pdf/WorkOrderJobPackReport";
+import SurveyPrintableReport, { SURVEY_REPORT_TYPE } from "./pdf/SurveyPrintableReport";
+import WorkOrderJobPackReport, { JOB_PACK_TYPE } from "./pdf/WorkOrderJobPackReport";
+import { useReportBrand } from "./pdf/ReportParts";
 import ReportPreviewDialog from "./pdf/ReportPreviewDialog";
 import SiteReportPdfPreview, { fetchSiteReportPdf, saveBlob, siteReportFileName } from "./pdf/SiteReportPdfPreview";
 
@@ -224,6 +225,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
   const [exportingWoPdf, setExportingWoPdf] = useState(false);
   const [woPreviewOpen, setWoPreviewOpen] = useState(false);
   const woReportPrintRef = React.useRef<HTMLDivElement>(null);
+  const reportBrand = useReportBrand();
 
   const handleExportWoJobPackPdf = async () => {
     const wo = survey?.work_order || survey?.work_orders?.[0];
@@ -232,7 +234,11 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       setExportingWoPdf(true);
       toast.loading("Generating Contractor Work Order Job Pack PDF...", { id: "wo-pdf-export" });
       const filename = `${wo.reference || `WO-${survey.reference}`}-Job-Pack.pdf`;
-      await exportWorkOrderJobPackToPdf(woReportPrintRef.current, filename);
+      await exportWorkOrderJobPackToPdf(woReportPrintRef.current, filename, {
+        company: reportBrand.name,
+        documentType: JOB_PACK_TYPE,
+        reference: wo.reference || survey.reference || `Survey #${survey.id}`,
+      });
       toast.success("Work Order Job Pack PDF downloaded successfully!", { id: "wo-pdf-export" });
     } catch (err: any) {
       console.error("Job Pack export failed:", err);
@@ -315,7 +321,11 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       setExportingPdf(true);
       toast.loading("Generating professional survey PDF report...", { id: "pdf-export" });
       const filename = `${survey.reference || `SURVEY-${survey.id}`}-Inspection-Report.pdf`;
-      await exportSurveyReportToPdf(reportPrintRef.current, filename);
+      await exportSurveyReportToPdf(reportPrintRef.current, filename, {
+        company: reportBrand.name,
+        documentType: SURVEY_REPORT_TYPE,
+        reference: survey.reference || `Survey #${survey.id}`,
+      });
       toast.success("PDF survey report downloaded successfully!", { id: "pdf-export" });
     } catch (err: any) {
       console.error("PDF export failed:", err);
@@ -2321,8 +2331,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       <ReportPreviewDialog
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
-        title="Survey report preview"
-        subtitle={`${survey.reference || `Survey #${survey.id}`} · Inspection & commercial scope`}
+        title="Inspection & commercial report"
+        subtitle={`${survey.reference || `Survey #${survey.id}`} · Defects, room-by-room inspection and costing`}
         icon={<IconFileDescription size={22} />}
         printTargetId="survey-printable-report"
         onDownload={handleExportPdf}
@@ -2680,7 +2690,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       <ReportPreviewDialog
         open={woPreviewOpen}
         onClose={() => setWoPreviewOpen(false)}
-        title="Work order job pack preview"
+        title="Work order job pack"
         subtitle={activeWorkOrder ? `${activeWorkOrder.reference} · ${survey.reference || `Survey #${survey.id}`}` : undefined}
         icon={<IconBriefcase size={22} />}
         printTargetId="work-order-job-pack-report"
