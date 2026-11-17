@@ -135,6 +135,11 @@ interface SurveyDetailsProps {
   id: string;
 }
 
+// Which reports make sense at each survey status (the API checks the site report too).
+// Site report: once the inspection has started. Commercial report: once QS pricing can begin.
+const SITE_REPORT_STATUSES = ["in_progress", "submitted", "qs_review", "completed", "frozen"];
+const COMMERCIAL_REPORT_STATUSES = ["submitted", "qs_review", "completed", "frozen"];
+
 export default function SurveyDetails({ id }: SurveyDetailsProps) {
   const inspectionForm = useInspectionForm(id);
   const router = useRouter();
@@ -333,6 +338,9 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       setDownloadingSiteReport(false);
     }
   };
+
+  const canSiteReport = Boolean(survey && SITE_REPORT_STATUSES.includes(survey.status));
+  const canCommercialReport = Boolean(survey && COMMERCIAL_REPORT_STATUSES.includes(survey.status));
 
   const fetchSurvey = React.useCallback(async () => {
     setLoading(true);
@@ -781,28 +789,37 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
             />
           )}
 
-          <Button
-            variant="outlined"
-            color="inherit"
-            startIcon={<IconEye size={18} />}
-            endIcon={<IconChevronDown size={16} />}
-            onClick={(e) => setReportMenu({ anchor: e.currentTarget, mode: "preview" })}
-            sx={{ fontWeight: 600, borderRadius: "8px" }}
-          >
-            Preview Report
-          </Button>
+          <Tooltip title={canSiteReport ? "" : "Reports are available once the inspection has started"}>
+            <span>
+              <Button
+                variant="outlined"
+                color="inherit"
+                startIcon={<IconEye size={18} />}
+                endIcon={<IconChevronDown size={16} />}
+                onClick={(e) => setReportMenu({ anchor: e.currentTarget, mode: "preview" })}
+                disabled={!canSiteReport}
+                sx={{ fontWeight: 600, borderRadius: "8px" }}
+              >
+                Preview Report
+              </Button>
+            </span>
+          </Tooltip>
 
-          <Button
-            variant="outlined"
-            color="primary"
-            startIcon={exportingPdf || downloadingSiteReport ? <CircularProgress size={16} /> : <IconDownload size={18} />}
-            endIcon={<IconChevronDown size={16} />}
-            onClick={(e) => setReportMenu({ anchor: e.currentTarget, mode: "download" })}
-            disabled={exportingPdf || downloadingSiteReport || !survey}
-            sx={{ fontWeight: 600, borderRadius: "8px" }}
-          >
-            {exportingPdf || downloadingSiteReport ? "Exporting PDF..." : "Export Report (PDF)"}
-          </Button>
+          <Tooltip title={canSiteReport ? "" : "Reports are available once the inspection has started"}>
+            <span>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={exportingPdf || downloadingSiteReport ? <CircularProgress size={16} /> : <IconDownload size={18} />}
+                endIcon={<IconChevronDown size={16} />}
+                onClick={(e) => setReportMenu({ anchor: e.currentTarget, mode: "download" })}
+                disabled={!canSiteReport || exportingPdf || downloadingSiteReport}
+                sx={{ fontWeight: 600, borderRadius: "8px" }}
+              >
+                {exportingPdf || downloadingSiteReport ? "Exporting PDF..." : "Export Report (PDF)"}
+              </Button>
+            </span>
+          </Tooltip>
 
           <Menu
             anchorEl={reportMenu?.anchor}
@@ -834,6 +851,9 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                 tone: "primary" as const,
                 title: "Site survey report",
                 hint: "Rooms, photos and condition of each element",
+                available: canSiteReport,
+                reason: "Available once the inspection has started",
+                note: survey.status === "in_progress" ? "Draft while the inspection is in progress" : "",
                 run: (mode?: string) => (mode === "preview" ? setSiteReportOpen(true) : void handleDownloadSiteReport()),
               },
               {
@@ -842,11 +862,15 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                 tone: "secondary" as const,
                 title: "Inspection & commercial report",
                 hint: "Defects, rooms and the priced scope",
+                available: canCommercialReport,
+                reason: "Available once the survey is submitted for QS",
+                note: "",
                 run: (mode?: string) => (mode === "preview" ? setPreviewOpen(true) : void handleExportPdf()),
               },
             ].map((option) => (
               <MenuItem
                 key={option.key}
+                disabled={!option.available}
                 onClick={() => {
                   const mode = reportMenu?.mode;
                   setReportMenu(null);
@@ -874,8 +898,13 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                     {option.title}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.35}>
-                    {option.hint}
+                    {option.available ? option.hint : option.reason}
                   </Typography>
+                  {option.available && option.note && (
+                    <Typography variant="caption" color="warning.dark" fontWeight={600} display="block" lineHeight={1.35} mt={0.25}>
+                      {option.note}
+                    </Typography>
+                  )}
                 </Box>
               </MenuItem>
             ))}
@@ -2220,7 +2249,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                 );
               })()}
 
-              {/* Action Buttons in Tab 1 */}
+              {/* Action Buttons in Tab 1: the priced report only makes sense once QS pricing can begin */}
+              {canCommercialReport && (
               <Stack direction="row" spacing={2} justifyContent="flex-end">
                 <Button
                   variant="outlined"
@@ -2254,6 +2284,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                   </Button>
                 )}
               </Stack>
+              )}
             </Box>
           );
         })()}
