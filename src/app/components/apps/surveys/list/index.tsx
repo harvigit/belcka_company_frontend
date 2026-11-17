@@ -33,6 +33,7 @@ import {
   LinearProgress,
   Tabs,
   Tab,
+  Autocomplete,
 } from "@mui/material";
 import { alpha, darken, Theme } from "@mui/material/styles";
 import {
@@ -49,7 +50,11 @@ import {
   IconLock,
   IconSettings,
   IconDotsVertical,
+  IconCopy,
   IconColumns,
+  IconAlertTriangle,
+  IconCalendarEvent,
+  IconArrowBackUp,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -120,6 +125,15 @@ function Badge({ tone, label, icon }: { tone: ToneColor; label: string; icon?: R
   );
 }
 
+// Summary cards above the list. Each one is a quick filter (the API's `focus` parameter).
+type FocusKey = "overdue" | "due_soon" | "rework" | "with_qs";
+const FOCUS_CARDS: { key: FocusKey; label: string; hint: string; tone: ToneColor; icon: React.ReactNode }[] = [
+  { key: "overdue", label: "Overdue", hint: "Date passed, not submitted", tone: "error", icon: <IconAlertTriangle size={20} /> },
+  { key: "due_soon", label: "Due in 7 days", hint: "Upcoming survey dates", tone: "info", icon: <IconCalendarEvent size={20} /> },
+  { key: "rework", label: "Rework requested", hint: "Sent back by the QS", tone: "warning", icon: <IconArrowBackUp size={20} /> },
+  { key: "with_qs", label: "With QS", hint: "Submitted or being priced", tone: "secondary", icon: <IconCalculator size={20} /> },
+];
+
 const formatDate = (value?: string | null) =>
   value
     ? new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
@@ -154,6 +168,9 @@ export default function SurveyList() {
   // Search & Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Active summary card; it replaces the status tab while set.
+  const [focusFilter, setFocusFilter] = useState<FocusKey | null>(null);
+  const [stats, setStats] = useState<Record<FocusKey, number> | null>(null);
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [surveyorFilter, setSurveyorFilter] = useState<string>("all");
 
@@ -169,6 +186,55 @@ export default function SurveyList() {
 
   // Delete modal state
   const [deleteTargetId, setDeleteTargetId] = useState<string | number | null>(null);
+
+  // Duplicate survey dialog: copies the set-up into a new survey, assigned to the chosen surveyor.
+  const [duplicateSource, setDuplicateSource] = useState<Survey | null>(null);
+  const [duplicateSurveyorId, setDuplicateSurveyorId] = useState<string>("");
+  const [duplicateDate, setDuplicateDate] = useState<string>("");
+  // Both fields are required; problems are shown after the first Create attempt.
+  const [duplicateTried, setDuplicateTried] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+
+  const openDuplicate = (survey: Survey) => {
+    setDuplicateSource(survey);
+    setDuplicateTried(false);
+    // Start with the same surveyor when they can still be assigned.
+    const same = survey.surveyor_id && surveyors.some((s) => String(s.id) === String(survey.surveyor_id));
+    setDuplicateSurveyorId(same ? String(survey.surveyor_id) : "");
+    // Local today, as YYYY-MM-DD for the date input.
+    const now = new Date();
+    setDuplicateDate(
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+    );
+  };
+
+  const handleDuplicate = async () => {
+    if (!duplicateSource) return;
+    if (!duplicateSurveyorId || !duplicateDate) {
+      setDuplicateTried(true);
+      return;
+    }
+    try {
+      setDuplicating(true);
+      const res = await api.post(`surveys/${duplicateSource.id}/duplicate`, {
+        surveyor_id: Number(duplicateSurveyorId),
+        survey_date: duplicateDate,
+      });
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message || "Survey duplicated");
+        setDuplicateSource(null);
+        const newId = res.data.info?.id;
+        if (newId) router.push(`/apps/surveys/view/${newId}`);
+        else void fetchSurveys();
+      } else {
+        toast.error(res.data?.message || "Failed to duplicate survey");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to duplicate survey");
+    } finally {
+      setDuplicating(false);
+    }
+  };
   const [deleting, setDeleting] = useState(false);
 
   // Work Order Handoff Dialog State
@@ -273,6 +339,7 @@ export default function SurveyList() {
         limit: pagination.pageSize,
       };
       if (statusFilter !== "all") params.status = statusFilter;
+      if (focusFilter) params.focus = focusFilter;
 
       // The API counts per status within the given filters, so with a status tab selected the
       // other tabs' counts come from a second, one-row request without the status filter.
@@ -293,6 +360,7 @@ export default function SurveyList() {
             ? res.data.data?.statusCounts ?? null
             : countsRes?.data?.data?.statusCounts ?? null,
         );
+        setStats(res.data.data?.stats ?? null);
         const filterOptions = res.data.filter_options || {};
         setProjectOptions((prev) => tableFilterOptions(filterOptions.projects, rows, "project_id", "project_name", prev));
         setSurveyorOptions((prev) => tableFilterOptions(filterOptions.surveyors, rows, "surveyor_id", "surveyor_name", prev));
@@ -335,6 +403,7 @@ export default function SurveyList() {
   const hasActiveFilters = Boolean(
     search.trim() ||
     statusFilter !== "all" ||
+    focusFilter ||
     projectFilter !== "all" ||
     surveyorFilter !== "all"
   );
@@ -342,6 +411,7 @@ export default function SurveyList() {
   const handleClearFilters = () => {
     setSearch("");
     setStatusFilter("all");
+    setFocusFilter(null);
     setProjectFilter("all");
     setSurveyorFilter("all");
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
@@ -707,7 +777,7 @@ export default function SurveyList() {
     data,
     columns,
     fetchData: fetchSurveys,
-    debounceDependencies: [search, statusFilter, projectFilter, surveyorFilter],
+    debounceDependencies: [search, statusFilter, focusFilter, projectFilter, surveyorFilter],
     initialPagination: { pageIndex: 0, pageSize: 50 },
     state: { columnVisibility },
     onColumnVisibilityChange,
@@ -716,7 +786,7 @@ export default function SurveyList() {
   // Reset to first page when search or filters change
   useEffect(() => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [search, statusFilter, projectFilter, surveyorFilter, setPagination]);
+  }, [search, statusFilter, focusFilter, projectFilter, surveyorFilter, setPagination]);
 
   const allCount = statusCounts
     ? Object.values(statusCounts).reduce((sum, n) => sum + (n || 0), 0)
@@ -738,7 +808,7 @@ export default function SurveyList() {
         justifyContent="space-between"
         alignItems={{ xs: "flex-start", sm: "center" }}
         spacing={2}
-        mb={3}
+        mb={2.5}
       >
         <Box>
           <Typography variant="h4" fontWeight={700}>
@@ -775,11 +845,93 @@ export default function SurveyList() {
         </Stack>
       </Stack>
 
+      {/* Summary cards: click one to filter the list, click it again to clear */}
+      <Grid container spacing={2} mb={2.5}>
+        {FOCUS_CARDS.map((card) => {
+          const active = focusFilter === card.key;
+          const count = stats?.[card.key];
+          return (
+            <Grid key={card.key} size={{ xs: 6, md: 3 }}>
+              <Box
+                component="button"
+                type="button"
+                aria-pressed={active}
+                onClick={() => {
+                  setFocusFilter(active ? null : card.key);
+                  setStatusFilter("all");
+                }}
+                sx={(theme) => ({
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  p: 1.75,
+                  textAlign: "left",
+                  font: "inherit",
+                  color: "inherit",
+                  cursor: "pointer",
+                  borderRadius: "12px",
+                  border: "1px solid",
+                  borderColor: active ? theme.palette.primary.main : theme.palette.divider,
+                  bgcolor: active ? alpha(theme.palette.primary.main, 0.06) : theme.palette.background.paper,
+                  boxShadow: active ? `0 0 0 1px ${theme.palette.primary.main}` : "none",
+                  transition: "border-color .15s, background-color .15s",
+                  "&:hover": { borderColor: active ? theme.palette.primary.main : theme.palette.text.disabled },
+                  "&:focus-visible": { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2 },
+                })}
+              >
+                <Box
+                  sx={[
+                    {
+                      width: 40,
+                      height: 40,
+                      flexShrink: 0,
+                      borderRadius: "10px",
+                      display: { xs: "none", sm: "flex" },
+                      alignItems: "center",
+                      justifyContent: "center",
+                    },
+                    toneSx(card.tone),
+                  ]}
+                >
+                  {card.icon}
+                </Box>
+                <Box minWidth={0}>
+                  <Stack direction="row" alignItems="baseline" spacing={1}>
+                    <Typography
+                      component="span"
+                      sx={{ fontSize: "1.375rem", fontWeight: 700, lineHeight: 1.2, color: count ? "text.primary" : "text.disabled" }}
+                    >
+                      {count ?? "–"}
+                    </Typography>
+                    <Typography
+                      component="span"
+                      variant="body2"
+                      fontWeight={600}
+                      sx={{ whiteSpace: { sm: "nowrap" }, lineHeight: 1.3 }}
+                    >
+                      {card.label}
+                    </Typography>
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ display: { xs: "none", sm: "block" } }}>
+                    {card.hint}
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>
+          );
+        })}
+      </Grid>
+
       <BlankCard>
-        {/* Status tabs with counts */}
+        {/* Status tabs with counts; no tab is selected while a summary card filters the list */}
         <Tabs
-          value={statusFilter}
-          onChange={(_, value) => setStatusFilter(value)}
+          value={focusFilter ? false : statusFilter}
+          onChange={(_, value) => {
+            setFocusFilter(null);
+            setStatusFilter(value);
+          }}
           variant="scrollable"
           scrollButtons="auto"
           sx={{
@@ -844,7 +996,7 @@ export default function SurveyList() {
                 </InputAdornment>
               ),
             }}
-            sx={{ flex: 1, minWidth: { md: 280 }, maxWidth: { md: 420 } }}
+            sx={{ flex: { xs: "none", md: "0 0 360px" }, width: { xs: "100%", md: 360 } }}
           />
 
           <CustomTextField
@@ -1051,6 +1203,18 @@ export default function SurveyList() {
             <ListItemIcon><IconEye size={18} /></ListItemIcon>
             <ListItemText>View survey</ListItemText>
           </MenuItem>,
+          isAdmin && (
+            <MenuItem
+              key="duplicate"
+              onClick={() => {
+                closeMenu();
+                openDuplicate(menuSurvey);
+              }}
+            >
+              <ListItemIcon><IconCopy size={18} /></ListItemIcon>
+              <ListItemText>Duplicate survey</ListItemText>
+            </MenuItem>
+          ),
           menuActions.canInspect && (
             <MenuItem key="inspect" component={Link} href={`/apps/surveys/inspect/${menuSurvey.id}`} onClick={closeMenu}>
               <ListItemIcon><IconCamera size={18} /></ListItemIcon>
@@ -1266,6 +1430,101 @@ export default function SurveyList() {
             disabled={submittingWo}
           >
             {submittingWo ? "Issuing Work Order..." : "Issue Work Order"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Duplicate Survey Dialog */}
+      <Dialog open={Boolean(duplicateSource)} onClose={() => !duplicating && setDuplicateSource(null)} maxWidth="xs" fullWidth>
+        <DialogTitle component="div" sx={{ pb: 0.5 }}>
+          <Typography variant="h6" component="h2" fontWeight={700}>
+            Duplicate survey
+          </Typography>
+          <Typography variant="body2" color="text.secondary" noWrap>
+            {duplicateSource?.reference}
+            {duplicateSource?.title ? ` · ${duplicateSource.title}` : ""}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 1.5, mb: 2, p: 1.5, borderRadius: "8px", bgcolor: "grey.50", border: "1px solid", borderColor: "divider" }}>
+            <Typography variant="body2" fontWeight={600} mb={0.5}>
+              A new survey is created with the same set-up
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Copied: property, project, template, rooms and elements, property detail questions and notes.
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Not copied: inspection results, measurements, photos, answers and pricing.
+            </Typography>
+          </Box>
+          <Stack spacing={2}>
+            <Autocomplete
+              options={surveyors}
+              value={surveyors.find((u) => String(u.id) === duplicateSurveyorId) || null}
+              onChange={(_, user) => setDuplicateSurveyorId(user ? String(user.id) : "")}
+              getOptionLabel={(u) => u.name || ""}
+              isOptionEqualToValue={(a, b) => String(a.id) === String(b.id)}
+              noOptionsText="No surveyor found"
+              ListboxProps={{ style: { maxHeight: 280 } }}
+              renderOption={(props, u) => {
+                const { key, ...optionProps } = props as any;
+                return (
+                  <Box component="li" key={u.id} {...optionProps} sx={{ display: "flex", gap: 1.25, alignItems: "center", py: "6px !important" }}>
+                    <Avatar sx={[{ width: 28, height: 28, fontSize: "0.7rem", fontWeight: 700 }, toneSx("primary")]}>
+                      {initials(u.name)}
+                    </Avatar>
+                    <Box minWidth={0}>
+                      <Typography variant="body2" fontWeight={500} noWrap>
+                        {u.name}
+                      </Typography>
+                      {u.email && (
+                        <Typography variant="caption" color="text.secondary" noWrap display="block">
+                          {u.email}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                );
+              }}
+              renderInput={(params) => (
+                <CustomTextField
+                  {...params}
+                  required
+                  label="Assign to"
+                  placeholder="Search surveyor by name"
+                  error={duplicateTried && !duplicateSurveyorId}
+                  helperText={
+                    duplicateTried && !duplicateSurveyorId
+                      ? "Select the surveyor for the new survey"
+                      : "The surveyor is notified and the survey starts as Assigned."
+                  }
+                />
+              )}
+            />
+            <CustomTextField
+              type="date"
+              fullWidth
+              required
+              label="Survey date"
+              value={duplicateDate}
+              onChange={(e: any) => setDuplicateDate(e.target.value)}
+              error={duplicateTried && !duplicateDate}
+              helperText={duplicateTried && !duplicateDate ? "Select the survey date" : undefined}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setDuplicateSource(null)} disabled={duplicating}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={duplicating ? <CircularProgress size={16} color="inherit" /> : <IconCopy size={16} />}
+            onClick={handleDuplicate}
+            disabled={duplicating}
+          >
+            {duplicating ? "Creating..." : "Create copy"}
           </Button>
         </DialogActions>
       </Dialog>
