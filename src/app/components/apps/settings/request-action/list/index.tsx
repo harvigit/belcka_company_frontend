@@ -21,7 +21,6 @@ import {
 } from '@mui/material';
 
 import {
-    IconAdjustments,
     IconAlertTriangle,
     IconBeach,
     IconBriefcase,
@@ -31,13 +30,10 @@ import {
     IconEdit,
     IconEye,
     IconGavel,
-    IconHammer,
     IconInfoCircle,
     IconLink,
-    IconReceipt,
     IconSearch,
     IconShieldCheck,
-    IconUserEdit,
     IconUsersGroup,
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
@@ -52,12 +48,8 @@ const REQUEST_TYPES = [
     { name: 'Add Timesheet', slug: 'timesheet_request', icon: IconClockPlus },
     // 'Edit Timesheet' (timesheet_approve) is managed in Time Clock → Settings → Bookkeeper Setting.
     { name: 'Leave request', slug: 'leave_request', icon: IconBeach },
-    { name: 'Pricework request', slug: 'pricework_request', icon: IconHammer },
-    { name: 'Adjustment request', slug: 'adjustment_request', icon: IconAdjustments },
-    { name: 'Personal detail request', slug: 'personal_detail_request', icon: IconUserEdit },
     { name: 'Billing Info Request', slug: 'billing_info_request', icon: IconCreditCard },
     { name: 'Rate request', slug: 'rate_request', icon: IconCoin },
-    { name: 'Expense request', slug: 'expense_request', icon: IconReceipt },
     { name: 'Penalty request', slug: 'penalty_request', icon: IconAlertTriangle },
     { name: 'Penalty appeal request', slug: 'penalty_appeal_request', icon: IconGavel },
     { name: 'Team cap increase request', slug: 'team_cap_request', icon: IconUsersGroup },
