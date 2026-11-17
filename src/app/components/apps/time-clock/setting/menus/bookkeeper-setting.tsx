@@ -339,8 +339,8 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
 
     const anyDelete = accessRows.some((row) => row.delete);
     const activeCount = accessRows.filter(hasAnyAction).length;
-    // Header, user rows and the "Select all" row share these columns so everything lines up.
-    const tableColumns = `minmax(0, 1fr) repeat(${TIMESHEET_ACTIONS.length}, 84px) 44px`;
+    // Header and user rows share these columns so everything lines up.
+    const tableColumns = `minmax(0, 1fr) repeat(${TIMESHEET_ACTIONS.length}, 110px) 44px`;
     const tableRowSx = {
       display: "grid",
       gridTemplateColumns: { xs: "minmax(0, 1fr) 44px", sm: tableColumns },
@@ -408,7 +408,8 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
           </Box>
         ) : (
           <Box sx={{ mt: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-            {/* Column headers (wide screens) */}
+            {/* Column headers (wide screens). With 2+ users each header has a checkbox that
+                ticks or clears that action for everyone. */}
             <Box
               sx={{
                 ...tableRowSx,
@@ -422,21 +423,52 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
               <Typography variant="caption" fontWeight={600} color="text.secondary">
                 {t("User")}
               </Typography>
-              {TIMESHEET_ACTIONS.map((action) => (
-                <Box
-                  key={action.key}
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  gap={0.5}
-                  sx={{ color: action.key === "delete" ? "error.main" : "text.secondary" }}
-                >
-                  <action.icon size={14} />
-                  <Typography variant="caption" fontWeight={600} color="inherit">
-                    {t(action.label)}
-                  </Typography>
-                </Box>
-              ))}
+              {TIMESHEET_ACTIONS.map((action) => {
+                const color = action.key === "delete" ? "error.main" : "text.secondary";
+                if (selectedAccessUsers.length < 2) {
+                  return (
+                    <Box key={action.key} display="flex" alignItems="center" justifyContent="center" gap={0.5} sx={{ color }}>
+                      <action.icon size={14} />
+                      <Typography variant="caption" fontWeight={600} color="inherit">
+                        {t(action.label)}
+                      </Typography>
+                    </Box>
+                  );
+                }
+                const ticked = accessRows.filter((row) => row[action.key]).length;
+                return (
+                  <Tooltip key={action.key} title={`${t("Select all")} · ${t(action.label)}`}>
+                    {/* The checkbox sits in the column centre (same line as the row checkboxes);
+                        the name hangs to its right. */}
+                    <Box
+                      component="label"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      sx={{ position: "relative", color, cursor: "pointer", userSelect: "none" }}
+                    >
+                      <Checkbox
+                        size="small"
+                        checked={ticked === accessRows.length}
+                        indeterminate={ticked > 0 && ticked < accessRows.length}
+                        onChange={(e) => setActionForAll(action.key, e.target.checked)}
+                        disabled={settings.isSaving}
+                        sx={{ p: 0.5 }}
+                        inputProps={{ "aria-label": `${t("Select all")} ${t(action.label)}` }}
+                      />
+                      <Typography
+                        variant="caption"
+                        fontWeight={600}
+                        color="inherit"
+                        noWrap
+                        sx={{ position: "absolute", left: "calc(50% + 16px)", top: "50%", transform: "translateY(-50%)" }}
+                      >
+                        {t(action.label)}
+                      </Typography>
+                    </Box>
+                  </Tooltip>
+                );
+              })}
               <span />
             </Box>
 
@@ -526,40 +558,6 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
                 </Box>
               );
             })}
-
-            {/* Tick or clear a whole column (wide screens, more than one user) */}
-            {selectedAccessUsers.length > 1 && (
-              <Box
-                sx={{
-                  ...tableRowSx,
-                  display: { xs: "none", sm: "grid" },
-                  py: 0.25,
-                  bgcolor: "grey.50",
-                  borderTop: "1px solid",
-                  borderColor: "divider",
-                }}
-              >
-                <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                  {t("Select all")}
-                </Typography>
-                {TIMESHEET_ACTIONS.map((action) => {
-                  const ticked = accessRows.filter((row) => row[action.key]).length;
-                  return (
-                    <Box key={action.key} display="flex" justifyContent="center">
-                      <Checkbox
-                        size="small"
-                        checked={ticked === accessRows.length}
-                        indeterminate={ticked > 0 && ticked < accessRows.length}
-                        onChange={(e) => setActionForAll(action.key, e.target.checked)}
-                        disabled={settings.isSaving}
-                        inputProps={{ "aria-label": `${t("Select all")} ${t(action.label)}` }}
-                      />
-                    </Box>
-                  );
-                })}
-                <span />
-              </Box>
-            )}
           </Box>
         )}
 
