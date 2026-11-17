@@ -155,11 +155,13 @@ const ChoiceCard = ({
   title,
   caption,
   onClick,
+  error = false,
 }: {
   selected: boolean;
   title: string;
   caption: string;
   onClick: () => void;
+  error?: boolean;
 }) => (
   <Box
     role="button"
@@ -174,8 +176,10 @@ const ChoiceCard = ({
       borderRadius: 2,
       cursor: "pointer",
       border: "1px solid",
-      borderColor: selected ? "primary.main" : "divider",
+      borderColor: selected ? "primary.main" : error ? "error.main" : "divider",
       bgcolor: selected ? "#e7ecf7" : "background.paper",
+      transition: "border-color .15s",
+      "&:hover": { borderColor: selected ? "primary.main" : "text.disabled" },
     }}
   >
     <Typography fontWeight={600} color={selected ? "primary.main" : "text.primary"}>
@@ -187,7 +191,23 @@ const ChoiceCard = ({
   </Box>
 );
 
-const SectionTitle = ({ step, title, caption }: { step: string; title: string; caption: string }) => (
+const RequiredMark = () => (
+  <Box component="span" color="error.main" ml={0.5}>
+    *
+  </Box>
+);
+
+const SectionTitle = ({
+  step,
+  title,
+  caption,
+  required = false,
+}: {
+  step: string;
+  title: string;
+  caption: string;
+  required?: boolean;
+}) => (
   <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={2}>
     <Box
       sx={{
@@ -206,13 +226,26 @@ const SectionTitle = ({ step, title, caption }: { step: string; title: string; c
       {step}
     </Box>
     <Box>
-      <Typography fontWeight={700}>{title}</Typography>
+      <Typography fontWeight={700}>
+        {title}
+        {required && <RequiredMark />}
+      </Typography>
       <Typography variant="body2" color="text.secondary">
         {caption}
       </Typography>
     </Box>
   </Stack>
 );
+
+/** Error line under a group of controls (choice cards, tables, lists), styled like a field's helper text. */
+const FieldError = ({ message }: { message?: string }) =>
+  message ? (
+    <Typography variant="caption" color="error" display="block" mt={0.75} ml={0.25}>
+      {message}
+    </Typography>
+  ) : null;
+
+type FieldErrors = Record<string, string>;
 
 const SurveyElementForm = ({
   elementId,
@@ -241,6 +274,8 @@ const SurveyElementForm = ({
   const [knownMaterials, setKnownMaterials] = useState<CatalogueMaterial[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Errors show under the fields after the first Save draft / Publish, and update as the user fixes them.
+  const [attempt, setAttempt] = useState<null | "draft" | "publish">(null);
 
   const loadCatalogues = async () => {
     const damageUrl = elementId
@@ -640,94 +675,74 @@ const SurveyElementForm = ({
     });
   };
 
-  const save = async (publish: boolean) => {
-    if (!form.name.trim()) {
-      toast.error("Name is a required field!");
-      return;
-    }
+  // Field id -> message. Draft only checks what is filled in; publish also needs every required field.
+  const validateForm = (publish: boolean): FieldErrors => {
+    const errs: FieldErrors = {};
+    if (!form.name.trim()) errs.name = "Enter the element name";
+    if (publish && !form.form_factor) errs.form_factor = "Choose flat or volumetric";
+    if (publish && !form.measurement_mode) errs.measurement_mode = "Choose how the surveyor measures this element";
     if (form.measurement_mode === "dimensions") {
+      if (publish && !form.selected_dimensions.length) errs.dimensions = "Select at least one dimension";
       for (const dimName of form.selected_dimensions) {
         const val = String(form.dimensions_map[dimName]?.value ?? "").trim();
-        if (val !== "" && !(Number(val) > 0)) {
-          toast.error(`${dimName} must be greater than 0!`);
-          return;
-        }
+        if (val !== "" && !(Number(val) > 0)) errs[`dim_${dimName}`] = "Must be greater than 0";
+        else if (publish && val === "") errs[`dim_${dimName}`] = "Enter a value greater than 0";
+        if (publish && !form.dimensions_map[dimName]?.unit) errs[`unit_${dimName}`] = "Select a unit";
       }
     }
-    if (
-      (form.output_name || form.output_unit) &&
-      !OUTPUT_OPTIONS.some((o) => o.name === form.output_name && o.unit === form.output_unit)
+    const outputValid = OUTPUT_OPTIONS.some((o) => o.name === form.output_name && o.unit === form.output_unit);
+    if ((form.output_name || form.output_unit) && !outputValid) {
+      errs.output = "Select a valid output measurement";
+    } else if (publish && (!form.output_name.trim() || !form.output_unit.trim())) {
+      errs.output = form.form_factor ? "Select the output measurement" : "Choose a form factor, then the output measurement";
+    } else if (
+      publish &&
+      form.form_factor &&
+      !OUTPUT_OPTIONS.some(
+        (o) =>
+          o.name === form.output_name &&
+          o.unit === form.output_unit &&
+          (o.factors as readonly string[]).includes(form.form_factor),
+      )
     ) {
-      toast.error("Select a valid output measurement!");
-      return;
+      errs.output = "Doesn't match the form factor. Select it again";
     }
     const photoMinimum = String(form.surface_photo_minimum ?? "").trim();
     if (photoMinimum && (!Number.isInteger(Number(photoMinimum)) || Number(photoMinimum) < 1)) {
-      toast.error("Surface photos minimum must be a whole number of 1 or more!");
-      return;
+      errs.photos = "Enter a whole number of 1 or more";
+    } else if (publish && !photoMinimum) {
+      errs.photos = "Enter the minimum number of surface photos";
     }
     if (publish) {
-      if (!form.form_factor) {
-        toast.error("Form factor is a required field!");
-        return;
-      }
-      if (!form.measurement_mode) {
-        toast.error("Select a measurement method!");
-        return;
-      }
-      if (form.measurement_mode === "dimensions") {
-        if (!form.selected_dimensions.length) {
-          toast.error("Select at least one dimension!");
-          return;
-        }
-        for (const dimName of form.selected_dimensions) {
-          const val = form.dimensions_map[dimName]?.value;
-          if (val === "" || val === undefined || val === null || !(Number(val) > 0)) {
-            toast.error(`Enter a measurement greater than 0 for ${dimName}!`);
-            return;
-          }
-          const unit = form.dimensions_map[dimName]?.unit;
-          if (!unit) {
-            toast.error(`Select a valid unit for ${dimName}!`);
-            return;
-          }
-        }
-      }
-      if (!form.output_name.trim() || !form.output_unit.trim()) {
-        toast.error("Output measurement is a required field!");
-        return;
-      }
-      if (
-        !OUTPUT_OPTIONS.some(
-          (o) =>
-            o.name === form.output_name &&
-            o.unit === form.output_unit &&
-            (o.factors as readonly string[]).includes(form.form_factor),
-        )
-      ) {
-        toast.error("The output measurement does not match the form factor!");
-        return;
-      }
-      if (!form.surface_photo_minimum || Number(form.surface_photo_minimum) < 1) {
-        toast.error("Surface photo minimum is a required field!");
-        return;
-      }
-      if (!form.damage.some(hasMethod)) {
-        toast.error("Select at least one damage type!");
-        return;
-      }
+      if (!form.damage.some(hasMethod)) errs.damage = "Tick at least one measurement method for a damage type";
       // Selected materials and new ones added on this element both count.
       const hasMaterial = (category: "subbase" | "topwear") =>
-        selectedMaterials(category).length > 0 ||
-        pendingMaterials.some((item) => item.category === category);
-      if (!hasMaterial("subbase")) {
-        toast.error("Select at least one subbase material!");
-        return;
-      }
-      if (!hasMaterial("topwear")) {
-        toast.error("Select at least one topwear material!");
-        return;
-      }
+        selectedMaterials(category).length > 0 || pendingMaterials.some((item) => item.category === category);
+      if (!hasMaterial("subbase")) errs.subbase = "Select or create at least one subbase material";
+      if (!hasMaterial("topwear")) errs.topwear = "Select or create at least one topwear material";
+    }
+    return errs;
+  };
+
+  const errors: FieldErrors = attempt ? validateForm(attempt === "publish") : {};
+
+  const save = async (publish: boolean) => {
+    setAttempt(publish ? "publish" : "draft");
+    const errs = validateForm(publish);
+    const keys = Object.keys(errs);
+    if (keys.length) {
+      toast.error(
+        keys.length === 1 ? "Please fix the highlighted field." : `Please fix the ${keys.length} highlighted fields.`,
+      );
+      // Bring the first problem into view.
+      requestAnimationFrame(() => {
+        const first = keys
+          .map((key) => document.querySelector<HTMLElement>(`.survey-element-form [data-field="${key}"]`))
+          .filter(Boolean)
+          .sort((x, y) => x!.getBoundingClientRect().top - y!.getBoundingClientRect().top)[0];
+        first?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+      return;
     }
 
     setSaving(true);
@@ -818,7 +833,7 @@ const SurveyElementForm = ({
         display: "flex",
         flexDirection: "column",
         minHeight: 0,
-        bgcolor: "#f8fafc",
+        bgcolor: "background.paper",
         ...surveyInputAlignSx,
       }}
     >
@@ -882,21 +897,31 @@ const SurveyElementForm = ({
             >
               <CustomTextField
                 size="small"
+                required
                 label="Element name"
+                placeholder="e.g. Wall, Floor, Kitchen units"
                 value={form.name}
                 onChange={(event: any) => setField("name", event.target.value)}
+                error={Boolean(errors.name)}
+                helperText={errors.name || "The name surveyors see in each room"}
+                inputProps={{ "data-field": "name" }}
                 fullWidth
               />
               <CustomTextField
                 size="small"
-                label="Description (optional)"
+                label="Description"
+                placeholder="Optional"
                 value={form.description}
                 onChange={(event: any) => setField("description", event.target.value)}
+                helperText="Optional note for surveyors"
                 fullWidth
               />
             </Box>
-            <Typography variant="body2" fontWeight={600} mt={2} mb={1}>
-              Form factor
+            <Typography variant="body2" fontWeight={600} mt={2.5} mb={1} data-field="form_factor">
+              Form factor{" "}
+              <Box component="span" color="error.main">
+                *
+              </Box>
             </Typography>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
               <ChoiceCard
@@ -904,14 +929,17 @@ const SurveyElementForm = ({
                 title="Flat"
                 caption="Area from height and length, such as a wall or floor."
                 onClick={() => chooseFactor("flat")}
+                error={Boolean(errors.form_factor)}
               />
               <ChoiceCard
                 selected={form.form_factor === "volumetric"}
                 title="Volumetric"
                 caption="Volume from length, width and depth, such as a cupboard."
                 onClick={() => chooseFactor("volumetric")}
+                error={Boolean(errors.form_factor)}
               />
             </Stack>
+            <FieldError message={errors.form_factor} />
           </Paper>
 
           <Paper elevation={0} sx={sectionSx}>
@@ -920,25 +948,38 @@ const SurveyElementForm = ({
               title="Measurement, units and photos"
               caption="Choose how the surveyor measures this element and how many surface photos are required."
             />
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} mb={2}>
+            <Typography variant="body2" fontWeight={600} mb={1} data-field="measurement_mode">
+              Measurement method{" "}
+              <Box component="span" color="error.main">
+                *
+              </Box>
+            </Typography>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
               <ChoiceCard
                 selected={form.measurement_mode === "dimensions"}
                 title="Dimensions"
                 caption="Enter each side. The result is calculated."
                 onClick={() => setField("measurement_mode", "dimensions")}
+                error={Boolean(errors.measurement_mode)}
               />
               <ChoiceCard
                 selected={form.measurement_mode === "direct"}
                 title="Direct area / volume"
                 caption="Enter the finished area or volume."
                 onClick={() => setField("measurement_mode", "direct")}
+                error={Boolean(errors.measurement_mode)}
               />
             </Stack>
+            <FieldError message={errors.measurement_mode} />
+            <Box mb={2.5} />
 
             {form.measurement_mode === "dimensions" && (
               <Box mb={2}>
-                <Typography variant="body2" fontWeight={600} mb={1}>
-                  Dimension selection
+                <Typography variant="body2" fontWeight={600} mb={1} data-field="dimensions">
+                  Dimensions{" "}
+                  <Box component="span" color="error.main">
+                    *
+                  </Box>
                 </Typography>
                 <Autocomplete
                   multiple
@@ -959,6 +1000,8 @@ const SurveyElementForm = ({
                           ? "Select dimensions (Length, Depth, Height, Width)"
                           : ""
                       }
+                      error={Boolean(errors.dimensions)}
+                      helperText={errors.dimensions || "The sides the surveyor measures"}
                     />
                   )}
                   renderTags={(tagValue, getTagProps) =>
@@ -995,20 +1038,22 @@ const SurveyElementForm = ({
                         key={dimName}
                         direction="row"
                         spacing={1}
-                        alignItems="center"
+                        alignItems="flex-start"
                         sx={{
                           p: 1.5,
                           borderRadius: 2,
                           border: "1px solid",
                           borderColor: "divider",
-                          bgcolor: "#fafbfc",
                         }}
                       >
                         <CustomTextField
                           size="small"
+                          required
                           label={dimName}
+                          error={Boolean(errors[`dim_${dimName}`])}
+                          helperText={errors[`dim_${dimName}`]}
+                          inputProps={{ min: 0, step: "any", "data-field": `dim_${dimName}` }}
                           type="number"
-                          inputProps={{ min: 0, step: "any" }}
                           placeholder="Enter value"
                           value={form.dimensions_map[dimName]?.value ?? ""}
                           onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1030,6 +1075,8 @@ const SurveyElementForm = ({
                           select
                           size="small"
                           label="Unit"
+                          error={Boolean(errors[`unit_${dimName}`])}
+                          helperText={errors[`unit_${dimName}`]}
                           value={form.dimensions_map[dimName]?.unit || "m"}
                           onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                             const u = event.target.value;
@@ -1063,13 +1110,16 @@ const SurveyElementForm = ({
               sx={{
                 display: "grid",
                 gap: 2,
-                gridTemplateColumns: { xs: "1fr", md: "1fr 160px" },
+                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
               }}
             >
               <CustomTextField
                 select
                 size="small"
+                required
                 label="Output measurement"
+                error={Boolean(errors.output)}
+                inputProps={{ "data-field": "output" }}
                 value={
                   OUTPUT_OPTIONS.some((o) => o.name === form.output_name && o.unit === form.output_unit)
                     ? outputKey(form.output_name, form.output_unit)
@@ -1079,7 +1129,10 @@ const SurveyElementForm = ({
                   const [name, unit] = event.target.value.split("|");
                   setForm((current) => ({ ...current, output_name: name, output_unit: unit }));
                 }}
-                helperText={form.form_factor ? undefined : "Choose a form factor first"}
+                helperText={
+                  errors.output ||
+                  (form.form_factor ? "What the quantity is calculated as" : "Choose a form factor first")
+                }
                 disabled={!form.form_factor}
                 fullWidth
               >
@@ -1097,6 +1150,7 @@ const SurveyElementForm = ({
                 value={form.output_unit}
                 InputProps={{ readOnly: true }}
                 helperText="Set by the output measurement"
+                placeholder="—"
                 fullWidth
               />
               <CustomTextField
@@ -1104,16 +1158,20 @@ const SurveyElementForm = ({
                 label="Other units available"
                 value={form.other_units}
                 onChange={(event: any) => setField("other_units", event.target.value)}
-                placeholder="cm, mm, cm²"
+                placeholder="e.g. cm, mm, cm²"
+                helperText="Comma separated. Optional"
                 fullWidth
               />
               <CustomTextField
                 size="small"
+                required
                 label="Surface photos minimum"
                 type="number"
-                inputProps={{ min: 1, step: 1 }}
+                inputProps={{ min: 1, step: 1, "data-field": "photos" }}
                 value={form.surface_photo_minimum}
                 onChange={(event: any) => setField("surface_photo_minimum", event.target.value)}
+                error={Boolean(errors.photos)}
+                helperText={errors.photos || "Photos of the whole surface the surveyor must take"}
                 fullWidth
               />
             </Box>
@@ -1121,10 +1179,10 @@ const SurveyElementForm = ({
               direction="row"
               spacing={1}
               alignItems="center"
-              sx={{ mt: 2, px: 1.5, py: 1, borderRadius: 1.5, bgcolor: "#f8fafc" }}
+              sx={{ mt: 2, px: 1.5, py: 1, borderRadius: 1.5, border: "1px dashed", borderColor: "divider", color: "text.secondary" }}
             >
               <IconLock size={16} />
-              <Typography variant="body2">
+              <Typography variant="body2" color="text.secondary">
                 Each damage needs a minimum of 1 photo. This rule is locked.
               </Typography>
             </Stack>
@@ -1140,6 +1198,7 @@ const SurveyElementForm = ({
               <SectionTitle
                 step="3"
                 title="Applicable damage types"
+                required
                 caption="Tick the measurement methods allowed for each damage type. Damage types created here stay on this element only."
               />
               <Stack direction="row" spacing={1} sx={{ minWidth: { md: 320 } }}>
@@ -1173,10 +1232,17 @@ const SurveyElementForm = ({
                   ))}
               </Stack>
             )}
+            <Box data-field="damage" />
             {damageTypes.length === 0 && pendingDamage.length === 0 ? (
               <Typography color="text.secondary">No active damage types.</Typography>
             ) : (
-              <Table size="small" sx={{ tableLayout: "fixed" }}>
+              <Table
+                size="small"
+                sx={{
+                  tableLayout: "fixed",
+                  ...(errors.damage && { outline: "1px solid", outlineColor: "error.main", borderRadius: 1 }),
+                }}
+              >
                 <TableHead>
                   <TableRow>
                     {["Damage type", "Count", "Length", "Width", "Area", ""].map((heading, index) => (
@@ -1296,6 +1362,7 @@ const SurveyElementForm = ({
                 </TableBody>
               </Table>
             )}
+            <FieldError message={errors.damage} />
           </Paper>
 
           <Paper elevation={0} sx={sectionSx}>
@@ -1317,10 +1384,12 @@ const SurveyElementForm = ({
               ] as const).map(([category, label, draftName, setDraftName]) => (
                 <Box
                   key={category}
-                  sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "divider" }}
+                  data-field={category}
+                  sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: errors[category] ? "error.main" : "divider" }}
                 >
                   <Typography fontWeight={600} mb={1.5}>
                     {label}
+                    <RequiredMark />
                   </Typography>
                   <Stack direction="row" flexWrap="wrap" gap={1} mb={1.5}>
                     {knownMaterials
@@ -1448,6 +1517,8 @@ const SurveyElementForm = ({
                             ? "Select active materials"
                             : "No active materials"
                         }
+                        error={Boolean(errors[category])}
+                        helperText={errors[category]}
                       />
                     )}
                   />

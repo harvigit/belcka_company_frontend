@@ -27,26 +27,44 @@ export const waitForPdfImages = async (element: HTMLElement, timeoutMs = 5000): 
   );
 };
 
+/** Running header and footer text drawn on every PDF page. */
+export type PdfPageChrome = {
+  company: string;
+  documentType: string;
+  reference: string;
+};
+
 /**
- * Capture and download an HTML element as an executive-ready A4 multi-page PDF.
+ * Capture and download an HTML element as an A4 PDF. Blocks marked with PDF_PAGE_BLOCK_ATTR are
+ * kept whole where they fit. Every page gets the same footer (company, document, page N of M), and
+ * pages after the first a running header, so all survey documents share one frame.
  */
 export const exportSurveyReportToPdf = async (
   element: HTMLElement,
-  fileName: string = "Survey-Inspection-Report.pdf"
+  fileName: string = "Survey-Inspection-Report.pdf",
+  chrome?: PdfPageChrome
 ): Promise<void> => {
   await waitForPdfImages(element);
 
   const pdf = new jsPDF("p", "pt", "a4");
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const footerHeight = 28;
-  const pageContentHeight = pageHeight - footerHeight;
+  const side = 28; // matches the document's own side padding (40px of 794px)
+  const firstTop = 28;
+  const pageTop = chrome ? 50 : 28;
+  const contentBottom = pageHeight - 40;
 
   const pageBlocks = Array.from(element.querySelectorAll<HTMLElement>(`[${PDF_PAGE_BLOCK_ATTR}="true"]`));
 
   if (pageBlocks.length > 0) {
-    let cursorY = 0;
+    let top = firstTop;
+    let cursorY = top;
     let previousBlockBottom = 0;
+    const newPage = () => {
+      pdf.addPage();
+      top = pageTop;
+      cursorY = top;
+    };
 
     for (const block of pageBlocks) {
       const canvas = await html2canvas(block, {
@@ -68,53 +86,64 @@ export const exportSurveyReportToPdf = async (
       const blockGap = previousBlockBottom === 0 ? 0 : Math.min(rawBlockGap, 20);
       previousBlockBottom = block.offsetTop + block.offsetHeight;
 
-      // Check if block fits on current page
-      if (cursorY > 0 && cursorY + blockGap + blockImageHeight > pageContentHeight) {
-        pdf.addPage();
-        cursorY = 0;
-      } else if (cursorY > 0) {
+      const atTop = cursorY <= top;
+      if (!atTop && cursorY + blockGap + blockImageHeight > contentBottom) {
+        newPage();
+      } else if (!atTop) {
         cursorY += blockGap;
       }
 
-      // If block fits within one single page
-      if (blockImageHeight <= pageContentHeight) {
+      // Fits on the page
+      if (cursorY + blockImageHeight <= contentBottom) {
         pdf.addImage(blockImageData, "JPEG", blockX, cursorY, blockImageWidth, blockImageHeight);
         cursorY += blockImageHeight;
         continue;
       }
 
-      // For extra-large blocks exceeding a single page
+      // Taller than a page: draw it in slices. The parts outside the content area are covered by
+      // the header and footer bands below.
       let remainingHeight = blockImageHeight;
       let sourceY = 0;
-
       while (remainingHeight > 0) {
-        const availableHeight = pageContentHeight - cursorY;
-        const drawHeight = Math.min(remainingHeight, availableHeight);
-
+        const drawHeight = Math.min(remainingHeight, contentBottom - cursorY);
         pdf.addImage(blockImageData, "JPEG", blockX, cursorY - sourceY, blockImageWidth, blockImageHeight);
         remainingHeight -= drawHeight;
         sourceY += drawHeight;
         cursorY += drawHeight;
-
-        if (remainingHeight > 0) {
-          pdf.addPage();
-          cursorY = 0;
-        }
+        if (remainingHeight > 0) newPage();
       }
     }
 
-    // Draw page numbers on all pages
     const totalPages = pdf.getNumberOfPages();
-    pdf.setFontSize(9);
-    pdf.setTextColor(113, 130, 139);
     for (let index = 1; index <= totalPages; index += 1) {
       pdf.setPage(index);
-      pdf.text(
-        `Belcka Survey Studio • Page ${index} of ${totalPages}`,
-        pageWidth - 36,
-        pageHeight - 14,
-        { align: "right" }
-      );
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, contentBottom, pageWidth, pageHeight - contentBottom, "F");
+      pdf.setDrawColor(226, 232, 240);
+      pdf.setLineWidth(0.6);
+      pdf.line(side, pageHeight - 30, pageWidth - side, pageHeight - 30);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.setTextColor(100, 116, 139);
+      if (chrome) {
+        pdf.text(`${chrome.company}  ·  ${chrome.documentType}  ·  ${chrome.reference}`, side, pageHeight - 17);
+      }
+      pdf.text(`Page ${index} of ${totalPages}`, pageWidth - side, pageHeight - 17, { align: "right" });
+
+      if (chrome && index > 1) {
+        // jsPDF's text colour is also the fill colour, so set white again before the band.
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(0, 0, pageWidth, pageTop - 6, "F");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(9);
+        pdf.setTextColor(15, 23, 42);
+        pdf.text(chrome.company, side, 26);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(`${chrome.documentType}  ·  ${chrome.reference}`, pageWidth - side, 26, { align: "right" });
+        pdf.line(side, 34, pageWidth - side, 34);
+      }
     }
 
     pdf.save(fileName);
@@ -149,3 +178,41 @@ export const exportSurveyReportToPdf = async (
 };
 
 export const exportWorkOrderJobPackToPdf = exportSurveyReportToPdf;
+
+/**
+ * Prints only the given element: copies it, with the page's styles, into a hidden iframe and
+ * opens the browser's print dialog there, so the rest of the app is not printed.
+ */
+export const printElement = async (element: HTMLElement, title = "Survey report"): Promise<void> => {
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  Object.assign(frame.style, { position: "fixed", right: "0", bottom: "0", width: "0", height: "0", border: "0" });
+  document.body.appendChild(frame);
+
+  const doc = frame.contentDocument;
+  const win = frame.contentWindow;
+  if (!doc || !win) {
+    frame.remove();
+    return;
+  }
+
+  const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+    .map((node) => node.outerHTML)
+    .join("\n");
+  doc.open();
+  doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/</g, "&lt;")}</title>${styles}
+<style>
+  @page { size: A4; margin: 12mm; }
+  html, body { margin: 0; background: #fff; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  [${PDF_PAGE_BLOCK_ATTR}="true"] { break-inside: avoid; page-break-inside: avoid; }
+  #print-root > * { width: auto !important; padding: 0 !important; }
+</style></head><body><div id="print-root">${element.outerHTML}</div></body></html>`);
+  doc.close();
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  await waitForPdfImages(doc.body as HTMLElement);
+  win.focus();
+  win.print();
+  setTimeout(() => frame.remove(), 1000);
+};

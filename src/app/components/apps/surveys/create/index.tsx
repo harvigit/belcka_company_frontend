@@ -109,12 +109,21 @@ export default function CreateSurveyWizard() {
           const rawAddresses = resExpense.value.data.addresses || [];
           setProjects(rawProjects.map((p: any) => ({ id: p.id, name: p.name })));
           setAddresses(
-            rawAddresses.map((a: any) => ({
-              id: a.id,
-              project_id: a.project_id,
-              name: a.name,
-              parentAddress: a.parentAddress,
-            })),
+            rawAddresses.map((a: any) => {
+              // Show the property's full address (the name the survey list and details show),
+              // prefixed with its parent address when it has one.
+              const fullName = String(a.full_name || "").trim();
+              const parentName = String(a.parent_name || "").trim();
+              const full = fullName || String(a.name || "");
+              const parent = parentName && parentName !== full ? parentName : null;
+              return {
+                id: a.id,
+                project_id: a.project_id,
+                name: parent ? `${parent} – ${full}` : full,
+                full_name: full,
+                parent_name: parent,
+              };
+            }),
           );
         }
 
@@ -443,7 +452,7 @@ export default function CreateSurveyWizard() {
               formData={{
                 ...formData,
                 projectName: selectedProject?.name,
-                propertyName: selectedAddress?.name,
+                propertyName: selectedAddress?.full_name || selectedAddress?.name,
                 surveyorName: selectedSurveyor?.name,
               }}
               method={method}

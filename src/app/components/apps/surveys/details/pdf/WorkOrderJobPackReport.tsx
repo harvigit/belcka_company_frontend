@@ -4,6 +4,9 @@ import React from "react";
 import { Box, Typography, Chip, Stack } from "@mui/material";
 import { Survey, SurveyWorkOrder } from "../../types";
 import { PDF_PAGE_BLOCK_ATTR } from "./surveyPdfExport";
+import { REPORT, ReportHeader, ReportFooter, SectionTitle, Tone, humanize, reportDate, useReportBrand } from "./ReportParts";
+
+export const JOB_PACK_TYPE = "Work order job pack";
 
 interface WorkOrderJobPackReportProps {
   survey: Survey;
@@ -24,23 +27,10 @@ export default function WorkOrderJobPackReport({
     (sum, vo) => sum + (Number(vo.amount) || 0),
     0
   );
+  const brand = useReportBrand();
   const currentTotal = Number(
     workOrder.total_amount ?? (Number(workOrder.baseline_total) + totalApprovedVos)
   );
-
-  const statusColors: Record<string, { bg: string; text: string; border: string }> = {
-    issued: { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" },
-    active: { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" },
-    in_progress: { bg: "#fefce8", text: "#854d0e", border: "#fef08a" },
-    completed: { bg: "#f0fdf4", text: "#166534", border: "#bbf7d0" },
-    cancelled: { bg: "#fef2f2", text: "#991b1b", border: "#fecaca" },
-  };
-
-  const stStyle = statusColors[workOrder.status] || {
-    bg: "#f8fafc",
-    text: "#475569",
-    border: "#cbd5e1",
-  };
 
   return (
     <Box
@@ -48,95 +38,38 @@ export default function WorkOrderJobPackReport({
       id="work-order-job-pack-report"
       sx={{
         width: 794, // Standard A4 width at 96 DPI
+        // Positioned so each PDF block's offsetLeft/offsetTop is measured from the page, not the window.
+        position: "relative",
         mx: "auto",
-        p: 4,
+        px: 5,
+        py: 4.5,
         bgcolor: "#ffffff",
-        color: "#1e293b",
-        fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+        color: REPORT.text,
+        fontFamily: REPORT.font,
         lineHeight: 1.45,
-        "@media print": {
-          width: "100%",
-          p: 2,
-          boxShadow: "none",
-        },
+        "& .MuiTypography-root": { fontFamily: REPORT.font },
       }}
     >
       {/* ============================================================== */}
       {/* 1. COVER / EXECUTIVE HEADER BLOCK                              */}
       {/* ============================================================== */}
       <Box {...{ [PDF_PAGE_BLOCK_ATTR]: "true" }} sx={{ mb: 3 }}>
-        <Box
-          sx={{
-            p: 3,
-            borderRadius: "10px",
-            bgcolor: "#102936",
-            color: "#ffffff",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-          }}
-        >
-          <Box>
-            <Stack direction="row" spacing={1} alignItems="center" mb={0.75}>
-              <Box
-                sx={{
-                  width: 28,
-                  height: 28,
-                  bgcolor: "#007e85",
-                  borderRadius: "6px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 800,
-                  fontSize: 16,
-                  color: "#ffffff",
-                }}
-              >
-                B
-              </Box>
-              <Typography variant="h6" fontWeight={800} sx={{ letterSpacing: 1 }}>
-                BELCKA PROPERTY SOLUTIONS
-              </Typography>
-            </Stack>
-            <Typography variant="h5" fontWeight={800} color="#38bdf8" mb={0.5}>
-              CONTRACTOR WORK ORDER & JOB PACK
-            </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.85 }}>
-              Official Contractual Scope of Works, Schedule of Rates & Acceptance Specification
-            </Typography>
-          </Box>
-
-          <Box textAlign="right">
-            <Box
-              sx={{
-                display: "inline-block",
-                px: 1.5,
-                py: 0.5,
-                borderRadius: "6px",
-                bgcolor: stStyle.bg,
-                color: stStyle.text,
-                border: `1px solid ${stStyle.border}`,
-                fontWeight: 700,
-                fontSize: 12,
-                mb: 1,
-              }}
-            >
-              STATUS: {workOrder.status.toUpperCase()}
-            </Box>
-            <Typography variant="caption" display="block" sx={{ opacity: 0.75 }}>
-              Work Order Ref: <strong>{workOrder.reference}</strong>
-            </Typography>
-            <Typography variant="caption" display="block" sx={{ opacity: 0.75 }}>
-              Survey Ref: {survey.reference || `SRV-${survey.id}`}
-            </Typography>
-            <Typography variant="caption" display="block" sx={{ opacity: 0.75 }}>
-              Issued:{" "}
-              {workOrder.issued_at
-                ? new Date(workOrder.issued_at).toLocaleDateString("en-GB")
-                : new Date().toLocaleDateString("en-GB")}
-            </Typography>
-          </Box>
-        </Box>
+        <ReportHeader
+          brand={brand}
+          documentType={JOB_PACK_TYPE}
+          reference={workOrder.reference}
+          title={survey.property_name || survey.address?.name || "Property not set"}
+          subtitle="Scope of works, schedule of rates and acceptance"
+          status={humanize(workOrder.status)}
+          statusTone={
+            ({ completed: "success", cancelled: "danger", in_progress: "warning" } as Record<string, Tone>)[workOrder.status] || "brand"
+          }
+          meta={[
+            { label: "Contractor", value: workOrder.contractor_name || "—" },
+            { label: "Survey", value: survey.reference || `SRV-${survey.id}` },
+            { label: "Issued", value: workOrder.issued_at ? reportDate(workOrder.issued_at) : "Not issued yet" },
+          ]}
+        />
       </Box>
 
       {/* ============================================================== */}
@@ -328,9 +261,7 @@ export default function WorkOrderJobPackReport({
       {/* 3. ITEMIZED SCHEDULE OF WORKS & RATES TABLE                    */}
       {/* ============================================================== */}
       <Box {...{ [PDF_PAGE_BLOCK_ATTR]: "true" }} sx={{ mb: 3 }}>
-        <Typography variant="subtitle1" fontWeight={800} color="#0f172a" mb={1}>
-          Itemized Scope of Works & Agreed Schedule of Rates ({items.length} Line Items)
-        </Typography>
+        <SectionTitle number={1} title={`Scope of works & schedule of rates (${items.length} line${items.length === 1 ? "" : "s"})`} />
 
         <Box
           sx={{
@@ -446,9 +377,7 @@ export default function WorkOrderJobPackReport({
       {/* 4. APPROVED VARIATION ORDERS SECTION                            */}
       {/* ============================================================== */}
       <Box {...{ [PDF_PAGE_BLOCK_ATTR]: "true" }} sx={{ mb: 3 }}>
-        <Typography variant="subtitle1" fontWeight={800} color="#0f172a" mb={1}>
-          Approved Variation Orders ({approvedVariations.length})
-        </Typography>
+        <SectionTitle number={2} title={`Approved variation orders (${approvedVariations.length})`} />
 
         {approvedVariations.length === 0 ? (
           <Box
@@ -540,6 +469,7 @@ export default function WorkOrderJobPackReport({
       {/* 5. SITE RULES, HEALTH & SAFETY AND INSTRUCTIONS                */}
       {/* ============================================================== */}
       <Box {...{ [PDF_PAGE_BLOCK_ATTR]: "true" }} sx={{ mb: 3 }}>
+        <SectionTitle number={3} title="Site instructions & health and safety" />
         <Box
           sx={{
             p: 2,
@@ -548,9 +478,6 @@ export default function WorkOrderJobPackReport({
             bgcolor: "#fffbeb",
           }}
         >
-          <Typography variant="subtitle2" fontWeight={800} color="#b45309" mb={1}>
-            SITE INSTRUCTIONS & HEALTH & SAFETY COMPLIANCE RULES
-          </Typography>
 
           {workOrder.notes && (
             <Box mb={1.5} pb={1.5} sx={{ borderBottom: "1px dashed #fcd34d" }}>
@@ -573,7 +500,7 @@ export default function WorkOrderJobPackReport({
           </Typography>
           <Typography variant="caption" color="#78350f" display="block" sx={{ mb: 0.5 }}>
             • <strong>Unforeseen Site Conditions:</strong> Do NOT carry out any work beyond this scope
-            without an approved Belcka Variation Order. Unauthorised works will not be compensated.
+            without an approved Variation Order. Unauthorised works will not be compensated.
           </Typography>
           <Typography variant="caption" color="#78350f" display="block">
             • <strong>Cleanliness & Handover:</strong> The workspace must be left in a safe, clean, and
@@ -586,9 +513,7 @@ export default function WorkOrderJobPackReport({
       {/* 6. DUAL SIGN-OFF & ACCEPTANCE SECTION                          */}
       {/* ============================================================== */}
       <Box {...{ [PDF_PAGE_BLOCK_ATTR]: "true" }}>
-        <Typography variant="subtitle1" fontWeight={800} color="#0f172a" mb={1.5}>
-          Contractual Acceptance & Dual Authorisation Sign-Off
-        </Typography>
+        <SectionTitle number={4} title="Acceptance & sign-off" />
 
         <Box
           sx={{
@@ -643,10 +568,10 @@ export default function WorkOrderJobPackReport({
             }}
           >
             <Typography variant="subtitle2" fontWeight={800} color="#0f172a" mb={0.5}>
-              BELCKA AUTHORISED REPRESENTATIVE
+              {brand.name.toUpperCase()} AUTHORISED REPRESENTATIVE
             </Typography>
             <Typography variant="caption" color="#64748b" display="block" mb={2}>
-              Authorised for commercial execution on behalf of Belcka Property Solutions. Works are
+              Authorised for commercial execution on behalf of {brand.name}. Works are
               subject to final sign-off inspection.
             </Typography>
 
@@ -670,6 +595,8 @@ export default function WorkOrderJobPackReport({
           </Box>
         </Box>
       </Box>
+
+      <ReportFooter brand={brand} documentType={JOB_PACK_TYPE} reference={workOrder.reference} />
     </Box>
   );
 }

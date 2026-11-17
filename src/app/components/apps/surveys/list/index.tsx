@@ -9,7 +9,6 @@ import {
   Typography,
   Button,
   IconButton,
-  
   InputAdornment,
   Table,
   TableBody,
@@ -17,10 +16,11 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Chip,
   Tooltip,
   MenuItem,
-  CardContent,
+  Menu,
+  ListItemIcon,
+  ListItemText,
   Grid,
   Dialog,
   DialogTitle,
@@ -30,7 +30,13 @@ import {
   Avatar,
   Divider,
   CircularProgress,
+  LinearProgress,
+  Tabs,
+  Tab,
+  Autocomplete,
+  Drawer,
 } from "@mui/material";
+import { alpha, darken, Theme } from "@mui/material/styles";
 import {
   IconSearch,
   IconPlus,
@@ -39,14 +45,18 @@ import {
   IconCamera,
   IconTrash,
   IconClipboardCheck,
-  IconClock,
-  IconCheck,
-  IconFileText,
   IconX,
   IconCalculator,
   IconBriefcase,
   IconLock,
   IconSettings,
+  IconDotsVertical,
+  IconCopy,
+  IconColumns,
+  IconAlertTriangle,
+  IconCalendarEvent,
+  IconArrowBackUp,
+  IconHistory,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -63,29 +73,85 @@ import CustomTextField from "@/app/components/forms/theme-elements/CustomTextFie
 import SurveySettings from "@/app/components/apps/settings/survey-settings";
 import { NamedFilterOption, tableFilterOptions } from "@/utils/uniqueFilterOptions";
 import { Survey, SurveyorOption, SurveyStatus } from "../types";
+import SurveyHistory from "../history/SurveyHistory";
 
-const statusColorMap: Record<
-  SurveyStatus,
-  "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"
-> = {
-  draft: "default",
-  assigned: "info",
-  in_progress: "warning",
-  submitted: "primary",
-  qs_review: "secondary",
-  completed: "success",
-  frozen: "success",
+type ToneColor = "grey" | "primary" | "secondary" | "info" | "success" | "warning" | "error";
+
+// Status order follows the survey lifecycle; the tabs above the table use the same order.
+const STATUS_META: Record<SurveyStatus, { label: string; tone: ToneColor }> = {
+  draft: { label: "Draft", tone: "grey" },
+  assigned: { label: "Assigned", tone: "info" },
+  in_progress: { label: "In Progress", tone: "warning" },
+  submitted: { label: "Submitted", tone: "primary" },
+  qs_review: { label: "QS Review", tone: "secondary" },
+  completed: { label: "Completed", tone: "success" },
+  frozen: { label: "Frozen", tone: "grey" },
+};
+const STATUS_ORDER = Object.keys(STATUS_META) as SurveyStatus[];
+
+// Statuses in which the surveyor can still inspect, edit, or the survey can be deleted.
+const FIELD_STATUSES: string[] = ["draft", "assigned", "in_progress"];
+const QS_STATUSES: string[] = ["submitted", "qs_review", "completed", "frozen"];
+
+// Soft "tonal" badge colours from the theme palette, readable in light and dark mode.
+const toneSx = (tone: ToneColor) => (theme: Theme) => {
+  const main = tone === "grey" ? theme.palette.grey[500] : theme.palette[tone].main;
+  return {
+    bgcolor: alpha(main, theme.palette.mode === "dark" ? 0.24 : 0.12),
+    color: theme.palette.mode === "dark" ? main : darken(main, tone === "warning" ? 0.45 : 0.15),
+  };
 };
 
-const statusLabelMap: Record<SurveyStatus, string> = {
-  draft: "Draft",
-  assigned: "Assigned",
-  in_progress: "In Progress",
-  submitted: "Submitted",
-  qs_review: "QS Review",
-  completed: "Completed",
-  frozen: "Frozen",
-};
+function Badge({ tone, label, icon }: { tone: ToneColor; label: string; icon?: React.ReactNode }) {
+  return (
+    <Box
+      component="span"
+      sx={[
+        {
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 0.5,
+          px: 1,
+          py: 0.25,
+          borderRadius: "6px",
+          fontSize: "0.75rem",
+          fontWeight: 600,
+          lineHeight: 1.6,
+          whiteSpace: "nowrap",
+        },
+        toneSx(tone),
+      ]}
+    >
+      {icon}
+      {label}
+    </Box>
+  );
+}
+
+// Summary cards above the list. Each one is a quick filter (the API's `focus` parameter).
+type FocusKey = "overdue" | "due_soon" | "rework" | "with_qs";
+const FOCUS_CARDS: { key: FocusKey; label: string; hint: string; tone: ToneColor; icon: React.ReactNode }[] = [
+  { key: "overdue", label: "Overdue", hint: "Date passed, not submitted", tone: "error", icon: <IconAlertTriangle size={20} /> },
+  { key: "due_soon", label: "Due in 7 days", hint: "Upcoming survey dates", tone: "info", icon: <IconCalendarEvent size={20} /> },
+  { key: "rework", label: "Rework requested", hint: "Sent back by the QS", tone: "warning", icon: <IconArrowBackUp size={20} /> },
+  { key: "with_qs", label: "With QS", hint: "Submitted or being priced", tone: "secondary", icon: <IconCalculator size={20} /> },
+];
+
+const formatDate = (value?: string | null) =>
+  value
+    ? new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    : "—";
+
+const formatMoney = (value: number | string | null | undefined) =>
+  `£${Number(value || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const initials = (name?: string | null) =>
+  (name || "")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("");
 
 export default function SurveyList() {
   const router = useRouter();
@@ -99,12 +165,15 @@ export default function SurveyList() {
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Survey[]>([]);
-  // Totals per status across all pages, returned by the list API for the summary cards.
+  // Totals per status across all pages (ignoring the status tab), for the tab counts.
   const [statusCounts, setStatusCounts] = useState<Record<string, number> | null>(null);
 
   // Search & Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Active summary card; it replaces the status tab while set.
+  const [focusFilter, setFocusFilter] = useState<FocusKey | null>(null);
+  const [stats, setStats] = useState<Record<FocusKey, number> | null>(null);
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [surveyorFilter, setSurveyorFilter] = useState<string>("all");
 
@@ -115,8 +184,63 @@ export default function SurveyList() {
   const [projectOptions, setProjectOptions] = useState<NamedFilterOption[]>([]);
   const [surveyorOptions, setSurveyorOptions] = useState<NamedFilterOption[]>([]);
 
+  // Row "more actions" menu
+  const [rowMenu, setRowMenu] = useState<{ anchor: HTMLElement; survey: Survey } | null>(null);
+
   // Delete modal state
   const [deleteTargetId, setDeleteTargetId] = useState<string | number | null>(null);
+
+  // Duplicate survey dialog: copies the set-up into a new survey, assigned to the chosen surveyor.
+  const [duplicateSource, setDuplicateSource] = useState<Survey | null>(null);
+  // History drawer: one survey's history, or "all" for every survey's (header button).
+  const [historyTarget, setHistoryTarget] = useState<Survey | "all" | null>(null);
+  const historySurvey = historyTarget && historyTarget !== "all" ? historyTarget : null;
+  const [duplicateSurveyorId, setDuplicateSurveyorId] = useState<string>("");
+  const [duplicateDate, setDuplicateDate] = useState<string>("");
+  // Both fields are required; problems are shown after the first Create attempt.
+  const [duplicateTried, setDuplicateTried] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+
+  const openDuplicate = (survey: Survey) => {
+    setDuplicateSource(survey);
+    setDuplicateTried(false);
+    // Start with the same surveyor when they can still be assigned.
+    const same = survey.surveyor_id && surveyors.some((s) => String(s.id) === String(survey.surveyor_id));
+    setDuplicateSurveyorId(same ? String(survey.surveyor_id) : "");
+    // Local today, as YYYY-MM-DD for the date input.
+    const now = new Date();
+    setDuplicateDate(
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+    );
+  };
+
+  const handleDuplicate = async () => {
+    if (!duplicateSource) return;
+    if (!duplicateSurveyorId || !duplicateDate) {
+      setDuplicateTried(true);
+      return;
+    }
+    try {
+      setDuplicating(true);
+      const res = await api.post(`surveys/${duplicateSource.id}/duplicate`, {
+        surveyor_id: Number(duplicateSurveyorId),
+        survey_date: duplicateDate,
+      });
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message || "Survey duplicated");
+        setDuplicateSource(null);
+        const newId = res.data.info?.id;
+        if (newId) router.push(`/apps/surveys/view/${newId}`);
+        else void fetchSurveys();
+      } else {
+        toast.error(res.data?.message || "Failed to duplicate survey");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to duplicate survey");
+    } finally {
+      setDuplicating(false);
+    }
+  };
   const [deleting, setDeleting] = useState(false);
 
   // Work Order Handoff Dialog State
@@ -173,10 +297,11 @@ export default function SurveyList() {
   // Column Visibility Popover Anchor
   const [columnAnchor, setColumnAnchor] = useState<HTMLElement | null>(null);
 
-  // Persistent column visibility
+  // Persistent column visibility (Created Date is hidden until the user turns it on)
   const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
-    storageKey: `cv_${user?.company_id}_${user?.id}_surveys_list`,
+    storageKey: `cv_${user?.company_id}_${user?.id}_surveys_list_v3`,
     enabled: !!user?.id,
+    defaultVisibility: { template: false, baseline_total: false, created_at: false },
     alwaysVisibleColumns: ["actions"],
   });
 
@@ -209,23 +334,39 @@ export default function SurveyList() {
   const fetchSurveys = async () => {
     setLoading(true);
     try {
+      const baseParams: any = {};
+      if (search.trim()) baseParams.search = search.trim();
+      if (projectFilter !== "all") baseParams.project_id = projectFilter;
+      if (surveyorFilter !== "all") baseParams.surveyor_id = surveyorFilter;
+
       const params: any = {
+        ...baseParams,
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
       };
-
-      if (search.trim()) params.search = search.trim();
       if (statusFilter !== "all") params.status = statusFilter;
-      if (projectFilter !== "all") params.project_id = projectFilter;
-      if (surveyorFilter !== "all") params.surveyor_id = surveyorFilter;
+      if (focusFilter) params.focus = focusFilter;
 
-      const res = await api.get("surveys/get", { params });
+      // The API counts per status within the given filters, so with a status tab selected the
+      // other tabs' counts come from a second, one-row request without the status filter.
+      const [res, countsRes] = await Promise.all([
+        api.get("surveys/get", { params }),
+        statusFilter !== "all"
+          ? api.get("surveys/get", { params: { ...baseParams, page: 1, limit: 1 } }).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+
       if (res.data?.IsSuccess) {
         const rows = res.data.info || [];
         setData(rows);
         setTotalRows(res.data.data?.totalItems ?? rows.length);
         setPageCount(res.data.data?.totalPages ?? 1);
-        setStatusCounts(res.data.data?.statusCounts ?? null);
+        setStatusCounts(
+          statusFilter === "all"
+            ? res.data.data?.statusCounts ?? null
+            : countsRes?.data?.data?.statusCounts ?? null,
+        );
+        setStats(res.data.data?.stats ?? null);
         const filterOptions = res.data.filter_options || {};
         setProjectOptions((prev) => tableFilterOptions(filterOptions.projects, rows, "project_id", "project_name", prev));
         setSurveyorOptions((prev) => tableFilterOptions(filterOptions.surveyors, rows, "surveyor_id", "surveyor_name", prev));
@@ -268,6 +409,7 @@ export default function SurveyList() {
   const hasActiveFilters = Boolean(
     search.trim() ||
     statusFilter !== "all" ||
+    focusFilter ||
     projectFilter !== "all" ||
     surveyorFilter !== "all"
   );
@@ -275,50 +417,75 @@ export default function SurveyList() {
   const handleClearFilters = () => {
     setSearch("");
     setStatusFilter("all");
+    setFocusFilter(null);
     setProjectFilter("all");
     setSurveyorFilter("all");
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  };
+
+  // What the current user can do with a survey; the same rules the old icon buttons used.
+  const surveyActions = (survey: Survey) => {
+    const status = survey.status;
+    const isCompleted = status === "completed" || status === "frozen";
+    const workOrder = (survey as any).work_order;
+    const activeWorkOrder = workOrder && workOrder.status !== "cancelled" ? workOrder : null;
+    return {
+      canInspect: (isAdmin || survey.surveyor_id === access.user_id) && FIELD_STATUSES.includes(status),
+      canQs: QS_STATUSES.includes(status),
+      canEdit: isAdmin && !isCompleted,
+      canDelete: isAdmin && FIELD_STATUSES.includes(status),
+      canIssueWorkOrder:
+        isAdmin && status === "completed" && Boolean(survey.baseline_locked_at) && !activeWorkOrder,
+      workOrder: isCompleted && survey.baseline_locked_at ? workOrder : null,
+    };
   };
 
   const columns = useMemo(
     () => [
       {
         id: "reference",
-        header: "Survey Ref",
-        meta: { label: "Survey Ref" },
-        cell: ({ row }: { row: { original: Survey } }) => (
-          <Box>
-            <Link
-              href={`/apps/surveys/view/${row.original.id}`}
-              style={{ textDecoration: "none" }}
-            >
-              <Typography
-                variant="body2"
-                fontWeight={700}
-                color="primary.main"
-                sx={{ "&:hover": { textDecoration: "underline" } }}
+        header: "Survey",
+        meta: { label: "Survey", width: "19%" },
+        cell: ({ row }: { row: { original: Survey } }) => {
+          const s = row.original;
+          return (
+            <Box sx={{ minWidth: 0 }}>
+              <Link
+                href={`/apps/surveys/view/${s.id}`}
+                onClick={(e) => e.stopPropagation()}
+                style={{ textDecoration: "none" }}
               >
-                {row.original.reference || `SRV-${row.original.id}`}
-              </Typography>
-            </Link>
-            {row.original.title && (
-              <Typography variant="caption" color="text.secondary" display="block">
-                {row.original.title}
-              </Typography>
-            )}
-          </Box>
-        ),
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={700}
+                  color="primary.main"
+                  noWrap
+                  sx={{ "&:hover": { textDecoration: "underline" } }}
+                >
+                  {s.reference || `SRV-${s.id}`}
+                </Typography>
+              </Link>
+              <Tooltip title={s.title || ""} placement="top-start" enterDelay={600}>
+                <Typography variant="body2" color="text.secondary" noWrap>
+                  {s.title || "—"}
+                </Typography>
+              </Tooltip>
+            </Box>
+          );
+        },
       },
       {
         id: "property",
-        header: "Property / Project",
-        meta: { label: "Property / Project" },
+        header: "Property",
+        meta: { label: "Property", width: "21%" },
         cell: ({ row }: { row: { original: Survey } }) => (
-          <Box>
-            <Typography variant="body2" fontWeight={600}>
-              {row.original.property_name || "—"}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
+          <Box sx={{ minWidth: 0 }}>
+            <Tooltip title={row.original.property_name || ""} placement="top-start" enterDelay={600}>
+              <Typography variant="body2" fontWeight={600} noWrap>
+                {row.original.property_name || "—"}
+              </Typography>
+            </Tooltip>
+            <Typography variant="body2" color="text.secondary" noWrap>
               {row.original.project_name || "—"}
             </Typography>
           </Box>
@@ -326,305 +493,282 @@ export default function SurveyList() {
       },
       {
         id: "template",
-        header: "Template / Method",
-        meta: { label: "Template / Method" },
-        cell: ({ row }: { row: { original: Survey } }) => (
-          <Box>
-            <Typography variant="body2">
-              {row.original.template_name || (row.original.creation_method === "blank" ? "Custom Blank" : "Standard")}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {(row.original as any).total_rooms ?? row.original.rooms?.length ?? 0} room(s)
-            </Typography>
-          </Box>
-        ),
+        header: "Template",
+        meta: { label: "Template", width: "15%" },
+        cell: ({ row }: { row: { original: Survey } }) => {
+          const s = row.original;
+          const rooms = (s as any).total_rooms ?? s.rooms?.length ?? 0;
+          return (
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="body2" noWrap>
+                {s.template_name || (s.creation_method === "blank" ? "Custom blank" : "Standard")}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" noWrap>
+                {rooms} {rooms === 1 ? "room" : "rooms"}
+              </Typography>
+            </Box>
+          );
+        },
       },
       {
         id: "surveyor",
-        header: "Assigned Surveyor",
-        meta: { label: "Assigned Surveyor" },
-        cell: ({ row }: { row: { original: Survey } }) => (
-          <Typography variant="body2">
-            {row.original.surveyor_name || (
-              <Typography component="span" variant="caption" color="text.secondary" fontStyle="italic">
-                Unassigned
+        header: "Surveyor",
+        meta: { label: "Surveyor", width: "15%" },
+        cell: ({ row }: { row: { original: Survey } }) =>
+          row.original.surveyor_name ? (
+            <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 0 }}>
+              <Avatar sx={[{ width: 32, height: 32, fontSize: "0.75rem", fontWeight: 700, flexShrink: 0 }, toneSx("primary")]}>
+                {initials(row.original.surveyor_name)}
+              </Avatar>
+              <Typography variant="body2" noWrap>
+                {row.original.surveyor_name}
               </Typography>
-            )}
-          </Typography>
-        ),
+            </Stack>
+          ) : (
+            <Typography variant="body2" color="text.secondary" fontStyle="italic">
+              Unassigned
+            </Typography>
+          ),
       },
       {
         id: "survey_date",
         header: "Survey Date",
-        meta: { label: "Survey Date" },
+        meta: { label: "Survey Date", width: "12%" },
         cell: ({ row }: { row: { original: Survey } }) => (
-          <Typography variant="body2">
-            {row.original.survey_date
-              ? new Date(row.original.survey_date).toLocaleDateString()
-              : "—"}
+          <Typography variant="body2" noWrap>
+            {formatDate(row.original.survey_date)}
           </Typography>
         ),
       },
       {
         id: "status",
         header: "Status",
-        meta: { label: "Status" },
+        meta: { label: "Status", width: "17%" },
         cell: ({ row }: { row: { original: Survey } }) => {
-          const status = row.original.status || "draft";
-          const progress = (row.original as any).progress;
-          const formProgress = row.original.form_progress;
+          const s = row.original;
+          const status = (s.status || "draft") as SurveyStatus;
+          const meta = STATUS_META[status] || { label: status, tone: "grey" as ToneColor };
+          const progress = (s as any).progress;
+          const formProgress = s.form_progress;
+          const workOrder = (s as any).work_order;
+          const showProgress = FIELD_STATUSES.includes(status) && progress && progress.total > 0;
+          const pct = showProgress ? Math.min(100, Math.max(0, Number(progress.percentage) || 0)) : 0;
+
+          // One short line under the badge saying where the survey stands.
+          let detail: React.ReactNode = null;
+          if (s.qs_status === "rework_requested" && FIELD_STATUSES.includes(status)) {
+            detail = (
+              <Typography variant="caption" fontWeight={600} noWrap sx={(theme) => ({ color: toneSx("warning")(theme).color })}>
+                Rework requested by QS
+              </Typography>
+            );
+          } else if (showProgress) {
+            detail = (
+              <Tooltip
+                placement="top-start"
+                title={
+                  <Box>
+                    <div>
+                      {progress.inspected} of {progress.total} elements inspected
+                    </div>
+                    {formProgress && formProgress.required_total > 0 && (
+                      <div>
+                        Property details: {formProgress.required_answered} of {formProgress.required_total} answered
+                      </div>
+                    )}
+                  </Box>
+                }
+              >
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={pct}
+                    color={pct === 100 ? "success" : "primary"}
+                    sx={{ flex: 1, maxWidth: 90, height: 5, borderRadius: 3, bgcolor: "action.hover" }}
+                  />
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {progress.inspected}/{progress.total} inspected
+                  </Typography>
+                </Stack>
+              </Tooltip>
+            );
+          } else if (status === "submitted") {
+            detail = "Waiting for QS";
+          } else if (status === "qs_review") {
+            detail = s.qs_status === "approved" ? "QS approved" : "QS pricing in progress";
+          } else if ((status === "completed" || status === "frozen") && s.baseline_total != null) {
+            detail = `${formatMoney(s.baseline_total)} baseline${
+              workOrder && workOrder.status !== "cancelled" ? ` · ${workOrder.reference}` : ""
+            }`;
+          }
+
           return (
-            <Box>
-              <Chip
-                size="small"
-                label={statusLabelMap[status] || status}
-                color={statusColorMap[status] || "default"}
-                sx={{ fontWeight: 600, textTransform: "capitalize" }}
+            <Stack spacing={0.5} alignItems="flex-start" sx={{ minWidth: 0 }}>
+              <Badge
+                tone={meta.tone}
+                label={meta.label}
+                icon={status === "frozen" ? <IconLock size={12} /> : undefined}
               />
-              {/* Property detail is step 1 of the inspection, so it is listed first. */}
-              {formProgress && formProgress.required_total > 0 && (
-                <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
-                  Property detail {formProgress.required_answered}/{formProgress.required_total}
+              {typeof detail === "string" ? (
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  {detail}
                 </Typography>
+              ) : (
+                detail
               )}
-              {progress && progress.total > 0 && (
-                <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
-                  {progress.inspected}/{progress.total} inspected ({progress.percentage}%)
-                </Typography>
-              )}
-            </Box>
+            </Stack>
           );
         },
       },
       {
         id: "baseline_total",
-        header: "Commercial Baseline",
-        meta: { label: "Commercial Baseline" },
+        header: "Commercial",
+        meta: { label: "Commercial", width: "13%" },
         cell: ({ row }: { row: { original: Survey } }) => {
-          const hasBaseline = row.original.baseline_total !== null && row.original.baseline_total !== undefined;
-          const isCompleted = row.original.status === "completed" || row.original.status === "frozen";
+          const s = row.original;
+          const actions = surveyActions(s);
+          const hasBaseline = s.baseline_total !== null && s.baseline_total !== undefined;
+          const workOrder = actions.workOrder;
 
           if (hasBaseline) {
             return (
-              <Box>
-                <Typography variant="body2" fontWeight={800} color={isCompleted ? "success.dark" : "text.primary"}>
-                  £{Number(row.original.baseline_total).toLocaleString("en-GB", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+              <Box sx={{ minWidth: 120 }}>
+                <Typography variant="subtitle2" fontWeight={700} noWrap>
+                  {formatMoney(s.baseline_total)}
                 </Typography>
-                <Chip
-                  size="small"
-                  color="success"
-                  label="Locked Baseline"
-                  sx={{ height: 18, fontSize: "0.68rem", fontWeight: 700, mt: 0.5 }}
-                />
+                <Stack direction="row" alignItems="center" spacing={0.5} mt={0.25}>
+                  <IconLock size={12} />
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    Baseline locked
+                  </Typography>
+                </Stack>
+                {workOrder && (
+                  <Box mt={0.75}>
+                    <Tooltip
+                      title={
+                        workOrder.status === "cancelled"
+                          ? `Work order ${workOrder.reference} was cancelled`
+                          : `Issued to ${workOrder.contractor_name || "contractor"} for ${formatMoney(workOrder.total_amount)}`
+                      }
+                    >
+                      <Box
+                        component={Link}
+                        href={`/apps/surveys/view/${s.id}?tab=commercial`}
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        sx={{ textDecoration: "none" }}
+                      >
+                        <Badge
+                          tone={workOrder.status === "cancelled" ? "grey" : "primary"}
+                          label={workOrder.status === "cancelled" ? `${workOrder.reference} cancelled` : workOrder.reference}
+                          icon={<IconBriefcase size={12} />}
+                        />
+                      </Box>
+                    </Tooltip>
+                  </Box>
+                )}
+                {actions.canIssueWorkOrder && (
+                  <Button
+                    size="small"
+                    variant="text"
+                    startIcon={<IconBriefcase size={14} />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenHandoff(s);
+                    }}
+                    sx={{ mt: 0.5, px: 0.5, minWidth: 0, fontSize: "0.75rem" }}
+                  >
+                    Issue work order
+                  </Button>
+                )}
               </Box>
             );
           }
 
-          if (["submitted", "qs_review"].includes(row.original.status)) {
+          // Before a baseline is locked, show where the QS pricing stands.
+          const qsState =
+            s.qs_status === "rework_requested"
+              ? { tone: "warning" as ToneColor, label: "Rework requested" }
+              : s.qs_status === "approved"
+                ? { tone: "success" as ToneColor, label: "QS approved" }
+                : s.status === "qs_review"
+                  ? { tone: "secondary" as ToneColor, label: "Being priced" }
+                  : s.status === "submitted"
+                    ? { tone: "grey" as ToneColor, label: "Awaiting QS" }
+                    : null;
+          if (qsState) {
             return (
-              <Box>
-                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                  Under QS Review
-                </Typography>
-                <Chip
-                  size="small"
-                  color="secondary"
-                  variant="outlined"
-                  label="Pricing in Progress"
-                  sx={{ height: 18, fontSize: "0.68rem", fontWeight: 600, mt: 0.5 }}
-                />
+              <Box sx={{ minWidth: 120 }}>
+                <Badge tone={qsState.tone} label={qsState.label} />
               </Box>
             );
           }
 
           return (
-            <Typography variant="caption" color="text.secondary" fontStyle="italic">
-              Pre-Inspection
+            <Typography variant="body2" color="text.disabled">
+              —
             </Typography>
           );
         },
       },
       {
-        id: "qs_status",
-        header: "QS & Work Order",
-        meta: { label: "QS & Work Order" },
-        cell: ({ row }: { row: { original: Survey } }) => {
-          const qsStatus = row.original.qs_status;
-          const workOrder = (row.original as any).work_order;
-
-          return (
-            <Stack spacing={0.5} alignItems="flex-start">
-              {workOrder && (
-                <Tooltip title={workOrder.status === "cancelled" ? `Work order ${workOrder.reference} was cancelled` : `Issued to ${workOrder.contractor_name || "Contractor"} for £${Number(workOrder.total_amount).toFixed(2)}`}>
-                  <Chip
-                    size="small"
-                    color={workOrder.status === "cancelled" ? "default" : "primary"}
-                    icon={<IconBriefcase size={12} />}
-                    label={workOrder.status === "cancelled" ? `${workOrder.reference} (cancelled)` : workOrder.reference}
-                    component={Link}
-                    href={`/apps/surveys/view/${row.original.id}?tab=commercial`}
-                    clickable
-                    sx={{ height: 20, fontSize: "0.7rem", fontWeight: 700 }}
-                  />
-                </Tooltip>
-              )}
-              {isAdmin && row.original.status === "completed" && row.original.baseline_locked_at && (!workOrder || workOrder.status === "cancelled") && (
-                <Chip
-                  size="small"
-                  color="success"
-                  variant="outlined"
-                  label="Ready for Handoff"
-                  onClick={() => handleOpenHandoff(row.original)}
-                  sx={{ height: 20, fontSize: "0.7rem", fontWeight: 600, cursor: "pointer" }}
-                />
-              )}
-
-              {qsStatus === "rework_requested" ? (
-                <Chip
-                  size="small"
-                  color="warning"
-                  label="Rework Requested"
-                  sx={{ height: 18, fontSize: "0.68rem", fontWeight: 600 }}
-                />
-              ) : qsStatus === "approved" ? (
-                <Chip
-                  size="small"
-                  color="success"
-                  label="QS Approved"
-                  sx={{ height: 18, fontSize: "0.68rem", fontWeight: 600 }}
-                />
-              ) : qsStatus === "in_review" || qsStatus === "in_progress" ? (
-                <Chip
-                  size="small"
-                  color="secondary"
-                  label="QS In Review"
-                  sx={{ height: 18, fontSize: "0.68rem", fontWeight: 600 }}
-                />
-              ) : null}
-            </Stack>
-          );
-        },
-      },
-      {
         id: "created_at",
-        header: "Created Date",
-        meta: { label: "Created Date" },
+        header: "Created",
+        meta: { label: "Created Date", width: "10%" },
         cell: ({ row }: { row: { original: Survey } }) => (
-          <Typography variant="caption" color="text.secondary">
-            {row.original.created_at
-              ? new Date(row.original.created_at).toLocaleDateString()
-              : "—"}
+          <Typography variant="body2" color="text.secondary" noWrap>
+            {formatDate(row.original.created_at)}
           </Typography>
         ),
       },
       {
         id: "actions",
-        header: "Actions",
-        meta: { label: "Actions" },
+        header: "",
+        meta: { label: "Actions", width: 168 },
         cell: ({ row }: { row: { original: Survey } }) => {
-          const isCompleted = row.original.status === "completed" || row.original.status === "frozen";
-          const hasBaseline = Boolean(row.original.baseline_locked_at);
-          const workOrder = (row.original as any).work_order;
+          const s = row.original;
+          const a = surveyActions(s);
+
+          // One clear next step per row; everything else lives in the ••• menu.
+          const primary = a.canInspect
+            ? { label: s.status === "in_progress" ? "Continue" : "Inspect", icon: <IconCamera size={16} />, href: `/apps/surveys/inspect/${s.id}` }
+            : a.canQs && ["submitted", "qs_review"].includes(s.status)
+              ? { label: "QS Review", icon: <IconCalculator size={16} />, href: `/apps/surveys/qs/${s.id}` }
+              : { label: "View", icon: <IconEye size={16} />, href: `/apps/surveys/view/${s.id}` };
 
           return (
-            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-              {/* Work Order Handoff Action */}
-              {isCompleted && hasBaseline && workOrder && (
-                  <Tooltip title={`View Work Order ${workOrder.reference}`}>
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      component={Link}
-                      href={`/apps/surveys/view/${row.original.id}?tab=commercial`}
-                    >
-                      <IconBriefcase size={18} />
-                    </IconButton>
-                  </Tooltip>
-              )}
-              {isCompleted && hasBaseline && isAdmin && row.original.status === "completed" && (!workOrder || workOrder.status === "cancelled") && (
-                  <Tooltip title="Issue Contractor Work Order">
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => handleOpenHandoff(row.original)}
-                    >
-                      <IconBriefcase size={18} />
-                    </IconButton>
-                  </Tooltip>
-              )}
-
-              {["submitted", "qs_review", "completed", "frozen"].includes(row.original.status) && (
-                <Tooltip title="QS Assessment & Costing">
-                  <IconButton
-                    size="small"
-                    color="secondary"
-                    component={Link}
-                    href={`/apps/surveys/qs/${row.original.id}`}
-                  >
-                    <IconCalculator size={18} />
-                  </IconButton>
-                </Tooltip>
-              )}
-
-              {(isAdmin || row.original.surveyor_id === access.user_id) &&
-                (row.original.status === "assigned" ||
-                row.original.status === "in_progress" ||
-                row.original.status === "draft") && (
-                <Tooltip title="Conduct Inspection">
-                  <IconButton
-                    size="small"
-                    color="success"
-                    component={Link}
-                    href={`/apps/surveys/inspect/${row.original.id}`}
-                  >
-                    <IconCamera size={18} />
-                  </IconButton>
-                </Tooltip>
-              )}
-
-              <Tooltip title="View Survey">
+            <Stack
+              direction="row"
+              spacing={0.5}
+              justifyContent="flex-end"
+              alignItems="center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                startIcon={primary.icon}
+                component={Link}
+                href={primary.href}
+                sx={{ whiteSpace: "nowrap", borderRadius: "8px" }}
+              >
+                {primary.label}
+              </Button>
+              <Tooltip title="More actions">
                 <IconButton
                   size="small"
-                  color="primary"
-                  component={Link}
-                  href={`/apps/surveys/view/${row.original.id}`}
+                  aria-label="More actions"
+                  onClick={(e) => setRowMenu({ anchor: e.currentTarget, survey: s })}
                 >
-                  <IconEye size={18} />
+                  <IconDotsVertical size={18} />
                 </IconButton>
               </Tooltip>
-
-              {isAdmin && !isCompleted && (
-                <Tooltip title="Edit Survey">
-                  <IconButton
-                    size="small"
-                    color="info"
-                    component={Link}
-                    href={`/apps/surveys/edit/${row.original.id}`}
-                  >
-                    <IconEdit size={18} />
-                  </IconButton>
-                </Tooltip>
-              )}
-
-              {isAdmin && ["draft", "assigned", "in_progress"].includes(row.original.status) && (
-                <Tooltip title="Delete Survey">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => setDeleteTargetId(row.original.id)}
-                  >
-                    <IconTrash size={18} />
-                  </IconButton>
-                </Tooltip>
-              )}
             </Stack>
           );
         },
       },
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [isAdmin, access.user_id],
   );
 
@@ -639,49 +783,68 @@ export default function SurveyList() {
     data,
     columns,
     fetchData: fetchSurveys,
-    debounceDependencies: [search, statusFilter, projectFilter, surveyorFilter],
+    debounceDependencies: [search, statusFilter, focusFilter, projectFilter, surveyorFilter],
     initialPagination: { pageIndex: 0, pageSize: 50 },
     state: { columnVisibility },
     onColumnVisibilityChange,
   });
 
-  // Summary card count for the given statuses: API totals when available, otherwise the loaded rows.
-  const countByStatus = (...statuses: string[]) =>
-    statusCounts
-      ? statuses.reduce((sum, s) => sum + (statusCounts[s] ?? 0), 0)
-      : data.filter((s) => statuses.includes(s.status)).length;
-
   // Reset to first page when search or filters change
   useEffect(() => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [search, statusFilter, projectFilter, surveyorFilter, setPagination]);
+  }, [search, statusFilter, focusFilter, projectFilter, surveyorFilter, setPagination]);
+
+  const allCount = statusCounts
+    ? Object.values(statusCounts).reduce((sum, n) => sum + (n || 0), 0)
+    : statusFilter === "all"
+      ? totalRows
+      : null;
+  const tabCount = (status: string) =>
+    status === "all" ? allCount : statusCounts ? statusCounts[status] ?? 0 : null;
+
+  const menuSurvey = rowMenu?.survey;
+  const menuActions = menuSurvey ? surveyActions(menuSurvey) : null;
+  const closeMenu = () => setRowMenu(null);
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3 } }}>
-      {/* Top Header Bar */}
+      {/* Header */}
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
         alignItems={{ xs: "flex-start", sm: "center" }}
         spacing={2}
-        mb={3}
+        mb={2.5}
       >
         <Box>
-          <Typography variant="h5" fontWeight={700}>
+          <Typography variant="h4" fontWeight={700}>
             Surveys
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Operational surveys, room inspections, and property condition assessments.
+          <Typography variant="body2" color="text.secondary" mt={0.5}>
+            Property surveys from inspection to QS pricing and work orders.
           </Typography>
         </Box>
 
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Tooltip title="Survey Settings">
-            <IconButton onClick={() => setSettingsOpen(true)} color="primary" aria-label="Survey Settings">
-              <IconSettings />
-            </IconButton>
-          </Tooltip>
+        <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" sx={{ "& .MuiButton-root": { whiteSpace: "nowrap" } }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<IconSettings size={18} />}
+            onClick={() => setSettingsOpen(true)}
+            sx={{ fontWeight: 600, borderRadius: "8px" }}
+          >
+            Settings
+          </Button>
           <SurveySettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<IconHistory size={18} />}
+            onClick={() => setHistoryTarget("all")}
+            sx={{ fontWeight: 600, borderRadius: "8px" }}
+          >
+            History
+          </Button>
           {isAdmin && (
             <Button
               variant="contained"
@@ -697,222 +860,233 @@ export default function SurveyList() {
         </Stack>
       </Stack>
 
-      {/* KPI Summary Cards */}
-      <Grid container spacing={2.5} mb={3}>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <BlankCard sx={{ height: "100%" }}>
-            <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar sx={{ bgcolor: "primary.light", color: "primary.main", width: 44, height: 44, borderRadius: "10px" }}>
-                  <IconClipboardCheck size={22} />
-                </Avatar>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5, textTransform: "uppercase" }}>
-                    Total Surveys
-                  </Typography>
-                  <Typography variant="h5" fontWeight={700}>
-                    {totalRows}
+      {/* Summary cards: click one to filter the list, click it again to clear */}
+      <Grid container spacing={2} mb={2.5}>
+        {FOCUS_CARDS.map((card) => {
+          const active = focusFilter === card.key;
+          const count = stats?.[card.key];
+          return (
+            <Grid key={card.key} size={{ xs: 6, md: 3 }}>
+              <Box
+                component="button"
+                type="button"
+                aria-pressed={active}
+                onClick={() => {
+                  setFocusFilter(active ? null : card.key);
+                  setStatusFilter("all");
+                }}
+                sx={(theme) => ({
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  p: 1.75,
+                  textAlign: "left",
+                  font: "inherit",
+                  color: "inherit",
+                  cursor: "pointer",
+                  borderRadius: "12px",
+                  border: "1px solid",
+                  borderColor: active ? theme.palette.primary.main : theme.palette.divider,
+                  bgcolor: active ? alpha(theme.palette.primary.main, 0.06) : theme.palette.background.paper,
+                  boxShadow: active ? `0 0 0 1px ${theme.palette.primary.main}` : "none",
+                  transition: "border-color .15s, background-color .15s",
+                  "&:hover": { borderColor: active ? theme.palette.primary.main : theme.palette.text.disabled },
+                  "&:focus-visible": { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2 },
+                })}
+              >
+                <Box
+                  sx={[
+                    {
+                      width: 40,
+                      height: 40,
+                      flexShrink: 0,
+                      borderRadius: "10px",
+                      display: { xs: "none", sm: "flex" },
+                      alignItems: "center",
+                      justifyContent: "center",
+                    },
+                    toneSx(card.tone),
+                  ]}
+                >
+                  {card.icon}
+                </Box>
+                <Box minWidth={0}>
+                  <Stack direction="row" alignItems="baseline" spacing={1}>
+                    <Typography
+                      component="span"
+                      sx={{ fontSize: "1.375rem", fontWeight: 700, lineHeight: 1.2, color: count ? "text.primary" : "text.disabled" }}
+                    >
+                      {count ?? "–"}
+                    </Typography>
+                    <Typography
+                      component="span"
+                      variant="body2"
+                      fontWeight={600}
+                      sx={{ whiteSpace: { sm: "nowrap" }, lineHeight: 1.3 }}
+                    >
+                      {card.label}
+                    </Typography>
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ display: { xs: "none", sm: "block" } }}>
+                    {card.hint}
                   </Typography>
                 </Box>
-              </Stack>
-            </CardContent>
-          </BlankCard>
-        </Grid>
-
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <BlankCard sx={{ height: "100%" }}>
-            <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar sx={{ bgcolor: "grey.100", color: "grey.700", width: 44, height: 44, borderRadius: "10px" }}>
-                  <IconFileText size={22} />
-                </Avatar>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5, textTransform: "uppercase" }}>
-                    Drafts
-                  </Typography>
-                  <Typography variant="h5" fontWeight={700}>
-                    {countByStatus("draft")}
-                  </Typography>
-                </Box>
-              </Stack>
-            </CardContent>
-          </BlankCard>
-        </Grid>
-
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <BlankCard sx={{ height: "100%" }}>
-            <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar sx={{ bgcolor: "warning.light", color: "warning.main", width: 44, height: 44, borderRadius: "10px" }}>
-                  <IconClock size={22} />
-                </Avatar>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5, textTransform: "uppercase" }}>
-                    In Progress / Assigned
-                  </Typography>
-                  <Typography variant="h5" fontWeight={700}>
-                    {countByStatus("assigned", "in_progress")}
-                  </Typography>
-                </Box>
-              </Stack>
-            </CardContent>
-          </BlankCard>
-        </Grid>
-
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <BlankCard sx={{ height: "100%" }}>
-            <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar sx={{ bgcolor: "success.light", color: "success.main", width: 44, height: 44, borderRadius: "10px" }}>
-                  <IconCheck size={22} />
-                </Avatar>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5, textTransform: "uppercase" }}>
-                    Completed / Submitted
-                  </Typography>
-                  <Typography variant="h5" fontWeight={700}>
-                    {countByStatus("completed", "submitted", "qs_review", "frozen")}
-                  </Typography>
-                </Box>
-              </Stack>
-            </CardContent>
-          </BlankCard>
-        </Grid>
+              </Box>
+            </Grid>
+          );
+        })}
       </Grid>
 
-      {/* Main Table Card with Toolbar */}
       <BlankCard>
-        {/* Search, Filters, and Column Visibility Toolbar */}
+        {/* Status tabs with counts; no tab is selected while a summary card filters the list */}
+        <Tabs
+          value={focusFilter ? false : statusFilter}
+          onChange={(_, value) => {
+            setFocusFilter(null);
+            setStatusFilter(value);
+          }}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            px: 1.5,
+            minHeight: 52,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            "& .MuiTab-root": { minHeight: 52, textTransform: "none", fontWeight: 600, px: 1.5 },
+          }}
+        >
+          {["all", ...STATUS_ORDER].map((status) => {
+            const count = tabCount(status);
+            const selected = statusFilter === status;
+            return (
+              <Tab
+                key={status}
+                value={status}
+                label={
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <span>{status === "all" ? "All" : STATUS_META[status as SurveyStatus].label}</span>
+                    {count !== null && (
+                      <Box
+                        component="span"
+                        sx={(theme) => ({
+                          minWidth: 22,
+                          px: 0.75,
+                          borderRadius: "10px",
+                          fontSize: "0.7rem",
+                          fontWeight: 700,
+                          lineHeight: "20px",
+                          textAlign: "center",
+                          bgcolor: selected ? theme.palette.primary.main : theme.palette.action.selected,
+                          color: selected ? theme.palette.primary.contrastText : theme.palette.text.secondary,
+                        })}
+                      >
+                        {count}
+                      </Box>
+                    )}
+                  </Stack>
+                }
+              />
+            );
+          })}
+        </Tabs>
+
+        {/* Search and filters */}
         <Stack
           direction={{ xs: "column", md: "row" }}
-          justifyContent="space-between"
           alignItems={{ xs: "stretch", md: "center" }}
-          spacing={2}
-          p={2.5}
+          spacing={1.5}
+          p={2}
         >
-          {/* Left: Search input & inline filters */}
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            alignItems={{ xs: "stretch", sm: "center" }}
-            spacing={1.5}
-            flex={1}
-            flexWrap="wrap"
+          <CustomTextField
+            size="small"
+            placeholder="Search reference, title, property or project"
+            value={search}
+            onChange={(e: any) => setSearch(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <IconSearch size={18} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ flex: { xs: "none", md: "0 0 360px" }, width: { xs: "100%", md: 360 } }}
+          />
+
+          <CustomTextField
+            size="small"
+            select
+            value={projectFilter}
+            onChange={(e: any) => setProjectFilter(e.target.value)}
+            sx={{ minWidth: 180 }}
           >
-            {/* Search */}
-            <CustomTextField
-              size="small"
-              placeholder="Search reference, property, title..."
-              value={search}
-              onChange={(e: any) => setSearch(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <IconSearch size={18} color="#64748b" />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{ minWidth: { xs: "100%", sm: 260 } }}
-            />
+            <MenuItem value="all">All projects</MenuItem>
+            {projectOptions.map((p) => (
+              <MenuItem key={p.id} value={String(p.id)}>
+                {p.name}
+              </MenuItem>
+            ))}
+          </CustomTextField>
 
-            {/* Status Filter */}
-            <CustomTextField
-              size="small"
-              select
-              label="Status"
-              value={statusFilter}
-              onChange={(e: any) => setStatusFilter(e.target.value)}
-              sx={{ minWidth: 140 }}
+          <CustomTextField
+            size="small"
+            select
+            value={surveyorFilter}
+            onChange={(e: any) => setSurveyorFilter(e.target.value)}
+            sx={{ minWidth: 180 }}
+          >
+            <MenuItem value="all">All surveyors</MenuItem>
+            {surveyorOptions.map((s) => (
+              <MenuItem key={s.id} value={String(s.id)}>
+                {s.name}
+              </MenuItem>
+            ))}
+          </CustomTextField>
+
+          {hasActiveFilters && (
+            <Button
+              color="inherit"
+              startIcon={<IconX size={16} />}
+              onClick={handleClearFilters}
+              sx={{ whiteSpace: "nowrap", color: "text.secondary" }}
             >
-              <MenuItem value="all">All Statuses</MenuItem>
-              <MenuItem value="draft">Draft</MenuItem>
-              <MenuItem value="assigned">Assigned</MenuItem>
-              <MenuItem value="in_progress">In Progress</MenuItem>
-              <MenuItem value="submitted">Submitted</MenuItem>
-              <MenuItem value="qs_review">QS Review</MenuItem>
-              <MenuItem value="completed">Completed</MenuItem>
-              <MenuItem value="frozen">Frozen</MenuItem>
-            </CustomTextField>
+              Clear
+            </Button>
+          )}
 
-            {/* Project Filter */}
-            <CustomTextField
-              size="small"
-              select
-              label="Project"
-              value={projectFilter}
-              onChange={(e: any) => setProjectFilter(e.target.value)}
-              sx={{ minWidth: 160 }}
+          <Box flex={1} display={{ xs: "none", md: "block" }} />
+
+          <Tooltip title="Show / hide columns">
+            <IconButton
+              onClick={(e) => setColumnAnchor(e.currentTarget)}
+              sx={{ border: "1px solid", borderColor: "divider", borderRadius: "8px", alignSelf: { xs: "flex-end", md: "center" } }}
             >
-              <MenuItem value="all">All Projects</MenuItem>
-              {projectOptions.map((p) => (
-                <MenuItem key={p.id} value={String(p.id)}>
-                  {p.name}
-                </MenuItem>
-              ))}
-            </CustomTextField>
-
-            {/* Surveyor Filter */}
-            <CustomTextField
-              size="small"
-              select
-              label="Assigned Surveyor"
-              value={surveyorFilter}
-              onChange={(e: any) => setSurveyorFilter(e.target.value)}
-              sx={{ minWidth: 170 }}
-            >
-              <MenuItem value="all">All Surveyors</MenuItem>
-              {surveyorOptions.map((s) => (
-                <MenuItem key={s.id} value={String(s.id)}>
-                  {s.name}
-                </MenuItem>
-              ))}
-            </CustomTextField>
-
-            {/* Clear Filters Button */}
-            {hasActiveFilters && (
-              <Tooltip title="Clear all filters">
-                <Button
-                  color="error"
-                  variant="outlined"
-                  onClick={handleClearFilters}
-                  sx={{ minWidth: 40, px: 1, height: 38 }}
-                >
-                  <IconX size={18} />
-                </Button>
-              </Tooltip>
-            )}
-          </Stack>
-
-          {/* Right: Show/Hide Columns Button */}
-          <Stack direction="row" alignItems="center" spacing={1} justifyContent="flex-end">
-            <Tooltip title="Show / hide columns">
-              <IconButton
-                color="primary"
-                onClick={(e) => setColumnAnchor(e.currentTarget)}
-                sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: "8px",
-                  p: 1,
-                }}
-              >
-                <IconEye size={20} />
-              </IconButton>
-            </Tooltip>
-            <ColumnVisibilityPopover
-              open={Boolean(columnAnchor)}
-              anchorEl={columnAnchor}
-              onClose={() => setColumnAnchor(null)}
-              table={table}
-              excludedColumns={["actions"]}
-            />
-          </Stack>
+              <IconColumns size={20} />
+            </IconButton>
+          </Tooltip>
+          <ColumnVisibilityPopover
+            open={Boolean(columnAnchor)}
+            anchorEl={columnAnchor}
+            onClose={() => setColumnAnchor(null)}
+            table={table}
+            excludedColumns={["actions"]}
+          />
         </Stack>
 
         <Divider />
 
         {/* Survey Table */}
         <TableContainer>
-          <Table stickyHeader>
+          <Table
+            stickyHeader
+            sx={{
+              tableLayout: "fixed",
+              width: "100%",
+              // Below this the table scrolls sideways instead of squeezing the columns.
+              minWidth: table.getVisibleLeafColumns().length * 150,
+            }}
+          >
             <TableHead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
@@ -920,15 +1094,21 @@ export default function SurveyList() {
                     <TableCell
                       key={header.id}
                       sx={{
-                        py: 1.5,
-                        fontWeight: 700,
+                        py: 1.25,
+                        px: 1.5,
+                        fontWeight: 600,
                         fontSize: "0.75rem",
-                        bgcolor: "grey.50",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.4,
+                        color: "text.secondary",
+                        whiteSpace: "nowrap",
+                        bgcolor: "background.default",
+                        width: (header.column.columnDef.meta as any)?.width,
                         ...(header.column.id === "actions" && {
                           textAlign: "right",
                           position: "sticky",
                           right: 0,
-                          zIndex: 2,
+                          zIndex: 3,
                         }),
                       }}
                     >
@@ -950,7 +1130,7 @@ export default function SurveyList() {
                 <TableRow>
                   <TableCell colSpan={table.getVisibleLeafColumns().length} align="center" sx={{ py: 8 }}>
                     <Stack spacing={1.5} alignItems="center">
-                      <Avatar sx={{ bgcolor: "primary.light", color: "primary.main", width: 56, height: 56 }}>
+                      <Avatar sx={[{ width: 56, height: 56 }, toneSx("primary")]}>
                         <IconClipboardCheck size={28} />
                       </Avatar>
                       <Typography variant="h6" fontWeight={600}>
@@ -958,37 +1138,56 @@ export default function SurveyList() {
                       </Typography>
                       <Typography variant="body2" color="text.secondary" maxWidth={450}>
                         {hasActiveFilters
-                          ? "No surveys matched your search criteria. Try clearing some filters."
-                          : "No surveys have been created yet. Click 'Create Survey' to launch the builder with an existing template or blank property."}
+                          ? "No surveys match these filters. Try another tab or clear the filters."
+                          : "No surveys have been created yet. Click 'Create Survey' to start from a template or a blank property."}
                       </Typography>
-                      {isAdmin && (
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          startIcon={<IconPlus size={18} />}
-                          component={Link}
-                          href="/apps/surveys/create"
-                          sx={{ mt: 1, borderRadius: "8px" }}
-                        >
-                          Create Survey
+                      {hasActiveFilters ? (
+                        <Button variant="outlined" onClick={handleClearFilters} sx={{ mt: 1, borderRadius: "8px" }}>
+                          Clear filters
                         </Button>
+                      ) : (
+                        isAdmin && (
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<IconPlus size={18} />}
+                            component={Link}
+                            href="/apps/surveys/create"
+                            sx={{ mt: 1, borderRadius: "8px" }}
+                          >
+                            Create Survey
+                          </Button>
+                        )
                       )}
                     </Stack>
                   </TableCell>
                 </TableRow>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} hover>
+                  <TableRow
+                    key={row.id}
+                    hover
+                    onClick={() => router.push(`/apps/surveys/view/${row.original.id}`)}
+                    sx={{
+                      cursor: "pointer",
+                      "&:hover .sticky-actions": { bgcolor: "action.hover" },
+                    }}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
+                        className={cell.column.id === "actions" ? "sticky-actions" : undefined}
                         sx={{
-                          py: 1.5,
+                          py: 1.75,
+                          px: 1.5,
+                          verticalAlign: "middle",
                           ...(cell.column.id === "actions" && {
                             position: "sticky",
                             right: 0,
                             bgcolor: "background.paper",
+                            backgroundImage: "none",
                             zIndex: 1,
+                            width: 1,
                           }),
                         }}
                       >
@@ -1002,9 +1201,186 @@ export default function SurveyList() {
           </Table>
         </TableContainer>
 
-        {/* Standard Pagination Footer */}
         <TablePaginationFooter table={table} totalRows={totalRows} />
       </BlankCard>
+
+      {/* History drawer */}
+      <Drawer
+        anchor="right"
+        open={Boolean(historyTarget)}
+        onClose={() => setHistoryTarget(null)}
+        PaperProps={{ sx: { width: { xs: "100%", md: historyTarget === "all" ? 980 : 760 }, maxWidth: "100vw", display: "flex", flexDirection: "column" } }}
+      >
+        {historyTarget === "all" && (
+          <>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1.5}
+              sx={{ px: 2.5, py: 1.75, borderBottom: "1px solid", borderColor: "divider", flexShrink: 0 }}
+            >
+              <Box
+                sx={[
+                  { width: 40, height: 40, borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+                  toneSx("primary"),
+                ]}
+              >
+                <IconHistory size={20} />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography fontWeight={700} noWrap>
+                  Survey history
+                </Typography>
+                <Typography variant="caption" color="text.secondary" noWrap display="block">
+                  Every action on every survey, from the web and the app, latest first
+                </Typography>
+              </Box>
+              <IconButton onClick={() => setHistoryTarget(null)} aria-label="Close history" size="small">
+                <IconX size={20} />
+              </IconButton>
+            </Stack>
+            <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+              <SurveyHistory />
+            </Box>
+          </>
+        )}
+        {historySurvey && (
+          <>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1.5}
+              sx={{ px: 2.5, py: 1.75, borderBottom: "1px solid", borderColor: "divider", flexShrink: 0 }}
+            >
+              <Box
+                sx={[
+                  { width: 40, height: 40, borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+                  toneSx("primary"),
+                ]}
+              >
+                <IconHistory size={20} />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography fontWeight={700} noWrap>
+                  History · {historySurvey.reference}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" noWrap display="block">
+                  {historySurvey.property_name || historySurvey.title || "Survey"}
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                variant="outlined"
+                component={Link}
+                href={`/apps/surveys/view/${historySurvey.id}`}
+                sx={{ borderRadius: "8px", whiteSpace: "nowrap" }}
+              >
+                Open survey
+              </Button>
+              <IconButton onClick={() => setHistoryTarget(null)} aria-label="Close history" size="small">
+                <IconX size={20} />
+              </IconButton>
+            </Stack>
+            <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+              <SurveyHistory surveyId={historySurvey.id} />
+            </Box>
+          </>
+        )}
+      </Drawer>
+
+      {/* Row actions menu */}
+      <Menu
+        anchorEl={rowMenu?.anchor}
+        open={Boolean(rowMenu)}
+        onClose={closeMenu}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{ paper: { sx: { minWidth: 220, borderRadius: "10px" } } }}
+      >
+        {menuSurvey && menuActions && [
+          <MenuItem key="view" component={Link} href={`/apps/surveys/view/${menuSurvey.id}`} onClick={closeMenu}>
+            <ListItemIcon><IconEye size={18} /></ListItemIcon>
+            <ListItemText>View survey</ListItemText>
+          </MenuItem>,
+          <MenuItem
+            key="history"
+            onClick={() => {
+              closeMenu();
+              setHistoryTarget(menuSurvey);
+            }}
+          >
+            <ListItemIcon><IconHistory size={18} /></ListItemIcon>
+            <ListItemText>View history</ListItemText>
+          </MenuItem>,
+          isAdmin && (
+            <MenuItem
+              key="duplicate"
+              onClick={() => {
+                closeMenu();
+                openDuplicate(menuSurvey);
+              }}
+            >
+              <ListItemIcon><IconCopy size={18} /></ListItemIcon>
+              <ListItemText>Duplicate survey</ListItemText>
+            </MenuItem>
+          ),
+          menuActions.canInspect && (
+            <MenuItem key="inspect" component={Link} href={`/apps/surveys/inspect/${menuSurvey.id}`} onClick={closeMenu}>
+              <ListItemIcon><IconCamera size={18} /></ListItemIcon>
+              <ListItemText>Conduct inspection</ListItemText>
+            </MenuItem>
+          ),
+          menuActions.canQs && (
+            <MenuItem key="qs" component={Link} href={`/apps/surveys/qs/${menuSurvey.id}`} onClick={closeMenu}>
+              <ListItemIcon><IconCalculator size={18} /></ListItemIcon>
+              <ListItemText>QS assessment &amp; costing</ListItemText>
+            </MenuItem>
+          ),
+          menuActions.workOrder && (
+            <MenuItem
+              key="wo"
+              component={Link}
+              href={`/apps/surveys/view/${menuSurvey.id}?tab=commercial`}
+              onClick={closeMenu}
+            >
+              <ListItemIcon><IconBriefcase size={18} /></ListItemIcon>
+              <ListItemText>View work order {menuActions.workOrder.reference}</ListItemText>
+            </MenuItem>
+          ),
+          menuActions.canIssueWorkOrder && (
+            <MenuItem
+              key="issue"
+              onClick={() => {
+                closeMenu();
+                handleOpenHandoff(menuSurvey);
+              }}
+            >
+              <ListItemIcon><IconBriefcase size={18} /></ListItemIcon>
+              <ListItemText>Issue work order</ListItemText>
+            </MenuItem>
+          ),
+          menuActions.canEdit && (
+            <MenuItem key="edit" component={Link} href={`/apps/surveys/edit/${menuSurvey.id}`} onClick={closeMenu}>
+              <ListItemIcon><IconEdit size={18} /></ListItemIcon>
+              <ListItemText>Edit survey</ListItemText>
+            </MenuItem>
+          ),
+          menuActions.canDelete && <Divider key="divider" />,
+          menuActions.canDelete && (
+            <MenuItem
+              key="delete"
+              onClick={() => {
+                closeMenu();
+                setDeleteTargetId(menuSurvey.id);
+              }}
+              sx={{ color: "error.main" }}
+            >
+              <ListItemIcon sx={{ color: "error.main" }}><IconTrash size={18} /></ListItemIcon>
+              <ListItemText>Delete survey</ListItemText>
+            </MenuItem>
+          ),
+        ]}
+      </Menu>
 
       {/* Work Order Handoff Dialog */}
       <Dialog
@@ -1163,6 +1539,101 @@ export default function SurveyList() {
             disabled={submittingWo}
           >
             {submittingWo ? "Issuing Work Order..." : "Issue Work Order"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Duplicate Survey Dialog */}
+      <Dialog open={Boolean(duplicateSource)} onClose={() => !duplicating && setDuplicateSource(null)} maxWidth="xs" fullWidth>
+        <DialogTitle component="div" sx={{ pb: 0.5 }}>
+          <Typography variant="h6" component="h2" fontWeight={700}>
+            Duplicate survey
+          </Typography>
+          <Typography variant="body2" color="text.secondary" noWrap>
+            {duplicateSource?.reference}
+            {duplicateSource?.title ? ` · ${duplicateSource.title}` : ""}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 1.5, mb: 2, p: 1.5, borderRadius: "8px", bgcolor: "grey.50", border: "1px solid", borderColor: "divider" }}>
+            <Typography variant="body2" fontWeight={600} mb={0.5}>
+              A new survey is created with the same set-up
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Copied: property, project, template, rooms and elements, property detail questions and notes.
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Not copied: inspection results, measurements, photos, answers and pricing.
+            </Typography>
+          </Box>
+          <Stack spacing={2}>
+            <Autocomplete
+              options={surveyors}
+              value={surveyors.find((u) => String(u.id) === duplicateSurveyorId) || null}
+              onChange={(_, user) => setDuplicateSurveyorId(user ? String(user.id) : "")}
+              getOptionLabel={(u) => u.name || ""}
+              isOptionEqualToValue={(a, b) => String(a.id) === String(b.id)}
+              noOptionsText="No surveyor found"
+              ListboxProps={{ style: { maxHeight: 280 } }}
+              renderOption={(props, u) => {
+                const { key, ...optionProps } = props as any;
+                return (
+                  <Box component="li" key={u.id} {...optionProps} sx={{ display: "flex", gap: 1.25, alignItems: "center", py: "6px !important" }}>
+                    <Avatar sx={[{ width: 28, height: 28, fontSize: "0.7rem", fontWeight: 700 }, toneSx("primary")]}>
+                      {initials(u.name)}
+                    </Avatar>
+                    <Box minWidth={0}>
+                      <Typography variant="body2" fontWeight={500} noWrap>
+                        {u.name}
+                      </Typography>
+                      {u.email && (
+                        <Typography variant="caption" color="text.secondary" noWrap display="block">
+                          {u.email}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                );
+              }}
+              renderInput={(params) => (
+                <CustomTextField
+                  {...params}
+                  required
+                  label="Assign to"
+                  placeholder="Search surveyor by name"
+                  error={duplicateTried && !duplicateSurveyorId}
+                  helperText={
+                    duplicateTried && !duplicateSurveyorId
+                      ? "Select the surveyor for the new survey"
+                      : "The surveyor is notified and the survey starts as Assigned."
+                  }
+                />
+              )}
+            />
+            <CustomTextField
+              type="date"
+              fullWidth
+              required
+              label="Survey date"
+              value={duplicateDate}
+              onChange={(e: any) => setDuplicateDate(e.target.value)}
+              error={duplicateTried && !duplicateDate}
+              helperText={duplicateTried && !duplicateDate ? "Select the survey date" : undefined}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setDuplicateSource(null)} disabled={duplicating}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={duplicating ? <CircularProgress size={16} color="inherit" /> : <IconCopy size={16} />}
+            onClick={handleDuplicate}
+            disabled={duplicating}
+          >
+            {duplicating ? "Creating..." : "Create copy"}
           </Button>
         </DialogActions>
       </Dialog>

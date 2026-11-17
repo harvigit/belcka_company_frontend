@@ -1,17 +1,72 @@
 "use client";
 
 import React from "react";
-import { Box, Typography, Chip, Stack } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import dayjs from "dayjs";
-import { Survey } from "../../types";
+import { Survey, SurveyItem } from "../../types";
 import { PDF_PAGE_BLOCK_ATTR } from "./surveyPdfExport";
+import {
+  REPORT,
+  Pill,
+  Tone,
+  ReportHeader,
+  ReportFooter,
+  SectionTitle,
+  Stat,
+  Label,
+  tableSx,
+  money,
+  humanize,
+  reportDate,
+  useReportBrand,
+} from "./ReportParts";
+
+export const SURVEY_REPORT_TYPE = "Inspection & commercial scope report";
 
 interface SurveyPrintableReportProps {
   survey: Survey;
   containerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
+const block = { [PDF_PAGE_BLOCK_ATTR]: "true" };
+
+const CONDITION: Record<string, { label: string; tone: Tone }> = {
+  good: { label: "Good", tone: "success" },
+  minor_defects: { label: "Minor defects", tone: "warning" },
+  damaged: { label: "Damaged", tone: "danger" },
+  not_accessible: { label: "Not accessible", tone: "neutral" },
+};
+
+const STATUS_TONE: Record<string, Tone> = {
+  completed: "success",
+  frozen: "success",
+  submitted: "brand",
+  qs_review: "brand",
+  in_progress: "warning",
+};
+
+const isDefect = (item: SurveyItem) =>
+  item.condition === "damaged" || item.condition === "minor_defects" || Boolean(item.repair_action);
+
+const quantityText = (item: SurveyItem) =>
+  item.calculated_qty !== null && item.calculated_qty !== undefined
+    ? `${item.calculated_qty} ${item.output_unit || ""}`.trim()
+    : "—";
+
+const measurementsText = (item: SurveyItem) => {
+  const dims = [
+    [item.dimension_1_name, item.dimension_1_value, item.dimension_1_unit],
+    [item.dimension_2_name, item.dimension_2_value, item.dimension_2_unit],
+    [item.dimension_3_name, item.dimension_3_value, item.dimension_3_unit],
+  ]
+    .filter(([name, value]) => name && value !== null && value !== undefined && value !== ("" as any))
+    .map(([name, value, unit]) => `${name} ${value}${unit ? ` ${unit}` : ""}`);
+  return dims.length ? dims.join(" × ") : "—";
+};
+
 export default function SurveyPrintableReport({ survey, containerRef }: SurveyPrintableReportProps) {
+  const brand = useReportBrand();
+  const reference = survey.reference || `Survey #${survey.id}`;
   const getImageUrl = (path?: string) => {
     if (!path) return "";
     if (path.startsWith("http://") || path.startsWith("https://")) return path;
@@ -19,640 +74,350 @@ export default function SurveyPrintableReport({ survey, containerRef }: SurveyPr
     return `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
   };
 
-  const totalElements = (survey.rooms || []).reduce(
-    (acc, r) => acc + (r.items ? r.items.length : 0),
-    0
-  );
-  const inspectedElements = (survey.rooms || []).reduce(
-    (acc, r) => acc + (r.items ? r.items.filter((i) => i.is_inspected).length : 0),
-    0
-  );
-  const defectElements = (survey.rooms || []).flatMap((r) =>
-    (r.items || []).filter(
-      (i) => i.condition === "damaged" || i.condition === "minor_defects" || Boolean(i.repair_action)
-    )
-  );
+  const rooms = survey.rooms || [];
+  const totalElements = rooms.reduce((acc, r) => acc + (r.items?.length || 0), 0);
+  const inspectedElements = rooms.reduce((acc, r) => acc + (r.items || []).filter((i) => i.is_inspected).length, 0);
+  const inspectedPct = totalElements > 0 ? Math.round((inspectedElements / totalElements) * 100) : 0;
+  const defects = rooms.flatMap((room) => (room.items || []).filter(isDefect).map((item) => ({ room, item })));
 
   const scopeItems = survey.scope_items || [];
   const baseEstimate = scopeItems.reduce((acc, l) => acc + (Number(l.total_amount) || 0), 0);
   const adjustSign = survey.scope_adjust_sign === -1 ? -1 : 1;
   const adjustType = survey.scope_adjust_type || "percent";
   const adjustValue = Number(survey.scope_adjust_value) || 0;
-  let adjustAmount = 0;
-  if (adjustType === "percent") {
-    adjustAmount = Math.round((baseEstimate * (adjustValue / 100) * adjustSign + Number.EPSILON) * 100) / 100;
-  } else {
-    adjustAmount = Math.round((adjustValue * adjustSign + Number.EPSILON) * 100) / 100;
-  }
+  const adjustAmount =
+    adjustType === "percent"
+      ? Math.round((baseEstimate * (adjustValue / 100) * adjustSign + Number.EPSILON) * 100) / 100
+      : Math.round((adjustValue * adjustSign + Number.EPSILON) * 100) / 100;
+  const isLocked = Boolean(survey.baseline_locked_at);
   const baselineTotal =
     survey.baseline_total !== null && survey.baseline_total !== undefined
       ? Number(survey.baseline_total)
       : Math.max(0, baseEstimate + adjustAmount);
+  const totalLabel = isLocked ? "Approved baseline" : "Proposed total";
+  const hasDuration = survey.estimated_duration_days !== null && survey.estimated_duration_days !== undefined;
 
-  const conditionColors: Record<string, { bg: string; text: string; border: string }> = {
-    good: { bg: "#f0fdf4", text: "#166534", border: "#bbf7d0" },
-    minor_defects: { bg: "#fefce8", text: "#854d0e", border: "#fef08a" },
-    damaged: { bg: "#fef2f2", text: "#991b1b", border: "#fecaca" },
-    not_accessible: { bg: "#f8fafc", text: "#475569", border: "#e2e8f0" },
-  };
+  const surveyorName =
+    survey.surveyor_name ||
+    (survey.surveyor ? `${survey.surveyor.first_name || ""} ${survey.surveyor.last_name || ""}`.trim() : "") ||
+    "Unassigned";
+
+  let section = 0;
+  const next = () => (section += 1);
+  const defectsSection = defects.length > 0 ? next() : 0;
+  const roomsSection = rooms.length > 0 ? next() : 0;
+  const scopeSection = scopeItems.length > 0 ? next() : 0;
 
   return (
     <Box
       ref={containerRef}
       id="survey-printable-report"
       sx={{
-        width: 794, // Standard A4 width at 96 DPI
+        width: 794, // A4 width at 96 DPI
+        // Positioned so each PDF block's offsetLeft/offsetTop is measured from the page, not the window.
+        position: "relative",
         mx: "auto",
-        p: 4,
+        px: 5,
+        py: 4.5,
         bgcolor: "#ffffff",
-        color: "#1e293b",
-        fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+        color: REPORT.text,
+        fontFamily: REPORT.font,
         lineHeight: 1.45,
-        "@media print": {
-          width: "100%",
-          p: 2,
-          boxShadow: "none",
-        },
+        "& .MuiTypography-root": { fontFamily: REPORT.font },
       }}
     >
-      {/* ============================================================== */}
-      {/* 1. COVER / EXECUTIVE HEADER BLOCK                              */}
-      {/* ============================================================== */}
-      <Box {...{ [PDF_PAGE_BLOCK_ATTR]: "true" }} sx={{ mb: 3 }}>
-        {/* Navy Header Banner */}
-        <Box
-          sx={{
-            p: 3,
-            borderRadius: "10px",
-            bgcolor: "#102936",
-            color: "#ffffff",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-          }}
-        >
-          <Box>
-            <Stack direction="row" spacing={1} alignItems="center" mb={0.75}>
-              <Box
-                sx={{
-                  width: 28,
-                  height: 28,
-                  bgcolor: "#007e85",
-                  color: "#ffffff",
-                  display: "grid",
-                  placeItems: "center",
-                  borderRadius: "6px",
-                  fontWeight: 900,
-                  fontSize: "1rem",
-                }}
-              >
-                B
-              </Box>
-              <Typography variant="overline" sx={{ letterSpacing: 1.5, fontWeight: 700, color: "#66d3d5" }}>
-                BELCKA PROPERTY SURVEY STUDIO
-              </Typography>
-            </Stack>
+      {/* 1. Header and summary */}
+      <Box {...block} sx={{ mb: 4 }}>
+        <ReportHeader
+          brand={brand}
+          documentType={SURVEY_REPORT_TYPE}
+          reference={reference}
+          title={survey.property_name || survey.address?.name || "Property not set"}
+          subtitle={survey.title && survey.title !== survey.reference ? survey.title : undefined}
+          status={humanize(survey.status)}
+          statusTone={STATUS_TONE[survey.status] || "neutral"}
+          meta={[
+            { label: "Project", value: survey.project_name || survey.project?.name || "—" },
+            { label: "Surveyor", value: surveyorName },
+            { label: "Survey date", value: reportDate(survey.survey_date) },
+          ]}
+        />
 
-            <Typography variant="h4" fontWeight={800} sx={{ letterSpacing: -0.5 }}>
-              Inspection & Commercial Scope Report
-            </Typography>
-            <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
-              Reference: <strong style={{ color: "#ffffff" }}>{survey.reference}</strong> •{" "}
-              {survey.title || "Full Property Condition Audit"}
-            </Typography>
-          </Box>
-
-          <Box sx={{ textAlign: "right" }}>
-            <Box
-              sx={{
-                display: "inline-block",
-                px: 2,
-                py: 0.75,
-                borderRadius: "6px",
-                bgcolor:
-                  survey.status === "completed" || survey.status === "frozen"
-                    ? "#166534"
-                    : survey.status === "qs_review" || survey.status === "submitted"
-                    ? "#007e85"
-                    : "#334155",
-                color: "#ffffff",
-                fontWeight: 700,
-                fontSize: "0.85rem",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-              }}
-            >
-              {survey.status.replace("_", " ")}
-            </Box>
-            <Typography variant="caption" sx={{ display: "block", color: "#94a3b8", mt: 0.75 }}>
-              Generated: {dayjs().format("DD MMM YYYY, HH:mm")}
-            </Typography>
-          </Box>
-        </Box>
-
-        {/* Property & Survey Metadata Grid */}
-        <Box
-          sx={{
-            mt: 2,
-            p: 2.5,
-            borderRadius: "8px",
-            border: "1px solid #e2e8f0",
-            bgcolor: "#f8fafc",
-          }}
-        >
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 2,
-            }}
-          >
-            <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
-                PROPERTY ADDRESS
-              </Typography>
-              <Typography variant="body2" fontWeight={600} mt={0.25}>
-                {survey.property_name || survey.address?.name || "—"}
-              </Typography>
-            </Box>
-
-            <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
-                PROJECT / CLIENT
-              </Typography>
-              <Typography variant="body2" fontWeight={600} mt={0.25}>
-                {survey.project_name || survey.project?.name || "—"}
-              </Typography>
-            </Box>
-
-            <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
-                ASSIGNED SURVEYOR
-              </Typography>
-              <Typography variant="body2" fontWeight={600} mt={0.25}>
-                {survey.surveyor_name ||
-                  (survey.surveyor ? `${survey.surveyor.first_name} ${survey.surveyor.last_name}` : "Unassigned")}
-              </Typography>
-            </Box>
-
-            <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
-                INSPECTION DATE
-              </Typography>
-              <Typography variant="body2" fontWeight={600} mt={0.25}>
-                {survey.survey_date ? dayjs(survey.survey_date).format("DD MMM YYYY") : "—"}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-
-        {/* 4 Executive KPI Cards */}
-        <Box
-          sx={{
-            mt: 2,
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 2,
-          }}
-        >
-          <Box sx={{ p: 2, borderRadius: "8px", border: "1px solid #e2e8f0", bgcolor: "#ffffff" }}>
-            <Typography variant="caption" color="text.secondary" fontWeight={700}>
-              TOTAL ROOMS / AREAS
-            </Typography>
-            <Typography variant="h5" fontWeight={800} color="#102936" mt={0.5}>
-              {survey.rooms?.length || 0}
-            </Typography>
-          </Box>
-
-          <Box sx={{ p: 2, borderRadius: "8px", border: "1px solid #e2e8f0", bgcolor: "#ffffff" }}>
-            <Typography variant="caption" color="text.secondary" fontWeight={700}>
-              INSPECTION COMPLETION
-            </Typography>
-            <Typography variant="h5" fontWeight={800} color="#007e85" mt={0.5}>
-              {inspectedElements} / {totalElements} (
-              {totalElements > 0 ? Math.round((inspectedElements / totalElements) * 100) : 0}%)
-            </Typography>
-          </Box>
-
-          <Box sx={{ p: 2, borderRadius: "8px", border: "1px solid #e2e8f0", bgcolor: "#ffffff" }}>
-            <Typography variant="caption" color="text.secondary" fontWeight={700}>
-              DEFECTS IDENTIFIED
-            </Typography>
-            <Typography
-              variant="h5"
-              fontWeight={800}
-              color={defectElements.length > 0 ? "#b91c1c" : "#166534"}
-              mt={0.5}
-            >
-              {defectElements.length}
-            </Typography>
-          </Box>
-
-          <Box sx={{ p: 2, borderRadius: "8px", border: "1px solid #e2e8f0", bgcolor: "#ffffff" }}>
-            <Typography variant="caption" color="text.secondary" fontWeight={700}>
-              COMMERCIAL BASELINE
-            </Typography>
-            <Typography variant="h5" fontWeight={800} color="#102936" mt={0.5}>
-              £
-              {baselineTotal.toLocaleString("en-GB", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </Typography>
-          </Box>
+        <Box sx={{ mt: 2, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1.25 }}>
+          <Stat label="Rooms / areas" value={rooms.length} hint={`${totalElements} element${totalElements === 1 ? "" : "s"}`} />
+          <Stat
+            label="Inspected"
+            value={`${inspectedPct}%`}
+            hint={`${inspectedElements} of ${totalElements} elements`}
+            valueColor={inspectedPct === 100 ? "#047857" : REPORT.ink}
+          />
+          <Stat
+            label="Defects found"
+            value={defects.length}
+            hint={defects.length ? "See defect schedule" : "No defects recorded"}
+            valueColor={defects.length ? "#b42318" : "#047857"}
+          />
+          <Stat label={totalLabel} value={money(baselineTotal)} hint={isLocked ? "Locked by QS" : "Pending QS lock"} valueColor={REPORT.brand} />
         </Box>
       </Box>
 
-      {/* ============================================================== */}
-      {/* 2. DEFECT SUMMARY CALLOUT BLOCK                                */}
-      {/* ============================================================== */}
-      {defectElements.length > 0 && (
-        <Box
-          {...{ [PDF_PAGE_BLOCK_ATTR]: "true" }}
-          sx={{
-            mb: 3,
-            p: 2.5,
-            borderRadius: "8px",
-            border: "1px solid #fecaca",
-            bgcolor: "#fff5f5",
-          }}
-        >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-            <Typography variant="subtitle1" fontWeight={800} color="#991b1b">
-              Defect Schedule & Remedial Actions ({defectElements.length})
-            </Typography>
-            <Chip
-              label="Action Required"
-              size="small"
-              sx={{ bgcolor: "#fee2e2", color: "#991b1b", fontWeight: 700 }}
-            />
-          </Stack>
-
-          <Box
-            component="table"
-            sx={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "0.8rem",
-              "& th, & td": { p: 1, borderBottom: "1px solid #fee2e2", textAlign: "left" },
-              "& th": { color: "#991b1b", fontWeight: 700, bgcolor: "#fef2f2" },
-            }}
-          >
-            <thead>
-              <tr>
-                <th style={{ width: "30%" }}>Element / Room</th>
-                <th style={{ width: "25%" }}>Defect & Severity</th>
-                <th style={{ width: "15%" }}>Qty / Unit</th>
-                <th style={{ width: "30%" }}>Recommended Remedial Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {defectElements.map((item, idx) => (
-                <tr key={idx}>
-                  <td>
-                    <strong>{item.name}</strong>
-                  </td>
-                  <td>
-                    <span style={{ color: item.condition === "damaged" ? "#b91c1c" : "#b45309", fontWeight: 600 }}>
-                      {item.damage_type_name || item.condition || "Defect"}
-                    </span>
-                    {item.severity && (
-                      <span style={{ fontSize: "0.75rem", color: "#64748b" }}> ({item.severity})</span>
-                    )}
-                  </td>
-                  <td>
-                    {item.calculated_qty !== null && item.calculated_qty !== undefined
-                      ? `${item.calculated_qty} ${item.output_unit || "units"}`
-                      : "—"}
-                  </td>
-                  <td>{item.repair_action || item.notes || "Remedial repair specified"}</td>
+      {/* 2. Defect schedule */}
+      {defects.length > 0 && (
+        <Box {...block} sx={{ mb: 4 }}>
+          <SectionTitle number={defectsSection} title="Defect schedule" aside={<Pill tone="danger">{defects.length} to remedy</Pill>} />
+          <Box sx={{ border: `1px solid ${REPORT.line}`, borderRadius: "8px", overflow: "hidden" }}>
+            <Box component="table" sx={tableSx}>
+              <thead>
+                <tr>
+                  <th style={{ width: "28%" }}>Room · Element</th>
+                  <th style={{ width: "22%" }}>Condition</th>
+                  <th style={{ width: "14%" }}>Quantity</th>
+                  <th style={{ width: "36%" }}>Recommended action</th>
                 </tr>
-              ))}
-            </tbody>
+              </thead>
+              <tbody>
+                {defects.map(({ room, item }) => {
+                  const cond = CONDITION[item.condition || ""] || { label: humanize(item.condition) || "Defect", tone: "warning" as Tone };
+                  return (
+                    <tr key={item.id}>
+                      <td>
+                        <div style={{ fontWeight: 700, color: REPORT.ink }}>{item.name}</div>
+                        <div style={{ fontSize: 11, color: REPORT.muted }}>{room.name}</div>
+                      </td>
+                      <td>
+                        <Pill tone={cond.tone}>{cond.label}</Pill>
+                        {(item.damage_type_name || item.severity) && (
+                          <div style={{ fontSize: 11, color: REPORT.muted, marginTop: 4 }}>
+                            {[item.damage_type_name, item.severity ? `${humanize(item.severity)} severity` : ""].filter(Boolean).join(" · ")}
+                          </div>
+                        )}
+                      </td>
+                      <td>{quantityText(item)}</td>
+                      <td>{item.repair_action || item.notes || <span style={{ color: REPORT.faint }}>Not specified</span>}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Box>
           </Box>
         </Box>
       )}
 
-      {/* ============================================================== */}
-      {/* 3. ROOM-BY-ROOM INSPECTION EVIDENCE SCHEDULE                   */}
-      {/* ============================================================== */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" fontWeight={800} color="#102936" mb={1.5}>
-          Room-by-Room Inspection Evidence Schedule
-        </Typography>
-
-        {(survey.rooms || []).map((room, rIdx) => {
-          const roomItems = room.items || [];
-          return (
-            <Box
-              key={room.id}
-              {...{ [PDF_PAGE_BLOCK_ATTR]: "true" }}
-              sx={{
-                mb: 3,
-                p: 2.5,
-                borderRadius: "8px",
-                border: "1px solid #e2e8f0",
-                bgcolor: "#ffffff",
-              }}
-            >
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-                <Typography variant="subtitle1" fontWeight={800} color="#102936">
-                  {rIdx + 1}. {room.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                  {roomItems.filter((i) => i.is_inspected).length} of {roomItems.length} elements inspected
-                </Typography>
-              </Stack>
-
-              {roomItems.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                  No inspection elements assigned to this room.
-                </Typography>
-              ) : (
+      {/* 3. Room-by-room inspection */}
+      {rooms.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          {rooms.map((room, rIdx) => {
+            const items = room.items || [];
+            const photos = items.flatMap((i) => (i.photos || []).map((p) => ({ item: i, photo: p })));
+            // The section title travels with the first room, so it never ends a page on its own.
+            return (
+              <Box key={room.id} {...block} sx={{ mb: 2 }}>
+                {rIdx === 0 && <SectionTitle number={roomsSection} title="Room-by-room inspection" />}
+                <Box sx={{ border: `1px solid ${REPORT.line}`, borderRadius: "8px", overflow: "hidden" }}>
                 <Box
-                  component="table"
                   sx={{
-                    width: "100%",
-                    borderCollapse: "collapse",
-                    fontSize: "0.8rem",
-                    mb: 2,
-                    "& th, & td": { p: 1, borderBottom: "1px solid #e2e8f0", textAlign: "left" },
-                    "& th": { color: "#475569", fontWeight: 700, bgcolor: "#f8fafc" },
+                    px: 1.5,
+                    py: 1,
+                    bgcolor: REPORT.soft,
+                    borderBottom: `1px solid ${REPORT.line}`,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                   }}
                 >
-                  <thead>
-                    <tr>
-                      <th style={{ width: "22%" }}>Element</th>
-                      <th style={{ width: "15%" }}>Condition</th>
-                      <th style={{ width: "25%" }}>Site Measurements</th>
-                      <th style={{ width: "13%" }}>Quantity</th>
-                      <th style={{ width: "25%" }}>Defect & Repair Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {roomItems.map((item) => {
-                      const cond = item.condition || "good";
-                      const colors = conditionColors[cond] || conditionColors.good;
-                      const dims = [
-                        item.dimension_1_name && item.dimension_1_value
-                          ? `${item.dimension_1_name}: ${item.dimension_1_value}${item.dimension_1_unit || ""}`
-                          : null,
-                        item.dimension_2_name && item.dimension_2_value
-                          ? `${item.dimension_2_name}: ${item.dimension_2_value}${item.dimension_2_unit || ""}`
-                          : null,
-                        item.dimension_3_name && item.dimension_3_value
-                          ? `${item.dimension_3_name}: ${item.dimension_3_value}${item.dimension_3_unit || ""}`
-                          : null,
-                      ].filter(Boolean);
-
-                      return (
-                        <tr key={item.id}>
-                          <td>
-                            <strong>{item.name}</strong>
-                          </td>
-                          <td>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                padding: "2px 8px",
-                                borderRadius: "4px",
-                                fontSize: "0.75rem",
-                                fontWeight: 700,
-                                textTransform: "capitalize",
-                                backgroundColor: colors.bg,
-                                color: colors.text,
-                                border: `1px solid ${colors.border}`,
-                              }}
-                            >
-                              {cond.replace("_", " ")}
-                            </span>
-                          </td>
-                          <td>{dims.length > 0 ? dims.join(" × ") : "Direct"}</td>
-                          <td>
-                            <strong>
-                              {item.calculated_qty !== null && item.calculated_qty !== undefined
-                                ? `${item.calculated_qty} ${item.output_unit || "units"}`
-                                : "—"}
-                            </strong>
-                          </td>
-                          <td>
-                            {item.repair_action || item.damage_type_name ? (
-                              <span>
-                                {item.repair_action || "Repair"}
-                                {item.damage_type_name ? ` (${item.damage_type_name})` : ""}
-                              </span>
-                            ) : (
-                              <span style={{ color: "#94a3b8" }}>Sound condition</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </Box>
-              )}
-
-              {/* Photo Evidence Gallery for this room */}
-              {roomItems.some((i) => (i.photos || []).length > 0) && (
-                <Box sx={{ mt: 2, pt: 1.5, borderTop: "1px dashed #e2e8f0" }}>
-                  <Typography variant="caption" fontWeight={700} color="text.secondary" display="block" mb={1}>
-                    PHOTOGRAPHIC SITE EVIDENCE
+                  <Typography sx={{ fontSize: 13, fontWeight: 800, color: REPORT.ink }}>
+                    {rIdx + 1}. {room.name}
                   </Typography>
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(4, 1fr)",
-                      gap: 1.5,
-                    }}
-                  >
-                    {roomItems.flatMap((i) =>
-                      (i.photos || []).map((p) => (
-                        <Box
-                          key={p.id}
-                          sx={{
-                            borderRadius: "6px",
-                            overflow: "hidden",
-                            border: "1px solid #e2e8f0",
-                            bgcolor: "#f8fafc",
-                          }}
-                        >
+                  <Typography sx={{ fontSize: 11, color: REPORT.muted, fontWeight: 600 }}>
+                    {items.filter((i) => i.is_inspected).length} of {items.length} inspected
+                  </Typography>
+                </Box>
+
+                {items.length === 0 ? (
+                  <Typography sx={{ fontSize: 12, color: REPORT.muted, fontStyle: "italic", p: 1.5 }}>
+                    No elements in this room.
+                  </Typography>
+                ) : (
+                  <Box component="table" sx={tableSx}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: "22%" }}>Element</th>
+                        <th style={{ width: "17%" }}>Condition</th>
+                        <th style={{ width: "26%" }}>Measurements</th>
+                        <th style={{ width: "12%" }}>Quantity</th>
+                        <th style={{ width: "23%" }}>Repair</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item) => {
+                        const cond = item.is_inspected
+                          ? CONDITION[item.condition || ""] || { label: humanize(item.condition) || "Recorded", tone: "neutral" as Tone }
+                          : { label: "Not inspected", tone: "neutral" as Tone };
+                        return (
+                          <tr key={item.id}>
+                            <td style={{ fontWeight: 700, color: REPORT.ink }}>{item.name}</td>
+                            <td>
+                              <Pill tone={cond.tone}>{cond.label}</Pill>
+                            </td>
+                            <td>{measurementsText(item)}</td>
+                            <td style={{ fontWeight: 600 }}>{quantityText(item)}</td>
+                            <td>
+                              {item.repair_action || item.damage_type_name ? (
+                                <>
+                                  {item.repair_action || "Repair"}
+                                  {item.damage_type_name && (
+                                    <div style={{ fontSize: 11, color: REPORT.muted }}>{item.damage_type_name}</div>
+                                  )}
+                                </>
+                              ) : (
+                                <span style={{ color: REPORT.faint }}>None</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </Box>
+                )}
+
+                {photos.length > 0 && (
+                  <Box sx={{ p: 1.5, borderTop: `1px dashed ${REPORT.line}` }}>
+                    <Label>Site photos ({photos.length})</Label>
+                    <Box sx={{ mt: 1, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1 }}>
+                      {photos.map(({ item, photo }) => (
+                        <Box key={photo.id} sx={{ borderRadius: "6px", overflow: "hidden", border: `1px solid ${REPORT.line}` }}>
                           <Box
                             component="img"
-                            src={getImageUrl(p.file_path)}
-                            alt={p.file_name || i.name}
-                            sx={{
-                              width: "100%",
-                              height: 100,
-                              objectFit: "cover",
-                              display: "block",
-                            }}
+                            src={getImageUrl(photo.file_path)}
+                            alt={photo.caption || item.name}
+                            sx={{ width: "100%", height: 104, objectFit: "cover", display: "block", bgcolor: REPORT.soft }}
                           />
-                          <Box sx={{ p: 0.75 }}>
-                            <Typography variant="caption" fontWeight={700} noWrap display="block">
-                              {i.name}
+                          <Box sx={{ px: 0.75, py: 0.5 }}>
+                            <Typography noWrap sx={{ fontSize: 11, fontWeight: 700, color: REPORT.ink }}>
+                              {item.name}
                             </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              sx={{ fontSize: "0.65rem" }}
-                              noWrap
-                              display="block"
-                            >
-                              {p.caption || p.file_name || "Inspection photo"}
-                            </Typography>
+                            {photo.caption && (
+                              <Typography noWrap sx={{ fontSize: 10, color: REPORT.muted }}>
+                                {photo.caption}
+                              </Typography>
+                            )}
                           </Box>
                         </Box>
-                      ))
-                    )}
+                      ))}
+                    </Box>
                   </Box>
+                )}
                 </Box>
-              )}
-            </Box>
-          );
-        })}
-      </Box>
+              </Box>
+            );
+          })}
+        </Box>
+      )}
 
-      {/* ============================================================== */}
-      {/* 4. COMMERCIAL SCOPE OF WORK & SCHEDULE OF RATES                */}
-      {/* ============================================================== */}
+      {/* 4. Commercial scope */}
       {scopeItems.length > 0 && (
-        <Box
-          {...{ [PDF_PAGE_BLOCK_ATTR]: "true" }}
-          sx={{
-            mb: 3,
-            p: 2.5,
-            borderRadius: "8px",
-            border: "1px solid #e2e8f0",
-            bgcolor: "#ffffff",
-          }}
-        >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-            <Box>
-              <Typography variant="h6" fontWeight={800} color="#102936">
-                Commercial Scope of Work & Schedule of Rates
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Priced commercial remediation baseline prepared by Quantity Surveying.
-              </Typography>
-            </Box>
-
-            <Chip
-              label={
-                survey.baseline_locked_at
-                  ? `Baseline Approved: £${baselineTotal.toFixed(2)}`
-                  : `Proposed Total: £${baselineTotal.toFixed(2)}`
-              }
-              color={survey.baseline_locked_at ? "success" : "primary"}
-              sx={{ fontWeight: 700 }}
-            />
-          </Stack>
-
-          <Box
-            component="table"
-            sx={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "0.8rem",
-              mb: 2,
-              "& th, & td": { p: 1, borderBottom: "1px solid #e2e8f0", textAlign: "left" },
-              "& th": { color: "#475569", fontWeight: 700, bgcolor: "#f8fafc" },
-            }}
-          >
-            <thead>
-              <tr>
-                <th style={{ width: "12%" }}>Code</th>
-                <th style={{ width: "28%" }}>Location / Element</th>
-                <th style={{ width: "30%" }}>Work Item Description</th>
-                <th style={{ width: "10%", textAlign: "right" }}>Qty</th>
-                <th style={{ width: "10%", textAlign: "right" }}>Rate (£)</th>
-                <th style={{ width: "10%", textAlign: "right" }}>Total (£)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {scopeItems.map((line) => (
-                <tr key={line.id}>
-                  <td>
-                    <code>{line.item_code || `ITM-${line.id}`}</code>
-                  </td>
-                  <td>
-                    <strong>{line.room_name}</strong>
-                    {line.element_name && (
-                      <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{line.element_name}</div>
-                    )}
-                  </td>
-                  <td>{line.description}</td>
-                  <td style={{ textAlign: "right" }}>
-                    {line.quantity} {line.unit}
-                  </td>
-                  <td style={{ textAlign: "right" }}>£{Number(line.unit_rate).toFixed(2)}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <strong>£{Number(line.total_amount).toFixed(2)}</strong>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={5} style={{ textAlign: "right", fontWeight: 600, paddingTop: "10px" }}>
-                  Base Work Lines Estimate:
-                </td>
-                <td style={{ textAlign: "right", fontWeight: 700, paddingTop: "10px" }}>£{baseEstimate.toFixed(2)}</td>
-              </tr>
-              {adjustAmount !== 0 && (
+        <Box {...block} sx={{ mb: 4 }}>
+          <SectionTitle
+            number={scopeSection}
+            title="Commercial scope & schedule of rates"
+            aside={<Pill tone={isLocked ? "success" : "brand"}>{isLocked ? "Baseline locked" : "In QS review"}</Pill>}
+          />
+          <Box sx={{ border: `1px solid ${REPORT.line}`, borderRadius: "8px", overflow: "hidden" }}>
+            <Box component="table" sx={tableSx}>
+              <thead>
                 <tr>
-                  <td colSpan={5} style={{ textAlign: "right", color: "#64748b" }}>
-                    Whole-Scope Adjustment ({adjustSign > 0 ? "+" : "-"}
-                    {adjustType === "percent" ? `${adjustValue}%` : `£${adjustValue}`}):
-                  </td>
-                  <td style={{ textAlign: "right", color: adjustSign > 0 ? "#166534" : "#b91c1c" }}>
-                    {adjustSign > 0 ? "+" : "-"}£{Math.abs(adjustAmount).toFixed(2)}
-                  </td>
+                  <th style={{ width: "12%" }}>Code</th>
+                  <th style={{ width: "24%" }}>Location</th>
+                  <th style={{ width: "32%" }}>Work item</th>
+                  <th className="num" style={{ width: "11%" }}>Qty</th>
+                  <th className="num" style={{ width: "10%" }}>Rate</th>
+                  <th className="num" style={{ width: "11%" }}>Amount</th>
                 </tr>
-              )}
-              <tr style={{ borderTop: "2px solid #102936" }}>
-                <td colSpan={5} style={{ textAlign: "right", fontSize: "0.95rem", fontWeight: 800 }}>
-                  Approved Contract Baseline:
-                </td>
-                <td style={{ textAlign: "right", fontSize: "1rem", fontWeight: 800, color: "#102936" }}>
-                  £{baselineTotal.toFixed(2)}
-                </td>
-              </tr>
-            </tfoot>
+              </thead>
+              <tbody>
+                {scopeItems.map((line) => (
+                  <tr key={line.id}>
+                    <td style={{ fontFamily: "monospace", fontSize: 11 }}>{line.item_code || `ITM-${line.id}`}</td>
+                    <td>
+                      <div style={{ fontWeight: 700, color: REPORT.ink }}>{line.room_name || "General"}</div>
+                      {line.element_name && <div style={{ fontSize: 11, color: REPORT.muted }}>{line.element_name}</div>}
+                    </td>
+                    <td>{line.description}</td>
+                    <td className="num">
+                      {line.quantity} {line.unit}
+                    </td>
+                    <td className="num">{money(line.unit_rate)}</td>
+                    <td className="num" style={{ fontWeight: 700, color: REPORT.ink }}>
+                      {money(line.total_amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Box>
           </Box>
 
-          {/* Baseline Sign-Off Stamp */}
+          {/* Totals */}
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1.5 }}>
+            <Box sx={{ width: 300, fontSize: 12.5 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", py: 0.5 }}>
+                <span style={{ color: REPORT.muted }}>Work lines</span>
+                <span style={{ fontWeight: 600 }}>{money(baseEstimate)}</span>
+              </Box>
+              {adjustAmount !== 0 && (
+                <Box sx={{ display: "flex", justifyContent: "space-between", py: 0.5 }}>
+                  <span style={{ color: REPORT.muted }}>
+                    Adjustment ({adjustSign > 0 ? "+" : "−"}
+                    {adjustType === "percent" ? `${adjustValue}%` : money(adjustValue)})
+                  </span>
+                  <span style={{ fontWeight: 600, color: adjustSign > 0 ? "#047857" : "#b42318" }}>
+                    {adjustSign > 0 ? "+" : "−"}
+                    {money(Math.abs(adjustAmount))}
+                  </span>
+                </Box>
+              )}
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mt: 0.75,
+                  pt: 1,
+                  borderTop: `2px solid ${REPORT.ink}`,
+                  borderRadius: 0,
+                }}
+              >
+                <span style={{ fontWeight: 800, color: REPORT.ink }}>{totalLabel}</span>
+                <span style={{ fontWeight: 800, fontSize: 16, color: REPORT.brand }}>{money(baselineTotal)}</span>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Sign-off */}
           <Box
             sx={{
               mt: 2,
-              p: 2,
-              borderRadius: "6px",
-              bgcolor: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              p: 1.5,
+              borderRadius: "8px",
+              bgcolor: REPORT.soft,
+              border: `1px solid ${REPORT.line}`,
+              display: "grid",
+              gridTemplateColumns: hasDuration ? "1fr auto" : "1fr",
+              gap: 2,
             }}
           >
             <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
-                COMMERCIAL SIGN-OFF & BASELINE STATUS
-              </Typography>
-              <Typography variant="body2" fontWeight={600} mt={0.25}>
-                {survey.baseline_locked_at
-                  ? `Baseline Approved & Frozen on ${dayjs(survey.baseline_locked_at).format(
-                      "DD MMM YYYY, HH:mm"
-                    )}`
-                  : "Commercial Scope in Review (Pending QS Final Lock)"}
+              <Label>Commercial sign-off</Label>
+              <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: REPORT.ink, mt: 0.25 }}>
+                {isLocked
+                  ? `Baseline approved and locked on ${dayjs(survey.baseline_locked_at).format("DD MMM YYYY, HH:mm")}`
+                  : "In QS review. The total can still change until the baseline is locked."}
               </Typography>
             </Box>
-
-            {survey.estimated_duration_days && (
+            {hasDuration && (
               <Box sx={{ textAlign: "right" }}>
-                <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
-                  ESTIMATED PROJECT DURATION
-                </Typography>
-                <Typography variant="body2" fontWeight={700} mt={0.25} color="#007e85">
-                  {survey.estimated_duration_days} Working Days
+                <Label>Estimated duration</Label>
+                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: REPORT.brand, mt: 0.25 }}>
+                  {survey.estimated_duration_days} working day{Number(survey.estimated_duration_days) === 1 ? "" : "s"}
                 </Typography>
               </Box>
             )}
@@ -660,33 +425,8 @@ export default function SurveyPrintableReport({ survey, containerRef }: SurveyPr
         </Box>
       )}
 
-      {/* ============================================================== */}
-      {/* 5. REPORT FOOTER & AUDIT BLOCK                                 */}
-      {/* ============================================================== */}
-      <Box
-        {...{ [PDF_PAGE_BLOCK_ATTR]: "true" }}
-        sx={{
-          mt: 3,
-          pt: 2,
-          borderTop: "1px solid #cbd5e1",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontSize: "0.75rem",
-          color: "#64748b",
-        }}
-      >
-        <Box>
-          <strong>BELCKA</strong> • Construction & Survey Management Platform
-          <Typography variant="caption" display="block" color="text.secondary">
-            Confidential inspection document. All site evidence and baseline costing are protected and audited.
-          </Typography>
-        </Box>
-
-        <Box sx={{ textAlign: "right" }}>
-          <span>Document ID: SVY-{survey.id}</span> • Ref: {survey.reference}
-        </Box>
-      </Box>
+      {/* Footer (screen and print; the PDF draws it on every page) */}
+      <ReportFooter brand={brand} documentType={SURVEY_REPORT_TYPE} reference={reference} />
     </Box>
   );
 }

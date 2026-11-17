@@ -22,6 +22,8 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  ListItemIcon,
+  ListItemText,
   CircularProgress,
   Tooltip,
   Table,
@@ -63,6 +65,7 @@ import {
   IconPrinter,
   IconEye,
   IconFileDescription,
+  IconPhoto,
   IconCoins,
   IconReceiptTax,
   IconClock,
@@ -71,6 +74,7 @@ import {
   IconPlus,
   IconPlayerPlay,
   IconArchive,
+  IconHistory,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -90,8 +94,12 @@ import {
   SurveyVariationOrder,
 } from "../types";
 import { exportSurveyReportToPdf, exportWorkOrderJobPackToPdf } from "./pdf/surveyPdfExport";
-import SurveyPrintableReport from "./pdf/SurveyPrintableReport";
-import WorkOrderJobPackReport from "./pdf/WorkOrderJobPackReport";
+import SurveyPrintableReport, { SURVEY_REPORT_TYPE } from "./pdf/SurveyPrintableReport";
+import WorkOrderJobPackReport, { JOB_PACK_TYPE } from "./pdf/WorkOrderJobPackReport";
+import { useReportBrand } from "./pdf/ReportParts";
+import ReportPreviewDialog from "./pdf/ReportPreviewDialog";
+import SurveyHistory from "../history/SurveyHistory";
+import SiteReportPdfPreview, { fetchSiteReportPdf, saveBlob, siteReportFileName } from "./pdf/SiteReportPdfPreview";
 
 const statusColorMap: Record<
   SurveyStatus,
@@ -130,6 +138,14 @@ interface SurveyDetailsProps {
   id: string;
 }
 
+// Which reports make sense at each survey status (the API checks the site report too).
+// Site report: once the inspection has started. Commercial report: once QS pricing can begin.
+const SITE_REPORT_STATUSES = ["in_progress", "submitted", "qs_review", "completed", "frozen"];
+const COMMERCIAL_REPORT_STATUSES = ["submitted", "qs_review", "completed", "frozen"];
+
+// Fixed value so the History tab keeps its place whether or not the Property Detail tab is shown.
+const HISTORY_TAB = 9;
+
 export default function SurveyDetails({ id }: SurveyDetailsProps) {
   const inspectionForm = useInspectionForm(id);
   const router = useRouter();
@@ -145,7 +161,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
 
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tabValue, setTabValue] = useState(0);
+  const [tabValue, setTabValue] = useState<number>(0);
 
   // Status Menu Anchor
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
@@ -181,6 +197,10 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
 
   // PDF Export & Preview State
   const [exportingPdf, setExportingPdf] = useState(false);
+  // Header report menus: "preview" or "download", each offering both reports.
+  const [reportMenu, setReportMenu] = useState<{ anchor: HTMLElement; mode: "preview" | "download" } | null>(null);
+  const [siteReportOpen, setSiteReportOpen] = useState(false);
+  const [downloadingSiteReport, setDownloadingSiteReport] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const reportPrintRef = React.useRef<HTMLDivElement>(null);
 
@@ -210,6 +230,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
   const [exportingWoPdf, setExportingWoPdf] = useState(false);
   const [woPreviewOpen, setWoPreviewOpen] = useState(false);
   const woReportPrintRef = React.useRef<HTMLDivElement>(null);
+  const reportBrand = useReportBrand();
 
   const handleExportWoJobPackPdf = async () => {
     const wo = survey?.work_order || survey?.work_orders?.[0];
@@ -218,7 +239,11 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       setExportingWoPdf(true);
       toast.loading("Generating Contractor Work Order Job Pack PDF...", { id: "wo-pdf-export" });
       const filename = `${wo.reference || `WO-${survey.reference}`}-Job-Pack.pdf`;
-      await exportWorkOrderJobPackToPdf(woReportPrintRef.current, filename);
+      await exportWorkOrderJobPackToPdf(woReportPrintRef.current, filename, {
+        company: reportBrand.name,
+        documentType: JOB_PACK_TYPE,
+        reference: wo.reference || survey.reference || `Survey #${survey.id}`,
+      });
       toast.success("Work Order Job Pack PDF downloaded successfully!", { id: "wo-pdf-export" });
     } catch (err: any) {
       console.error("Job Pack export failed:", err);
@@ -301,7 +326,11 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       setExportingPdf(true);
       toast.loading("Generating professional survey PDF report...", { id: "pdf-export" });
       const filename = `${survey.reference || `SURVEY-${survey.id}`}-Inspection-Report.pdf`;
-      await exportSurveyReportToPdf(reportPrintRef.current, filename);
+      await exportSurveyReportToPdf(reportPrintRef.current, filename, {
+        company: reportBrand.name,
+        documentType: SURVEY_REPORT_TYPE,
+        reference: survey.reference || `Survey #${survey.id}`,
+      });
       toast.success("PDF survey report downloaded successfully!", { id: "pdf-export" });
     } catch (err: any) {
       console.error("PDF export failed:", err);
@@ -310,6 +339,23 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       setExportingPdf(false);
     }
   };
+
+  const handleDownloadSiteReport = async () => {
+    if (!survey) return;
+    try {
+      setDownloadingSiteReport(true);
+      toast.loading("Generating site survey report...", { id: "site-report" });
+      saveBlob(await fetchSiteReportPdf(survey.id), siteReportFileName(survey.reference));
+      toast.success("Site survey report downloaded", { id: "site-report" });
+    } catch {
+      toast.error("Couldn't generate the site survey report. Please try again.", { id: "site-report" });
+    } finally {
+      setDownloadingSiteReport(false);
+    }
+  };
+
+  const canSiteReport = Boolean(survey && SITE_REPORT_STATUSES.includes(survey.status));
+  const canCommercialReport = Boolean(survey && COMMERCIAL_REPORT_STATUSES.includes(survey.status));
 
   const fetchSurvey = React.useCallback(async () => {
     setLoading(true);
@@ -519,90 +565,37 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
     return dims;
   };
 
-  // Helper for condition rating score
-  const renderConditionScore = (
-    score?: number | null,
-    condition?: string | null,
-    photoCount?: number,
-    damagePhotoCount?: number,
-  ) => {
-    if (condition) {
-      const map: Record<
-        string,
-        { label: string; color: "success" | "warning" | "error" | "default" }
-      > = {
-        good: { label: "Good", color: "success" },
-        minor_defects: { label: "Minor Defects", color: "warning" },
-        damaged: { label: "Damaged", color: "error" },
-        not_accessible: { label: "Not Accessible", color: "default" },
-      };
-      const opt = map[condition] || { label: condition, color: "default" };
-      return (
-        <Stack direction="row" spacing={0.5} alignItems="center">
-          <Chip
-            size="small"
-            color={opt.color}
-            variant="filled"
-            label={opt.label}
-            sx={{ fontWeight: 700, fontSize: "0.75rem" }}
-          />
-          {photoCount && photoCount > 0 ? (
-            <Chip
-              size="small"
-              icon={<IconCamera size={14} />}
-              label={photoCount}
-              variant="outlined"
-              sx={{ fontWeight: 600, fontSize: "0.7rem", height: 22 }}
-            />
-          ) : null}
-          {damagePhotoCount && damagePhotoCount > 0 ? (
-            <Tooltip title="Damage photos taken for the defect">
-              <Chip
-                size="small"
-                icon={<IconCamera size={14} />}
-                label={`${damagePhotoCount} damage`}
-                color="error"
-                variant="outlined"
-                sx={{ fontWeight: 600, fontSize: "0.7rem", height: 22 }}
-              />
-            </Tooltip>
-          ) : null}
-        </Stack>
-      );
-    }
-
-    if (score === undefined || score === null) {
-      return (
-        <Typography variant="caption" color="text.secondary" fontStyle="italic">
-          Pending inspection
-        </Typography>
-      );
-    }
-
-    let color: "success" | "info" | "warning" | "error" = "success";
-    let label = "Excellent";
-    if (score === 4) {
-      color = "info";
-      label = "Good";
-    } else if (score === 3) {
-      color = "warning";
-      label = "Fair";
-    } else if (score === 2) {
-      color = "warning";
-      label = "Poor";
-    } else if (score <= 1) {
-      color = "error";
-      label = "Very Poor";
-    }
-
+  // Soft condition badge used in the rooms table (one style for every condition).
+  const CONDITION_BADGE: Record<string, { label: string; bg: string; fg: string }> = {
+    good: { label: "Good", bg: "#e7f6ee", fg: "#087443" },
+    minor_defects: { label: "Minor defects", bg: "#fff4d6", fg: "#a15c07" },
+    damaged: { label: "Damaged", bg: "#fde8e8", fg: "#b42318" },
+    not_accessible: { label: "Not accessible", bg: "#eef1f5", fg: "#475569" },
+  };
+  const conditionBadge = (item: SurveyItem) => {
+    const meta = item.condition
+      ? CONDITION_BADGE[item.condition] || { label: item.condition.replace(/_/g, " "), bg: "#eef1f5", fg: "#475569" }
+      : item.is_inspected
+        ? { label: "Inspected", bg: "#eef1f5", fg: "#475569" }
+        : { label: "Not inspected", bg: "#f1f5f9", fg: "#94a3b8" };
     return (
-      <Chip
-        size="small"
-        color={color}
-        variant="outlined"
-        label={`${score}/5 • ${label}`}
-        sx={{ fontWeight: 600, fontSize: "0.75rem" }}
-      />
+      <Box
+        component="span"
+        sx={{
+          display: "inline-block",
+          px: 1,
+          py: 0.25,
+          borderRadius: "6px",
+          fontSize: "0.75rem",
+          fontWeight: 600,
+          lineHeight: 1.6,
+          whiteSpace: "nowrap",
+          bgcolor: meta.bg,
+          color: meta.fg,
+        }}
+      >
+        {meta.label}
+      </Box>
     );
   };
 
@@ -650,57 +643,63 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3 } }}>
-      {/* Top Navigation Header */}
+      {/* Top Navigation Header: title on the left, actions on the right in one row of small buttons */}
       <Stack
-        direction={{ xs: "column", sm: "row" }}
+        direction={{ xs: "column", md: "row" }}
         justifyContent="space-between"
-        alignItems={{ xs: "flex-start", sm: "center" }}
+        alignItems={{ xs: "flex-start", md: "center" }}
         spacing={2}
-        mb={3}
+        mb={2.5}
       >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
           <IconButton
+            size="small"
             onClick={() => router.push("/apps/surveys/list")}
-            sx={{
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: "8px",
-            }}
+            sx={{ border: "1px solid", borderColor: "divider", borderRadius: "8px", width: 36, height: 36 }}
             aria-label="Back to surveys"
           >
-            <IconArrowLeft size={20} />
+            <IconArrowLeft size={18} />
           </IconButton>
-          <Box>
-            <Stack direction="row" alignItems="center" spacing={1.5}>
-              <Typography variant="h4" fontWeight={700} sx={{ whiteSpace: "nowrap" }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Typography fontWeight={800} sx={{ fontSize: "1.25rem", whiteSpace: "nowrap", lineHeight: 1.2 }}>
                 {survey.reference || `SRV-${survey.id}`}
               </Typography>
               <Chip
                 label={statusLabelMap[survey.status] || survey.status}
                 color={statusColorMap[survey.status] || "default"}
                 size="small"
-                sx={{ fontWeight: 600, textTransform: "capitalize" }}
+                sx={{ fontWeight: 600, height: 22 }}
               />
             </Stack>
             {survey.title && (
-              <Typography variant="body2" color="text.secondary" mt={0.25}>
+              <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25, maxWidth: { xs: 260, sm: 420 } }}>
                 {survey.title}
               </Typography>
             )}
           </Box>
         </Stack>
 
-        <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap justifyContent="flex-end">
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          flexWrap="wrap"
+          useFlexGap
+          justifyContent={{ xs: "flex-start", md: "flex-end" }}
+          sx={{ "& .MuiButton-root": { height: 36, borderRadius: "8px", fontWeight: 600, whiteSpace: "nowrap" } }}
+        >
           {/* Status Change Dropdown (Strictly aligned with ALLOWED_SURVEY_TRANSITIONS) */}
           {isAdmin && survey.status !== "frozen" && (ALLOWED_SURVEY_TRANSITIONS[survey.status] || []).length > 0 && (
             <>
               <Button
+                size="small"
                 variant="outlined"
-                color="secondary"
+                color="inherit"
                 endIcon={<IconChevronDown size={16} />}
                 onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
                 disabled={updatingStatus}
-                sx={{ fontWeight: 600, borderRadius: "8px" }}
+                sx={{ borderColor: "divider" }}
               >
                 Change Status
               </Button>
@@ -734,116 +733,170 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
             </>
           )}
 
-          {/* Explicit Freeze & Archive Button for Completed surveys */}
+          {/* Reports: preview or download either report from one menu */}
+          <Tooltip title={canSiteReport ? "" : "Reports are available once the inspection has started"}>
+            <span>
+              <Button
+                size="small"
+                variant="outlined"
+                color="inherit"
+                startIcon={exportingPdf || downloadingSiteReport ? <CircularProgress size={14} /> : <IconFileDescription size={16} />}
+                endIcon={<IconChevronDown size={16} />}
+                onClick={(e) => setReportMenu({ anchor: e.currentTarget, mode: "preview" })}
+                disabled={!canSiteReport || exportingPdf || downloadingSiteReport}
+                sx={{ borderColor: "divider" }}
+              >
+                {exportingPdf || downloadingSiteReport ? "Generating..." : "Reports"}
+              </Button>
+            </span>
+          </Tooltip>
+
+          <Menu
+            anchorEl={reportMenu?.anchor}
+            open={Boolean(reportMenu)}
+            onClose={() => setReportMenu(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            slotProps={{
+              paper: {
+                sx: {
+                  mt: 0.75,
+                  width: 360,
+                  borderRadius: "12px",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  boxShadow: "0 12px 32px -8px rgba(15,23,42,0.18)",
+                },
+              },
+              list: { sx: { p: 0.75 } },
+            }}
+          >
+            {[
+              {
+                key: "site",
+                icon: <IconPhoto size={18} />,
+                tone: "primary" as const,
+                title: "Site survey report",
+                hint: "Photos and condition, room by room",
+                available: canSiteReport,
+                reason: "Available once the inspection has started",
+                note: survey.status === "in_progress" ? "Draft · inspection in progress" : "",
+                preview: () => setSiteReportOpen(true),
+                download: () => void handleDownloadSiteReport(),
+              },
+              {
+                key: "commercial",
+                icon: <IconFileDescription size={18} />,
+                tone: "secondary" as const,
+                title: "Inspection & commercial report",
+                hint: "Defects and the priced scope",
+                available: canCommercialReport,
+                reason: "Available after the survey is submitted",
+                note: "",
+                preview: () => setPreviewOpen(true),
+                download: () => void handleExportPdf(),
+              },
+            ].map((option) => (
+              <Stack
+                key={option.key}
+                direction="row"
+                spacing={1.25}
+                alignItems="center"
+                sx={{
+                  px: 1.25,
+                  py: 1,
+                  borderRadius: "8px",
+                  opacity: option.available ? 1 : 0.5,
+                  "&:hover": option.available ? { bgcolor: "action.hover" } : undefined,
+                }}
+              >
+                <Box sx={{ color: `${option.tone}.main`, display: "flex", flexShrink: 0 }}>{option.icon}</Box>
+                <Box minWidth={0} flex={1}>
+                  <Typography variant="body2" fontWeight={600} lineHeight={1.35} noWrap>
+                    {option.title}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color={option.available && option.note ? "warning.dark" : "text.secondary"}
+                    display="block"
+                    lineHeight={1.35}
+                    noWrap
+                  >
+                    {!option.available ? option.reason : option.note || option.hint}
+                  </Typography>
+                </Box>
+                {option.available && (
+                  <Stack direction="row" spacing={0.25} flexShrink={0}>
+                    <Tooltip title="Preview">
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        aria-label={`Preview ${option.title}`}
+                        onClick={() => {
+                          setReportMenu(null);
+                          option.preview();
+                        }}
+                      >
+                        <IconEye size={18} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Download PDF">
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        aria-label={`Download ${option.title}`}
+                        onClick={() => {
+                          setReportMenu(null);
+                          option.download();
+                        }}
+                      >
+                        <IconDownload size={18} />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                )}
+              </Stack>
+            ))}
+          </Menu>
+
+          {/* Work order shortcuts (completed / frozen surveys with a locked baseline) */}
+          {(survey.status === "completed" || survey.status === "frozen") && survey.baseline_locked_at && (survey.work_order || survey.work_orders?.[0]) && (
+            <Button size="small" variant="outlined" color="inherit" startIcon={<IconBriefcase size={16} />} onClick={() => setTabValue(1)} sx={{ borderColor: "divider" }}>
+              WO: {(survey.work_order || survey.work_orders?.[0])?.reference}
+            </Button>
+          )}
+
           {isAdmin && survey.status === "completed" && (
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<IconLock size={18} />}
-              onClick={() => setFreezeDialogOpen(true)}
-              sx={{ fontWeight: 700, borderRadius: "8px" }}
-            >
+            <Button size="small" variant="outlined" color="error" startIcon={<IconLock size={16} />} onClick={() => setFreezeDialogOpen(true)}>
               Freeze & Archive
             </Button>
           )}
 
-          {/* Frozen Indicator */}
           {survey.status === "frozen" && (
-            <Chip
-              icon={<IconLock size={16} />}
-              label="Survey Frozen & Archived"
-              color="default"
-              variant="outlined"
-              sx={{ fontWeight: 700, height: 36, px: 1, borderColor: "grey.400" }}
-            />
-          )}
-
-          <Button
-            variant="outlined"
-            color="inherit"
-            startIcon={<IconEye size={18} />}
-            onClick={() => setPreviewOpen(true)}
-            sx={{ fontWeight: 600, borderRadius: "8px" }}
-          >
-            Preview Report
-          </Button>
-
-          <Button
-            variant="outlined"
-            color="primary"
-            startIcon={exportingPdf ? <CircularProgress size={16} /> : <IconDownload size={18} />}
-            onClick={handleExportPdf}
-            disabled={exportingPdf || !survey}
-            sx={{ fontWeight: 600, borderRadius: "8px" }}
-          >
-            {exportingPdf ? "Exporting PDF..." : "Export Report (PDF)"}
-          </Button>
-
-          {["submitted", "qs_review", "completed", "frozen"].includes(survey.status) && (
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<IconCalculator size={18} />}
-              component={Link}
-              href={`/apps/surveys/qs/${survey.id}`}
-              sx={{ fontWeight: 700, borderRadius: "8px" }}
-            >
-              QS Assessment & Costing
-            </Button>
-          )}
-
-          {(isAdmin || survey.surveyor_id === access.user_id) &&
-            (survey.status === "assigned" || survey.status === "in_progress" || survey.status === "draft") && (
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={<IconCamera size={18} />}
-              component={Link}
-              href={`/apps/surveys/inspect/${survey.id}`}
-              sx={{ fontWeight: 700, borderRadius: "8px" }}
-            >
-              Conduct Inspection
-            </Button>
-          )}
-
-          {/* Work Order Action Button */}
-          {(survey.status === "completed" || survey.status === "frozen") && survey.baseline_locked_at && (
-            <>
-            {(survey.work_order || survey.work_orders?.[0]) && (
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<IconBriefcase size={18} />}
-                onClick={() => setTabValue(1)}
-                sx={{ fontWeight: 700, borderRadius: "8px" }}
-              >
-                WO: {(survey.work_order || survey.work_orders?.[0])?.reference}
-              </Button>
-            )}
-            {isAdmin && survey.status === "completed" && !hasOpenWorkOrder && (
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<IconBriefcase size={18} />}
-                onClick={handleOpenHandoff}
-                sx={{ fontWeight: 700, borderRadius: "8px" }}
-              >
-                Issue Work Order
-              </Button>
-            )}
-            </>
+            <Chip icon={<IconLock size={15} />} label="Frozen & archived" variant="outlined" sx={{ fontWeight: 600, height: 36, borderColor: "divider" }} />
           )}
 
           {isAdmin && !["completed", "frozen"].includes(survey.status) && (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<IconEdit size={18} />}
-              component={Link}
-              href={`/apps/surveys/edit/${survey.id}`}
-              sx={{ fontWeight: 600, borderRadius: "8px" }}
-            >
+            <Button size="small" variant="outlined" color="primary" startIcon={<IconEdit size={16} />} component={Link} href={`/apps/surveys/edit/${survey.id}`}>
               Edit Survey
+            </Button>
+          )}
+
+          {/* The one main next step for this status */}
+          {(isAdmin || survey.surveyor_id === access.user_id) &&
+            (survey.status === "assigned" || survey.status === "in_progress" || survey.status === "draft") && (
+            <Button size="small" variant="contained" color="success" startIcon={<IconCamera size={16} />} component={Link} href={`/apps/surveys/inspect/${survey.id}`}>
+              Conduct Inspection
+            </Button>
+          )}
+          {["submitted", "qs_review", "completed", "frozen"].includes(survey.status) && (
+            <Button size="small" variant="contained" color="primary" startIcon={<IconCalculator size={16} />} component={Link} href={`/apps/surveys/qs/${survey.id}`}>
+              QS Assessment & Costing
+            </Button>
+          )}
+          {isAdmin && survey.status === "completed" && survey.baseline_locked_at && !hasOpenWorkOrder && (
+            <Button size="small" variant="contained" color="primary" startIcon={<IconBriefcase size={16} />} onClick={handleOpenHandoff}>
+              Issue Work Order
             </Button>
           )}
         </Stack>
@@ -863,140 +916,128 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
         </Alert>
       )}
 
-      {/* Overview Cards (Equal height grid) */}
-      <Grid container spacing={2.5} mb={3}>
-        {/* Project */}
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <BlankCard sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-            <CardContent sx={{ p: 2.5, flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-              <Stack direction="row" spacing={1.5} alignItems="center" mb={1.5}>
-                <Avatar sx={{ bgcolor: "primary.light", color: "primary.main", width: 40, height: 40, borderRadius: "10px" }}>
-                  <IconBuilding size={20} />
-                </Avatar>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5, textTransform: "uppercase" }}>
-                    Project
-                  </Typography>
-                </Box>
-              </Stack>
-              <Typography variant="subtitle1" fontWeight={700} noWrap title={survey.project_name || "—"}>
-                {survey.project_name || "—"}
-              </Typography>
-            </CardContent>
-          </BlankCard>
-        </Grid>
-
-        {/* Property Address */}
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <BlankCard sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-            <CardContent sx={{ p: 2.5, flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-              <Stack direction="row" spacing={1.5} alignItems="center" mb={1.5}>
-                <Avatar sx={{ bgcolor: "info.light", color: "info.main", width: 40, height: 40, borderRadius: "10px" }}>
-                  <IconMapPin size={20} />
-                </Avatar>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5, textTransform: "uppercase" }}>
-                    Property Address
-                  </Typography>
-                </Box>
-              </Stack>
-              <Tooltip title={survey.property_name || "—"} arrow placement="top">
-                <Typography
-                  variant="subtitle1"
-                  fontWeight={700}
-                  sx={{
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                    lineHeight: 1.3,
-                  }}
+      {/* Overview: one compact strip with the four key facts */}
+      <BlankCard sx={{ mb: 2.5, overflow: "hidden" }}>
+        {/* 1px gaps over a divider-coloured background draw clean lines for 4, 2 or 1 columns. */}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(4, 1fr)" },
+            gap: "1px",
+            bgcolor: "divider",
+            borderRadius: 0,
+            "& > div": { px: 2.5, py: 2, minWidth: 0, borderRadius: 0, bgcolor: "background.paper" },
+          }}
+        >
+          {[
+            {
+              key: "address",
+              icon: <IconMapPin size={16} />,
+              tone: "info" as const,
+              label: "Property address",
+              value: survey.property_name || "—",
+            },
+            {
+              key: "project",
+              icon: <IconBuilding size={16} />,
+              tone: "primary" as const,
+              label: "Project",
+              value: survey.project_name || "—",
+            },
+            {
+              key: "surveyor",
+              icon: <IconUser size={16} />,
+              tone: "warning" as const,
+              label: "Assigned surveyor",
+              value: survey.surveyor_name || "Unassigned",
+              muted: !survey.surveyor_name,
+              // Recorded only for surveys assigned since this was added.
+              sub:
+                survey.surveyor_id && survey.assigned_by_name
+                  ? `Assigned by ${survey.assigned_by_name}${survey.assigned_at ? ` on ${new Date(survey.assigned_at).toLocaleDateString("en-GB")}` : ""}`
+                  : "",
+            },
+            {
+              key: "date",
+              icon: <IconCalendar size={16} />,
+              tone: "success" as const,
+              label: "Inspection date",
+              value: survey.survey_date
+                ? new Date(survey.survey_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+                : "—",
+            },
+          ].map((item) => (
+            <Box key={item.key}>
+              <Stack direction="row" spacing={1} alignItems="center" mb={0.75}>
+                <Box
+                  sx={(theme) => ({
+                    width: 26,
+                    height: 26,
+                    borderRadius: "7px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: theme.palette[item.tone].light,
+                    color: theme.palette[item.tone].main,
+                    flexShrink: 0,
+                  })}
                 >
-                  {survey.property_name || "—"}
+                  {item.icon}
+                </Box>
+                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ textTransform: "uppercase", letterSpacing: 0.4, fontSize: "0.7rem" }}>
+                  {item.label}
+                </Typography>
+              </Stack>
+              <Tooltip title={item.value} placement="top-start" enterDelay={500}>
+                <Typography
+                  variant="body2"
+                  fontWeight={500}
+                  color={item.muted ? "text.secondary" : "text.primary"}
+                  fontStyle={item.muted ? "italic" : "normal"}
+                  sx={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.4 }}
+                >
+                  {item.value}
                 </Typography>
               </Tooltip>
-            </CardContent>
-          </BlankCard>
-        </Grid>
-
-        {/* Assigned Surveyor */}
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <BlankCard sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-            <CardContent sx={{ p: 2.5, flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-              <Stack direction="row" spacing={1.5} alignItems="center" mb={1.5}>
-                <Avatar sx={{ bgcolor: "warning.light", color: "warning.main", width: 40, height: 40, borderRadius: "10px" }}>
-                  <IconUser size={20} />
-                </Avatar>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5, textTransform: "uppercase" }}>
-                    Assigned Surveyor
-                  </Typography>
-                </Box>
-              </Stack>
-              <Typography variant="subtitle1" fontWeight={700} noWrap title={survey.surveyor_name || "Unassigned"}>
-                {survey.surveyor_name || (
-                  <Typography component="span" variant="subtitle1" color="text.secondary" fontStyle="italic">
-                    Unassigned
-                  </Typography>
-                )}
-              </Typography>
-              {/* Recorded only for surveys assigned since this was added. */}
-              {survey.surveyor_id && survey.assigned_by_name && (
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  Assigned by {survey.assigned_by_name}
-                  {survey.assigned_at ? ` on ${new Date(survey.assigned_at).toLocaleDateString("en-GB")}` : ""}
+              {item.sub && (
+                <Typography variant="caption" color="text.secondary" display="block" noWrap mt={0.25}>
+                  {item.sub}
                 </Typography>
               )}
-            </CardContent>
-          </BlankCard>
-        </Grid>
-
-        {/* Inspection Date */}
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <BlankCard sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-            <CardContent sx={{ p: 2.5, flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-              <Stack direction="row" spacing={1.5} alignItems="center" mb={1.5}>
-                <Avatar sx={{ bgcolor: "success.light", color: "success.main", width: 40, height: 40, borderRadius: "10px" }}>
-                  <IconCalendar size={20} />
-                </Avatar>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5, textTransform: "uppercase" }}>
-                    Inspection Date
-                  </Typography>
-                </Box>
-              </Stack>
-              <Typography variant="subtitle1" fontWeight={700}>
-                {survey.survey_date ? new Date(survey.survey_date).toLocaleDateString() : "—"}
-              </Typography>
-            </CardContent>
-          </BlankCard>
-        </Grid>
-      </Grid>
+            </Box>
+          ))}
+        </Box>
+      </BlankCard>
 
       {/* Main Content Area */}
       <BlankCard>
         {/* Card Tabs Bar */}
         <Box
           sx={{
-            px: 3,
-            pt: 1,
+            px: { xs: 1.5, md: 2.5 },
             borderBottom: "1px solid",
             borderColor: "divider",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            flexWrap: "wrap",
             gap: 2,
           }}
         >
           <Tabs
             value={tabValue}
             onChange={(_, val) => setTabValue(val)}
+            variant="scrollable"
+            scrollButtons="auto"
             sx={{
+              minHeight: 52,
+              flex: 1,
+              minWidth: 0,
               "& .MuiTab-root": {
                 fontWeight: 600,
-                fontSize: "0.925rem",
-                py: 2,
+                fontSize: "0.875rem",
+                textTransform: "none",
+                minHeight: 52,
+                px: 1.75,
               },
             }}
           >
@@ -1019,6 +1060,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
             <Tab label="Survey Details & Metadata" />
             {inspectionForm.data?.form && (
               <Tab
+                value={3}
                 label={
                   <Stack direction="row" spacing={1} alignItems="center">
                     <span>Property Detail</span>
@@ -1038,29 +1080,36 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                 }
               />
             )}
+            <Tab
+              value={HISTORY_TAB}
+              label={
+                <Stack direction="row" spacing={0.75} alignItems="center">
+                  <IconHistory size={16} />
+                  <span>History</span>
+                </Stack>
+              }
+            />
           </Tabs>
 
           {tabValue === 0 && (survey.rooms || []).length > 0 && (
-            <Stack direction="row" spacing={1} pb={{ xs: 1.5, sm: 0 }}>
+            <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0, display: { xs: "none", sm: "flex" } }}>
               <Button
                 size="small"
-                variant="outlined"
-                color="secondary"
+                color="inherit"
                 startIcon={<IconArrowsMaximize size={15} />}
                 onClick={handleExpandAll}
-                sx={{ fontSize: "0.75rem", textTransform: "none" }}
+                sx={{ fontSize: "0.75rem", textTransform: "none", color: "text.secondary" }}
               >
-                Expand All
+                Expand all
               </Button>
               <Button
                 size="small"
-                variant="outlined"
-                color="secondary"
+                color="inherit"
                 startIcon={<IconArrowsMinimize size={15} />}
                 onClick={handleCollapseAll}
-                sx={{ fontSize: "0.75rem", textTransform: "none" }}
+                sx={{ fontSize: "0.75rem", textTransform: "none", color: "text.secondary" }}
               >
-                Collapse All
+                Collapse all
               </Button>
             </Stack>
           )}
@@ -1068,7 +1117,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
 
         {/* Tab 0: Rooms & Elements Table Layout */}
         {tabValue === 0 && (
-          <Box p={3}>
+          <Box p={{ xs: 2, md: 2.5 }}>
             {(!survey.rooms || survey.rooms.length === 0) ? (
               <Box p={6} textAlign="center">
                 <Avatar sx={{ bgcolor: "grey.100", color: "grey.600", width: 56, height: 56, mx: "auto", mb: 2 }}>
@@ -1093,9 +1142,15 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                 )}
               </Box>
             ) : (
-              <Stack spacing={2.5}>
+              <Stack spacing={1.5}>
                 {survey.rooms.map((room, rIdx) => {
                   const isExpanded = Boolean(expandedRooms[String(room.id)]);
+                  const roomItems = room.items || [];
+                  const roomIssues = roomItems.filter(
+                    (i) => i.condition === "damaged" || i.condition === "minor_defects" || Boolean(i.repair_action),
+                  ).length;
+                  const roomPhotos = roomItems.reduce((n, i) => n + (i.photos?.length || 0), 0);
+                  const roomInspected = roomItems.filter((i) => i.is_inspected).length;
                   return (
                     <Accordion
                       key={room.id}
@@ -1117,43 +1172,68 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                         expandIcon={<IconChevronDown size={20} />}
                         sx={{
                           bgcolor: isExpanded ? "grey.50" : "background.paper",
-                          px: 2.5,
-                          py: 1,
+                          px: 2,
+                          minHeight: 56,
+                          "& .MuiAccordionSummary-content": { my: 1, minWidth: 0 },
                           "&:hover": { bgcolor: "grey.100" },
                         }}
                       >
-                        <Stack direction="row" spacing={2} alignItems="center" flex={1}>
-                          <Chip
-                            label={`#${rIdx + 1}`}
-                            size="small"
-                            color="primary"
-                            variant="filled"
-                            sx={{ fontWeight: 700, borderRadius: "6px", height: 24 }}
-                          />
-                          <Box flex={1}>
+                        <Stack direction="row" spacing={1.5} alignItems="center" flex={1} minWidth={0} pr={1}>
+                          <Box
+                            sx={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: "7px",
+                              bgcolor: "primary.main",
+                              color: "#fff",
+                              fontSize: "0.8rem",
+                              fontWeight: 700,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {rIdx + 1}
+                          </Box>
+                          <Box flex={1} minWidth={0}>
                             <Stack direction="row" spacing={1} alignItems="center">
-                              <Typography variant="subtitle1" fontWeight={700}>
+                              <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ fontSize: "0.95rem" }}>
                                 {room.name}
                               </Typography>
                               {room.added_on_site && <AddedOnSiteChip />}
                             </Stack>
                             {room.notes && (
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography variant="caption" color="text.secondary" noWrap display="block">
                                 {room.notes}
                               </Typography>
                             )}
                           </Box>
-                          <Chip
-                            label={`${room.items?.length || 0} Elements`}
-                            size="small"
-                            variant="outlined"
-                            sx={{
-                              fontWeight: 600,
-                              fontSize: "0.75rem",
-                              borderColor: "divider",
-                              bgcolor: "background.paper",
-                            }}
-                          />
+                          <Stack
+                            direction="row"
+                            spacing={1.5}
+                            alignItems="center"
+                            divider={<Box sx={{ width: "1px", height: 14, bgcolor: "divider" }} />}
+                            sx={{ display: { xs: "none", sm: "flex" }, flexShrink: 0 }}
+                          >
+                            <Typography variant="caption" color="text.secondary" fontWeight={500} noWrap>
+                              {roomInspected}/{roomItems.length} inspected
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              noWrap
+                              fontWeight={500}
+                              color={roomIssues ? "error.main" : "text.secondary"}
+                            >
+                              {roomIssues} {roomIssues === 1 ? "issue" : "issues"}
+                            </Typography>
+                            <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
+                              <IconCamera size={14} />
+                              <Typography variant="caption" fontWeight={500} noWrap>
+                                {roomPhotos}
+                              </Typography>
+                            </Stack>
+                          </Stack>
                         </Stack>
                       </AccordionSummary>
 
@@ -1168,139 +1248,124 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                           </Box>
                         ) : (
                           <TableContainer>
-                            <Table size="small">
-                              <TableHead sx={{ bgcolor: "grey.50" }}>
+                            <Table
+                              size="small"
+                              sx={{
+                                tableLayout: "fixed",
+                                minWidth: 820,
+                                "& th": {
+                                  py: 1,
+                                  fontSize: "0.75rem",
+                                  fontWeight: 600,
+                                  color: "text.secondary",
+                                  whiteSpace: "nowrap",
+                                  bgcolor: "background.paper",
+                                },
+                                "& td": { py: 1.25, verticalAlign: "middle" },
+                              }}
+                            >
+                              <TableHead>
                                 <TableRow>
-                                  <TableCell sx={{ width: 50, py: 1.5, fontWeight: 700, fontSize: "0.75rem" }}>
-                                    #
-                                  </TableCell>
-                                  <TableCell sx={{ width: "25%", py: 1.5, fontWeight: 700, fontSize: "0.75rem" }}>
-                                    ELEMENT NAME
-                                  </TableCell>
-                                  <TableCell sx={{ width: 100, py: 1.5, fontWeight: 700, fontSize: "0.75rem" }}>
-                                    UNIT
-                                  </TableCell>
-                                  <TableCell sx={{ py: 1.5, fontWeight: 700, fontSize: "0.75rem" }}>
-                                    DIMENSIONS & MEASUREMENTS
-                                  </TableCell>
-                                  <TableCell sx={{ width: 160, py: 1.5, fontWeight: 700, fontSize: "0.75rem" }}>
-                                    CONDITION
-                                  </TableCell>
-                                  <TableCell sx={{ width: 140, py: 1.5, fontWeight: 700, fontSize: "0.75rem" }}>
-                                    ACTION / REPAIR
-                                  </TableCell>
-                                  <TableCell sx={{ width: "20%", py: 1.5, fontWeight: 700, fontSize: "0.75rem" }}>
-                                    NOTES
-                                  </TableCell>
+                                  <TableCell sx={{ width: 48 }}>#</TableCell>
+                                  <TableCell sx={{ width: "24%" }}>Element</TableCell>
+                                  <TableCell sx={{ width: 140 }}>Condition</TableCell>
+                                  <TableCell>Measurements</TableCell>
+                                  <TableCell sx={{ width: 160 }}>Photos</TableCell>
+                                  <TableCell sx={{ width: "24%" }}>Repair / notes</TableCell>
                                 </TableRow>
                               </TableHead>
                               <TableBody>
                                 {room.items.map((item, iIdx) => {
                                   const dims = formatDimensions(item);
+                                  const damagePhotos = item.photos?.filter((p) => p.photo_type === "damage").length || 0;
+                                  const generalPhotos = (item.photos?.length || 0) - damagePhotos;
                                   return (
                                     <TableRow key={item.id || iIdx} hover>
-                                      {/* Index */}
-                                      <TableCell sx={{ py: 1.5, color: "text.secondary", fontWeight: 600 }}>
-                                        {iIdx + 1}
-                                      </TableCell>
+                                      <TableCell sx={{ color: "text.secondary" }}>{iIdx + 1}</TableCell>
 
-                                      {/* Element Name with Icon */}
-                                      <TableCell sx={{ py: 1.5 }}>
-                                        <Stack direction="row" spacing={1} alignItems="center">
-                                          {item.name?.toLowerCase().includes("door") ? (
-                                            <IconDoor size={18} color="#475569" />
-                                          ) : item.name?.toLowerCase().includes("window") ? (
-                                            <IconWindow size={18} color="#475569" />
-                                          ) : (
-                                            <IconTool size={18} color="#475569" />
-                                          )}
-                                          <Typography variant="body2" fontWeight={700}>
+                                      {/* Element (unit beside the name) */}
+                                      <TableCell>
+                                        <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
+                                          <Box sx={{ color: "text.secondary", display: "flex", flexShrink: 0 }}>
+                                            {item.name?.toLowerCase().includes("door") ? (
+                                              <IconDoor size={17} />
+                                            ) : item.name?.toLowerCase().includes("window") ? (
+                                              <IconWindow size={17} />
+                                            ) : (
+                                              <IconTool size={17} />
+                                            )}
+                                          </Box>
+                                          <Typography variant="body2" fontWeight={600} noWrap title={item.name}>
                                             {item.name}
                                           </Typography>
+                                          {item.output_unit && (
+                                            <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+                                              {item.output_unit}
+                                            </Typography>
+                                          )}
                                           {/* A room added on site is already badged; its elements don't repeat it. */}
                                           {item.added_on_site && !room.added_on_site && <AddedOnSiteChip />}
                                         </Stack>
                                       </TableCell>
 
-                                      {/* Unit */}
-                                      <TableCell sx={{ py: 1.5 }}>
-                                        {item.output_unit ? (
-                                          <Chip
-                                            label={item.output_unit}
-                                            size="small"
-                                            variant="outlined"
-                                            sx={{
-                                              fontWeight: 600,
-                                              fontSize: "0.75rem",
-                                              height: 22,
-                                              bgcolor: "grey.50",
-                                            }}
-                                          />
+                                      <TableCell>{conditionBadge(item)}</TableCell>
+
+                                      <TableCell>
+                                        {dims.length > 0 ? (
+                                          <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
+                                            {dims.join(" × ")}
+                                          </Typography>
                                         ) : (
-                                          <Typography variant="caption" color="text.secondary">
+                                          <Typography variant="body2" color="text.disabled">
                                             —
                                           </Typography>
                                         )}
                                       </TableCell>
 
-                                      {/* Dimensions */}
-                                      <TableCell sx={{ py: 1.5 }}>
-                                        {dims.length > 0 ? (
-                                          <Stack direction="row" spacing={1} flexWrap="wrap">
-                                            {dims.map((dim, dIdx) => (
-                                              <Chip
-                                                key={dIdx}
-                                                label={dim}
-                                                size="small"
-                                                variant="filled"
-                                                sx={{
-                                                  bgcolor: "primary.light",
-                                                  color: "primary.main",
-                                                  fontWeight: 600,
-                                                  fontSize: "0.75rem",
-                                                  height: 22,
-                                                }}
-                                              />
-                                            ))}
+                                      <TableCell>
+                                        {generalPhotos + damagePhotos > 0 ? (
+                                          <Stack direction="row" spacing={1} alignItems="center">
+                                            <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
+                                              <IconCamera size={15} />
+                                              <Typography variant="body2">{generalPhotos}</Typography>
+                                            </Stack>
+                                            {damagePhotos > 0 && (
+                                              <Tooltip title="Damage photos taken for the defect">
+                                                <Typography variant="caption" color="error.main" fontWeight={600} noWrap>
+                                                  +{damagePhotos} damage
+                                                </Typography>
+                                              </Tooltip>
+                                            )}
                                           </Stack>
                                         ) : (
-                                          <Typography variant="caption" color="text.secondary" fontStyle="italic">
-                                            No dimensions recorded
-                                          </Typography>
-                                        )}
-                                      </TableCell>
-
-                                      {/* Condition */}
-                                      <TableCell sx={{ py: 1.5 }}>
-                                        {renderConditionScore(
-                                          item.condition_score,
-                                          item.condition,
-                                          item.photos?.filter((p) => p.photo_type !== "damage").length,
-                                          item.photos?.filter((p) => p.photo_type === "damage").length,
-                                        )}
-                                      </TableCell>
-
-                                      {/* Action / Repair */}
-                                      <TableCell sx={{ py: 1.5 }}>
-                                        {item.repair_action ? (
-                                          <Typography variant="body2" fontWeight={600} color="text.primary">
-                                            {item.repair_action}
-                                          </Typography>
-                                        ) : (
-                                          <Typography variant="caption" color="text.secondary">
+                                          <Typography variant="body2" color="text.disabled">
                                             —
                                           </Typography>
                                         )}
                                       </TableCell>
 
-                                      {/* Notes */}
-                                      <TableCell sx={{ py: 1.5 }}>
-                                        {item.notes ? (
-                                          <Typography variant="body2" color="text.secondary">
-                                            {item.notes}
-                                          </Typography>
+                                      <TableCell>
+                                        {item.repair_action || item.notes ? (
+                                          <Box minWidth={0}>
+                                            {item.repair_action && (
+                                              <Typography variant="body2" fontWeight={500} noWrap title={item.repair_action}>
+                                                {item.repair_action}
+                                              </Typography>
+                                            )}
+                                            {item.notes && (
+                                              <Typography
+                                                variant={item.repair_action ? "caption" : "body2"}
+                                                color="text.secondary"
+                                                display="block"
+                                                noWrap
+                                                title={item.notes}
+                                              >
+                                                {item.notes}
+                                              </Typography>
+                                            )}
+                                          </Box>
                                         ) : (
-                                          <Typography variant="caption" color="text.secondary">
+                                          <Typography variant="body2" color="text.disabled">
                                             —
                                           </Typography>
                                         )}
@@ -2118,7 +2183,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                 );
               })()}
 
-              {/* Action Buttons in Tab 1 */}
+              {/* Action Buttons in Tab 1: the priced report only makes sense once QS pricing can begin */}
+              {canCommercialReport && (
               <Stack direction="row" spacing={2} justifyContent="flex-end">
                 <Button
                   variant="outlined"
@@ -2152,9 +2218,12 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                   </Button>
                 )}
               </Stack>
+              )}
             </Box>
           );
         })()}
+
+        {tabValue === HISTORY_TAB && <SurveyHistory surveyId={survey.id} />}
 
         {/* Tab 2: Survey Metadata & Audit */}
         {tabValue === 3 && inspectionForm.data?.form && (
@@ -2267,65 +2336,27 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
         )}
       </BlankCard>
 
+      {/* Site survey report (photos) preview */}
+      <SiteReportPdfPreview
+        open={siteReportOpen}
+        surveyId={survey.id}
+        reference={survey.reference}
+        onClose={() => setSiteReportOpen(false)}
+      />
+
       {/* Report Preview Modal Dialog */}
-      <Dialog
+      <ReportPreviewDialog
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: "12px", maxHeight: "90vh" },
-        }}
+        title="Inspection & commercial report"
+        subtitle={`${survey.reference || `Survey #${survey.id}`} · Defects, room-by-room inspection and costing`}
+        icon={<IconFileDescription size={22} />}
+        printTargetId="survey-printable-report"
+        onDownload={handleExportPdf}
+        downloading={exportingPdf}
       >
-        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1.5 }}>
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <IconFileDescription size={22} />
-            <Typography variant="h6" fontWeight={700}>
-              Survey Inspection & Commercial Report Preview
-            </Typography>
-          </Stack>
-          <IconButton size="small" onClick={() => setPreviewOpen(false)}>
-            <IconX size={20} />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ bgcolor: "#f1f5f9", p: 3, display: "flex", justifyContent: "center" }}>
-          <Box
-            sx={{
-              boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
-              bgcolor: "#ffffff",
-              maxWidth: "100%",
-              overflowX: "auto",
-            }}
-          >
-            <SurveyPrintableReport survey={survey} />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, justifyContent: "space-between" }}>
-          <Button
-            variant="outlined"
-            color="inherit"
-            startIcon={<IconPrinter size={18} />}
-            onClick={() => window.print()}
-          >
-            Print
-          </Button>
-          <Stack direction="row" spacing={1.5}>
-            <Button variant="outlined" onClick={() => setPreviewOpen(false)}>
-              Close
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={exportingPdf ? <CircularProgress size={16} color="inherit" /> : <IconDownload size={18} />}
-              onClick={handleExportPdf}
-              disabled={exportingPdf}
-              sx={{ fontWeight: 700 }}
-            >
-              {exportingPdf ? "Generating PDF..." : "Download PDF"}
-            </Button>
-          </Stack>
-        </DialogActions>
-      </Dialog>
+        <SurveyPrintableReport survey={survey} />
+      </ReportPreviewDialog>
 
       {/* Work Order Handoff Dialog */}
       <Dialog
@@ -2673,53 +2704,25 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       </Dialog>
 
       {/* Contractor Job Pack PDF Preview Dialog */}
-      <Dialog
+      <ReportPreviewDialog
         open={woPreviewOpen}
         onClose={() => setWoPreviewOpen(false)}
-        maxWidth="lg"
-        fullWidth
+        title="Work order job pack"
+        subtitle={activeWorkOrder ? `${activeWorkOrder.reference} · ${survey.reference || `Survey #${survey.id}`}` : undefined}
+        icon={<IconBriefcase size={22} />}
+        printTargetId="work-order-job-pack-report"
+        onDownload={handleExportWoJobPackPdf}
+        downloading={exportingWoPdf}
+        downloadLabel="Download job pack"
       >
-        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <IconBriefcase size={22} />
-            <Typography variant="h6" fontWeight={700}>
-              Contractor Work Order Job Pack Preview
-            </Typography>
-          </Stack>
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="contained"
-              color="primary"
-              size="small"
-              startIcon={<IconDownload size={16} />}
-              onClick={handleExportWoJobPackPdf}
-              disabled={exportingWoPdf}
-            >
-              {exportingWoPdf ? "Downloading..." : "Download Job Pack PDF"}
-            </Button>
-            <IconButton size="small" onClick={() => setWoPreviewOpen(false)}>
-              <IconX size={18} />
-            </IconButton>
-          </Stack>
-        </DialogTitle>
-        <DialogContent dividers sx={{ bgcolor: "grey.100", p: 3, display: "flex", justifyContent: "center" }}>
-          {activeWorkOrder ? (
-            <Box sx={{ width: "794px", bgcolor: "#fff", boxShadow: 3, borderRadius: 1, overflow: "hidden" }}>
-              <WorkOrderJobPackReport
-                survey={survey}
-                workOrder={activeWorkOrder}
-              />
-            </Box>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              No work order data available to preview.
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setWoPreviewOpen(false)}>Close Preview</Button>
-        </DialogActions>
-      </Dialog>
+        {activeWorkOrder ? (
+          <WorkOrderJobPackReport survey={survey} workOrder={activeWorkOrder} />
+        ) : (
+          <Typography variant="body2" color="text.secondary" sx={{ p: 4, textAlign: "center" }}>
+            No work order data available to preview.
+          </Typography>
+        )}
+      </ReportPreviewDialog>
 
       {/* Off-screen render container for PDF export generator */}
       <Box

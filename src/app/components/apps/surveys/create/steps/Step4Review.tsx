@@ -139,7 +139,9 @@ export default function Step4Review({
                       Scheduled Inspection Date
                     </Typography>
                     <Typography variant="body2">
-                      {formData.surveyDate || "Not scheduled"}
+                      {formData.surveyDate
+                        ? formData.surveyDate.split("T")[0].split("-").reverse().join("-")
+                        : "Not scheduled"}
                     </Typography>
                   </Box>
                 </Stack>
