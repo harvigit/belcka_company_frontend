@@ -30,6 +30,8 @@ type Props = {
     buttonMinWidth?: number | string;
     placeholder?: string;
     allowClear?: boolean;
+    /** date-fns format of each date on the button, e.g. "dd MMM" to leave out the year. */
+    labelFormat?: string;
 };
 
 const generatePayrollRanges = (cycle: PayrollCycle, count = 10): { from: Date; to: Date }[] => {
@@ -77,6 +79,7 @@ const DateRangePickerBox: React.FC<Props> = ({
     buttonMinWidth = 230,
     placeholder = 'Select Date Range',
     allowClear = false,
+    labelFormat = "dd MMM yyyy",
 }) => {
     const { t } = useTranslation();
     const today = new Date();
@@ -132,7 +135,7 @@ const DateRangePickerBox: React.FC<Props> = ({
     };
 
     const formatRangeLabel = () => from && to ?
-        `${format(from, "dd MMM yyyy")} ~ ${format(to, "dd MMM yyyy")}` : placeholder;
+        `${format(from, labelFormat)} ~ ${format(to, labelFormat)}` : placeholder;
 
     const formatPresetLabel = (range: { from: Date; to: Date }) =>
         `${format(range.from, "dd/MM/yyyy")} - ${format(range.to, "dd/MM/yyyy")}`;

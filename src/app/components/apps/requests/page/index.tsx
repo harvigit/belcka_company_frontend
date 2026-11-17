@@ -364,7 +364,8 @@ function WorklogSystemInfoCard({ requestId }: { requestId: number }) {
 
 export default function RequestsPage() {
   const { t } = useTranslation();
-  const mdUp = useMediaQuery((theme: Theme) => theme.breakpoints.up("md"));
+  // List and detail side by side from lg; below that one panel at a time.
+  const splitView = useMediaQuery((theme: Theme) => theme.breakpoints.up("md"));
   const session = useSession();
   const companyId = Number(
     (session.data?.user as { company_id?: string | number | null } | undefined)
@@ -764,7 +765,11 @@ export default function RequestsPage() {
         <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
           <Box
             display="grid"
-            gridTemplateColumns={{ xs: "1fr", lg: "minmax(0, 7fr) minmax(0, 5fr)" }}
+            gridTemplateColumns={{
+              // One column while the list sits beside it; two once there's room.
+              xs: "1fr",
+              xl: "minmax(0, 7fr) minmax(0, 5fr)",
+            }}
             gap={2}
             alignItems="start"
           >
@@ -1152,21 +1157,34 @@ export default function RequestsPage() {
       {/* Toolbar */}
       <Box
         display="flex"
-        flexDirection={{ xs: "column", lg: "row" }}
-        alignItems={{ xs: "stretch", lg: "center" }}
+        flexWrap={{ xs: "wrap", md: "nowrap" }}
+        alignItems="center"
         justifyContent="space-between"
-        gap={2}
+        columnGap={2}
+        rowGap={1.5}
       >
         <Box
           display="flex"
           alignItems="center"
-          gap={2}
+          columnGap={2}
+          rowGap={1}
           flexWrap="wrap"
+          minWidth={0}
+          sx={{ flex: { xs: "1 1 100%", md: "0 0 auto" } }}
         >
-          <Typography variant="h4" fontWeight={700}>
-            {t("Requests")}
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          {/* Tabs stay on one line and scroll sideways when there is no room. */}
+          <Box
+            display="flex"
+            gap={1}
+            minWidth={0}
+            sx={{
+              overflowX: "auto",
+              maxWidth: "100%",
+              pb: 0.25,
+              scrollbarWidth: "none",
+              "&::-webkit-scrollbar": { display: "none" },
+            }}
+          >
             {STATUS_TABS.map((tab) => {
               const active = statusTab === tab.key;
               return (
@@ -1177,6 +1195,8 @@ export default function RequestsPage() {
                   color="primary"
                   onClick={() => setStatusTab(tab.key)}
                   sx={{
+                    flexShrink: 0,
+                    whiteSpace: "nowrap",
                     borderRadius: "10px",
                     fontWeight: 600,
                     px: 1.5,
@@ -1188,34 +1208,44 @@ export default function RequestsPage() {
                   }}
                 >
                   {t(tab.label)}
-                  <Box
-                    component="span"
-                    sx={{
-                      ml: 1,
-                      px: 0.75,
-                      borderRadius: "8px",
-                      fontSize: 11,
-                      lineHeight: "18px",
-                      bgcolor: active ? "rgba(255,255,255,0.25)" : "grey.100",
-                    }}
-                  >
-                    {counts[tab.key]}
-                  </Box>
+                  {/* Only Pending shows how many are waiting. */}
+                  {tab.key === "pending" && (
+                    <Box
+                      component="span"
+                      sx={{
+                        ml: 1,
+                        px: 0.75,
+                        borderRadius: "8px",
+                        fontSize: 11,
+                        lineHeight: "18px",
+                        bgcolor: active ? "rgba(255,255,255,0.25)" : "grey.100",
+                      }}
+                    >
+                      {counts.pending}
+                    </Box>
+                  )}
                 </Button>
               );
             })}
-          </Stack>
+          </Box>
         </Box>
 
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={1.5}
-          alignItems={{ xs: "stretch", sm: "center" }}
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="flex-end"
+          gap={1}
+          minWidth={0}
+          sx={{ flex: { xs: "1 1 100%", md: "1 1 0" } }}
         >
           <TextField
             placeholder={t("Search...")}
             size="small"
-            sx={{ width: { xs: "100%", sm: 260 } }}
+            sx={{
+              flex: "1 1 0",
+              minWidth: 0,
+              maxWidth: { md: 300 },
+            }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
@@ -1226,11 +1256,24 @@ export default function RequestsPage() {
               ),
             }}
           />
-          <DateRangePickerBox
-            from={startDate}
-            to={endDate}
-            onChange={handleDateRangeChange}
-          />
+          <Box
+            sx={{
+              flex: "0 0 auto",
+              "& .MuiButton-root": {
+                whiteSpace: "nowrap",
+                height: 40,
+              },
+            }}
+          >
+            <DateRangePickerBox
+              from={startDate}
+              to={endDate}
+              onChange={handleDateRangeChange}
+              labelFormat="dd MMM"
+              buttonMinWidth={0}
+              buttonLabelAlign="left"
+            />
+          </Box>
           <Button
             variant={hasActiveFilters ? "contained" : "outlined"}
             color="primary"
@@ -1238,28 +1281,34 @@ export default function RequestsPage() {
               setTempFilters(filters);
               setFilterOpen(true);
             }}
-            startIcon={<IconFilter size={18} />}
-            sx={{ minWidth: 110, height: 40 }}
+            aria-label={t("Filters")}
+            title={t("Filters")}
+            sx={{ flexShrink: 0, minWidth: 40, width: 40, height: 40, p: 0 }}
           >
-            {t("Filters")}
+            <IconFilter size={18} />
           </Button>
-        </Stack>
+        </Box>
       </Box>
 
       {/* List + detail */}
       <Box
         display="grid"
-        gridTemplateColumns={{ xs: "1fr", md: "minmax(300px, 4fr) minmax(0, 8fr)" }}
+        gridTemplateColumns={{
+          xs: "1fr",
+          md: "minmax(280px, 5fr) minmax(0, 7fr)",
+          lg: "minmax(300px, 4fr) minmax(0, 8fr)",
+          xl: "minmax(340px, 3fr) minmax(0, 8fr)",
+        }}
         gap={2}
         sx={{ flex: 1, minHeight: 0 }}
       >
         {showList && (
-          <Box minHeight={0} sx={{ height: { xs: "70vh", md: "100%" } }}>
+          <Box minHeight={0} sx={{ height: { xs: "70vh", lg: "100%" } }}>
             {listPanel}
           </Box>
         )}
         {showDetail && (
-          <Box minHeight={0} sx={{ height: { xs: "auto", md: "100%" } }}>
+          <Box minHeight={0} sx={{ height: { xs: "auto", lg: "100%" } }}>
             {selected ? renderDetail(selected) : emptyDetail}
           </Box>
         )}
