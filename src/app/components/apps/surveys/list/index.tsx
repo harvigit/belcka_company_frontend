@@ -33,6 +33,7 @@ import {
   LinearProgress,
   Tabs,
   Tab,
+  Autocomplete,
 } from "@mui/material";
 import { alpha, darken, Theme } from "@mui/material/styles";
 import {
@@ -49,6 +50,7 @@ import {
   IconLock,
   IconSettings,
   IconDotsVertical,
+  IconCopy,
   IconColumns,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
@@ -169,6 +171,55 @@ export default function SurveyList() {
 
   // Delete modal state
   const [deleteTargetId, setDeleteTargetId] = useState<string | number | null>(null);
+
+  // Duplicate survey dialog: copies the set-up into a new survey, assigned to the chosen surveyor.
+  const [duplicateSource, setDuplicateSource] = useState<Survey | null>(null);
+  const [duplicateSurveyorId, setDuplicateSurveyorId] = useState<string>("");
+  const [duplicateDate, setDuplicateDate] = useState<string>("");
+  // Both fields are required; problems are shown after the first Create attempt.
+  const [duplicateTried, setDuplicateTried] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+
+  const openDuplicate = (survey: Survey) => {
+    setDuplicateSource(survey);
+    setDuplicateTried(false);
+    // Start with the same surveyor when they can still be assigned.
+    const same = survey.surveyor_id && surveyors.some((s) => String(s.id) === String(survey.surveyor_id));
+    setDuplicateSurveyorId(same ? String(survey.surveyor_id) : "");
+    // Local today, as YYYY-MM-DD for the date input.
+    const now = new Date();
+    setDuplicateDate(
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+    );
+  };
+
+  const handleDuplicate = async () => {
+    if (!duplicateSource) return;
+    if (!duplicateSurveyorId || !duplicateDate) {
+      setDuplicateTried(true);
+      return;
+    }
+    try {
+      setDuplicating(true);
+      const res = await api.post(`surveys/${duplicateSource.id}/duplicate`, {
+        surveyor_id: Number(duplicateSurveyorId),
+        survey_date: duplicateDate,
+      });
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message || "Survey duplicated");
+        setDuplicateSource(null);
+        const newId = res.data.info?.id;
+        if (newId) router.push(`/apps/surveys/view/${newId}`);
+        else void fetchSurveys();
+      } else {
+        toast.error(res.data?.message || "Failed to duplicate survey");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to duplicate survey");
+    } finally {
+      setDuplicating(false);
+    }
+  };
   const [deleting, setDeleting] = useState(false);
 
   // Work Order Handoff Dialog State
@@ -1051,6 +1102,18 @@ export default function SurveyList() {
             <ListItemIcon><IconEye size={18} /></ListItemIcon>
             <ListItemText>View survey</ListItemText>
           </MenuItem>,
+          isAdmin && (
+            <MenuItem
+              key="duplicate"
+              onClick={() => {
+                closeMenu();
+                openDuplicate(menuSurvey);
+              }}
+            >
+              <ListItemIcon><IconCopy size={18} /></ListItemIcon>
+              <ListItemText>Duplicate survey</ListItemText>
+            </MenuItem>
+          ),
           menuActions.canInspect && (
             <MenuItem key="inspect" component={Link} href={`/apps/surveys/inspect/${menuSurvey.id}`} onClick={closeMenu}>
               <ListItemIcon><IconCamera size={18} /></ListItemIcon>
@@ -1266,6 +1329,101 @@ export default function SurveyList() {
             disabled={submittingWo}
           >
             {submittingWo ? "Issuing Work Order..." : "Issue Work Order"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Duplicate Survey Dialog */}
+      <Dialog open={Boolean(duplicateSource)} onClose={() => !duplicating && setDuplicateSource(null)} maxWidth="xs" fullWidth>
+        <DialogTitle component="div" sx={{ pb: 0.5 }}>
+          <Typography variant="h6" component="h2" fontWeight={700}>
+            Duplicate survey
+          </Typography>
+          <Typography variant="body2" color="text.secondary" noWrap>
+            {duplicateSource?.reference}
+            {duplicateSource?.title ? ` · ${duplicateSource.title}` : ""}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 1.5, mb: 2, p: 1.5, borderRadius: "8px", bgcolor: "grey.50", border: "1px solid", borderColor: "divider" }}>
+            <Typography variant="body2" fontWeight={600} mb={0.5}>
+              A new survey is created with the same set-up
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Copied: property, project, template, rooms and elements, property detail questions and notes.
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Not copied: inspection results, measurements, photos, answers and pricing.
+            </Typography>
+          </Box>
+          <Stack spacing={2}>
+            <Autocomplete
+              options={surveyors}
+              value={surveyors.find((u) => String(u.id) === duplicateSurveyorId) || null}
+              onChange={(_, user) => setDuplicateSurveyorId(user ? String(user.id) : "")}
+              getOptionLabel={(u) => u.name || ""}
+              isOptionEqualToValue={(a, b) => String(a.id) === String(b.id)}
+              noOptionsText="No surveyor found"
+              ListboxProps={{ style: { maxHeight: 280 } }}
+              renderOption={(props, u) => {
+                const { key, ...optionProps } = props as any;
+                return (
+                  <Box component="li" key={u.id} {...optionProps} sx={{ display: "flex", gap: 1.25, alignItems: "center", py: "6px !important" }}>
+                    <Avatar sx={[{ width: 28, height: 28, fontSize: "0.7rem", fontWeight: 700 }, toneSx("primary")]}>
+                      {initials(u.name)}
+                    </Avatar>
+                    <Box minWidth={0}>
+                      <Typography variant="body2" fontWeight={500} noWrap>
+                        {u.name}
+                      </Typography>
+                      {u.email && (
+                        <Typography variant="caption" color="text.secondary" noWrap display="block">
+                          {u.email}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                );
+              }}
+              renderInput={(params) => (
+                <CustomTextField
+                  {...params}
+                  required
+                  label="Assign to"
+                  placeholder="Search surveyor by name"
+                  error={duplicateTried && !duplicateSurveyorId}
+                  helperText={
+                    duplicateTried && !duplicateSurveyorId
+                      ? "Select the surveyor for the new survey"
+                      : "The surveyor is notified and the survey starts as Assigned."
+                  }
+                />
+              )}
+            />
+            <CustomTextField
+              type="date"
+              fullWidth
+              required
+              label="Survey date"
+              value={duplicateDate}
+              onChange={(e: any) => setDuplicateDate(e.target.value)}
+              error={duplicateTried && !duplicateDate}
+              helperText={duplicateTried && !duplicateDate ? "Select the survey date" : undefined}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setDuplicateSource(null)} disabled={duplicating}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={duplicating ? <CircularProgress size={16} color="inherit" /> : <IconCopy size={16} />}
+            onClick={handleDuplicate}
+            disabled={duplicating}
+          >
+            {duplicating ? "Creating..." : "Create copy"}
           </Button>
         </DialogActions>
       </Dialog>
