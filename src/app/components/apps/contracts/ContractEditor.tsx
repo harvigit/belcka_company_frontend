@@ -1,8 +1,11 @@
 'use client';
 
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {EditorContent, useEditor} from '@tiptap/react';
+import {Extension} from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
+import {Plugin, PluginKey} from '@tiptap/pm/state';
+import {Decoration, DecorationSet} from '@tiptap/pm/view';
 import {
     Box,
     Button,
@@ -36,14 +39,60 @@ interface Props {
     onChange: (html: string) => void;
     fields: ContractField[];
     onReady?: (insert: (key: string) => void) => void;
+    /** Known values shown in place of their {{key}} tokens (the stored HTML keeps the token). */
+    fieldValues?: Record<string, string>;
 }
 
-const ContractEditor = ({value, onChange, fields, onReady}: Props) => {
+const fieldValuesKey = new PluginKey<DecorationSet>('contractFieldValues');
+
+/** Shows each {{key}} with a known value as that value, without changing the document. */
+const FieldValues = (values: React.MutableRefObject<Record<string, string>>) =>
+    Extension.create({
+        name: 'contractFieldValues',
+        addProseMirrorPlugins() {
+            const build = (doc: any) => {
+                const decorations: Decoration[] = [];
+                doc.descendants((node: any, pos: number) => {
+                    if (!node.isText) return;
+                    for (const m of node.text.matchAll(/\{\{\s*([a-z_]+)\s*\}\}/g)) {
+                        const value = values.current[m[1]];
+                        if (!value) continue;
+                        const from = pos + m.index;
+                        const to = from + m[0].length;
+                        decorations.push(
+                            Decoration.widget(from, () => {
+                                const span = document.createElement('span');
+                                span.className = 'contract-field-value';
+                                span.textContent = value;
+                                span.title = m[0];
+                                return span;
+                            }, {side: -1, key: `${m[1]}:${value}`}),
+                            Decoration.inline(from, to, {class: 'contract-field-token'}),
+                        );
+                    }
+                });
+                return DecorationSet.create(doc, decorations);
+            };
+            return [
+                new Plugin({
+                    key: fieldValuesKey,
+                    state: {
+                        init: (_, {doc}) => build(doc),
+                        apply: (tr, old) => (tr.docChanged || tr.getMeta(fieldValuesKey) ? build(tr.doc) : old),
+                    },
+                    props: {decorations: (state) => fieldValuesKey.getState(state)},
+                }),
+            ];
+        },
+    });
+
+const ContractEditor = ({value, onChange, fields, onReady, fieldValues}: Props) => {
     const [fieldMenu, setFieldMenu] = useState<HTMLElement | null>(null);
     const [formFieldOpen, setFormFieldOpen] = useState(false);
+    const valuesRef = useRef<Record<string, string>>(fieldValues ?? {});
 
     const editor = useEditor({
-        extensions: [StarterKit],
+        extensions: [StarterKit, FieldValues(valuesRef)],
         content: value || '',
         editorProps: {attributes: {class: 'contract-editor-content'}},
         onUpdate: ({editor}) => onChange(editor.getHTML()),
@@ -55,6 +104,12 @@ const ContractEditor = ({value, onChange, fields, onReady}: Props) => {
         if (!editor || editor.getHTML() === value) return;
         editor.commands.setContent(value || '', false);
     }, [editor, value]);
+
+    // Redraw the shown values when they arrive or change.
+    useEffect(() => {
+        valuesRef.current = fieldValues ?? {};
+        if (editor && !editor.isDestroyed) editor.view.dispatch(editor.state.tr.setMeta(fieldValuesKey, true));
+    }, [editor, fieldValues]);
 
     useEffect(() => {
         if (!editor || !onReady) return;
@@ -176,6 +231,14 @@ const ContractEditor = ({value, onChange, fields, onReady}: Props) => {
                     },
                     '& .contract-editor-content p': {my: 1},
                     '& .contract-editor-content h2, & .contract-editor-content h3': {mt: 2, mb: 1},
+                    // A field with a known value shows the value; the {{key}} token stays in the saved HTML.
+                    '& .contract-field-token': {display: 'none'},
+                    '& .contract-field-value': {
+                        bgcolor: 'primary.light',
+                        color: 'primary.main',
+                        borderRadius: 0.5,
+                        px: 0.5,
+                    },
                 }}
             >
                 <EditorContent editor={editor}/>

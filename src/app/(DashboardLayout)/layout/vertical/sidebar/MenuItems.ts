@@ -29,6 +29,7 @@ import {
   IconChartPie,
   IconCertificate,
   IconClipboardCheck,
+  IconNotes,
   IconBuildingWarehouse,
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
@@ -198,6 +199,13 @@ const MenuItems: NavGroup[] = [
     slug: "contract_approvals",
     icon: IconFileCheck,
     href: "/apps/contract-approvals",
+  },
+  {
+    id: uniqueId(),
+    title: "Requests",
+    slug: "requests",
+    icon: IconNotes,
+    href: "/apps/requests",
   },
   {
     id: uniqueId(),
