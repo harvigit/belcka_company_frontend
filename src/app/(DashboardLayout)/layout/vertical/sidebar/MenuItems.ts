@@ -30,7 +30,6 @@ import {
   IconCertificate,
   IconClipboardCheck,
   IconNotes,
-  IconBuildingWarehouse,
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
