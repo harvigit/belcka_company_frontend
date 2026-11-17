@@ -22,6 +22,8 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  ListItemIcon,
+  ListItemText,
   CircularProgress,
   Tooltip,
   Table,
@@ -63,6 +65,7 @@ import {
   IconPrinter,
   IconEye,
   IconFileDescription,
+  IconPhoto,
   IconCoins,
   IconReceiptTax,
   IconClock,
@@ -93,6 +96,7 @@ import { exportSurveyReportToPdf, exportWorkOrderJobPackToPdf } from "./pdf/surv
 import SurveyPrintableReport from "./pdf/SurveyPrintableReport";
 import WorkOrderJobPackReport from "./pdf/WorkOrderJobPackReport";
 import ReportPreviewDialog from "./pdf/ReportPreviewDialog";
+import SiteReportPdfPreview, { fetchSiteReportPdf, saveBlob, siteReportFileName } from "./pdf/SiteReportPdfPreview";
 
 const statusColorMap: Record<
   SurveyStatus,
@@ -182,6 +186,10 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
 
   // PDF Export & Preview State
   const [exportingPdf, setExportingPdf] = useState(false);
+  // Header report menus: "preview" or "download", each offering both reports.
+  const [reportMenu, setReportMenu] = useState<{ anchor: HTMLElement; mode: "preview" | "download" } | null>(null);
+  const [siteReportOpen, setSiteReportOpen] = useState(false);
+  const [downloadingSiteReport, setDownloadingSiteReport] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const reportPrintRef = React.useRef<HTMLDivElement>(null);
 
@@ -309,6 +317,20 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
       toast.error(err?.message || "Failed to generate PDF report", { id: "pdf-export" });
     } finally {
       setExportingPdf(false);
+    }
+  };
+
+  const handleDownloadSiteReport = async () => {
+    if (!survey) return;
+    try {
+      setDownloadingSiteReport(true);
+      toast.loading("Generating site survey report...", { id: "site-report" });
+      saveBlob(await fetchSiteReportPdf(survey.id), siteReportFileName(survey.reference));
+      toast.success("Site survey report downloaded", { id: "site-report" });
+    } catch {
+      toast.error("Couldn't generate the site survey report. Please try again.", { id: "site-report" });
+    } finally {
+      setDownloadingSiteReport(false);
     }
   };
 
@@ -763,7 +785,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
             variant="outlined"
             color="inherit"
             startIcon={<IconEye size={18} />}
-            onClick={() => setPreviewOpen(true)}
+            endIcon={<IconChevronDown size={16} />}
+            onClick={(e) => setReportMenu({ anchor: e.currentTarget, mode: "preview" })}
             sx={{ fontWeight: 600, borderRadius: "8px" }}
           >
             Preview Report
@@ -772,13 +795,91 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
           <Button
             variant="outlined"
             color="primary"
-            startIcon={exportingPdf ? <CircularProgress size={16} /> : <IconDownload size={18} />}
-            onClick={handleExportPdf}
-            disabled={exportingPdf || !survey}
+            startIcon={exportingPdf || downloadingSiteReport ? <CircularProgress size={16} /> : <IconDownload size={18} />}
+            endIcon={<IconChevronDown size={16} />}
+            onClick={(e) => setReportMenu({ anchor: e.currentTarget, mode: "download" })}
+            disabled={exportingPdf || downloadingSiteReport || !survey}
             sx={{ fontWeight: 600, borderRadius: "8px" }}
           >
-            {exportingPdf ? "Exporting PDF..." : "Export Report (PDF)"}
+            {exportingPdf || downloadingSiteReport ? "Exporting PDF..." : "Export Report (PDF)"}
           </Button>
+
+          <Menu
+            anchorEl={reportMenu?.anchor}
+            open={Boolean(reportMenu)}
+            onClose={() => setReportMenu(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+            transformOrigin={{ vertical: "top", horizontal: "left" }}
+            slotProps={{
+              paper: {
+                sx: {
+                  mt: 0.75,
+                  width: 320,
+                  borderRadius: "12px",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  boxShadow: "0 12px 32px -8px rgba(15,23,42,0.18)",
+                },
+              },
+              list: { sx: { p: 0.75 } },
+            }}
+          >
+            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ display: "block", px: 1.25, pt: 0.5, pb: 0.75, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              {reportMenu?.mode === "download" ? "Download as PDF" : "Choose a report to preview"}
+            </Typography>
+            {[
+              {
+                key: "site",
+                icon: <IconPhoto size={18} />,
+                tone: "primary" as const,
+                title: "Site survey report",
+                hint: "Rooms, photos and condition of each element",
+                run: (mode?: string) => (mode === "preview" ? setSiteReportOpen(true) : void handleDownloadSiteReport()),
+              },
+              {
+                key: "commercial",
+                icon: <IconFileDescription size={18} />,
+                tone: "secondary" as const,
+                title: "Inspection & commercial report",
+                hint: "Defects, rooms and the priced scope",
+                run: (mode?: string) => (mode === "preview" ? setPreviewOpen(true) : void handleExportPdf()),
+              },
+            ].map((option) => (
+              <MenuItem
+                key={option.key}
+                onClick={() => {
+                  const mode = reportMenu?.mode;
+                  setReportMenu(null);
+                  option.run(mode);
+                }}
+                sx={{ borderRadius: "8px", px: 1.25, py: 1, gap: 1.5, alignItems: "flex-start", whiteSpace: "normal" }}
+              >
+                <Box
+                  sx={(theme) => ({
+                    width: 34,
+                    height: 34,
+                    flexShrink: 0,
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: theme.palette[option.tone].light,
+                    color: theme.palette[option.tone].main,
+                  })}
+                >
+                  {option.icon}
+                </Box>
+                <Box minWidth={0}>
+                  <Typography variant="body2" fontWeight={600} lineHeight={1.35}>
+                    {option.title}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.35}>
+                    {option.hint}
+                  </Typography>
+                </Box>
+              </MenuItem>
+            ))}
+          </Menu>
 
           {["submitted", "qs_review", "completed", "frozen"].includes(survey.status) && (
             <Button
@@ -2267,6 +2368,14 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
           </Box>
         )}
       </BlankCard>
+
+      {/* Site survey report (photos) preview */}
+      <SiteReportPdfPreview
+        open={siteReportOpen}
+        surveyId={survey.id}
+        reference={survey.reference}
+        onClose={() => setSiteReportOpen(false)}
+      />
 
       {/* Report Preview Modal Dialog */}
       <ReportPreviewDialog
