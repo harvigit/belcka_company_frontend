@@ -74,6 +74,7 @@ import {
   IconPlus,
   IconPlayerPlay,
   IconArchive,
+  IconHistory,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -97,6 +98,7 @@ import SurveyPrintableReport, { SURVEY_REPORT_TYPE } from "./pdf/SurveyPrintable
 import WorkOrderJobPackReport, { JOB_PACK_TYPE } from "./pdf/WorkOrderJobPackReport";
 import { useReportBrand } from "./pdf/ReportParts";
 import ReportPreviewDialog from "./pdf/ReportPreviewDialog";
+import SurveyHistory from "../history/SurveyHistory";
 import SiteReportPdfPreview, { fetchSiteReportPdf, saveBlob, siteReportFileName } from "./pdf/SiteReportPdfPreview";
 
 const statusColorMap: Record<
@@ -141,6 +143,9 @@ interface SurveyDetailsProps {
 const SITE_REPORT_STATUSES = ["in_progress", "submitted", "qs_review", "completed", "frozen"];
 const COMMERCIAL_REPORT_STATUSES = ["submitted", "qs_review", "completed", "frozen"];
 
+// Fixed value so the History tab keeps its place whether or not the Property Detail tab is shown.
+const HISTORY_TAB = 9;
+
 export default function SurveyDetails({ id }: SurveyDetailsProps) {
   const inspectionForm = useInspectionForm(id);
   const router = useRouter();
@@ -156,7 +161,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
 
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tabValue, setTabValue] = useState(0);
+  const [tabValue, setTabValue] = useState<number>(0);
 
   // Status Menu Anchor
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
@@ -1055,6 +1060,7 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
             <Tab label="Survey Details & Metadata" />
             {inspectionForm.data?.form && (
               <Tab
+                value={3}
                 label={
                   <Stack direction="row" spacing={1} alignItems="center">
                     <span>Property Detail</span>
@@ -1074,6 +1080,15 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
                 }
               />
             )}
+            <Tab
+              value={HISTORY_TAB}
+              label={
+                <Stack direction="row" spacing={0.75} alignItems="center">
+                  <IconHistory size={16} />
+                  <span>History</span>
+                </Stack>
+              }
+            />
           </Tabs>
 
           {tabValue === 0 && (survey.rooms || []).length > 0 && (
@@ -2207,6 +2222,8 @@ export default function SurveyDetails({ id }: SurveyDetailsProps) {
             </Box>
           );
         })()}
+
+        {tabValue === HISTORY_TAB && <SurveyHistory surveyId={survey.id} />}
 
         {/* Tab 2: Survey Metadata & Audit */}
         {tabValue === 3 && inspectionForm.data?.form && (
