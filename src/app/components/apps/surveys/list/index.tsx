@@ -34,6 +34,7 @@ import {
   Tabs,
   Tab,
   Autocomplete,
+  Drawer,
 } from "@mui/material";
 import { alpha, darken, Theme } from "@mui/material/styles";
 import {
@@ -55,6 +56,7 @@ import {
   IconAlertTriangle,
   IconCalendarEvent,
   IconArrowBackUp,
+  IconHistory,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -71,6 +73,7 @@ import CustomTextField from "@/app/components/forms/theme-elements/CustomTextFie
 import SurveySettings from "@/app/components/apps/settings/survey-settings";
 import { NamedFilterOption, tableFilterOptions } from "@/utils/uniqueFilterOptions";
 import { Survey, SurveyorOption, SurveyStatus } from "../types";
+import SurveyHistory from "../history/SurveyHistory";
 
 type ToneColor = "grey" | "primary" | "secondary" | "info" | "success" | "warning" | "error";
 
@@ -189,6 +192,9 @@ export default function SurveyList() {
 
   // Duplicate survey dialog: copies the set-up into a new survey, assigned to the chosen surveyor.
   const [duplicateSource, setDuplicateSource] = useState<Survey | null>(null);
+  // History drawer: one survey's history, or "all" for every survey's (header button).
+  const [historyTarget, setHistoryTarget] = useState<Survey | "all" | null>(null);
+  const historySurvey = historyTarget && historyTarget !== "all" ? historyTarget : null;
   const [duplicateSurveyorId, setDuplicateSurveyorId] = useState<string>("");
   const [duplicateDate, setDuplicateDate] = useState<string>("");
   // Both fields are required; problems are shown after the first Create attempt.
@@ -819,7 +825,7 @@ export default function SurveyList() {
           </Typography>
         </Box>
 
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" sx={{ "& .MuiButton-root": { whiteSpace: "nowrap" } }}>
           <Button
             variant="outlined"
             color="primary"
@@ -830,6 +836,15 @@ export default function SurveyList() {
             Settings
           </Button>
           <SurveySettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<IconHistory size={18} />}
+            onClick={() => setHistoryTarget("all")}
+            sx={{ fontWeight: 600, borderRadius: "8px" }}
+          >
+            History
+          </Button>
           {isAdmin && (
             <Button
               variant="contained"
@@ -1189,6 +1204,90 @@ export default function SurveyList() {
         <TablePaginationFooter table={table} totalRows={totalRows} />
       </BlankCard>
 
+      {/* History drawer */}
+      <Drawer
+        anchor="right"
+        open={Boolean(historyTarget)}
+        onClose={() => setHistoryTarget(null)}
+        PaperProps={{ sx: { width: { xs: "100%", md: historyTarget === "all" ? 980 : 760 }, maxWidth: "100vw", display: "flex", flexDirection: "column" } }}
+      >
+        {historyTarget === "all" && (
+          <>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1.5}
+              sx={{ px: 2.5, py: 1.75, borderBottom: "1px solid", borderColor: "divider", flexShrink: 0 }}
+            >
+              <Box
+                sx={[
+                  { width: 40, height: 40, borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+                  toneSx("primary"),
+                ]}
+              >
+                <IconHistory size={20} />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography fontWeight={700} noWrap>
+                  Survey history
+                </Typography>
+                <Typography variant="caption" color="text.secondary" noWrap display="block">
+                  Every action on every survey, from the web and the app, latest first
+                </Typography>
+              </Box>
+              <IconButton onClick={() => setHistoryTarget(null)} aria-label="Close history" size="small">
+                <IconX size={20} />
+              </IconButton>
+            </Stack>
+            <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+              <SurveyHistory />
+            </Box>
+          </>
+        )}
+        {historySurvey && (
+          <>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1.5}
+              sx={{ px: 2.5, py: 1.75, borderBottom: "1px solid", borderColor: "divider", flexShrink: 0 }}
+            >
+              <Box
+                sx={[
+                  { width: 40, height: 40, borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+                  toneSx("primary"),
+                ]}
+              >
+                <IconHistory size={20} />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography fontWeight={700} noWrap>
+                  History · {historySurvey.reference}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" noWrap display="block">
+                  {historySurvey.property_name || historySurvey.title || "Survey"}
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                variant="outlined"
+                component={Link}
+                href={`/apps/surveys/view/${historySurvey.id}`}
+                sx={{ borderRadius: "8px", whiteSpace: "nowrap" }}
+              >
+                Open survey
+              </Button>
+              <IconButton onClick={() => setHistoryTarget(null)} aria-label="Close history" size="small">
+                <IconX size={20} />
+              </IconButton>
+            </Stack>
+            <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+              <SurveyHistory surveyId={historySurvey.id} />
+            </Box>
+          </>
+        )}
+      </Drawer>
+
       {/* Row actions menu */}
       <Menu
         anchorEl={rowMenu?.anchor}
@@ -1202,6 +1301,16 @@ export default function SurveyList() {
           <MenuItem key="view" component={Link} href={`/apps/surveys/view/${menuSurvey.id}`} onClick={closeMenu}>
             <ListItemIcon><IconEye size={18} /></ListItemIcon>
             <ListItemText>View survey</ListItemText>
+          </MenuItem>,
+          <MenuItem
+            key="history"
+            onClick={() => {
+              closeMenu();
+              setHistoryTarget(menuSurvey);
+            }}
+          >
+            <ListItemIcon><IconHistory size={18} /></ListItemIcon>
+            <ListItemText>View history</ListItemText>
           </MenuItem>,
           isAdmin && (
             <MenuItem
