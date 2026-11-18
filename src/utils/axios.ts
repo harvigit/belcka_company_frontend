@@ -15,6 +15,25 @@ let lastSwitchTime = 0;
 let isSyncing = false;
 let lastKnownCompanyId: number | null = null;
 
+// The response interceptor below already toasts the API's own error message. Many callers
+// also toast a generic fallback ("Something went wrong") in their catch block, which showed
+// two toasts. Drop that fallback (or an exact repeat) right after an interceptor toast.
+const API_ERROR_TOAST_WINDOW_MS = 1500;
+const GENERIC_ERROR_RE = /^(something went wrong|failed to|an error occurred|error\b)/i;
+let lastApiErrorToast = { message: "", at: 0 };
+const showToastError = toast.error;
+
+toast.error = ((message, opts) => {
+  if (
+    typeof message === "string" &&
+    Date.now() - lastApiErrorToast.at < API_ERROR_TOAST_WINDOW_MS &&
+    (message === lastApiErrorToast.message || GENERIC_ERROR_RE.test(message.trim()))
+  ) {
+    return "";
+  }
+  return showToastError(message, opts);
+}) as typeof toast.error;
+
 const userLogout = async () => {
   if (isLoggingOut) return;
 
@@ -186,10 +205,11 @@ api.interceptors.response.use(
     if (!error.config?.__handled && error.message !== 'SELECT_ALL_INTERCEPT') {
       error.config.__handled = true;
 
-      toast.error(
+      const message =
         error.response?.data?.message ||
-          "Something went wrong. Please try again.",
-      );
+        "Something went wrong. Please try again.";
+      showToastError(message);
+      lastApiErrorToast = { message, at: Date.now() };
     }
 
     return Promise.reject(error);
