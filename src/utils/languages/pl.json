@@ -325,7 +325,11 @@
     "Search and add users": "Wyszukaj i dodaj użytkowników",
     "No users found": "Nie znaleziono użytkowników",
     "Retry": "Spróbuj ponownie",
-    "Could not load users, please try again": "Nie udało się wczytać użytkowników, spróbuj ponownie"
+    "Could not load users, please try again": "Nie udało się wczytać użytkowników, spróbuj ponownie",
+    "You don't have permission to lock timesheets": "Nie masz uprawnień do blokowania kart czasu pracy",
+    "You don't have permission to unlock timesheets": "Nie masz uprawnień do odblokowywania kart czasu pracy",
+    "You don't have permission to mark timesheets as paid": "Nie masz uprawnień do oznaczania kart czasu pracy jako opłacone",
+    "You don't have permission to delete timesheets": "Nie masz uprawnień do usuwania kart czasu pracy"
   },
   "navigation": {
     "Addresses": "Adresy",

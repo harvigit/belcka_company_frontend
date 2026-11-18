@@ -88,6 +88,7 @@ import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import LeaveLists from './time-clock-details/leaves';
 import {ConflictDetail} from '@/app/components/apps/time-clock/types/timeClock';
 import ConfirmationDialog from './components/ConfirmationDialog';
+import ActionPermissionTooltip from './components/ActionPermissionTooltip';
 import {IconEye} from '@tabler/icons-react';
 import {useServerTable} from '@/hooks/useServerTable';
 import TablePaginationFooter from '../../common/TablePaginationFooter';
@@ -528,6 +529,12 @@ const TimeClock = ({queryParams}: Props) => {
     const [typeFilter, setTypeFilter] = useState('all_data');
     const [tempTypeFilter, setTempTypeFilter] = useState('all_data');
     const [filtersHydrated, setFiltersHydrated] = useState(false);
+    // Request view: the page was opened from a request / notification link (user_id + open=true).
+    // That link must show exactly that request, so the saved list filters are not applied until
+    // the user clears the view (the saved filters stay stored and come back on clear).
+    const requestViewRef = useRef(false);
+    // True when that link also carried the request dates (they then win over the saved range).
+    const requestDatesRef = useRef(false);
     const [filterOptions, setFilterOptions] = useState<{
         teams: FilterOption[];
         statuses: FilterOption[];
@@ -552,6 +559,36 @@ const TimeClock = ({queryParams}: Props) => {
     // Same access as the old Request Action page: Admins, or users with the
     // "RequestActions" web permission, can manage who may Lock/Unlock/Pay timesheets.
     const canManageTimesheetAccess = isCompanyAdmin || hasPermission(permissions, 'RequestActions');
+    // Which toolbar actions the signed-in user can run (Bookkeeper Setting). Admins can run all.
+    const [timesheetActionAccess, setTimesheetActionAccess] = useState({
+        lock: false,
+        unlock: false,
+        paid: false,
+        delete: false,
+    });
+    const loadTimesheetActionAccess = useCallback(async () => {
+        if (!user?.company_id) return;
+        if (isCompanyAdmin) {
+            setTimesheetActionAccess({lock: true, unlock: true, paid: true, delete: true});
+            return;
+        }
+        try {
+            const res = await api.get('request-action/timesheet-actions', {skipToast: true} as any);
+            const my = res.data?.info?.my_actions ?? {};
+            setTimesheetActionAccess({
+                lock: Boolean(my.lock),
+                unlock: Boolean(my.unlock),
+                paid: Boolean(my.paid),
+                delete: Boolean(my.delete),
+            });
+        } catch (error) {
+            console.error('Failed to load timesheet action access:', error);
+        }
+    }, [user?.company_id, isCompanyAdmin]);
+
+    useEffect(() => {
+        loadTimesheetActionAccess();
+    }, [loadTimesheetActionAccess]);
     const [companyGroups, setCompanyGroups] = useState<{ id: number; name: string }[]>([]);
 
     useEffect(() => {
@@ -690,6 +727,16 @@ const TimeClock = ({queryParams}: Props) => {
             isArchived = isArchivedUserParam === 'true' || isArchivedUserParam === '1';
             userId = urlUserId;
 
+            if (urlUserId && searchParams.get('open') === 'true') {
+                requestViewRef.current = true;
+                requestDatesRef.current = Boolean(searchParams.get('start_date') && searchParams.get('end_date'));
+                setFilters(EMPTY_TIME_CLOCK_FILTERS);
+                setTempFilters(EMPTY_TIME_CLOCK_FILTERS);
+                setTypeFilter('all_data');
+                setTempTypeFilter('all_data');
+                setSearchTerm('');
+            }
+
             sessionStorage.setItem(
                 'timesheet_sensitive_params',
                 JSON.stringify({
@@ -774,37 +821,48 @@ const TimeClock = ({queryParams}: Props) => {
         );
     }, [timeClockFiltersCookieKey]);
 
+    // Saved list filters (cookie) as filter state, or null when nothing valid is saved.
+    const readStoredTimeClockFilters = useCallback(() => {
+        if (!timeClockFiltersCookieKey) return null;
+        try {
+            const stored = readListingTableState(timeClockFiltersCookieKey);
+            if (!stored) return null;
+            const parsed = JSON.parse(stored) as TimeClockStoredFilters;
+            const nextFilters: TimeClockFilterState = {
+                teams: normalizeStoredNumberFilter(parsed.filters?.teams),
+                groups: normalizeStoredNumberFilter(parsed.filters?.groups, true),
+                statuses: normalizeStoredStringFilter(parsed.filters?.statuses),
+                users: normalizeStoredNumberFilter(parsed.filters?.users),
+                projects: normalizeStoredNumberFilter(parsed.filters?.projects),
+            };
+            const nextTypeFilter = isValidTimeClockTypeFilter(parsed.typeFilter)
+                ? parsed.typeFilter
+                : 'all_data';
+            return {filters: nextFilters, typeFilter: nextTypeFilter};
+        } catch (error) {
+            console.error('Failed to load time-clock filters cookie:', error);
+            removeListingTableState(timeClockFiltersCookieKey);
+            return null;
+        }
+    }, [timeClockFiltersCookieKey]);
+
     useEffect(() => {
         if (!timeClockFiltersCookieKey) return;
 
         try {
-            const stored = readListingTableState(timeClockFiltersCookieKey);
+            // Request view keeps empty filters; the saved ones are restored when it is cleared.
+            const stored = requestViewRef.current ? null : readStoredTimeClockFilters();
             if (stored) {
-                const parsed = JSON.parse(stored) as TimeClockStoredFilters;
-                const nextFilters: TimeClockFilterState = {
-                    teams: normalizeStoredNumberFilter(parsed.filters?.teams),
-                    groups: normalizeStoredNumberFilter(parsed.filters?.groups, true),
-                    statuses: normalizeStoredStringFilter(parsed.filters?.statuses),
-                    users: normalizeStoredNumberFilter(parsed.filters?.users),
-                    projects: normalizeStoredNumberFilter(parsed.filters?.projects),
-                };
-                const nextTypeFilter = isValidTimeClockTypeFilter(parsed.typeFilter)
-                    ? parsed.typeFilter
-                    : 'all_data';
-
-                setFilters(nextFilters);
-                setTempFilters(nextFilters);
-                setTypeFilter(nextTypeFilter);
-                setTempTypeFilter(nextTypeFilter);
+                setFilters(stored.filters);
+                setTempFilters(stored.filters);
+                setTypeFilter(stored.typeFilter);
+                setTempTypeFilter(stored.typeFilter);
             }
-        } catch (error) {
-            console.error('Failed to load time-clock filters cookie:', error);
-            removeListingTableState(timeClockFiltersCookieKey);
         } finally {
             skipNextDependencyPageResetRef.current = true;
             setFiltersHydrated(true);
         }
-    }, [timeClockFiltersCookieKey]);
+    }, [timeClockFiltersCookieKey, readStoredTimeClockFilters]);
 
     const [isFilteredView, setIsFilteredView] = useState(false);
     useEffect(() => {
@@ -828,6 +886,8 @@ const TimeClock = ({queryParams}: Props) => {
 
     useEffect(() => {
         if (!startDate || !endDate) return;
+        // The request date is only for this view; keep the user's own saved range.
+        if (requestViewRef.current) return;
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
     }, [startDate, endDate, columnVisibility]);
 
@@ -1019,6 +1079,29 @@ const TimeClock = ({queryParams}: Props) => {
         queryParamsRef.current = nextQueryParams;
         setResolvedQueryParams(nextQueryParams);
 
+        // Leaving a request view: bring back the user's saved filters and date range. The list
+        // reloads through the filter / date / user dependencies, so no direct fetch here (it would
+        // use the old filters and could finish after the right one).
+        if (requestViewRef.current) {
+            requestViewRef.current = false;
+            requestDatesRef.current = false;
+
+            const storedFilters = readStoredTimeClockFilters();
+            const nextFilters = storedFilters?.filters ?? EMPTY_TIME_CLOCK_FILTERS;
+            const nextTypeFilter = storedFilters?.typeFilter ?? 'all_data';
+            setFilters(nextFilters);
+            setTempFilters(nextFilters);
+            setTypeFilter(nextTypeFilter);
+            setTempTypeFilter(nextTypeFilter);
+
+            const storedRange = loadDateRangeFromStorage();
+            if (storedRange?.startDate && storedRange?.endDate) {
+                setStartDate(storedRange.startDate);
+                setEndDate(storedRange.endDate);
+            }
+            return;
+        }
+
         const s = startDate || defaultStart;
         const e = endDate || defaultEnd;
         fetchData(s, e);
@@ -1062,13 +1145,19 @@ const TimeClock = ({queryParams}: Props) => {
                     to = defaultEnd;
                 }
 
-                setStartDate(from);
-                setEndDate(to);
-                saveDateRangeToStorage(from, to, stored?.columnVisibility ?? columnVisibility);
+                // In request view the request date is set from the link; this async load must not
+                // replace it with the saved / payroll range when it finishes later.
+                if (!requestDatesRef.current) {
+                    setStartDate(from);
+                    setEndDate(to);
+                    saveDateRangeToStorage(from, to, stored?.columnVisibility ?? columnVisibility);
+                }
             } catch (error) {
                 console.error('Error fetching payroll cycle:', error);
-                setStartDate(defaultStart);
-                setEndDate(defaultEnd);
+                if (!requestDatesRef.current) {
+                    setStartDate(defaultStart);
+                    setEndDate(defaultEnd);
+                }
             } finally {
                 setCycleReady(true);
             }
@@ -2385,6 +2474,8 @@ const TimeClock = ({queryParams}: Props) => {
 
     useEffect(() => {
         if (!startDate || !endDate) return;
+        // The request date is only for this view; keep the user's own saved range.
+        if (requestViewRef.current) return;
         saveDateRangeToStorage(startDate, endDate, columnVisibility, pagination);
     }, [startDate, endDate, columnVisibility, pagination.pageIndex, pagination.pageSize]);
 
@@ -3084,6 +3175,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     onClose={handleSettingClose}
                                     onSaved={() => {
                                         settingsSavedRef.current = true;
+                                        loadTimesheetActionAccess();
                                     }}
                                     initialActiveMenuItem={settingsInitialMenu}
                                     initialProjectId={settingsInitialProjectId}
@@ -3370,36 +3462,50 @@ const TimeClock = ({queryParams}: Props) => {
                             <Box sx={{flexGrow: 1}}/>
 
                             <Stack direction="row" spacing={1.5}>
+                                <ActionPermissionTooltip
+                                    allowed={timesheetActionAccess.lock}
+                                    title={t("You don't have permission to lock timesheets")}
+                                >
                                 <Button
                                     startIcon={<IconLock size={15}/>}
                                     variant="outlined"
                                     color="success"
                                     size="small"
                                     onClick={handleLock}
-                                    disabled={isTimesheetActionPending}
+                                    disabled={isTimesheetActionPending || !timesheetActionAccess.lock}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     {t('Lock')}
                                 </Button>
+                                </ActionPermissionTooltip>
 
+                                <ActionPermissionTooltip
+                                    allowed={timesheetActionAccess.unlock}
+                                    title={t("You don't have permission to unlock timesheets")}
+                                >
                                 <Button
                                     startIcon={<IconLockOpen size={15}/>}
                                     variant="outlined"
                                     color="error"
                                     size="small"
                                     onClick={handleUnlock}
-                                    disabled={isTimesheetActionPending}
+                                    disabled={isTimesheetActionPending || !timesheetActionAccess.unlock}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     {t('Unlock')}
                                 </Button>
+                                </ActionPermissionTooltip>
 
+                                <ActionPermissionTooltip
+                                    allowed={timesheetActionAccess.paid}
+                                    title={t("You don't have permission to mark timesheets as paid")}
+                                >
                                 <Button
                                     variant="contained"
                                     color="primary"
                                     size="small"
                                     onClick={handleMarkAsPaid}
-                                    disabled={isTimesheetActionPending}
+                                    disabled={isTimesheetActionPending || !timesheetActionAccess.paid}
                                     startIcon={
                                         isPaidActionPending
                                             ? <CircularProgress size={15} color="inherit"/>
@@ -3416,18 +3522,24 @@ const TimeClock = ({queryParams}: Props) => {
                                 >
                                     {t('Paid')}
                                 </Button>
+                                </ActionPermissionTooltip>
 
+                                <ActionPermissionTooltip
+                                    allowed={timesheetActionAccess.delete}
+                                    title={t("You don't have permission to delete timesheets")}
+                                >
                                 <Button
                                     startIcon={<IconTrash size={15}/>}
                                     variant="outlined"
                                     color="error"
                                     size="small"
                                     onClick={handleDeleteSelectedUsers}
-                                    disabled={isTimesheetActionPending}
+                                    disabled={isTimesheetActionPending || !timesheetActionAccess.delete}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     {t('Delete')}
                                 </Button>
+                                </ActionPermissionTooltip>
 
                                 <Button
                                     size="small"

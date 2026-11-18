@@ -256,6 +256,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [adjustmentNote, setAdjustmentNote] = useState('');
     const [savingAdjustment, setSavingAdjustment] = useState(false);
     const [canDirectEditWorklog, setCanDirectEditWorklog] = useState(false);
+    // Lock / Unlock / Delete the signed-in user can run (Bookkeeper Setting). Admins can run all.
+    const [timesheetActionAccess, setTimesheetActionAccess] = useState({lock: false, unlock: false, delete: false});
     const [isLockActionPending, setIsLockActionPending] = useState(false);
     const isLockActionPendingRef = useRef(false);
     const isLockActionMountedRef = useRef(true);
@@ -339,12 +341,18 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         const resolveDirectEditPermission = async () => {
             const userId = Number(sessionUser?.id);
             if (!userId) {
-                if (!cancelled) setCanDirectEditWorklog(false);
+                if (!cancelled) {
+                    setCanDirectEditWorklog(false);
+                    setTimesheetActionAccess({lock: false, unlock: false, delete: false});
+                }
                 return;
             }
 
             if (Number(sessionUser?.user_role_id) === 1) {
-                if (!cancelled) setCanDirectEditWorklog(true);
+                if (!cancelled) {
+                    setCanDirectEditWorklog(true);
+                    setTimesheetActionAccess({lock: true, unlock: true, delete: true});
+                }
                 return;
             }
 
@@ -355,10 +363,18 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
                 if (!cancelled) {
                     setCanDirectEditWorklog(Boolean(myActions.edit));
+                    setTimesheetActionAccess({
+                        lock: Boolean(myActions.lock),
+                        unlock: Boolean(myActions.unlock),
+                        delete: Boolean(myActions.delete),
+                    });
                 }
             } catch (error) {
                 console.error('Failed to resolve worklog edit permission:', error);
-                if (!cancelled) setCanDirectEditWorklog(false);
+                if (!cancelled) {
+                    setCanDirectEditWorklog(false);
+                    setTimesheetActionAccess({lock: false, unlock: false, delete: false});
+                }
             }
         };
 
@@ -2373,6 +2389,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 getSelectedRowsWorklogs={getSelectedRowsWorklogs}
                 onDeleteClick={handleDeleteWorklogs}
                 disabled={isLockActionPending || isUnlockActionPending}
+                actionAccess={timesheetActionAccess}
             />
 
             <Drawer
