@@ -318,7 +318,7 @@
     "Clear all": "Wyczyść wszystko",
     "Delete removes all hours, pricework, expenses and penalties in the selected date range": "Usuwanie kasuje wszystkie godziny, akordy, wydatki i kary z wybranego zakresu dat",
     "Paid records can't be deleted, and there is no undo": "Opłaconych rekordów nie można usunąć, a usunięcia nie można cofnąć",
-    "No users added, only Admins can lock, unlock, mark as paid or delete timesheets": "Nie dodano użytkowników, tylko administratorzy mogą blokować, odblokowywać, oznaczać jako opłacone lub usuwać karty czasu pracy",
+    "No users added, only Admins can edit, lock, unlock, mark as paid or delete timesheets": "Nie dodano użytkowników, tylko administratorzy mogą edytować, blokować, odblokowywać, oznaczać jako opłacone lub usuwać karty czasu pracy",
     "Unsaved changes — click Save changes to apply them": "Niezapisane zmiany — kliknij Zapisz zmiany, aby je zastosować",
     "Timesheet actions": "Akcje kart czasu pracy",
     "Choose who can lock, unlock, mark as paid and delete timesheets in Time Clock": "Wybierz, kto może blokować, odblokowywać, oznaczać jako opłacone i usuwać karty czasu pracy w Time Clock",

@@ -19,6 +19,7 @@ import {
 import {
   IconAlertTriangle,
   IconCash,
+  IconClockEdit,
   IconLock,
   IconLockOpen,
   IconShieldCheck,
@@ -36,9 +37,10 @@ import { useTranslation } from "react-i18next";
 import { useSession } from "next-auth/react";
 
 // Who can run each Time Clock action. Saved per action in request_actions
-// (timesheet_lock, timesheet_unlock, timesheet_paid, timesheet_delete) and checked by the backend.
+// (timesheet_approve for Edit, timesheet_lock, timesheet_unlock, timesheet_paid, timesheet_delete) and checked by the backend.
 // Separate from Request Settings: with no users saved, only admins can run the action.
 const TIMESHEET_ACTIONS = [
+  { key: "edit", label: "Edit", icon: IconClockEdit },
   { key: "lock", label: "Lock", icon: IconLock },
   { key: "unlock", label: "Unlock", icon: IconLockOpen },
   { key: "paid", label: "Paid", icon: IconCash },
@@ -51,8 +53,8 @@ interface AccessRow extends ActionAccess {
   id: number;
 }
 
-// New users can lock, unlock and mark as paid. Delete is left off because it can't be undone.
-const NEW_USER_ACCESS: ActionAccess = { lock: true, unlock: true, paid: true, delete: false };
+// New users can edit, lock, unlock and mark as paid. Delete is left off because it can't be undone.
+const NEW_USER_ACCESS: ActionAccess = { edit: true, lock: true, unlock: true, paid: true, delete: false };
 
 const hasAnyAction = (row: ActionAccess) => TIMESHEET_ACTIONS.some((action) => row[action.key]);
 
@@ -194,6 +196,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
       const rows: AccessRow[] = (Array.isArray(info.users) ? info.users : [])
         .map((u: any) => ({
           id: Number(u.user_id),
+          edit: Boolean(u.edit),
           lock: Boolean(u.lock),
           unlock: Boolean(u.unlock),
           paid: Boolean(u.paid),
@@ -403,7 +406,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
           >
             <IconUsers size={22} style={{ opacity: 0.5 }} />
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {t("No users added, only Admins can lock, unlock, mark as paid or delete timesheets")}
+              {t("No users added, only Admins can edit, lock, unlock, mark as paid or delete timesheets")}
             </Typography>
           </Box>
         ) : (

@@ -28,13 +28,11 @@ import {
     IconCircleCheck,
     IconLayoutList,
     IconBriefcase,
-    IconClockEdit,
     IconClockPlus,
     IconCoin,
     IconCreditCard,
     IconEdit,
     IconEye,
-    IconGavel,
     IconInfoCircle,
     IconLink,
     IconSearch,
@@ -59,14 +57,8 @@ const REQUEST_TYPES = [
         group: 'time',
         icon: IconClockPlus,
     },
-    {
-        name: 'Edit timesheet',
-        description: 'Edit hours directly in Time Clock and approve or reject timesheet edit requests',
-        slug: 'timesheet_approve',
-        group: 'time',
-        icon: IconClockEdit,
-    },
-    // Lock, Unlock, Paid and Delete on Time Clock are managed in Time Clock → Settings → Bookkeeper Setting.
+    // Editing hours directly (no request), Lock, Unlock, Paid and Delete on Time Clock are managed in
+    // Time Clock → Settings → Bookkeeper Setting.
     {
         name: 'Leave',
         description: 'A user applies for leave or changes a leave',
@@ -88,19 +80,13 @@ const REQUEST_TYPES = [
         group: 'user',
         icon: IconCoin,
     },
+    // Penalties and penalty appeals are one type; the old `penalty_request` setting is no longer offered.
     {
-        name: 'Penalties',
-        description: 'See penalties on timesheets, act on them and get penalty notifications',
-        slug: 'penalty_request',
-        group: 'penalty',
-        icon: IconAlertTriangle,
-    },
-    {
-        name: 'Penalty appeals',
-        description: 'A user disputes a penalty they received',
+        name: 'Penalties & appeals',
+        description: 'Penalties on timesheets and appeals against them',
         slug: 'penalty_appeal_request',
         group: 'penalty',
-        icon: IconGavel,
+        icon: IconAlertTriangle,
     },
     {
         name: 'Team size increase',

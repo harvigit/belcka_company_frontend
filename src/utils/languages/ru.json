@@ -318,7 +318,7 @@
     "Clear all": "Очистить все",
     "Delete removes all hours, pricework, expenses and penalties in the selected date range": "Удаление стирает все часы, сдельные работы, расходы и штрафы за выбранный период",
     "Paid records can't be deleted, and there is no undo": "Оплаченные записи нельзя удалить, и отменить удаление невозможно",
-    "No users added, only Admins can lock, unlock, mark as paid or delete timesheets": "Пользователи не добавлены, только администраторы могут блокировать, разблокировать, отмечать оплаченными или удалять табели",
+    "No users added, only Admins can edit, lock, unlock, mark as paid or delete timesheets": "Пользователи не добавлены, только администраторы могут редактировать, блокировать, разблокировать, отмечать оплаченными или удалять табели",
     "Unsaved changes — click Save changes to apply them": "Несохранённые изменения — нажмите Сохранить изменения, чтобы применить их",
     "Timesheet actions": "Действия с табелями",
     "Choose who can lock, unlock, mark as paid and delete timesheets in Time Clock": "Выберите, кто может блокировать, разблокировать, отмечать оплаченными и удалять табели в Time Clock",
