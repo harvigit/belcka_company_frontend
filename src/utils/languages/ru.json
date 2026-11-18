@@ -325,7 +325,11 @@
     "Search and add users": "Найдите и добавьте пользователей",
     "No users found": "Пользователи не найдены",
     "Retry": "Повторить",
-    "Could not load users, please try again": "Не удалось загрузить пользователей, попробуйте ещё раз"
+    "Could not load users, please try again": "Не удалось загрузить пользователей, попробуйте ещё раз",
+    "You don't have permission to lock timesheets": "У вас нет прав на блокировку табелей",
+    "You don't have permission to unlock timesheets": "У вас нет прав на разблокировку табелей",
+    "You don't have permission to mark timesheets as paid": "У вас нет прав отмечать табели как оплаченные",
+    "You don't have permission to delete timesheets": "У вас нет прав на удаление табелей"
   },
   "navigation": {
     "Addresses": "Адреса",

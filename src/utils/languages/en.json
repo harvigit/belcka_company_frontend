@@ -325,7 +325,11 @@
     "Search and add users": "Search and add users",
     "No users found": "No users found",
     "Retry": "Retry",
-    "Could not load users, please try again": "Could not load users, please try again"
+    "Could not load users, please try again": "Could not load users, please try again",
+    "You don't have permission to lock timesheets": "You don't have permission to lock timesheets",
+    "You don't have permission to unlock timesheets": "You don't have permission to unlock timesheets",
+    "You don't have permission to mark timesheets as paid": "You don't have permission to mark timesheets as paid",
+    "You don't have permission to delete timesheets": "You don't have permission to delete timesheets"
   },
   "navigation": {
     "Addresses": "Addresses",

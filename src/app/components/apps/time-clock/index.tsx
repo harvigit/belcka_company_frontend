@@ -88,6 +88,7 @@ import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import LeaveLists from './time-clock-details/leaves';
 import {ConflictDetail} from '@/app/components/apps/time-clock/types/timeClock';
 import ConfirmationDialog from './components/ConfirmationDialog';
+import ActionPermissionTooltip from './components/ActionPermissionTooltip';
 import {IconEye} from '@tabler/icons-react';
 import {useServerTable} from '@/hooks/useServerTable';
 import TablePaginationFooter from '../../common/TablePaginationFooter';
@@ -3461,41 +3462,50 @@ const TimeClock = ({queryParams}: Props) => {
                             <Box sx={{flexGrow: 1}}/>
 
                             <Stack direction="row" spacing={1.5}>
-                                {timesheetActionAccess.lock && (
+                                <ActionPermissionTooltip
+                                    allowed={timesheetActionAccess.lock}
+                                    title={t("You don't have permission to lock timesheets")}
+                                >
                                 <Button
                                     startIcon={<IconLock size={15}/>}
                                     variant="outlined"
                                     color="success"
                                     size="small"
                                     onClick={handleLock}
-                                    disabled={isTimesheetActionPending}
+                                    disabled={isTimesheetActionPending || !timesheetActionAccess.lock}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     {t('Lock')}
                                 </Button>
-                                )}
+                                </ActionPermissionTooltip>
 
-                                {timesheetActionAccess.unlock && (
+                                <ActionPermissionTooltip
+                                    allowed={timesheetActionAccess.unlock}
+                                    title={t("You don't have permission to unlock timesheets")}
+                                >
                                 <Button
                                     startIcon={<IconLockOpen size={15}/>}
                                     variant="outlined"
                                     color="error"
                                     size="small"
                                     onClick={handleUnlock}
-                                    disabled={isTimesheetActionPending}
+                                    disabled={isTimesheetActionPending || !timesheetActionAccess.unlock}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     {t('Unlock')}
                                 </Button>
-                                )}
+                                </ActionPermissionTooltip>
 
-                                {timesheetActionAccess.paid && (
+                                <ActionPermissionTooltip
+                                    allowed={timesheetActionAccess.paid}
+                                    title={t("You don't have permission to mark timesheets as paid")}
+                                >
                                 <Button
                                     variant="contained"
                                     color="primary"
                                     size="small"
                                     onClick={handleMarkAsPaid}
-                                    disabled={isTimesheetActionPending}
+                                    disabled={isTimesheetActionPending || !timesheetActionAccess.paid}
                                     startIcon={
                                         isPaidActionPending
                                             ? <CircularProgress size={15} color="inherit"/>
@@ -3512,21 +3522,24 @@ const TimeClock = ({queryParams}: Props) => {
                                 >
                                     {t('Paid')}
                                 </Button>
-                                )}
+                                </ActionPermissionTooltip>
 
-                                {timesheetActionAccess.delete && (
+                                <ActionPermissionTooltip
+                                    allowed={timesheetActionAccess.delete}
+                                    title={t("You don't have permission to delete timesheets")}
+                                >
                                 <Button
                                     startIcon={<IconTrash size={15}/>}
                                     variant="outlined"
                                     color="error"
                                     size="small"
                                     onClick={handleDeleteSelectedUsers}
-                                    disabled={isTimesheetActionPending}
+                                    disabled={isTimesheetActionPending || !timesheetActionAccess.delete}
                                     sx={{px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px'}}
                                 >
                                     {t('Delete')}
                                 </Button>
-                                )}
+                                </ActionPermissionTooltip>
 
                                 <Button
                                     size="small"

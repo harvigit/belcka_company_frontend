@@ -1,6 +1,8 @@
 import React from 'react';
 import { Box, Stack, IconButton, Typography, Button } from '@mui/material';
 import {IconX, IconLock, IconLockOpen, IconTrash} from '@tabler/icons-react';
+import {useTranslation} from 'react-i18next';
+import ActionPermissionTooltip from './ActionPermissionTooltip';
 
 interface ActionBarProps {
     selectedRows: Set<string>;
@@ -11,6 +13,8 @@ interface ActionBarProps {
     getSelectedRowsLockStatus: () => { hasLockedRows: boolean; hasUnlockedRows: boolean };
     getSelectedRowsWorklogs: () => { hasWorklogs: boolean; };
     disabled?: boolean;
+    // Which actions the signed-in user may run (Bookkeeper Setting → Timesheet actions)
+    actionAccess: { lock: boolean; unlock: boolean; delete: boolean };
 }
 
 const ActionBar: React.FC<ActionBarProps> = ({
@@ -22,7 +26,10 @@ const ActionBar: React.FC<ActionBarProps> = ({
                                                  getSelectedRowsLockStatus,
                                                  getSelectedRowsWorklogs,
                                                  disabled = false,
+                                                 actionAccess,
                                              }) => {
+    const {t} = useTranslation();
+
     if (selectedRows.size === 0) return null;
 
     const { hasLockedRows, hasUnlockedRows } = getSelectedRowsLockStatus();
@@ -62,6 +69,10 @@ const ActionBar: React.FC<ActionBarProps> = ({
                 <Box sx={{ flexGrow: 1 }} />
 
                 <Stack direction="row" spacing={1.5}>
+                    <ActionPermissionTooltip
+                        allowed={actionAccess.lock}
+                        title={t("You don't have permission to lock timesheets")}
+                    >
                     <Button
                         size="small"
                         variant="outlined"
@@ -74,7 +85,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
                             '&:hover': { boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)' }
                         }}
                         onClick={onLockClick}
-                        disabled={disabled}
+                        disabled={disabled || !actionAccess.lock}
                         // disabled={hasLockedRows}
                     >
                         <IconLock size={16} />
@@ -82,7 +93,12 @@ const ActionBar: React.FC<ActionBarProps> = ({
                             Lock
                         </Typography>
                     </Button>
+                    </ActionPermissionTooltip>
 
+                    <ActionPermissionTooltip
+                        allowed={actionAccess.unlock}
+                        title={t("You don't have permission to unlock timesheets")}
+                    >
                     <Button
                         size="small"
                         variant="outlined"
@@ -95,7 +111,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
                             '&:hover': { boxShadow: '0 2px 8px rgba(211, 47, 47, 0.2)' }
                         }}
                         onClick={onUnlockClick}
-                        disabled={disabled}
+                        disabled={disabled || !actionAccess.unlock}
                         // disabled={hasUnlockedRows}
                     >
                         <IconLockOpen size={16} />
@@ -103,7 +119,12 @@ const ActionBar: React.FC<ActionBarProps> = ({
                             Unlock
                         </Typography>
                     </Button>
+                    </ActionPermissionTooltip>
 
+                    <ActionPermissionTooltip
+                        allowed={actionAccess.delete}
+                        title={t("You don't have permission to delete timesheets")}
+                    >
                     <Button
                         size="small"
                         variant="outlined"
@@ -116,13 +137,14 @@ const ActionBar: React.FC<ActionBarProps> = ({
                             '&:hover': { boxShadow: '0 2px 8px rgba(211, 47, 47, 0.2)' }
                         }}
                         onClick={onDeleteClick}
-                        disabled={disabled || !hasWorklogs}
+                        disabled={disabled || !hasWorklogs || !actionAccess.delete}
                     >
                         <IconTrash size={16} />
                         <Typography variant="caption" sx={{ ml: 0.5, fontWeight: 600 }}>
                             Delete
                         </Typography>
                     </Button>
+                    </ActionPermissionTooltip>
                 </Stack>
             </Stack>
         </Box>
