@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { Box, Portal } from "@mui/material";
-import dayjs from "dayjs";
 import PageContainer from "@/app/components/container/PageContainer";
 import BlankCard from "@/app/components/shared/BlankCard";
 import ApiTimingLogs from "@/app/components/apps/api-timing";
@@ -14,14 +13,10 @@ const ApiTimingPage = () => {
 
   useEffect(() => {
     let cancelled = false;
-    const params = new URLSearchParams({
-      from: dayjs().subtract(6, "day").startOf("day").toISOString(),
-      to: dayjs().endOf("day").toISOString(),
-    });
 
     (async () => {
       try {
-        await api.get(`api-timing/summary?${params.toString()}`, { skipToast: true } as any);
+        await api.get("api-timing/access", { skipToast: true } as any);
         if (!cancelled) setAccess("allowed");
       } catch (err: any) {
         const status = err?.response?.status;
