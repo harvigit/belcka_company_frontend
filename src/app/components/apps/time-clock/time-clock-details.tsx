@@ -357,12 +357,12 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
 
             try {
-                // Edit action in Time Clock → Settings → Bookkeeper Setting
+                // Edit hours action in Time Clock → Settings → Bookkeeper Setting
                 const res = await api.get('request-action/timesheet-actions');
                 const myActions = res.data?.info?.my_actions ?? {};
 
                 if (!cancelled) {
-                    setCanDirectEditWorklog(Boolean(myActions.edit));
+                    setCanDirectEditWorklog(Boolean(myActions.edit_hours));
                     setTimesheetActionAccess({
                         lock: Boolean(myActions.lock),
                         unlock: Boolean(myActions.unlock),
