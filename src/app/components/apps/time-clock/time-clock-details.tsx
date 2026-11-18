@@ -349,24 +349,12 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
 
             try {
-                const res = await api.get('request-action/list');
-                const actions = res.data?.info || res.data || [];
-                const timesheetApprove = Array.isArray(actions)
-                    ? actions.find((item: any) =>
-                        String(item.slug ?? item.request_slug ?? '').trim() === 'timesheet_approve'
-                    )
-                    : null;
-
-                const selectedUsers = timesheetApprove?.selected_users ?? timesheetApprove?.user_ids ?? '';
-                const userIds = Array.isArray(selectedUsers)
-                    ? selectedUsers.map(Number)
-                    : String(selectedUsers)
-                        .split(',')
-                        .map((id: string) => Number(id.trim()))
-                        .filter((id: number) => !isNaN(id));
+                // Edit action in Time Clock → Settings → Bookkeeper Setting
+                const res = await api.get('request-action/timesheet-actions');
+                const myActions = res.data?.info?.my_actions ?? {};
 
                 if (!cancelled) {
-                    setCanDirectEditWorklog(userIds.includes(userId));
+                    setCanDirectEditWorklog(Boolean(myActions.edit));
                 }
             } catch (error) {
                 console.error('Failed to resolve worklog edit permission:', error);
