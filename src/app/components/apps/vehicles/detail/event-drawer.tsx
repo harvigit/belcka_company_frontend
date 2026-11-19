@@ -6,8 +6,9 @@ import toast from "react-hot-toast";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import FormDrawer from "../../inventory-new/shared/FormDrawer";
 import FormField from "../../inventory-new/shared/FormField";
-import { EventKind, EVENT_KINDS, FLEET_RULES, formatMiles, Vehicle, VehicleEvent } from "../types";
+import { EventKind, EVENT_KINDS, FLEET_RULES, formatMiles, StationPlace, Vehicle, VehicleEvent } from "../types";
 import { NewEvent } from "../useVehicles";
+import StationField from "./station-field";
 
 const WHEELS = [
   ["FL", "Front left"],
@@ -23,6 +24,7 @@ interface FormState {
   mileage: string;
   cost: string;
   supplier: string;
+  station: StationPlace | null;
   invoice_no: string;
   note: string;
   litres: string;
@@ -35,6 +37,7 @@ const blank = (): FormState => ({
   mileage: "",
   cost: "",
   supplier: "",
+  station: null,
   invoice_no: "",
   note: "",
   litres: "",
@@ -156,6 +159,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
       mileage: editing.mileage ? String(editing.mileage) : "",
       cost: editing.cost !== null && editing.cost !== undefined ? String(editing.cost) : "",
       supplier: editing.supplier,
+      station: editing.station ?? null,
       invoice_no: editing.invoice_no,
       note: editing.note,
       litres: editing.litres ? String(editing.litres) : "",
@@ -235,6 +239,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
         mileage,
         cost: cfg.cost && form.cost !== "" ? Number(form.cost) : null,
         supplier: form.supplier.trim(),
+        station: kind === "fuel" ? form.station : undefined,
         invoice_no: form.invoice_no.trim(),
         note: form.note.trim(),
         litres: kind === "fuel" ? Number(form.litres) : null,
@@ -384,11 +389,19 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
           {cfg.supplier && (
             <Box flex={1}>
               <FormField label={cfg.supplier}>
-                <CustomTextField
-                  value={form.supplier}
-                  onChange={(e: any) => set("supplier", e.target.value.slice(0, 80))}
-                  fullWidth
-                />
+                {kind === "fuel" ? (
+                  <StationField
+                    name={form.supplier}
+                    place={form.station}
+                    onChange={(name, station) => setForm((prev) => ({ ...prev, supplier: name, station }))}
+                  />
+                ) : (
+                  <CustomTextField
+                    value={form.supplier}
+                    onChange={(e: any) => set("supplier", e.target.value.slice(0, 80))}
+                    fullWidth
+                  />
+                )}
               </FormField>
             </Box>
           )}

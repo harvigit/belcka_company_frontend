@@ -149,8 +149,19 @@ export interface VehicleEvent {
   import_id?: string;
   // fuel card used (last 6 digits)
   card?: string;
+  // fuel: the station picked from Google (supplier keeps its name); empty when typed by hand
+  station?: StationPlace | null;
   created_by: string;
   created_at: string;
+}
+
+// A fuel station found on Google (search or near the user's location)
+export interface StationPlace {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  place_id: string;
 }
 
 // fleet_fuel_cards: a card belongs to a person; fuel goes to the vehicle they drive that day
