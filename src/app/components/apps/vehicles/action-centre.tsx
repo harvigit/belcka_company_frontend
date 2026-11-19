@@ -63,7 +63,7 @@ type Section = "queue" | "checks" | "register";
 const FOCUS_MATCH: Record<Focus, (r: ActionRow) => boolean> = {
   all: () => true,
   urgent: (r) => r.priority !== "normal",
-  defects: (r) => r.category === "defect" || r.category === "request",
+  defects: (r) => r.category === "defect" || r.category === "accident",
   due: (r) => r.category === "due" || r.category === "licence",
   approvals: (r) => r.category === "permit" || r.category === "expense" || r.category === "conflict",
 };
@@ -220,7 +220,7 @@ const ActionCentre: React.FC = () => {
   const tiles: { key: Focus; label: string; count: number; icon: React.ReactNode; color: "primary" | "error" | "warning" | "info" | "secondary" }[] = [
     { key: "all", label: "Open actions", count: actions.length, icon: <IconChecklist size={22} />, color: "primary" },
     { key: "urgent", label: "Critical or high", count: urgent, icon: <IconAlertOctagon size={22} />, color: "error" },
-    { key: "defects", label: "Defects and requests", count: actions.filter(FOCUS_MATCH.defects).length, icon: <IconTool size={22} />, color: "warning" },
+    { key: "defects", label: "Defects and accidents", count: actions.filter(FOCUS_MATCH.defects).length, icon: <IconTool size={22} />, color: "warning" },
     { key: "due", label: "Due dates and licences", count: actions.filter(FOCUS_MATCH.due).length, icon: <IconCalendarDue size={22} />, color: "info" },
     { key: "approvals", label: "Approvals and conflicts", count: actions.filter(FOCUS_MATCH.approvals).length, icon: <IconReceipt size={22} />, color: "secondary" },
   ];
@@ -331,7 +331,7 @@ const ActionCentre: React.FC = () => {
               <Typography color="textSecondary">
                 {actions.length
                   ? "No actions match your search or filter."
-                  : "No defects, requests, due dates or approvals need you right now."}
+                  : "No defects, accidents, due dates or approvals need you right now."}
               </Typography>
               {actions.length > 0 && (
                 <Button variant="outlined" onClick={() => { setSearch(""); setFocus("all"); }}>
@@ -452,7 +452,7 @@ const ActionCentre: React.FC = () => {
         <Box p={2} display="flex" flexDirection="column" gap={1.5}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography variant="body2" color="textSecondary">
-              Every defect and driver request, with what was done about it.
+              Every defect and accident, with what was done about it.
             </Typography>
             <Tabs value={registerFilter} onChange={(_, v) => setRegisterFilter(v)} sx={{ minHeight: 0 }}>
               <Tab value="open" label="Open" sx={{ minHeight: 0, py: 1 }} />
@@ -461,16 +461,16 @@ const ActionCentre: React.FC = () => {
           </Stack>
           <RecordTable<Defect>
             rows={register}
-            empty={registerFilter === "open" ? "No open defects or requests." : "No defects reported yet."}
+            empty={registerFilter === "open" ? "No open defects or accidents." : "No defects reported yet."}
             columns={[
               { header: "Reported", render: (d) => `${formatDate(d.reported_at)} · ${d.reported_by}` },
               { header: "Vehicle", render: (d) => <RegPlate registration={byId.get(d.vehicle_id)?.registration ?? "-"} /> },
               {
-                header: "Defect / request",
+                header: "Defect / accident",
                 render: (d) => (
                   <Box sx={{ maxWidth: 320 }}>
                     <Typography variant="body2" fontWeight={600}>
-                      {d.type === "request" ? d.request_kind : d.category}
+                      {d.type === "accident" ? `Accident · ${formatDate(d.incident_date)}` : d.category}
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
                       {d.description}
@@ -481,8 +481,8 @@ const ActionCentre: React.FC = () => {
               {
                 header: "Photos",
                 render: (d) => {
-                  if (d.type === "request") return "-";
-                  const n = defectItem(d, store.checklists)?.photos.length ?? 0;
+                  const n = d.type === "accident" ? d.photos?.length ?? 0 : defectItem(d, store.checklists)?.photos.length ?? 0;
+                  if (d.type === "accident" && !n) return <Typography variant="body2" color="textSecondary">None</Typography>;
                   return n ? (
                     <Chip size="small" variant="outlined" icon={<IconCamera size={14} />} label={n} />
                   ) : (
@@ -493,8 +493,8 @@ const ActionCentre: React.FC = () => {
               {
                 header: "Severity",
                 render: (d) =>
-                  d.type === "request" ? (
-                    <Chip size="small" variant="outlined" label="Request" />
+                  d.type === "accident" ? (
+                    <Chip size="small" color="error" variant="outlined" label="Accident" />
                   ) : (
                     <Chip size="small" color={SEVERITY[d.severity].color} label={SEVERITY[d.severity].label} />
                   ),

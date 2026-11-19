@@ -1,5 +1,4 @@
 import {
-  CAN_DRIVE,
   CONFLICT_TYPE,
   Defect,
   DriverLicence,
@@ -16,7 +15,7 @@ import {
 } from "./types";
 
 export type Priority = "critical" | "high" | "normal";
-export type ActionCategory = "defect" | "request" | "due" | "permit" | "expense" | "onboarding" | "licence" | "conflict";
+export type ActionCategory = "defect" | "accident" | "due" | "permit" | "expense" | "onboarding" | "licence" | "conflict";
 
 export const PRIORITY: Record<Priority, { label: string; color: "error" | "warning" | "default"; order: number }> = {
   critical: { label: "Critical", color: "error", order: 0 },
@@ -26,7 +25,7 @@ export const PRIORITY: Record<Priority, { label: string; color: "error" | "warni
 
 export const ACTION_CATEGORY: Record<ActionCategory, string> = {
   defect: "Defects",
-  request: "Driver requests",
+  accident: "Accidents",
   due: "Due dates",
   permit: "Permits",
   expense: "Approvals",
@@ -71,7 +70,7 @@ const DUE_TAB: Record<string, string> = {
   "Tyre check": "tyres",
 };
 
-// One queue for everything that needs the office: defects, driver requests, due dates,
+// One queue for everything that needs the office: defects, accidents, due dates,
 // permit approvals and renewals, expenses waiting for approval and unfinished start lists.
 export function buildActions({ vehicles, events, defects, permits, onboardings, licences = [], conflicts = [] }: Input): ActionRow[] {
   const byId = new Map(vehicles.map((v) => [v.id, v]));
@@ -82,16 +81,15 @@ export function buildActions({ vehicles, events, defects, permits, onboardings, 
     const vehicle = byId.get(d.vehicle_id) ?? null;
     if (vehicle?.status === "archived") continue;
     const status = d.status === "open" ? "Open" : `In progress${d.owner ? ` · ${d.owner}` : ""}`;
-    if (d.type === "request") {
-      const can = d.can_drive ?? "yes";
+    if (d.type === "accident") {
       rows.push({
         id: `def${d.id}`,
-        priority: can === "no" ? "critical" : can === "garage_only" ? "high" : "normal",
-        category: "request",
-        title: d.request_kind ?? "Driver request",
-        detail: `${CAN_DRIVE[can]} · ${d.description}`,
+        priority: "high",
+        category: "accident",
+        title: "Accident reported",
+        detail: `${d.reported_by} · ${d.description}`,
         vehicle,
-        date: d.reported_at,
+        date: d.incident_date ?? d.reported_at,
         status,
         target: { kind: "defect", defectId: d.id },
       });

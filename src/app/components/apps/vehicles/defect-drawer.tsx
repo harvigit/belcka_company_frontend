@@ -7,7 +7,6 @@ import FormDrawer from "../inventory-new/shared/FormDrawer";
 import FormField from "../inventory-new/shared/FormField";
 import { PhotoThumbs, RegPlate } from "./shared";
 import {
-  CAN_DRIVE,
   DailyChecklist,
   Defect,
   defectItem,
@@ -67,11 +66,11 @@ export const DefectReviewDrawer: React.FC<ReviewProps> = ({
   }, [defect]);
 
   if (!defect) return null;
-  const isRequest = defect.type === "request";
+  const isAccident = defect.type === "accident";
   const closing = status === "resolved" || status === "closed";
   const resolutionError = showErrors && closing && !resolution.trim() ? "Say what was done before closing it." : "";
-  const unsafe = (!isRequest && severity === "critical") || defect.can_drive === "no";
-  const item = isRequest ? undefined : defectItem(defect, checklists);
+  const unsafe = !isAccident && severity === "critical";
+  const item = isAccident ? undefined : defectItem(defect, checklists);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,16 +83,16 @@ export const DefectReviewDrawer: React.FC<ReviewProps> = ({
       status,
       owner: owner.trim(),
       resolution: resolution.trim(),
-      ...(isRequest ? {} : { severity }),
+      ...(isAccident ? {} : { severity }),
     });
-    toast.success(`${isRequest ? "Request" : "Defect"} updated.`);
+    toast.success(`${isAccident ? "Accident report" : "Defect"} updated.`);
     onClose();
   };
 
   return (
     <FormDrawer
       open
-      title={isRequest ? "Driver request" : "Defect"}
+      title={isAccident ? "Accident report" : "Defect"}
       onClose={onClose}
       onSubmit={submit}
       isSaving={false}
@@ -102,15 +101,15 @@ export const DefectReviewDrawer: React.FC<ReviewProps> = ({
       <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" mb={1}>
           {vehicle && <RegPlate registration={vehicle.registration} />}
-          {isRequest ? (
-            <Chip size="small" color="primary" variant="outlined" label={defect.request_kind} />
+          {isAccident ? (
+            <Chip size="small" color="error" variant="outlined" label="Accident" />
           ) : (
             <Chip size="small" color={SEVERITY[defect.severity].color} label={SEVERITY[defect.severity].label} />
           )}
           <Chip size="small" color={DEFECT_STATUS[defect.status].color} label={DEFECT_STATUS[defect.status].label} />
         </Stack>
         <Typography fontWeight={600} mb={0.5}>
-          {isRequest ? defect.request_kind : defect.category}
+          {isAccident ? "What happened" : defect.category}
         </Typography>
         <Typography variant="body2" mb={1}>
           {defect.description}
@@ -126,19 +125,27 @@ export const DefectReviewDrawer: React.FC<ReviewProps> = ({
             <Typography variant="body2">{vehicle.make_model}</Typography>
           </Info>
         )}
-        {isRequest && defect.can_drive && (
-          <Info label="Can it be driven?">
-            <Typography variant="body2" fontWeight={600} color={defect.can_drive === "no" ? "error" : undefined}>
-              {CAN_DRIVE[defect.can_drive]}
+        {isAccident && defect.incident_date && (
+          <Info label="Date of accident">
+            <Typography variant="body2" fontWeight={600}>
+              {formatDate(defect.incident_date)}
             </Typography>
           </Info>
         )}
-        {defect.preferred_date && (
-          <Info label="Preferred date">
-            <Typography variant="body2">{formatDate(defect.preferred_date)}</Typography>
-          </Info>
-        )}
-        {!isRequest && (
+        {isAccident ? (
+          <Box mt={1}>
+            <Typography variant="body2" color="textSecondary" mb={1}>
+              Driver&apos;s photos
+            </Typography>
+            {defect.photos?.length ? (
+              <PhotoThumbs photos={defect.photos} />
+            ) : (
+              <Typography variant="caption" color="textSecondary">
+                No photos added (optional for accidents)
+              </Typography>
+            )}
+          </Box>
+        ) : (
           <Box mt={1}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
               <Typography variant="body2" color="textSecondary">
@@ -180,7 +187,7 @@ export const DefectReviewDrawer: React.FC<ReviewProps> = ({
         </Alert>
       )}
 
-      {!isRequest && (
+      {!isAccident && (
         <FormField label="Severity" hint="The driver only marks an item as a defect; the office sets how serious it is.">
           <CustomTextField select size="small" fullWidth value={severity} onChange={(e: any) => setSeverity(e.target.value)}>
             {(Object.keys(SEVERITY) as DefectSeverity[]).map((s) => (
@@ -204,7 +211,10 @@ export const DefectReviewDrawer: React.FC<ReviewProps> = ({
       <FormField label="Responsible" hint="Who is dealing with it, e.g. a person or the garage">
         <CustomTextField fullWidth value={owner} onChange={(e: any) => setOwner(e.target.value.slice(0, 60))} />
       </FormField>
-      <FormField label={`What was done${closing ? " *" : ""}`}>
+      <FormField
+        label={`What was done${closing ? " *" : ""}`}
+        hint={isAccident ? "e.g. insurance claim number, repair booked, cost recharged" : undefined}
+      >
         <CustomTextField
           fullWidth
           multiline
