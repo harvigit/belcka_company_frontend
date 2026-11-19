@@ -243,8 +243,37 @@ export interface DriverLocation {
   lat: number;
   lng: number;
   place: string;
+  // what the driver recorded in the app at this place
+  kind: LocationKind;
+  // shown under the kind, e.g. "Defect found", "Parking"
   action: string;
+  // daily check with a defect: the marker turns red
+  alert?: boolean;
+  // the record it came from, so the map can open it
+  checklist_id?: number;
+  defect_id?: number;
 }
+
+export type LocationKind =
+  | "daily_check"
+  | "fuel"
+  | "mileage"
+  | "tyre_check"
+  | "photo_check"
+  | "accident"
+  | "expense"
+  | "mileage_claim";
+
+export const LOCATION_KIND: Record<LocationKind, { label: string; color: string }> = {
+  daily_check: { label: "Daily check", color: "#2e7d32" },
+  fuel: { label: "Fuel", color: "#ef6c00" },
+  mileage: { label: "Mileage", color: "#1565c0" },
+  tyre_check: { label: "Tyre check", color: "#6a1b9a" },
+  photo_check: { label: "Photo check", color: "#00838f" },
+  accident: { label: "Accident", color: "#c62828" },
+  expense: { label: "Expense", color: "#5d4037" },
+  mileage_claim: { label: "Mileage claim", color: "#3949ab" },
+};
 
 // fleet_activities: who changed what, for the whole Vehicles module
 export type ActivityArea =

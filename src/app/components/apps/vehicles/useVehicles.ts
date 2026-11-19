@@ -65,7 +65,7 @@ interface FleetData {
   locations: DriverLocation[];
 }
 
-const storageKey = (companyId?: number | null) => `vehicles_ui_mock_v11_${companyId ?? "0"}`;
+const storageKey = (companyId?: number | null) => `vehicles_ui_mock_v12_${companyId ?? "0"}`;
 
 // Saved settings and onboarding types are copied into the shared FLEET_RULES / ONBOARDING_TEMPLATES
 // so every screen and helper uses them (static UI; the API will return them later).
@@ -394,22 +394,27 @@ const sampleData = (): FleetData => {
         Stratford: [51.5416, -0.0033],
         Enfield: [51.6523, -0.0807],
         "Haringey site CF114": [51.5869, -0.1035],
+        "Lordship Lane": [51.5978, -0.0826],
       };
       const t = (daysAgo: number, h: number, m: number) => dayjs().subtract(daysAgo, "day").hour(h).minute(m).second(0).toISOString();
-      const rows: [number, string, number | null, string, string, string][] = [
-        // driver, name, vehicle, at, place, action
-        [101, "Jamie Storeman", 1, t(1, 7, 40), "Wood Green", "Daily checklist"],
-        [101, "Jamie Storeman", 1, t(1, 10, 15), "Haringey site CF114", "Parking expense"],
-        [101, "Jamie Storeman", 1, t(1, 15, 5), "Tottenham", "Fuel"],
-        [101, "Jamie Storeman", 1, t(0, 7, 35), "Wood Green", "Daily checklist"],
-        [101, "Jamie Storeman", 1, t(0, 9, 50), "Hackney", "Daily checklist · defect"],
-        [101, "Jamie Storeman", 1, t(0, 12, 20), "Haringey site CF114", "Mileage"],
-        [102, "Morgan Buyer", 2, t(1, 8, 0), "Camden", "Daily checklist"],
-        [102, "Morgan Buyer", 2, t(0, 8, 5), "Camden", "Daily checklist"],
-        [102, "Morgan Buyer", 2, t(0, 11, 30), "Stratford", "Vehicle supplies expense"],
-        [103, "Jordan Supervisor", 4, t(1, 9, 10), "Enfield", "Mileage claim"],
+      type Row = [number, string, number | null, string, string, DriverLocation["kind"], string, Partial<DriverLocation>?];
+      const rows: Row[] = [
+        // driver, name, vehicle, at, place, kind, detail, record
+        [101, "Jamie Storeman", 1, t(2, 15, 5), "Tottenham", "fuel", "58.2 L at BP"],
+        [101, "Jamie Storeman", 1, t(1, 7, 40), "Wood Green", "daily_check", "Safe to drive", { checklist_id: 1 }],
+        [101, "Jamie Storeman", 1, t(1, 10, 15), "Haringey site CF114", "expense", "Parking"],
+        [101, "Jamie Storeman", 1, t(1, 16, 30), "Lordship Lane", "accident", "Wing mirror clipped", { defect_id: 5, alert: true }],
+        [101, "Jamie Storeman", 1, t(0, 7, 35), "Wood Green", "daily_check", "Defect found", { checklist_id: 3, alert: true }],
+        [101, "Jamie Storeman", 1, t(0, 9, 50), "Hackney", "tyre_check", "Front left tyre pressure"],
+        [101, "Jamie Storeman", 1, t(0, 12, 20), "Haringey site CF114", "mileage", "48,210 mi"],
+        [102, "Morgan Buyer", 2, t(3, 14, 0), "Camden", "accident", "Reversed into a bollard", { defect_id: 3, alert: true }],
+        [102, "Morgan Buyer", 2, t(2, 11, 30), "Stratford", "expense", "Vehicle supplies"],
+        [102, "Morgan Buyer", 2, t(1, 8, 0), "Camden", "daily_check", "Safe to drive", { checklist_id: 2 }],
+        [102, "Morgan Buyer", 2, t(0, 8, 5), "Camden", "daily_check", "Safe to drive", { checklist_id: 4 }],
+        [102, "Morgan Buyer", 2, t(0, 13, 40), "Stratford", "photo_check", "4 photos"],
+        [103, "Jordan Supervisor", 4, t(1, 9, 10), "Enfield", "mileage_claim", "64 business miles"],
       ];
-      return rows.map(([driver_id, driver_name, vehicle_id, at, place, action], i) => ({
+      return rows.map(([driver_id, driver_name, vehicle_id, at, place, kind, action, extra], i) => ({
         id: i + 1,
         driver_id,
         driver_name,
@@ -418,7 +423,9 @@ const sampleData = (): FleetData => {
         lat: P[place][0],
         lng: P[place][1],
         place,
+        kind,
         action,
+        ...extra,
       }));
     })(),
     activities: [

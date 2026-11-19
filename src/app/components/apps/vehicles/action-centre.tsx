@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -82,6 +82,16 @@ const ActionCentre: React.FC = () => {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
   const [reviewId, setReviewId] = useState<number | null>(null);
   const [checklistId, setChecklistId] = useState<number | null>(null);
+
+  // Opened from elsewhere (e.g. the Map) with ?defect=ID: show that report straight away.
+  useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get("defect"));
+    if (id) {
+      setReviewId(id);
+      router.replace("/apps/vehicles/action-centre", { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [registerFilter, setRegisterFilter] = useState<"open" | "all">("open");
 
   const actions = useMemo(
