@@ -1,0 +1,20 @@
+"use client";
+
+import React from "react";
+import PageContainer from "@/app/components/container/PageContainer";
+import BlankCard from "@/app/components/shared/BlankCard";
+import PermissionGuard from "@/app/auth/PermissionGuard";
+import Expenses from "@/app/components/apps/vehicles/expenses";
+
+/** Vehicles · Expenses: company admins, or users given the Vehicles permission. */
+const VehicleExpensesPage = () => (
+  <PageContainer title="Vehicle expenses" description="Driver expenses and mileage claims">
+    <PermissionGuard permission="vehicles">
+      <BlankCard>
+        <Expenses />
+      </BlankCard>
+    </PermissionGuard>
+  </PageContainer>
+);
+
+export default VehicleExpensesPage;
