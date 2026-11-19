@@ -34,7 +34,7 @@ import {
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
 import { IconSettings, IconFileText, IconFileCheck } from "@tabler/icons-react";
-import { IconBox, IconTruck } from "@tabler/icons-react";
+import { IconBox, IconCar, IconTruck } from "@tabler/icons-react";
 import { IconPoint } from "@tabler/icons-react";
 
 const MenuItems: NavGroup[] = [
@@ -385,6 +385,15 @@ const MenuItems: NavGroup[] = [
   //   icon: IconServer,
   //   href: "/apps/inventory-new/stock/list",
   // },
+  {
+    id: uniqueId(),
+    title: "Vehicles",
+    slug: "vehicles",
+    icon: IconCar,
+    href: "/apps/vehicles/list",
+    matchRoutes: ["/apps/vehicles"],
+  },
+    
   // Settings stays last: SidebarItems pins the "settings" slug to the bottom of the sidebar.
   {
     id: uniqueId(),
