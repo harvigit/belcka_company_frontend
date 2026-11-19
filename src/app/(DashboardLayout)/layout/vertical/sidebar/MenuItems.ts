@@ -34,7 +34,7 @@ import {
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
 import { IconSettings, IconFileText, IconFileCheck } from "@tabler/icons-react";
-import { IconBox, IconTruck } from "@tabler/icons-react";
+import { IconBox, IconCar, IconTruck } from "@tabler/icons-react";
 import { IconPoint } from "@tabler/icons-react";
 
 const MenuItems: NavGroup[] = [
@@ -323,6 +323,17 @@ const MenuItems: NavGroup[] = [
     slug: "collect",
     icon: IconShoppingBag,
     href: "/apps/collect/list",
+  },
+
+  {
+    id: uniqueId(),
+    title: "Vehicles",
+    // Shown to admins and to users given the Vehicles permission.
+    slug: "vehicles",
+    icon: IconCar,
+    href: "/apps/vehicles/list",
+    // stays highlighted on the vehicle pages, Action Centre and Expenses
+    matchRoutes: ["/apps/vehicles"],
   },
 
   {

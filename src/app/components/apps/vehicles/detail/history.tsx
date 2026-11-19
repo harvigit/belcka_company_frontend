@@ -1,0 +1,551 @@
+"use client";
+import React, { useState } from "react";
+import {
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
+  IconButton,
+  LinearProgress,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { IconEdit, IconPlus, IconTrash } from "@tabler/icons-react";
+import dayjs from "dayjs";
+import toast from "react-hot-toast";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import { DueCell } from "../shared";
+import {
+  Activity,
+  ACTIVITY_AREA,
+  dueItems,
+  DriverLog,
+  EventKind,
+  EVENT_KINDS,
+  FLEET_RULES,
+  formatDate,
+  formatMiles,
+  lowestTread,
+  money,
+  Vehicle,
+  VehicleEvent,
+} from "../types";
+import { Column, RecordTable, Section, StatTile } from "./common";
+
+interface TabProps {
+  vehicle: Vehicle;
+  events: VehicleEvent[];
+  onAdd: (kind: EventKind) => void;
+  onEdit: (e: VehicleEvent) => void;
+  onDelete: (e: VehicleEvent) => void;
+  readOnly: boolean;
+}
+
+// Edit / delete for one record. Imported rows are undone as a whole file; driver expenses are
+// handled on the Expenses screen.
+export const RecordActions: React.FC<{
+  e: VehicleEvent;
+  readOnly: boolean;
+  onEdit: (e: VehicleEvent) => void;
+  onDelete: (e: VehicleEvent) => void;
+  canEdit?: boolean;
+}> = ({ e, readOnly, onEdit, onDelete, canEdit = true }) => {
+  if (readOnly) return null;
+  const locked = e.import_id
+    ? "Imported from a file: undo the import to remove it"
+    : e.status
+      ? "Sent from the driver app: manage it on the Expenses screen"
+      : "";
+  return (
+    <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+      <Tooltip title={locked || (canEdit ? "Edit" : "")}>
+        <span>
+          <IconButton size="small" color="primary" disabled={!!locked || !canEdit} onClick={() => onEdit(e)}>
+            <IconEdit size={16} />
+          </IconButton>
+        </span>
+      </Tooltip>
+      <Tooltip title={locked || "Delete"}>
+        <span>
+          <IconButton size="small" color="error" disabled={!!locked} onClick={() => onDelete(e)}>
+            <IconTrash size={16} />
+          </IconButton>
+        </span>
+      </Tooltip>
+    </Stack>
+  );
+};
+
+const actionsCol = (p: TabProps): Column<VehicleEvent> => ({
+  header: "",
+  align: "right",
+  render: (e) => <RecordActions e={e} readOnly={p.readOnly} onEdit={p.onEdit} onDelete={p.onDelete} />,
+});
+
+const newestFirst = (a: VehicleEvent, b: VehicleEvent) =>
+  b.date.localeCompare(a.date) || (b.mileage ?? 0) - (a.mileage ?? 0) || b.id - a.id;
+
+const AddButton: React.FC<{ label: string; onClick: () => void; primary?: boolean; hidden?: boolean }> = ({
+  label,
+  onClick,
+  primary,
+  hidden,
+}) =>
+  hidden ? null : (
+    <Button variant={primary ? "contained" : "outlined"} startIcon={<IconPlus size={16} />} onClick={onClick}>
+      {label}
+    </Button>
+  );
+
+const dateCol: Column<VehicleEvent> = { header: "Date", render: (e) => formatDate(e.date) };
+const mileageCol: Column<VehicleEvent> = { header: "Mileage", render: (e) => formatMiles(e.mileage) };
+const costCol: Column<VehicleEvent> = { header: "Cost", render: (e) => money(e.cost), align: "right" };
+const byCol: Column<VehicleEvent> = {
+  header: "Added by",
+  render: (e) => (
+    <Typography variant="body2" color="textSecondary" noWrap>
+      {e.created_by}
+    </Typography>
+  ),
+};
+const noteCol = (header = "Note"): Column<VehicleEvent> => ({
+  header,
+  render: (e) => (
+    <Typography variant="body2" sx={{ maxWidth: 280 }}>
+      {e.note || "-"}
+    </Typography>
+  ),
+});
+
+/* ---------------- MOT & Service ---------------- */
+export const MaintenanceTab: React.FC<TabProps> = (props) => {
+  const { vehicle, events, onAdd, readOnly } = props;
+  const rows = events.filter((e) => ["mot", "service", "repair", "accident"].includes(e.kind)).sort(newestFirst);
+  const due = dueItems(vehicle).filter((d) => d.label !== "Tyre check");
+  return (
+    <Box display="flex" flexDirection="column" gap={3}>
+      <Grid container spacing={2}>
+        {due.map((d) => (
+          <Grid key={d.label} size={{ xs: 12, sm: 6, md: 3 }}>
+            <StatTile label={d.label} value={formatDate(d.date)} sub={<DueCell item={d} />} />
+          </Grid>
+        ))}
+      </Grid>
+      <Section
+        title="MOT, service, repairs and accidents"
+        subtitle={
+          vehicle.type === "private"
+            ? "Private car: only the MOT is tracked here."
+            : `Service every ${FLEET_RULES.serviceMonths} months or ${FLEET_RULES.serviceMiles.toLocaleString("en-GB")} miles.`
+        }
+        actions={
+          <>
+            <AddButton label="MOT" onClick={() => onAdd("mot")} primary hidden={readOnly} />
+            <AddButton label="Service" onClick={() => onAdd("service")} hidden={readOnly || vehicle.type === "private"} />
+            <AddButton label="Repair" onClick={() => onAdd("repair")} hidden={readOnly} />
+            <AddButton label="Accident" onClick={() => onAdd("accident")} hidden={readOnly} />
+          </>
+        }
+      >
+        <RecordTable
+          rows={rows}
+          empty="No MOT, service, repair or accident recorded yet."
+          columns={[
+            dateCol,
+            {
+              header: "Type",
+              render: (e) => (
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  color={EVENT_KINDS[e.kind].color}
+                  label={e.kind === "mot" ? `MOT · ${e.passed ? "Pass" : "Fail"}` : EVENT_KINDS[e.kind].label}
+                />
+              ),
+            },
+            mileageCol,
+            { header: "Garage", render: (e) => e.supplier || "-" },
+            { header: "Invoice", render: (e) => e.invoice_no || "-" },
+            noteCol(),
+            costCol,
+            actionsCol(props),
+          ]}
+        />
+      </Section>
+    </Box>
+  );
+};
+
+/* ---------------- Tyres ---------------- */
+export const TyresTab: React.FC<TabProps> = (props) => {
+  const { vehicle, events, onAdd, readOnly } = props;
+  const rows = events.filter((e) => e.kind === "tyre_check" || e.kind === "tyre_change").sort(newestFirst);
+  const next = dueItems(vehicle).find((d) => d.label === "Tyre check") ?? null;
+  const last = rows.find((e) => lowestTread(e) !== null);
+  const lowest = last ? lowestTread(last) : null;
+  return (
+    <Box display="flex" flexDirection="column" gap={3}>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatTile label="Next tyre check" value={formatDate(next?.date)} sub={<DueCell item={next} />} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatTile
+            label="Lowest tread"
+            value={lowest === null ? "-" : `${lowest} mm`}
+            sub={
+              lowest !== null && lowest <= FLEET_RULES.treadLimitMm ? (
+                <Chip size="small" color="error" label="Replace now" />
+              ) : last ? (
+                `Measured ${formatDate(last.date)}`
+              ) : (
+                "Not measured yet"
+              )
+            }
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatTile
+            label="Rule"
+            value={`${FLEET_RULES.tyreCheckMonths} months`}
+            sub={`or ${FLEET_RULES.tyreCheckMiles.toLocaleString("en-GB")} mi · replace at ${FLEET_RULES.treadLimitMm} mm`}
+          />
+        </Grid>
+      </Grid>
+      <Section
+        title="Tyre history"
+        actions={
+          <>
+            <AddButton label="Tyre check" onClick={() => onAdd("tyre_check")} primary hidden={readOnly} />
+            <AddButton label="Tyre change" onClick={() => onAdd("tyre_change")} hidden={readOnly} />
+          </>
+        }
+      >
+        <RecordTable
+          rows={rows}
+          empty="No tyre checks yet. Record the tread of each tyre to track wear."
+          columns={[
+            dateCol,
+            { header: "Type", render: (e) => EVENT_KINDS[e.kind].label },
+            mileageCol,
+            {
+              header: "Tread (FL / FR / RL / RR)",
+              render: (e) => {
+                if (!e.tread || !Object.keys(e.tread).length) return "-";
+                const low = lowestTread(e);
+                return (
+                  <Typography
+                    variant="body2"
+                    color={low !== null && low <= FLEET_RULES.treadLimitMm ? "error" : undefined}
+                    fontWeight={low !== null && low <= FLEET_RULES.treadLimitMm ? 700 : undefined}
+                  >
+                    {(["FL", "FR", "RL", "RR"] as const).map((w) => e.tread?.[w] ?? "-").join(" / ")} mm
+                  </Typography>
+                );
+              },
+            },
+            { header: "Fitter", render: (e) => e.supplier || "-" },
+            noteCol(),
+            costCol,
+            actionsCol(props),
+          ]}
+        />
+      </Section>
+    </Box>
+  );
+};
+
+/* ---------------- Fuel ---------------- */
+const LITRES_PER_GALLON = 4.54609;
+
+// Fill-to-fill: miles between two fills divided by the fuel put in at the second fill.
+const fillToFillMpg = (fills: VehicleEvent[]) => {
+  const sorted = fills.filter((f) => f.mileage && f.litres).sort((a, b) => (a.mileage ?? 0) - (b.mileage ?? 0));
+  let miles = 0;
+  let litres = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    miles += (sorted[i].mileage ?? 0) - (sorted[i - 1].mileage ?? 0);
+    litres += sorted[i].litres ?? 0;
+  }
+  return litres > 0 && miles > 0 ? miles / (litres / LITRES_PER_GALLON) : null;
+};
+
+export const FuelTab: React.FC<
+  TabProps & { onSetLimit: (litres: number) => Promise<void> }
+> = (props) => {
+  const { vehicle, events, onAdd, readOnly, onSetLimit } = props;
+  const [limitOpen, setLimitOpen] = useState(false);
+  const [limit, setLimit] = useState("");
+  const fills = events.filter((e) => e.kind === "fuel").sort(newestFirst);
+  const yearStart = dayjs().startOf("year").format("YYYY-MM-DD");
+  const thisYear = fills.filter((f) => f.date >= yearStart);
+  const yearCost = thisYear.reduce((s, f) => s + (f.cost ?? 0), 0);
+  const yearLitres = thisYear.reduce((s, f) => s + (f.litres ?? 0), 0);
+  const mpg = fillToFillMpg(fills);
+  // Monday of the current week (dayjs weeks start on Sunday)
+  const weekStart = dayjs().subtract((dayjs().day() + 6) % 7, "day").format("YYYY-MM-DD");
+  const weekLitres = fills.filter((f) => f.date >= weekStart).reduce((s, f) => s + (f.litres ?? 0), 0);
+  const weeklyLimit = vehicle.weekly_fuel_limit ?? 0;
+  const overLimit = weeklyLimit > 0 && weekLitres > weeklyLimit;
+
+  return (
+    <Box display="flex" flexDirection="column" gap={3}>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatTile label="Fuel this year" value={money(yearCost)} sub={`${yearLitres.toFixed(1)} L`} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatTile
+            label="Average"
+            value={mpg ? `${mpg.toFixed(1)} mpg` : "-"}
+            sub={mpg ? "Fill to fill" : "Needs two fills with mileage"}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatTile
+            label="Average price"
+            value={yearLitres > 0 ? `£${(yearCost / yearLitres).toFixed(3)}` : "-"}
+            sub="per litre this year"
+          />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatTile
+            label="This week"
+            value={`${weekLitres.toFixed(1)} L`}
+            sub={
+              weeklyLimit > 0 ? (
+                <Box>
+                  <LinearProgress
+                    variant="determinate"
+                    color={overLimit ? "error" : "primary"}
+                    value={Math.min(100, (weekLitres / weeklyLimit) * 100)}
+                    sx={{ my: 0.5, borderRadius: 1 }}
+                  />
+                  {overLimit ? `Over the ${weeklyLimit} L limit` : `Limit ${weeklyLimit} L (Mon–Sun)`}
+                </Box>
+              ) : (
+                "No weekly limit"
+              )
+            }
+          />
+        </Grid>
+      </Grid>
+
+      <Section
+        title="Fuel log"
+        actions={
+          <>
+            <AddButton label="Log fuel" onClick={() => onAdd("fuel")} primary hidden={readOnly} />
+            {!readOnly && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setLimit(weeklyLimit ? String(weeklyLimit) : "");
+                  setLimitOpen(true);
+                }}
+              >
+                Weekly limit
+              </Button>
+            )}
+          </>
+        }
+      >
+        <RecordTable
+          rows={fills}
+          empty="No fuel logged yet."
+          columns={[
+            dateCol,
+            mileageCol,
+            { header: "Litres", render: (e) => (e.litres ? `${e.litres.toFixed(1)} L` : "-") },
+            { header: "Station", render: (e) => e.supplier || "-" },
+            {
+              header: "Per litre",
+              render: (e) => (e.litres && e.cost ? `£${(e.cost / e.litres).toFixed(3)}` : "-"),
+            },
+            byCol,
+            costCol,
+            actionsCol(props),
+          ]}
+        />
+      </Section>
+
+      <Dialog open={limitOpen} onClose={() => setLimitOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Weekly fuel limit · {vehicle.registration}</DialogTitle>
+        <DialogContent>
+          <Typography color="textSecondary" mb={2}>
+            Litres per week, Monday to Sunday. Leave empty or 0 for no limit. Going over shows a warning.
+          </Typography>
+          <CustomTextField
+            autoFocus
+            fullWidth
+            value={limit}
+            placeholder="0"
+            onChange={(e: any) => /^\d{0,4}$/.test(e.target.value) && setLimit(e.target.value)}
+            slotProps={{ htmlInput: { inputMode: "numeric" } }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outlined" onClick={() => setLimitOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={async () => {
+              await onSetLimit(Number(limit || 0));
+              toast.success(Number(limit) > 0 ? `Weekly limit set to ${limit} L.` : "Weekly limit removed.");
+              setLimitOpen(false);
+            }}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};
+
+/* ---------------- Mileage ---------------- */
+export const MileageTab: React.FC<TabProps> = (props) => {
+  const { vehicle, events, onAdd, readOnly } = props;
+  const readings = events
+    .filter((e) => e.mileage)
+    .sort((a, b) => a.date.localeCompare(b.date) || (a.mileage ?? 0) - (b.mileage ?? 0));
+  const withDiff = readings
+    .map((e, i) => ({ ...e, diff: i > 0 ? (e.mileage ?? 0) - (readings[i - 1].mileage ?? 0) : null }))
+    .reverse();
+  const since = (days: number) => {
+    const from = dayjs().subtract(days, "day").format("YYYY-MM-DD");
+    const before = [...readings].reverse().find((r) => r.date <= from);
+    return before ? vehicle.mileage - (before.mileage ?? 0) : null;
+  };
+  const last30 = since(30);
+  const last365 = since(365);
+
+  return (
+    <Box display="flex" flexDirection="column" gap={3}>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatTile label="Odometer" value={formatMiles(vehicle.mileage)} sub={readings.length ? `Last reading ${formatDate(readings[readings.length - 1].date)}` : undefined} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 4 }}>
+          <StatTile label="Last 30 days" value={last30 === null ? "-" : formatMiles(last30)} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 4 }}>
+          <StatTile label="Last 12 months" value={last365 === null ? "-" : formatMiles(last365)} />
+        </Grid>
+      </Grid>
+      <Section
+        title="Odometer readings"
+        subtitle="Readings come from fuel, service, MOT and tyre records, or are added here."
+        actions={<AddButton label="Add reading" onClick={() => onAdd("mileage")} primary hidden={readOnly} />}
+      >
+        <RecordTable
+          rows={withDiff}
+          empty="No readings yet."
+          columns={[
+            dateCol,
+            { header: "Odometer", render: (e) => formatMiles(e.mileage) },
+            { header: "Since previous", render: (e) => (e.diff === null ? "-" : `+${formatMiles(e.diff)}`) },
+            { header: "Came with", render: (e) => EVENT_KINDS[e.kind].label },
+            byCol,
+            actionsCol(props),
+          ]}
+        />
+      </Section>
+    </Box>
+  );
+};
+
+/* ---------------- Activity ---------------- */
+export const ActivityTab: React.FC<{
+  events: VehicleEvent[];
+  driverLogs: DriverLog[];
+  // who changed what on this vehicle (fleet_activities)
+  changes: Activity[];
+  onOpenLog: () => void;
+}> = ({ events, driverLogs, changes, onOpenLog }) => {
+  type Row = { id: string; date: string; what: React.ReactNode; detail: string; mileage: number | null; by: string };
+  const rows: Row[] = [
+    ...events.map((e) => ({
+      id: `e${e.id}`,
+      date: e.date,
+      what: (
+        <Chip
+          size="small"
+          variant="outlined"
+          color={EVENT_KINDS[e.kind].color}
+          label={EVENT_KINDS[e.kind].label}
+        />
+      ),
+      detail: [e.supplier, e.note, e.cost ? money(e.cost) : "", e.litres ? `${e.litres} L` : ""]
+        .filter(Boolean)
+        .join(" · "),
+      mileage: e.mileage,
+      by: e.created_by,
+    })),
+    ...driverLogs.flatMap((l) => [
+      { id: `d${l.id}`, date: l.from, what: <Chip size="small" variant="outlined" label="Driver assigned" />, detail: l.driver_name, mileage: null, by: "-" },
+      ...(l.to
+        ? [{ id: `u${l.id}`, date: l.to, what: <Chip size="small" variant="outlined" label="Driver removed" />, detail: l.driver_name, mileage: null, by: "-" }]
+        : []),
+    ]),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  const changeRows = [...changes].sort((a, b) => b.at.localeCompare(a.at) || b.id - a.id);
+
+  return (
+    <Box display="flex" flexDirection="column" gap={3}>
+    <Section title="History" subtitle="Everything recorded for this vehicle, newest first.">
+      <RecordTable
+        rows={rows}
+        empty="Nothing recorded yet."
+        columns={[
+          { header: "Date", render: (r) => formatDate(r.date) },
+          { header: "What", render: (r) => r.what },
+          { header: "Details", render: (r) => <Typography variant="body2">{r.detail || "-"}</Typography> },
+          { header: "Mileage", render: (r) => formatMiles(r.mileage) },
+          { header: "By", render: (r) => <Typography variant="body2" color="textSecondary">{r.by}</Typography> },
+        ]}
+      />
+    </Section>
+
+    <Section
+      title="Changes"
+      subtitle="Who added, changed or removed something on this vehicle."
+      actions={
+        <Button variant="outlined" onClick={onOpenLog}>
+          Full activity log
+        </Button>
+      }
+    >
+      <RecordTable<Activity>
+        rows={changeRows}
+        empty="No changes recorded yet."
+        columns={[
+          { header: "When", render: (a) => `${dayjs(a.at).format("DD/MM/YYYY")} · ${dayjs(a.at).format("HH:mm")}` },
+          { header: "Who", render: (a) => a.by },
+          {
+            header: "What",
+            render: (a) => (
+              <Box>
+                <Typography variant="body2" fontWeight={600}>
+                  {a.action}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {ACTIVITY_AREA[a.area]}
+                </Typography>
+              </Box>
+            ),
+          },
+          { header: "Details", render: (a) => <Typography variant="body2">{a.detail || "-"}</Typography> },
+        ]}
+      />
+    </Section>
+    </Box>
+  );
+};

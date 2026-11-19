@@ -22,7 +22,16 @@ interface InventoryTableProps {
   rowCount: number;
   // Optional content shown under a row (e.g. linked supplier items); null keeps the row closed.
   renderExpanded?: (row: any) => React.ReactNode | null;
+  // Optional: open the row's record when the row is clicked (clicks on buttons and inputs are ignored).
+  onRowClick?: (row: any) => void;
 }
+
+// A click on a control inside the row, or one that ends a text selection, is not a row click.
+const isRowClick = (e: React.MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (target.closest("button, a, input, textarea, select, label, [role='button'], [role='checkbox']")) return false;
+  return !window.getSelection()?.toString();
+};
 
 const stickyActions = (isScrollable: boolean, zIndex: number) => ({
   position: "sticky",
@@ -38,6 +47,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
   loading,
   rowCount,
   renderExpanded,
+  onRowClick,
 }) => {
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
@@ -177,6 +187,11 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                   <React.Fragment key={row.id}>
                     <TableRow
                       hover
+                      onClick={
+                        onRowClick
+                          ? (e: React.MouseEvent) => isRowClick(e) && onRowClick(row.original)
+                          : undefined
+                      }
                       sx={{
                         cursor: "pointer",
                         [`&:hover .${ROW_CHECKBOX_CLASS}, &:focus-within .${ROW_CHECKBOX_CLASS}`]:
