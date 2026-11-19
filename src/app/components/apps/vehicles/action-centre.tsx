@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -65,7 +65,8 @@ const FOCUS_MATCH: Record<Focus, (r: ActionRow) => boolean> = {
   urgent: (r) => r.priority !== "normal",
   defects: (r) => r.category === "defect" || r.category === "accident",
   due: (r) => r.category === "due" || r.category === "licence",
-  approvals: (r) => r.category === "permit" || r.category === "expense" || r.category === "conflict",
+  approvals: (r) =>
+    r.category === "permit" || r.category === "expense" || r.category === "conflict" || r.category === "fuel",
 };
 
 const ActionCentre: React.FC = () => {
@@ -81,6 +82,16 @@ const ActionCentre: React.FC = () => {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
   const [reviewId, setReviewId] = useState<number | null>(null);
   const [checklistId, setChecklistId] = useState<number | null>(null);
+
+  // Opened from elsewhere (e.g. the Map) with ?defect=ID: show that report straight away.
+  useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get("defect"));
+    if (id) {
+      setReviewId(id);
+      router.replace("/apps/vehicles/action-centre", { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [registerFilter, setRegisterFilter] = useState<"open" | "all">("open");
 
   const actions = useMemo(
@@ -222,7 +233,7 @@ const ActionCentre: React.FC = () => {
     { key: "urgent", label: "Critical or high", count: urgent, icon: <IconAlertOctagon size={22} />, color: "error" },
     { key: "defects", label: "Defects and accidents", count: actions.filter(FOCUS_MATCH.defects).length, icon: <IconTool size={22} />, color: "warning" },
     { key: "due", label: "Due dates and licences", count: actions.filter(FOCUS_MATCH.due).length, icon: <IconCalendarDue size={22} />, color: "info" },
-    { key: "approvals", label: "Approvals and conflicts", count: actions.filter(FOCUS_MATCH.approvals).length, icon: <IconReceipt size={22} />, color: "secondary" },
+    { key: "approvals", label: "Approvals and fuel", count: actions.filter(FOCUS_MATCH.approvals).length, icon: <IconReceipt size={22} />, color: "secondary" },
   ];
 
   const reviewDefect = store.defects.find((d) => d.id === reviewId) ?? null;
