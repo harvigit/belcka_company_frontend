@@ -362,7 +362,22 @@ export const FuelTab: React.FC<
             dateCol,
             mileageCol,
             { header: "Litres", render: (e) => (e.litres ? `${e.litres.toFixed(1)} L` : "-") },
-            { header: "Station", render: (e) => e.supplier || "-" },
+            {
+              header: "Station",
+              render: (e) =>
+                e.supplier ? (
+                  <>
+                    {e.supplier}
+                    {e.station?.address && (
+                      <Typography variant="caption" color="textSecondary" display="block">
+                        {e.station.address}
+                      </Typography>
+                    )}
+                  </>
+                ) : (
+                  "-"
+                ),
+            },
             {
               header: "Per litre",
               render: (e) => (e.litres && e.cost ? `£${(e.cost / e.litres).toFixed(3)}` : "-"),
