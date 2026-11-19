@@ -65,7 +65,7 @@ interface FleetData {
   locations: DriverLocation[];
 }
 
-const storageKey = (companyId?: number | null) => `vehicles_ui_mock_v10_${companyId ?? "0"}`;
+const storageKey = (companyId?: number | null) => `vehicles_ui_mock_v11_${companyId ?? "0"}`;
 
 // Saved settings and onboarding types are copied into the shared FLEET_RULES / ONBOARDING_TEMPLATES
 // so every screen and helper uses them (static UI; the API will return them later).
@@ -130,6 +130,8 @@ const sampleData = (): FleetData => {
       service_due: inDays(-12),
       tyre_check_due: inDays(-78),
       weekly_fuel_limit: 60,
+      fuel_use_min: 5,
+      fuel_use_max: 6.5,
     }),
     vehicle({
       id: 2,
@@ -643,8 +645,14 @@ export function useVehicles(companyId?: number | null, userName = "You") {
             ? "Taken off the road"
             : "weekly_fuel_limit" in patch
               ? "Weekly fuel limit changed"
-              : "Vehicle details updated",
-        detail: `${regOf(id)}${"weekly_fuel_limit" in patch ? ` · ${patch.weekly_fuel_limit ? `${patch.weekly_fuel_limit} L a week` : "no limit"}` : ""}`,
+              : "fuel_use_min" in patch
+                ? "Normal fuel use changed"
+                : "Vehicle details updated",
+        detail: `${regOf(id)}${"weekly_fuel_limit" in patch ? ` · ${patch.weekly_fuel_limit ? `${patch.weekly_fuel_limit} L a week` : "no limit"}` : ""}${
+          "fuel_use_min" in patch
+            ? ` · ${patch.fuel_use_min || patch.fuel_use_max ? `${patch.fuel_use_min ?? "…"} – ${patch.fuel_use_max ?? "…"} L/100 km` : "not set"}`
+            : ""
+        }`,
       },
     ]);
     update((d) => ({ ...d, vehicles: d.vehicles.map((v) => (v.id === id ? { ...v, ...patch } : v)) }));

@@ -4,6 +4,10 @@ import {
   DriverLicence,
   ImportConflict,
   dueItems,
+  FUEL_CHECK_DAYS,
+  fuelRangeState,
+  fuelRangeText,
+  fuelUse,
   licenceState,
   money,
   ParkingPermit,
@@ -15,7 +19,7 @@ import {
 } from "./types";
 
 export type Priority = "critical" | "high" | "normal";
-export type ActionCategory = "defect" | "accident" | "due" | "permit" | "expense" | "onboarding" | "licence" | "conflict";
+export type ActionCategory = "defect" | "accident" | "due" | "permit" | "expense" | "onboarding" | "licence" | "conflict" | "fuel";
 
 export const PRIORITY: Record<Priority, { label: string; color: "error" | "warning" | "default"; order: number }> = {
   critical: { label: "Critical", color: "error", order: 0 },
@@ -32,6 +36,7 @@ export const ACTION_CATEGORY: Record<ActionCategory, string> = {
   onboarding: "Start lists",
   licence: "Driving licences",
   conflict: "Import conflicts",
+  fuel: "Fuel use",
 };
 
 export interface ActionRow {
@@ -122,6 +127,32 @@ export function buildActions({ vehicles, events, defects, permits, onboardings, 
         target: { kind: "vehicle", vehicleId: v.id, tab: DUE_TAB[item.label] ?? "overview" },
       });
     }
+  }
+
+  // Fuel use outside the vehicle's normal range over the last weeks
+  const fuelFrom = new Date(Date.now() - FUEL_CHECK_DAYS * 86400000).toISOString().slice(0, 10);
+  for (const v of inUse) {
+    if (!v.fuel_use_min && !v.fuel_use_max) continue;
+    const use = fuelUse(events.filter((e) => e.vehicle_id === v.id), fuelFrom);
+    const state = fuelRangeState(v, use.l100);
+    if (state !== "above" && state !== "below") continue;
+    rows.push({
+      id: `fuel${v.id}`,
+      priority: "normal",
+      category: "fuel",
+      title: state === "above" ? "Fuel use above normal" : "Fuel use below normal",
+      detail: `${use.l100?.toFixed(1)} L/100 km in the last ${FUEL_CHECK_DAYS} days · normal ${fuelRangeText(v)}${
+        state === "above" ? " · check the fills and the vehicle" : " · check for missing fills"
+      }`,
+      vehicle: v,
+      date: events
+        .filter((e) => e.vehicle_id === v.id && e.kind === "fuel")
+        .map((e) => e.date)
+        .sort()
+        .pop() ?? fuelFrom,
+      status: "To check",
+      target: { kind: "vehicle", vehicleId: v.id, tab: "fuel" },
+    });
   }
 
   for (const p of permits) {
