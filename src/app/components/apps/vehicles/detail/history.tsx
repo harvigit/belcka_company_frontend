@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -11,6 +12,7 @@ import {
   Grid,
   IconButton,
   LinearProgress,
+  MenuItem,
   Stack,
   Tooltip,
   Typography,
@@ -30,6 +32,11 @@ import {
   FLEET_RULES,
   formatDate,
   formatMiles,
+  FUEL_RANGE_STATE,
+  fuelRangeState,
+  fuelRangeText,
+  fuelUse,
+  l100ToMpg,
   lowestTread,
   money,
   Vehicle,
@@ -261,59 +268,84 @@ export const TyresTab: React.FC<TabProps> = (props) => {
 };
 
 /* ---------------- Fuel ---------------- */
-const LITRES_PER_GALLON = 4.54609;
-
-// Fill-to-fill: miles between two fills divided by the fuel put in at the second fill.
-const fillToFillMpg = (fills: VehicleEvent[]) => {
-  const sorted = fills.filter((f) => f.mileage && f.litres).sort((a, b) => (a.mileage ?? 0) - (b.mileage ?? 0));
-  let miles = 0;
-  let litres = 0;
-  for (let i = 1; i < sorted.length; i++) {
-    miles += (sorted[i].mileage ?? 0) - (sorted[i - 1].mileage ?? 0);
-    litres += sorted[i].litres ?? 0;
-  }
-  return litres > 0 && miles > 0 ? miles / (litres / LITRES_PER_GALLON) : null;
+type FuelPeriod = "30" | "90" | "year" | "365" | "all";
+const FUEL_PERIODS: Record<FuelPeriod, string> = {
+  "30": "Last 30 days",
+  "90": "Last 90 days",
+  year: "This year",
+  "365": "Last 12 months",
+  all: "All time",
 };
+const periodFrom = (p: FuelPeriod) =>
+  p === "all"
+    ? ""
+    : p === "year"
+      ? dayjs().startOf("year").format("YYYY-MM-DD")
+      : dayjs().subtract(Number(p), "day").format("YYYY-MM-DD");
+
+// "7.5" style number with up to 1 decimal, or "" (empty = not set)
+const rangeInput = (value: string) => /^\d{0,2}(\.\d?)?$/.test(value);
 
 export const FuelTab: React.FC<
-  TabProps & { onSetLimit: (litres: number) => Promise<void> }
+  TabProps & {
+    onSetLimit: (litres: number) => Promise<void>;
+    onSetRange: (min: number | null, max: number | null) => Promise<void>;
+  }
 > = (props) => {
-  const { vehicle, events, onAdd, readOnly, onSetLimit } = props;
+  const { vehicle, events, onAdd, readOnly, onSetLimit, onSetRange } = props;
   const [limitOpen, setLimitOpen] = useState(false);
   const [limit, setLimit] = useState("");
+  const [period, setPeriod] = useState<FuelPeriod>("30");
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const [range, setRange] = useState({ min: "", max: "" });
+  const [rangeTried, setRangeTried] = useState(false);
+
   const fills = events.filter((e) => e.kind === "fuel").sort(newestFirst);
   const yearStart = dayjs().startOf("year").format("YYYY-MM-DD");
-  const thisYear = fills.filter((f) => f.date >= yearStart);
-  const yearCost = thisYear.reduce((s, f) => s + (f.cost ?? 0), 0);
-  const yearLitres = thisYear.reduce((s, f) => s + (f.litres ?? 0), 0);
-  const mpg = fillToFillMpg(fills);
+  const thisYear = fuelUse(events, yearStart);
   // Monday of the current week (dayjs weeks start on Sunday)
   const weekStart = dayjs().subtract((dayjs().day() + 6) % 7, "day").format("YYYY-MM-DD");
-  const weekLitres = fills.filter((f) => f.date >= weekStart).reduce((s, f) => s + (f.litres ?? 0), 0);
+  // the weekly limit counts fuel waiting for approval too: it is already in the tank
+  const weekLitres = fills
+    .filter((f) => f.date >= weekStart && f.status !== "rejected")
+    .reduce((s, f) => s + (f.litres ?? 0), 0);
   const weeklyLimit = vehicle.weekly_fuel_limit ?? 0;
   const overLimit = weeklyLimit > 0 && weekLitres > weeklyLimit;
+
+  // the chosen period
+  const from = periodFrom(period);
+  const use = fuelUse(events, from);
+  const readings = events
+    .filter((e) => e.mileage)
+    .sort((a, b) => a.date.localeCompare(b.date) || (a.mileage ?? 0) - (b.mileage ?? 0));
+  const startReading = from ? [...readings].reverse().find((r) => r.date <= from) ?? readings[0] : readings[0];
+  const milesDriven = startReading ? Math.max(0, vehicle.mileage - (startReading.mileage ?? 0)) : 0;
+  const rangeState = fuelRangeState(vehicle, use.l100);
+
+  const rangeMin = range.min === "" ? null : Number(range.min);
+  const rangeMax = range.max === "" ? null : Number(range.max);
+  const rangeError =
+    rangeMin !== null && rangeMax !== null && rangeMin > rangeMax
+      ? "The lowest can't be higher than the highest."
+      : (rangeMin !== null && rangeMin <= 0) || (rangeMax !== null && rangeMax <= 0)
+        ? "Use a number above 0, or leave it empty."
+        : "";
+  const allUse = fuelUse(events);
 
   return (
     <Box display="flex" flexDirection="column" gap={3}>
       <Grid container spacing={2}>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <StatTile label="Fuel this year" value={money(yearCost)} sub={`${yearLitres.toFixed(1)} L`} />
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatTile label="Fuel this year" value={money(thisYear.cost)} sub={`${thisYear.litres.toFixed(1)} L`} />
         </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <StatTile
-            label="Average"
-            value={mpg ? `${mpg.toFixed(1)} mpg` : "-"}
-            sub={mpg ? "Fill to fill" : "Needs two fills with mileage"}
-          />
-        </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 4 }}>
           <StatTile
             label="Average price"
-            value={yearLitres > 0 ? `£${(yearCost / yearLitres).toFixed(3)}` : "-"}
+            value={thisYear.litres > 0 ? `£${(thisYear.cost / thisYear.litres).toFixed(3)}` : "-"}
             sub="per litre this year"
           />
         </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 4 }}>
           <StatTile
             label="This week"
             value={`${weekLitres.toFixed(1)} L`}
@@ -335,6 +367,92 @@ export const FuelTab: React.FC<
           />
         </Grid>
       </Grid>
+
+      <Section
+        title="Fuel use"
+        subtitle="Measured fill to fill: the miles between two fills and the litres put in at the second one. Fills need an odometer reading."
+        actions={
+          <>
+            <CustomTextField
+              select
+              size="small"
+              value={period}
+              onChange={(e: any) => setPeriod(e.target.value)}
+              sx={{ minWidth: 160 }}
+              aria-label="Period"
+            >
+              {(Object.keys(FUEL_PERIODS) as FuelPeriod[]).map((p) => (
+                <MenuItem key={p} value={p}>
+                  {FUEL_PERIODS[p]}
+                </MenuItem>
+              ))}
+            </CustomTextField>
+            {!readOnly && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setRange({
+                    min: vehicle.fuel_use_min ? String(vehicle.fuel_use_min) : "",
+                    max: vehicle.fuel_use_max ? String(vehicle.fuel_use_max) : "",
+                  });
+                  setRangeTried(false);
+                  setRangeOpen(true);
+                }}
+              >
+                Normal fuel use
+              </Button>
+            )}
+          </>
+        }
+      >
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 6, md: 2 }}>
+            <StatTile label="Miles driven" value={formatMiles(milesDriven)} sub="from odometer readings" />
+          </Grid>
+          <Grid size={{ xs: 6, md: 2 }}>
+            <StatTile
+              label="Fuel filled"
+              value={`${use.litres.toFixed(1)} L`}
+              sub={`${use.fills} fill${use.fills === 1 ? "" : "s"}`}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 2 }}>
+            <StatTile label="Fuel cost" value={money(use.cost)} />
+          </Grid>
+          <Grid size={{ xs: 6, md: 2 }}>
+            <StatTile
+              label="Fuel use"
+              value={use.l100 ? `${use.l100.toFixed(1)} L/100 km` : "-"}
+              sub={use.mpg ? `${use.mpg.toFixed(1)} mpg` : "Needs two fills with odometer"}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 2 }}>
+            <StatTile
+              label="Cost per mile"
+              value={use.measured_miles > 0 ? `£${(use.measured_cost / use.measured_miles).toFixed(2)}` : "-"}
+              sub="fuel only"
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 2 }}>
+            <StatTile
+              label="Normal range"
+              value={<Typography fontWeight={700}>{fuelRangeText(vehicle)}</Typography>}
+              sub={
+                rangeState !== "not_set" ? (
+                  <Chip
+                    size="small"
+                    sx={{ mt: 0.5 }}
+                    color={FUEL_RANGE_STATE[rangeState].color}
+                    label={FUEL_RANGE_STATE[rangeState].label}
+                  />
+                ) : (
+                  "Set it to get warnings"
+                )
+              }
+            />
+          </Grid>
+        </Grid>
+      </Section>
 
       <Section
         title="Fuel log"
@@ -414,6 +532,57 @@ export const FuelTab: React.FC<
               await onSetLimit(Number(limit || 0));
               toast.success(Number(limit) > 0 ? `Weekly limit set to ${limit} L.` : "Weekly limit removed.");
               setLimitOpen(false);
+            }}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={rangeOpen} onClose={() => setRangeOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Normal fuel use · {vehicle.registration}</DialogTitle>
+        <DialogContent>
+          <Typography color="textSecondary" mb={2}>
+            The lowest and highest normal use for this vehicle, in litres per 100 km. Outside this range it shows a
+            warning here and in the Action Centre. Leave both empty to switch it off.
+          </Typography>
+          {allUse.l100 && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              So far this vehicle uses {allUse.l100.toFixed(1)} L/100 km ({allUse.mpg?.toFixed(1)} mpg).
+            </Alert>
+          )}
+          <Stack direction="row" spacing={2}>
+            {(["min", "max"] as const).map((k) => (
+              <CustomTextField
+                key={k}
+                label={k === "min" ? "Lowest (L/100 km)" : "Highest (L/100 km)"}
+                fullWidth
+                value={range[k]}
+                onChange={(e: any) => rangeInput(e.target.value) && setRange({ ...range, [k]: e.target.value })}
+                error={rangeTried && !!rangeError}
+                helperText={range[k] && Number(range[k]) > 0 ? `${l100ToMpg(Number(range[k])).toFixed(1)} mpg` : " "}
+                slotProps={{ htmlInput: { inputMode: "decimal" } }}
+              />
+            ))}
+          </Stack>
+          {rangeTried && rangeError && (
+            <Typography variant="caption" color="error">
+              {rangeError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outlined" onClick={() => setRangeOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={async () => {
+              setRangeTried(true);
+              if (rangeError) return;
+              await onSetRange(rangeMin, rangeMax);
+              toast.success(rangeMin || rangeMax ? "Normal fuel use saved." : "Normal fuel use removed.");
+              setRangeOpen(false);
             }}
           >
             Save

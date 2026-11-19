@@ -271,6 +271,7 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
             <FuelTab
               {...tabProps}
               onSetLimit={(litres) => store.updateVehicle(vehicle.id, { weekly_fuel_limit: litres })}
+              onSetRange={(min, max) => store.updateVehicle(vehicle.id, { fuel_use_min: min, fuel_use_max: max })}
             />
           )}
           {tab === "mileage" && <MileageTab {...tabProps} />}

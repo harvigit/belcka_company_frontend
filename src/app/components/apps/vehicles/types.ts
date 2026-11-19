@@ -36,6 +36,9 @@ export interface Vehicle {
   parking_place?: string;
   // litres per week, 0 = unlimited
   weekly_fuel_limit?: number;
+  // normal fuel use in L/100 km; outside it the vehicle is flagged (empty = not set)
+  fuel_use_min?: number | null;
+  fuel_use_max?: number | null;
 }
 
 // fleet_settings: the same rules apply to every company vehicle (static until Settings is built).
@@ -316,6 +319,88 @@ export const EXPENSE_STATUS: Record<ExpenseStatus, { label: string; color: "warn
 
 // Only approved costs count towards a vehicle's totals.
 export const countsAsCost = (e: VehicleEvent) => (e.cost ?? 0) > 0 && (!e.status || e.status === "approved");
+
+/* ---------- Fuel use ---------- */
+const LITRES_PER_GALLON = 4.54609;
+const KM_PER_MILE = 1.609344;
+export const l100ToMpg = (l100: number) => (100 * LITRES_PER_GALLON) / (l100 * KM_PER_MILE);
+
+export interface FuelUse {
+  // fuel bought in the period
+  fills: number;
+  litres: number;
+  cost: number;
+  // fill to fill: miles between fills and the litres put in at the later fill
+  measured_miles: number;
+  measured_litres: number;
+  measured_cost: number;
+  l100: number | null;
+  mpg: number | null;
+}
+
+/**
+ * Fuel bought from `from` (YYYY-MM-DD, "" = all time), and how much the vehicle uses.
+ * Use is measured fill to fill, so only fills with an odometer reading count: each one
+ * counts with the miles since the fill before it (that one may be before the period).
+ * Fills waiting for approval or rejected are left out.
+ */
+export function fuelUse(events: VehicleEvent[], from = ""): FuelUse {
+  const fills = events.filter((e) => e.kind === "fuel" && (!e.status || e.status === "approved"));
+  const inPeriod = fills.filter((e) => e.date >= from);
+  const withOdo = fills
+    .filter((e) => e.mileage && e.litres)
+    .sort((a, b) => (a.mileage ?? 0) - (b.mileage ?? 0));
+  let miles = 0;
+  let litres = 0;
+  let cost = 0;
+  for (let i = 1; i < withOdo.length; i++) {
+    if (withOdo[i].date < from) continue;
+    miles += (withOdo[i].mileage ?? 0) - (withOdo[i - 1].mileage ?? 0);
+    litres += withOdo[i].litres ?? 0;
+    cost += withOdo[i].cost ?? 0;
+  }
+  const l100 = miles > 0 && litres > 0 ? (litres / (miles * KM_PER_MILE)) * 100 : null;
+  return {
+    fills: inPeriod.length,
+    litres: inPeriod.reduce((s, e) => s + (e.litres ?? 0), 0),
+    cost: inPeriod.reduce((s, e) => s + (e.cost ?? 0), 0),
+    measured_miles: miles,
+    measured_litres: litres,
+    measured_cost: cost,
+    l100,
+    mpg: l100 ? l100ToMpg(l100) : null,
+  };
+}
+
+export type FuelRangeState = "not_set" | "unknown" | "within" | "above" | "below";
+export const FUEL_RANGE_STATE: Record<FuelRangeState, { label: string; color: "success" | "error" | "warning" | "default" }> = {
+  not_set: { label: "Not set", color: "default" },
+  unknown: { label: "Not enough fills", color: "default" },
+  within: { label: "Within the normal range", color: "success" },
+  above: { label: "Above the normal range", color: "error" },
+  below: { label: "Below the normal range", color: "warning" },
+};
+
+export const fuelRangeState = (vehicle: Vehicle, l100: number | null): FuelRangeState => {
+  const min = vehicle.fuel_use_min || 0;
+  const max = vehicle.fuel_use_max || 0;
+  if (!min && !max) return "not_set";
+  if (l100 === null) return "unknown";
+  if (max && l100 > max) return "above";
+  if (min && l100 < min) return "below";
+  return "within";
+};
+
+export const fuelRangeText = (vehicle: Vehicle) => {
+  const min = vehicle.fuel_use_min || 0;
+  const max = vehicle.fuel_use_max || 0;
+  if (!min && !max) return "Not set";
+  if (min && max) return `${min} – ${max} L/100 km`;
+  return min ? `At least ${min} L/100 km` : `Up to ${max} L/100 km`;
+};
+
+// Days the Action Centre looks back when checking fuel use against the normal range
+export const FUEL_CHECK_DAYS = 30;
 
 // fleet_defects: defects from the daily checklist and accidents the driver records in the app
 export type DefectSeverity = "minor" | "major" | "critical";
