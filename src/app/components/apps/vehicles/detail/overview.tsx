@@ -184,7 +184,7 @@ const Overview: React.FC<OverviewProps> = ({ vehicle, events, readOnly, onAssign
       </Grid>
 
       {otherAttention.length > 0 && (
-        <Section title="Open items" subtitle="Defects, requests, permits and other things to sort out for this vehicle.">
+        <Section title="Open items" subtitle="Defects, accidents, permits and other things to sort out for this vehicle.">
           <Paper variant="outlined" sx={{ borderRadius: 2 }}>
             {otherAttention.map((a, i) => (
               <React.Fragment key={a.id}>

@@ -253,7 +253,7 @@ export const ACTIVITY_AREA: Record<ActivityArea, string> = {
   document: "Documents",
   permit: "Parking permits",
   onboarding: "Start lists",
-  defect: "Defects and requests",
+  defect: "Defects and accidents",
   expense: "Expense approvals",
   card: "Fuel cards",
   import: "Imports and conflicts",
@@ -306,7 +306,7 @@ export const EXPENSE_STATUS: Record<ExpenseStatus, { label: string; color: "warn
 // Only approved costs count towards a vehicle's totals.
 export const countsAsCost = (e: VehicleEvent) => (e.cost ?? 0) > 0 && (!e.status || e.status === "approved");
 
-// fleet_defects: defects found by drivers (or the office) and the driver's vehicle requests
+// fleet_defects: defects from the daily checklist and accidents the driver records in the app
 export type DefectSeverity = "minor" | "major" | "critical";
 export type DefectStatus = "open" | "in_progress" | "resolved" | "closed";
 
@@ -320,23 +320,6 @@ export const DAILY_CHECK_ITEMS = [
   "Body damage",
   "Load and equipment",
 ] as const;
-
-export const REQUEST_KINDS = [
-  "Service needed",
-  "Vehicle unsafe / off road",
-  "Warning light or unusual symptom",
-  "Replacement vehicle received",
-  "Return / handover vehicle",
-  "Other",
-] as const;
-
-export type CanDrive = "yes" | "garage_only" | "no";
-
-export const CAN_DRIVE: Record<CanDrive, string> = {
-  yes: "Can be driven",
-  garage_only: "Only to the garage",
-  no: "Off the road",
-};
 
 export const SEVERITY: Record<DefectSeverity, { label: string; color: "default" | "warning" | "error" }> = {
   minor: { label: "Minor", color: "default" },
@@ -354,19 +337,20 @@ export const DEFECT_STATUS: Record<DefectStatus, { label: string; color: "error"
 export interface Defect {
   id: number;
   vehicle_id: number;
-  type: "defect" | "request";
-  // defects
+  // "defect": a daily checklist item marked as a defect. "accident": recorded by the driver in the app.
+  type: "defect" | "accident";
+  // defects: the checklist item, and how serious the office thinks it is
   category: string;
   severity: DefectSeverity;
-  // driver requests
-  request_kind?: string;
-  can_drive?: CanDrive;
-  preferred_date?: string;
+  // accidents: when it happened and the optional photos the driver added
+  incident_date?: string;
+  photos?: string[];
+  // defect: the driver's note; accident: "What happened?"
   description: string;
   reported_by: string;
   reported_at: string;
   // Defects only come from a daily checklist: the item marked as a defect, with the driver's photos.
-  // Driver requests have no checklist.
+  // Accidents have no checklist.
   checklist_id?: number | null;
   status: DefectStatus;
   owner: string;

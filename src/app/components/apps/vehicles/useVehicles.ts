@@ -65,7 +65,7 @@ interface FleetData {
   locations: DriverLocation[];
 }
 
-const storageKey = (companyId?: number | null) => `vehicles_ui_mock_v9_${companyId ?? "0"}`;
+const storageKey = (companyId?: number | null) => `vehicles_ui_mock_v10_${companyId ?? "0"}`;
 
 // Saved settings and onboarding types are copied into the shared FLEET_RULES / ONBOARDING_TEMPLATES
 // so every screen and helper uses them (static UI; the API will return them later).
@@ -315,9 +315,9 @@ const sampleData = (): FleetData => {
   const defects: Defect[] = [
     defect({ id: 1, vehicle_id: 1, category: "Tyres and wheels", severity: "major", description: "Front left tyre looks low on air", reported_by: "Jamie Storeman", reported_at: today(), checklist_id: 3 }),
     defect({ id: 2, vehicle_id: 2, category: "Mirrors and windows", severity: "minor", description: "Passenger wing mirror glass cracked", reported_by: "Morgan Buyer", reported_at: inDays(-4), checklist_id: 5 }),
-    defect({ id: 3, vehicle_id: 5, type: "request", request_kind: "Vehicle unsafe / off road", can_drive: "no", category: "Other", severity: "critical", description: "Clutch slipping badly when pulling away", reported_by: "Sam Carpenter", reported_at: inDays(-3), status: "in_progress", owner: "Northside Garage", updated_by: SAMPLE_BY, updated_at: inDays(-3) }),
+    defect({ id: 3, vehicle_id: 2, type: "accident", category: "Accident", severity: "major", incident_date: inDays(-3), photos: ["accident-kp70-1.jpg", "accident-kp70-2.jpg"], description: "Reversed into a bollard at the Camden site. Rear bumper dented, lights fine. Nobody hurt.", reported_by: "Morgan Buyer", reported_at: inDays(-3), status: "in_progress", owner: "Northside Garage", updated_by: SAMPLE_BY, updated_at: inDays(-2) }),
     defect({ id: 4, vehicle_id: 3, category: "Mirrors and windows", severity: "minor", description: "Driver side wiper blade split", reported_by: "Sam Carpenter", reported_at: inDays(-70), checklist_id: 6, status: "resolved", owner: "Office", resolution: "New wiper blades fitted", updated_by: SAMPLE_BY, updated_at: inDays(-68) }),
-    defect({ id: 5, vehicle_id: 2, type: "request", request_kind: "Service needed", can_drive: "yes", category: "Other", severity: "minor", description: "Service light came on this morning", reported_by: "Morgan Buyer", reported_at: inDays(-1), preferred_date: inDays(6) }),
+    defect({ id: 5, vehicle_id: 1, type: "accident", category: "Accident", severity: "minor", incident_date: inDays(-1), photos: [], description: "Wing mirror clipped by a passing van while parked on Lordship Lane. Mirror still works.", reported_by: "Jamie Storeman", reported_at: inDays(-1) }),
   ];
 
   const licences: DriverLicence[] = [
@@ -828,7 +828,7 @@ export function useVehicles(companyId?: number | null, userName = "You") {
 
   const updateDefect = async (id: number, patch: Pick<Defect, "status" | "owner" | "resolution"> & { severity?: Defect["severity"] }) => {
     const defect = data.defects.find((x) => x.id === id);
-    if (defect) log([{ area: "defect", vehicle_id: defect.vehicle_id, action: `${defect.type === "request" ? "Request" : "Defect"} ${patch.status.replace("_", " ")}`, detail: `${regOf(defect.vehicle_id)} · ${defect.type === "request" ? defect.request_kind : defect.category}${patch.resolution ? ` · ${patch.resolution}` : ""}` }]);
+    if (defect) log([{ area: "defect", vehicle_id: defect.vehicle_id, action: `${defect.type === "accident" ? "Accident" : "Defect"} ${patch.status.replace("_", " ")}`, detail: `${regOf(defect.vehicle_id)} · ${defect.type === "accident" ? "Accident" : defect.category}${patch.resolution ? ` · ${patch.resolution}` : ""}` }]);
     update((data) => ({
       ...data,
       defects: data.defects.map((d) =>

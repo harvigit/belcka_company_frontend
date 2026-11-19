@@ -136,10 +136,13 @@ const DriversPage: React.FC = () => {
         expenses: store.events
           .filter((e) => e.submitted_by === name && e.date >= from && countsAsCost(e))
           .reduce((s, e) => s + (e.cost ?? 0), 0),
-        accidents: theirs.filter((e) => e.kind === "accident").length,
+        // accidents the driver recorded in the app, plus any the office added on the vehicle
+        accidents:
+          store.defects.filter((d) => d.type === "accident" && d.reported_by === name && (d.incident_date ?? d.reported_at) >= from).length +
+          theirs.filter((e) => e.kind === "accident").length,
       };
     });
-  }, [store.driverLogs, store.licences, store.reimbursements, store.events, vehicles, employees, from]);
+  }, [store.driverLogs, store.licences, store.reimbursements, store.events, store.defects, vehicles, employees, from]);
 
   const counts = {
     all: drivers.length,
