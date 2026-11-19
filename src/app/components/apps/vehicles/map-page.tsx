@@ -3,37 +3,140 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
+  Button,
   ButtonBase,
-  Chip,
   CircularProgress,
   Divider,
   Grid,
+  IconButton,
   Paper,
   Stack,
   Typography,
 } from "@mui/material";
-import { GoogleMap, InfoWindow, Marker, Polyline, useJsApiLoader } from "@react-google-maps/api";
+import {
+  IconCamera,
+  IconCarCrash,
+  IconChecklist,
+  IconGasStation,
+  IconGauge,
+  IconX,
+  IconReceipt,
+  IconRoute,
+  IconWheel,
+} from "@tabler/icons-react";
+import { GoogleMap, InfoWindow, OverlayViewF, OVERLAY_MOUSE_TARGET, Polyline, useJsApiLoader } from "@react-google-maps/api";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
+import ChecklistDialog from "./checklist-dialog";
 import FleetNav from "./fleet-nav";
 import { DriverName, NoCompany, RegPlate } from "./shared";
-import { DriverLocation } from "./types";
+import { DriverLocation, LOCATION_KIND, LocationKind } from "./types";
 import { useVehicles } from "./useVehicles";
 
 dayjs.extend(relativeTime);
 
 const LONDON = { lat: 51.5574, lng: -0.0906 };
-const initials = (name: string) =>
-  name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("");
+const ALERT_COLOR = LOCATION_KIND.accident.color;
+
+const KIND_ICON: Record<LocationKind, React.ElementType> = {
+  daily_check: IconChecklist,
+  fuel: IconGasStation,
+  mileage: IconGauge,
+  tyre_check: IconWheel,
+  photo_check: IconCamera,
+  accident: IconCarCrash,
+  expense: IconReceipt,
+  mileage_claim: IconRoute,
+};
+
+const OPEN_LABEL: Record<LocationKind, string> = {
+  daily_check: "Open checklist",
+  fuel: "Open fuel log",
+  mileage: "Open mileage",
+  tyre_check: "Open tyres",
+  photo_check: "Open vehicle",
+  accident: "Open accident report",
+  expense: "Open expenses",
+  mileage_claim: "Open expenses",
+};
+
+const VEHICLE_TAB: Partial<Record<LocationKind, string>> = { fuel: "fuel", mileage: "mileage", tyre_check: "tyres" };
+
+const colorOf = (p: Pick<DriverLocation, "kind" | "alert">) => (p.alert ? ALERT_COLOR : LOCATION_KIND[p.kind].color);
+
+/** Round coloured badge with the icon of what was recorded. */
+const KindBadge: React.FC<{ point: Pick<DriverLocation, "kind" | "alert">; size?: number }> = ({ point, size = 28 }) => {
+  const Icon = KIND_ICON[point.kind];
+  return (
+    <Box
+      sx={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        backgroundColor: colorOf(point),
+        color: "#fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <Icon size={Math.round(size * 0.58)} stroke={2} />
+    </Box>
+  );
+};
+
+/** Pin on the map: badge + a short label (plate or stop number), pointing at the place. */
+const MapPin: React.FC<{ point: DriverLocation; label: string; active: boolean; onClick: () => void }> = ({
+  point,
+  label,
+  active,
+  onClick,
+}) => (
+  <Box sx={{ position: "relative", pb: "7px", transform: active ? "scale(1.1)" : undefined, transformOrigin: "bottom center" }}>
+    <ButtonBase
+      onClick={onClick}
+      title={`${point.driver_name} · ${LOCATION_KIND[point.kind].label}`}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 0.5,
+        pl: 0.25,
+        pr: 1,
+        py: 0.25,
+        borderRadius: 99,
+        backgroundColor: "#fff",
+        border: `2px solid ${colorOf(point)}`,
+        boxShadow: active ? 4 : 2,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <KindBadge point={point} size={24} />
+      <Typography variant="caption" fontWeight={700} color="#111">
+        {label}
+      </Typography>
+    </ButtonBase>
+    {/* little pointer under the pill */}
+    <Box
+      sx={{
+        position: "absolute",
+        bottom: 0,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: 0,
+        height: 0,
+        borderLeft: "6px solid transparent",
+        borderRight: "6px solid transparent",
+        borderTop: `8px solid ${colorOf(point)}`,
+      }}
+    />
+  </Box>
+);
 
 // Dashed line between recorded stops (it is not the driven route).
 const DASHED: google.maps.PolylineOptions = {
@@ -42,6 +145,7 @@ const DASHED: google.maps.PolylineOptions = {
 };
 
 const MapPage: React.FC = () => {
+  const router = useRouter();
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null; name?: string | null };
   const store = useVehicles(user?.company_id, user?.name || "You");
@@ -54,6 +158,7 @@ const MapPage: React.FC = () => {
   const [driverId, setDriverId] = useState<number | null>(null);
   const [day, setDay] = useState(dayjs().format("YYYY-MM-DD"));
   const [openPoint, setOpenPoint] = useState<number | null>(null);
+  const [checklistId, setChecklistId] = useState<number | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
 
   // Each driver's latest point.
@@ -92,11 +197,34 @@ const MapPage: React.FC = () => {
     }
     const bounds = new google.maps.LatLngBounds();
     shown.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }));
-    map.fitBounds(bounds, 60);
+    map.fitBounds(bounds, 80);
   }, [map, isLoaded, shown]);
 
   const plate = (id: number | null) => vehicles.find((v) => v.id === id)?.registration;
   const selected = latest.find((p) => p.driver_id === driverId);
+  const checklist = store.checklists.find((c) => c.id === checklistId) ?? null;
+
+  // Open the record this place came from.
+  const openRecord = (p: DriverLocation) => {
+    if (p.kind === "daily_check" && p.checklist_id) {
+      setChecklistId(p.checklist_id);
+      return;
+    }
+    if (p.kind === "accident" && p.defect_id) {
+      router.push(`/apps/vehicles/action-centre?defect=${p.defect_id}`);
+      return;
+    }
+    if (p.kind === "expense" || p.kind === "mileage_claim") {
+      router.push("/apps/vehicles/expenses");
+      return;
+    }
+    if (p.vehicle_id) {
+      const tab = VEHICLE_TAB[p.kind];
+      router.push(`/apps/vehicles/${p.vehicle_id}${tab ? `?tab=${tab}` : ""}`);
+    }
+  };
+
+  const describe = (p: DriverLocation) => `${LOCATION_KIND[p.kind].label}${p.action ? ` · ${p.action}` : ""}`;
 
   if (store.noCompany) return <NoCompany />;
 
@@ -109,8 +237,9 @@ const MapPage: React.FC = () => {
           Map
         </Typography>
         <Typography variant="body2" color="textSecondary">
-          Where drivers last recorded something in the app (checklist, fuel, expense, defect). The dashed line joins
-          a driver&apos;s stops on one day; it is not the exact route driven.
+          Where drivers recorded something in the app: daily check, fuel, mileage, tyre or photo check, accident or
+          expense. A place is saved only when the driver records something, so the dashed line joins one day&apos;s
+          stops and is not the exact route driven.
         </Typography>
       </Box>
 
@@ -164,14 +293,17 @@ const MapPage: React.FC = () => {
                       backgroundColor: active ? "primary.light" : "transparent",
                     }}
                   >
-                    <Stack spacing={0.5} width="100%">
+                    <Stack spacing={0.75} width="100%">
                       <Stack direction="row" justifyContent="space-between" alignItems="center">
                         <DriverName name={p.driver_name} />
                         {plate(p.vehicle_id) && <RegPlate registration={plate(p.vehicle_id) as string} />}
                       </Stack>
-                      <Typography variant="caption" color="textSecondary">
-                        {p.action} · {p.place} · {dayjs(p.at).fromNow()}
-                      </Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <KindBadge point={p} size={20} />
+                        <Typography variant="caption" color="textSecondary">
+                          {describe(p)} · {p.place} · {dayjs(p.at).fromNow()}
+                        </Typography>
+                      </Stack>
                     </Stack>
                   </ButtonBase>
                   <Divider />
@@ -196,18 +328,27 @@ const MapPage: React.FC = () => {
                     {selected.driver_name} recorded nothing on {dayjs(day).format("DD/MM/YYYY")}.
                   </Typography>
                 ) : (
-                  <Stack spacing={1}>
+                  <Stack spacing={0.5}>
                     {stops.map((s, i) => (
                       <ButtonBase
                         key={s.id}
                         onClick={() => setOpenPoint(s.id)}
-                        sx={{ justifyContent: "flex-start", textAlign: "left", borderRadius: 1, p: 0.5 }}
+                        sx={{
+                          justifyContent: "flex-start",
+                          textAlign: "left",
+                          borderRadius: 1,
+                          p: 0.75,
+                          backgroundColor: openPoint === s.id ? "action.selected" : "transparent",
+                        }}
                       >
                         <Stack direction="row" spacing={1.5} alignItems="center">
-                          <Chip size="small" color="primary" label={i + 1} sx={{ minWidth: 28 }} />
+                          <Typography variant="caption" fontWeight={700} color="textSecondary" width={14} textAlign="right">
+                            {i + 1}
+                          </Typography>
+                          <KindBadge point={s} />
                           <Box>
                             <Typography variant="body2" fontWeight={600}>
-                              {dayjs(s.at).format("HH:mm")} · {s.action}
+                              {dayjs(s.at).format("HH:mm")} · {describe(s)}
                             </Typography>
                             <Typography variant="caption" color="textSecondary">
                               {s.place}
@@ -257,39 +398,101 @@ const MapPage: React.FC = () => {
                   <Polyline path={stops.map((s) => ({ lat: s.lat, lng: s.lng }))} options={DASHED} />
                 )}
                 {shown.map((p, i) => (
-                  <Marker
+                  <OverlayViewF
                     key={p.id}
                     position={{ lat: p.lat, lng: p.lng }}
-                    label={{
-                      text: driverId === null ? initials(p.driver_name) : String(i + 1),
-                      color: "#ffffff",
-                      fontSize: "11px",
-                      fontWeight: "700",
-                    }}
-                    onClick={() => setOpenPoint(p.id)}
-                  />
+                    mapPaneName={OVERLAY_MOUSE_TARGET}
+                    // anchor the pin's pointer on the place
+                    getPixelPositionOffset={(w, h) => ({ x: -w / 2, y: -h })}
+                    zIndex={openPoint === p.id ? 10 : 1}
+                  >
+                    <MapPin
+                      point={p}
+                      label={driverId === null ? plate(p.vehicle_id) ?? p.driver_name : String(i + 1)}
+                      active={openPoint === p.id}
+                      onClick={() => setOpenPoint(p.id)}
+                    />
+                  </OverlayViewF>
                 ))}
                 {shown
                   .filter((p) => p.id === openPoint)
                   .map((p) => (
-                    <InfoWindow key={p.id} position={{ lat: p.lat, lng: p.lng }} onCloseClick={() => setOpenPoint(null)}>
-                      <Box sx={{ minWidth: 180 }}>
-                        <Typography variant="body2" fontWeight={700}>
+                    <InfoWindow
+                      key={p.id}
+                      position={{ lat: p.lat, lng: p.lng }}
+                      onCloseClick={() => setOpenPoint(null)}
+                      // own header: Google's header row leaves a big gap around the close button
+                      options={{ pixelOffset: new google.maps.Size(0, -40), headerDisabled: true }}
+                    >
+                      <Box sx={{ minWidth: 210, maxWidth: 260 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" mb={0.75}>
+                          <KindBadge point={p} size={22} />
+                          <Typography variant="body2" fontWeight={700} flex={1}>
+                            {LOCATION_KIND[p.kind].label}
+                          </Typography>
+                          <IconButton size="small" aria-label="Close" onClick={() => setOpenPoint(null)} sx={{ m: -0.5 }}>
+                            <IconX size={16} />
+                          </IconButton>
+                        </Stack>
+                        {p.action && (
+                          <Typography variant="body2" lineHeight={1.4}>
+                            {p.action}
+                          </Typography>
+                        )}
+                        <Typography variant="body2" color="textSecondary" lineHeight={1.4}>
                           {p.driver_name}
                           {plate(p.vehicle_id) ? ` · ${plate(p.vehicle_id)}` : ""}
                         </Typography>
-                        <Typography variant="body2">{p.action}</Typography>
-                        <Typography variant="caption" color="textSecondary">
+                        <Typography variant="caption" color="textSecondary" display="block">
                           {p.place} · {dayjs(p.at).format("DD/MM/YYYY HH:mm")}
                         </Typography>
+                        <Button size="small" variant="outlined" fullWidth sx={{ mt: 1 }} onClick={() => openRecord(p)}>
+                          {OPEN_LABEL[p.kind]}
+                        </Button>
                       </Box>
                     </InfoWindow>
                   ))}
               </GoogleMap>
             )}
+
+            {/* What the icons mean */}
+            {isLoaded && !loadError && process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY && (
+              <Paper
+                elevation={2}
+                sx={{
+                  position: "absolute",
+                  left: 10,
+                  bottom: 24,
+                  p: 1,
+                  borderRadius: 2,
+                  maxWidth: { xs: "calc(100% - 20px)", sm: 420 },
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 1,
+                  opacity: 0.95,
+                }}
+              >
+                {(Object.keys(LOCATION_KIND) as LocationKind[]).map((k) => (
+                  <Stack key={k} direction="row" spacing={0.5} alignItems="center">
+                    <KindBadge point={{ kind: k }} size={18} />
+                    <Typography variant="caption">{LOCATION_KIND[k].label}</Typography>
+                  </Stack>
+                ))}
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <KindBadge point={{ kind: "daily_check", alert: true }} size={18} />
+                  <Typography variant="caption">Defect found</Typography>
+                </Stack>
+              </Paper>
+            )}
           </Paper>
         </Grid>
       </Grid>
+
+      <ChecklistDialog
+        checklist={checklist}
+        vehicle={vehicles.find((v) => v.id === checklist?.vehicle_id) ?? null}
+        onClose={() => setChecklistId(null)}
+      />
     </Box>
   );
 };
