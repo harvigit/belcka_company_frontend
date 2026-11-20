@@ -23,12 +23,11 @@ import BlankCard from "@/app/components/shared/BlankCard";
 import ConfirmDialog from "../../inventory-new/shared/ConfirmDialog";
 import AssignDriverDialog from "../assign-dialog";
 import { NoCompany, RegPlate } from "../shared";
-import { EventKind, EVENT_KINDS, formatDate, fuelLabel, money, nextDue, DUE_CHIP, statusInfo, typeLabel, VehicleEvent } from "../types";
+import { EventKind, formatDate, fuelLabel, nextDue, DUE_CHIP, statusInfo, typeLabel } from "../types";
 import { DriverOption, useVehicles } from "../useVehicles";
 import { useDrivers } from "../useDrivers";
 import { useVehicleEditor } from "../useVehicleEditor";
 import Overview from "./overview";
-import { ActionRow, buildActions } from "../actions";
 import { ActivityTab, FuelTab, MaintenanceTab, MileageTab, TyresTab } from "./history";
 import DocumentsTab from "./documents";
 import DriversTab from "./drivers";
@@ -36,6 +35,8 @@ import PermitsTab from "./permits";
 import OnboardingTab from "./onboarding";
 import InvoicesTab from "./invoices";
 import EventDrawer from "./event-drawer";
+import TyreCheckDialog from "./tyre-check-dialog";
+import PhotoChecksTab from "./photo-checks";
 
 const TABS = [
   { value: "overview", label: "Overview" },
@@ -44,6 +45,7 @@ const TABS = [
   { value: "fuel", label: "Fuel" },
   { value: "mileage", label: "Mileage" },
   { value: "permits", label: "Parking permits" },
+  { value: "photos", label: "Photo checks" },
   { value: "onboarding", label: "Onboarding" },
   { value: "invoices", label: "Invoices" },
   { value: "documents", label: "Documents" },
@@ -75,8 +77,6 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
     TABS.some((t) => t.value === initialTab) ? (initialTab as TabValue) : "overview",
   );
   const [addKind, setAddKind] = useState<EventKind | null>(null);
-  const [editingEvent, setEditingEvent] = useState<VehicleEvent | null>(null);
-  const [deletingEvent, setDeletingEvent] = useState<VehicleEvent | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
 
@@ -134,7 +134,7 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
     setAssignOpen(false);
   };
 
-  const tabProps = { vehicle, events, onAdd: setAddKind, onEdit: setEditingEvent, onDelete: setDeletingEvent, readOnly };
+  const tabProps = { vehicle, events, onAdd: setAddKind, readOnly };
 
   return (
     <BlankCard>
@@ -254,15 +254,8 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
               onAssign={() => setAssignOpen(true)}
               onEdit={() => editor.openEdit(vehicle)}
               onUpdate={(patch) => store.updateVehicle(vehicle.id, patch)}
-              onOpenTab={(value) => changeTab(value as TabValue)}
-              attention={buildActions(store).filter((a) => a.vehicle?.id === vehicle.id)}
-              onOpenAction={(a: ActionRow) => {
-                if (a.target.kind === "vehicle") changeTab(a.target.tab as TabValue);
-                else if (a.target.kind === "drivers") router.push("/apps/vehicles/drivers");
-                else if (a.target.kind === "conflicts") router.push("/apps/vehicles/road-costs?tab=conflicts");
-                else if (a.target.kind === "expenses") router.push("/apps/vehicles/expenses");
-                else router.push("/apps/vehicles/action-centre");
-              }}
+              onUpdateMileage={() => setAddKind("mileage")}
+              onAddAccident={() => setAddKind("accident")}
             />
           )}
           {tab === "maintenance" && <MaintenanceTab {...tabProps} />}
@@ -285,6 +278,14 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
               onRemove={store.removePermit}
             />
           )}
+          {tab === "photos" && (
+            <PhotoChecksTab
+              vehicle={vehicle}
+              events={events}
+              readOnly={readOnly}
+              onAskNow={() => store.askPhotoCheck(vehicle.id)}
+            />
+          )}
           {tab === "onboarding" && (
             <OnboardingTab
               vehicle={vehicle}
@@ -303,9 +304,6 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
               onAdd={store.addEvent}
               onAttach={store.attachFile}
               onOpenTab={(value) => changeTab(value as TabValue)}
-              onEdit={setEditingEvent}
-              onDelete={setDeletingEvent}
-              onUpdate={store.updateEvent}
             />
           )}
           {tab === "documents" && (
@@ -339,36 +337,20 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
 
       {editor.drawer}
 
-      <EventDrawer
-        kind={addKind}
-        editing={editingEvent}
+      <TyreCheckDialog
+        open={addKind === "tyre_check"}
         vehicle={vehicle}
         events={events}
-        onClose={() => {
-          setAddKind(null);
-          setEditingEvent(null);
-        }}
-        onSave={(data) => (editingEvent ? store.updateEvent(editingEvent.id, data) : store.addEvent(data))}
+        onClose={() => setAddKind(null)}
+        onSave={store.addEvent}
       />
 
-      <ConfirmDialog
-        open={!!deletingEvent}
-        title="Delete record"
-        message={
-          deletingEvent
-            ? `Delete ${EVENT_KINDS[deletingEvent.kind].label.toLowerCase()} of ${formatDate(deletingEvent.date)}${
-                deletingEvent.cost ? ` (${money(deletingEvent.cost)})` : ""
-              }? The mileage and due dates are worked out again from the other records. This shows in the activity log.`
-            : ""
-        }
-        confirmLabel="Delete"
-        onClose={() => setDeletingEvent(null)}
-        onConfirm={async () => {
-          if (!deletingEvent) return;
-          await store.deleteEvent(deletingEvent.id);
-          toast.success("Record deleted.");
-          setDeletingEvent(null);
-        }}
+      <EventDrawer
+        kind={addKind === "tyre_check" ? null : addKind}
+        vehicle={vehicle}
+        events={events}
+        onClose={() => setAddKind(null)}
+        onSave={store.addEvent}
       />
 
       <AssignDriverDialog

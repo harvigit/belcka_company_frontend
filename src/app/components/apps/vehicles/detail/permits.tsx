@@ -2,14 +2,11 @@
 import React, { useState } from "react";
 import { Alert, Box, Button, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { IconCheck, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
-import dayjs from "dayjs";
 import toast from "react-hot-toast";
-import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
-import FormDrawer from "../../inventory-new/shared/FormDrawer";
-import FormField from "../../inventory-new/shared/FormField";
 import ConfirmDialog from "../../inventory-new/shared/ConfirmDialog";
 import { formatDate, ParkingPermit, PERMIT_STATE, permitState, Vehicle } from "../types";
 import { NewPermit } from "../useVehicles";
+import { PERMIT_ORDER, PermitDrawer, PermitRejectDialog } from "../permit-forms";
 import { RecordTable, Section } from "./common";
 
 interface PermitsTabProps {
@@ -21,57 +18,15 @@ interface PermitsTabProps {
   onRemove: (id: number) => Promise<void>;
 }
 
-const blank = () => ({
-  zone: "",
-  issuer: "",
-  reference: "",
-  valid_from: dayjs().format("YYYY-MM-DD"),
-  valid_until: dayjs().add(1, "year").subtract(1, "day").format("YYYY-MM-DD"),
-});
-
 const PermitsTab: React.FC<PermitsTabProps> = ({ vehicle, permits, readOnly, onAdd, onDecide, onRemove }) => {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(blank);
-  const [showErrors, setShowErrors] = useState(false);
   const [toReject, setToReject] = useState<ParkingPermit | null>(null);
-  const [reason, setReason] = useState("");
   const [toRemove, setToRemove] = useState<ParkingPermit | null>(null);
 
-  const order = { pending: 0, expiring: 1, active: 2, upcoming: 3, expired: 4, rejected: 5 } as const;
   const rows = [...permits].sort(
-    (a, b) => order[permitState(a)] - order[permitState(b)] || b.valid_until.localeCompare(a.valid_until),
+    (a, b) => PERMIT_ORDER[permitState(a)] - PERMIT_ORDER[permitState(b)] || b.valid_until.localeCompare(a.valid_until),
   );
   const pending = permits.filter((p) => p.status === "pending");
-
-  const errors = {
-    zone: showErrors && !form.zone.trim() ? "Enter the zone or car park." : "",
-    issuer: showErrors && !form.issuer.trim() ? "Enter who issued it." : "",
-    valid_until:
-      form.valid_until && form.valid_from && form.valid_until < form.valid_from
-        ? "Must be after the start date."
-        : showErrors && !form.valid_until
-          ? "Choose the end date."
-          : "",
-  };
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setShowErrors(true);
-    if (!form.zone.trim() || !form.issuer.trim() || !form.valid_from || !form.valid_until || form.valid_until < form.valid_from) {
-      toast.error("Please check the highlighted fields.");
-      return;
-    }
-    await onAdd({
-      vehicle_id: vehicle.id,
-      zone: form.zone.trim(),
-      issuer: form.issuer.trim(),
-      reference: form.reference.trim(),
-      valid_from: form.valid_from,
-      valid_until: form.valid_until,
-    });
-    toast.success(`Permit ${form.zone.trim()} added.`);
-    setOpen(false);
-  };
 
   return (
     <Box display="flex" flexDirection="column" gap={2}>
@@ -88,11 +43,7 @@ const PermitsTab: React.FC<PermitsTabProps> = ({ vehicle, permits, readOnly, onA
             <Button
               variant="contained"
               startIcon={<IconPlus size={16} />}
-              onClick={() => {
-                setForm(blank());
-                setShowErrors(false);
-                setOpen(true);
-              }}
+              onClick={() => setOpen(true)}
             >
               Add permit
             </Button>
@@ -163,10 +114,7 @@ const PermitsTab: React.FC<PermitsTabProps> = ({ vehicle, permits, readOnly, onA
                           <IconButton
                             color="error"
                             size="small"
-                            onClick={() => {
-                              setReason("");
-                              setToReject(p);
-                            }}
+                            onClick={() => setToReject(p)}
                           >
                             <IconX size={18} />
                           </IconButton>
@@ -185,104 +133,13 @@ const PermitsTab: React.FC<PermitsTabProps> = ({ vehicle, permits, readOnly, onA
         />
       </Section>
 
-      <FormDrawer
-        open={open}
-        title={`Add parking permit · ${vehicle.registration}`}
-        onClose={() => setOpen(false)}
-        onSubmit={submit}
-        isSaving={false}
-        submitLabel="Add permit"
-      >
-        <Typography variant="body2" color="textSecondary">
-          A vehicle can have more than one permit. Permits you add here are active straight away.
-        </Typography>
-        <FormField label="Zone or car park *">
-          <CustomTextField
-            value={form.zone}
-            onChange={(e: any) => setForm((f) => ({ ...f, zone: e.target.value.slice(0, 80) }))}
-            placeholder="Camden CA-F"
-            fullWidth
-            error={!!errors.zone}
-            helperText={errors.zone}
-          />
-        </FormField>
-        <Stack direction="row" spacing={2}>
-          <Box flex={1}>
-            <FormField label="Issued by *">
-              <CustomTextField
-                value={form.issuer}
-                onChange={(e: any) => setForm((f) => ({ ...f, issuer: e.target.value.slice(0, 80) }))}
-                placeholder="Camden Council"
-                fullWidth
-                error={!!errors.issuer}
-                helperText={errors.issuer}
-              />
-            </FormField>
-          </Box>
-          <Box flex={1}>
-            <FormField label="Permit reference">
-              <CustomTextField
-                value={form.reference}
-                onChange={(e: any) => setForm((f) => ({ ...f, reference: e.target.value.slice(0, 40) }))}
-                fullWidth
-              />
-            </FormField>
-          </Box>
-        </Stack>
-        <Stack direction="row" spacing={2}>
-          <Box flex={1}>
-            <FormField label="Valid from *">
-              <CustomTextField
-                type="date"
-                value={form.valid_from}
-                onChange={(e: any) => setForm((f) => ({ ...f, valid_from: e.target.value }))}
-                fullWidth
-              />
-            </FormField>
-          </Box>
-          <Box flex={1}>
-            <FormField label="Valid until *">
-              <CustomTextField
-                type="date"
-                value={form.valid_until}
-                onChange={(e: any) => setForm((f) => ({ ...f, valid_until: e.target.value }))}
-                fullWidth
-                error={!!errors.valid_until}
-                helperText={errors.valid_until}
-              />
-            </FormField>
-          </Box>
-        </Stack>
-      </FormDrawer>
+      <PermitDrawer open={open} vehicle={vehicle} onClose={() => setOpen(false)} onAdd={onAdd} />
 
-      <ConfirmDialog
-        open={!!toReject}
-        title="Reject permit request"
-        message={toReject ? `Reject ${toReject.zone}? The driver sees your reason in the app.` : ""}
-        confirmLabel="Reject"
+      <PermitRejectDialog
+        permit={toReject}
         onClose={() => setToReject(null)}
-        onConfirm={async () => {
-          if (!toReject) return;
-          if (!reason.trim()) {
-            toast.error("Please add a reason for rejecting!");
-            return;
-          }
-          await onDecide(toReject.id, false, reason.trim());
-          toast.success(`${toReject.zone} rejected.`);
-          setToReject(null);
-        }}
-      >
-        <CustomTextField
-          autoFocus
-          fullWidth
-          multiline
-          minRows={2}
-          placeholder="Reason..."
-          value={reason}
-          onChange={(e: any) => setReason(e.target.value.slice(0, 200))}
-          sx={{ mt: 2 }}
-        />
-      </ConfirmDialog>
+        onReject={(id, reason) => onDecide(id, false, reason)}
+      />
 
       <ConfirmDialog
         open={!!toRemove}

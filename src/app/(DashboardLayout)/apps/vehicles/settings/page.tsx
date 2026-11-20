@@ -3,6 +3,7 @@
 import React from "react";
 import PageContainer from "@/app/components/container/PageContainer";
 import BlankCard from "@/app/components/shared/BlankCard";
+import FleetTheme from "@/app/components/apps/vehicles/fleet-theme";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import SettingsPage from "@/app/components/apps/vehicles/settings-page";
 
@@ -11,7 +12,9 @@ const VehicleSettingsPage = () => (
   <PageContainer title="Fleet settings" description="Fleet rules and onboarding types">
     <PermissionGuard permission="vehicles">
       <BlankCard>
-        <SettingsPage />
+        <FleetTheme>
+          <SettingsPage />
+        </FleetTheme>
       </BlankCard>
     </PermissionGuard>
   </PageContainer>

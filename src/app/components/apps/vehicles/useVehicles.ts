@@ -26,6 +26,10 @@ import {
   ImportBatch,
   ImportConflict,
   DriverLocation,
+  FleetPlace,
+  PLACE_KIND,
+  PHOTO_SHOTS,
+  randomPhotoCheckDate,
   Vehicle,
   VehicleDocument,
   VehicleEvent,
@@ -63,9 +67,10 @@ interface FleetData {
   conflicts: ImportConflict[];
   activities: Activity[];
   locations: DriverLocation[];
+  places: FleetPlace[];
 }
 
-const storageKey = (companyId?: number | null) => `vehicles_ui_mock_v12_${companyId ?? "0"}`;
+const storageKey = (companyId?: number | null) => `vehicles_ui_mock_v17_${companyId ?? "0"}`;
 
 // Saved settings and onboarding types are copied into the shared FLEET_RULES / ONBOARDING_TEMPLATES
 // so every screen and helper uses them (static UI; the API will return them later).
@@ -129,6 +134,7 @@ const sampleData = (): FleetData => {
       tax_due: inDays(95),
       service_due: inDays(-12),
       tyre_check_due: inDays(-78),
+      next_photo_check: inDays(10),
       weekly_fuel_limit: 60,
       fuel_use_min: 5,
       fuel_use_max: 6.5,
@@ -145,6 +151,7 @@ const sampleData = (): FleetData => {
       tax_due: inDays(27),
       service_due: inDays(300),
       tyre_check_due: inDays(162),
+      next_photo_check: inDays(0),
       created_at: inDays(-380),
     }),
     vehicle({
@@ -159,13 +166,14 @@ const sampleData = (): FleetData => {
       service_due: inDays(330),
       tyre_check_due: inDays(152),
       gps_tracker: "TRK-0031",
+      next_photo_check: inDays(69),
       created_at: inDays(-200),
       vin: "WBA8E1C50JA123456",
       first_registered: "2023-03-14",
       v5c_reference: "1234 5678 9012",
       registered_keeper: "Belcka Ltd",
       engine: "Diesel · 1995 cc",
-      parking_place: "Head office car park, bay 12",
+      parking: { name: "Head office car park, bay 12", address: "12 Seven Sisters Rd, London N7 6AE", lat: 51.5615, lng: -0.1105 },
     }),
     vehicle({
       id: 4,
@@ -192,6 +200,7 @@ const sampleData = (): FleetData => {
       service_due: inDays(5),
       tyre_check_due: inDays(100),
       notes: "At Northside Garage for clutch repair.",
+      next_photo_check: inDays(40),
       created_at: inDays(-700),
     }),
   ];
@@ -213,7 +222,7 @@ const sampleData = (): FleetData => {
     // LX21 ABC
     ev({ vehicle_id: 1, kind: "service", date: inDays(-377), mileage: 36500, supplier: "Northside Garage", invoice_no: "NG-2014", cost: 268, note: "Full service" }),
     ev({ vehicle_id: 1, kind: "mot", date: inDays(-341), mileage: 36900, supplier: "City MOT Centre", cost: 54.85, passed: true, note: "Advisory: rear brake pads wearing" }),
-    ev({ vehicle_id: 1, kind: "tyre_change", date: inDays(-260), mileage: 39800, supplier: "Kwik Fit", invoice_no: "KF-88213", cost: 412, note: "2 front tyres replaced", tread: { FL: 7, FR: 7, RL: 5, RR: 5 } }),
+    ev({ vehicle_id: 1, kind: "tyre_change", date: inDays(-260), mileage: 39800, supplier: "Kwik Fit", invoice_no: "KF-88213", cost: 412, note: "2 front tyres replaced", lowest_tread: 5 }),
     ev({ vehicle_id: 1, kind: "mileage", date: inDays(-95), mileage: 45100 }),
     ev({ vehicle_id: 1, kind: "fuel", date: inDays(-22), mileage: 47420, litres: 58.2, cost: 86.72, supplier: "BP" }),
     ev({ vehicle_id: 1, kind: "fuel", date: inDays(-10), mileage: 47930, litres: 55.1, cost: 81.55, supplier: "Shell", card: "424421", import_id: "fuel-1" }),
@@ -233,7 +242,9 @@ const sampleData = (): FleetData => {
     // KP70 XYZ
     ev({ vehicle_id: 2, kind: "mot", date: inDays(-225), mileage: 58200, supplier: "City MOT Centre", cost: 54.85, passed: true }),
     ev({ vehicle_id: 2, kind: "service", date: inDays(-65), mileage: 60900, supplier: "Northside Garage", invoice_no: "NG-2377", cost: 249, note: "Interim service" }),
-    ev({ vehicle_id: 2, kind: "tyre_check", date: inDays(-20), mileage: 61500, tread: { FL: 5, FR: 5, RL: 6, RR: 6 } }),
+    ev({ vehicle_id: 2, kind: "photo_check", date: inDays(-88), mileage: 60200, created_by: "Morgan Buyer", note: "Small scratch on the rear bumper, was there before", photos: PHOTO_SHOTS.map((v) => `kp70-${v.toLowerCase().replace(/ /g, "-")}.jpg`), lowest_tread: 5.5 }),
+    ev({ vehicle_id: 3, kind: "photo_check", date: inDays(-25), mileage: 22050, created_by: "Sam Carpenter", note: "No new damage", photos: PHOTO_SHOTS.map((v) => `bd23-${v.toLowerCase().replace(/ /g, "-")}.jpg`) }),
+    ev({ vehicle_id: 2, kind: "tyre_check", date: inDays(-20), mileage: 61500, tread: { FL: 5, FR: 5, RL: 6, RR: 6 }, wheels: { FL: { state: "worn", photo: "kp70-front-left-tyre.jpg" }, FR: { state: "worn" }, RL: { state: "ok" }, RR: { state: "ok" } }, note: "Fronts wearing on the outer edge" }),
     ev({ vehicle_id: 2, kind: "fuel", date: inDays(-6), mileage: 61840, litres: 44, cost: 65.12, supplier: "Esso", card: "427730", import_id: "fuel-1" }),
     // BD23 MNG
     ev({ vehicle_id: 3, kind: "mot", date: inDays(-145), mileage: 21000, supplier: "City MOT Centre", cost: 54.85, passed: true }),
@@ -282,6 +293,7 @@ const sampleData = (): FleetData => {
     vehicle_id: vehicleId,
     driver_name: driver,
     date,
+    submitted_at: dayjs(`${date}T${({ 1: "07:40", 2: "08:00", 3: "07:35", 4: "08:05" } as Record<number, string>)[id] ?? "07:30"}`).toISOString(),
     mileage,
     items: DAILY_CHECK_ITEMS.map((item) => ({
       item,
@@ -428,6 +440,13 @@ const sampleData = (): FleetData => {
         ...extra,
       }));
     })(),
+    places: [
+      { id: 1, name: "Head office", kind: "office", address: "12 Seven Sisters Rd, London N7 6AE", lat: 51.5615, lng: -0.1105, note: "", created_by: SAMPLE_BY, created_at: inDays(-300) },
+      { id: 2, name: "Shell Holloway Road", kind: "fuel", address: "412 Holloway Rd, London N7 6PZ", lat: 51.5555, lng: -0.1155, note: "Company fuel card accepted", created_by: SAMPLE_BY, created_at: inDays(-200) },
+      { id: 3, name: "North Middlesex Hospital (A&E)", kind: "hospital", address: "Sterling Way, London N18 1QX", lat: 51.6135, lng: -0.0735, note: "Nearest A&E for the Haringey sites", created_by: SAMPLE_BY, created_at: inDays(-150) },
+      { id: 4, name: "Northside Garage", kind: "garage", address: "Lordship Lane, London N17", lat: 51.5965, lng: -0.0845, note: "Service and repairs", created_by: SAMPLE_BY, created_at: inDays(-120) },
+      { id: 5, name: "Haringey site CF114", kind: "site", address: "1 Bedwell Road, London N17 7AH", lat: 51.5869, lng: -0.1035, note: "", created_by: SAMPLE_BY, created_at: inDays(-60) },
+    ],
     activities: [
       { id: 1, at: dayjs().subtract(400, "day").hour(9).toISOString(), by: SAMPLE_BY, area: "vehicle", vehicle_id: 1, action: "Vehicle added", detail: "LX21 ABC · Ford Transit Custom" },
       { id: 2, at: dayjs().subtract(120, "day").hour(10).toISOString(), by: SAMPLE_BY, area: "driver", vehicle_id: 2, action: "Driver assigned", detail: "KP70 XYZ · Morgan Buyer" },
@@ -496,6 +515,8 @@ const applyEvent = (v: Vehicle, e: VehicleEvent): Vehicle => {
   if (e.kind === "mot" && e.passed) next.mot_due = later(next.mot_due, addMonths(e.date, FLEET_RULES.motValidMonths));
   if (e.kind === "tyre_check" || e.kind === "tyre_change")
     next.tyre_check_due = later(next.tyre_check_due, addMonths(e.date, FLEET_RULES.tyreCheckMonths));
+  // a photo check sets the next one at a random day inside the period
+  if (e.kind === "photo_check" && v.type !== "private") next.next_photo_check = randomPhotoCheckDate(e.date);
   return next;
 };
 
@@ -540,6 +561,7 @@ export function useVehicles(companyId?: number | null, userName = "You") {
     conflicts: [],
     activities: [],
     locations: [],
+    places: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -618,7 +640,17 @@ export function useVehicles(companyId?: number | null, userName = "You") {
       const id = form.id ?? nextId(d.vehicles);
       const vehiclesNext = form.id
         ? d.vehicles.map((v) => (v.id === form.id ? { ...v, ...fields } : v))
-        : [{ ...fields, id, tyre_check_due: "", created_at: today(), weekly_fuel_limit: 0 }, ...d.vehicles];
+        : [
+            {
+              ...fields,
+              id,
+              tyre_check_due: "",
+              next_photo_check: fields.type === "private" ? "" : randomPhotoCheckDate(today()),
+              created_at: today(),
+              weekly_fuel_limit: 0,
+            },
+            ...d.vehicles,
+          ];
       // A new vehicle's mileage is its first odometer reading, so later readings are checked against it.
       const eventsNext: VehicleEvent[] = form.id
         ? d.events
@@ -663,6 +695,13 @@ export function useVehicles(companyId?: number | null, userName = "You") {
       },
     ]);
     update((d) => ({ ...d, vehicles: d.vehicles.map((v) => (v.id === id ? { ...v, ...patch } : v)) }));
+  };
+
+  // "Ask for a check now": the photo check is due today; the driver sees it in the app.
+  const askPhotoCheck = async (id: number) => {
+    const v = data.vehicles.find((x) => x.id === id);
+    log([{ area: "record", vehicle_id: id, action: "Photo check asked for now", detail: `${regOf(id)}${v?.driver_name ? ` · ${v.driver_name}` : ""}` }]);
+    update((d) => ({ ...d, vehicles: d.vehicles.map((x) => (x.id === id ? { ...x, next_photo_check: today() } : x)) }));
   };
 
   const assignDriver = async (id: number, driver: DriverOption | null) => {
@@ -795,6 +834,21 @@ export function useVehicles(companyId?: number | null, userName = "You") {
     const permit = data.permits.find((x) => x.id === id);
     if (permit) log([{ area: "permit", vehicle_id: permit.vehicle_id, action: "Permit removed", detail: `${regOf(permit.vehicle_id)} · ${permit.zone}` }]);
     update((d) => ({ ...d, permits: d.permits.filter((p) => p.id !== id) }));
+  };
+
+  // Company places on the Map (office, fuel station, hospital...)
+  const addPlace = async (place: Omit<FleetPlace, "id" | "created_by" | "created_at">) => {
+    log([{ area: "place", vehicle_id: null, action: "Map place added", detail: `${PLACE_KIND[place.kind].label} · ${place.name}` }]);
+    update((d) => {
+      const list = d.places ?? [];
+      return { ...d, places: [...list, { ...place, id: nextId(list), created_by: userName, created_at: today() }] };
+    });
+  };
+
+  const removePlace = async (id: number) => {
+    const place = (data.places ?? []).find((x) => x.id === id);
+    if (place) log([{ area: "place", vehicle_id: null, action: "Map place removed", detail: `${PLACE_KIND[place.kind].label} · ${place.name}` }]);
+    update((d) => ({ ...d, places: (d.places ?? []).filter((x) => x.id !== id) }));
   };
 
   // Start the onboarding list for the current driver, or switch it to another type.
@@ -1072,6 +1126,10 @@ export function useVehicles(companyId?: number | null, userName = "You") {
     settings: data.settings,
     activities: data.activities,
     locations: data.locations,
+    places: data.places ?? [],
+    addPlace,
+    removePlace,
+    askPhotoCheck,
     reopenExpense,
     noCompany: companyId === null,
     updateEvent,

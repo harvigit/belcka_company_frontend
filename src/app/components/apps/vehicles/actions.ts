@@ -13,6 +13,8 @@ import {
   ParkingPermit,
   permitState,
   SEVERITY,
+  TYRE_WHEELS,
+  wheelState,
   Vehicle,
   VehicleEvent,
   VehicleOnboarding,
@@ -73,6 +75,7 @@ const DUE_TAB: Record<string, string> = {
   "Road tax": "overview",
   Insurance: "overview",
   "Tyre check": "tyres",
+  "Photo check": "photos",
 };
 
 // One queue for everything that needs the office: defects, accidents, due dates,
@@ -127,6 +130,27 @@ export function buildActions({ vehicles, events, defects, permits, onboardings, 
         target: { kind: "vehicle", vehicleId: v.id, tab: DUE_TAB[item.label] ?? "overview" },
       });
     }
+  }
+
+  // Latest tyre check found tyres to replace (cleared by a later tyre change or check)
+  for (const v of inUse) {
+    const latest = events
+      .filter((e) => e.vehicle_id === v.id && (e.kind === "tyre_check" || e.kind === "tyre_change"))
+      .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)[0];
+    if (!latest || latest.kind !== "tyre_check") continue;
+    const bad = TYRE_WHEELS.filter(([w]) => latest.tread?.[w] !== undefined && wheelState(latest, w) === "replace");
+    if (!bad.length) continue;
+    rows.push({
+      id: `tyre${v.id}`,
+      priority: "high",
+      category: "due",
+      title: "Tyres to replace",
+      detail: `${bad.map(([, label]) => label).join(", ")} · checked ${latest.created_by}`,
+      vehicle: v,
+      date: latest.date,
+      status: "Book a tyre change",
+      target: { kind: "vehicle", vehicleId: v.id, tab: "tyres" },
+    });
   }
 
   // Fuel use outside the vehicle's normal range over the last weeks

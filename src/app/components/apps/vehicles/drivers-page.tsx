@@ -4,7 +4,6 @@ import {
   Alert,
   Box,
   Button,
-  ButtonBase,
   Chip,
   Dialog,
   DialogActions,
@@ -41,7 +40,7 @@ import InventoryTable from "../inventory-new/shared/InventoryTable";
 import FormDrawer from "../inventory-new/shared/FormDrawer";
 import FormField from "../inventory-new/shared/FormField";
 import FleetNav from "./fleet-nav";
-import { RecordTable } from "./detail/common";
+import { RecordTable, CARD_TONE, StatCard } from "./detail/common";
 import { DriverName, DriverPicker, RegPlate, NoCompany } from "./shared";
 import {
   countsAsCost,
@@ -61,6 +60,13 @@ import { useDrivers } from "./useDrivers";
 
 type Period = "30" | "365" | "all";
 type Focus = "all" | "ok" | "soon" | "problem";
+
+const DRIVER_HINT: Record<Focus, string> = {
+  all: "People driving or with a card",
+  ok: "Checked and in date",
+  soon: "Check the new licence",
+  problem: "Can't drive until checked",
+};
 
 interface DriverRow {
   id: number;
@@ -315,53 +321,19 @@ const DriversPage: React.FC = () => {
       </Stack>
 
       <Grid container spacing={2} sx={{ px: 2, pt: 2 }}>
-        {tiles.map((t) => {
-          const active = focus === t.key;
-          return (
-            <Grid key={t.key} size={{ xs: 6, md: 3 }}>
-              <ButtonBase
-                onClick={() => setFocus(active && t.key !== "all" ? "all" : t.key)}
-                aria-pressed={active}
-                sx={{
-                  width: "100%",
-                  justifyContent: "flex-start",
-                  gap: 1.5,
-                  p: 1.5,
-                  borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: active ? `${t.color}.main` : "grey.200",
-                  boxShadow: active ? 1 : 0,
-                  textAlign: "left",
-                  "&:hover": { borderColor: `${t.color}.main` },
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: `${t.color}.main`,
-                    backgroundColor: `${t.color}.light`,
-                    flexShrink: 0,
-                  }}
-                >
-                  {t.icon}
-                </Box>
-                <Box>
-                  <Typography variant="h5" fontWeight={700} lineHeight={1.1}>
-                    {t.count}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {t.label}
-                  </Typography>
-                </Box>
-              </ButtonBase>
-            </Grid>
-          );
-        })}
+        {tiles.map((t) => (
+          <Grid key={t.key} size={{ xs: 6, md: 3 }}>
+            <StatCard
+              icon={t.icon}
+              tone={CARD_TONE[t.color]}
+              value={t.count}
+              label={t.label}
+              hint={DRIVER_HINT[t.key]}
+              active={focus === t.key && t.key !== "all"}
+              onClick={() => setFocus(focus === t.key && t.key !== "all" ? "all" : t.key)}
+            />
+          </Grid>
+        ))}
       </Grid>
 
       <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" mx={2} my={1.5} spacing={1}>

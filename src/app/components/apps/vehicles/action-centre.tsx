@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
-  ButtonBase,
   Chip,
   Divider,
   Grid,
@@ -42,7 +41,7 @@ import FleetNav from "./fleet-nav";
 import { ActionCategory, ActionRow, ACTION_CATEGORY, buildActions, PRIORITY } from "./actions";
 import { DefectReviewDrawer } from "./defect-drawer";
 import ChecklistDialog from "./checklist-dialog";
-import { RecordTable } from "./detail/common";
+import { RecordTable, CARD_TONE, StatCard } from "./detail/common";
 import { RegPlate, NoCompany } from "./shared";
 import {
   checklistSafe,
@@ -59,6 +58,14 @@ import { useVehicles } from "./useVehicles";
 
 type Focus = "all" | "urgent" | "defects" | "due" | "approvals";
 type Section = "queue" | "checks" | "register";
+
+const TILE_HINT: Record<Focus, string> = {
+  all: "Everything to sort out",
+  urgent: "Do these first",
+  defects: "From checks and the app",
+  due: "MOT, service, tax, licences",
+  approvals: "Permits, expenses, fuel",
+};
 
 const FOCUS_MATCH: Record<Focus, (r: ActionRow) => boolean> = {
   all: () => true,
@@ -83,13 +90,15 @@ const ActionCentre: React.FC = () => {
   const [reviewId, setReviewId] = useState<number | null>(null);
   const [checklistId, setChecklistId] = useState<number | null>(null);
 
-  // Opened from elsewhere (e.g. the Map) with ?defect=ID: show that report straight away.
+  // Opened from elsewhere: ?defect=ID shows that report (Map), ?section=checks|register opens
+  // that tab (Vehicles tiles).
   useEffect(() => {
-    const id = Number(new URLSearchParams(window.location.search).get("defect"));
-    if (id) {
-      setReviewId(id);
-      router.replace("/apps/vehicles/action-centre", { scroll: false });
-    }
+    const params = new URLSearchParams(window.location.search);
+    const id = Number(params.get("defect"));
+    const tab = params.get("section");
+    if (tab === "checks" || tab === "register") setSection(tab);
+    if (id) setReviewId(id);
+    if (id || tab) router.replace("/apps/vehicles/action-centre", { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [registerFilter, setRegisterFilter] = useState<"open" | "all">("open");
@@ -264,53 +273,19 @@ const ActionCentre: React.FC = () => {
       {section === "queue" && (
         <>
           <Grid container spacing={2} sx={{ px: 2, pt: 2 }}>
-            {tiles.map((t) => {
-              const active = focus === t.key;
-              return (
-                <Grid key={t.key} size={{ xs: 6, sm: 4, md: "grow" }}>
-                  <ButtonBase
-                    onClick={() => setFocus(active && t.key !== "all" ? "all" : t.key)}
-                    aria-pressed={active}
-                    sx={{
-                      width: "100%",
-                      justifyContent: "flex-start",
-                      gap: 1.5,
-                      p: 1.5,
-                      borderRadius: 2,
-                      border: "1px solid",
-                      borderColor: active ? `${t.color}.main` : "grey.200",
-                      boxShadow: active ? 1 : 0,
-                      textAlign: "left",
-                      "&:hover": { borderColor: `${t.color}.main` },
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 2,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: `${t.color}.main`,
-                        backgroundColor: `${t.color}.light`,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {t.icon}
-                    </Box>
-                    <Box>
-                      <Typography variant="h5" fontWeight={700} lineHeight={1.1}>
-                        {t.count}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {t.label}
-                      </Typography>
-                    </Box>
-                  </ButtonBase>
-                </Grid>
-              );
-            })}
+            {tiles.map((t) => (
+              <Grid key={t.key} size={{ xs: 6, sm: 4, md: "grow" }}>
+                <StatCard
+                  icon={t.icon}
+                  tone={CARD_TONE[t.color]}
+                  value={t.count}
+                  label={t.label}
+                  hint={TILE_HINT[t.key]}
+                  active={focus === t.key && t.key !== "all"}
+                  onClick={() => setFocus(focus === t.key && t.key !== "all" ? "all" : t.key)}
+                />
+              </Grid>
+            ))}
           </Grid>
 
           <Stack direction="row" spacing={1} alignItems="center" mx={2} my={1.5} flexWrap="wrap">

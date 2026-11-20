@@ -9,6 +9,7 @@ import {
   Grid,
   IconButton,
   InputAdornment,
+  MenuItem,
   Stack,
   TextField,
   ToggleButton,
@@ -26,14 +27,18 @@ import {
 } from "@tanstack/react-table";
 import {
   IconAlertTriangle,
+  IconCalendar,
+  IconCalendarX,
+  IconDownload,
+  IconChecklist,
+  IconClipboardCheck,
+  IconTool,
   IconArchive,
   IconArrowBackUp,
   IconCar,
-  IconClockExclamation,
   IconEdit,
   IconPlus,
   IconSearch,
-  IconUserOff,
   IconUserPlus,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
@@ -49,10 +54,14 @@ import { useRouter } from "next/navigation";
 import AssignDriverDialog from "./assign-dialog";
 import { DriverName, DueCell, RegPlate, NoCompany } from "./shared";
 import {
+  countsAsCost,
+  dueItems,
   formatDate,
   formatMiles,
   fuelLabel,
+  money,
   nextDue,
+  permitState,
   statusInfo,
   typeLabel,
   Vehicle,
@@ -63,9 +72,24 @@ import { DriverOption, useVehicles } from "./useVehicles";
 import { useDrivers } from "./useDrivers";
 import { useVehicleEditor } from "./useVehicleEditor";
 import FleetNav from "./fleet-nav";
+import { CARD_TONE, StatCard } from "./detail/common";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import { buildActions } from "./actions";
+import DriverChecksToday from "./driver-checks-today";
+import dayjs from "dayjs";
 
-type QuickFilter = "all" | "overdue" | "soon" | "unassigned";
+type QuickFilter = "all" | "active" | "mot" | "service";
 type View = "current" | "archived";
+type Period = "30" | "90" | "365" | "year" | "all" | "custom";
+
+const PERIODS: Record<Period, { label: string; short: string }> = {
+  "30": { label: "Last 30 days", short: "30 days" },
+  "90": { label: "Last 90 days", short: "90 days" },
+  "365": { label: "Last 12 months", short: "12 months" },
+  year: { label: "This year", short: "this year" },
+  all: { label: "All time", short: "all time" },
+  custom: { label: "Choose dates...", short: "dates" },
+};
 
 const noFilters = { type: "", status: "" };
 
@@ -92,6 +116,12 @@ const VehicleList: React.FC = () => {
   const [quick, setQuick] = useState<QuickFilter>("all");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
+  // Period for the "miles" and "costs" columns (like the Period on the prototype dashboard)
+  const [period, setPeriod] = useState<Period>("30");
+  const [custom, setCustom] = useState({
+    from: dayjs().subtract(1, "month").format("YYYY-MM-DD"),
+    to: dayjs().format("YYYY-MM-DD"),
+  });
   const [assignFor, setAssignFor] = useState<Vehicle | null>(null);
   const [toArchive, setToArchive] = useState<Vehicle | null>(null);
 
@@ -99,15 +129,66 @@ const VehicleList: React.FC = () => {
   const current = useMemo(() => vehicles.filter((v) => v.status !== "archived"), [vehicles]);
   const archivedCount = vehicles.length - current.length;
 
-  const counts = useMemo(() => {
-    const due = current.map((v) => nextDue(v)?.state);
+  // MOT / service overdue, the same way the vehicle page and the Action Centre work it out
+  const isOverdue = (v: Vehicle, label: "MOT" | "Service") =>
+    (v.status === "active" || v.status === "in_service") &&
+    dueItems(v).some((i) => i.label === label && i.state === "overdue");
+
+  const stats = useMemo(() => {
+    const today = dayjs().format("YYYY-MM-DD");
+    const needCheck = current.filter((v) => v.status === "active" && v.driver_id && v.type !== "private");
+    const checked = new Set(store.checklists.filter((c) => c.date === today).map((c) => c.vehicle_id));
+    const live = new Set(current.map((v) => v.id));
     return {
-      all: current.length,
-      overdue: due.filter((s) => s === "overdue").length,
-      soon: due.filter((s) => s === "soon").length,
-      unassigned: current.filter((v) => !v.driver_id).length,
+      active: current.filter((v) => v.status === "active").length,
+      actions: buildActions(store).length,
+      defects: store.defects.filter(
+        (d) => d.type === "defect" && (d.status === "open" || d.status === "in_progress") && live.has(d.vehicle_id),
+      ).length,
+      checksDone: needCheck.filter((v) => checked.has(v.id)).length,
+      checksNeeded: needCheck.length,
+      mot: current.filter((v) => isOverdue(v, "MOT")).length,
+      service: current.filter((v) => isOverdue(v, "Service")).length,
     };
-  }, [current]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, store.checklists, store.defects, store.events, store.permits, store.onboardings, store.licences, store.conflicts]);
+
+  const today = dayjs().format("YYYY-MM-DD");
+  const range = useMemo(() => {
+    if (period === "all") return { from: "", to: today, name: "all time" };
+    if (period === "year") return { from: dayjs().startOf("year").format("YYYY-MM-DD"), to: today, name: "this year" };
+    if (period === "custom") {
+      const from = custom.from && custom.to && custom.from > custom.to ? custom.to : custom.from;
+      return {
+        from,
+        to: custom.to || today,
+        name: `${formatDate(from)} – ${formatDate(custom.to || today)}`,
+      };
+    }
+    return { from: dayjs().subtract(Number(period), "day").format("YYYY-MM-DD"), to: today, name: PERIODS[period].short };
+  }, [period, custom, today]);
+
+  // Miles driven and costs per vehicle in the period
+  const usage = useMemo(() => {
+    const map = new Map<number, { miles: number; costs: number }>();
+    for (const v of vehicles) {
+      const own = store.events.filter((e) => e.vehicle_id === v.id);
+      const readings = own
+        .filter((e) => e.mileage && e.date <= range.to)
+        .sort((a, b) => a.date.localeCompare(b.date) || (a.mileage ?? 0) - (b.mileage ?? 0));
+      // start: last reading before the period (or the first one); end: last reading in it (or today's mileage)
+      const start = range.from ? [...readings].reverse().find((e) => e.date < range.from) ?? readings[0] : readings[0];
+      const end = range.to >= today ? v.mileage : readings[readings.length - 1]?.mileage ?? v.mileage;
+      const miles = start ? Math.max(0, end - (start.mileage ?? 0)) : 0;
+      const costs = own
+        .filter((e) => countsAsCost(e) && e.date >= range.from && e.date <= range.to)
+        .reduce((sum, e) => sum + (e.cost ?? 0), 0);
+      map.set(v.id, { miles, costs });
+    }
+    return map;
+  }, [vehicles, store.events, range, today]);
+
+  const permitsOf = (v: Vehicle) => store.permits.filter((p) => p.vehicle_id === v.id);
 
   const rows = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -116,10 +197,9 @@ const VehicleList: React.FC = () => {
       if (filters.type && v.type !== filters.type) return false;
       if (!isArchiveView) {
         if (filters.status && v.status !== filters.status) return false;
-        const state = nextDue(v)?.state;
-        if (quick === "overdue" && state !== "overdue") return false;
-        if (quick === "soon" && state !== "soon") return false;
-        if (quick === "unassigned" && v.driver_id) return false;
+        if (quick === "active" && v.status !== "active") return false;
+        if (quick === "mot" && !isOverdue(v, "MOT")) return false;
+        if (quick === "service" && !isOverdue(v, "Service")) return false;
       }
       if (!term) return true;
       return [v.registration, v.make_model, v.driver_name ?? "", v.gps_tracker]
@@ -127,6 +207,7 @@ const VehicleList: React.FC = () => {
         .toLowerCase()
         .includes(term);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vehicles, searchTerm, filters, quick, isArchiveView]);
 
   const hasNarrowing =
@@ -218,11 +299,16 @@ const VehicleList: React.FC = () => {
       },
     }),
     columnHelper.accessor("mileage", {
-      header: "Mileage",
+      header: `Mileage / ${range.name}`,
       cell: ({ row }) => (
-        <Typography className="f-14" sx={{ pl: 1, fontVariantNumeric: "tabular-nums" }}>
-          {formatMiles(row.original.mileage)}
-        </Typography>
+        <Box sx={{ pl: 1, fontVariantNumeric: "tabular-nums" }}>
+          <Typography className="f-14" fontWeight={600}>
+            {formatMiles(row.original.mileage)}
+          </Typography>
+          <Typography variant="caption" color="textSecondary">
+            +{formatMiles(usage.get(row.original.id)?.miles ?? 0)}
+          </Typography>
+        </Box>
       ),
     }),
     columnHelper.accessor((v) => (v.status === "archived" ? v.archived_at ?? "" : nextDue(v)?.date ?? ""), {
@@ -236,6 +322,34 @@ const VehicleList: React.FC = () => {
         ) : (
           <DueCell item={nextDue(row.original)} />
         ),
+    }),
+    columnHelper.accessor((v) => usage.get(v.id)?.costs ?? 0, {
+      id: "costs",
+      header: `Costs · ${range.name}`,
+      cell: ({ row }) => (
+        <Typography className="f-14" sx={{ pl: 1, fontVariantNumeric: "tabular-nums" }}>
+          {money(usage.get(row.original.id)?.costs ?? 0)}
+        </Typography>
+      ),
+    }),
+    columnHelper.accessor((v) => permitsOf(v).length, {
+      id: "permits",
+      header: "Parking permits",
+      cell: ({ row }) => {
+        const list = permitsOf(row.original);
+        const attention = list.filter((p) => ["pending", "expiring", "expired"].includes(permitState(p))).length;
+        return (
+          <Tooltip title={attention ? `${attention} need${attention === 1 ? "s" : ""} attention` : "Open permits"}>
+            <Chip
+              size="small"
+              variant={list.length ? "filled" : "outlined"}
+              color={attention ? "warning" : list.length ? "primary" : "default"}
+              label={`${list.length} permit${list.length === 1 ? "" : "s"}`}
+              onClick={() => router.push(`/apps/vehicles/${row.original.id}?tab=permits`)}
+            />
+          </Tooltip>
+        );
+      },
     }),
     columnHelper.accessor("status", {
       header: "Status",
@@ -301,80 +415,162 @@ const VehicleList: React.FC = () => {
     autoResetPageIndex: true,
   });
 
-  const quickCards: {
-    key: QuickFilter;
+  // The vehicles shown now (search, filters and tiles applied), sorted like the table.
+  const exportCsv = () => {
+    const list = table.getSortedRowModel().rows.map((r) => r.original);
+    if (!list.length) {
+      toast.error("No vehicles to export.");
+      return;
+    }
+    const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const due = (v: Vehicle, label: string) => {
+      const item = dueItems(v).find((i) => i.label === label);
+      return item ? formatDate(item.date) : "";
+    };
+    const lines = [
+      [
+        "Registration",
+        "Make and model",
+        "Type",
+        "Fuel",
+        "Status",
+        "Driver",
+        "Mileage",
+        "MOT due",
+        "Service due",
+        "Insurance due",
+        "Road tax due",
+        "Tyre check due",
+        "Next due",
+        `Miles (${range.name})`,
+        `Costs (${range.name})`,
+        "Parking permits",
+        "GPS tracker",
+      ]
+        .map(cell)
+        .join(","),
+      ...list.map((v) => {
+        const next = nextDue(v);
+        return [
+          v.registration,
+          v.make_model,
+          typeLabel(v.type),
+          fuelLabel(v.fuel_type),
+          statusInfo(v.status).label,
+          v.driver_name ?? "",
+          v.mileage,
+          due(v, "MOT"),
+          due(v, "Service"),
+          due(v, "Insurance"),
+          due(v, "Road tax"),
+          due(v, "Tyre check"),
+          next ? `${next.label} · ${formatDate(next.date)}` : "",
+          usage.get(v.id)?.miles ?? 0,
+          (usage.get(v.id)?.costs ?? 0).toFixed(2),
+          permitsOf(v).length,
+          v.gps_tracker,
+        ]
+          .map(cell)
+          .join(",");
+      }),
+    ];
+    const url = URL.createObjectURL(new Blob([lines.join("\r\n")], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vehicles-${isArchiveView ? "archived-" : ""}${dayjs().format("YYYY-MM-DD")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${list.length} vehicle${list.length === 1 ? "" : "s"} exported.`);
+  };
+
+  const STAT_HINT: Record<string, string> = {
+    active: "In use now",
+    actions: "In the Action Centre",
+    defects: "From daily checklists",
+    checks: "Done / needed today",
+    mot: "Past the MOT date",
+    service: "Past the service date",
+  };
+
+  // Six numbers at the top: the ones on vehicles filter this list, the others open the Action Centre.
+  const statCards: {
+    key: string;
     label: string;
-    count: number;
+    value: string | number;
     icon: React.ReactNode;
-    color: "primary" | "error" | "warning" | "secondary";
+    color: "primary" | "error" | "warning" | "secondary" | "info" | "success";
+    filter?: QuickFilter;
+    href?: string;
+    alert?: boolean;
   }[] = [
-    { key: "all", label: "All vehicles", count: counts.all, icon: <IconCar size={22} />, color: "primary" },
-    { key: "overdue", label: "Overdue", count: counts.overdue, icon: <IconAlertTriangle size={22} />, color: "error" },
-    { key: "soon", label: "Due in 30 days", count: counts.soon, icon: <IconClockExclamation size={22} />, color: "warning" },
-    { key: "unassigned", label: "No driver", count: counts.unassigned, icon: <IconUserOff size={22} />, color: "secondary" },
+    { key: "active", label: "Active vehicles", value: stats.active, icon: <IconCar size={22} />, color: "primary", filter: "active" },
+    {
+      key: "actions",
+      label: "Open actions",
+      value: stats.actions,
+      icon: <IconChecklist size={22} />,
+      color: "secondary",
+      href: "/apps/vehicles/action-centre",
+    },
+    {
+      key: "defects",
+      label: "Open defects",
+      value: stats.defects,
+      icon: <IconTool size={22} />,
+      color: "warning",
+      href: "/apps/vehicles/action-centre?section=register",
+      alert: stats.defects > 0,
+    },
+    {
+      key: "checks",
+      label: "Checklists today",
+      value: `${stats.checksDone} / ${stats.checksNeeded}`,
+      icon: <IconClipboardCheck size={22} />,
+      color: stats.checksDone < stats.checksNeeded ? "info" : "success",
+      href: "/apps/vehicles/action-centre?section=checks",
+    },
+    { key: "mot", label: "MOT overdue", value: stats.mot, icon: <IconCalendarX size={22} />, color: "error", filter: "mot", alert: stats.mot > 0 },
+    {
+      key: "service",
+      label: "Service overdue",
+      value: stats.service,
+      icon: <IconAlertTriangle size={22} />,
+      color: "error",
+      filter: "service",
+      alert: stats.service > 0,
+    },
   ];
 
   if (store.noCompany) return <NoCompany />;
 
   return (
-    <Box sx={{ height: "calc(100vh - 100px)", display: "flex", flexDirection: "column" }}>
+    <Box sx={{ minHeight: "calc(100vh - 100px)", display: "flex", flexDirection: "column" }}>
       <FleetNav data={store} />
 
       {!isArchiveView && (
         <Grid container spacing={2} sx={{ px: 2, pt: 2, pb: 1 }}>
-          {quickCards.map((card) => {
-            const active = quick === card.key;
-            return (
-              <Grid key={card.key} size={{ xs: 6, md: 3 }}>
-                <ButtonBase
-                  onClick={() => setQuick(active && card.key !== "all" ? "all" : card.key)}
-                  aria-pressed={active}
-                  sx={{
-                    width: "100%",
-                    justifyContent: "flex-start",
-                    gap: 1.5,
-                    p: 1.5,
-                    borderRadius: 2,
-                    border: "1px solid",
-                    borderColor: active ? `${card.color}.main` : "grey.200",
-                    boxShadow: active ? 1 : 0,
-                    backgroundColor: "background.paper",
-                    textAlign: "left",
-                    transition: "all .15s",
-                    "&:hover": { borderColor: `${card.color}.main` },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 2,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: `${card.color}.main`,
-                      backgroundColor: `${card.color}.light`,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {card.icon}
-                  </Box>
-                  <Box>
-                    <Typography variant="h5" fontWeight={700} lineHeight={1.1}>
-                      {card.count}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      {card.label}
-                    </Typography>
-                  </Box>
-                </ButtonBase>
-              </Grid>
-            );
-          })}
+          {statCards.map((card) => (
+            <Grid key={card.key} size={{ xs: 6, sm: 4, lg: 2 }}>
+              <StatCard
+                icon={card.icon}
+                tone={CARD_TONE[card.color]}
+                value={card.value}
+                label={card.label}
+                hint={STAT_HINT[card.key]}
+                active={!!card.filter && quick === card.filter}
+                alert={card.alert}
+                link={!!card.href}
+                title={card.href ? "Open in the Action Centre" : quick === card.filter ? "Show all vehicles" : "Show these vehicles"}
+                onClick={() =>
+                  card.href ? router.push(card.href) : setQuick(quick === card.filter ? "all" : (card.filter as QuickFilter))
+                }
+              />
+            </Grid>
+          ))}
         </Grid>
       )}
 
-      <Box sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+      <Box sx={{ display: "flex", flexDirection: "column" }}>
         <Stack
           mx={2}
           my={1.5}
@@ -422,9 +618,51 @@ const VehicleList: React.FC = () => {
                     ]),
               ]}
             />
+            <CustomTextField
+              select
+              size="small"
+              value={period}
+              onChange={(e: any) => setPeriod(e.target.value)}
+              sx={{ minWidth: 170 }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <IconCalendar size={16} />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+              aria-label="Period for miles and costs"
+            >
+              {(Object.keys(PERIODS) as Period[]).map((p) => (
+                <MenuItem key={p} value={p}>
+                  {PERIODS[p].label}
+                </MenuItem>
+              ))}
+            </CustomTextField>
+            {period === "custom" && (
+              <>
+                <CustomTextField
+                  type="date"
+                  size="small"
+                  value={custom.from}
+                  onChange={(e: any) => setCustom((c) => ({ ...c, from: e.target.value }))}
+                  slotProps={{ htmlInput: { max: custom.to || today, "aria-label": "From" } }}
+                />
+                <Typography color="textSecondary">to</Typography>
+                <CustomTextField
+                  type="date"
+                  size="small"
+                  value={custom.to}
+                  onChange={(e: any) => setCustom((c) => ({ ...c, to: e.target.value }))}
+                  slotProps={{ htmlInput: { min: custom.from, max: today, "aria-label": "To" } }}
+                />
+              </>
+            )}
             {quick !== "all" && !isArchiveView && (
               <Chip
-                label={quickCards.find((c) => c.key === quick)?.label}
+                label={statCards.find((c) => c.filter === quick)?.label}
                 onDelete={() => setQuick("all")}
                 color="primary"
                 variant="outlined"
@@ -452,6 +690,9 @@ const VehicleList: React.FC = () => {
                 Archived ({archivedCount})
               </ToggleButton>
             </ToggleButtonGroup>
+            <Button variant="outlined" startIcon={<IconDownload size={18} />} onClick={exportCsv}>
+              Export CSV
+            </Button>
             {!isArchiveView && (
               <Button variant="contained" startIcon={<IconPlus size={18} />} onClick={openCreate}>
                 Add vehicle
@@ -489,6 +730,15 @@ const VehicleList: React.FC = () => {
         <Divider />
         <TablePaginationFooter table={table} totalRows={rows.length} />
       </Box>
+
+      {!isArchiveView && (
+        <DriverChecksToday
+          vehicles={current}
+          checklists={store.checklists}
+          onOpenVehicle={openVehicle}
+          onOpenActionCentre={() => router.push("/apps/vehicles/action-centre?section=checks")}
+        />
+      )}
 
       {editor.drawer}
 

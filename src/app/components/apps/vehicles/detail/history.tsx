@@ -10,18 +10,16 @@ import {
   DialogContent,
   DialogTitle,
   Grid,
-  IconButton,
   LinearProgress,
   MenuItem,
   Stack,
-  Tooltip,
   Typography,
 } from "@mui/material";
-import { IconEdit, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPlus } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
-import { DueCell } from "../shared";
+import { DueCell, PhotoThumbs } from "../shared";
 import {
   Activity,
   ACTIVITY_AREA,
@@ -39,60 +37,20 @@ import {
   l100ToMpg,
   lowestTread,
   money,
+  TYRE_STATE,
+  wheelState,
   Vehicle,
   VehicleEvent,
 } from "../types";
-import { Column, RecordTable, Section, StatTile } from "./common";
+import { Column, RecordTable, Section, StatTile, toneAt } from "./common";
+import { WheelLayout } from "./tyre-check-dialog";
 
 interface TabProps {
   vehicle: Vehicle;
   events: VehicleEvent[];
   onAdd: (kind: EventKind) => void;
-  onEdit: (e: VehicleEvent) => void;
-  onDelete: (e: VehicleEvent) => void;
   readOnly: boolean;
 }
-
-// Edit / delete for one record. Imported rows are undone as a whole file; driver expenses are
-// handled on the Expenses screen.
-export const RecordActions: React.FC<{
-  e: VehicleEvent;
-  readOnly: boolean;
-  onEdit: (e: VehicleEvent) => void;
-  onDelete: (e: VehicleEvent) => void;
-  canEdit?: boolean;
-}> = ({ e, readOnly, onEdit, onDelete, canEdit = true }) => {
-  if (readOnly) return null;
-  const locked = e.import_id
-    ? "Imported from a file: undo the import to remove it"
-    : e.status
-      ? "Sent from the driver app: manage it on the Expenses screen"
-      : "";
-  return (
-    <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-      <Tooltip title={locked || (canEdit ? "Edit" : "")}>
-        <span>
-          <IconButton size="small" color="primary" disabled={!!locked || !canEdit} onClick={() => onEdit(e)}>
-            <IconEdit size={16} />
-          </IconButton>
-        </span>
-      </Tooltip>
-      <Tooltip title={locked || "Delete"}>
-        <span>
-          <IconButton size="small" color="error" disabled={!!locked} onClick={() => onDelete(e)}>
-            <IconTrash size={16} />
-          </IconButton>
-        </span>
-      </Tooltip>
-    </Stack>
-  );
-};
-
-const actionsCol = (p: TabProps): Column<VehicleEvent> => ({
-  header: "",
-  align: "right",
-  render: (e) => <RecordActions e={e} readOnly={p.readOnly} onEdit={p.onEdit} onDelete={p.onDelete} />,
-});
 
 const newestFirst = (a: VehicleEvent, b: VehicleEvent) =>
   b.date.localeCompare(a.date) || (b.mileage ?? 0) - (a.mileage ?? 0) || b.id - a.id;
@@ -123,28 +81,35 @@ const byCol: Column<VehicleEvent> = {
 const noteCol = (header = "Note"): Column<VehicleEvent> => ({
   header,
   render: (e) => (
-    <Typography variant="body2" sx={{ maxWidth: 280 }}>
-      {e.note || "-"}
-    </Typography>
+    <Box sx={{ maxWidth: 280 }}>
+      <Typography variant="body2">{e.note || "-"}</Typography>
+      {!!e.photos?.length && (
+        <Box mt={0.75}>
+          <PhotoThumbs photos={e.photos} size={40} />
+        </Box>
+      )}
+    </Box>
   ),
 });
 
 /* ---------------- MOT & Service ---------------- */
 export const MaintenanceTab: React.FC<TabProps> = (props) => {
   const { vehicle, events, onAdd, readOnly } = props;
-  const rows = events.filter((e) => ["mot", "service", "repair", "accident"].includes(e.kind)).sort(newestFirst);
+  // Same as the prototype "MOT and service history": MOT, service and other costs.
+  // Repairs are invoices (Invoices tab); accidents are on the Overview tab.
+  const rows = events.filter((e) => ["mot", "service", "other_cost"].includes(e.kind)).sort(newestFirst);
   const due = dueItems(vehicle).filter((d) => d.label !== "Tyre check");
   return (
     <Box display="flex" flexDirection="column" gap={3}>
       <Grid container spacing={2}>
-        {due.map((d) => (
+        {due.map((d, i) => (
           <Grid key={d.label} size={{ xs: 12, sm: 6, md: 3 }}>
-            <StatTile label={d.label} value={formatDate(d.date)} sub={<DueCell item={d} />} />
+            <StatTile tone={toneAt(i)} label={d.label} value={formatDate(d.date)} sub={<DueCell item={d} />} />
           </Grid>
         ))}
       </Grid>
       <Section
-        title="MOT, service, repairs and accidents"
+        title="MOT and service history"
         subtitle={
           vehicle.type === "private"
             ? "Private car: only the MOT is tracked here."
@@ -154,8 +119,7 @@ export const MaintenanceTab: React.FC<TabProps> = (props) => {
           <>
             <AddButton label="MOT" onClick={() => onAdd("mot")} primary hidden={readOnly} />
             <AddButton label="Service" onClick={() => onAdd("service")} hidden={readOnly || vehicle.type === "private"} />
-            <AddButton label="Repair" onClick={() => onAdd("repair")} hidden={readOnly} />
-            <AddButton label="Accident" onClick={() => onAdd("accident")} hidden={readOnly} />
+            <AddButton label="Other cost" onClick={() => onAdd("other_cost")} hidden={readOnly} />
           </>
         }
       >
@@ -180,7 +144,6 @@ export const MaintenanceTab: React.FC<TabProps> = (props) => {
             { header: "Invoice", render: (e) => e.invoice_no || "-" },
             noteCol(),
             costCol,
-            actionsCol(props),
           ]}
         />
       </Section>
@@ -195,14 +158,16 @@ export const TyresTab: React.FC<TabProps> = (props) => {
   const next = dueItems(vehicle).find((d) => d.label === "Tyre check") ?? null;
   const last = rows.find((e) => lowestTread(e) !== null);
   const lowest = last ? lowestTread(last) : null;
+  // latest check with all four tyres, shown around the car like on the prototype
+  const lastCheck = rows.find((e) => e.kind === "tyre_check" && e.tread && Object.keys(e.tread).length);
   return (
     <Box display="flex" flexDirection="column" gap={3}>
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatTile label="Next tyre check" value={formatDate(next?.date)} sub={<DueCell item={next} />} />
+          <StatTile tone="blue" label="Next tyre check" value={formatDate(next?.date)} sub={<DueCell item={next} />} />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatTile
+          <StatTile tone="purple"
             label="Lowest tread"
             value={lowest === null ? "-" : `${lowest} mm`}
             sub={
@@ -217,13 +182,49 @@ export const TyresTab: React.FC<TabProps> = (props) => {
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatTile
+          <StatTile tone="green"
             label="Rule"
             value={`${FLEET_RULES.tyreCheckMonths} months`}
             sub={`or ${FLEET_RULES.tyreCheckMiles.toLocaleString("en-GB")} mi · replace at ${FLEET_RULES.treadLimitMm} mm`}
           />
         </Grid>
       </Grid>
+      {lastCheck && (
+        <Section
+          title={`Last tyre check · ${formatDate(lastCheck.date)}`}
+          subtitle={`${lastCheck.created_by}${lastCheck.mileage ? ` · ${formatMiles(lastCheck.mileage)}` : ""}${lastCheck.note ? ` · ${lastCheck.note}` : ""}`}
+        >
+          <Box maxWidth={620}>
+            <WheelLayout
+              render={(w) => {
+                const tread = lastCheck.tread?.[w];
+                const state = wheelState(lastCheck, w);
+                const photo = lastCheck.wheels?.[w]?.photo;
+                return (
+                  <Stack spacing={1}>
+                    <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                      <Typography fontWeight={700} sx={{ fontVariantNumeric: "tabular-nums" }}>
+                        {typeof tread === "number" ? `${tread} mm` : "-"}
+                      </Typography>
+                      <Chip size="small" color={TYRE_STATE[state].color} label={TYRE_STATE[state].label} />
+                    </Stack>
+                    {photo && <PhotoThumbs photos={[photo]} size={56} />}
+                  </Stack>
+                );
+              }}
+            />
+            {lastCheck.extra_photo && (
+              <Box mt={1.5}>
+                <Typography variant="caption" color="textSecondary" display="block" mb={0.5}>
+                  Photo from any side
+                </Typography>
+                <PhotoThumbs photos={[lastCheck.extra_photo]} size={56} />
+              </Box>
+            )}
+          </Box>
+        </Section>
+      )}
+
       <Section
         title="Tyre history"
         actions={
@@ -241,10 +242,21 @@ export const TyresTab: React.FC<TabProps> = (props) => {
             { header: "Type", render: (e) => EVENT_KINDS[e.kind].label },
             mileageCol,
             {
-              header: "Tread (FL / FR / RL / RR)",
+              header: "Tread mm (FL / FR / RL / RR)",
               render: (e) => {
-                if (!e.tread || !Object.keys(e.tread).length) return "-";
                 const low = lowestTread(e);
+                if (!e.tread || !Object.keys(e.tread).length)
+                  return low === null ? (
+                    "-"
+                  ) : (
+                    <Typography
+                      variant="body2"
+                      color={low <= FLEET_RULES.treadLimitMm ? "error" : undefined}
+                      fontWeight={low <= FLEET_RULES.treadLimitMm ? 700 : undefined}
+                    >
+                      Lowest {low} mm
+                    </Typography>
+                  );
                 return (
                   <Typography
                     variant="body2"
@@ -257,9 +269,9 @@ export const TyresTab: React.FC<TabProps> = (props) => {
               },
             },
             { header: "Fitter", render: (e) => e.supplier || "-" },
-            noteCol(),
+            { header: "Invoice", render: (e) => e.invoice_no || "-" },
             costCol,
-            actionsCol(props),
+            noteCol(),
           ]}
         />
       </Section>
@@ -336,17 +348,17 @@ export const FuelTab: React.FC<
     <Box display="flex" flexDirection="column" gap={3}>
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatTile label="Fuel this year" value={money(thisYear.cost)} sub={`${thisYear.litres.toFixed(1)} L`} />
+          <StatTile tone="blue" label="Fuel this year" value={money(thisYear.cost)} sub={`${thisYear.litres.toFixed(1)} L`} />
         </Grid>
         <Grid size={{ xs: 6, sm: 4 }}>
-          <StatTile
+          <StatTile tone="purple"
             label="Average price"
             value={thisYear.litres > 0 ? `£${(thisYear.cost / thisYear.litres).toFixed(3)}` : "-"}
             sub="per litre this year"
           />
         </Grid>
         <Grid size={{ xs: 6, sm: 4 }}>
-          <StatTile
+          <StatTile tone="green"
             label="This week"
             value={`${weekLitres.toFixed(1)} L`}
             sub={
@@ -407,34 +419,34 @@ export const FuelTab: React.FC<
       >
         <Grid container spacing={2}>
           <Grid size={{ xs: 6, md: 2 }}>
-            <StatTile label="Miles driven" value={formatMiles(milesDriven)} sub="from odometer readings" />
+            <StatTile tone="blue" label="Miles driven" value={formatMiles(milesDriven)} sub="from odometer readings" />
           </Grid>
           <Grid size={{ xs: 6, md: 2 }}>
-            <StatTile
+            <StatTile tone="purple"
               label="Fuel filled"
               value={`${use.litres.toFixed(1)} L`}
               sub={`${use.fills} fill${use.fills === 1 ? "" : "s"}`}
             />
           </Grid>
           <Grid size={{ xs: 6, md: 2 }}>
-            <StatTile label="Fuel cost" value={money(use.cost)} />
+            <StatTile tone="green" label="Fuel cost" value={money(use.cost)} />
           </Grid>
           <Grid size={{ xs: 6, md: 2 }}>
-            <StatTile
+            <StatTile tone="pink"
               label="Fuel use"
               value={use.l100 ? `${use.l100.toFixed(1)} L/100 km` : "-"}
               sub={use.mpg ? `${use.mpg.toFixed(1)} mpg` : "Needs two fills with odometer"}
             />
           </Grid>
           <Grid size={{ xs: 6, md: 2 }}>
-            <StatTile
+            <StatTile tone="orange"
               label="Cost per mile"
               value={use.measured_miles > 0 ? `£${(use.measured_cost / use.measured_miles).toFixed(2)}` : "-"}
               sub="fuel only"
             />
           </Grid>
           <Grid size={{ xs: 6, md: 2 }}>
-            <StatTile
+            <StatTile tone="teal"
               label="Normal range"
               value={<Typography fontWeight={700}>{fuelRangeText(vehicle)}</Typography>}
               sub={
@@ -502,7 +514,6 @@ export const FuelTab: React.FC<
             },
             byCol,
             costCol,
-            actionsCol(props),
           ]}
         />
       </Section>
@@ -614,13 +625,13 @@ export const MileageTab: React.FC<TabProps> = (props) => {
     <Box display="flex" flexDirection="column" gap={3}>
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatTile label="Odometer" value={formatMiles(vehicle.mileage)} sub={readings.length ? `Last reading ${formatDate(readings[readings.length - 1].date)}` : undefined} />
+          <StatTile tone="blue" label="Odometer" value={formatMiles(vehicle.mileage)} sub={readings.length ? `Last reading ${formatDate(readings[readings.length - 1].date)}` : undefined} />
         </Grid>
         <Grid size={{ xs: 6, sm: 4 }}>
-          <StatTile label="Last 30 days" value={last30 === null ? "-" : formatMiles(last30)} />
+          <StatTile tone="purple" label="Last 30 days" value={last30 === null ? "-" : formatMiles(last30)} />
         </Grid>
         <Grid size={{ xs: 6, sm: 4 }}>
-          <StatTile label="Last 12 months" value={last365 === null ? "-" : formatMiles(last365)} />
+          <StatTile tone="green" label="Last 12 months" value={last365 === null ? "-" : formatMiles(last365)} />
         </Grid>
       </Grid>
       <Section
@@ -637,7 +648,6 @@ export const MileageTab: React.FC<TabProps> = (props) => {
             { header: "Since previous", render: (e) => (e.diff === null ? "-" : `+${formatMiles(e.diff)}`) },
             { header: "Came with", render: (e) => EVENT_KINDS[e.kind].label },
             byCol,
-            actionsCol(props),
           ]}
         />
       </Section>
