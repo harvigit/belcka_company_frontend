@@ -9,8 +9,6 @@ import FormDrawer from "../../inventory-new/shared/FormDrawer";
 import FormField from "../../inventory-new/shared/FormField";
 import { countsAsCost, EventKind, EVENT_KINDS, formatDate, INVOICE_KINDS, money, Vehicle, VehicleEvent } from "../types";
 import { NewEvent } from "../useVehicles";
-import { hasEventForm } from "./event-drawer";
-import { RecordActions } from "./history";
 import { RecordTable, Section, StatTile } from "./common";
 
 const MAX_MB = 5;
@@ -23,9 +21,6 @@ interface InvoicesTabProps {
   onAttach: (eventId: number, fileName: string) => Promise<void>;
   onOpenTab: (tab: string) => void;
   // fuel, MOT, service, tyres and repairs open the record form on the vehicle page
-  onEdit: (e: VehicleEvent) => void;
-  onDelete: (e: VehicleEvent) => void;
-  onUpdate: (id: number, patch: Partial<NewEvent>) => Promise<void>;
 }
 
 const blank = () => ({
@@ -61,8 +56,7 @@ const FilePicker: React.FC<{ label: string; onPick: (name: string) => void; onEr
   </Button>
 );
 
-const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, onAdd, onAttach, onOpenTab, onEdit, onDelete, onUpdate }) => {
-  const [editingId, setEditingId] = useState<number | null>(null);
+const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, onAdd, onAttach, onOpenTab }) => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(blank);
   const [showErrors, setShowErrors] = useState(false);
@@ -96,13 +90,8 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, on
       note: form.note.trim(),
       file_name: form.file_name || undefined,
     };
-    if (editingId) {
-      await onUpdate(editingId, fields);
-      toast.success(`${EVENT_KINDS[form.kind].label} invoice updated.`);
-    } else {
-      await onAdd({ ...fields, vehicle_id: vehicle.id, mileage: null });
-      toast.success(`${EVENT_KINDS[form.kind].label} invoice added.`);
-    }
+    await onAdd({ ...fields, vehicle_id: vehicle.id, mileage: null });
+    toast.success(`${EVENT_KINDS[form.kind].label} invoice added.`);
     setOpen(false);
   };
 
@@ -110,13 +99,13 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, on
     <Box display="flex" flexDirection="column" gap={3}>
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatTile label="All costs" value={money(total)} sub={`${costs.length} records`} />
+          <StatTile tone="blue" label="All costs" value={money(total)} sub={`${costs.length} records`} />
         </Grid>
         <Grid size={{ xs: 6, sm: 4 }}>
-          <StatTile label="This year" value={money(thisYear)} />
+          <StatTile tone="purple" label="This year" value={money(thisYear)} />
         </Grid>
         <Grid size={{ xs: 6, sm: 4 }}>
-          <StatTile
+          <StatTile tone="green"
             label="With an invoice file"
             value={`${withFile} / ${costs.length}`}
             sub={costs.length > withFile ? "Attach the missing files below" : "All costs have a file"}
@@ -135,7 +124,6 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, on
               onClick={() => {
                 setForm(blank());
                 setShowErrors(false);
-                setEditingId(null);
                 setOpen(true);
               }}
             >
@@ -189,39 +177,13 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, on
                 ),
             },
             { header: "Amount", align: "right", render: (e) => <b>{money(e.cost)}</b> },
-            {
-              header: "",
-              align: "right",
-              render: (e) => (
-                <RecordActions
-                  e={e}
-                  readOnly={readOnly}
-                  onDelete={onDelete}
-                  onEdit={(ev) => {
-                    if (hasEventForm(ev.kind)) return onEdit(ev);
-                    setForm({
-                      kind: ev.kind,
-                      date: ev.date,
-                      supplier: ev.supplier,
-                      invoice_no: ev.invoice_no,
-                      cost: ev.cost ? String(ev.cost) : "",
-                      note: ev.note,
-                      file_name: ev.file_name ?? "",
-                    });
-                    setShowErrors(false);
-                    setEditingId(ev.id);
-                    setOpen(true);
-                  }}
-                />
-              ),
-            },
           ]}
         />
       </Section>
 
       <FormDrawer
         open={open}
-        title={`${editingId ? "Edit invoice" : "Upload invoice"} · ${vehicle.registration}`}
+        title={`Upload invoice · ${vehicle.registration}`}
         onClose={() => setOpen(false)}
         onSubmit={submit}
         isSaving={false}

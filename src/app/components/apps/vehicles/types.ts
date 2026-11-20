@@ -33,13 +33,24 @@ export interface Vehicle {
   v5c_reference?: string;
   registered_keeper?: string;
   engine?: string;
-  parking_place?: string;
+  // where the vehicle is normally kept (prototype "Parking place")
+  parking?: ParkingPlace | null;
   // litres per week, 0 = unlimited
   weekly_fuel_limit?: number;
   // normal fuel use in L/100 km; outside it the vehicle is flagged (empty = not set)
   fuel_use_min?: number | null;
   fuel_use_max?: number | null;
 }
+
+export interface ParkingPlace {
+  name: string;
+  address: string;
+  lat: number | null;
+  lng: number | null;
+}
+
+export const parkingText = (v: Vehicle) =>
+  [v.parking?.name, v.parking?.address].filter(Boolean).join(" · ") || "Not set";
 
 // fleet_settings: the same rules apply to every company vehicle (static until Settings is built).
 // Defaults; the Settings page changes them (useVehicles copies the saved values in here so every
@@ -131,12 +142,19 @@ export interface VehicleEvent {
   invoice_no: string;
   note: string;
   litres?: number | null;
-  // tyre checks: tread per wheel in mm
-  tread?: Partial<Record<"FL" | "FR" | "RL" | "RR", number>>;
+  // tyre checks: tread per wheel in mm, the state the checker chose and an optional photo
+  tread?: Partial<Record<TyreWheel, number>>;
+  wheels?: Partial<Record<TyreWheel, { state: TyreState; photo?: string }>>;
+  // tyre check: optional photo from any side
+  extra_photo?: string;
+  // tyre change: lowest tread after the change (one number, as on the prototype)
+  lowest_tread?: number | null;
   // MOT result
   passed?: boolean;
   // invoice or receipt (fleet_event_photos)
   file_name?: string;
+  // accident photos (fleet_event_photos)
+  photos?: string[];
   // Expenses and mileage claims sent from the driver app wait for approval.
   // Records added on the web have no status and count straight away.
   status?: ExpenseStatus;
@@ -254,6 +272,44 @@ export interface DriverLocation {
   defect_id?: number;
 }
 
+// fleet_places: company places shown on the Map (office, fuel station, hospital...)
+export type PlaceKind =
+  | "office"
+  | "depot"
+  | "site"
+  | "fuel"
+  | "garage"
+  | "parking"
+  | "hospital"
+  | "photo"
+  | "accident"
+  | "other";
+
+export const PLACE_KIND: Record<PlaceKind, { label: string; color: string; hint: string }> = {
+  office: { label: "Office", color: "#1e4db7", hint: "Head office or a branch" },
+  depot: { label: "Depot / yard", color: "#455a64", hint: "Where vehicles are kept" },
+  site: { label: "Site", color: "#f57c00", hint: "A work site or project" },
+  fuel: { label: "Fuel station", color: "#ef6c00", hint: "Where drivers fill up" },
+  garage: { label: "Garage", color: "#6d4c41", hint: "Service, MOT or repairs" },
+  parking: { label: "Parking", color: "#0277bd", hint: "Car park or permit zone" },
+  hospital: { label: "Hospital", color: "#d32f2f", hint: "Nearest A&E for sites" },
+  photo: { label: "Photo check point", color: "#00838f", hint: "Where photo checks are done" },
+  accident: { label: "Accident spot", color: "#c62828", hint: "Where an accident happened" },
+  other: { label: "Other", color: "#7c4dff", hint: "Anything else" },
+};
+
+export interface FleetPlace {
+  id: number;
+  name: string;
+  kind: PlaceKind;
+  address: string;
+  lat: number;
+  lng: number;
+  note: string;
+  created_by: string;
+  created_at: string;
+}
+
 export type LocationKind =
   | "daily_check"
   | "fuel"
@@ -287,7 +343,8 @@ export type ActivityArea =
   | "expense"
   | "card"
   | "import"
-  | "settings";
+  | "settings"
+  | "place";
 
 export const ACTIVITY_AREA: Record<ActivityArea, string> = {
   vehicle: "Vehicles",
@@ -301,6 +358,7 @@ export const ACTIVITY_AREA: Record<ActivityArea, string> = {
   card: "Fuel cards",
   import: "Imports and conflicts",
   settings: "Settings and connections",
+  place: "Map places",
 };
 
 export interface Activity {
@@ -490,6 +548,8 @@ export interface DailyChecklist {
   vehicle_id: number;
   driver_name: string;
   date: string;
+  // when the driver sent it (ISO date and time)
+  submitted_at?: string;
   mileage: number;
   // A defect item has the driver's note and at least one camera photo (fleet_daily_checklist_items).
   items: { item: string; ok: boolean; note: string; photos: string[] }[];
@@ -663,7 +723,29 @@ export interface DriverLog {
 
 export const lowestTread = (e: VehicleEvent) => {
   const values = Object.values(e.tread ?? {}).filter((n): n is number => typeof n === "number");
-  return values.length ? Math.min(...values) : null;
+  if (values.length) return Math.min(...values);
+  return typeof e.lowest_tread === "number" ? e.lowest_tread : null;
+};
+
+/* ---------- Tyres ---------- */
+export type TyreWheel = "FL" | "FR" | "RL" | "RR";
+export const TYRE_WHEELS: [TyreWheel, string][] = [
+  ["FL", "Front left"],
+  ["FR", "Front right"],
+  ["RL", "Rear left"],
+  ["RR", "Rear right"],
+];
+export type TyreState = "ok" | "worn" | "replace";
+export const TYRE_STATE: Record<TyreState, { label: string; color: "success" | "warning" | "error" }> = {
+  ok: { label: "OK", color: "success" },
+  worn: { label: "Worn", color: "warning" },
+  replace: { label: "Replace", color: "error" },
+};
+// state of one wheel: what the checker chose, or Replace when the tread is at the limit
+export const wheelState = (e: VehicleEvent, w: TyreWheel): TyreState => {
+  const tread = e.tread?.[w];
+  if (typeof tread === "number" && tread <= FLEET_RULES.treadLimitMm) return "replace";
+  return e.wheels?.[w]?.state ?? "ok";
 };
 
 export const money = (value?: number | null) =>

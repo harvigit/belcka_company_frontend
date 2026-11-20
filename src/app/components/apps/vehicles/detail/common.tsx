@@ -13,17 +13,54 @@ import {
   Typography,
 } from "@mui/material";
 
-// Small label + value tile used across the vehicle page.
+/* ---------- Light colours for tiles and cards (client: light blue, purple, green, pink...) ---------- */
+// Theme "light" colours where the theme has them, so dark mode keeps working; purple is a soft tint.
+export type Tone = "blue" | "purple" | "green" | "pink" | "orange" | "teal";
+export const TONES: Record<Tone, { bg: string; fg: string }> = {
+  blue: { bg: "info.light", fg: "info.main" },
+  purple: { bg: "rgba(124, 77, 255, 0.10)", fg: "#7c4dff" },
+  green: { bg: "success.light", fg: "success.main" },
+  pink: { bg: "error.light", fg: "error.main" },
+  orange: { bg: "warning.light", fg: "#b26a00" },
+  teal: { bg: "primary.light", fg: "primary.main" },
+};
+// Filter cards are coloured by meaning (primary, error...); this maps that to a light tone.
+export const CARD_TONE: Record<"primary" | "secondary" | "success" | "error" | "warning" | "info", Tone> = {
+  primary: "blue",
+  secondary: "purple",
+  success: "green",
+  error: "pink",
+  warning: "orange",
+  info: "teal",
+};
+const TONE_ORDER: Tone[] = ["blue", "purple", "green", "pink", "orange", "teal"];
+// Tones in a fixed order, so tiles next to each other never share a colour.
+export const toneAt = (i: number): Tone => TONE_ORDER[i % TONE_ORDER.length];
+
+// Small label + value tile used across the Vehicles screens.
 export const StatTile: React.FC<{
   label: string;
   value: React.ReactNode;
   sub?: React.ReactNode;
-}> = ({ label, value, sub }) => (
-  <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, height: "100%" }}>
+  tone?: Tone;
+}> = ({ label, value, sub, tone }) => (
+  <Paper
+    variant="outlined"
+    sx={{
+      p: 1.5,
+      borderRadius: 2,
+      height: "100%",
+      ...(tone ? { backgroundColor: TONES[tone].bg, borderColor: "transparent" } : {}),
+    }}
+  >
     <Typography
       variant="caption"
-      color="textSecondary"
-      sx={{ textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 600 }}
+      sx={{
+        textTransform: "uppercase",
+        letterSpacing: 0.6,
+        fontWeight: 700,
+        color: tone ? TONES[tone].fg : "text.secondary",
+      }}
     >
       {label}
     </Typography>

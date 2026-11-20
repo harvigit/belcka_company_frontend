@@ -356,16 +356,16 @@ const FuelCardsPage: React.FC = () => {
         <>
           <Grid container spacing={2} sx={{ px: 2, pt: 2 }}>
             <Grid size={{ xs: 6, md: 3 }}>
-              <StatTile label="Cards" value={store.cards.length} />
+              <StatTile tone="blue" label="Cards" value={store.cards.length} />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
-              <StatTile label="Not linked to a person" value={unlinked} sub={unlinked ? "Their fuel can't be placed on a vehicle" : "All linked"} />
+              <StatTile tone="purple" label="Not linked to a person" value={unlinked} sub={unlinked ? "Their fuel can't be placed on a vehicle" : "All linked"} />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
-              <StatTile label="Expired or expiring" value={expiring} />
+              <StatTile tone="green" label="Expired or expiring" value={expiring} />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
-              <StatTile
+              <StatTile tone="pink"
                 label="Fuel on cards · 30 days"
                 value={money(cardRows.reduce((s, c) => s + c.cost30, 0))}
                 sub={`${cardRows.reduce((s, c) => s + c.litres30, 0).toFixed(1)} L`}

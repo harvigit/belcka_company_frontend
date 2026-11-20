@@ -7,10 +7,13 @@ import {
   ButtonBase,
   CircularProgress,
   Divider,
+  FormControlLabel,
   Grid,
   IconButton,
   Paper,
   Stack,
+  Switch,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import {
@@ -19,6 +22,10 @@ import {
   IconChecklist,
   IconGasStation,
   IconGauge,
+  IconInfoCircle,
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
+  IconMapPinPlus,
   IconX,
   IconReceipt,
   IconRoute,
@@ -35,7 +42,10 @@ import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
 import ChecklistDialog from "./checklist-dialog";
 import FleetNav from "./fleet-nav";
 import { DriverName, NoCompany, RegPlate } from "./shared";
-import { DriverLocation, LOCATION_KIND, LocationKind } from "./types";
+import { DriverLocation, FleetPlace, LOCATION_KIND, LocationKind, PLACE_KIND } from "./types";
+import { PlaceBadge, PlaceDialog, PlaceDraft, PlacePin } from "./map-places";
+import ConfirmDialog from "../inventory-new/shared/ConfirmDialog";
+import toast from "react-hot-toast";
 import { useVehicles } from "./useVehicles";
 
 dayjs.extend(relativeTime);
@@ -160,6 +170,15 @@ const MapPage: React.FC = () => {
   const [openPoint, setOpenPoint] = useState<number | null>(null);
   const [checklistId, setChecklistId] = useState<number | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  // list of drivers can be hidden to make the map bigger
+  const [showList, setShowList] = useState(true);
+  const [legendOpen, setLegendOpen] = useState(true);
+  // company places (office, fuel station, hospital...)
+  const [showPlaces, setShowPlaces] = useState(true);
+  const [picking, setPicking] = useState(false);
+  const [draft, setDraft] = useState<PlaceDraft | null>(null);
+  const [openPlace, setOpenPlace] = useState<number | null>(null);
+  const [toRemove, setToRemove] = useState<FleetPlace | null>(null);
 
   // Each driver's latest point.
   const latest = useMemo(() => {
@@ -224,6 +243,23 @@ const MapPage: React.FC = () => {
     }
   };
 
+  // "Add place": the next click on the map sets where the place is.
+  const pickPlace = (e: google.maps.MapMouseEvent) => {
+    if (!picking || !e.latLng) return;
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    setPicking(false);
+    setDraft({ lat, lng, address: "" });
+    new google.maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === "OK" && results?.[0]) {
+        const address = results[0].formatted_address;
+        setDraft((d) => (d && d.lat === lat && d.lng === lng && !d.address ? { ...d, address } : d));
+      }
+    });
+  };
+  const places = store.places;
+  const placeKinds = [...new Set(places.map((p) => p.kind))];
+
   const describe = (p: DriverLocation) => `${LOCATION_KIND[p.kind].label}${p.action ? ` · ${p.action}` : ""}`;
 
   if (store.noCompany) return <NoCompany />;
@@ -232,21 +268,41 @@ const MapPage: React.FC = () => {
     <Box sx={{ minHeight: "calc(100vh - 100px)", display: "flex", flexDirection: "column" }}>
       <FleetNav data={store} />
 
-      <Box px={2} pt={2}>
-        <Typography variant="h5" fontWeight={700}>
-          Map
-        </Typography>
-        <Typography variant="body2" color="textSecondary">
-          Where drivers recorded something in the app: daily check, fuel, mileage, tyre or photo check, accident or
-          expense. A place is saved only when the driver records something, so the dashed line joins one day&apos;s
-          stops and is not the exact route driven.
-        </Typography>
-      </Box>
+      <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ md: "flex-end" }} spacing={1.5} px={2} pt={2}>
+        <Box>
+          <Typography variant="h5" fontWeight={700}>
+            Map
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Where drivers recorded something in the app, and your company places (office, fuel stations, hospitals...).
+            The dashed line joins one day&apos;s stops; it is not the exact route driven.
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1} alignItems="center" flexShrink={0}>
+          <FormControlLabel
+            control={<Switch checked={showPlaces} onChange={(e) => setShowPlaces(e.target.checked)} />}
+            label={`Places (${places.length})`}
+            sx={{ mr: 0.5 }}
+          />
+          <Button
+            variant={picking ? "outlined" : "contained"}
+            startIcon={<IconMapPinPlus size={18} />}
+            onClick={() => {
+              setPicking((v) => !v);
+              setShowPlaces(true);
+            }}
+            disabled={!isLoaded || !!loadError}
+          >
+            {picking ? "Cancel" : "Add place"}
+          </Button>
+        </Stack>
+      </Stack>
 
       <Grid container spacing={2} sx={{ p: 2, flex: 1 }}>
         {/* Drivers and stops */}
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 4 }} sx={{ display: showList ? undefined : "none" }}>
           <Paper variant="outlined" sx={{ borderRadius: 2, height: { md: "calc(100vh - 290px)" }, overflow: "auto" }}>
+            <Stack direction="row" alignItems="stretch" sx={{ backgroundColor: driverId === null ? "primary.light" : "transparent" }}>
             <ButtonBase
               onClick={() => {
                 setDriverId(null);
@@ -258,7 +314,7 @@ const MapPage: React.FC = () => {
                 textAlign: "left",
                 px: 2,
                 py: 1.5,
-                backgroundColor: driverId === null ? "primary.light" : "transparent",
+                flex: 1,
               }}
             >
               <Box>
@@ -268,6 +324,12 @@ const MapPage: React.FC = () => {
                 </Typography>
               </Box>
             </ButtonBase>
+              <Tooltip title="Hide the list (bigger map)">
+                <IconButton onClick={() => setShowList(false)} sx={{ alignSelf: "center", mr: 1 }} aria-label="Hide the list">
+                  <IconLayoutSidebarLeftCollapse size={20} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
             <Divider />
             {latest.length === 0 && (
               <Typography color="textSecondary" p={2}>
@@ -365,7 +427,7 @@ const MapPage: React.FC = () => {
         </Grid>
 
         {/* Map */}
-        <Grid size={{ xs: 12, md: 8 }}>
+        <Grid size={{ xs: 12, md: showList ? 8 : 12 }}>
           <Paper
             variant="outlined"
             sx={{ borderRadius: 2, overflow: "hidden", height: { xs: 420, md: "calc(100vh - 290px)" }, position: "relative" }}
@@ -384,8 +446,10 @@ const MapPage: React.FC = () => {
                 zoom={11}
                 onLoad={setMap}
                 onUnmount={() => setMap(null)}
+                onClick={pickPlace}
                 mapContainerStyle={{ width: "100%", height: "100%" }}
                 options={{
+                  draggableCursor: picking ? "crosshair" : undefined,
                   gestureHandling: "greedy",
                   zoomControl: true,
                   mapTypeControl: false,
@@ -394,6 +458,76 @@ const MapPage: React.FC = () => {
                   clickableIcons: false,
                 }}
               >
+                {showPlaces &&
+                  places.map((pl) => (
+                    <OverlayViewF
+                      key={`place${pl.id}`}
+                      position={{ lat: pl.lat, lng: pl.lng }}
+                      mapPaneName={OVERLAY_MOUSE_TARGET}
+                      getPixelPositionOffset={(w, h) => ({ x: -w / 2, y: -h })}
+                      zIndex={openPlace === pl.id ? 9 : 0}
+                    >
+                      <PlacePin
+                        place={pl}
+                        active={openPlace === pl.id}
+                        onClick={() => {
+                          setOpenPoint(null);
+                          setOpenPlace(pl.id);
+                        }}
+                      />
+                    </OverlayViewF>
+                  ))}
+                {showPlaces &&
+                  places
+                    .filter((pl) => pl.id === openPlace)
+                    .map((pl) => (
+                      <InfoWindow
+                        key={`placeinfo${pl.id}`}
+                        position={{ lat: pl.lat, lng: pl.lng }}
+                        onCloseClick={() => setOpenPlace(null)}
+                        options={{ pixelOffset: new google.maps.Size(0, -40), headerDisabled: true }}
+                      >
+                        <Box sx={{ minWidth: 210, maxWidth: 260 }}>
+                          <Stack direction="row" spacing={1} alignItems="center" mb={0.75}>
+                            <PlaceBadge kind={pl.kind} size={22} />
+                            <Typography variant="body2" fontWeight={700} flex={1}>
+                              {pl.name}
+                            </Typography>
+                            <IconButton size="small" aria-label="Close" onClick={() => setOpenPlace(null)} sx={{ m: -0.5 }}>
+                              <IconX size={16} />
+                            </IconButton>
+                          </Stack>
+                          <Typography variant="body2" color="textSecondary" lineHeight={1.4}>
+                            {PLACE_KIND[pl.kind].label}
+                          </Typography>
+                          {pl.address && (
+                            <Typography variant="caption" color="textSecondary" display="block">
+                              {pl.address}
+                            </Typography>
+                          )}
+                          {pl.note && (
+                            <Typography variant="body2" lineHeight={1.4} mt={0.5}>
+                              {pl.note}
+                            </Typography>
+                          )}
+                          <Stack direction="row" spacing={1} mt={1}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              fullWidth
+                              href={`https://www.google.com/maps/dir/?api=1&destination=${pl.lat},${pl.lng}`}
+                              target="_blank"
+                              rel="noopener"
+                            >
+                              Directions
+                            </Button>
+                            <Button size="small" variant="outlined" color="error" fullWidth onClick={() => setToRemove(pl)}>
+                              Remove
+                            </Button>
+                          </Stack>
+                        </Box>
+                      </InfoWindow>
+                    ))}
                 {driverId !== null && stops.length > 1 && (
                   <Polyline path={stops.map((s) => ({ lat: s.lat, lng: s.lng }))} options={DASHED} />
                 )}
@@ -410,7 +544,10 @@ const MapPage: React.FC = () => {
                       point={p}
                       label={driverId === null ? plate(p.vehicle_id) ?? p.driver_name : String(i + 1)}
                       active={openPoint === p.id}
-                      onClick={() => setOpenPoint(p.id)}
+                      onClick={() => {
+                        setOpenPlace(null);
+                        setOpenPoint(p.id);
+                      }}
                     />
                   </OverlayViewF>
                 ))}
@@ -455,34 +592,116 @@ const MapPage: React.FC = () => {
               </GoogleMap>
             )}
 
-            {/* What the icons mean */}
+            {/* What the icons mean: a small card that can be folded away */}
             {isLoaded && !loadError && process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY && (
-              <Paper
-                elevation={2}
-                sx={{
-                  position: "absolute",
-                  left: 10,
-                  bottom: 24,
-                  p: 1,
-                  borderRadius: 2,
-                  maxWidth: { xs: "calc(100% - 20px)", sm: 420 },
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 1,
-                  opacity: 0.95,
-                }}
-              >
-                {(Object.keys(LOCATION_KIND) as LocationKind[]).map((k) => (
-                  <Stack key={k} direction="row" spacing={0.5} alignItems="center">
-                    <KindBadge point={{ kind: k }} size={18} />
-                    <Typography variant="caption">{LOCATION_KIND[k].label}</Typography>
+              legendOpen ? (
+                <Paper
+                  elevation={3}
+                  sx={{
+                    position: "absolute",
+                    left: 10,
+                    bottom: 28,
+                    width: { xs: "calc(100% - 20px)", sm: 300 },
+                    maxHeight: "calc(100% - 90px)",
+                    overflow: "auto",
+                    borderRadius: 2,
+                    p: 1.5,
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      What the icons mean
+                    </Typography>
+                    <Tooltip title="Hide">
+                      <IconButton size="small" onClick={() => setLegendOpen(false)} aria-label="Hide the icon list" sx={{ m: -0.5 }}>
+                        <IconX size={16} />
+                      </IconButton>
+                    </Tooltip>
                   </Stack>
-                ))}
-                <Stack direction="row" spacing={0.5} alignItems="center">
-                  <KindBadge point={{ kind: "daily_check", alert: true }} size={18} />
-                  <Typography variant="caption">Defect found</Typography>
-                </Stack>
-              </Paper>
+
+                  <Typography variant="caption" color="textSecondary" fontWeight={600} display="block" mb={0.75}>
+                    DRIVER RECORDS (ROUND)
+                  </Typography>
+                  <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 1.5, rowGap: 0.75 }}>
+                    {(Object.keys(LOCATION_KIND) as LocationKind[]).map((k) => (
+                      <Stack key={k} direction="row" spacing={1} alignItems="center" minWidth={0}>
+                        <KindBadge point={{ kind: k }} size={20} />
+                        <Typography variant="caption" noWrap>
+                          {LOCATION_KIND[k].label}
+                        </Typography>
+                      </Stack>
+                    ))}
+                    <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
+                      <KindBadge point={{ kind: "daily_check", alert: true }} size={20} />
+                      <Typography variant="caption" noWrap>
+                        Defect found
+                      </Typography>
+                    </Stack>
+                  </Box>
+
+                  {showPlaces && placeKinds.length > 0 && (
+                    <>
+                      <Divider sx={{ my: 1.25 }} />
+                      <Typography variant="caption" color="textSecondary" fontWeight={600} display="block" mb={0.75}>
+                        COMPANY PLACES (SQUARE)
+                      </Typography>
+                      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 1.5, rowGap: 0.75 }}>
+                        {placeKinds.map((k) => (
+                          <Stack key={k} direction="row" spacing={1} alignItems="center" minWidth={0}>
+                            <PlaceBadge kind={k} size={20} />
+                            <Typography variant="caption" noWrap>
+                              {PLACE_KIND[k].label}
+                            </Typography>
+                          </Stack>
+                        ))}
+                      </Box>
+                    </>
+                  )}
+                </Paper>
+              ) : (
+                <Button
+                  variant="contained"
+                  color="inherit"
+                  size="small"
+                  startIcon={<IconInfoCircle size={18} />}
+                  onClick={() => setLegendOpen(true)}
+                  sx={{ position: "absolute", left: 10, bottom: 28, backgroundColor: "background.paper", boxShadow: 2 }}
+                >
+                  Icons
+                </Button>
+              )
+            )}
+
+            {/* Show the drivers list again */}
+            {!showList && (
+              <Tooltip title="Show the drivers list">
+                <Button
+                  variant="contained"
+                  color="inherit"
+                  size="small"
+                  startIcon={<IconLayoutSidebarLeftExpand size={18} />}
+                  onClick={() => setShowList(true)}
+                  sx={{ position: "absolute", top: 10, left: 10, backgroundColor: "background.paper", boxShadow: 2 }}
+                >
+                  Drivers
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* Picking a spot for a new place */}
+            {picking && (
+              <Alert
+                severity="info"
+                icon={<IconMapPinPlus size={20} />}
+                sx={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", boxShadow: 3, maxWidth: "calc(100% - 140px)" }}
+                action={
+                  <Button color="inherit" size="small" onClick={() => setPicking(false)}>
+                    Cancel
+                  </Button>
+                }
+              >
+                Click on the map where the place is.
+              </Alert>
             )}
           </Paper>
         </Grid>
@@ -492,6 +711,23 @@ const MapPage: React.FC = () => {
         checklist={checklist}
         vehicle={vehicles.find((v) => v.id === checklist?.vehicle_id) ?? null}
         onClose={() => setChecklistId(null)}
+      />
+
+      <PlaceDialog draft={draft} onClose={() => setDraft(null)} onSave={store.addPlace} />
+
+      <ConfirmDialog
+        open={!!toRemove}
+        title="Remove place"
+        message={toRemove ? `Remove ${toRemove.name} from the map?` : ""}
+        confirmLabel="Remove"
+        onClose={() => setToRemove(null)}
+        onConfirm={async () => {
+          if (!toRemove) return;
+          await store.removePlace(toRemove.id);
+          toast.success(`${toRemove.name} removed.`);
+          setOpenPlace(null);
+          setToRemove(null);
+        }}
       />
     </Box>
   );

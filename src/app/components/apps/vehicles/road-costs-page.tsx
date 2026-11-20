@@ -340,16 +340,16 @@ const RoadCostsPage: React.FC = () => {
         <>
           <Grid container spacing={2} sx={{ px: 2, pt: 2 }}>
             <Grid size={{ xs: 6, md: 3 }}>
-              <StatTile label="Parking this year" value={money(sumYear("parking"))} />
+              <StatTile tone="blue" label="Parking this year" value={money(sumYear("parking"))} />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
-              <StatTile label="Road charges this year" value={money(sumYear("road_charge"))} sub="Congestion, ULEZ, Dart" />
+              <StatTile tone="purple" label="Road charges this year" value={money(sumYear("road_charge"))} sub="Congestion, ULEZ, Dart" />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
-              <StatTile label="Fines this year" value={money(sumYear("fine"))} />
+              <StatTile tone="green" label="Fines this year" value={money(sumYear("fine"))} />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
-              <StatTile label="Records" value={charges.length} />
+              <StatTile tone="pink" label="Records" value={charges.length} />
             </Grid>
           </Grid>
           <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" mx={2} my={1.5} spacing={1}>

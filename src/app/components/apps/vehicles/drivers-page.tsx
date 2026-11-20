@@ -41,7 +41,7 @@ import InventoryTable from "../inventory-new/shared/InventoryTable";
 import FormDrawer from "../inventory-new/shared/FormDrawer";
 import FormField from "../inventory-new/shared/FormField";
 import FleetNav from "./fleet-nav";
-import { RecordTable } from "./detail/common";
+import { RecordTable, CARD_TONE, TONES } from "./detail/common";
 import { DriverName, DriverPicker, RegPlate, NoCompany } from "./shared";
 import {
   countsAsCost,
@@ -329,10 +329,11 @@ const DriversPage: React.FC = () => {
                   p: 1.5,
                   borderRadius: 2,
                   border: "1px solid",
-                  borderColor: active ? `${t.color}.main` : "grey.200",
+                  borderColor: active ? TONES[CARD_TONE[t.color]].fg : "transparent",
+                  backgroundColor: TONES[CARD_TONE[t.color]].bg,
                   boxShadow: active ? 1 : 0,
                   textAlign: "left",
-                  "&:hover": { borderColor: `${t.color}.main` },
+                  "&:hover": { borderColor: TONES[CARD_TONE[t.color]].fg },
                 }}
               >
                 <Box
@@ -343,8 +344,8 @@ const DriversPage: React.FC = () => {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: `${t.color}.main`,
-                    backgroundColor: `${t.color}.light`,
+                    color: TONES[CARD_TONE[t.color]].fg,
+                    backgroundColor: "background.paper",
                     flexShrink: 0,
                   }}
                 >

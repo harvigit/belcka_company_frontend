@@ -280,21 +280,21 @@ const Expenses: React.FC = () => {
 
       <Grid container spacing={2} sx={{ px: 2, pt: 2 }}>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatTile
+          <StatTile tone="blue"
             label="Waiting for approval"
             value={pending.length}
             sub={pending.length ? money(pending.reduce((s, e) => s + (e.cost ?? 0), 0)) : "Nothing to approve"}
           />
         </Grid>
         <Grid size={{ xs: 6, sm: 4 }}>
-          <StatTile
+          <StatTile tone="purple"
             label="Approved this month"
             value={money(approvedMonth.reduce((s, e) => s + (e.cost ?? 0), 0))}
             sub={`${approvedMonth.length} expense${approvedMonth.length === 1 ? "" : "s"}`}
           />
         </Grid>
         <Grid size={{ xs: 6, sm: 4 }}>
-          <StatTile label="Mileage claimed this month" value={`${claimMiles} mi`} sub="Private cars, not rejected" />
+          <StatTile tone="green" label="Mileage claimed this month" value={`${claimMiles} mi`} sub="Private cars, not rejected" />
         </Grid>
       </Grid>
 

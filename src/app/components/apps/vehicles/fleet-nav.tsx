@@ -10,11 +10,12 @@ import { DriverLicence, Defect, ImportConflict, ParkingPermit, Vehicle, VehicleE
 const ITEMS = [
   { href: "/apps/vehicles/list", label: "Vehicles", count: "" as const },
   { href: "/apps/vehicles/action-centre", label: "Action Centre", count: "actions" as const },
-  { href: "/apps/vehicles/expenses", label: "Expenses", count: "expenses" as const },
   { href: "/apps/vehicles/drivers", label: "Drivers", count: "" as const },
+  { href: "/apps/vehicles/expenses", label: "Expenses", count: "expenses" as const },
   { href: "/apps/vehicles/map", label: "Map", count: "" as const },
   { href: "/apps/vehicles/fuel-cards", label: "Fuel cards", count: "" as const },
   { href: "/apps/vehicles/road-costs", label: "Road costs", count: "conflicts" as const },
+  { href: "/apps/vehicles/permits", label: "Permits", count: "permits" as const },
   { href: "/apps/vehicles/activity", label: "Activity", count: "" as const },
   { href: "/apps/vehicles/settings", label: "Settings", count: "" as const },
 ];
@@ -38,12 +39,16 @@ const FleetNav: React.FC<{ data: FleetNavData }> = ({ data }) => {
   const urgent = actions.filter((a) => a.priority !== "normal").length;
   const expenses = data.events.filter((e) => e.status === "pending").length;
   const openConflicts = data.conflicts.filter((c) => !c.resolved).length;
+  const archived = new Set(data.vehicles.filter((v) => v.status === "archived").map((v) => v.id));
+  const pendingPermits = data.permits.filter((p) => p.status === "pending" && !archived.has(p.vehicle_id)).length;
 
   const badge = (key: (typeof ITEMS)[number]["count"]) => {
     if (key === "actions" && actions.length > 0)
       return <Chip size="small" color={urgent > 0 ? "error" : "primary"} label={actions.length} sx={{ height: 20 }} />;
     if (key === "conflicts" && openConflicts > 0)
       return <Chip size="small" color="error" label={openConflicts} sx={{ height: 20 }} />;
+    if (key === "permits" && pendingPermits > 0)
+      return <Chip size="small" color="warning" label={pendingPermits} sx={{ height: 20 }} />;
     if (key === "expenses" && expenses > 0)
       return <Chip size="small" color="warning" label={expenses} sx={{ height: 20 }} />;
     return null;
