@@ -23,6 +23,8 @@ export interface Vehicle {
   service_due: string;
   // Worked out from the last tyre check or change and the fleet_settings tyre rule.
   tyre_check_due?: string;
+  // company vehicles: a photo check is asked for at a random date inside the set period
+  next_photo_check?: string;
   gps_tracker: string;
   notes: string;
   created_at: string;
@@ -129,7 +131,9 @@ export type EventKind =
   // sent by the driver from the app
   | "cleaning"
   | "vehicle_supplies"
-  | "mileage_claim";
+  | "mileage_claim"
+  // seven photos of the whole vehicle, from the driver app
+  | "photo_check";
 
 export interface VehicleEvent {
   id: number;
@@ -579,6 +583,18 @@ export const EVENT_KINDS: Record<EventKind, { label: string; color: "primary" | 
   cleaning: { label: "Cleaning", color: "secondary" },
   vehicle_supplies: { label: "Vehicle supplies", color: "secondary" },
   mileage_claim: { label: "Mileage claim", color: "info" },
+  photo_check: { label: "Photo check", color: "info" },
+};
+
+/* ---------- Photo checks ---------- */
+// The seven views the driver app asks for, one after the other.
+export const PHOTO_SHOTS = ["Front", "Back", "Left side", "Right side", "Interior front", "Interior rear", "Odometer"];
+
+// Next photo check: a random day inside the set period, so drivers can't tell when it comes.
+export const randomPhotoCheckDate = (from: string) => {
+  const days = Math.max(14, Math.round(FLEET_RULES.photoCheckMonths * 30.4));
+  const offset = 14 + Math.floor(Math.random() * Math.max(1, days - 14));
+  return dayjs(from).add(offset, "day").format("YYYY-MM-DD");
 };
 
 // Costs added straight from the Invoices tab. Fuel, MOT, service and tyres have their own tabs
@@ -876,6 +892,7 @@ export const dueItems = (v: Vehicle): DueItem[] => {
       { label: "Road tax", date: v.tax_due },
       { label: "Service", date: v.service_due },
       { label: "Tyre check", date: v.tyre_check_due ?? "" },
+      { label: "Photo check", date: v.next_photo_check ?? "" },
     );
   }
   return items.map((i) => ({ ...i, state: dueState(i.date) }));

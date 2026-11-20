@@ -3,7 +3,6 @@ import React, { useMemo, useState } from "react";
 import {
   Box,
   Button,
-  ButtonBase,
   Chip,
   Divider,
   Grid,
@@ -44,7 +43,7 @@ import ConfirmDialog from "../inventory-new/shared/ConfirmDialog";
 import FilterButton from "../inventory-new/shared/FilterButton";
 import { selectColumn } from "../inventory-new/shared/selectColumn";
 import FleetNav from "./fleet-nav";
-import { CARD_TONE, TONES } from "./detail/common";
+import { CARD_TONE, StatCard } from "./detail/common";
 import { NoCompany, RegPlate } from "./shared";
 import { PERMIT_ORDER, PermitDrawer, PermitRejectDialog } from "./permit-forms";
 import { formatDate, ParkingPermit, PERMIT_STATE, PermitState, permitState } from "./types";
@@ -323,58 +322,21 @@ const PermitsPage: React.FC = () => {
       </Box>
 
       <Grid container spacing={2} sx={{ px: 2, pt: 2 }}>
-        {cards.map((card) => {
-          const active = focus === card.key;
-          return (
-            <Grid key={card.key} size={{ xs: 12, sm: 4 }}>
-              <ButtonBase
-                onClick={() => {
-                  setFocus(active && card.key !== "all" ? "all" : card.key);
-                  setSelected(new Set());
-                }}
-                aria-pressed={active}
-                sx={{
-                  width: "100%",
-                  justifyContent: "flex-start",
-                  gap: 1.5,
-                  p: 1.5,
-                  borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: active ? TONES[CARD_TONE[card.color]].fg : "transparent",
-                  backgroundColor: TONES[CARD_TONE[card.color]].bg,
-                  boxShadow: active ? 1 : 0,
-                  textAlign: "left",
-                  transition: "all .15s",
-                  "&:hover": { borderColor: TONES[CARD_TONE[card.color]].fg },
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: TONES[CARD_TONE[card.color]].fg,
-                    backgroundColor: "background.paper",
-                    flexShrink: 0,
-                  }}
-                >
-                  {card.icon}
-                </Box>
-                <Box>
-                  <Typography variant="h5" fontWeight={700} lineHeight={1.1}>
-                    {card.count}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {card.label} · {card.hint}
-                  </Typography>
-                </Box>
-              </ButtonBase>
-            </Grid>
-          );
-        })}
+        {cards.map((card) => (
+          <Grid key={card.key} size={{ xs: 12, sm: 4 }}>
+            <StatCard
+              icon={card.icon}
+              tone={CARD_TONE[card.color]}
+              value={card.count}
+              label={`${card.label} · ${card.hint}`}
+              active={focus === card.key && card.key !== "all"}
+              onClick={() => {
+                setFocus(focus === card.key && card.key !== "all" ? "all" : card.key);
+                setSelected(new Set());
+              }}
+            />
+          </Grid>
+        ))}
       </Grid>
 
       <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" mx={2} my={1.5} spacing={1}>

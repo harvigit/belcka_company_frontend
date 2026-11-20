@@ -69,13 +69,18 @@ const OPEN_LABEL: Record<LocationKind, string> = {
   fuel: "Open fuel log",
   mileage: "Open mileage",
   tyre_check: "Open tyres",
-  photo_check: "Open vehicle",
+  photo_check: "Open photo checks",
   accident: "Open accident report",
   expense: "Open expenses",
   mileage_claim: "Open expenses",
 };
 
-const VEHICLE_TAB: Partial<Record<LocationKind, string>> = { fuel: "fuel", mileage: "mileage", tyre_check: "tyres" };
+const VEHICLE_TAB: Partial<Record<LocationKind, string>> = {
+  fuel: "fuel",
+  mileage: "mileage",
+  tyre_check: "tyres",
+  photo_check: "photos",
+};
 
 const colorOf = (p: Pick<DriverLocation, "kind" | "alert">) => (p.alert ? ALERT_COLOR : LOCATION_KIND[p.kind].color);
 

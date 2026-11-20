@@ -28,6 +28,8 @@ import {
   DriverLocation,
   FleetPlace,
   PLACE_KIND,
+  PHOTO_SHOTS,
+  randomPhotoCheckDate,
   Vehicle,
   VehicleDocument,
   VehicleEvent,
@@ -68,7 +70,7 @@ interface FleetData {
   places: FleetPlace[];
 }
 
-const storageKey = (companyId?: number | null) => `vehicles_ui_mock_v16_${companyId ?? "0"}`;
+const storageKey = (companyId?: number | null) => `vehicles_ui_mock_v17_${companyId ?? "0"}`;
 
 // Saved settings and onboarding types are copied into the shared FLEET_RULES / ONBOARDING_TEMPLATES
 // so every screen and helper uses them (static UI; the API will return them later).
@@ -132,6 +134,7 @@ const sampleData = (): FleetData => {
       tax_due: inDays(95),
       service_due: inDays(-12),
       tyre_check_due: inDays(-78),
+      next_photo_check: inDays(10),
       weekly_fuel_limit: 60,
       fuel_use_min: 5,
       fuel_use_max: 6.5,
@@ -148,6 +151,7 @@ const sampleData = (): FleetData => {
       tax_due: inDays(27),
       service_due: inDays(300),
       tyre_check_due: inDays(162),
+      next_photo_check: inDays(0),
       created_at: inDays(-380),
     }),
     vehicle({
@@ -162,6 +166,7 @@ const sampleData = (): FleetData => {
       service_due: inDays(330),
       tyre_check_due: inDays(152),
       gps_tracker: "TRK-0031",
+      next_photo_check: inDays(69),
       created_at: inDays(-200),
       vin: "WBA8E1C50JA123456",
       first_registered: "2023-03-14",
@@ -195,6 +200,7 @@ const sampleData = (): FleetData => {
       service_due: inDays(5),
       tyre_check_due: inDays(100),
       notes: "At Northside Garage for clutch repair.",
+      next_photo_check: inDays(40),
       created_at: inDays(-700),
     }),
   ];
@@ -236,6 +242,8 @@ const sampleData = (): FleetData => {
     // KP70 XYZ
     ev({ vehicle_id: 2, kind: "mot", date: inDays(-225), mileage: 58200, supplier: "City MOT Centre", cost: 54.85, passed: true }),
     ev({ vehicle_id: 2, kind: "service", date: inDays(-65), mileage: 60900, supplier: "Northside Garage", invoice_no: "NG-2377", cost: 249, note: "Interim service" }),
+    ev({ vehicle_id: 2, kind: "photo_check", date: inDays(-88), mileage: 60200, created_by: "Morgan Buyer", note: "Small scratch on the rear bumper, was there before", photos: PHOTO_SHOTS.map((v) => `kp70-${v.toLowerCase().replace(/ /g, "-")}.jpg`), lowest_tread: 5.5 }),
+    ev({ vehicle_id: 3, kind: "photo_check", date: inDays(-25), mileage: 22050, created_by: "Sam Carpenter", note: "No new damage", photos: PHOTO_SHOTS.map((v) => `bd23-${v.toLowerCase().replace(/ /g, "-")}.jpg`) }),
     ev({ vehicle_id: 2, kind: "tyre_check", date: inDays(-20), mileage: 61500, tread: { FL: 5, FR: 5, RL: 6, RR: 6 }, wheels: { FL: { state: "worn", photo: "kp70-front-left-tyre.jpg" }, FR: { state: "worn" }, RL: { state: "ok" }, RR: { state: "ok" } }, note: "Fronts wearing on the outer edge" }),
     ev({ vehicle_id: 2, kind: "fuel", date: inDays(-6), mileage: 61840, litres: 44, cost: 65.12, supplier: "Esso", card: "427730", import_id: "fuel-1" }),
     // BD23 MNG
@@ -507,6 +515,8 @@ const applyEvent = (v: Vehicle, e: VehicleEvent): Vehicle => {
   if (e.kind === "mot" && e.passed) next.mot_due = later(next.mot_due, addMonths(e.date, FLEET_RULES.motValidMonths));
   if (e.kind === "tyre_check" || e.kind === "tyre_change")
     next.tyre_check_due = later(next.tyre_check_due, addMonths(e.date, FLEET_RULES.tyreCheckMonths));
+  // a photo check sets the next one at a random day inside the period
+  if (e.kind === "photo_check" && v.type !== "private") next.next_photo_check = randomPhotoCheckDate(e.date);
   return next;
 };
 
@@ -630,7 +640,17 @@ export function useVehicles(companyId?: number | null, userName = "You") {
       const id = form.id ?? nextId(d.vehicles);
       const vehiclesNext = form.id
         ? d.vehicles.map((v) => (v.id === form.id ? { ...v, ...fields } : v))
-        : [{ ...fields, id, tyre_check_due: "", created_at: today(), weekly_fuel_limit: 0 }, ...d.vehicles];
+        : [
+            {
+              ...fields,
+              id,
+              tyre_check_due: "",
+              next_photo_check: fields.type === "private" ? "" : randomPhotoCheckDate(today()),
+              created_at: today(),
+              weekly_fuel_limit: 0,
+            },
+            ...d.vehicles,
+          ];
       // A new vehicle's mileage is its first odometer reading, so later readings are checked against it.
       const eventsNext: VehicleEvent[] = form.id
         ? d.events
@@ -675,6 +695,13 @@ export function useVehicles(companyId?: number | null, userName = "You") {
       },
     ]);
     update((d) => ({ ...d, vehicles: d.vehicles.map((v) => (v.id === id ? { ...v, ...patch } : v)) }));
+  };
+
+  // "Ask for a check now": the photo check is due today; the driver sees it in the app.
+  const askPhotoCheck = async (id: number) => {
+    const v = data.vehicles.find((x) => x.id === id);
+    log([{ area: "record", vehicle_id: id, action: "Photo check asked for now", detail: `${regOf(id)}${v?.driver_name ? ` · ${v.driver_name}` : ""}` }]);
+    update((d) => ({ ...d, vehicles: d.vehicles.map((x) => (x.id === id ? { ...x, next_photo_check: today() } : x)) }));
   };
 
   const assignDriver = async (id: number, driver: DriverOption | null) => {
@@ -1102,6 +1129,7 @@ export function useVehicles(companyId?: number | null, userName = "You") {
     places: data.places ?? [],
     addPlace,
     removePlace,
+    askPhotoCheck,
     reopenExpense,
     noCompany: companyId === null,
     updateEvent,

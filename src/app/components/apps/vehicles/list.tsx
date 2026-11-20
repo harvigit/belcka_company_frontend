@@ -27,7 +27,6 @@ import {
 } from "@tanstack/react-table";
 import {
   IconAlertTriangle,
-  IconArrowRight,
   IconCalendar,
   IconCalendarX,
   IconDownload,
@@ -73,7 +72,7 @@ import { DriverOption, useVehicles } from "./useVehicles";
 import { useDrivers } from "./useDrivers";
 import { useVehicleEditor } from "./useVehicleEditor";
 import FleetNav from "./fleet-nav";
-import { CARD_TONE, TONES } from "./detail/common";
+import { CARD_TONE, StatCard } from "./detail/common";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { buildActions } from "./actions";
 import DriverChecksToday from "./driver-checks-today";
@@ -484,6 +483,15 @@ const VehicleList: React.FC = () => {
     toast.success(`${list.length} vehicle${list.length === 1 ? "" : "s"} exported.`);
   };
 
+  const STAT_HINT: Record<string, string> = {
+    active: "In use now",
+    actions: "In the Action Centre",
+    defects: "From daily checklists",
+    checks: "Done / needed today",
+    mot: "Past the MOT date",
+    service: "Past the service date",
+  };
+
   // Six numbers at the top: the ones on vehicles filter this list, the others open the Action Centre.
   const statCards: {
     key: string;
@@ -541,69 +549,24 @@ const VehicleList: React.FC = () => {
 
       {!isArchiveView && (
         <Grid container spacing={2} sx={{ px: 2, pt: 2, pb: 1 }}>
-          {statCards.map((card) => {
-            const active = !!card.filter && quick === card.filter;
-            return (
-              <Grid key={card.key} size={{ xs: 6, sm: 4, lg: 2 }}>
-                <ButtonBase
-                  onClick={() =>
-                    card.href ? router.push(card.href) : setQuick(active ? "all" : (card.filter as QuickFilter))
-                  }
-                  aria-pressed={card.filter ? active : undefined}
-                  title={card.href ? "Open in the Action Centre" : active ? "Show all vehicles" : "Show these vehicles"}
-                  sx={{
-                    width: "100%",
-                    height: "100%",
-                    justifyContent: "flex-start",
-                    alignItems: "flex-start",
-                    gap: 1.25,
-                    p: 1.5,
-                    borderRadius: 2,
-                    border: "1px solid",
-                    borderColor: active ? TONES[CARD_TONE[card.color]].fg : "transparent",
-                    backgroundColor: TONES[CARD_TONE[card.color]].bg,
-                    boxShadow: active ? 1 : 0,
-                    textAlign: "left",
-                    transition: "all .15s",
-                    "&:hover": { borderColor: TONES[CARD_TONE[card.color]].fg },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: 2,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: TONES[CARD_TONE[card.color]].fg,
-                      backgroundColor: "background.paper",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {card.icon}
-                  </Box>
-                  <Box minWidth={0} flex={1}>
-                    <Typography
-                      variant="h5"
-                      fontWeight={700}
-                      lineHeight={1.1}
-                      color={card.alert ? TONES[CARD_TONE[card.color]].fg : undefined}
-                      sx={{ fontVariantNumeric: "tabular-nums" }}
-                    >
-                      {card.value}
-                    </Typography>
-                    <Stack direction="row" alignItems="center" spacing={0.5}>
-                      <Typography variant="body2" color="textSecondary" noWrap>
-                        {card.label}
-                      </Typography>
-                      {card.href && <IconArrowRight size={14} style={{ flexShrink: 0, opacity: 0.6 }} />}
-                    </Stack>
-                  </Box>
-                </ButtonBase>
-              </Grid>
-            );
-          })}
+          {statCards.map((card) => (
+            <Grid key={card.key} size={{ xs: 6, sm: 4, lg: 2 }}>
+              <StatCard
+                icon={card.icon}
+                tone={CARD_TONE[card.color]}
+                value={card.value}
+                label={card.label}
+                hint={STAT_HINT[card.key]}
+                active={!!card.filter && quick === card.filter}
+                alert={card.alert}
+                link={!!card.href}
+                title={card.href ? "Open in the Action Centre" : quick === card.filter ? "Show all vehicles" : "Show these vehicles"}
+                onClick={() =>
+                  card.href ? router.push(card.href) : setQuick(quick === card.filter ? "all" : (card.filter as QuickFilter))
+                }
+              />
+            </Grid>
+          ))}
         </Grid>
       )}
 
