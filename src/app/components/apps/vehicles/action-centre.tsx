@@ -42,7 +42,7 @@ import FleetNav from "./fleet-nav";
 import { ActionCategory, ActionRow, ACTION_CATEGORY, buildActions, PRIORITY } from "./actions";
 import { DefectReviewDrawer } from "./defect-drawer";
 import ChecklistDialog from "./checklist-dialog";
-import { RecordTable } from "./detail/common";
+import { RecordTable, CARD_TONE, TONES } from "./detail/common";
 import { RegPlate, NoCompany } from "./shared";
 import {
   checklistSafe,
@@ -83,13 +83,15 @@ const ActionCentre: React.FC = () => {
   const [reviewId, setReviewId] = useState<number | null>(null);
   const [checklistId, setChecklistId] = useState<number | null>(null);
 
-  // Opened from elsewhere (e.g. the Map) with ?defect=ID: show that report straight away.
+  // Opened from elsewhere: ?defect=ID shows that report (Map), ?section=checks|register opens
+  // that tab (Vehicles tiles).
   useEffect(() => {
-    const id = Number(new URLSearchParams(window.location.search).get("defect"));
-    if (id) {
-      setReviewId(id);
-      router.replace("/apps/vehicles/action-centre", { scroll: false });
-    }
+    const params = new URLSearchParams(window.location.search);
+    const id = Number(params.get("defect"));
+    const tab = params.get("section");
+    if (tab === "checks" || tab === "register") setSection(tab);
+    if (id) setReviewId(id);
+    if (id || tab) router.replace("/apps/vehicles/action-centre", { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [registerFilter, setRegisterFilter] = useState<"open" | "all">("open");
@@ -278,10 +280,11 @@ const ActionCentre: React.FC = () => {
                       p: 1.5,
                       borderRadius: 2,
                       border: "1px solid",
-                      borderColor: active ? `${t.color}.main` : "grey.200",
+                      borderColor: active ? TONES[CARD_TONE[t.color]].fg : "transparent",
+                      backgroundColor: TONES[CARD_TONE[t.color]].bg,
                       boxShadow: active ? 1 : 0,
                       textAlign: "left",
-                      "&:hover": { borderColor: `${t.color}.main` },
+                      "&:hover": { borderColor: TONES[CARD_TONE[t.color]].fg },
                     }}
                   >
                     <Box
@@ -292,8 +295,8 @@ const ActionCentre: React.FC = () => {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: `${t.color}.main`,
-                        backgroundColor: `${t.color}.light`,
+                        color: TONES[CARD_TONE[t.color]].fg,
+                        backgroundColor: "background.paper",
                         flexShrink: 0,
                       }}
                     >

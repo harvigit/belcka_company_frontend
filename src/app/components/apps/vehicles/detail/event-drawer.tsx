@@ -1,6 +1,7 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { Alert, Box, MenuItem, Stack, Typography } from "@mui/material";
+import React, { useEffect, useRef, useState } from "react";
+import { Alert, Box, Button, Chip, MenuItem, Stack, Typography } from "@mui/material";
+import { IconPhoto, IconUpload } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
@@ -9,15 +10,6 @@ import FormField from "../../inventory-new/shared/FormField";
 import { EventKind, EVENT_KINDS, FLEET_RULES, formatMiles, StationPlace, Vehicle, VehicleEvent } from "../types";
 import { NewEvent } from "../useVehicles";
 import StationField from "./station-field";
-
-const WHEELS = [
-  ["FL", "Front left"],
-  ["FR", "Front right"],
-  ["RL", "Rear left"],
-  ["RR", "Rear right"],
-] as const;
-
-type Wheel = (typeof WHEELS)[number][0];
 
 interface FormState {
   date: string;
@@ -29,7 +21,10 @@ interface FormState {
   note: string;
   litres: string;
   passed: "yes" | "no";
-  tread: Record<Wheel, string>;
+  // tyre change: lowest tread after the change
+  lowest_tread: string;
+  // accident: photos (file names until upload is built)
+  photos: string[];
 }
 
 const blank = (): FormState => ({
@@ -42,7 +37,8 @@ const blank = (): FormState => ({
   note: "",
   litres: "",
   passed: "yes",
-  tread: { FL: "", FR: "", RL: "", RR: "" },
+  lowest_tread: "",
+  photos: [],
 });
 
 // What each record type asks for, so every form shows only fields that matter.
@@ -51,12 +47,15 @@ const FIELDS: Partial<Record<
   EventKind,
   {
     title: string;
-    mileage: "required" | "optional";
+    mileage: "required" | "optional" | "none";
     cost: boolean;
     supplier?: string;
     invoice?: boolean;
     note: string;
     noteRequired?: boolean;
+    notePlaceholder?: string;
+    // optional photos (accident)
+    photos?: boolean;
     info?: string;
   }
 >> = {
@@ -77,21 +76,16 @@ const FIELDS: Partial<Record<
     note: "Advisories",
     info: `A pass moves the MOT date to ${FLEET_RULES.motValidMonths} months after the test.`,
   },
-  tyre_check: {
-    title: "Add tyre check",
-    mileage: "optional",
-    cost: false,
-    note: "Note",
-    info: `Tyres at ${FLEET_RULES.treadLimitMm} mm or less need replacing. The next check moves to ${FLEET_RULES.tyreCheckMonths} months after this date.`,
-  },
+  // Tyre checks use their own dialog (four tyres around the car), see tyre-check-dialog.tsx.
   tyre_change: {
     title: "Add tyre change",
-    mileage: "optional",
+    mileage: "required",
     cost: true,
-    supplier: "Fitter",
+    supplier: "Garage / supplier",
     invoice: true,
-    note: "Which tyres were changed",
-    noteRequired: true,
+    note: "Note",
+    notePlaceholder: "e.g. 2 front tyres replaced",
+    info: `The next tyre check moves to ${FLEET_RULES.tyreCheckMonths} months after this date.`,
   },
   fuel: {
     title: "Log fuel",
@@ -115,12 +109,27 @@ const FIELDS: Partial<Record<
     note: "What was repaired",
     noteRequired: true,
   },
-  accident: {
-    title: "Record accident",
+  // Same fields as the prototype "Other cost" (MOT & Service tab).
+  other_cost: {
+    title: "Add other cost",
     mileage: "optional",
     cost: true,
+    supplier: "Garage / supplier",
+    invoice: true,
+    note: "What was it for",
+    noteRequired: true,
+    notePlaceholder: "e.g. new wiper blades, bulb, valet",
+  },
+  // Same fields as the prototype accident form: date, what happened, photos.
+  // Repair costs go on the Invoices tab as a Repair.
+  accident: {
+    title: "Record accident",
+    mileage: "none",
+    cost: false,
     note: "What happened",
     noteRequired: true,
+    notePlaceholder: "Where it happened, what was damaged, was anyone hurt",
+    photos: true,
   },
 };
 
@@ -136,6 +145,54 @@ interface EventDrawerProps {
   onClose: () => void;
   onSave: (event: NewEvent) => Promise<void>;
 }
+
+/** Pick up to `max` photos (camera on phones). Static UI: keeps the file names. */
+const PhotoUpload: React.FC<{ value: string[]; onChange: (photos: string[]) => void; max: number }> = ({
+  value,
+  onChange,
+  max,
+}) => {
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <Stack spacing={1} alignItems="flex-start">
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          const images = files.filter((f) => f.type.startsWith("image/")).map((f) => f.name);
+          if (images.length < files.length) toast.error("Only photos can be added.");
+          const next = [...value, ...images.filter((n) => !value.includes(n))].slice(0, max);
+          if (value.length + images.length > max) toast.error(`Up to ${max} photos.`);
+          onChange(next);
+          e.target.value = "";
+        }}
+      />
+      {value.length > 0 && (
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          {value.map((name) => (
+            <Chip
+              key={name}
+              icon={<IconPhoto size={16} />}
+              label={name}
+              variant="outlined"
+              onDelete={() => onChange(value.filter((n) => n !== name))}
+              sx={{ maxWidth: 220 }}
+            />
+          ))}
+        </Stack>
+      )}
+      {value.length < max && (
+        <Button variant="outlined" startIcon={<IconUpload size={16} />} onClick={() => input.current?.click()}>
+          {value.length ? "Add more photos" : "Upload photos"}
+        </Button>
+      )}
+    </Stack>
+  );
+};
 
 const decimal = (value: string, max = 7) => new RegExp(`^\\d{0,${max}}(\\.\\d{0,2})?$`).test(value);
 
@@ -164,12 +221,8 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
       note: editing.note,
       litres: editing.litres ? String(editing.litres) : "",
       passed: editing.passed === false ? "no" : "yes",
-      tread: {
-        FL: editing.tread?.FL !== undefined ? String(editing.tread.FL) : "",
-        FR: editing.tread?.FR !== undefined ? String(editing.tread.FR) : "",
-        RL: editing.tread?.RL !== undefined ? String(editing.tread.RL) : "",
-        RR: editing.tread?.RR !== undefined ? String(editing.tread.RR) : "",
-      },
+      lowest_tread: typeof editing.lowest_tread === "number" ? String(editing.lowest_tread) : "",
+      photos: editing.photos ?? [],
     });
   }, [kind, editing]);
 
@@ -191,7 +244,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
   const readingAfter = later.length ? Math.min(...later) : null;
   const mileage = form.mileage === "" ? null : Number(form.mileage);
 
-  const errors: Partial<Record<"date" | "mileage" | "litres" | "cost" | "note" | "tread", string>> = {};
+  const errors: Partial<Record<"date" | "mileage" | "litres" | "cost" | "note" | "lowest_tread", string>> = {};
   if (!form.date) errors.date = "Choose a date.";
   else if (form.date > dayjs().format("YYYY-MM-DD")) errors.date = "The date can't be in the future.";
   if (mileage === null && mileageRequired && showErrors) errors.mileage = "Enter the odometer reading.";
@@ -204,12 +257,9 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
     if (!(Number(form.cost) > 0)) errors.cost = "Enter the cost.";
   }
   if (cfg.noteRequired && showErrors && !form.note.trim()) errors.note = "Please describe it.";
-  if (kind === "tyre_check" && showErrors && WHEELS.some(([w]) => form.tread[w] === ""))
-    errors.tread = "Enter the tread for all four tyres.";
-
-  const lowTyres = WHEELS.filter(
-    ([w]) => form.tread[w] !== "" && Number(form.tread[w]) <= FLEET_RULES.treadLimitMm,
-  ).map(([, label]) => label);
+  else if (kind === "accident" && showErrors && form.note.trim().length < 5) errors.note = "Describe what happened.";
+  if (form.lowest_tread !== "" && Number(form.lowest_tread) > 12) errors.lowest_tread = "Enter 0–12 mm.";
+  const lowTread = form.lowest_tread !== "" && Number(form.lowest_tread) <= FLEET_RULES.treadLimitMm;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,17 +269,11 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
       (mileageRequired && mileage === null) ||
       (kind === "fuel" && (!(Number(form.litres) > 0) || !(Number(form.cost) > 0))) ||
       (cfg.noteRequired && !form.note.trim()) ||
-      (kind === "tyre_check" && WHEELS.some(([w]) => form.tread[w] === ""));
+      (kind === "accident" && form.note.trim().length < 5);
     if (missing || Object.keys(errors).length > 0) {
       toast.error("Please check the highlighted fields.");
       return;
     }
-    const tread =
-      kind === "tyre_check" || kind === "tyre_change"
-        ? Object.fromEntries(
-            WHEELS.filter(([w]) => form.tread[w] !== "").map(([w]) => [w, Number(form.tread[w])]),
-          )
-        : undefined;
     setSaving(true);
     try {
       await onSave({
@@ -244,7 +288,8 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
         note: form.note.trim(),
         litres: kind === "fuel" ? Number(form.litres) : null,
         passed: kind === "mot" ? form.passed === "yes" : undefined,
-        tread,
+        lowest_tread: kind === "tyre_change" && form.lowest_tread !== "" ? Number(form.lowest_tread) : undefined,
+        photos: cfg.photos && form.photos.length ? form.photos : undefined,
       });
       toast.success(`${EVENT_KINDS[kind].label} ${editing ? "updated" : "saved"} for ${vehicle.registration}.`);
       onClose();
@@ -276,6 +321,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
             />
           </FormField>
         </Box>
+        {cfg.mileage !== "none" && (
         <Box flex={1}>
           <FormField label={`Odometer (miles)${mileageRequired ? " *" : ""}`}>
             <CustomTextField
@@ -292,6 +338,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
             />
           </FormField>
         </Box>
+        )}
       </Stack>
 
       {kind === "mot" && (
@@ -314,39 +361,21 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
         </Alert>
       )}
 
-      {(kind === "tyre_check" || kind === "tyre_change") && (
-        <FormField
-          label={`Tread depth (mm)${kind === "tyre_check" ? " *" : ""}`}
-          hint={kind === "tyre_change" ? "Optional: tread of the tyres after the change" : undefined}
-        >
-          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
-            {WHEELS.map(([w, label]) => (
-              <CustomTextField
-                key={w}
-                label={label}
-                value={form.tread[w]}
-                onChange={(e: any) => {
-                  if (decimal(e.target.value, 2)) set("tread", { ...form.tread, [w]: e.target.value });
-                }}
-                size="small"
-                error={
-                  (!!errors.tread && form.tread[w] === "") ||
-                  (form.tread[w] !== "" && Number(form.tread[w]) <= FLEET_RULES.treadLimitMm)
-                }
-                slotProps={{ htmlInput: { inputMode: "decimal" } }}
-              />
-            ))}
-          </Box>
-          {errors.tread && (
-            <Typography variant="caption" color="error">
-              {errors.tread}
-            </Typography>
-          )}
+      {kind === "tyre_change" && (
+        <FormField label="Lowest tread (mm)" hint="Optional: the lowest tread after the change">
+          <CustomTextField
+            value={form.lowest_tread}
+            onChange={(e: any) => decimal(e.target.value, 2) && set("lowest_tread", e.target.value)}
+            fullWidth
+            error={!!errors.lowest_tread}
+            helperText={errors.lowest_tread}
+            slotProps={{ htmlInput: { inputMode: "decimal" } }}
+          />
         </FormField>
       )}
-      {lowTyres.length > 0 && (
+      {lowTread && (
         <Alert severity="error">
-          {lowTyres.join(", ")} at or below {FLEET_RULES.treadLimitMm} mm: replace now.
+          At or below {FLEET_RULES.treadLimitMm} mm: the tyres are due for replacement.
         </Alert>
       )}
 
@@ -434,6 +463,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
         <CustomTextField
           value={form.note}
           onChange={(e: any) => set("note", e.target.value.slice(0, 300))}
+          placeholder={cfg.notePlaceholder}
           multiline
           minRows={2}
           fullWidth
@@ -441,6 +471,12 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
           helperText={errors.note}
         />
       </FormField>
+
+      {cfg.photos && (
+        <FormField label="Photos · optional" hint="Damage, the other vehicle, the place. Up to 5 photos.">
+          <PhotoUpload value={form.photos} onChange={(photos) => set("photos", photos)} max={5} />
+        </FormField>
+      )}
     </FormDrawer>
   );
 };
