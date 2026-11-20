@@ -36,6 +36,7 @@ import OnboardingTab from "./onboarding";
 import InvoicesTab from "./invoices";
 import EventDrawer from "./event-drawer";
 import TyreCheckDialog from "./tyre-check-dialog";
+import PhotoChecksTab from "./photo-checks";
 
 const TABS = [
   { value: "overview", label: "Overview" },
@@ -44,6 +45,7 @@ const TABS = [
   { value: "fuel", label: "Fuel" },
   { value: "mileage", label: "Mileage" },
   { value: "permits", label: "Parking permits" },
+  { value: "photos", label: "Photo checks" },
   { value: "onboarding", label: "Onboarding" },
   { value: "invoices", label: "Invoices" },
   { value: "documents", label: "Documents" },
@@ -274,6 +276,14 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
               onAdd={store.addPermit}
               onDecide={store.decidePermit}
               onRemove={store.removePermit}
+            />
+          )}
+          {tab === "photos" && (
+            <PhotoChecksTab
+              vehicle={vehicle}
+              events={events}
+              readOnly={readOnly}
+              onAskNow={() => store.askPhotoCheck(vehicle.id)}
             />
           )}
           {tab === "onboarding" && (

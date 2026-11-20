@@ -75,6 +75,7 @@ const DUE_TAB: Record<string, string> = {
   "Road tax": "overview",
   Insurance: "overview",
   "Tyre check": "tyres",
+  "Photo check": "photos",
 };
 
 // One queue for everything that needs the office: defects, accidents, due dates,
