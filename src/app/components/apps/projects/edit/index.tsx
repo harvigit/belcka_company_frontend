@@ -36,6 +36,8 @@ interface FormData {
   workzone_ids?: string;
   project_limit?: string | number;
   allow_work?: boolean;
+  // Uplift % the QS adds on top of the NHF rates in surveys (0–100, default 10).
+  uplift_percent?: string | number;
 }
 
 // interface Shift {
@@ -178,6 +180,13 @@ const EditProject: React.FC<EditProjectProps> = ({
     ) {
       return;
     }
+    // Uplift %: up to 3 digits and 2 decimals, never above 100.
+    if (
+      name === "uplift_percent" &&
+      (!/^\d{0,3}(\.\d{0,2})?$/.test(value) || Number(value) > 100)
+    ) {
+      return;
+    }
 
     setFormData((prevData) => ({
       ...prevData,
@@ -209,6 +218,10 @@ const EditProject: React.FC<EditProjectProps> = ({
             ? String(project.project_limit)
             : "",
         allow_work: project.allow_work !== false,
+        uplift_percent:
+          project.uplift_percent === 0 || project.uplift_percent
+            ? String(Number(project.uplift_percent))
+            : "10",
         // shift_ids: (project.shifts || []).map((s: any) => s.id).join(","),
         team_ids: (project.teams || []).map((t: any) => t.id).join(","),
         user_ids: (project.assigned_users || [])
@@ -1111,6 +1124,35 @@ const EditProject: React.FC<EditProjectProps> = ({
                     />
                   </>
                 );
+                const upliftField = (
+                  <>
+                    <Typography
+                      variant="h5"
+                      mt={embedded ? 0 : 2}
+                      className="f-14"
+                    >
+                      Uplift %
+                    </Typography>
+                    <CustomTextField
+                      id="uplift_percent"
+                      name="uplift_percent"
+                      placeholder="10"
+                      value={formData.uplift_percent ?? ""}
+                      onChange={handleChange}
+                      inputProps={{ inputMode: "decimal" }}
+                      InputProps={{
+                        endAdornment: (
+                          <Typography color="text.secondary" sx={{ ml: 1 }}>
+                            %
+                          </Typography>
+                        ),
+                      }}
+                      helperText="Added on top of the NHF rates when the QS prices a survey of this project. Default 10%."
+                      variant="outlined"
+                      fullWidth
+                    />
+                  </>
+                );
                 const allowWorkField = (
                   <>
                     <Typography color="text.secondary" className="f-14">
@@ -1138,6 +1180,8 @@ const EditProject: React.FC<EditProjectProps> = ({
                       <Grid size={{ xs: 12, md: 6 }}>{addressField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{projectLimitField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{allowWorkField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>{upliftField}</Grid>
+                      <Grid size={{ xs: 12, md: 6 }} />
                       <Grid size={{ xs: 12, md: 6 }}>{teamsField}</Grid>
                       <Grid size={{ xs: 12, md: 6 }}>{usersField}</Grid>
                     </Grid>
@@ -1151,6 +1195,7 @@ const EditProject: React.FC<EditProjectProps> = ({
                     {addressField}
                     {projectLimitField}
                     {allowWorkField}
+                    {upliftField}
                     {teamsField}
                     {usersField}
                     {budgetField}
