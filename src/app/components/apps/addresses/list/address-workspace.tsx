@@ -180,7 +180,7 @@ type DraftSite = {
   duplicate: DuplicateMatch | null;
 };
 
-type Prediction = {
+export type Prediction = {
   id: string;
   label: string;
   source: "postcoder" | "google";
@@ -305,7 +305,7 @@ function hasPoint(lat?: number | null, lng?: number | null) {
   return Number.isFinite(lat) && Number.isFinite(lng);
 }
 
-async function searchPlaces(
+export async function searchPlaces(
   query: string,
   mapsReady: boolean,
 ): Promise<Prediction[]> {
@@ -362,7 +362,7 @@ async function searchPlaces(
   });
 }
 
-function resolvePrediction(item: Prediction): Promise<{
+export function resolvePrediction(item: Prediction): Promise<{
   street: string;
   postcode: string;
   lat: number | null;
