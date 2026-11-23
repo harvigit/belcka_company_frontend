@@ -14,7 +14,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { IconArchive, IconArrowBackUp, IconArrowLeft, IconEdit, IconUserPlus } from "@tabler/icons-react";
+import { IconArchive, IconArrowBackUp, IconArrowLeft, IconEdit, IconTrash, IconUserPlus } from "@tabler/icons-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
@@ -79,6 +79,7 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
   const [addKind, setAddKind] = useState<EventKind | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const vehicle = vehicles.find((v) => v.id === vehicleId);
 
@@ -129,7 +130,11 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
   const next = nextDue(vehicle);
 
   const handleAssign = async (_v: unknown, driver: DriverOption | null) => {
-    await store.assignDriver(vehicle.id, driver);
+    try {
+      await store.assignDriver(vehicle.id, driver);
+    } catch {
+      return; // the API's message is already shown
+    }
     toast.success(driver ? `${vehicle.registration} assigned to ${driver.name}.` : `Driver removed from ${vehicle.registration}.`);
     setAssignOpen(false);
   };
@@ -187,6 +192,11 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
                   <IconArchive size={20} />
                 </IconButton>
               </Tooltip>
+              <Tooltip title="Delete">
+                <IconButton color="error" onClick={() => setDeleteOpen(true)}>
+                  <IconTrash size={20} />
+                </IconButton>
+              </Tooltip>
             </Stack>
           )}
         </Stack>
@@ -196,17 +206,26 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
             severity="info"
             sx={{ mt: 2 }}
             action={
-              <Button
-                color="inherit"
-                size="small"
-                startIcon={<IconArrowBackUp size={16} />}
-                onClick={async () => {
-                  await store.restore([vehicle.id]);
-                  toast.success(`${vehicle.registration} restored as Inactive.`);
-                }}
-              >
-                Restore
-              </Button>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  color="inherit"
+                  size="small"
+                  startIcon={<IconArrowBackUp size={16} />}
+                  onClick={async () => {
+                    try {
+                      await store.restore([vehicle.id]);
+                    } catch {
+                      return; // the API's message is already shown
+                    }
+                    toast.success(`${vehicle.registration} restored as Inactive.`);
+                  }}
+                >
+                  Restore
+                </Button>
+                <Button color="error" size="small" startIcon={<IconTrash size={16} />} onClick={() => setDeleteOpen(true)}>
+                  Delete
+                </Button>
+              </Stack>
             }
           >
             Archived on {formatDate(vehicle.archived_at)}. Its history is read-only until you restore it.
@@ -370,9 +389,33 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
         confirmLabel="Archive"
         onClose={() => setArchiveOpen(false)}
         onConfirm={async () => {
-          await store.archive([vehicle.id]);
+          try {
+            await store.archive([vehicle.id]);
+          } catch {
+            return; // the API's message is already shown
+          }
           toast.success(`${vehicle.registration} moved to Archived.`);
           setArchiveOpen(false);
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Delete vehicle"
+        message={`Delete ${vehicle.registration}? It disappears from the list and the archive, and its registration can be added again. ${
+          vehicle.driver_name ? `${vehicle.driver_name} will no longer see it in their app. ` : ""
+        }Use Archive instead when the vehicle is sold and you want to keep it with the past vehicles.`}
+        confirmLabel="Delete"
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={async () => {
+          try {
+            await store.remove([vehicle.id]);
+          } catch {
+            return; // the API's message is already shown
+          }
+          toast.success(`${vehicle.registration} deleted.`);
+          setDeleteOpen(false);
+          router.push("/apps/vehicles/list");
         }}
       />
     </BlankCard>

@@ -175,7 +175,11 @@ export const DefectReviewDrawer: React.FC<ReviewProps> = ({
               color="inherit"
               size="small"
               onClick={async () => {
-                await onTakeOffRoad(vehicle.id);
+                try {
+                  await onTakeOffRoad(vehicle.id);
+                } catch {
+                  return; // the API's message is already shown
+                }
                 toast.success(`${vehicle.registration} marked as In service.`);
               }}
             >

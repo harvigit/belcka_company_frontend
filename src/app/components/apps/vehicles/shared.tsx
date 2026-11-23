@@ -124,34 +124,43 @@ export const NoCompany: React.FC = () => (
   </Box>
 );
 
-// Camera photos a driver took of a defect in the daily checklist. The static UI only has the
-// file names, so each photo shows as a tile; the API will return real image URLs.
+// Photos from the API (defects, accidents, tyre and photo checks): each opens full size in a new tab.
+// A value that is not a link (no photo file) shows as a plain tile.
 export const PhotoThumbs: React.FC<{ photos: string[]; size?: number }> = ({ photos, size = 72 }) =>
   photos.length ? (
     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-      {photos.map((p, i) => (
-        <Box
-          key={p}
-          title={p}
-          sx={{
-            width: size,
-            height: size,
-            borderRadius: 1.5,
-            border: "1px solid",
-            borderColor: "grey.300",
-            backgroundColor: "grey.100",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "text.secondary",
-            gap: 0.25,
-          }}
-        >
-          <IconCamera size={20} />
-          <Typography variant="caption">Photo {i + 1}</Typography>
-        </Box>
-      ))}
+      {photos.map((p, i) => {
+        const tile = {
+          width: size,
+          height: size,
+          borderRadius: 1.5,
+          border: "1px solid",
+          borderColor: "grey.300",
+          backgroundColor: "grey.100",
+        } as const;
+        return /^https?:\/\//.test(p) ? (
+          <Box key={`${p}${i}`} component="a" href={p} target="_blank" rel="noopener noreferrer" title={`Photo ${i + 1}`} sx={{ ...tile, overflow: "hidden", display: "block" }}>
+            <Box component="img" src={p} alt={`Photo ${i + 1}`} sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          </Box>
+        ) : (
+          <Box
+            key={`${p}${i}`}
+            title={p}
+            sx={{
+              ...tile,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "text.secondary",
+              gap: 0.25,
+            }}
+          >
+            <IconCamera size={20} />
+            <Typography variant="caption">Photo {i + 1}</Typography>
+          </Box>
+        );
+      })}
     </Stack>
   ) : (
     <Typography variant="caption" color="warning.dark">

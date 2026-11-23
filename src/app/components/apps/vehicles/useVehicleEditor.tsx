@@ -110,6 +110,8 @@ export function useVehicleEditor({ vehicles, drivers, save, findByRegistration }
       await save({ ...formData, registration }, driver);
       toast.success(formData.id ? `${registration} updated.` : `${registration} added.`);
       setOpen(false);
+    } catch {
+      // the API's message is already shown
     } finally {
       setIsSaving(false);
     }

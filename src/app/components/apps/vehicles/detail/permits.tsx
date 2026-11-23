@@ -103,7 +103,11 @@ const PermitsTab: React.FC<PermitsTabProps> = ({ vehicle, permits, readOnly, onA
                             color="success"
                             size="small"
                             onClick={async () => {
-                              await onDecide(p.id, true);
+                              try {
+                                await onDecide(p.id, true);
+                              } catch {
+                                return; // the API's message is already shown
+                              }
                               toast.success(`${p.zone} approved.`);
                             }}
                           >
@@ -148,7 +152,11 @@ const PermitsTab: React.FC<PermitsTabProps> = ({ vehicle, permits, readOnly, onA
         onClose={() => setToRemove(null)}
         onConfirm={async () => {
           if (!toRemove) return;
-          await onRemove(toRemove.id);
+          try {
+            await onRemove(toRemove.id);
+          } catch {
+            return; // the API's message is already shown
+          }
           toast.success("Permit removed.");
           setToRemove(null);
         }}

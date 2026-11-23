@@ -17,7 +17,7 @@ interface DocumentsTabProps {
   vehicle: Vehicle;
   documents: VehicleDocument[];
   readOnly: boolean;
-  onAdd: (doc: NewDocument) => Promise<void>;
+  onAdd: (doc: NewDocument, file: File) => Promise<void>;
   onRemove: (id: number) => Promise<void>;
 }
 
@@ -27,6 +27,8 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ vehicle, documents, readOnl
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
   const [fileError, setFileError] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
   const [toRemove, setToRemove] = useState<VehicleDocument | null>(null);
 
   const has = (kind: string) => documents.some((d) => d.kind === kind);
@@ -35,17 +37,25 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ vehicle, documents, readOnl
 
   const openAdd = (kind?: string) => {
     setForm({ ...empty, kind: kind ?? empty.kind });
+    setFile(null);
     setFileError("");
     setOpen(true);
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.file_name) {
+    if (!file) {
       setFileError("Choose a photo or PDF.");
       return;
     }
-    await onAdd({ ...form, vehicle_id: vehicle.id, number: form.number.trim(), note: form.note.trim() });
+    setSaving(true);
+    try {
+      await onAdd({ ...form, vehicle_id: vehicle.id, number: form.number.trim(), note: form.note.trim() }, file);
+    } catch {
+      return; // the API's message is already shown
+    } finally {
+      setSaving(false);
+    }
     toast.success(`${form.kind} added.`);
     setOpen(false);
   };
@@ -89,7 +99,13 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ vehicle, documents, readOnl
                       {d.kind}
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
-                      {d.file_name}
+                      {d.file_url ? (
+                        <a href={d.file_url} target="_blank" rel="noopener noreferrer">
+                          {d.file_name}
+                        </a>
+                      ) : (
+                        d.file_name
+                      )}
                     </Typography>
                   </Box>
                 </Stack>
@@ -139,7 +155,7 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ vehicle, documents, readOnl
         title={`Upload document · ${vehicle.registration}`}
         onClose={() => setOpen(false)}
         onSubmit={submit}
-        isSaving={false}
+        isSaving={saving}
         submitLabel="Upload"
       >
         <FormField label="Document">
@@ -172,6 +188,7 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ vehicle, documents, readOnl
                   return;
                 }
                 setFileError("");
+                setFile(file);
                 setForm((f) => ({ ...f, file_name: file.name }));
               }}
             />
@@ -227,7 +244,11 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ vehicle, documents, readOnl
         onClose={() => setToRemove(null)}
         onConfirm={async () => {
           if (!toRemove) return;
-          await onRemove(toRemove.id);
+          try {
+            await onRemove(toRemove.id);
+          } catch {
+            return; // the API's message is already shown
+          }
           toast.success("Document removed.");
           setToRemove(null);
         }}

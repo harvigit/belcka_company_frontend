@@ -125,6 +125,8 @@ const ImportDialog: React.FC<ImportDialogProps> = ({
       const skipped = rows.filter((x) => (x.status === "unknown" || x.status === "unlinked_card") && !x.vehicleId);
       await onApply(source, fileName, counts.import, skipped);
       onClose();
+    } catch {
+      // the API's message is already shown
     } finally {
       setSaving(false);
     }
@@ -214,7 +216,7 @@ const ImportDialog: React.FC<ImportDialogProps> = ({
           <Stack spacing={2}>
             <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
               <Typography variant="body2" color="textSecondary" mr={1}>
-                {fileName} · {rows.length} rows
+                {`${fileName} · ${rows.length} ${rows.length === 1 ? "row" : "rows"} in the file`}
               </Typography>
               <Chip size="small" color="success" label={`${counts.import.length} to import`} />
               {counts.needVehicle > 0 && <Chip size="small" color="warning" label={`${counts.needVehicle} need a vehicle`} />}

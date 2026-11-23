@@ -540,7 +540,11 @@ export const FuelTab: React.FC<
           <Button
             variant="contained"
             onClick={async () => {
-              await onSetLimit(Number(limit || 0));
+              try {
+                await onSetLimit(Number(limit || 0));
+              } catch {
+                return; // the API's message is already shown
+              }
               toast.success(Number(limit) > 0 ? `Weekly limit set to ${limit} L.` : "Weekly limit removed.");
               setLimitOpen(false);
             }}
@@ -591,7 +595,11 @@ export const FuelTab: React.FC<
             onClick={async () => {
               setRangeTried(true);
               if (rangeError) return;
-              await onSetRange(rangeMin, rangeMax);
+              try {
+                await onSetRange(rangeMin, rangeMax);
+              } catch {
+                return; // the API's message is already shown
+              }
               toast.success(rangeMin || rangeMax ? "Normal fuel use saved." : "Normal fuel use removed.");
               setRangeOpen(false);
             }}
@@ -663,7 +671,7 @@ export const ActivityTab: React.FC<{
   changes: Activity[];
   onOpenLog: () => void;
 }> = ({ events, driverLogs, changes, onOpenLog }) => {
-  type Row = { id: string; date: string; what: React.ReactNode; detail: string; mileage: number | null; by: string };
+  type Row = { id: string; date: string; what: React.ReactNode; detail: string; photos?: string[]; mileage: number | null; by: string };
   const rows: Row[] = [
     ...events.map((e) => ({
       id: `e${e.id}`,
@@ -679,6 +687,8 @@ export const ActivityTab: React.FC<{
       detail: [e.supplier, e.note, e.cost ? money(e.cost) : "", e.litres ? `${e.litres} L` : ""]
         .filter(Boolean)
         .join(" · "),
+      // accident and photo check photos
+      photos: e.photos,
       mileage: e.mileage,
       by: e.created_by,
     })),
@@ -701,7 +711,19 @@ export const ActivityTab: React.FC<{
         columns={[
           { header: "Date", render: (r) => formatDate(r.date) },
           { header: "What", render: (r) => r.what },
-          { header: "Details", render: (r) => <Typography variant="body2">{r.detail || "-"}</Typography> },
+          {
+            header: "Details",
+            render: (r) => (
+              <Box>
+                <Typography variant="body2">{r.detail || "-"}</Typography>
+                {!!r.photos?.length && (
+                  <Box mt={0.75}>
+                    <PhotoThumbs photos={r.photos} size={40} />
+                  </Box>
+                )}
+              </Box>
+            ),
+          },
           { header: "Mileage", render: (r) => formatMiles(r.mileage) },
           { header: "By", render: (r) => <Typography variant="body2" color="textSecondary">{r.by}</Typography> },
         ]}

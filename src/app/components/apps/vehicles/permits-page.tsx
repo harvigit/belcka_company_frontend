@@ -249,7 +249,11 @@ const PermitsPage: React.FC = () => {
                   <IconButton
                     color="success"
                     onClick={async () => {
-                      await store.decidePermit(p.id, true);
+                      try {
+                        await store.decidePermit(p.id, true);
+                      } catch {
+                        return; // the API's message is already shown
+                      }
                       toast.success(`${p.zone} approved.`);
                     }}
                   >
@@ -409,7 +413,11 @@ const PermitsPage: React.FC = () => {
         onClose={() => setToRemove(null)}
         onConfirm={async () => {
           if (!toRemove) return;
-          await store.removePermit(toRemove.id);
+          try {
+            await store.removePermit(toRemove.id);
+          } catch {
+            return; // the API's message is already shown
+          }
           setSelected((prev) => {
             const next = new Set(prev);
             next.delete(toRemove.id);

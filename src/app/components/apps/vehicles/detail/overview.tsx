@@ -109,13 +109,17 @@ const Overview: React.FC<OverviewProps> = ({
       setVinError("A VIN has 17 characters.");
       return;
     }
-    await onUpdate({
-      vin,
-      first_registered: details.first_registered,
-      v5c_reference: (details.v5c_reference ?? "").trim(),
-      registered_keeper: (details.registered_keeper ?? "").trim(),
-      engine: (details.engine ?? "").trim(),
-    });
+    try {
+      await onUpdate({
+        vin,
+        first_registered: details.first_registered,
+        v5c_reference: (details.v5c_reference ?? "").trim(),
+        registered_keeper: (details.registered_keeper ?? "").trim(),
+        engine: (details.engine ?? "").trim(),
+      });
+    } catch {
+      return; // the API's message is already shown
+    }
     toast.success("Vehicle details saved.");
     setDetailsOpen(false);
   };

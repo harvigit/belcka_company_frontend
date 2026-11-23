@@ -89,12 +89,16 @@ const ParkingDialog: React.FC<{
       toast.error("Please check the highlighted fields.");
       return;
     }
-    await onSave({
-      name: form.name.trim(),
-      address: form.address.trim(),
-      lat,
-      lng,
-    });
+    try {
+      await onSave({
+        name: form.name.trim(),
+        address: form.address.trim(),
+        lat,
+        lng,
+      });
+    } catch {
+      return; // the API's message is already shown
+    }
     toast.success(`Parking place saved for ${vehicle.registration}.`);
     onClose();
   };
