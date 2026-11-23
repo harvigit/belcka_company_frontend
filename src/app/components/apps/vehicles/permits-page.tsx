@@ -381,20 +381,9 @@ const PermitsPage: React.FC = () => {
       </Stack>
       <Divider />
 
-      {!loading && rows.length === 0 ? (
-        <Stack alignItems="center" spacing={1} py={6}>
-          <Typography variant="h6">{all.length ? "Nothing here" : "No parking permits yet"}</Typography>
-          <Typography color="textSecondary">
-            {all.length ? "No permits match this view." : "Add a permit, or approve one a driver requests in the app."}
-          </Typography>
-        </Stack>
-      ) : (
-        <>
-          <InventoryTable table={table} loading={loading} rowCount={rows.length} onRowClick={openVehicle} />
-          <Divider />
-          <TablePaginationFooter table={table} totalRows={rows.length} selectedCount={selected.size} />
-        </>
-      )}
+      <InventoryTable table={table} loading={loading} rowCount={rows.length} onRowClick={openVehicle} />
+      <Divider />
+      <TablePaginationFooter table={table} totalRows={rows.length} selectedCount={selected.size} />
 
       <PermitDrawer open={adding} vehicles={fleet} onClose={() => setAdding(false)} onAdd={store.addPermit} />
 

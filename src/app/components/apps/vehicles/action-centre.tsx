@@ -311,27 +311,9 @@ const ActionCentre: React.FC = () => {
           </Stack>
           <Divider />
 
-          {!loading && rows.length === 0 ? (
-            <Stack alignItems="center" spacing={1} py={6}>
-              <Typography variant="h6">{actions.length ? "Nothing matches" : "All clear"}</Typography>
-              <Typography color="textSecondary">
-                {actions.length
-                  ? "No actions match your search or filter."
-                  : "No defects, accidents, due dates or approvals need you right now."}
-              </Typography>
-              {actions.length > 0 && (
-                <Button variant="outlined" onClick={() => { setSearch(""); setFocus("all"); }}>
-                  Show all actions
-                </Button>
-              )}
-            </Stack>
-          ) : (
-            <>
-              <InventoryTable table={table} loading={loading} rowCount={rows.length} onRowClick={openTarget} />
-              <Divider />
-              <TablePaginationFooter table={table} totalRows={rows.length} />
-            </>
-          )}
+          <InventoryTable table={table} loading={loading} rowCount={rows.length} onRowClick={openTarget} />
+          <Divider />
+          <TablePaginationFooter table={table} totalRows={rows.length} />
         </>
       )}
 

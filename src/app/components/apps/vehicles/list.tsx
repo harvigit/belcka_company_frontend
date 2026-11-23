@@ -212,14 +212,6 @@ const VehicleList: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vehicles, searchTerm, filters, quick, isArchiveView]);
 
-  const hasNarrowing =
-    !!searchTerm.trim() || !!filters.type || !!filters.status || (quick !== "all" && !isArchiveView);
-  const clearAll = () => {
-    setSearchTerm("");
-    setFilters(noFilters);
-    setQuick("all");
-  };
-
   const handleAssign = async (vehicle: Vehicle, driver: DriverOption | null) => {
     try {
       await assignDriver(vehicle.id, driver);
@@ -738,29 +730,6 @@ const VehicleList: React.FC = () => {
           </Stack>
         </Stack>
         <Divider />
-
-        {!loading && rows.length === 0 && (
-          <Stack alignItems="center" spacing={1} sx={{ pt: 3 }}>
-            <Typography color="textSecondary">
-              {hasNarrowing
-                ? "No vehicles match your search or filters."
-                : isArchiveView
-                  ? "No archived vehicles. Sold or removed vehicles appear here with their history."
-                  : "No vehicles yet. Add your first vehicle to start tracking MOT, service and drivers."}
-            </Typography>
-            {hasNarrowing ? (
-              <Button variant="outlined" onClick={clearAll}>
-                Clear search and filters
-              </Button>
-            ) : (
-              !isArchiveView && (
-                <Button variant="contained" startIcon={<IconPlus size={18} />} onClick={openCreate}>
-                  Add vehicle
-                </Button>
-              )
-            )}
-          </Stack>
-        )}
 
         <InventoryTable table={table} loading={loading} rowCount={rows.length} onRowClick={openVehicle} />
         <Divider />
