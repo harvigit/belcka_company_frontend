@@ -23,7 +23,7 @@ export default function SurveyListPage() {
             </Button>
           </Stack>
           <Box sx={{ p: 4, textAlign: "center" }}>
-            <Typography color="text.secondary">The new survey list is on its way. NHF rates are under Settings.</Typography>
+            <Typography color="text.secondary">The new survey list is on its way. Templates and NHF rates are under Settings.</Typography>
           </Box>
         </BlankCard>
         <SurveySettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
