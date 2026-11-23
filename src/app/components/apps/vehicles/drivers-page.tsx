@@ -378,20 +378,9 @@ const DriversPage: React.FC = () => {
       </Stack>
       <Divider />
 
-      {!loading && rows.length === 0 ? (
-        <Stack alignItems="center" spacing={1} py={6}>
-          <Typography variant="h6">No drivers</Typography>
-          <Typography color="textSecondary">
-            {drivers.length ? "No drivers match your search or filter." : "Assign a vehicle to an employee and they appear here."}
-          </Typography>
-        </Stack>
-      ) : (
-        <>
-          <InventoryTable table={table} loading={loading} rowCount={rows.length} onRowClick={(d: DriverRow) => setOpenId(d.id)} />
-          <Divider />
-          <TablePaginationFooter table={table} totalRows={rows.length} />
-        </>
-      )}
+      <InventoryTable table={table} loading={loading} rowCount={rows.length} onRowClick={(d: DriverRow) => setOpenId(d.id)} />
+      <Divider />
+      <TablePaginationFooter table={table} totalRows={rows.length} />
 
       {/* Driver details */}
       {open && (
