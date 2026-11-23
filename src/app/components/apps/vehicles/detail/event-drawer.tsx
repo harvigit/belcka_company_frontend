@@ -23,8 +23,8 @@ interface FormState {
   passed: "yes" | "no";
   // tyre change: lowest tread after the change
   lowest_tread: string;
-  // accident: photos (file names until upload is built)
-  photos: string[];
+  // accident: photos picked now (uploaded after the record is saved)
+  photos: File[];
 }
 
 const blank = (): FormState => ({
@@ -146,8 +146,8 @@ interface EventDrawerProps {
   onSave: (event: NewEvent) => Promise<void>;
 }
 
-/** Pick up to `max` photos (camera on phones). Static UI: keeps the file names. */
-const PhotoUpload: React.FC<{ value: string[]; onChange: (photos: string[]) => void; max: number }> = ({
+/** Pick up to `max` photos (camera on phones); they are uploaded with the record. */
+const PhotoUpload: React.FC<{ value: File[]; onChange: (photos: File[]) => void; max: number }> = ({
   value,
   onChange,
   max,
@@ -163,9 +163,9 @@ const PhotoUpload: React.FC<{ value: string[]; onChange: (photos: string[]) => v
         hidden
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
-          const images = files.filter((f) => f.type.startsWith("image/")).map((f) => f.name);
+          const images = files.filter((f) => f.type.startsWith("image/"));
           if (images.length < files.length) toast.error("Only photos can be added.");
-          const next = [...value, ...images.filter((n) => !value.includes(n))].slice(0, max);
+          const next = [...value, ...images.filter((f) => !value.some((v) => v.name === f.name))].slice(0, max);
           if (value.length + images.length > max) toast.error(`Up to ${max} photos.`);
           onChange(next);
           e.target.value = "";
@@ -173,13 +173,13 @@ const PhotoUpload: React.FC<{ value: string[]; onChange: (photos: string[]) => v
       />
       {value.length > 0 && (
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          {value.map((name) => (
+          {value.map((file) => (
             <Chip
-              key={name}
+              key={file.name}
               icon={<IconPhoto size={16} />}
-              label={name}
+              label={file.name}
               variant="outlined"
-              onDelete={() => onChange(value.filter((n) => n !== name))}
+              onDelete={() => onChange(value.filter((f) => f !== file))}
               sx={{ maxWidth: 220 }}
             />
           ))}
@@ -222,7 +222,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
       litres: editing.litres ? String(editing.litres) : "",
       passed: editing.passed === false ? "no" : "yes",
       lowest_tread: typeof editing.lowest_tread === "number" ? String(editing.lowest_tread) : "",
-      photos: editing.photos ?? [],
+      photos: [],
     });
   }, [kind, editing]);
 
@@ -289,10 +289,12 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
         litres: kind === "fuel" ? Number(form.litres) : null,
         passed: kind === "mot" ? form.passed === "yes" : undefined,
         lowest_tread: kind === "tyre_change" && form.lowest_tread !== "" ? Number(form.lowest_tread) : undefined,
-        photos: cfg.photos && form.photos.length ? form.photos : undefined,
+        photo_files: cfg.photos && form.photos.length ? form.photos.map((file) => ({ file })) : undefined,
       });
       toast.success(`${EVENT_KINDS[kind].label} ${editing ? "updated" : "saved"} for ${vehicle.registration}.`);
       onClose();
+    } catch {
+      // the API's message is already shown
     } finally {
       setSaving(false);
     }

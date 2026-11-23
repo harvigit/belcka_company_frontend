@@ -276,7 +276,7 @@ const FuelCardsPage: React.FC = () => {
 
   const applyFuel = async (source: Connection, fileName: string, ready: PreviewRow[], skipped: PreviewRow[]) => {
     const dates = [...ready, ...skipped].map((r) => r.date).filter(Boolean).sort();
-    await store.applyImport(
+    const message = await store.applyImport(
       {
         connection_id: source.id,
         source: source.name,
@@ -310,7 +310,8 @@ const FuelCardsPage: React.FC = () => {
       "fuel",
     );
     toast.success(
-      `${ready.length} fill${ready.length === 1 ? "" : "s"} imported${skipped.length ? `, ${skipped.length} added to conflicts` : ""}.`,
+      message ??
+        `${ready.length} fill${ready.length === 1 ? "" : "s"} imported${skipped.length ? `, ${skipped.length} added to conflicts` : ""}.`,
     );
     setSection("reports");
   };
@@ -446,7 +447,11 @@ const FuelCardsPage: React.FC = () => {
         numbers={store.cards.filter((c) => c.id !== editing?.id).map((c) => c.number)}
         onClose={() => setEditing(null)}
         onSave={async (c) => {
-          await store.saveCard(c);
+          try {
+            await store.saveCard(c);
+          } catch {
+            return; // the API's message is already shown
+          }
           toast.success(c.id ? `Card •••• ${c.number} updated.` : `Card •••• ${c.number} added.`);
           setEditing(null);
         }}
@@ -477,7 +482,11 @@ const FuelCardsPage: React.FC = () => {
         onClose={() => setToUndo(null)}
         onConfirm={async () => {
           if (!toUndo) return;
-          await store.undoImport(toUndo.id);
+          try {
+            await store.undoImport(toUndo.id);
+          } catch {
+            return; // the API's message is already shown
+          }
           toast.success("Import undone.");
           setToUndo(null);
         }}

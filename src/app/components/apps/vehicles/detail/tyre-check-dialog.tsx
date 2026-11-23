@@ -83,7 +83,7 @@ export const WheelLayout: React.FC<{ render: (wheel: TyreWheel, label: string) =
 };
 
 /** Camera / file button for one optional photo; shows the picked file with a remove button. */
-const PhotoPick: React.FC<{ value: string; onChange: (name: string) => void; label?: string }> = ({
+const PhotoPick: React.FC<{ value: File | null; onChange: (file: File | null) => void; label?: string }> = ({
   value,
   onChange,
   label = "Add photo",
@@ -102,7 +102,7 @@ const PhotoPick: React.FC<{ value: string; onChange: (name: string) => void; lab
           if (file && !file.type.startsWith("image/")) {
             toast.error("Please choose a photo.");
           } else if (file) {
-            onChange(file.name);
+            onChange(file);
           }
           e.target.value = "";
         }}
@@ -110,8 +110,8 @@ const PhotoPick: React.FC<{ value: string; onChange: (name: string) => void; lab
       {value ? (
         <Chip
           icon={<IconCamera size={16} />}
-          label={value}
-          onDelete={() => onChange("")}
+          label={value.name}
+          onDelete={() => onChange(null)}
           deleteIcon={<IconX size={14} />}
           variant="outlined"
           sx={{ maxWidth: "100%" }}
@@ -132,12 +132,12 @@ const PhotoPick: React.FC<{ value: string; onChange: (name: string) => void; lab
   );
 };
 
-type WheelForm = { tread: string; state: TyreState; photo: string };
+type WheelForm = { tread: string; state: TyreState; photo: File | null };
 const emptyWheels = (): Record<TyreWheel, WheelForm> => ({
-  FL: { tread: "", state: "ok", photo: "" },
-  FR: { tread: "", state: "ok", photo: "" },
-  RL: { tread: "", state: "ok", photo: "" },
-  RR: { tread: "", state: "ok", photo: "" },
+  FL: { tread: "", state: "ok", photo: null },
+  FR: { tread: "", state: "ok", photo: null },
+  RL: { tread: "", state: "ok", photo: null },
+  RR: { tread: "", state: "ok", photo: null },
 });
 
 const treadOk = (v: string) => v !== "" && Number(v) >= 0 && Number(v) <= 12;
@@ -152,7 +152,7 @@ const TyreCheckDialog: React.FC<{
 }> = ({ open, vehicle, events, onClose, onSave }) => {
   const [wheels, setWheels] = useState(emptyWheels);
   const [mileage, setMileage] = useState("");
-  const [extraPhoto, setExtraPhoto] = useState("");
+  const [extraPhoto, setExtraPhoto] = useState<File | null>(null);
   const [note, setNote] = useState("");
   const [tried, setTried] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -161,7 +161,7 @@ const TyreCheckDialog: React.FC<{
     if (!open) return;
     setWheels(emptyWheels());
     setMileage(String(vehicle.mileage || ""));
-    setExtraPhoto("");
+    setExtraPhoto(null);
     setNote("");
     setTried(false);
   }, [open, vehicle.mileage]);
@@ -203,15 +203,19 @@ const TyreCheckDialog: React.FC<{
         invoice_no: "",
         note: note.trim(),
         tread: Object.fromEntries(TYRE_WHEELS.map(([w]) => [w, Number(wheels[w].tread)])),
-        wheels: Object.fromEntries(
-          TYRE_WHEELS.map(([w]) => [w, { state: stateOf(w), ...(wheels[w].photo ? { photo: wheels[w].photo } : {}) }]),
-        ),
-        extra_photo: extraPhoto || undefined,
+        wheels: Object.fromEntries(TYRE_WHEELS.map(([w]) => [w, { state: stateOf(w) }])),
+        // uploaded after the check is saved, labelled with the wheel
+        photo_files: [
+          ...TYRE_WHEELS.flatMap(([w]) => (wheels[w].photo ? [{ file: wheels[w].photo as File, label: w }] : [])),
+          ...(extraPhoto ? [{ file: extraPhoto, label: "extra" }] : []),
+        ],
       });
       toast.success(
         toReplace.length ? `Saved. To replace: ${toReplace.join(", ")}.` : `Tyre check saved for ${vehicle.registration}.`,
       );
       onClose();
+    } catch {
+      // the API's message is already shown
     } finally {
       setSaving(false);
     }

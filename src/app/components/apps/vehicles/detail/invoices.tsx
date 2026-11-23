@@ -18,7 +18,7 @@ interface InvoicesTabProps {
   events: VehicleEvent[];
   readOnly: boolean;
   onAdd: (event: NewEvent) => Promise<void>;
-  onAttach: (eventId: number, fileName: string) => Promise<void>;
+  onAttach: (eventId: number, file: File) => Promise<void>;
   onOpenTab: (tab: string) => void;
   // fuel, MOT, service, tyres and repairs open the record form on the vehicle page
 }
@@ -31,10 +31,11 @@ const blank = () => ({
   cost: "",
   note: "",
   file_name: "",
+  file: null as File | null,
 });
 
-// Picks a photo or PDF and hands back its name (static UI: the file itself is not stored).
-const FilePicker: React.FC<{ label: string; onPick: (name: string) => void; onError: (msg: string) => void }> = ({
+// Picks a photo or PDF (uploaded with the cost, or straight away for "Attach").
+const FilePicker: React.FC<{ label: string; onPick: (file: File) => void; onError: (msg: string) => void }> = ({
   label,
   onPick,
   onError,
@@ -50,7 +51,7 @@ const FilePicker: React.FC<{ label: string; onPick: (name: string) => void; onEr
         e.target.value = "";
         if (!file) return;
         if (file.size > MAX_MB * 1024 * 1024) return onError(`The file is larger than ${MAX_MB} MB.`);
-        onPick(file.name);
+        onPick(file);
       }}
     />
   </Button>
@@ -88,9 +89,12 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, on
       supplier: form.supplier.trim(),
       invoice_no: form.invoice_no.trim(),
       note: form.note.trim(),
-      file_name: form.file_name || undefined,
     };
-    await onAdd({ ...fields, vehicle_id: vehicle.id, mileage: null });
+    try {
+      await onAdd({ ...fields, vehicle_id: vehicle.id, mileage: null, file: form.file });
+    } catch {
+      return; // the API's message is already shown
+    }
     toast.success(`${EVENT_KINDS[form.kind].label} invoice added.`);
     setOpen(false);
   };
@@ -160,7 +164,13 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, on
                   <Stack direction="row" spacing={0.5} alignItems="center">
                     <IconFileText size={16} />
                     <Typography variant="body2" noWrap sx={{ maxWidth: 160 }}>
-                      {e.file_name}
+                      {e.file_url ? (
+                        <a href={e.file_url} target="_blank" rel="noopener noreferrer">
+                          {e.file_name}
+                        </a>
+                      ) : (
+                        e.file_name
+                      )}
                     </Typography>
                   </Stack>
                 ) : readOnly ? (
@@ -169,8 +179,12 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, on
                   <FilePicker
                     label="Attach"
                     onError={(msg) => toast.error(msg)}
-                    onPick={async (name) => {
-                      await onAttach(e.id, name);
+                    onPick={async (file) => {
+                      try {
+                        await onAttach(e.id, file);
+                      } catch {
+                        return; // the API's message is already shown
+                      }
                       toast.success("File attached.");
                     }}
                   />
@@ -278,7 +292,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, on
             <FilePicker
               label={form.file_name ? "Change file" : "Choose file"}
               onError={(msg) => toast.error(msg)}
-              onPick={(name) => setForm((f) => ({ ...f, file_name: name }))}
+              onPick={(file) => setForm((f) => ({ ...f, file_name: file.name, file }))}
             />
             {form.file_name && (
               <Typography variant="body2" noWrap>

@@ -263,7 +263,7 @@ const RoadCostsPage: React.FC = () => {
 
   const applyCharges = async (source: Connection, fileName: string, ready: PreviewRow[], skipped: PreviewRow[]) => {
     const dates = [...ready, ...skipped].map((r) => r.date).filter(Boolean).sort();
-    await store.applyImport(
+    const message = await store.applyImport(
       {
         connection_id: source.id,
         source: source.name,
@@ -294,7 +294,8 @@ const RoadCostsPage: React.FC = () => {
       "charge",
     );
     toast.success(
-      `${ready.length} charge${ready.length === 1 ? "" : "s"} imported${skipped.length ? `, ${skipped.length} added to conflicts` : ""}.`,
+      message ??
+        `${ready.length} charge${ready.length === 1 ? "" : "s"} imported${skipped.length ? `, ${skipped.length} added to conflicts` : ""}.`,
     );
     changeSection(skipped.length ? "conflicts" : "charges");
   };
@@ -548,7 +549,11 @@ const RoadCostsPage: React.FC = () => {
         onClose={() => setToUndo(null)}
         onConfirm={async () => {
           if (!toUndo) return;
-          await store.undoImport(toUndo.id);
+          try {
+            await store.undoImport(toUndo.id);
+          } catch {
+            return; // the API's message is already shown
+          }
           toast.success("Import undone.");
           setToUndo(null);
         }}
@@ -588,7 +593,11 @@ const RoadCostsPage: React.FC = () => {
                 color="error"
                 sx={{ mr: "auto" }}
                 onClick={async () => {
-                  await store.resolveConflict(resolving.id, false, "");
+                  try {
+                    await store.resolveConflict(resolving.id, false, "");
+                  } catch {
+                    return; // the API's message is already shown
+                  }
                   toast.success("Conflict reopened.");
                   setResolving(null);
                 }}
@@ -607,7 +616,11 @@ const RoadCostsPage: React.FC = () => {
                     toast.error("Say what was done before resolving it.");
                     return;
                   }
-                  await store.resolveConflict(resolving.id, true, note.trim());
+                  try {
+                    await store.resolveConflict(resolving.id, true, note.trim());
+                  } catch {
+                    return; // the API's message is already shown
+                  }
                   toast.success("Conflict resolved.");
                   setResolving(null);
                 }}

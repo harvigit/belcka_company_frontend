@@ -110,7 +110,11 @@ const PhotoChecksTab: React.FC<{
         confirmLabel="Ask now"
         onClose={() => setAsking(false)}
         onConfirm={async () => {
-          await onAskNow();
+          try {
+            await onAskNow();
+          } catch {
+            return; // the API's message is already shown
+          }
           toast.success(`Photo check asked for ${vehicle.registration}.`);
           setAsking(false);
         }}

@@ -493,7 +493,11 @@ const DriversPage: React.FC = () => {
         onClose={() => setReimburseFor(null)}
         onSave={async (r) => {
           if (!reimburseFor) return;
-          await store.saveReimbursement(reimburseFor.id, r);
+          try {
+            await store.saveReimbursement(reimburseFor.id, r);
+          } catch {
+            return; // the API's message is already shown
+          }
           toast.success(`Reimbursement for ${reimburseFor.name} saved.`);
           setReimburseFor(null);
         }}
@@ -558,14 +562,18 @@ const LicenceDrawer: React.FC<{
       return;
     }
     const name = employees.find((x) => x.id === driverId)?.name ?? existing?.driver_name ?? "Employee";
-    await onSave({
-      driver_id: driverId,
-      driver_name: name,
-      categories: form.categories.trim().toUpperCase(),
-      checked_on: form.checked_on,
-      valid_until: form.valid_until,
-      reference: form.reference.trim(),
-    });
+    try {
+      await onSave({
+        driver_id: driverId,
+        driver_name: name,
+        categories: form.categories.trim().toUpperCase(),
+        checked_on: form.checked_on,
+        valid_until: form.valid_until,
+        reference: form.reference.trim(),
+      });
+    } catch {
+      return; // the API's message is already shown
+    }
     toast.success(`Licence check saved for ${name}.`);
     onClose();
   };

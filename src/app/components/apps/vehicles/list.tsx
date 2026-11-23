@@ -35,6 +35,7 @@ import {
   IconTool,
   IconArchive,
   IconArrowBackUp,
+  IconTrash,
   IconCar,
   IconEdit,
   IconPlus,
@@ -103,7 +104,7 @@ const VehicleList: React.FC = () => {
   });
 
   const store = useVehicles(companyId);
-  const { vehicles, loading, save, assignDriver, archive, restore, findByRegistration } = store;
+  const { vehicles, loading, save, assignDriver, archive, restore, remove, findByRegistration } = store;
   const drivers = useDrivers(companyId);
   const router = useRouter();
   const editor = useVehicleEditor({ vehicles, drivers, save, findByRegistration });
@@ -124,6 +125,7 @@ const VehicleList: React.FC = () => {
   });
   const [assignFor, setAssignFor] = useState<Vehicle | null>(null);
   const [toArchive, setToArchive] = useState<Vehicle | null>(null);
+  const [toDelete, setToDelete] = useState<Vehicle | null>(null);
 
   const isArchiveView = view === "archived";
   const current = useMemo(() => vehicles.filter((v) => v.status !== "archived"), [vehicles]);
@@ -219,7 +221,11 @@ const VehicleList: React.FC = () => {
   };
 
   const handleAssign = async (vehicle: Vehicle, driver: DriverOption | null) => {
-    await assignDriver(vehicle.id, driver);
+    try {
+      await assignDriver(vehicle.id, driver);
+    } catch {
+      return; // the API's message is already shown
+    }
     toast.success(
       driver
         ? `${vehicle.registration} assigned to ${driver.name}.`
@@ -230,14 +236,33 @@ const VehicleList: React.FC = () => {
 
   const handleArchive = async () => {
     if (!toArchive) return;
-    await archive([toArchive.id]);
+    try {
+      await archive([toArchive.id]);
+    } catch {
+      return; // the API's message is already shown
+    }
     toast.success(`${toArchive.registration} moved to Archived.`);
     setToArchive(null);
   };
 
   const handleRestore = async (v: Vehicle) => {
-    await restore([v.id]);
+    try {
+      await restore([v.id]);
+    } catch {
+      return; // the API's message is already shown
+    }
     toast.success(`${v.registration} is back in the list as Inactive. Assign a driver to use it again.`);
+  };
+
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    try {
+      await remove([toDelete.id]);
+    } catch {
+      return; // the API's message is already shown
+    }
+    toast.success(`${toDelete.registration} deleted.`);
+    setToDelete(null);
   };
 
   const columnHelper = createColumnHelper<Vehicle>();
@@ -367,16 +392,26 @@ const VehicleList: React.FC = () => {
       header: "Actions",
       cell: ({ row }) => {
         const v = row.original;
+        const deleteButton = (
+          <Tooltip title="Delete">
+            <IconButton color="error" onClick={() => setToDelete(v)}>
+              <IconTrash size={18} />
+            </IconButton>
+          </Tooltip>
+        );
         if (v.status === "archived") {
           return (
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<IconArrowBackUp size={16} />}
-              onClick={() => handleRestore(v)}
-            >
-              Restore
-            </Button>
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<IconArrowBackUp size={16} />}
+                onClick={() => handleRestore(v)}
+              >
+                Restore
+              </Button>
+              {deleteButton}
+            </Stack>
           );
         }
         return (
@@ -396,6 +431,7 @@ const VehicleList: React.FC = () => {
                 <IconArchive size={18} />
               </IconButton>
             </Tooltip>
+            {deleteButton}
           </Stack>
         );
       },
@@ -763,6 +799,21 @@ const VehicleList: React.FC = () => {
         confirmLabel="Archive"
         onClose={() => setToArchive(null)}
         onConfirm={handleArchive}
+      />
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title="Delete vehicle"
+        message={
+          toDelete
+            ? `Delete ${toDelete.registration}? It disappears from the list and the archive, and its registration can be added again. ${
+                toDelete.driver_name ? `${toDelete.driver_name} will no longer see it in their app. ` : ""
+              }Use Archive instead when the vehicle is sold and you want to keep it with the past vehicles.`
+            : ""
+        }
+        confirmLabel="Delete"
+        onClose={() => setToDelete(null)}
+        onConfirm={handleDelete}
       />
     </Box>
   );

@@ -67,14 +67,18 @@ export const PermitDrawer: React.FC<{
       toast.error("Please check the highlighted fields.");
       return;
     }
-    await onAdd({
-      vehicle_id: picked.id,
-      zone: form.zone.trim(),
-      issuer: form.issuer.trim(),
-      reference: form.reference.trim(),
-      valid_from: form.valid_from,
-      valid_until: form.valid_until,
-    });
+    try {
+      await onAdd({
+        vehicle_id: picked.id,
+        zone: form.zone.trim(),
+        issuer: form.issuer.trim(),
+        reference: form.reference.trim(),
+        valid_from: form.valid_from,
+        valid_until: form.valid_until,
+      });
+    } catch {
+      return; // the API's message is already shown
+    }
     toast.success(`Permit ${form.zone.trim()} added to ${picked.registration}.`);
     onClose();
   };
@@ -197,7 +201,11 @@ export const PermitRejectDialog: React.FC<{
           toast.error("Please add a reason for rejecting!");
           return;
         }
-        await onReject(permit.id, reason.trim());
+        try {
+          await onReject(permit.id, reason.trim());
+        } catch {
+          return; // the API's message is already shown
+        }
         toast.success(`${permit.zone} rejected.`);
         onClose();
       }}

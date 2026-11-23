@@ -155,8 +155,9 @@ export interface VehicleEvent {
   lowest_tread?: number | null;
   // MOT result
   passed?: boolean;
-  // invoice or receipt (fleet_event_photos)
+  // invoice or receipt: its name and the link to open it
   file_name?: string;
+  file_url?: string;
   // accident photos (fleet_event_photos)
   photos?: string[];
   // Expenses and mileage claims sent from the driver app wait for approval.
@@ -176,6 +177,8 @@ export interface VehicleEvent {
   card?: string;
   // fuel: the station picked from Google (supplier keeps its name); empty when typed by hand
   station?: StationPlace | null;
+  // from the API (every record is)
+  from_api?: boolean;
   created_by: string;
   created_at: string;
 }
@@ -252,6 +255,8 @@ export interface ImportBatch {
   imported_at: string;
   undone_by?: string;
   undone_at?: string;
+  // saved through the API (vehicles/imports); others are still kept in this browser
+  from_api?: boolean;
 }
 
 // Driver locations for the Map. NOT in the 24 planned tables yet (client to confirm); the app saves
@@ -398,6 +403,8 @@ export interface ImportConflict {
   note: string;
   resolved_by: string;
   resolved_at: string;
+  // saved through the API (vehicles/imports); others are still kept in this browser
+  from_api?: boolean;
 }
 
 export type ExpenseStatus = "pending" | "approved" | "rejected";
@@ -723,6 +730,8 @@ export interface VehicleDocument {
   expires_on: string;
   note: string;
   file_name: string;
+  // link to open the uploaded photo or PDF (from the API)
+  file_url?: string;
   uploaded_by: string;
   uploaded_at: string;
 }
