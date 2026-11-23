@@ -37,6 +37,7 @@ import {
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import api from "@/utils/axios";
 import { User } from "next-auth";
 import { useServerTable } from "@/hooks/useServerTable";
@@ -51,7 +52,7 @@ import { DriverName } from "@/app/components/apps/vehicles/shared";
 import SurveySettings from "../settings";
 import { apiMessage } from "../settings/nhf-rates/types";
 import SurveyForm from "./SurveyForm";
-import { AssignDialog, SurveyViewDrawer } from "./dialogs";
+import { AssignDialog } from "./dialogs";
 import { STATUS_META, SurveyOptions, SurveyRow, longDate } from "./types";
 
 const columnHelper = createColumnHelper<SurveyRow>();
@@ -69,6 +70,8 @@ const text = (v?: string | null) => <Typography className="f-14">{v || "-"}</Typ
 // Surveys (Admin): status tiles, then the list with search, filters, columns and the ⋮ menu.
 const SurveyList: React.FC = () => {
   const session = useSession();
+  const router = useRouter();
+  const openSurvey = (id: number) => router.push(`/apps/surveys/view/${id}`);
   const user = session.data?.user as User & { company_id?: number | null };
   const { columnVisibility, onColumnVisibilityChange } = usePersistentColumnVisibility({
     storageKey: `cv_${user?.company_id}_${user?.id}_surveys_list`,
@@ -87,7 +90,6 @@ const SurveyList: React.FC = () => {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [formFor, setFormFor] = useState<{ id: number | null } | null>(null);
-  const [viewId, setViewId] = useState<number | null>(null);
   const [assignFor, setAssignFor] = useState<SurveyRow | null>(null);
   const [toDelete, setToDelete] = useState<SurveyRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -138,7 +140,7 @@ const SurveyList: React.FC = () => {
     columnHelper.accessor("title", {
       header: "Survey",
       cell: ({ row }) => (
-        <Box sx={{ cursor: "pointer", minWidth: 220 }} onClick={() => setViewId(row.original.id)}>
+        <Box sx={{ cursor: "pointer", minWidth: 220 }} onClick={() => openSurvey(row.original.id)}>
           <Typography className="f-14" fontWeight={600} color="primary">
             {row.original.title}
           </Typography>
@@ -202,7 +204,7 @@ const SurveyList: React.FC = () => {
         return (
           <Stack direction="row" spacing={0.5}>
             <Tooltip title="View">
-              <IconButton color="primary" onClick={() => setViewId(row.original.id)}>
+              <IconButton color="primary" onClick={() => openSurvey(row.original.id)}>
                 <IconEye size={18} />
               </IconButton>
             </Tooltip>
@@ -355,7 +357,7 @@ const SurveyList: React.FC = () => {
           )}
         </Box>
       ) : (
-        <InventoryTable table={table} loading={loading} rowCount={data.length} onRowClick={(row) => setViewId(row.original.id)} />
+        <InventoryTable table={table} loading={loading} rowCount={data.length} onRowClick={(row: SurveyRow) => openSurvey(row.id)} />
       )}
       <Divider />
       <TablePaginationFooter table={table} totalRows={totalRows} />
@@ -368,14 +370,6 @@ const SurveyList: React.FC = () => {
         onSaved={() => {
           setFormFor(null);
           refresh();
-        }}
-      />
-      <SurveyViewDrawer
-        id={viewId}
-        onClose={() => setViewId(null)}
-        onEdit={(id) => {
-          setViewId(null);
-          setFormFor({ id });
         }}
       />
       <AssignDialog

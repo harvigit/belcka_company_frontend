@@ -46,6 +46,9 @@ export type SurveyDetail = {
   assigned_at: string | null;
   survey_date: string | null;
   notes: string | null;
+  rework_notes: string | null;
+  started_at: string | null;
+  submitted_at: string | null;
   status: SurveyStatus;
   status_label: string;
   editable: boolean;
@@ -100,3 +103,78 @@ export const dateTime = (d?: string | null) =>
     : "–";
 
 export const countItems = (d?: PdSection[] | null) => (d ?? []).reduce((n, s) => n + s.items.length, 0);
+
+// ---------- survey page: what the surveyor recorded in the app ----------
+export type ItemResult = "pending" | "work" | "none" | "na";
+export type SurveyPhoto = { id: number; kind: "work" | "element"; url: string | null; file_name: string | null; created_at: string };
+export type InsItem = {
+  id: number;
+  node_id: number;
+  name: string;
+  code: string | null;
+  uom: string | null;
+  description: string | null;
+  added_on_site: boolean;
+  ai_suggested: boolean;
+  result: ItemResult;
+  result_label: string;
+  na_reason: string | null;
+  note: string | null;
+  work: {
+    name: string | null;
+    qty: number | null;
+    unit: string | null;
+    qty_status: "est" | "ver" | null;
+    vo: "Main" | "VO" | null;
+    note: string | null;
+    also_rooms: string[];
+  } | null;
+  photos: SurveyPhoto[];
+  inspected_at: string | null;
+};
+export type InsNode = {
+  id: number;
+  kind: "room" | "group";
+  name: string;
+  added_on_site: boolean;
+  inspected: number;
+  total: number;
+  elements: InsItem[];
+  groups: InsNode[];
+};
+export type InsWork = {
+  item_id: number;
+  room: string;
+  path: string[];
+  element: string;
+  code: string | null;
+  in_nhf: boolean | null;
+  work_name: string | null;
+  qty: number | null;
+  unit: string | null;
+  qty_status: "est" | "ver" | null;
+  vo: "Main" | "VO" | null;
+  note: string | null;
+  also_rooms: string[];
+  added_on_site: boolean;
+  ai_suggested: boolean;
+  photos: SurveyPhoto[];
+};
+export type InspectionData = {
+  progress: { inspected: number; total: number };
+  summary: { work: number; none: number; na: number; pending: number; added_on_site: number; ai_suggested: number };
+  photos: number;
+  verified: number;
+  estimated: number;
+  rooms: { id: number; name: string; added_on_site: boolean; inspected: number; total: number }[];
+  tree: InsNode[];
+  works: InsWork[];
+  not_accessible: { item_id: number; room: string; path: string[]; element: string; reason: string | null; note: string | null; photos: SurveyPhoto[] }[];
+};
+
+export const RESULT_META: Record<ItemResult, { label: string; color: "default" | "primary" | "success" | "warning" | "error" | "info" | "secondary" }> = {
+  pending: { label: "Not inspected", color: "default" },
+  work: { label: "Work needed", color: "primary" },
+  none: { label: "No works", color: "success" },
+  na: { label: "Not accessible", color: "warning" },
+};
