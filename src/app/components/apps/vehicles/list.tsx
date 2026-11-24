@@ -118,7 +118,7 @@ const VehicleList: React.FC = () => {
   const [quick, setQuick] = useState<QuickFilter>("all");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
-  // Period for the "miles" and "costs" columns (like the Period on the prototype dashboard)
+  // Period for the miles and costs columns
   const [period, setPeriod] = useState<Period>("30");
   const [custom, setCustom] = useState({
     from: dayjs().subtract(1, "month").format("YYYY-MM-DD"),
@@ -132,7 +132,7 @@ const VehicleList: React.FC = () => {
   const current = useMemo(() => vehicles.filter((v) => v.status !== "archived"), [vehicles]);
   const archivedCount = vehicles.length - current.length;
 
-  // MOT / service overdue, the same way the vehicle page and the Action Centre work it out
+  // MOT/service overdue, worked out as on the vehicle page and Action Centre
   const isOverdue = (v: Vehicle, label: "MOT" | "Service") =>
     (v.status === "active" || v.status === "in_service") &&
     dueItems(v).some((i) => i.label === label && i.state === "overdue");
@@ -171,7 +171,6 @@ const VehicleList: React.FC = () => {
     return { from: dayjs().subtract(Number(period), "day").format("YYYY-MM-DD"), to: today, name: PERIODS[period].short };
   }, [period, custom, today]);
 
-  // Miles driven and costs per vehicle in the period
   const usage = useMemo(() => {
     const map = new Map<number, { miles: number; costs: number }>();
     for (const v of vehicles) {
@@ -179,7 +178,7 @@ const VehicleList: React.FC = () => {
       const readings = own
         .filter((e) => e.mileage && e.date <= range.to)
         .sort((a, b) => a.date.localeCompare(b.date) || (a.mileage ?? 0) - (b.mileage ?? 0));
-      // start: last reading before the period (or the first one); end: last reading in it (or today's mileage)
+      // start: last reading before the period (or first); end: last in it (or current)
       const start = range.from ? [...readings].reverse().find((e) => e.date < range.from) ?? readings[0] : readings[0];
       const end = range.to >= today ? v.mileage : readings[readings.length - 1]?.mileage ?? v.mileage;
       const miles = start ? Math.max(0, end - (start.mileage ?? 0)) : 0;
@@ -217,7 +216,7 @@ const VehicleList: React.FC = () => {
     try {
       await assignDriver(vehicle.id, driver);
     } catch {
-      return; // the API's message is already shown
+      return;
     }
     toast.success(
       driver
@@ -232,7 +231,7 @@ const VehicleList: React.FC = () => {
     try {
       await archive([toArchive.id]);
     } catch {
-      return; // the API's message is already shown
+      return;
     }
     toast.success(`${toArchive.registration} moved to Archived.`);
     setToArchive(null);
@@ -242,7 +241,7 @@ const VehicleList: React.FC = () => {
     try {
       await restore([v.id]);
     } catch {
-      return; // the API's message is already shown
+      return;
     }
     toast.success(`${v.registration} is back in the list as Inactive. Assign a driver to use it again.`);
   };
@@ -252,7 +251,7 @@ const VehicleList: React.FC = () => {
     try {
       await remove([toDelete.id]);
     } catch {
-      return; // the API's message is already shown
+      return;
     }
     toast.success(`${toDelete.registration} deleted.`);
     setToDelete(null);
@@ -444,7 +443,7 @@ const VehicleList: React.FC = () => {
     autoResetPageIndex: true,
   });
 
-  // The vehicles shown now (search, filters and tiles applied), sorted like the table.
+  // Visible vehicles (search, filters, tiles applied), sorted like the table.
   const exportCsv = () => {
     const list = table.getSortedRowModel().rows.map((r) => r.original);
     if (!list.length) {
@@ -521,7 +520,7 @@ const VehicleList: React.FC = () => {
     service: "Past the service date",
   };
 
-  // Six numbers at the top: the ones on vehicles filter this list, the others open the Action Centre.
+  // Vehicle tiles filter this list; the others open the Action Centre.
   const statCards: {
     key: string;
     label: string;

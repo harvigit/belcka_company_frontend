@@ -47,10 +47,7 @@ const toMiles = (from: google.maps.LatLngLiteral, to: google.maps.LatLng) => {
   return metres === undefined ? undefined : metres / 1609.34;
 };
 
-/**
- * Station picker for fuel records: search Google by name, or press the location button
- * to list the nearest fuel stations. Typing a name without picking one still works.
- */
+/** Fuel station picker: Google search or nearby list; free text also works. */
 const StationField: React.FC<StationFieldProps> = ({ name, place, onChange }) => {
   const { isLoaded, loadError } = useJsApiLoader({
     ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,

@@ -34,7 +34,7 @@ const blank = () => ({
   file: null as File | null,
 });
 
-// Picks a photo or PDF (uploaded with the cost, or straight away for "Attach").
+// Photo or PDF, uploaded with the cost (or straight away for "Attach").
 const FilePicker: React.FC<{ label: string; onPick: (file: File) => void; onError: (msg: string) => void }> = ({
   label,
   onPick,
@@ -93,7 +93,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, on
     try {
       await onAdd({ ...fields, vehicle_id: vehicle.id, mileage: null, file: form.file });
     } catch {
-      return; // the API's message is already shown
+      return;
     }
     toast.success(`${EVENT_KINDS[form.kind].label} invoice added.`);
     setOpen(false);
@@ -183,7 +183,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, on
                       try {
                         await onAttach(e.id, file);
                       } catch {
-                        return; // the API's message is already shown
+                        return;
                       }
                       toast.success("File attached.");
                     }}

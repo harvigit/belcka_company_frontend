@@ -72,7 +72,7 @@ const PermitsPage: React.FC = () => {
   const [toReject, setToReject] = useState<ParkingPermit | null>(null);
   const [toRemove, setToRemove] = useState<ParkingPermit | null>(null);
 
-  // Permits of vehicles still in the fleet, the ones needing action first, then by end date.
+  // Fleet vehicles only; needing action first, then by end date.
   const all = useMemo(
     () =>
       permits
@@ -252,7 +252,7 @@ const PermitsPage: React.FC = () => {
                       try {
                         await store.decidePermit(p.id, true);
                       } catch {
-                        return; // the API's message is already shown
+                        return;
                       }
                       toast.success(`${p.zone} approved.`);
                     }}
@@ -405,7 +405,7 @@ const PermitsPage: React.FC = () => {
           try {
             await store.removePermit(toRemove.id);
           } catch {
-            return; // the API's message is already shown
+            return;
           }
           setSelected((prev) => {
             const next = new Set(prev);

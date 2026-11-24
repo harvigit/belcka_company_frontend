@@ -8,11 +8,7 @@ import { DueCell, PhotoThumbs } from "../shared";
 import { dueItems, FLEET_RULES, formatDate, formatMiles, PHOTO_SHOTS, Vehicle, VehicleEvent } from "../types";
 import { Section, StatTile } from "./common";
 
-/**
- * Photo checks (like the prototype): every few months, at a random date, the driver takes seven
- * photos of the whole vehicle in the app. It proves the state of the vehicle, e.g. when new damage
- * appeared. The office can ask for one straight away.
- */
+/** Driver photographs the whole vehicle every few months; office can ask anytime. */
 const PhotoChecksTab: React.FC<{
   vehicle: Vehicle;
   events: VehicleEvent[];
@@ -113,7 +109,7 @@ const PhotoChecksTab: React.FC<{
           try {
             await onAskNow();
           } catch {
-            return; // the API's message is already shown
+            return;
           }
           toast.success(`Photo check asked for ${vehicle.registration}.`);
           setAsking(false);

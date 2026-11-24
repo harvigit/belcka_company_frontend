@@ -52,7 +52,7 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ vehicle, documents, readOnl
     try {
       await onAdd({ ...form, vehicle_id: vehicle.id, number: form.number.trim(), note: form.note.trim() }, file);
     } catch {
-      return; // the API's message is already shown
+      return;
     } finally {
       setSaving(false);
     }
@@ -247,7 +247,7 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ vehicle, documents, readOnl
           try {
             await onRemove(toRemove.id);
           } catch {
-            return; // the API's message is already shown
+            return;
           }
           toast.success("Document removed.");
           setToRemove(null);

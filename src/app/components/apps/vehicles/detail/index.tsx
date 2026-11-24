@@ -133,7 +133,7 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
     try {
       await store.assignDriver(vehicle.id, driver);
     } catch {
-      return; // the API's message is already shown
+      return;
     }
     toast.success(driver ? `${vehicle.registration} assigned to ${driver.name}.` : `Driver removed from ${vehicle.registration}.`);
     setAssignOpen(false);
@@ -144,7 +144,6 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
   return (
     <BlankCard>
       <CardContent sx={{ pt: 1.5 }}>
-        {/* Header */}
         <Stack
           direction={{ xs: "column", md: "row" }}
           justifyContent="space-between"
@@ -215,7 +214,7 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
                     try {
                       await store.restore([vehicle.id]);
                     } catch {
-                      return; // the API's message is already shown
+                      return;
                     }
                     toast.success(`${vehicle.registration} restored as Inactive.`);
                   }}
@@ -232,7 +231,6 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
           </Alert>
         )}
 
-        {/* Tabs */}
         <Tabs
           value={tab}
           onChange={(_, value: TabValue) => changeTab(value)}
@@ -392,7 +390,7 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
           try {
             await store.archive([vehicle.id]);
           } catch {
-            return; // the API's message is already shown
+            return;
           }
           toast.success(`${vehicle.registration} moved to Archived.`);
           setArchiveOpen(false);
@@ -411,7 +409,7 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({ vehicleId }) => {
           try {
             await store.remove([vehicle.id]);
           } catch {
-            return; // the API's message is already shown
+            return;
           }
           toast.success(`${vehicle.registration} deleted.`);
           setDeleteOpen(false);

@@ -18,7 +18,6 @@ import {
   Vehicle,
 } from "./types";
 
-/* ---------- Review an existing defect or driver request ---------- */
 interface ReviewProps {
   defect: Defect | null;
   vehicle: Vehicle | null;
@@ -178,7 +177,7 @@ export const DefectReviewDrawer: React.FC<ReviewProps> = ({
                 try {
                   await onTakeOffRoad(vehicle.id);
                 } catch {
-                  return; // the API's message is already shown
+                  return;
                 }
                 toast.success(`${vehicle.registration} marked as In service.`);
               }}

@@ -47,7 +47,6 @@ import { useVehicles } from "./useVehicles";
 
 type View = ExpenseStatus | "all";
 
-// What the driver sent, in one line.
 const describe = (e: VehicleEvent) =>
   e.kind === "mileage_claim"
     ? `${e.claim_miles ?? 0} business miles × ${e.claim_rate ?? 0}p${e.note ? ` · ${e.note}` : ""}`

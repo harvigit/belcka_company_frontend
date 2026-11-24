@@ -15,11 +15,7 @@ const LIGHT_TEXT: Record<ChipColor, (t: Theme) => string> = {
   info: () => "#0277bd",
 };
 
-/**
- * Vehicles module look: every coloured badge (Overdue, Due soon, Active, permits...) is a soft
- * badge — light background, darker text — the same light colours as the tiles, so the screens
- * don't mix bright filled badges with pale cards. Applies to dialogs and drawers too.
- */
+// Soft badges (light bg, darker text) everywhere, incl. dialogs and drawers
 const fleetTheme = (outer: Theme) => {
   const dark = outer.palette.mode === "dark";
   const filled = Object.fromEntries(

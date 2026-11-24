@@ -13,10 +13,6 @@ interface Row {
   checklist: DailyChecklist | null;
 }
 
-/**
- * Today's daily checks on the Vehicles page: every company vehicle with a driver,
- * whether the driver has sent the checklist and what it found.
- */
 const DriverChecksToday: React.FC<{
   vehicles: Vehicle[];
   checklists: DailyChecklist[];
@@ -28,8 +24,7 @@ const DriverChecksToday: React.FC<{
   const today = dayjs().format("YYYY-MM-DD");
   const todays = new Map(checklists.filter((c) => c.date === today).map((c) => [c.vehicle_id, c]));
 
-  // Private cars don't need a daily check; vehicles without a driver aren't driven; drivers with no
-  // check items (Settings → Daily checks) have nothing to send.
+  // Skip private cars, vehicles without a driver, and drivers with no check items.
   const rows: Row[] = vehicles
     .filter((v) => needsDailyCheck(v, dailyChecks))
     .map((v) => ({ id: v.id, vehicle: v, checklist: todays.get(v.id) ?? null }))

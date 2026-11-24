@@ -30,7 +30,6 @@ import {
 } from "../types";
 import { NewEvent } from "../useVehicles";
 
-/* ---------- Car seen from above, with a box for each wheel around it ---------- */
 export const CarTop: React.FC = () => (
   <Box
     component="svg"
@@ -82,7 +81,6 @@ export const WheelLayout: React.FC<{ render: (wheel: TyreWheel, label: string) =
   );
 };
 
-/** Camera / file button for one optional photo; shows the picked file with a remove button. */
 const PhotoPick: React.FC<{ value: File | null; onChange: (file: File | null) => void; label?: string }> = ({
   value,
   onChange,
@@ -142,7 +140,6 @@ const emptyWheels = (): Record<TyreWheel, WheelForm> => ({
 
 const treadOk = (v: string) => v !== "" && Number(v) >= 0 && Number(v) <= 12;
 
-/* ---------- Tyre check (same fields as the prototype) ---------- */
 const TyreCheckDialog: React.FC<{
   open: boolean;
   vehicle: Vehicle;
@@ -215,7 +212,7 @@ const TyreCheckDialog: React.FC<{
       );
       onClose();
     } catch {
-      // the API's message is already shown
+      // API error already shown
     } finally {
       setSaving(false);
     }

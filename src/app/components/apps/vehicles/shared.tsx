@@ -6,7 +6,6 @@ import CustomTextField from "@/app/components/forms/theme-elements/CustomTextFie
 import { DueItem, DUE_CHIP, formatDate } from "./types";
 import { DriverOption } from "./useVehicles";
 
-// Registration shown like a UK number plate so it is easy to spot in a list.
 export const RegPlate: React.FC<{ registration: string; size?: "small" | "medium" }> = ({
   registration,
   size = "small",
@@ -73,12 +72,10 @@ export const DueCell: React.FC<{ item: DueItem | null }> = ({ item }) => {
   );
 };
 
-// Employee picker used by the vehicle form and the assign dialog.
 export const DriverPicker: React.FC<{
   drivers: DriverOption[];
   value: number | null;
   onChange: (driver: DriverOption | null) => void;
-  // employees who already drive another vehicle, shown as a hint in the list
   busyDriverIds?: Map<number, string>;
   error?: string;
 }> = ({ drivers, value, onChange, busyDriverIds, error }) => (
@@ -112,7 +109,6 @@ export const DriverPicker: React.FC<{
   />
 );
 
-// Shown when the signed-in user is not part of a company, so there are no vehicles to load.
 export const NoCompany: React.FC = () => (
   <Box sx={{ py: 8, px: 2, textAlign: "center" }}>
     <Typography variant="h6" mb={1}>
@@ -124,8 +120,7 @@ export const NoCompany: React.FC = () => (
   </Box>
 );
 
-// Photos from the API (defects, accidents, tyre and photo checks): each opens full size in a new tab.
-// A value that is not a link (no photo file) shows as a plain tile.
+// Non-link values (no photo file) show as plain tiles
 export const PhotoThumbs: React.FC<{ photos: string[]; size?: number }> = ({ photos, size = 72 }) =>
   photos.length ? (
     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>

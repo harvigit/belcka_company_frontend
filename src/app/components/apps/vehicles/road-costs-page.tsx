@@ -85,7 +85,7 @@ const RoadCostsPage: React.FC = () => {
     router.replace(`/apps/vehicles/road-costs${s === "charges" ? "" : `?tab=${s}`}`, { scroll: false });
   };
 
-  // Parking, road charges and fines: imported, added on a vehicle, or approved from the driver app.
+  // Parking, road charges, fines: imported, added on a vehicle, or from the app.
   const charges = useMemo(
     () =>
       store.events
@@ -218,7 +218,6 @@ const RoadCostsPage: React.FC = () => {
     toast.success(`${rows.length} row${rows.length === 1 ? "" : "s"} exported.`);
   };
 
-  /* ---------- Charges import ---------- */
   const sampleCsv = (source: Connection) => {
     const d = (n: number) => dayjs().subtract(n, "day").format("DD/MM/YYYY");
     if (source.id === "ringgo")
@@ -552,7 +551,7 @@ const RoadCostsPage: React.FC = () => {
           try {
             await store.undoImport(toUndo.id);
           } catch {
-            return; // the API's message is already shown
+            return;
           }
           toast.success("Import undone.");
           setToUndo(null);
@@ -596,7 +595,7 @@ const RoadCostsPage: React.FC = () => {
                   try {
                     await store.resolveConflict(resolving.id, false, "");
                   } catch {
-                    return; // the API's message is already shown
+                    return;
                   }
                   toast.success("Conflict reopened.");
                   setResolving(null);
@@ -619,7 +618,7 @@ const RoadCostsPage: React.FC = () => {
                   try {
                     await store.resolveConflict(resolving.id, true, note.trim());
                   } catch {
-                    return; // the API's message is already shown
+                    return;
                   }
                   toast.success("Conflict resolved.");
                   setResolving(null);

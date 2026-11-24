@@ -7,7 +7,6 @@ import FleetTheme from "@/app/components/apps/vehicles/fleet-theme";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import ActivityPage from "@/app/components/apps/vehicles/activity-page";
 
-/** Vehicles · Activity log: company admins, or users given the Vehicles permission. */
 const VehicleActivityPage = () => (
   <PageContainer title="Vehicle activity" description="Who changed what in Vehicles">
     <PermissionGuard permission="vehicles">

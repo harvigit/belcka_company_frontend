@@ -23,7 +23,6 @@ import {
   fuelLabel,
   fuelUse,
   money,
-  parkingText,
   typeLabel,
   Vehicle,
   VehicleEvent,
@@ -55,10 +54,6 @@ interface OverviewProps {
   onAddAccident: () => void;
 }
 
-/**
- * Vehicle overview, laid out like the prototype: the key numbers, the parking place,
- * what is due, and the main actions underneath.
- */
 const Overview: React.FC<OverviewProps> = ({
   vehicle,
   events,
@@ -118,7 +113,7 @@ const Overview: React.FC<OverviewProps> = ({
         engine: (details.engine ?? "").trim(),
       });
     } catch {
-      return; // the API's message is already shown
+      return;
     }
     toast.success("Vehicle details saved.");
     setDetailsOpen(false);
@@ -179,7 +174,6 @@ const Overview: React.FC<OverviewProps> = ({
 
   return (
     <Box display="flex" flexDirection="column" gap={3}>
-      {/* Key numbers */}
       <Grid container spacing={2}>
         {tiles.map((t, i) => (
           // 5 per row on wide screens: 9 tiles fit in 2 rows
@@ -197,7 +191,6 @@ const Overview: React.FC<OverviewProps> = ({
         </Box>
       )}
 
-      {/* What is due */}
       <Section title="What is due">
         <RecordTable
           rows={due.map((d) => ({ ...d, id: d.label }))}
@@ -213,7 +206,6 @@ const Overview: React.FC<OverviewProps> = ({
         />
       </Section>
 
-      {/* Main actions, like the prototype */}
       {!readOnly && (
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           <Button variant="outlined" startIcon={<IconEdit size={16} />} onClick={onEdit}>
@@ -231,7 +223,6 @@ const Overview: React.FC<OverviewProps> = ({
         </Stack>
       )}
 
-      {/* V5C logbook details */}
       <Section
         title="Vehicle details"
         subtitle="From the V5C logbook"

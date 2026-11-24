@@ -7,7 +7,6 @@ import FleetTheme from "@/app/components/apps/vehicles/fleet-theme";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import Expenses from "@/app/components/apps/vehicles/expenses";
 
-/** Vehicles · Expenses: company admins, or users given the Vehicles permission. */
 const VehicleExpensesPage = () => (
   <PageContainer title="Vehicle expenses" description="Driver expenses and mileage claims">
     <PermissionGuard permission="vehicles">

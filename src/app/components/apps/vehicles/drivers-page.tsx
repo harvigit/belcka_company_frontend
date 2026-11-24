@@ -105,7 +105,7 @@ const DriversPage: React.FC = () => {
 
   const from = period === "all" ? "0000-00-00" : dayjs().subtract(Number(period), "day").format("YYYY-MM-DD");
 
-  // A driver is anyone who has had a vehicle, or whose licence or reimbursement is recorded.
+  // A driver: anyone who had a vehicle, or has a licence or reimbursement recorded.
   const drivers: DriverRow[] = useMemo(() => {
     const ids = new Set<number>([
       ...store.driverLogs.map((l) => l.driver_id),
@@ -382,7 +382,6 @@ const DriversPage: React.FC = () => {
       <Divider />
       <TablePaginationFooter table={table} totalRows={rows.length} />
 
-      {/* Driver details */}
       {open && (
         <Dialog open onClose={() => setOpenId(null)} fullWidth maxWidth="sm">
           <DialogTitle>
@@ -485,7 +484,7 @@ const DriversPage: React.FC = () => {
           try {
             await store.saveReimbursement(reimburseFor.id, r);
           } catch {
-            return; // the API's message is already shown
+            return;
           }
           toast.success(`Reimbursement for ${reimburseFor.name} saved.`);
           setReimburseFor(null);
@@ -495,7 +494,6 @@ const DriversPage: React.FC = () => {
   );
 };
 
-/* ---------- Record / update a driving licence check (fleet_driver_licences) ---------- */
 const LicenceDrawer: React.FC<{
   target: { driverId: number | null } | null;
   employees: DriverOption[];
@@ -561,7 +559,7 @@ const LicenceDrawer: React.FC<{
         reference: form.reference.trim(),
       });
     } catch {
-      return; // the API's message is already shown
+      return;
     }
     toast.success(`Licence check saved for ${name}.`);
     onClose();
@@ -639,7 +637,6 @@ const LicenceDrawer: React.FC<{
   );
 };
 
-/* ---------- How a driver is paid back (fleet_driver_reimbursements) ---------- */
 const ReimbursementDialog: React.FC<{
   driver: DriverRow | null;
   onClose: () => void;

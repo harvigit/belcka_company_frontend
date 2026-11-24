@@ -54,7 +54,7 @@ const STATUS: Record<PreviewStatus, { label: string; color: "success" | "warning
 interface ImportDialogProps {
   open: boolean;
   title: string;
-  // what the file must contain, shown before choosing it
+  // shown before the file is chosen
   columnsHint: string;
   sources: Connection[];
   vehicles: Vehicle[];
@@ -65,7 +65,7 @@ interface ImportDialogProps {
   onGoToConnections: () => void;
 }
 
-// Two steps: choose the source and file, then check every row before anything is saved.
+// Two steps: choose source and file, then review every row before saving.
 const ImportDialog: React.FC<ImportDialogProps> = ({
   open,
   title,
@@ -126,7 +126,7 @@ const ImportDialog: React.FC<ImportDialogProps> = ({
       await onApply(source, fileName, counts.import, skipped);
       onClose();
     } catch {
-      // the API's message is already shown
+      // API error already shown
     } finally {
       setSaving(false);
     }
