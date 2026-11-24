@@ -472,11 +472,9 @@ export const FUEL_CHECK_DAYS = 30;
 export type DefectSeverity = "minor" | "major" | "critical";
 export type DefectStatus = "open" | "in_progress" | "resolved" | "closed";
 
-// A defect on a critical item opens a critical defect
 export interface DailyCheckItem {
   id: number;
   title: string;
-  is_critical: boolean;
   all_drivers: boolean;
   drivers: { id: number; name: string }[];
 }
