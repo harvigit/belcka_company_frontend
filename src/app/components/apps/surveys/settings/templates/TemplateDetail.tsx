@@ -17,6 +17,7 @@ import {
   TextField,
   Tooltip,
   Typography,
+  ButtonGroup,
 } from "@mui/material";
 import {
   IconArrowLeft,
@@ -30,6 +31,8 @@ import {
   IconPlus,
   IconSearch,
   IconTrash,
+  IconChevronsDown,
+  IconChevronsUp,
 } from "@tabler/icons-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -281,10 +284,22 @@ const TemplateDetail: React.FC<{ id: number; onBack: () => void }> = ({ id, onBa
                   slotProps={{ input: { endAdornment: <InputAdornment position="end"><IconSearch size={16} /></InputAdornment> } }}
                 />
                 {allIds.length > 0 && (
-                  <Stack direction="row" ml="auto">
-                    <Button size="small" onClick={() => setClosed((c) => ({ ...c, ...Object.fromEntries(allIds.map((x) => [x, false])) }))}>Expand all</Button>
-                    <Button size="small" onClick={() => setClosed((c) => ({ ...c, ...Object.fromEntries(allIds.map((x) => [x, true])) }))}>Collapse all</Button>
-                  </Stack>
+                  <ButtonGroup size="small" variant="outlined" sx={{ ml: "auto", "& .MuiButton-root": { px: 1.5, whiteSpace: "nowrap" } }}>
+                    <Button
+                      startIcon={<IconChevronsDown size={16} />}
+                      disabled={allIds.every((x) => !closed[x])}
+                      onClick={() => setClosed((c) => ({ ...c, ...Object.fromEntries(allIds.map((x) => [x, false])) }))}
+                    >
+                      Expand all
+                    </Button>
+                    <Button
+                      startIcon={<IconChevronsUp size={16} />}
+                      disabled={allIds.every((x) => closed[x])}
+                      onClick={() => setClosed((c) => ({ ...c, ...Object.fromEntries(allIds.map((x) => [x, true])) }))}
+                    >
+                      Collapse all
+                    </Button>
+                  </ButtonGroup>
                 )}
               </Stack>
               <Divider />
