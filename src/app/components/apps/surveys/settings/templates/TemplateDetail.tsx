@@ -172,7 +172,7 @@ const TemplateDetail: React.FC<{ id: number; onBack: () => void }> = ({ id, onBa
           <Typography className="f-14" fontWeight={600} sx={{ flex: 1 }}>{g.name}</Typography>
           <Typography variant="caption" color="textSecondary">{plural(countEls(g), "element")}</Typography>
           <Tooltip title="Add element here"><IconButton size="small" color="primary" onClick={() => setElDlg({ nodeId: g.id, element: null })}><IconPlus size={17} /></IconButton></Tooltip>
-          <IconButton size="small" onClick={(e) => setMenu({ anchor: e.currentTarget, node: g })}><IconDotsVertical size={17} /></IconButton>
+          <Tooltip title="More"><IconButton size="small" onClick={(e) => setMenu({ anchor: e.currentTarget, node: g })}><IconDotsVertical size={17} /></IconButton></Tooltip>
         </Stack>
         <Collapse in={!isClosed} unmountOnExit>
           {g.elements.filter(match).map((e) => elementRow(e, depth + 1))}
@@ -271,7 +271,8 @@ const TemplateDetail: React.FC<{ id: number; onBack: () => void }> = ({ id, onBa
                 <Stack direction="row" gap={1} ml={{ sm: "auto" }} flexWrap="wrap">
                   <Button variant="outlined" startIcon={<IconFolderPlus size={16} />} onClick={() => setNameDlg({ kind: "group", parentId: room.id })}>Add group</Button>
                   <Button variant="contained" startIcon={<IconPlus size={16} />} onClick={() => setElDlg({ nodeId: room.id, element: null })}>Add element</Button>
-                  <IconButton onClick={(e) => setMenu({ anchor: e.currentTarget, node: room })}><IconDotsVertical size={18} /></IconButton>
+                  <Tooltip title="Rename room"><IconButton color="primary" onClick={() => setNameDlg({ kind: "rename-node", node: room })}><IconEdit size={18} /></IconButton></Tooltip>
+                  <Tooltip title="Delete room"><IconButton color="error" onClick={() => setDel({ kind: "node", node: room })}><IconTrash size={18} /></IconButton></Tooltip>
                 </Stack>
               </Stack>
               <Stack direction="row" alignItems="center" gap={1} sx={{ px: 2, pb: 1.5 }}>
@@ -317,11 +318,9 @@ const TemplateDetail: React.FC<{ id: number; onBack: () => void }> = ({ id, onBa
                 {!room.elements.length && !room.children.length && (
                   <Box sx={{ textAlign: "center", py: 5 }}>
                     <Typography fontWeight={600}>Nothing in {room.name} yet.</Typography>
-                    <Typography className="f-14" color="textSecondary" mb={1.5}>Add a group such as Floor, Window or Door, or add an element directly to the room.</Typography>
-                    <Stack direction="row" gap={1} justifyContent="center">
-                      <Button variant="outlined" onClick={() => setNameDlg({ kind: "group", parentId: room.id })}>Add group</Button>
-                      <Button variant="contained" onClick={() => setElDlg({ nodeId: room.id, element: null })}>Add element</Button>
-                    </Stack>
+                    <Typography className="f-14" color="textSecondary">
+                      Use <b>Add group</b> above for a group such as Floor, Window or Door, or <b>Add element</b> to add one directly to the room.
+                    </Typography>
                   </Box>
                 )}
                 {query && !room.elements.some(match) && !room.children.some(visible) && (
@@ -334,20 +333,15 @@ const TemplateDetail: React.FC<{ id: number; onBack: () => void }> = ({ id, onBa
       )}
 
       <Menu anchorEl={menu?.anchor} open={!!menu} onClose={() => setMenu(null)}>
-        {menu?.node.kind === "group" && (
-          <MenuItem onClick={() => { setElDlg({ nodeId: menu.node.id, element: null }); setMenu(null); }}>
-            <ListItemIcon><IconPlus size={18} /></ListItemIcon>Add element
-          </MenuItem>
-        )}
         <MenuItem onClick={() => { if (menu) setNameDlg({ kind: "group", parentId: menu.node.id }); setMenu(null); }}>
-          <ListItemIcon><IconFolderPlus size={18} /></ListItemIcon>{menu?.node.kind === "room" ? "Add group" : "Add sub-group"}
+          <ListItemIcon><IconFolderPlus size={18} /></ListItemIcon>Add sub-group
         </MenuItem>
         <MenuItem onClick={() => { if (menu) setNameDlg({ kind: "rename-node", node: menu.node }); setMenu(null); }}>
-          <ListItemIcon><IconEdit size={18} /></ListItemIcon>Rename
+          <ListItemIcon><IconEdit size={18} /></ListItemIcon>Rename group
         </MenuItem>
         <Divider />
         <MenuItem sx={{ color: "#e53935" }} onClick={() => { if (menu) setDel({ kind: "node", node: menu.node }); setMenu(null); }}>
-          <ListItemIcon sx={{ color: "#e53935" }}><IconTrash size={18} /></ListItemIcon>Delete {menu?.node.kind === "room" ? "room" : "group"}
+          <ListItemIcon sx={{ color: "#e53935" }}><IconTrash size={18} /></ListItemIcon>Delete group
         </MenuItem>
       </Menu>
 
