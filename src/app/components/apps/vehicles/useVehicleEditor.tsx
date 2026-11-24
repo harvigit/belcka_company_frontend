@@ -29,14 +29,13 @@ export const toForm = (v: Vehicle): VehicleForm => ({
   notes: v.notes,
 });
 
-// Add / Edit vehicle drawer with its validation, shared by the list and the vehicle page.
 export function useVehicleEditor({ vehicles, drivers, save, findByRegistration }: Options) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<VehicleForm>(emptyVehicle);
   const [showErrors, setShowErrors] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Who already drives what, so the picker can warn before giving one person two vehicles.
+  // lets the picker warn before giving one person two vehicles
   const busyDriverIds = useMemo(() => {
     const map = new Map<number, string>();
     vehicles
@@ -47,10 +46,7 @@ export function useVehicleEditor({ vehicles, drivers, save, findByRegistration }
 
   const savedMileage = formData.id ? vehicles.find((v) => v.id === formData.id)?.mileage ?? 0 : 0;
 
-  // Rules from the prototype plus the fields the rest of the module depends on:
-  // the due list needs MOT and insurance (and road tax for company vehicles), the odometer checks
-  // need a starting mileage, and a private car always belongs to an employee.
-  // Wrong values show while typing; empty required fields only after the first save attempt.
+  // Wrong values show while typing; missing required ones after first save
   const validate = (f: VehicleForm, showMissing: boolean): VehicleFormErrors => {
     const e: VehicleFormErrors = {};
     const isPrivate = f.type === "private";

@@ -41,7 +41,7 @@ export const PLACE_ICON: Record<PlaceKind, React.ElementType> = {
   other: IconMapPin,
 };
 
-/** Rounded-square badge with the place icon (squares, so places differ from the round driver pins). */
+/** Square badge, so places differ from the round driver pins. */
 export const PlaceBadge: React.FC<{ kind: PlaceKind; size?: number }> = ({ kind, size = 28 }) => {
   const Icon = PLACE_ICON[kind];
   return (
@@ -63,7 +63,6 @@ export const PlaceBadge: React.FC<{ kind: PlaceKind; size?: number }> = ({ kind,
   );
 };
 
-/** Pin for a company place: icon badge with a small pointer, name on hover. */
 export const PlacePin: React.FC<{ place: FleetPlace; active: boolean; onClick: () => void }> = ({ place, active, onClick }) => (
   <Box sx={{ position: "relative", pb: "6px", transform: active ? "scale(1.15)" : undefined, transformOrigin: "bottom center" }}>
     <ButtonBase
@@ -91,7 +90,6 @@ export const PlacePin: React.FC<{ place: FleetPlace; active: boolean; onClick: (
 
 export type PlaceDraft = { lat: number; lng: number; address: string };
 
-/** Name the place picked on the map and choose its icon. */
 export const PlaceDialog: React.FC<{
   draft: PlaceDraft | null;
   onClose: () => void;

@@ -7,7 +7,6 @@ import FleetTheme from "@/app/components/apps/vehicles/fleet-theme";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import DriversPage from "@/app/components/apps/vehicles/drivers-page";
 
-/** Vehicles · Drivers: company admins, or users given the Vehicles permission. */
 const VehicleDriversPage = () => (
   <PageContainer title="Drivers" description="Drivers, licences and reimbursement">
     <PermissionGuard permission="vehicles">

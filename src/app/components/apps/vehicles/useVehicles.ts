@@ -28,13 +28,7 @@ import {
   VehicleOnboarding,
 } from "./types";
 
-// Everything in the Vehicles section comes from the vehicles API: vehicles, the driver log, licence checks and
-// reimbursements, fuel cards, every vehicle record (fuel, service, MOT, tyres, costs, expenses from the app),
-// file imports and their conflicts, documents, parking permits, defects and daily checks, start lists, fleet
-// rules, start list types and connections, the activity log, Map places and driver locations.
-// The API writes the activity log itself; this hook reads it again after each change.
-// The API calls throw when they fail (the API's message is already shown as a toast), so callers
-// keep their form open and do not show a success message.
+// API calls throw on failure (toast already shown), so callers keep forms open
 
 export interface DriverOption {
   id: number;
@@ -88,14 +82,12 @@ const emptyData = (): FleetData => ({
   places: [],
 });
 
-// Saved rules and start list types are copied into the shared FLEET_RULES / ONBOARDING_TEMPLATES
-// so every screen and helper uses them.
+// Copy saved rules into the shared FLEET_RULES / ONBOARDING_TEMPLATES
 const applySettings = (d: Pick<FleetData, "settings" | "templates">) => {
   Object.assign(FLEET_RULES, DEFAULT_FLEET_RULES, d.settings);
   ONBOARDING_TEMPLATES.splice(0, ONBOARDING_TEMPLATES.length, ...d.templates);
 };
 
-// Fields the vehicles API saves (vehicles/update takes any of them).
 const VEHICLE_API_FIELDS = [
   "registration",
   "make_model",
@@ -126,7 +118,6 @@ const vehicleApiBody = (patch: Partial<Vehicle>) =>
 
 const markApi = (list: VehicleEvent[]): VehicleEvent[] => list.map((e) => ({ ...e, from_api: true }));
 
-// The record fields the vehicles/events API saves.
 const EVENT_API_FIELDS = [
   "date",
   "mileage",
@@ -146,14 +137,13 @@ const EVENT_API_FIELDS = [
 ] as const;
 const eventApiBody = (e: Partial<NewEvent>) => {
   const body = Object.fromEntries(EVENT_API_FIELDS.filter((k) => e[k] !== undefined).map((k) => [k, e[k]]));
-  // photos are uploaded after the record is saved; only their state goes with the record
+  // photos upload after save; only their state goes with the record
   if (body.wheels) {
     body.wheels = Object.fromEntries(Object.entries(e.wheels ?? {}).map(([w, v]) => [w, { state: v?.state }]));
   }
   return body;
 };
 
-// A file picked on a form: the invoice or receipt, and photos (a tyre check labels them FL/FR/RL/RR/extra).
 export interface EventUploads {
   file?: File | null;
   photo_files?: { file: File; label?: string }[];
@@ -179,7 +169,7 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
   }, []);
 
   useEffect(() => {
-    // undefined = session still loading; null = this user has no company, so there is nothing to load
+    // undefined = session loading; null = user has no company
     if (companyId === null) {
       setLoading(false);
       return;
@@ -268,7 +258,7 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
 
   /* ---------- reading parts again after a change ---------- */
 
-  // The API writes the activity log; it is read again shortly after each change (several changes, one read).
+  // debounced: several changes, one read
   const reloadActivities = () => {
     if (activityTimer.current) clearTimeout(activityTimer.current);
     activityTimer.current = setTimeout(() => {
@@ -279,21 +269,20 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     }, 300);
   };
 
-  // The API keeps the driver log when a vehicle's driver changes; this reads it again afterwards.
+  // the API updates the driver log when the driver changes
   const reloadDriverLogs = () =>
     api
       .get("vehicles/drivers/get")
       .then((res) => update((d) => ({ ...d, driver_logs: res.data?.info?.driver_logs ?? d.driver_logs })))
       .catch(() => undefined); // the save itself worked; the API's message is already shown
 
-  // A new driver of a company vehicle gets a start list from the API.
+  // the API creates a start list for a new company-vehicle driver
   const reloadOnboardings = () =>
     api
       .get("vehicles/onboardings/get")
       .then((res) => update((d) => ({ ...d, onboardings: info(res, d.onboardings) })))
       .catch(() => undefined);
 
-  // Records of one vehicle, read again (e.g. the first mileage reading of a new vehicle).
   const reloadEvents = (vehicleId: number) =>
     api
       .get("vehicles/events/get", { params: { vehicle_id: vehicleId } })
@@ -305,7 +294,7 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
       )
       .catch(() => undefined);
 
-  // The vehicle as the API has it now (records move its mileage and due dates on).
+  // records move mileage and due dates, so re-read the vehicle
   const reloadVehicle = (vehicleId: number) =>
     api
       .get("vehicles/get", { params: { id: vehicleId, status: "all" } })
@@ -315,7 +304,6 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
       })
       .catch(() => undefined);
 
-  // Puts a vehicle returned by the API into the list (new ones first).
   const withVehicle = (d: FleetData, saved: Vehicle): FleetData => ({
     ...d,
     vehicles: d.vehicles.some((v) => v.id === saved.id)
@@ -330,7 +318,6 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
 
   const { vehicles } = data;
 
-  // The other vehicle (current or archived) that already has this registration, if any.
   const findByRegistration = (registration: string, exceptId?: number) =>
     vehicles.find(
       (v) =>
@@ -375,7 +362,7 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     reloadActivities();
   };
 
-  // "Ask for a check now": the photo check is due today; the driver sees it in the app.
+  // makes the photo check due today; the driver sees it in the app
   const askPhotoCheck = async (id: number) => {
     const res = await api.post("vehicles/update", { id, next_photo_check: new Date().toISOString().slice(0, 10) });
     update((d) => withVehicle(d, res.data.info));
@@ -414,7 +401,7 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     reloadActivities();
   };
 
-  // Deletes the vehicles (the API keeps their records); they leave the list and the archive.
+  // the API keeps the deleted vehicles' records
   const remove = async (ids: number[]) => {
     await api.post("vehicles/delete", { vehicle_ids: ids.join(",") });
     update((d) => ({ ...d, vehicles: d.vehicles.filter((v) => !ids.includes(v.id)) }));
@@ -424,7 +411,7 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
 
   /* ---------- records, invoices and photos ---------- */
 
-  // The invoice file and photos picked on the form go up after the record is saved.
+  // files go up after the record is saved
   const uploadFor = async (eventId: number, uploads: EventUploads) => {
     let saved: VehicleEvent | null = null;
     if (uploads.file) {
@@ -462,34 +449,12 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     }
   };
 
-  // Change a record. Mileage and due dates are worked out again by the API.
-  const updateEvent = async (id: number, patch: Partial<NewEvent>) => {
-    const res = await api.post("vehicles/events/update", { id, ...eventApiBody(patch) });
-    let saved: VehicleEvent = res.data.info;
-    const withFiles = await uploadFor(id, patch);
-    if (withFiles) saved = withFiles;
-    if (patch.photo_files?.length) reloadEvents(saved.vehicle_id);
-    else update((d) => withEvents(d, [saved]));
-    reloadVehicle(saved.vehicle_id);
-    reloadActivities();
-  };
-
-  const deleteEvent = async (id: number) => {
-    const ev = data.events.find((x) => x.id === id);
-    await api.post("vehicles/events/delete", { event_ids: String(id) });
-    update((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) }));
-    if (ev) reloadVehicle(ev.vehicle_id);
-    reloadActivities();
-  };
-
-  // Attach an invoice or receipt file to a cost that has none yet.
   const attachFile = async (eventId: number, file: File) => {
     const saved = await uploadFor(eventId, { file });
     if (saved) update((d) => withEvents(d, [saved]));
     reloadActivities();
   };
 
-  // Approve or reject expenses and mileage claims sent from the driver app.
   const decideExpenses = async (ids: number[], approve: boolean, reason = "") => {
     const pending = data.events.filter((e) => ids.includes(e.id) && e.status === "pending").map((e) => e.id);
     if (!pending.length) return;
@@ -500,7 +465,6 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     reloadActivities();
   };
 
-  // Puts a decided expense back to "Waiting for approval" (e.g. rejected by mistake).
   const reopenExpense = async (id: number) => {
     const e = data.events.find((x) => x.id === id);
     if (!e || !e.status || e.status === "pending") return;
@@ -512,7 +476,6 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
 
   /* ---------- documents and permits ---------- */
 
-  // Uploads the photo or PDF with the document's details (multipart, vehicles/documents/create).
   const addDocument = async (doc: NewDocument, file: File) => {
     const form = new FormData();
     form.append("file", file);
@@ -536,13 +499,13 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     reloadActivities();
   };
 
-  // Added in the office: the API approves it straight away (vehicles/permits/create).
+  // office-added permits are approved by the API straight away
   const addPermit = async (permit: NewPermit) => {
     const res = await api.post("vehicles/permits/create", permit);
     update((d) => ({ ...d, permits: [...d.permits, res.data.info] }));
     reloadActivities();
   };
-  // Approve or reject a request from the driver app (a reason is needed to reject).
+  // a reason is required to reject
   const decidePermit = async (id: number, approve: boolean, reason = "") => {
     const res = await api.post("vehicles/permits/decide", { id, approve, reason });
     const saved: ParkingPermit = res.data.info;
@@ -582,7 +545,6 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     ],
   });
 
-  // Start the onboarding list for the current driver, or switch it to another type.
   const startOnboarding = async (vehicleId: number, templateId: number) => {
     const res = await api.post("vehicles/onboardings/start", { vehicle_id: vehicleId, template_id: templateId });
     update((d) => withOnboarding(d, res.data.info));
@@ -618,7 +580,7 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     reloadActivities();
   };
 
-  // Add (no id) or edit a start list type. Lists already started keep their steps.
+  // Lists already started keep their steps.
   const saveTemplate = async (template: { id?: number; name: string; steps: string[] }) => {
     const res = await api.post("vehicles/settings/save-template", template);
     const saved: OnboardingTemplate = res.data.info;
@@ -637,7 +599,7 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     reloadActivities();
   };
 
-  // Add (no id) or edit a daily check item. Checklists already sent keep their items.
+  // Checklists already sent keep their items.
   const saveDailyCheck = async (item: {
     id?: number;
     title: string;
@@ -662,7 +624,6 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     reloadActivities();
   };
 
-  // The order drivers see the items in the app.
   const sortDailyChecks = async (ids: number[]) => {
     const res = await api.post("vehicles/settings/sort-daily-checks", { ids: ids.join(",") });
     update((d) => ({ ...d, dailyChecks: res.data.info }));
@@ -677,7 +638,6 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
 
   /* ---------- drivers and fuel cards ---------- */
 
-  // fleet_driver_licences: one record per driver
   const saveLicence = async (licence: Omit<DriverLicence, "checked_by"> & { checked_by?: string }) => {
     const res = await api.post("vehicles/drivers/save-licence", {
       driver_id: licence.driver_id,
@@ -692,7 +652,7 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     reloadActivities();
   };
 
-  // fleet_driver_reimbursements: null clears it (no reimbursement)
+  // null clears the reimbursement
   const saveReimbursement = async (driverId: number, r: Reimbursement | null) => {
     let saved: Reimbursement | null = null;
     if (r) {
@@ -713,7 +673,6 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     reloadActivities();
   };
 
-  // fleet_fuel_cards: add (no id) or edit
   const saveCard = async (card: Omit<FuelCard, "id"> & { id?: number }) => {
     const body = {
       number: card.number,
@@ -736,8 +695,7 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
 
   /* ---------- file imports ---------- */
 
-  // Saves an imported file: the rows become vehicle records tagged with the import id, rows that
-  // could not be placed become conflicts, and fuel imports are checked against weekly limits.
+  // unplaced rows become conflicts; fuel rows are checked against weekly limits
   const applyImport = async (
     batch: Omit<ImportBatch, "id" | "imported_by" | "imported_at">,
     rows: Omit<NewEvent, "import_id">[],
@@ -783,7 +741,7 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     return res.data.message;
   };
 
-  // Removes the records an import created. Its open conflicts are closed with a note.
+  // Open conflicts of the import are closed with a note.
   const undoImport = async (id: string) => {
     await api.post("vehicles/imports/undo", { import_id: id });
     const touched = [...new Set(data.events.filter((e) => e.import_id === id).map((e) => e.vehicle_id))];
@@ -818,8 +776,6 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     askPhotoCheck,
     reopenExpense,
     noCompany: companyId === null,
-    updateEvent,
-    deleteEvent,
     cards: data.cards,
     connections: data.connections,
     imports: data.imports,

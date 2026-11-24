@@ -78,8 +78,6 @@ const DUE_TAB: Record<string, string> = {
   "Photo check": "photos",
 };
 
-// One queue for everything that needs the office: defects, accidents, due dates,
-// permit approvals and renewals, expenses waiting for approval and unfinished start lists.
 export function buildActions({ vehicles, events, defects, permits, onboardings, licences = [], conflicts = [] }: Input): ActionRow[] {
   const byId = new Map(vehicles.map((v) => [v.id, v]));
   const inUse = vehicles.filter((v) => v.status === "active" || v.status === "in_service");
@@ -132,7 +130,7 @@ export function buildActions({ vehicles, events, defects, permits, onboardings, 
     }
   }
 
-  // Latest tyre check found tyres to replace (cleared by a later tyre change or check)
+  // Latest tyre check found tyres to replace (cleared by a later change/check)
   for (const v of inUse) {
     const latest = events
       .filter((e) => e.vehicle_id === v.id && (e.kind === "tyre_check" || e.kind === "tyre_change"))

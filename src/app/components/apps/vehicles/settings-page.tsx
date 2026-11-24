@@ -38,7 +38,6 @@ type DailyCheckForm = { id?: number; title: string; is_critical: boolean; all_dr
 
 type NumberRule = Exclude<keyof FleetRules, "odometerEveryFill" | "motValidMonths">;
 
-// Each rule with its unit and sensible limits.
 const RULES: { group: string; fields: { key: NumberRule; label: string; unit: string; min: number; max: number }[] }[] = [
   {
     group: "Service",
@@ -120,7 +119,6 @@ const SettingsPage: React.FC = () => {
     toast.success("Rules saved. Due dates use them from now on.");
   };
 
-  // How many current drivers have a start list of each type.
   const inUse = (templateId: number) =>
     store.vehicles.filter((v) => {
       if (!v.driver_id || v.status === "archived") return false;
@@ -130,14 +128,14 @@ const SettingsPage: React.FC = () => {
       return o?.template_id === templateId;
     }).length;
 
-  // Move a daily check up (-1) or down (1) in the order drivers see them.
+  // Move a daily check up (-1) or down (1).
   const moveCheck = async (index: number, by: number) => {
     const ids = store.dailyChecks.map((c) => c.id);
     [ids[index], ids[index + by]] = [ids[index + by], ids[index]];
     try {
       await store.sortDailyChecks(ids);
     } catch {
-      return; // the API's message is already shown
+      return;
     }
   };
 
@@ -478,7 +476,7 @@ const SettingsPage: React.FC = () => {
           try {
             await store.saveDailyCheck(c);
           } catch {
-            return; // the API's message is already shown
+            return;
           }
           toast.success(c.id ? `${c.title} updated. Drivers see it from their next check.` : `${c.title} added.`);
           setEditingCheck(null);
@@ -552,7 +550,7 @@ const SettingsPage: React.FC = () => {
           try {
             await store.deleteDailyCheck(checkToDelete.id);
           } catch {
-            return; // the API's message is already shown
+            return;
           }
           toast.success(`${checkToDelete.title} deleted.`);
           setCheckToDelete(null);
@@ -562,7 +560,6 @@ const SettingsPage: React.FC = () => {
   );
 };
 
-/* ---------- Add / edit an onboarding type with its steps ---------- */
 const TemplateDrawer: React.FC<{
   value: { id?: number; name: string; steps: string[] } | null;
   names: string[];
@@ -678,7 +675,6 @@ const TemplateDrawer: React.FC<{
   );
 };
 
-/* ---------- Add / edit a daily check item ---------- */
 const DailyCheckDrawer: React.FC<{
   value: DailyCheckForm | null;
   employees: DriverOption[];

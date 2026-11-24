@@ -18,7 +18,7 @@ import { ParkingPlace, Vehicle } from "../types";
 
 const coord = (v: string) => /^-?\d{0,3}(\.\d{0,7})?$/.test(v);
 
-/** Where the vehicle is normally kept (same fields as the prototype parking place form). */
+/** Where the vehicle is normally kept. */
 const ParkingDialog: React.FC<{
   open: boolean;
   vehicle: Vehicle;
@@ -97,7 +97,7 @@ const ParkingDialog: React.FC<{
         lng,
       });
     } catch {
-      return; // the API's message is already shown
+      return;
     }
     toast.success(`Parking place saved for ${vehicle.registration}.`);
     onClose();

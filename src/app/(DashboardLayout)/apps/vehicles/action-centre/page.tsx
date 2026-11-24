@@ -7,7 +7,6 @@ import FleetTheme from "@/app/components/apps/vehicles/fleet-theme";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import ActionCentre from "@/app/components/apps/vehicles/action-centre";
 
-/** Vehicles · Action Centre: company admins, or users given the Vehicles permission. */
 const ActionCentrePage = () => (
   <PageContainer title="Action Centre" description="Vehicle defects, requests, due dates and approvals">
     <PermissionGuard permission="vehicles">

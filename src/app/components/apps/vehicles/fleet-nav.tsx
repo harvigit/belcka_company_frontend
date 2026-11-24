@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { buildActions } from "./actions";
 import { DriverLicence, Defect, ImportConflict, ParkingPermit, Vehicle, VehicleEvent, VehicleOnboarding } from "./types";
 
-// Top navigation of the Vehicles section (one sidebar item, several screens).
 const ITEMS = [
   { href: "/apps/vehicles/list", label: "Vehicles", count: "" as const },
   { href: "/apps/vehicles/action-centre", label: "Action Centre", count: "actions" as const },

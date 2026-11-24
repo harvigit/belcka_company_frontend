@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import api from "@/utils/axios";
 import { DriverOption } from "./useVehicles";
 
-// Company employees who can be given a vehicle (vehicles/get-drivers).
 export function useDrivers(companyId?: number | null) {
   const [drivers, setDrivers] = useState<DriverOption[]>([]);
 

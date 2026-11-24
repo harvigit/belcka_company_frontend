@@ -19,27 +19,25 @@ export interface Vehicle {
   mot_due: string;
   insurance_due: string;
   tax_due: string;
-  // Worked out from the last service event and the fleet_settings service rule, not typed in.
+  // computed from last service + fleet rule, not user-entered
   service_due: string;
-  // Worked out from the last tyre check or change and the fleet_settings tyre rule.
+  // computed from last tyre check/change + fleet rule
   tyre_check_due?: string;
-  // company vehicles: a photo check is asked for at a random date inside the set period
+  // company vehicles: photo check requested on a random date in the period
   next_photo_check?: string;
   gps_tracker: string;
   notes: string;
   created_at: string;
   archived_at?: string | null;
-  // V5C logbook details
   vin?: string;
   first_registered?: string;
   v5c_reference?: string;
   registered_keeper?: string;
   engine?: string;
-  // where the vehicle is normally kept (prototype "Parking place")
   parking?: ParkingPlace | null;
   // litres per week, 0 = unlimited
   weekly_fuel_limit?: number;
-  // normal fuel use in L/100 km; outside it the vehicle is flagged (empty = not set)
+  // normal L/100 km; outside it the vehicle is flagged
   fuel_use_min?: number | null;
   fuel_use_max?: number | null;
 }
@@ -51,12 +49,7 @@ export interface ParkingPlace {
   lng: number | null;
 }
 
-export const parkingText = (v: Vehicle) =>
-  [v.parking?.name, v.parking?.address].filter(Boolean).join(" · ") || "Not set";
-
-// fleet_settings: the same rules apply to every company vehicle (static until Settings is built).
-// Defaults; the Settings page changes them (useVehicles copies the saved values in here so every
-// screen reads the same rules).
+// Defaults; useVehicles copies saved Settings values in here
 export const DEFAULT_FLEET_RULES = {
   serviceMonths: 12,
   serviceMiles: 12000,
@@ -66,7 +59,6 @@ export const DEFAULT_FLEET_RULES = {
   photoCheckMonths: 3,
   // a date this many days away or closer shows as "Due soon"
   dueSoonDays: 30,
-  // default pence per mile for private-car mileage claims
   mileageRatePence: 45,
   odometerEveryFill: true,
   motValidMonths: 12,
@@ -76,7 +68,6 @@ export type FleetRules = typeof DEFAULT_FLEET_RULES;
 
 export const FLEET_RULES: FleetRules = { ...DEFAULT_FLEET_RULES };
 
-// fleet_driver_licences
 export interface DriverLicence {
   driver_id: number;
   driver_name: string;
@@ -84,7 +75,7 @@ export interface DriverLicence {
   checked_on: string;
   valid_until: string;
   checked_by: string;
-  // DVLA check code or other reference; the licence image is not stored
+  // DVLA check code or other ref; licence image is not stored
   reference: string;
 }
 
@@ -103,7 +94,6 @@ export const licenceState = (l?: DriverLicence | null): LicenceState => {
   return s === "overdue" ? "expired" : s === "soon" ? "soon" : "valid";
 };
 
-// fleet_driver_reimbursements: how a driver of a private car is paid back
 export interface Reimbursement {
   driver_id: number;
   method: "per_mile" | "fixed";
@@ -111,7 +101,6 @@ export interface Reimbursement {
   fixed_amount: number;
 }
 
-// fleet_vehicle_events
 export type EventKind =
   | "service"
   | "mot"
@@ -132,7 +121,7 @@ export type EventKind =
   | "cleaning"
   | "vehicle_supplies"
   | "mileage_claim"
-  // seven photos of the whole vehicle, from the driver app
+  // seven whole-vehicle photos from the driver app
   | "photo_check";
 
 export interface VehicleEvent {
@@ -146,22 +135,19 @@ export interface VehicleEvent {
   invoice_no: string;
   note: string;
   litres?: number | null;
-  // tyre checks: tread per wheel in mm, the state the checker chose and an optional photo
+  // tread per wheel in mm
   tread?: Partial<Record<TyreWheel, number>>;
   wheels?: Partial<Record<TyreWheel, { state: TyreState; photo?: string }>>;
-  // tyre check: optional photo from any side
   extra_photo?: string;
-  // tyre change: lowest tread after the change (one number, as on the prototype)
+  // tyre change: lowest tread after the change
   lowest_tread?: number | null;
   // MOT result
   passed?: boolean;
-  // invoice or receipt: its name and the link to open it
   file_name?: string;
   file_url?: string;
-  // accident photos (fleet_event_photos)
+  // accident photos
   photos?: string[];
-  // Expenses and mileage claims sent from the driver app wait for approval.
-  // Records added on the web have no status and count straight away.
+  // app expenses/claims await approval; web records have no status
   status?: ExpenseStatus;
   submitted_by?: string;
   project?: string;
@@ -171,19 +157,17 @@ export interface VehicleEvent {
   decided_by?: string;
   decided_at?: string;
   reject_reason?: string;
-  // set on rows that came from a file import (so the import can be undone)
+  // set on imported rows so the import can be undone
   import_id?: string;
   // fuel card used (last 6 digits)
   card?: string;
-  // fuel: the station picked from Google (supplier keeps its name); empty when typed by hand
+  // Google-picked station; empty when typed by hand
   station?: StationPlace | null;
-  // from the API (every record is)
   from_api?: boolean;
   created_by: string;
   created_at: string;
 }
 
-// A fuel station found on Google (search or near the user's location)
 export interface StationPlace {
   name: string;
   address: string;
@@ -192,11 +176,11 @@ export interface StationPlace {
   place_id: string;
 }
 
-// fleet_fuel_cards: a card belongs to a person; fuel goes to the vehicle they drive that day
+// a card belongs to a person; fuel goes to the vehicle they drive that day
 export interface FuelCard {
   id: number;
   number: string; // last 6 digits only
-  holder: string; // name printed on the card
+  holder: string;
   driver_id: number | null;
   driver_name: string | null;
   group: string;
@@ -217,7 +201,6 @@ export const cardState = (c: FuelCard): { label: string; color: "success" | "war
       : { label: "Active", color: "success" };
 };
 
-// fleet_connections: outside services the fleet takes data from
 export type ConnectionKind = "file" | "live" | "server";
 
 export interface Connection {
@@ -225,7 +208,6 @@ export interface Connection {
   name: string;
   brings: string;
   kind: ConnectionKind;
-  // what an import from it creates
   target: "fuel" | "charges" | "none";
   charge_kind?: EventKind;
   connected: boolean;
@@ -240,7 +222,6 @@ export const CONNECTION_KIND: Record<ConnectionKind, string> = {
   server: "Needs a server",
 };
 
-// fleet_fuel_reports + fleet_charge_imports: one row per imported file
 export interface ImportBatch {
   id: string; // "fuel-1", "charge-2"
   connection_id: string;
@@ -255,12 +236,11 @@ export interface ImportBatch {
   imported_at: string;
   undone_by?: string;
   undone_at?: string;
-  // saved through the API (vehicles/imports); others are still kept in this browser
+  // saved via the API; others still live in this browser
   from_api?: boolean;
 }
 
-// Driver locations for the Map. NOT in the 24 planned tables yet (client to confirm); the app saves
-// a point each time the driver records something (checklist, fuel, expense, defect...).
+// Not in the planned tables yet; the app saves a point per driver record
 export interface DriverLocation {
   id: number;
   driver_id: number;
@@ -270,18 +250,15 @@ export interface DriverLocation {
   lat: number;
   lng: number;
   place: string;
-  // what the driver recorded in the app at this place
   kind: LocationKind;
   // shown under the kind, e.g. "Defect found", "Parking"
   action: string;
   // daily check with a defect: the marker turns red
   alert?: boolean;
-  // the record it came from, so the map can open it
   checklist_id?: number;
   defect_id?: number;
 }
 
-// fleet_places: company places shown on the Map (office, fuel station, hospital...)
 export type PlaceKind =
   | "office"
   | "depot"
@@ -340,7 +317,6 @@ export const LOCATION_KIND: Record<LocationKind, { label: string; color: string 
   mileage_claim: { label: "Mileage claim", color: "#3949ab" },
 };
 
-// fleet_activities: who changed what, for the whole Vehicles module
 export type ActivityArea =
   | "vehicle"
   | "driver"
@@ -380,7 +356,6 @@ export interface Activity {
   detail: string;
 }
 
-// fleet_import_conflicts
 export type ConflictType = "unknown_registration" | "card_not_linked" | "over_fuel_limit" | "duplicate";
 
 export const CONFLICT_TYPE: Record<ConflictType, string> = {
@@ -403,7 +378,7 @@ export interface ImportConflict {
   note: string;
   resolved_by: string;
   resolved_at: string;
-  // saved through the API (vehicles/imports); others are still kept in this browser
+  // saved via the API; others still live in this browser
   from_api?: boolean;
 }
 
@@ -424,7 +399,6 @@ const KM_PER_MILE = 1.609344;
 export const l100ToMpg = (l100: number) => (100 * LITRES_PER_GALLON) / (l100 * KM_PER_MILE);
 
 export interface FuelUse {
-  // fuel bought in the period
   fills: number;
   litres: number;
   cost: number;
@@ -436,12 +410,7 @@ export interface FuelUse {
   mpg: number | null;
 }
 
-/**
- * Fuel bought from `from` (YYYY-MM-DD, "" = all time), and how much the vehicle uses.
- * Use is measured fill to fill, so only fills with an odometer reading count: each one
- * counts with the miles since the fill before it (that one may be before the period).
- * Fills waiting for approval or rejected are left out.
- */
+// Measured fill to fill (odometer fills only); pending/rejected excluded
 export function fuelUse(events: VehicleEvent[], from = ""): FuelUse {
   const fills = events.filter((e) => e.kind === "fuel" && (!e.status || e.status === "approved"));
   const inPeriod = fills.filter((e) => e.date >= from);
@@ -497,15 +466,13 @@ export const fuelRangeText = (vehicle: Vehicle) => {
   return min ? `At least ${min} L/100 km` : `Up to ${max} L/100 km`;
 };
 
-// Days the Action Centre looks back when checking fuel use against the normal range
+// look-back window for the Action Centre fuel use check
 export const FUEL_CHECK_DAYS = 30;
 
-// fleet_defects: defects from the daily checklist and accidents the driver records in the app
 export type DefectSeverity = "minor" | "major" | "critical";
 export type DefectStatus = "open" | "in_progress" | "resolved" | "closed";
 
-// fleet_daily_check_items: Settings → Daily checks, the items drivers tick in the app every day.
-// A defect on a critical item opens a critical defect. Given to every driver, or only to `drivers`.
+// A defect on a critical item opens a critical defect
 export interface DailyCheckItem {
   id: number;
   title: string;
@@ -514,12 +481,10 @@ export interface DailyCheckItem {
   drivers: { id: number; name: string }[];
 }
 
-// The daily check items one driver ticks in the app.
 export const dailyChecksFor = (driverId: number, items: DailyCheckItem[]) =>
   items.filter((c) => c.all_drivers || c.drivers.some((d) => d.id === driverId));
 
-// Company vehicles in use with a driver need a daily check, when any item is given to that driver.
-// Private cars don't.
+// Company vehicles with a driver need one if any item applies to them
 export const needsDailyCheck = (v: Vehicle, items: DailyCheckItem[]) =>
   v.status === "active" && !!v.driver_id && v.type !== "private" && dailyChecksFor(v.driver_id, items).length > 0;
 
@@ -539,20 +504,16 @@ export const DEFECT_STATUS: Record<DefectStatus, { label: string; color: "error"
 export interface Defect {
   id: number;
   vehicle_id: number;
-  // "defect": a daily checklist item marked as a defect. "accident": recorded by the driver in the app.
   type: "defect" | "accident";
-  // defects: the checklist item, and how serious the office thinks it is
   category: string;
   severity: DefectSeverity;
-  // accidents: when it happened and the optional photos the driver added
   incident_date?: string;
   photos?: string[];
   // defect: the driver's note; accident: "What happened?"
   description: string;
   reported_by: string;
   reported_at: string;
-  // Defects only come from a daily checklist: the item marked as a defect, with the driver's photos.
-  // Accidents have no checklist.
+  // defects only; accidents have no checklist
   checklist_id?: number | null;
   status: DefectStatus;
   owner: string;
@@ -561,20 +522,17 @@ export interface Defect {
   updated_at: string;
 }
 
-// fleet_daily_checklists + fleet_daily_checklist_items
 export interface DailyChecklist {
   id: number;
   vehicle_id: number;
   driver_name: string;
   date: string;
-  // when the driver sent it (ISO date and time)
   submitted_at?: string;
   mileage: number;
-  // A defect item has the driver's note and at least one camera photo (fleet_daily_checklist_items).
+  // defect items have a note and at least one photo
   items: { item: string; ok: boolean; note: string; photos: string[] }[];
 }
 
-// The checklist item a defect came from, with its photos.
 export const defectItem = (d: Defect, checklists: DailyChecklist[]) =>
   checklists.find((c) => c.id === d.checklist_id)?.items.find((i) => i.item === d.category);
 
@@ -602,18 +560,9 @@ export const EVENT_KINDS: Record<EventKind, { label: string; color: "primary" | 
 };
 
 /* ---------- Photo checks ---------- */
-// The seven views the driver app asks for, one after the other.
 export const PHOTO_SHOTS = ["Front", "Back", "Left side", "Right side", "Interior front", "Interior rear", "Odometer"];
 
-// Next photo check: a random day inside the set period, so drivers can't tell when it comes.
-export const randomPhotoCheckDate = (from: string) => {
-  const days = Math.max(14, Math.round(FLEET_RULES.photoCheckMonths * 30.4));
-  const offset = 14 + Math.floor(Math.random() * Math.max(1, days - 14));
-  return dayjs(from).add(offset, "day").format("YYYY-MM-DD");
-};
-
-// Costs added straight from the Invoices tab. Fuel, MOT, service and tyres have their own tabs
-// because they also move the mileage and due dates.
+// Fuel, MOT, service and tyres have own tabs (they move mileage/due dates)
 export const INVOICE_KINDS: EventKind[] = [
   "repair",
   "insurance",
@@ -624,7 +573,6 @@ export const INVOICE_KINDS: EventKind[] = [
   "other_cost",
 ];
 
-// fleet_parking_permits
 export type PermitStatus = "pending" | "approved" | "rejected";
 
 export interface ParkingPermit {
@@ -662,7 +610,6 @@ export const permitState = (p: ParkingPermit): PermitState => {
   return dueState(p.valid_until) === "soon" ? "expiring" : "active";
 };
 
-// fleet_onboarding_templates + _template_steps (static until Settings is built)
 export interface OnboardingTemplate {
   id: number;
   name: string;
@@ -697,18 +644,10 @@ export const ONBOARDING_TEMPLATES: OnboardingTemplate[] = [
 ];
 
 // Management cars start the Manager list; other company vehicles the Driver list.
-// Copy of the starting types, used when nothing is saved yet. The Settings page edits
-// ONBOARDING_TEMPLATES in place (through useVehicles) so every screen sees the same list.
-export const DEFAULT_ONBOARDING_TEMPLATES: OnboardingTemplate[] = ONBOARDING_TEMPLATES.map((t) => ({
-  ...t,
-  steps: t.steps.map((s) => ({ ...s })),
-}));
-
 export const defaultTemplateFor = (type: VehicleType): OnboardingTemplate | undefined =>
   ONBOARDING_TEMPLATES.find((t) => t.name.toLowerCase() === (type === "management" ? "manager" : "driver")) ??
   ONBOARDING_TEMPLATES[0];
 
-// fleet_vehicle_onboardings + _onboarding_steps
 export interface VehicleOnboarding {
   id: number;
   vehicle_id: number;
@@ -720,7 +659,6 @@ export interface VehicleOnboarding {
   steps: { id: number; title: string; done_at: string | null; done_by: string | null }[];
 }
 
-// fleet_vehicle_documents
 export const DOCUMENT_KINDS = [
   "V5C registration certificate (logbook)",
   "Insurance certificate",
@@ -738,13 +676,11 @@ export interface VehicleDocument {
   expires_on: string;
   note: string;
   file_name: string;
-  // link to open the uploaded photo or PDF (from the API)
   file_url?: string;
   uploaded_by: string;
   uploaded_at: string;
 }
 
-// fleet_vehicle_drivers: who had the vehicle and when
 export interface DriverLog {
   id: number;
   vehicle_id: number;
@@ -774,7 +710,7 @@ export const TYRE_STATE: Record<TyreState, { label: string; color: "success" | "
   worn: { label: "Worn", color: "warning" },
   replace: { label: "Replace", color: "error" },
 };
-// state of one wheel: what the checker chose, or Replace when the tread is at the limit
+// what the checker chose, or Replace when tread is at the limit
 export const wheelState = (e: VehicleEvent, w: TyreWheel): TyreState => {
   const tread = e.tread?.[w];
   if (typeof tread === "number" && tread <= FLEET_RULES.treadLimitMm) return "replace";

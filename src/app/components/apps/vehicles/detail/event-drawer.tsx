@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Box, Button, Chip, MenuItem, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, MenuItem, Stack } from "@mui/material";
 import { IconPhoto, IconUpload } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
@@ -41,8 +41,7 @@ const blank = (): FormState => ({
   photos: [],
 });
 
-// What each record type asks for, so every form shows only fields that matter.
-// Invoice-only costs (insurance, parking, fines...) use the Invoices tab form instead.
+// Fields per record type; invoice-only costs use the Invoices tab form.
 const FIELDS: Partial<Record<
   EventKind,
   {
@@ -76,7 +75,7 @@ const FIELDS: Partial<Record<
     note: "Advisories",
     info: `A pass moves the MOT date to ${FLEET_RULES.motValidMonths} months after the test.`,
   },
-  // Tyre checks use their own dialog (four tyres around the car), see tyre-check-dialog.tsx.
+  // Tyre checks use their own dialog (tyre-check-dialog.tsx).
   tyre_change: {
     title: "Add tyre change",
     mileage: "required",
@@ -109,7 +108,6 @@ const FIELDS: Partial<Record<
     note: "What was repaired",
     noteRequired: true,
   },
-  // Same fields as the prototype "Other cost" (MOT & Service tab).
   other_cost: {
     title: "Add other cost",
     mileage: "optional",
@@ -120,7 +118,6 @@ const FIELDS: Partial<Record<
     noteRequired: true,
     notePlaceholder: "e.g. new wiper blades, bulb, valet",
   },
-  // Same fields as the prototype accident form: date, what happened, photos.
   // Repair costs go on the Invoices tab as a Repair.
   accident: {
     title: "Record accident",
@@ -133,9 +130,6 @@ const FIELDS: Partial<Record<
   },
 };
 
-// Record types this form can add or edit (invoice-only costs use the Invoices tab form).
-export const hasEventForm = (kind: EventKind) => !!FIELDS[kind];
-
 interface EventDrawerProps {
   kind: EventKind | null;
   // the record being changed; empty when adding a new one
@@ -146,7 +140,7 @@ interface EventDrawerProps {
   onSave: (event: NewEvent) => Promise<void>;
 }
 
-/** Pick up to `max` photos (camera on phones); they are uploaded with the record. */
+/** Pick up to `max` photos; they are uploaded with the record. */
 const PhotoUpload: React.FC<{ value: File[]; onChange: (photos: File[]) => void; max: number }> = ({
   value,
   onChange,
@@ -233,7 +227,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
   const set = <K extends keyof FormState>(name: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [name]: value }));
 
-  // An odometer can't go backwards: compare with the highest reading on or before this date.
+  // Odometer can't go below the highest reading on or before this date.
   const readingBefore = Math.max(
     0,
     ...events.filter((e) => e.date <= form.date && e.mileage).map((e) => e.mileage as number),
@@ -294,7 +288,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({ kind: newKind, editing, vehic
       toast.success(`${EVENT_KINDS[kind].label} ${editing ? "updated" : "saved"} for ${vehicle.registration}.`);
       onClose();
     } catch {
-      // the API's message is already shown
+      // API error already shown
     } finally {
       setSaving(false);
     }

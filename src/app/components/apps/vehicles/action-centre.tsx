@@ -38,7 +38,7 @@ import { User } from "next-auth";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import InventoryTable from "../inventory-new/shared/InventoryTable";
 import FleetNav from "./fleet-nav";
-import { ActionCategory, ActionRow, ACTION_CATEGORY, buildActions, PRIORITY } from "./actions";
+import { ActionRow, ACTION_CATEGORY, buildActions, PRIORITY } from "./actions";
 import { DefectReviewDrawer } from "./defect-drawer";
 import ChecklistDialog from "./checklist-dialog";
 import { RecordTable, CARD_TONE, StatCard } from "./detail/common";
@@ -53,7 +53,6 @@ import {
   formatMiles,
   needsDailyCheck,
   SEVERITY,
-  Vehicle,
 } from "./types";
 import { useVehicles } from "./useVehicles";
 
@@ -91,8 +90,7 @@ const ActionCentre: React.FC = () => {
   const [reviewId, setReviewId] = useState<number | null>(null);
   const [checklistId, setChecklistId] = useState<number | null>(null);
 
-  // Opened from elsewhere: ?defect=ID shows that report (Map), ?section=checks|register opens
-  // that tab (Vehicles tiles).
+  // ?defect=ID opens that report; ?section=checks|register opens that tab.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = Number(params.get("defect"));
@@ -119,7 +117,6 @@ const ActionCentre: React.FC = () => {
   );
   const byId = useMemo(() => new Map(vehicles.map((v) => [v.id, v])), [vehicles]);
   const urgent = actions.filter((a) => a.priority !== "normal").length;
-  const pendingExpenses = store.events.filter((e) => e.status === "pending").length;
 
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -224,8 +221,7 @@ const ActionCentre: React.FC = () => {
     autoResetPageIndex: true,
   });
 
-  // Daily checks: every company vehicle in use with a driver should have one each day, when any check
-  // item is given to that driver (Settings → Daily checks).
+  // Each driven company vehicle needs a daily check if its driver has check items.
   const today = dayjs().format("YYYY-MM-DD");
   const needCheck = vehicles.filter((v) => needsDailyCheck(v, store.dailyChecks));
   const todaysChecks = new Map(

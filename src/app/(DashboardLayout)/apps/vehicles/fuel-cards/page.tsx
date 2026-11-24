@@ -7,7 +7,6 @@ import FleetTheme from "@/app/components/apps/vehicles/fleet-theme";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import FuelCardsPage from "@/app/components/apps/vehicles/fuel-cards-page";
 
-/** Vehicles · Fuel cards: company admins, or users given the Vehicles permission. */
 const VehicleFuelCardsPage = () => (
   <PageContainer title="Fuel cards" description="Fuel cards and fuel report imports">
     <PermissionGuard permission="vehicles">

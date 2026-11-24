@@ -202,8 +202,6 @@ const FuelCardsPage: React.FC = () => {
     autoResetPageIndex: true,
   });
 
-  /* ---------- Shell report import ---------- */
-  // The vehicle a person had on a given day, from the driver history.
   const vehicleOn = (driverId: number, date: string) =>
     store.driverLogs.find((l) => l.driver_id === driverId && l.from <= date && (l.to ?? "9999") >= date)?.vehicle_id ?? null;
 
@@ -220,11 +218,10 @@ const FuelCardsPage: React.FC = () => {
     ].join("\n");
   };
 
-  // Highest odometer already recorded for a vehicle on or before a date.
   const lastReading = (vehicleId: number, date: string) =>
     Math.max(0, ...store.events.filter((e) => e.vehicle_id === vehicleId && e.date <= date && e.mileage).map((e) => e.mileage as number));
 
-  // An odometer lower than one already recorded is a typo in the report: the fill is kept, the reading is not.
+  // Odometer below an existing reading is a typo: keep the fill, drop the reading.
   const checkOdometer = (row: PreviewRow): PreviewRow => {
     if (!row.vehicleId || !row.odometer) return row;
     const last = lastReading(row.vehicleId, row.date);
@@ -450,7 +447,7 @@ const FuelCardsPage: React.FC = () => {
           try {
             await store.saveCard(c);
           } catch {
-            return; // the API's message is already shown
+            return;
           }
           toast.success(c.id ? `Card •••• ${c.number} updated.` : `Card •••• ${c.number} added.`);
           setEditing(null);
@@ -485,7 +482,7 @@ const FuelCardsPage: React.FC = () => {
           try {
             await store.undoImport(toUndo.id);
           } catch {
-            return; // the API's message is already shown
+            return;
           }
           toast.success("Import undone.");
           setToUndo(null);
@@ -495,7 +492,6 @@ const FuelCardsPage: React.FC = () => {
   );
 };
 
-/* ---------- Add / edit a fuel card (fleet_fuel_cards) ---------- */
 const CardDrawer: React.FC<{
   value: (Omit<FuelCard, "id"> & { id?: number }) | null;
   employees: { id: number; name: string }[];

@@ -84,7 +84,6 @@ const VEHICLE_TAB: Partial<Record<LocationKind, string>> = {
 
 const colorOf = (p: Pick<DriverLocation, "kind" | "alert">) => (p.alert ? ALERT_COLOR : LOCATION_KIND[p.kind].color);
 
-/** Round coloured badge with the icon of what was recorded. */
 const KindBadge: React.FC<{ point: Pick<DriverLocation, "kind" | "alert">; size?: number }> = ({ point, size = 28 }) => {
   const Icon = KIND_ICON[point.kind];
   return (
@@ -106,7 +105,6 @@ const KindBadge: React.FC<{ point: Pick<DriverLocation, "kind" | "alert">; size?
   );
 };
 
-/** Pin on the map: badge + a short label (plate or stop number), pointing at the place. */
 const MapPin: React.FC<{ point: DriverLocation; label: string; active: boolean; onClick: () => void }> = ({
   point,
   label,
@@ -136,7 +134,6 @@ const MapPin: React.FC<{ point: DriverLocation; label: string; active: boolean; 
         {label}
       </Typography>
     </ButtonBase>
-    {/* little pointer under the pill */}
     <Box
       sx={{
         position: "absolute",
@@ -153,7 +150,7 @@ const MapPin: React.FC<{ point: DriverLocation; label: string; active: boolean; 
   </Box>
 );
 
-// Dashed line between recorded stops (it is not the driven route).
+// Dashed line between stops (not the driven route).
 const DASHED: google.maps.PolylineOptions = {
   strokeOpacity: 0,
   icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 0.9, strokeColor: "#1565c0", scale: 3 }, offset: "0", repeat: "14px" }],
@@ -175,17 +172,14 @@ const MapPage: React.FC = () => {
   const [openPoint, setOpenPoint] = useState<number | null>(null);
   const [checklistId, setChecklistId] = useState<number | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
-  // list of drivers can be hidden to make the map bigger
   const [showList, setShowList] = useState(true);
   const [legendOpen, setLegendOpen] = useState(true);
-  // company places (office, fuel station, hospital...)
   const [showPlaces, setShowPlaces] = useState(true);
   const [picking, setPicking] = useState(false);
   const [draft, setDraft] = useState<PlaceDraft | null>(null);
   const [openPlace, setOpenPlace] = useState<number | null>(null);
   const [toRemove, setToRemove] = useState<FleetPlace | null>(null);
 
-  // Each driver's latest point.
   const latest = useMemo(() => {
     const byDriver = new Map<number, DriverLocation>();
     [...store.locations]
@@ -206,7 +200,6 @@ const MapPage: React.FC = () => {
 
   const shown = driverId === null ? latest : stops;
 
-  // Fit the map to whatever is shown.
   useEffect(() => {
     if (!map || !isLoaded) return;
     if (!shown.length) {
@@ -228,7 +221,6 @@ const MapPage: React.FC = () => {
   const selected = latest.find((p) => p.driver_id === driverId);
   const checklist = store.checklists.find((c) => c.id === checklistId) ?? null;
 
-  // Open the record this place came from.
   const openRecord = (p: DriverLocation) => {
     if (p.kind === "daily_check" && p.checklist_id) {
       setChecklistId(p.checklist_id);
@@ -248,7 +240,7 @@ const MapPage: React.FC = () => {
     }
   };
 
-  // "Add place": the next click on the map sets where the place is.
+  // "Add place": the next map click sets the place's position.
   const pickPlace = (e: google.maps.MapMouseEvent) => {
     if (!picking || !e.latLng) return;
     const lat = e.latLng.lat();
@@ -304,7 +296,6 @@ const MapPage: React.FC = () => {
       </Stack>
 
       <Grid container spacing={2} sx={{ p: 2, flex: 1 }}>
-        {/* Drivers and stops */}
         <Grid size={{ xs: 12, md: 4 }} sx={{ display: showList ? undefined : "none" }}>
           <Paper variant="outlined" sx={{ borderRadius: 2, height: { md: "calc(100vh - 290px)" }, overflow: "auto" }}>
             <Stack direction="row" alignItems="stretch" sx={{ backgroundColor: driverId === null ? "primary.light" : "transparent" }}>
@@ -431,7 +422,6 @@ const MapPage: React.FC = () => {
           </Paper>
         </Grid>
 
-        {/* Map */}
         <Grid size={{ xs: 12, md: showList ? 8 : 12 }}>
           <Paper
             variant="outlined"
@@ -563,7 +553,7 @@ const MapPage: React.FC = () => {
                       key={p.id}
                       position={{ lat: p.lat, lng: p.lng }}
                       onCloseClick={() => setOpenPoint(null)}
-                      // own header: Google's header row leaves a big gap around the close button
+                      // own header: Google's header leaves a big gap around the close button
                       options={{ pixelOffset: new google.maps.Size(0, -40), headerDisabled: true }}
                     >
                       <Box sx={{ minWidth: 210, maxWidth: 260 }}>
@@ -597,7 +587,6 @@ const MapPage: React.FC = () => {
               </GoogleMap>
             )}
 
-            {/* What the icons mean: a small card that can be folded away */}
             {isLoaded && !loadError && process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY && (
               legendOpen ? (
                 <Paper
@@ -677,7 +666,6 @@ const MapPage: React.FC = () => {
               )
             )}
 
-            {/* Show the drivers list again */}
             {!showList && (
               <Tooltip title="Show the drivers list">
                 <Button
@@ -693,7 +681,6 @@ const MapPage: React.FC = () => {
               </Tooltip>
             )}
 
-            {/* Picking a spot for a new place */}
             {picking && (
               <Alert
                 severity="info"

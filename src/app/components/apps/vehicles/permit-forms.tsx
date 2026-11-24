@@ -19,10 +19,7 @@ const blank = (vehicleId: number | null) => ({
   valid_until: dayjs().add(1, "year").subtract(1, "day").format("YYYY-MM-DD"),
 });
 
-/**
- * Add a parking permit. With `vehicle` it is for that vehicle (vehicle page);
- * without it the user picks the vehicle (fleet Permits page).
- */
+/** With `vehicle` it's for that vehicle; otherwise the user picks one. */
 export const PermitDrawer: React.FC<{
   open: boolean;
   vehicle?: Vehicle | null;
@@ -77,7 +74,7 @@ export const PermitDrawer: React.FC<{
         valid_until: form.valid_until,
       });
     } catch {
-      return; // the API's message is already shown
+      return;
     }
     toast.success(`Permit ${form.zone.trim()} added to ${picked.registration}.`);
     onClose();
@@ -180,7 +177,7 @@ export const PermitDrawer: React.FC<{
   );
 };
 
-/** Reject a permit request from the driver app (a reason is required; the driver sees it). */
+/** Reject a driver permit request; reason is required and shown to the driver. */
 export const PermitRejectDialog: React.FC<{
   permit: ParkingPermit | null;
   onClose: () => void;
@@ -204,7 +201,7 @@ export const PermitRejectDialog: React.FC<{
         try {
           await onReject(permit.id, reason.trim());
         } catch {
-          return; // the API's message is already shown
+          return;
         }
         toast.success(`${permit.zone} rejected.`);
         onClose();

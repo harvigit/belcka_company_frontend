@@ -52,7 +52,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
   const typeHint = VEHICLE_TYPES.find((t) => t.value === formData.type)?.hint;
   const statusHint = VEHICLE_STATUSES.find((s) => s.value === formData.status)?.hint;
 
-  // A date in the past is allowed (the vehicle shows as overdue) but flagged so it isn't a typo.
+  // Past dates are allowed (shown overdue) but flagged in case of a typo.
   const dateField = (name: "mot_due" | "insurance_due" | "tax_due", label: string, hint: string) => {
     const expired = !!formData[name] && formData[name] < dayjs().format("YYYY-MM-DD");
     return (

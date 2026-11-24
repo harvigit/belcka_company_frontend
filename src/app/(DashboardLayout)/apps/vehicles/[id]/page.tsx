@@ -7,7 +7,6 @@ import PermissionGuard from "@/app/auth/PermissionGuard";
 import VehicleDetail from "@/app/components/apps/vehicles/detail";
 import FleetTheme from "@/app/components/apps/vehicles/fleet-theme";
 
-/** Vehicle page: company admins, or users given the Vehicles permission. */
 const VehicleDetailPage = () => {
   const params = useParams<{ id: string }>();
   const vehicleId = Number(params?.id);

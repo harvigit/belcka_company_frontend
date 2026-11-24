@@ -92,11 +92,9 @@ const noteCol = (header = "Note"): Column<VehicleEvent> => ({
   ),
 });
 
-/* ---------------- MOT & Service ---------------- */
 export const MaintenanceTab: React.FC<TabProps> = (props) => {
   const { vehicle, events, onAdd, readOnly } = props;
-  // Same as the prototype "MOT and service history": MOT, service and other costs.
-  // Repairs are invoices (Invoices tab); accidents are on the Overview tab.
+  // Repairs are on the Invoices tab; accidents on the Overview tab.
   const rows = events.filter((e) => ["mot", "service", "other_cost"].includes(e.kind)).sort(newestFirst);
   const due = dueItems(vehicle).filter((d) => d.label !== "Tyre check");
   return (
@@ -151,14 +149,13 @@ export const MaintenanceTab: React.FC<TabProps> = (props) => {
   );
 };
 
-/* ---------------- Tyres ---------------- */
 export const TyresTab: React.FC<TabProps> = (props) => {
   const { vehicle, events, onAdd, readOnly } = props;
   const rows = events.filter((e) => e.kind === "tyre_check" || e.kind === "tyre_change").sort(newestFirst);
   const next = dueItems(vehicle).find((d) => d.label === "Tyre check") ?? null;
   const last = rows.find((e) => lowestTread(e) !== null);
   const lowest = last ? lowestTread(last) : null;
-  // latest check with all four tyres, shown around the car like on the prototype
+  // latest check with all four tyres, shown around the car
   const lastCheck = rows.find((e) => e.kind === "tyre_check" && e.tread && Object.keys(e.tread).length);
   return (
     <Box display="flex" flexDirection="column" gap={3}>
@@ -279,7 +276,6 @@ export const TyresTab: React.FC<TabProps> = (props) => {
   );
 };
 
-/* ---------------- Fuel ---------------- */
 type FuelPeriod = "30" | "90" | "year" | "365" | "all";
 const FUEL_PERIODS: Record<FuelPeriod, string> = {
   "30": "Last 30 days",
@@ -324,7 +320,6 @@ export const FuelTab: React.FC<
   const weeklyLimit = vehicle.weekly_fuel_limit ?? 0;
   const overLimit = weeklyLimit > 0 && weekLitres > weeklyLimit;
 
-  // the chosen period
   const from = periodFrom(period);
   const use = fuelUse(events, from);
   const readings = events
@@ -543,7 +538,7 @@ export const FuelTab: React.FC<
               try {
                 await onSetLimit(Number(limit || 0));
               } catch {
-                return; // the API's message is already shown
+                return;
               }
               toast.success(Number(limit) > 0 ? `Weekly limit set to ${limit} L.` : "Weekly limit removed.");
               setLimitOpen(false);
@@ -598,7 +593,7 @@ export const FuelTab: React.FC<
               try {
                 await onSetRange(rangeMin, rangeMax);
               } catch {
-                return; // the API's message is already shown
+                return;
               }
               toast.success(rangeMin || rangeMax ? "Normal fuel use saved." : "Normal fuel use removed.");
               setRangeOpen(false);
@@ -612,7 +607,6 @@ export const FuelTab: React.FC<
   );
 };
 
-/* ---------------- Mileage ---------------- */
 export const MileageTab: React.FC<TabProps> = (props) => {
   const { vehicle, events, onAdd, readOnly } = props;
   const readings = events
@@ -663,11 +657,9 @@ export const MileageTab: React.FC<TabProps> = (props) => {
   );
 };
 
-/* ---------------- Activity ---------------- */
 export const ActivityTab: React.FC<{
   events: VehicleEvent[];
   driverLogs: DriverLog[];
-  // who changed what on this vehicle (fleet_activities)
   changes: Activity[];
   onOpenLog: () => void;
 }> = ({ events, driverLogs, changes, onOpenLog }) => {
