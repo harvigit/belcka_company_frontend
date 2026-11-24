@@ -2,10 +2,8 @@
 
 import React, { useRef, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Grid,
   LinearProgress,
@@ -15,6 +13,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import Alert from "@/app/components/apps/surveys/shared/SurveyAlert";
 import { IconChevronDown, IconChevronRight, IconDoor, IconFolder, IconRefresh, IconTrash, IconUpload } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -36,6 +35,8 @@ import {
   dateTime,
   longDate,
 } from "../list/types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
+import { WARN_TEXT } from "@/app/components/apps/surveys/shared/colors";
 
 const qtyText = (qty: number | null, unit: string | null) => (qty === null ? "–" : `${qty.toLocaleString("en-GB")} ${uomLabel(unit)}`);
 const urls = (photos: SurveyPhoto[]) => photos.map((p) => p.url ?? p.file_name ?? "Photo");
@@ -192,7 +193,7 @@ export const OverviewTab: React.FC<{ s: SurveyDetail; ins: InspectionData | null
                   {[
                     { l: "Work added", v: ins.summary.work, c: "primary.main" },
                     { l: "No works", v: ins.summary.none, c: "success.main" },
-                    { l: "Not accessible", v: ins.summary.na, c: "warning.dark" },
+                    { l: "Not accessible", v: ins.summary.na, c: WARN_TEXT },
                     { l: "Not inspected", v: ins.summary.pending, c: "text.secondary" },
                   ].map((t) => (
                     <Grid key={t.l} size={{ xs: 6, sm: 3 }}>

@@ -2,10 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Collapse,
   Divider,
@@ -20,6 +18,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import Alert from "@/app/components/apps/surveys/shared/SurveyAlert";
 import { createColumnHelper } from "@tanstack/react-table";
 import {
   IconClock,
@@ -48,6 +47,7 @@ import ConfirmDialog from "@/app/components/apps/inventory-new/shared/ConfirmDia
 import ImportDialog from "./ImportDialog";
 import { CodeDrawer, SheetDrawer, VersionsDialog } from "./Dialogs";
 import { NhfCode, NhfSheet, apiMessage, money, shortDate, uomLabel } from "./types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
 
 const columnHelper = createColumnHelper<NhfCode>();
 const SHEET_KEY = "belcka.nhfRates.sheet";

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Alert, Box, Button, CircularProgress, MenuItem, Stack, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, MenuItem, Stack, Typography } from "@mui/material";
+import Alert from "@/app/components/apps/surveys/shared/SurveyAlert";
 import { IconCheck, IconMapPin, IconSearch } from "@tabler/icons-react";
 import { useJsApiLoader } from "@react-google-maps/api";
 import api from "@/utils/axios";

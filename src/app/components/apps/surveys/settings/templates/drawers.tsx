@@ -2,10 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Grid,
   IconButton,
@@ -17,6 +15,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import Alert from "@/app/components/apps/surveys/shared/SurveyAlert";
 import { IconCheck, IconSearch, IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -25,6 +24,7 @@ import FormDrawer from "@/app/components/apps/inventory-new/shared/FormDrawer";
 import FormField from "@/app/components/apps/inventory-new/shared/FormField";
 import { NhfSheet, UOM_OPTIONS, apiMessage, money, uomLabel } from "../nhf-rates/types";
 import { NhfHit, TemplateDetail, TplElement, TplNode, TplSkipped, pathOf } from "./types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
 
 // ---------- one name: new template, rename template, add / rename a room or group ----------
 export const NameDrawer: React.FC<{

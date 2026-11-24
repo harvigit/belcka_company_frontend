@@ -2,13 +2,11 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Autocomplete,
   Avatar,
   Box,
   Button,
   ButtonBase,
-  Chip,
   CircularProgress,
   Dialog,
   DialogContent,
@@ -21,6 +19,7 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+import Alert from "@/app/components/apps/surveys/shared/SurveyAlert";
 import { IconCheck, IconChevronLeft, IconChevronRight, IconDoor, IconPlus, IconRefresh, IconTrash, IconUpload, IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
@@ -31,6 +30,8 @@ import { apiMessage } from "../settings/nhf-rates/types";
 import NewAddressPanel from "./NewAddressPanel";
 import { PdDetails, PdFileCard } from "./PropertyDetail";
 import { PdAiStatus, PdSection, PdUpload, STATUS_META, SurveyDetail, SurveyOptions } from "./types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
+import { WARN_TEXT } from "@/app/components/apps/surveys/shared/colors";
 
 type Form = {
   title: string;
@@ -550,7 +551,7 @@ const SurveyForm: React.FC<{
                 {template.rooms.length ? (
                   template.rooms.map((r, i) => <Chip key={`${r}${i}`} size="small" variant="outlined" icon={<IconDoor size={14} />} label={r} />)
                 ) : (
-                  <Typography variant="caption" color="warning.dark">
+                  <Typography variant="caption" color={WARN_TEXT}>
                     This template has no rooms yet.
                   </Typography>
                 )}

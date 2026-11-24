@@ -3,12 +3,10 @@
 import React, { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Alert,
   Autocomplete,
   Box,
   Button,
   CardContent,
-  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -34,6 +32,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import Alert from "@/app/components/apps/surveys/shared/SurveyAlert";
 import { IconArrowBackUp, IconArrowLeft, IconBan, IconCheck, IconChecks, IconEdit, IconLockOpen, IconPhoto, IconSearch } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -48,6 +47,8 @@ import { apiMessage, uomLabel } from "../settings/nhf-rates/types";
 import { NhfHit } from "../settings/templates/types";
 import { dateTime } from "../list/types";
 import { LINE_META, QsDetail, QsLine, RATE_SOURCE, gbp } from "./types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
+import { WARN_TEXT } from "@/app/components/apps/surveys/shared/colors";
 
 type Filter = "all" | "pending" | "approved" | "excluded" | "no_rate" | "changed";
 const qtyText = (q: number | null, u: string | null) => (q === null ? "–" : `${q.toLocaleString("en-GB")} ${uomLabel(u)}`);
@@ -238,7 +239,7 @@ const LineDrawer: React.FC<{ line: QsLine | null; uplift: number; onClose: () =>
           slotProps={{ input: { endAdornment: <InputAdornment position="end">{uomLabel(line.unit)}</InputAdornment> } }}
         />
         {line.uom_mismatch && (
-          <Typography variant="caption" color="warning.dark" display="block">
+          <Typography variant="caption" color={WARN_TEXT} display="block">
             The NHF code is priced per {uomLabel(line.nhf?.uom)}, the surveyor measured in {uomLabel(line.unit)}.
           </Typography>
         )}
@@ -258,7 +259,7 @@ const LineDrawer: React.FC<{ line: QsLine | null; uplift: number; onClose: () =>
             slotProps={{ input: { startAdornment: <InputAdornment position="start">£</InputAdornment> } }}
           />
         ) : (
-          <Typography className="f-14" color={effectiveRate === null ? "warning.dark" : "textPrimary"}>
+          <Typography className="f-14" color={effectiveRate === null ? WARN_TEXT : "textPrimary"}>
             {effectiveRate === null ? "No rate for this code. Pick another code or use a manual rate." : `${gbp(effectiveRate)} per ${uomLabel(code?.uom ?? line.nhf?.uom ?? line.unit)}`}
           </Typography>
         )}
@@ -674,7 +675,7 @@ const QsWorkspace: React.FC<{ surveyId: number }> = ({ surveyId }) => {
                                     </Typography>
                                   )}
                                 </Typography>
-                                <Typography variant="caption" color={l.nhf ? "textSecondary" : "warning.dark"}>
+                                <Typography variant="caption" color={l.nhf ? "textSecondary" : WARN_TEXT}>
                                   {l.nhf ? l.nhf.short_name : "Not in NHF"}
                                 </Typography>
                               </>
@@ -691,14 +692,14 @@ const QsWorkspace: React.FC<{ surveyId: number }> = ({ surveyId }) => {
                             {l.qty_changed && <Typography variant="caption" color="primary">changed by QS</Typography>}
                             {l.uom_mismatch && (
                               <Tooltip title={`NHF priced per ${uomLabel(l.nhf?.uom)}`}>
-                                <Typography variant="caption" color="warning.dark" display="block">
+                                <Typography variant="caption" color={WARN_TEXT} display="block">
                                   unit differs
                                 </Typography>
                               </Tooltip>
                             )}
                           </TableCell>
                           <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                            <Typography className="f-14" color={l.rate === null ? "warning.dark" : "textPrimary"}>
+                            <Typography className="f-14" color={l.rate === null ? WARN_TEXT : "textPrimary"}>
                               {l.rate === null ? "No rate" : gbp(l.rate)}
                             </Typography>
                             <Typography variant="caption" color="textSecondary">

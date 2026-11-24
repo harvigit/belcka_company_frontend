@@ -4,7 +4,6 @@ import React, { useCallback, useState } from "react";
 import {
   Box,
   Button,
-  Chip,
   Divider,
   Grid,
   IconButton,
@@ -27,6 +26,7 @@ import { NameDrawer } from "./drawers";
 import ImportTemplateDialog from "./ImportTemplateDialog";
 import TemplateDetail from "./TemplateDetail";
 import { TemplateRow, plural } from "./types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
 
 const columnHelper = createColumnHelper<TemplateRow>();
 const num = (v: number) => <Typography className="f-14">{v.toLocaleString("en-GB")}</Typography>;

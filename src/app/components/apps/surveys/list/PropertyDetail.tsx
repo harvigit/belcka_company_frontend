@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import { Box, Button, Chip, Grid, Stack, Typography } from "@mui/material";
+import { Box, Button, Grid, Stack, Typography } from "@mui/material";
 import { IconEye, IconFileTypePdf } from "@tabler/icons-react";
 import { PdAiStatus, PdSection, countItems, fileSize } from "./types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
 
 // Property detail: the PDF card and the details AI read from it (read only).
 

@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import {
   Box,
   Button,
-  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -27,6 +26,7 @@ import CustomTextField from "@/app/components/forms/theme-elements/CustomTextFie
 import FormDrawer from "@/app/components/apps/inventory-new/shared/FormDrawer";
 import FormField from "@/app/components/apps/inventory-new/shared/FormField";
 import { NhfCode, NhfSheet, NhfVersion, UOM_OPTIONS, apiMessage, shortDate, uomLabel } from "./types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
 
 // ---------- Add / edit an element (code) of the selected sheet: right-hand drawer like the other forms ----------
 export const CodeDrawer: React.FC<{

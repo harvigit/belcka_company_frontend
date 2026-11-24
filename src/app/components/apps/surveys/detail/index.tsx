@@ -2,8 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Box, Button, CardContent, Chip, CircularProgress, Grid, IconButton, Stack, Tab, Tabs, Tooltip, Typography } from "@mui/material";
-import { IconArrowLeft, IconCheck, IconEdit, IconTrash, IconUsers } from "@tabler/icons-react";
+import { Box, Button, CardContent, CircularProgress, Grid, IconButton, Stack, Tab, Tabs, Tooltip, Typography } from "@mui/material";
+import { IconArrowLeft, IconEdit, IconTrash, IconUsers } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import BlankCard from "@/app/components/shared/BlankCard";
@@ -15,8 +15,10 @@ import { AssignDialog } from "../list/dialogs";
 import { InspectionData, STATUS_META, SurveyDetail, SurveyOptions, SurveyRow, SurveyStatus } from "../list/types";
 import { HistoryTab, InspectionTab, OverviewTab, PropertyDetailTab } from "./tabs";
 import QsPricingTab from "./qs-tab";
+import Alert from "@/app/components/apps/surveys/shared/SurveyAlert";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
+import StatusStepper from "./StatusStepper";
 
-const ORDER: SurveyStatus[] = ["draft", "assigned", "in_progress", "submitted", "qs_review", "completed"];
 const TABS = [
   { value: "overview", label: "Overview" },
   { value: "pd", label: "Property detail" },
@@ -103,7 +105,6 @@ const SurveyPage: React.FC<{ surveyId: number }> = ({ surveyId }) => {
       </BlankCard>
     );
 
-  const at = ORDER.indexOf(s.status);
   const asRow = { id: s.id, reference: s.reference, title: s.title, address: s.address, surveyor: s.surveyor } as unknown as SurveyRow;
 
   return (
@@ -146,50 +147,40 @@ const SurveyPage: React.FC<{ surveyId: number }> = ({ surveyId }) => {
           )}
         </Stack>
 
-        {/* status steps */}
-        <Stack direction="row" spacing={1} mt={2} sx={{ overflowX: "auto", pb: 0.5 }}>
-          {ORDER.map((k, i) => (
-            <Chip
-              key={k}
-              size="small"
-              icon={i < at ? <IconCheck size={13} /> : undefined}
-              color={i < at ? "success" : i === at ? STATUS_META[k].color : "default"}
-              variant={i <= at ? "filled" : "outlined"}
-              label={i < at ? STATUS_META[k].label : `${i + 1} ${STATUS_META[k].label}`}
-              sx={{ fontWeight: i === at ? 700 : 500, flexShrink: 0 }}
-            />
-          ))}
+        {/* status steps, rework note and numbers: the same 16px gap between each block */}
+        <Stack spacing={2} mt={2}>
+          <StatusStepper survey={s} />
+
+          {s.rework_notes && s.status === "in_progress" && (
+            <Alert severity="warning">
+              <b>Rework requested by the QS:</b> {s.rework_notes}
+            </Alert>
+          )}
+
+          {/* numbers */}
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <StatTile
+                label="Elements inspected"
+                value={ins ? `${ins.progress.inspected} / ${ins.progress.total}` : "–"}
+                sub={ins ? `${ins.rooms.length} ${ins.rooms.length === 1 ? "room" : "rooms"}` : undefined}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <StatTile label="Works" value={ins?.works.length ?? "–"} sub={ins ? `${ins.verified} verified · ${ins.estimated} estimated` : undefined} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <StatTile label="Not accessible" value={ins?.summary.na ?? "–"} sub="elements" />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <StatTile
+                label="Photos"
+                value={ins?.photos ?? "–"}
+                sub={ins?.summary.added_on_site ? `${ins.summary.added_on_site} ${ins.summary.added_on_site === 1 ? "element" : "elements"} added on site` : "on works and elements"}
+              />
+            </Grid>
+          </Grid>
         </Stack>
-
-        {s.rework_notes && s.status === "in_progress" && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            <b>Rework requested by the QS:</b> {s.rework_notes}
-          </Alert>
-        )}
-
-        {/* numbers */}
-        <Grid container spacing={2} mt={0.5}>
-          <Grid size={{ xs: 6, md: 3 }}>
-            <StatTile
-              label="Elements inspected"
-              value={ins ? `${ins.progress.inspected} / ${ins.progress.total}` : "–"}
-              sub={ins ? `${ins.rooms.length} ${ins.rooms.length === 1 ? "room" : "rooms"}` : undefined}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, md: 3 }}>
-            <StatTile label="Works" value={ins?.works.length ?? "–"} sub={ins ? `${ins.verified} verified · ${ins.estimated} estimated` : undefined} />
-          </Grid>
-          <Grid size={{ xs: 6, md: 3 }}>
-            <StatTile label="Not accessible" value={ins?.summary.na ?? "–"} sub="elements" />
-          </Grid>
-          <Grid size={{ xs: 6, md: 3 }}>
-            <StatTile
-              label="Photos"
-              value={ins?.photos ?? "–"}
-              sub={ins?.summary.added_on_site ? `${ins.summary.added_on_site} ${ins.summary.added_on_site === 1 ? "element" : "elements"} added on site` : "on works and elements"}
-            />
-          </Grid>
-        </Grid>
 
         <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ mt: 2, borderBottom: 1, borderColor: "divider" }}>
           {TABS.map((t) => (
