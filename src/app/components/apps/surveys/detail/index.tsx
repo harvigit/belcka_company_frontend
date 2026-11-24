@@ -14,12 +14,14 @@ import SurveyForm from "../list/SurveyForm";
 import { AssignDialog } from "../list/dialogs";
 import { InspectionData, STATUS_META, SurveyDetail, SurveyOptions, SurveyRow, SurveyStatus } from "../list/types";
 import { HistoryTab, InspectionTab, OverviewTab, PropertyDetailTab } from "./tabs";
+import QsPricingTab from "./qs-tab";
 
 const ORDER: SurveyStatus[] = ["draft", "assigned", "in_progress", "submitted", "qs_review", "completed"];
 const TABS = [
   { value: "overview", label: "Overview" },
   { value: "pd", label: "Property detail" },
   { value: "ins", label: "Inspection" },
+  { value: "qs", label: "QS pricing" },
   { value: "history", label: "History" },
 ];
 
@@ -199,6 +201,7 @@ const SurveyPage: React.FC<{ surveyId: number }> = ({ surveyId }) => {
           {tab === "overview" && <OverviewTab s={s} ins={ins} onTab={setTab} />}
           {tab === "pd" && <PropertyDetailTab s={s} aiEnabled={!!options?.ai_enabled} onChanged={load} />}
           {tab === "ins" && <InspectionTab s={s} ins={ins} />}
+          {tab === "qs" && <QsPricingTab surveyId={s.id} />}
           {tab === "history" && <HistoryTab s={s} />}
         </Box>
       </CardContent>
