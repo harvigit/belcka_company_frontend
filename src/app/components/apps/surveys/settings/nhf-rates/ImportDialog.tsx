@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
@@ -26,6 +25,7 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+import Alert from "@/app/components/apps/surveys/shared/SurveyAlert";
 import { IconFileSpreadsheet, IconUpload } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";

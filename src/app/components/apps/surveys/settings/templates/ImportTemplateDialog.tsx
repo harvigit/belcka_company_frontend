@@ -2,11 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
   Checkbox,
-  Chip,
   CircularProgress,
   Collapse,
   Dialog,
@@ -30,11 +28,13 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+import Alert from "@/app/components/apps/surveys/shared/SurveyAlert";
 import { IconChevronDown, IconChevronRight, IconUpload } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { NhfSheet, apiMessage, money, uomLabel } from "../nhf-rates/types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
 
 type Mapping = { room: number; groups: number[]; works: number; code: number; uom: number; qty: number; vo: number; comment: number; rate: number };
 type SowNode = { kind: string; name: string; children: SowNode[]; elements: { name: string; code: string | null }[] };
@@ -97,6 +97,7 @@ const ImportTemplateDialog: React.FC<Props> = ({ open, templateNames, onClose, o
     setP(null);
     setMap(null);
     setName("");
+    setNameTried(false);
     setMode("merge");
     setActs({});
     setOpenRooms({});
@@ -133,7 +134,6 @@ const ImportTemplateDialog: React.FC<Props> = ({ open, templateNames, onClose, o
       const d: Preview = res.data.data;
       setP(d);
       setMap(d.mapping);
-      if (!name) setName(d.template_name);
       setActs((cur) => Object.fromEntries(d.nhf.missing.map((m) => [m.code, cur[m.code] ?? { act: "norate", rate: m.file_rate !== null ? String(m.file_rate) : "" }])));
       if (step === 0) setStep(1);
     } catch (e) {
@@ -142,6 +142,8 @@ const ImportTemplateDialog: React.FC<Props> = ({ open, templateNames, onClose, o
     setBusy(false);
   };
 
+  const [nameTried, setNameTried] = useState(false);
+  const nameError = nameTried && !name.trim();
   const exists = !!name.trim() && templateNames.some((n) => n.toLowerCase() === name.trim().toLowerCase());
   const missingCols = !map || map.room < 0 || map.works < 0;
   const adds = p ? p.nhf.missing.filter((m) => acts[m.code]?.act === "add") : [];
@@ -289,12 +291,21 @@ const ImportTemplateDialog: React.FC<Props> = ({ open, templateNames, onClose, o
         {step === 2 && p && (
           <Stack spacing={2}>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 7 }}>
+              <Grid size={12}>
                 <Typography className="f-14" mb={0.5}>Template name *</Typography>
-                <CustomTextField size="small" fullWidth value={name} onChange={(e: any) => setName(e.target.value)} error={!name.trim()} helperText={!name.trim() ? "Enter a template name" : undefined} />
+                <CustomTextField
+                  size="small"
+                  fullWidth
+                  autoFocus
+                  placeholder="e.g. Flat void – standard"
+                  value={name}
+                  onChange={(e: any) => setName(e.target.value)}
+                  error={nameError}
+                  helperText={nameError ? "Enter a name for the template" : exists ? undefined : "Name the new template. Use an existing name to update that template instead."}
+                />
               </Grid>
               {exists && (
-                <Grid size={{ xs: 12, md: 5 }}>
+                <Grid size={12}>
                   <Typography className="f-14" mb={0.5}>A template with this name exists</Typography>
                   <ToggleButtonGroup size="small" exclusive value={mode} onChange={(_, v) => v && setMode(v)}>
                     <ToggleButton value="merge">Add what is new</ToggleButton>
@@ -446,7 +457,7 @@ const ImportTemplateDialog: React.FC<Props> = ({ open, templateNames, onClose, o
         {step === 2 && (
           <>
             <Button onClick={() => setStep(1)} disabled={busy}>Back</Button>
-            <Button variant="contained" disabled={busy || !name.trim()} onClick={doImport} startIcon={busy ? <CircularProgress size={16} /> : null}>
+            <Button variant="contained" disabled={busy} onClick={() => (name.trim() ? doImport() : setNameTried(true))} startIcon={busy ? <CircularProgress size={16} /> : null}>
               {exists ? (mode === "replace" ? "Replace template" : "Update template") : "Create template"}
             </Button>
           </>

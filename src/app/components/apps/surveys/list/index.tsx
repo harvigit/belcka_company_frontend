@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   Box,
   Button,
-  Chip,
   Divider,
   Grid,
   IconButton,
@@ -51,6 +50,7 @@ import { apiMessage } from "../settings/nhf-rates/types";
 import SurveyForm from "./SurveyForm";
 import { AssignDialog } from "./dialogs";
 import { STATUS_META, SurveyOptions, SurveyRow, longDate } from "./types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
 
 const columnHelper = createColumnHelper<SurveyRow>();
 type Tile = "all" | "draft" | "assigned" | "in_progress" | "review" | "completed";

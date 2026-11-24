@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
-  Chip,
   CircularProgress,
   Collapse,
   Divider,
@@ -41,6 +40,8 @@ import ConfirmDialog from "@/app/components/apps/inventory-new/shared/ConfirmDia
 import { NhfSheet, apiMessage, money, uomLabel } from "../nhf-rates/types";
 import { AddToNhfDrawer, ElementDrawer, NameDrawer } from "./drawers";
 import { TemplateDetail as Detail, TplElement, TplNode, countEls, countGroups, plural } from "./types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
+import { WARN_BG, WARN_BORDER, WARN_TEXT } from "@/app/components/apps/surveys/shared/colors";
 
 type NameDlg = { kind: "room" | "group" | "rename-node" | "rename-template"; parentId?: number; node?: TplNode } | null;
 type DelDlg = { kind: "node"; node: TplNode } | { kind: "element"; element: TplElement } | { kind: "template" } | null;
@@ -143,7 +144,7 @@ const TemplateDetail: React.FC<{ id: number; onBack: () => void }> = ({ id, onBa
         <Box sx={{ width: 120, textAlign: "right" }}>
           {notInNhf ? (
             <Tooltip title="This code is not in any NHF sheet, so it has no price">
-              <Button size="small" color="warning" variant="outlined" onClick={() => setNhfDlg(e)}>Add to NHF</Button>
+              <Button size="small" variant="outlined" sx={{ color: WARN_TEXT, borderColor: WARN_BORDER, "&:hover": { borderColor: WARN_TEXT, bgcolor: WARN_BG } }} onClick={() => setNhfDlg(e)}>Add to NHF</Button>
             </Tooltip>
           ) : (
             <Tooltip title={e.nhf && e.nhf.found ? `Base rate from ${e.nhf.sheet_name}` : "Rate kept on this element"}>
@@ -261,7 +262,7 @@ const TemplateDetail: React.FC<{ id: number; onBack: () => void }> = ({ id, onBa
                     {roomSkipped > 0 && (
                       <>
                         {" · "}
-                        <Box component="span" sx={{ color: "warning.main", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }} onClick={() => setElDlg({ nodeId: room.id, element: null })}>
+                        <Box component="span" sx={{ color: WARN_TEXT, fontWeight: 600, cursor: "pointer", textDecoration: "underline" }} onClick={() => setElDlg({ nodeId: room.id, element: null })}>
                           {roomSkipped} skipped at import
                         </Box>
                       </>

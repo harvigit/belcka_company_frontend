@@ -49,6 +49,8 @@ export type SurveyDetail = {
   rework_notes: string | null;
   started_at: string | null;
   submitted_at: string | null;
+  qs_started_at?: string | null;
+  qs_completed_at?: string | null;
   status: SurveyStatus;
   status_label: string;
   editable: boolean;

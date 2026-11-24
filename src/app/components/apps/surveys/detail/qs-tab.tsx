@@ -2,13 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Button, Chip, Grid, LinearProgress, Paper, Stack, Typography } from "@mui/material";
+import { Box, Button, Grid, LinearProgress, Paper, Stack, Typography } from "@mui/material";
 import { IconChevronRight } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import { Column, RecordTable, StatTile } from "@/app/components/apps/vehicles/detail/common";
 import { uomLabel } from "../settings/nhf-rates/types";
 import { dateTime } from "../list/types";
 import { LINE_META, QsDetail, QsLine, RATE_SOURCE, gbp } from "../qs/types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
 
 // Survey page › QS pricing: what the QS priced (read only here; pricing happens in QS review).
 const QsPricingTab: React.FC<{ surveyId: number }> = ({ surveyId }) => {

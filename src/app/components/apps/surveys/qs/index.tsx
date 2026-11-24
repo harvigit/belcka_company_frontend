@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Button, Chip, Divider, Grid, InputAdornment, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Divider, Grid, InputAdornment, Stack, TextField, Typography } from "@mui/material";
 import { createColumnHelper } from "@tanstack/react-table";
 import { IconArrowBackUp, IconChevronRight, IconCircleCheck, IconClipboardList, IconInbox, IconProgress, IconSearch } from "@tabler/icons-react";
 import toast from "react-hot-toast";
@@ -16,6 +16,8 @@ import SurveyNav from "../nav";
 import { apiMessage } from "../settings/nhf-rates/types";
 import { dateTime } from "../list/types";
 import { QsRow, gbp } from "./types";
+import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
+import { WARN_TEXT } from "@/app/components/apps/surveys/shared/colors";
 
 type Tile = "all" | "todo" | "review" | "rework" | "done";
 const TILES: { key: Tile; label: string; hint: string; icon: React.ReactNode; color: keyof typeof CARD_TONE }[] = [
@@ -102,7 +104,7 @@ const QsList: React.FC = () => {
             <Typography className="f-14" fontWeight={600}>
               {r.reviewed} / {r.lines}
             </Typography>
-            {r.no_rate > 0 && <Typography variant="caption" color="warning.dark">{r.no_rate} without a rate</Typography>}
+            {r.no_rate > 0 && <Typography variant="caption" color={WARN_TEXT}>{r.no_rate} without a rate</Typography>}
           </Stack>
         );
       },
