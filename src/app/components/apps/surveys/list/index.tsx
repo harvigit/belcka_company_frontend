@@ -9,9 +9,6 @@ import {
   Grid,
   IconButton,
   InputAdornment,
-  ListItemIcon,
-  Menu,
-  MenuItem,
   Stack,
   TextField,
   Tooltip,
@@ -21,7 +18,6 @@ import { createColumnHelper } from "@tanstack/react-table";
 import {
   IconCircleCheck,
   IconClipboardList,
-  IconDotsVertical,
   IconEdit,
   IconEye,
   IconFileText,
@@ -87,7 +83,6 @@ const SurveyList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<{ project_id: string; surveyor_id: string }>({ project_id: "", surveyor_id: "" });
   const [options, setOptions] = useState<SurveyOptions | null>(null);
-  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [formFor, setFormFor] = useState<{ id: number | null } | null>(null);
   const [assignFor, setAssignFor] = useState<SurveyRow | null>(null);
@@ -268,9 +263,6 @@ const SurveyList: React.FC = () => {
             Create a survey for a project address, choose its template and property detail, and assign a surveyor.
           </Typography>
         </Box>
-        <Button variant="outlined" color="inherit" startIcon={<IconSettings size={18} />} sx={{ ml: "auto", flexShrink: 0 }} onClick={() => setSettingsOpen(true)}>
-          Settings
-        </Button>
       </Stack>
 
       <Grid container spacing={2} sx={{ px: 2, pt: 2, pb: 1 }}>
@@ -304,43 +296,21 @@ const SurveyList: React.FC = () => {
             value={filters}
             onApply={(v) => setFilters({ project_id: v.project_id ?? "", surveyor_id: v.surveyor_id ?? "" })}
             fields={[
-              { key: "project_id", label: "Project", options: (options?.projects ?? []).map((p) => ({ value: String(p.id), label: p.name })) },
-              { key: "surveyor_id", label: "Surveyor", options: (options?.surveyors ?? []).map((u) => ({ value: String(u.id), label: u.name })) },
+              { key: "project_id", label: "Project", searchable: true, options: (options?.projects ?? []).map((p) => ({ value: String(p.id), label: p.name })) },
+              { key: "surveyor_id", label: "Surveyor", avatar: true, options: (options?.surveyors ?? []).map((u) => ({ value: String(u.id), label: u.name, image: u.image })) },
             ]}
           />
+        </Grid>
+        <Stack direction="row" alignItems="center" justifyContent="end" gap={1}>
           <Button variant="contained" startIcon={<IconPlus width={18} />} onClick={() => setFormFor({ id: null })}>
             Create survey
           </Button>
-        </Grid>
-        <Stack direction="row" alignItems="center" justifyContent="end">
           <ColumnVisibilityButton table={table} />
-          <IconButton onClick={(e) => setMenuAnchor(e.currentTarget)}>
-            <IconDotsVertical width={18} />
-          </IconButton>
-          <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={() => setMenuAnchor(null)}>
-            <MenuItem
-              onClick={() => {
-                setMenuAnchor(null);
-                setFormFor({ id: null });
-              }}
-            >
-              <ListItemIcon>
-                <IconPlus width={18} />
-              </ListItemIcon>
-              Create survey
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                setMenuAnchor(null);
-                setSettingsOpen(true);
-              }}
-            >
-              <ListItemIcon>
-                <IconSettings width={18} />
-              </ListItemIcon>
-              Templates and NHF rates
-            </MenuItem>
-          </Menu>
+          <Tooltip title="Settings: templates and NHF rates">
+            <IconButton aria-label="Settings" onClick={() => setSettingsOpen(true)}>
+              <IconSettings size={20} />
+            </IconButton>
+          </Tooltip>
         </Stack>
       </Stack>
       <Divider />
@@ -348,13 +318,8 @@ const SurveyList: React.FC = () => {
         <Box sx={{ py: 6, px: 2, textAlign: "center" }}>
           <Box component="img" src="/images/no-data.png" alt="" sx={{ width: 120, opacity: 0.8, mb: 1 }} />
           <Typography color="textSecondary">
-            {hasFilters ? "No survey matches these filters." : "No surveys yet. Use Create survey to add the first one."}
+            {hasFilters ? "No survey matches these filters." : "No surveys yet. Use Create survey above to add the first one."}
           </Typography>
-          {!hasFilters && (
-            <Button variant="contained" startIcon={<IconPlus width={18} />} sx={{ mt: 2 }} onClick={() => setFormFor({ id: null })}>
-              Create survey
-            </Button>
-          )}
         </Box>
       ) : (
         <InventoryTable table={table} loading={loading} rowCount={data.length} onRowClick={(row: SurveyRow) => openSurvey(row.id)} />
