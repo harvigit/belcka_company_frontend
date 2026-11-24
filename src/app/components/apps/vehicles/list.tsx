@@ -61,6 +61,7 @@ import {
   formatMiles,
   fuelLabel,
   money,
+  needsDailyCheck,
   nextDue,
   permitState,
   statusInfo,
@@ -138,7 +139,7 @@ const VehicleList: React.FC = () => {
 
   const stats = useMemo(() => {
     const today = dayjs().format("YYYY-MM-DD");
-    const needCheck = current.filter((v) => v.status === "active" && v.driver_id && v.type !== "private");
+    const needCheck = current.filter((v) => needsDailyCheck(v, store.dailyChecks));
     const checked = new Set(store.checklists.filter((c) => c.date === today).map((c) => c.vehicle_id));
     const live = new Set(current.map((v) => v.id));
     return {
@@ -740,6 +741,7 @@ const VehicleList: React.FC = () => {
         <DriverChecksToday
           vehicles={current}
           checklists={store.checklists}
+          dailyChecks={store.dailyChecks}
           onOpenVehicle={openVehicle}
           onOpenActionCentre={() => router.push("/apps/vehicles/action-centre?section=checks")}
         />

@@ -51,6 +51,7 @@ import {
   DEFECT_STATUS,
   formatDate,
   formatMiles,
+  needsDailyCheck,
   SEVERITY,
   Vehicle,
 } from "./types";
@@ -223,9 +224,10 @@ const ActionCentre: React.FC = () => {
     autoResetPageIndex: true,
   });
 
-  // Daily checks: every company vehicle in use with a driver should have one each day.
+  // Daily checks: every company vehicle in use with a driver should have one each day, when any check
+  // item is given to that driver (Settings → Daily checks).
   const today = dayjs().format("YYYY-MM-DD");
-  const needCheck = vehicles.filter((v) => v.status === "active" && v.driver_id && v.type !== "private");
+  const needCheck = vehicles.filter((v) => needsDailyCheck(v, store.dailyChecks));
   const todaysChecks = new Map(
     store.checklists.filter((c) => c.date === today).map((c) => [c.vehicle_id, c] as [number, DailyChecklist]),
   );

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Chip,
@@ -11,6 +12,8 @@ import {
   IconButton,
   InputAdornment,
   Paper,
+  Radio,
+  RadioGroup,
   Stack,
   Switch,
   Tooltip,
@@ -26,9 +29,12 @@ import FormField from "../inventory-new/shared/FormField";
 import ConfirmDialog from "../inventory-new/shared/ConfirmDialog";
 import FleetNav from "./fleet-nav";
 import { RecordTable, Section } from "./detail/common";
-import { Connection, CONNECTION_KIND, DEFAULT_FLEET_RULES, FleetRules, formatDate, OnboardingTemplate } from "./types";
-import { useVehicles } from "./useVehicles";
-import { NoCompany } from "./shared";
+import { Connection, CONNECTION_KIND, DailyCheckItem, DEFAULT_FLEET_RULES, FleetRules, formatDate, OnboardingTemplate } from "./types";
+import { DriverOption, useVehicles } from "./useVehicles";
+import { useDrivers } from "./useDrivers";
+import { DriverName, NoCompany } from "./shared";
+
+type DailyCheckForm = { id?: number; title: string; is_critical: boolean; all_drivers: boolean; driver_ids: number[] };
 
 type NumberRule = Exclude<keyof FleetRules, "odometerEveryFill" | "motValidMonths">;
 
@@ -66,11 +72,14 @@ const SettingsPage: React.FC = () => {
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null; name?: string | null };
   const store = useVehicles(user?.company_id, user?.name || "You");
+  const employees = useDrivers(user?.company_id);
 
   const [form, setForm] = useState<Record<string, string>>({});
   const [odometer, setOdometer] = useState(true);
   const [editing, setEditing] = useState<{ id?: number; name: string; steps: string[] } | null>(null);
   const [toDelete, setToDelete] = useState<OnboardingTemplate | null>(null);
+  const [editingCheck, setEditingCheck] = useState<DailyCheckForm | null>(null);
+  const [checkToDelete, setCheckToDelete] = useState<DailyCheckItem | null>(null);
   const [connecting, setConnecting] = useState<Connection | null>(null);
   const [account, setAccount] = useState("");
   const [disconnecting, setDisconnecting] = useState<Connection | null>(null);
@@ -120,6 +129,17 @@ const SettingsPage: React.FC = () => {
         .sort((a, b) => b.id - a.id)[0];
       return o?.template_id === templateId;
     }).length;
+
+  // Move a daily check up (-1) or down (1) in the order drivers see them.
+  const moveCheck = async (index: number, by: number) => {
+    const ids = store.dailyChecks.map((c) => c.id);
+    [ids[index], ids[index + by]] = [ids[index + by], ids[index]];
+    try {
+      await store.sortDailyChecks(ids);
+    } catch {
+      return; // the API's message is already shown
+    }
+  };
 
   if (store.noCompany) return <NoCompany />;
 
@@ -277,6 +297,107 @@ const SettingsPage: React.FC = () => {
 
         <Divider />
 
+        <Section
+          title="Daily checks"
+          subtitle="Drivers tick these in the app each day before the first journey and send the check. Give a check to all drivers or only to the drivers who need it. An item marked as a defect needs a photo and goes to the Action Centre. Checks already sent keep their items."
+          actions={
+            <Button
+              variant="contained"
+              startIcon={<IconPlus size={16} />}
+              onClick={() => setEditingCheck({ title: "", is_critical: false, all_drivers: true, driver_ids: [] })}
+            >
+              Add check
+            </Button>
+          }
+        >
+          <RecordTable<DailyCheckItem>
+            rows={store.dailyChecks}
+            empty="No daily checks. Add one so drivers have something to tick in the app."
+            columns={[
+              {
+                header: "#",
+                render: (c) => (
+                  <Typography variant="body2" color="textSecondary">
+                    {store.dailyChecks.indexOf(c) + 1}
+                  </Typography>
+                ),
+              },
+              { header: "Check", render: (c) => <Typography fontWeight={600}>{c.title}</Typography> },
+              {
+                header: "Drivers",
+                render: (c) =>
+                  c.all_drivers ? (
+                    <Chip size="small" variant="outlined" color="primary" label="All drivers" />
+                  ) : (
+                    <Box sx={{ maxWidth: 420 }}>
+                      <Typography variant="body2">{c.drivers.map((d) => d.name).join(", ")}</Typography>
+                    </Box>
+                  ),
+              },
+              {
+                header: "Defect level",
+                render: (c) =>
+                  c.is_critical ? (
+                    <Chip size="small" color="error" variant="outlined" label="Critical" />
+                  ) : (
+                    <Chip size="small" variant="outlined" label="Major" />
+                  ),
+              },
+              {
+                header: "",
+                align: "right",
+                render: (c) => {
+                  const i = store.dailyChecks.indexOf(c);
+                  const last = store.dailyChecks.length === 1;
+                  return (
+                    <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                      <Tooltip title="Move up">
+                        <span>
+                          <IconButton disabled={i === 0} onClick={() => moveCheck(i, -1)}>
+                            <IconArrowUp size={18} />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title="Move down">
+                        <span>
+                          <IconButton disabled={i === store.dailyChecks.length - 1} onClick={() => moveCheck(i, 1)}>
+                            <IconArrowDown size={18} />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title="Edit">
+                        <IconButton
+                          color="primary"
+                          onClick={() =>
+                            setEditingCheck({
+                              id: c.id,
+                              title: c.title,
+                              is_critical: c.is_critical,
+                              all_drivers: c.all_drivers,
+                              driver_ids: c.drivers.map((d) => d.id),
+                            })
+                          }
+                        >
+                          <IconEdit size={18} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title={last ? "Keep at least one check" : "Delete"}>
+                        <span>
+                          <IconButton color="error" disabled={last} onClick={() => setCheckToDelete(c)}>
+                            <IconTrash size={18} />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Stack>
+                  );
+                },
+              },
+            ]}
+          />
+        </Section>
+
+        <Divider />
+
         <Box id="connections">
           <Section
             title="Connections"
@@ -348,6 +469,21 @@ const SettingsPage: React.FC = () => {
         }}
       />
 
+      <DailyCheckDrawer
+        value={editingCheck}
+        employees={employees}
+        names={store.dailyChecks.filter((c) => c.id !== editingCheck?.id).map((c) => c.title.toLowerCase())}
+        onClose={() => setEditingCheck(null)}
+        onSave={async (c) => {
+          try {
+            await store.saveDailyCheck(c);
+          } catch {
+            return; // the API's message is already shown
+          }
+          toast.success(c.id ? `${c.title} updated. Drivers see it from their next check.` : `${c.title} added.`);
+          setEditingCheck(null);
+        }}
+      />
 
       <ConfirmDialog
         open={!!connecting}
@@ -403,6 +539,23 @@ const SettingsPage: React.FC = () => {
           await store.deleteTemplate(toDelete.id);
           toast.success(`${toDelete.name} deleted.`);
           setToDelete(null);
+        }}
+      />
+      <ConfirmDialog
+        open={!!checkToDelete}
+        title="Delete daily check"
+        message={checkToDelete ? `Delete ${checkToDelete.title}? Drivers stop seeing it; checks already sent keep it.` : ""}
+        confirmLabel="Delete"
+        onClose={() => setCheckToDelete(null)}
+        onConfirm={async () => {
+          if (!checkToDelete) return;
+          try {
+            await store.deleteDailyCheck(checkToDelete.id);
+          } catch {
+            return; // the API's message is already shown
+          }
+          toast.success(`${checkToDelete.title} deleted.`);
+          setCheckToDelete(null);
         }}
       />
     </Box>
@@ -521,6 +674,126 @@ const TemplateDrawer: React.FC<{
       {value.id && (
         <Alert severity="info">Changes apply to new start lists. Lists already started keep their steps.</Alert>
       )}
+    </FormDrawer>
+  );
+};
+
+/* ---------- Add / edit a daily check item ---------- */
+const DailyCheckDrawer: React.FC<{
+  value: DailyCheckForm | null;
+  employees: DriverOption[];
+  names: string[];
+  onClose: () => void;
+  onSave: (c: DailyCheckForm) => Promise<void>;
+}> = ({ value, employees, names, onClose, onSave }) => {
+  const [title, setTitle] = useState("");
+  const [critical, setCritical] = useState(false);
+  const [allDrivers, setAllDrivers] = useState(true);
+  const [driverIds, setDriverIds] = useState<number[]>([]);
+  const [showErrors, setShowErrors] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (value) {
+      setTitle(value.title);
+      setCritical(value.is_critical);
+      setAllDrivers(value.all_drivers);
+      setDriverIds(value.driver_ids);
+      setShowErrors(false);
+    }
+  }, [value]);
+
+  if (!value) return null;
+  const titleError = !title.trim()
+    ? showErrors
+      ? "Enter the check."
+      : ""
+    : names.includes(title.trim().toLowerCase())
+      ? "There is already a check with this name."
+      : "";
+  const driversError = showErrors && !allDrivers && !driverIds.length ? "Choose at least one driver." : "";
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowErrors(true);
+    if (!title.trim() || titleError || (!allDrivers && !driverIds.length)) {
+      toast.error("Please check the highlighted fields.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave({ id: value.id, title: title.trim(), is_critical: critical, all_drivers: allDrivers, driver_ids: allDrivers ? [] : driverIds });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <FormDrawer
+      open
+      title={value.id ? "Edit daily check" : "Add daily check"}
+      onClose={onClose}
+      onSubmit={submit}
+      isSaving={saving}
+      submitLabel="Save check"
+    >
+      <FormField label="Check *" hint={titleError ? undefined : "What the driver looks at, e.g. Tyres and wheels"}>
+        <CustomTextField
+          fullWidth
+          value={title}
+          onChange={(e: any) => setTitle(e.target.value.slice(0, 60))}
+          error={!!titleError}
+          helperText={titleError}
+        />
+      </FormField>
+      <FormField label="Who does this check *">
+        <RadioGroup value={allDrivers ? "all" : "selected"} onChange={(e) => setAllDrivers(e.target.value === "all")}>
+          <FormControlLabel value="all" control={<Radio size="small" />} label="All drivers" />
+          <FormControlLabel value="selected" control={<Radio size="small" />} label="Only the drivers I choose" />
+        </RadioGroup>
+        {!allDrivers && (
+          <Autocomplete
+            multiple
+            size="small"
+            sx={{ mt: 1 }}
+            options={employees}
+            value={employees.filter((d) => driverIds.includes(d.id))}
+            onChange={(_, list) => setDriverIds(list.map((d) => d.id))}
+            getOptionLabel={(o) => o.name}
+            isOptionEqualToValue={(o, v) => o.id === v.id}
+            disableCloseOnSelect
+            noOptionsText="No employees found"
+            renderOption={(props, option) => {
+              const { key, ...rest } = props as any;
+              return (
+                <Box component="li" key={key} {...rest}>
+                  <DriverName name={option.name} image={option.image} />
+                </Box>
+              );
+            }}
+            renderInput={(params) => (
+              <CustomTextField
+                {...params}
+                placeholder={driverIds.length ? "" : "Search employee..."}
+                error={!!driversError}
+                helperText={driversError || "Only these drivers see the check in the app."}
+              />
+            )}
+          />
+        )}
+      </FormField>
+      <FormControlLabel
+        control={<Switch checked={critical} onChange={(e) => setCritical(e.target.checked)} />}
+        label={
+          <Box>
+            <Typography variant="body2">Critical</Typography>
+            <Typography variant="caption" color="textSecondary">
+              A defect on this check is critical, for example brakes, tyres or lights.
+            </Typography>
+          </Box>
+        }
+      />
+      {value.id && <Alert severity="info">Checks already sent keep the old name.</Alert>}
     </FormDrawer>
   );
 };
