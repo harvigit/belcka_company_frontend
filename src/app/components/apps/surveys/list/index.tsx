@@ -46,6 +46,7 @@ import ConfirmDialog from "@/app/components/apps/inventory-new/shared/ConfirmDia
 import { CARD_TONE, StatCard } from "@/app/components/apps/vehicles/detail/common";
 import { DriverName } from "@/app/components/apps/vehicles/shared";
 import SurveySettings from "../settings";
+import SurveyNav from "../nav";
 import { apiMessage } from "../settings/nhf-rates/types";
 import SurveyForm from "./SurveyForm";
 import { AssignDialog } from "./dialogs";
@@ -256,6 +257,7 @@ const SurveyList: React.FC = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column" }}>
+      <SurveyNav value="surveys" />
       <Stack direction="row" alignItems="center" sx={{ px: 2, pt: 2 }}>
         <Box>
           <Typography variant="h5">Surveys</Typography>
