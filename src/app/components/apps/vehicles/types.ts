@@ -504,16 +504,24 @@ export const FUEL_CHECK_DAYS = 30;
 export type DefectSeverity = "minor" | "major" | "critical";
 export type DefectStatus = "open" | "in_progress" | "resolved" | "closed";
 
-export const DAILY_CHECK_ITEMS = [
-  "Lights and indicators",
-  "Tyres and wheels",
-  "Mirrors and windows",
-  "Fluids and leaks",
-  "Brakes and steering",
-  "Seat belts and horn",
-  "Body damage",
-  "Load and equipment",
-] as const;
+// fleet_daily_check_items: Settings → Daily checks, the items drivers tick in the app every day.
+// A defect on a critical item opens a critical defect. Given to every driver, or only to `drivers`.
+export interface DailyCheckItem {
+  id: number;
+  title: string;
+  is_critical: boolean;
+  all_drivers: boolean;
+  drivers: { id: number; name: string }[];
+}
+
+// The daily check items one driver ticks in the app.
+export const dailyChecksFor = (driverId: number, items: DailyCheckItem[]) =>
+  items.filter((c) => c.all_drivers || c.drivers.some((d) => d.id === driverId));
+
+// Company vehicles in use with a driver need a daily check, when any item is given to that driver.
+// Private cars don't.
+export const needsDailyCheck = (v: Vehicle, items: DailyCheckItem[]) =>
+  v.status === "active" && !!v.driver_id && v.type !== "private" && dailyChecksFor(v.driver_id, items).length > 0;
 
 export const SEVERITY: Record<DefectSeverity, { label: string; color: "default" | "warning" | "error" }> = {
   minor: { label: "Minor", color: "default" },

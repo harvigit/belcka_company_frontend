@@ -96,7 +96,8 @@ export const Section: React.FC<{
         )}
       </Box>
       {actions && (
-        <Stack direction="row" spacing={1} flexWrap="wrap">
+        // keep the buttons on one line when the subtitle is long
+        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ flexShrink: 0, "& .MuiButton-root": { whiteSpace: "nowrap" } }}>
           {actions}
         </Stack>
       )}

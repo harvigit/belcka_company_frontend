@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import ChecklistDialog from "./checklist-dialog";
 import { DriverName, RegPlate } from "./shared";
 import { RecordTable, Section } from "./detail/common";
-import { checklistSafe, DailyChecklist, Vehicle } from "./types";
+import { checklistSafe, DailyCheckItem, DailyChecklist, needsDailyCheck, Vehicle } from "./types";
 
 interface Row {
   id: number;
@@ -20,16 +20,18 @@ interface Row {
 const DriverChecksToday: React.FC<{
   vehicles: Vehicle[];
   checklists: DailyChecklist[];
+  dailyChecks: DailyCheckItem[];
   onOpenVehicle: (v: Vehicle) => void;
   onOpenActionCentre: () => void;
-}> = ({ vehicles, checklists, onOpenVehicle, onOpenActionCentre }) => {
+}> = ({ vehicles, checklists, dailyChecks, onOpenVehicle, onOpenActionCentre }) => {
   const [openId, setOpenId] = useState<number | null>(null);
   const today = dayjs().format("YYYY-MM-DD");
   const todays = new Map(checklists.filter((c) => c.date === today).map((c) => [c.vehicle_id, c]));
 
-  // Private cars don't need a daily check; vehicles without a driver aren't driven.
+  // Private cars don't need a daily check; vehicles without a driver aren't driven; drivers with no
+  // check items (Settings → Daily checks) have nothing to send.
   const rows: Row[] = vehicles
-    .filter((v) => v.status === "active" && v.driver_id && v.type !== "private")
+    .filter((v) => needsDailyCheck(v, dailyChecks))
     .map((v) => ({ id: v.id, vehicle: v, checklist: todays.get(v.id) ?? null }))
     // not done first, then defects, then safe
     .sort(

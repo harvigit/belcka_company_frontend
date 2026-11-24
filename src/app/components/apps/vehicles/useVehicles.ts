@@ -15,6 +15,7 @@ import {
   Reimbursement,
   Activity,
   Connection,
+  DailyCheckItem,
   FuelCard,
   ImportBatch,
   ImportConflict,
@@ -52,6 +53,7 @@ interface FleetData {
   checklists: DailyChecklist[];
   settings: FleetRules;
   templates: OnboardingTemplate[];
+  dailyChecks: DailyCheckItem[];
   licences: DriverLicence[];
   reimbursements: Reimbursement[];
   cards: FuelCard[];
@@ -74,6 +76,7 @@ const emptyData = (): FleetData => ({
   checklists: [],
   settings: { ...DEFAULT_FLEET_RULES },
   templates: [],
+  dailyChecks: [],
   licences: [],
   reimbursements: [],
   cards: [],
@@ -240,6 +243,7 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
             onboardings: info(onboardingsRes, []),
             settings: { ...DEFAULT_FLEET_RULES, ...(settings.rules ?? {}) },
             templates: settings.templates ?? [],
+            dailyChecks: settings.daily_checks ?? [],
             connections: settings.connections ?? [],
             activities: info(activitiesRes, []),
             places: info(placesRes, []),
@@ -633,6 +637,37 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     reloadActivities();
   };
 
+  // Add (no id) or edit a daily check item. Checklists already sent keep their items.
+  const saveDailyCheck = async (item: {
+    id?: number;
+    title: string;
+    is_critical: boolean;
+    all_drivers: boolean;
+    driver_ids: number[];
+  }) => {
+    const res = await api.post("vehicles/settings/save-daily-check", item);
+    const saved: DailyCheckItem = res.data.info;
+    update((d) => ({
+      ...d,
+      dailyChecks: d.dailyChecks.some((c) => c.id === saved.id)
+        ? d.dailyChecks.map((c) => (c.id === saved.id ? saved : c))
+        : [...d.dailyChecks, saved],
+    }));
+    reloadActivities();
+  };
+
+  const deleteDailyCheck = async (id: number) => {
+    await api.post("vehicles/settings/delete-daily-check", { id });
+    update((d) => ({ ...d, dailyChecks: d.dailyChecks.filter((c) => c.id !== id) }));
+    reloadActivities();
+  };
+
+  // The order drivers see the items in the app.
+  const sortDailyChecks = async (ids: number[]) => {
+    const res = await api.post("vehicles/settings/sort-daily-checks", { ids: ids.join(",") });
+    update((d) => ({ ...d, dailyChecks: res.data.info }));
+  };
+
   const setConnection = async (id: string, connected: boolean, account = "") => {
     const res = await api.post("vehicles/settings/set-connection", { id, connected, account });
     const saved: Connection = res.data.info;
@@ -800,6 +835,10 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     saveSettings,
     saveTemplate,
     deleteTemplate,
+    dailyChecks: data.dailyChecks,
+    saveDailyCheck,
+    deleteDailyCheck,
+    sortDailyChecks,
     saveLicence,
     saveReimbursement,
     defects: data.defects,
