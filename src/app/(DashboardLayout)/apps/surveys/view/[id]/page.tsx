@@ -3,21 +3,19 @@
 import React from "react";
 import { useParams } from "next/navigation";
 import PageContainer from "@/app/components/container/PageContainer";
-import BlankCard from "@/app/components/shared/BlankCard";
 import PermissionGuard from "@/app/auth/PermissionGuard";
-import SurveyDetails from "@/app/components/apps/surveys/details";
+import SurveyPage from "@/app/components/apps/surveys/detail";
 
-export default function SurveyViewPage() {
-  const params = useParams();
-  const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string) || "";
-
+/** Survey page: company admins, or users with the Surveys permission. */
+const SurveyViewPage = () => {
+  const params = useParams<{ id: string }>();
   return (
-    <PageContainer title="Survey Details" description="View survey inspection details">
+    <PageContainer title="Survey" description="Survey details, inspection and history">
       <PermissionGuard permissions={["Surveys", "Survey", "surveys"]} requireAll={false}>
-        <BlankCard>
-          <SurveyDetails id={id} />
-        </BlankCard>
+        <SurveyPage surveyId={Number(params?.id)} />
       </PermissionGuard>
     </PageContainer>
   );
-}
+};
+
+export default SurveyViewPage;
