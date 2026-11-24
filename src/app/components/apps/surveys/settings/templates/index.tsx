@@ -9,16 +9,13 @@ import {
   Grid,
   IconButton,
   InputAdornment,
-  ListItemIcon,
-  Menu,
-  MenuItem,
   Stack,
   TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
 import { createColumnHelper } from "@tanstack/react-table";
-import { IconDotsVertical, IconEdit, IconEye, IconFileImport, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
+import { IconEdit, IconEye, IconFileImport, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import { useServerTable } from "@/hooks/useServerTable";
@@ -41,7 +38,6 @@ const Templates: React.FC = () => {
   const [data, setData] = useState<TemplateRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [nameDlg, setNameDlg] = useState<{ row: TemplateRow | null } | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [toDelete, setToDelete] = useState<TemplateRow | null>(null);
@@ -163,20 +159,14 @@ const Templates: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             slotProps={{ input: { endAdornment: <InputAdornment position="end"><IconSearch size={16} /></InputAdornment> } }}
           />
-          <Button variant="contained" startIcon={<IconFileImport width={18} />} onClick={() => setImportOpen(true)}>
-            Import
-          </Button>
         </Grid>
-        <Stack direction="row" alignItems="center" justifyContent="end">
-          <IconButton onClick={(e) => setMenuAnchor(e.currentTarget)}><IconDotsVertical width={18} /></IconButton>
-          <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={() => setMenuAnchor(null)}>
-            <MenuItem onClick={() => { setMenuAnchor(null); setNameDlg({ row: null }); }}>
-              <ListItemIcon><IconPlus width={18} /></ListItemIcon>Add template
-            </MenuItem>
-            <MenuItem onClick={() => { setMenuAnchor(null); setImportOpen(true); }}>
-              <ListItemIcon><IconFileImport width={18} /></ListItemIcon>Import from Excel
-            </MenuItem>
-          </Menu>
+        <Stack direction="row" alignItems="center" justifyContent="end" gap={1}>
+          <Button variant="outlined" startIcon={<IconFileImport width={18} />} onClick={() => setImportOpen(true)}>
+            Import from Excel
+          </Button>
+          <Button variant="contained" startIcon={<IconPlus width={18} />} onClick={() => setNameDlg({ row: null })}>
+            Add template
+          </Button>
         </Stack>
       </Stack>
       <Divider />
