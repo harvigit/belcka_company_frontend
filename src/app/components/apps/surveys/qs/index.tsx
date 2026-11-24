@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Button, Chip, Divider, Grid, InputAdornment, Stack, TextField, Typography } from "@mui/material";
 import { createColumnHelper } from "@tanstack/react-table";
-import { IconArrowBackUp, IconChevronRight, IconCircleCheck, IconInbox, IconProgress, IconSearch } from "@tabler/icons-react";
+import { IconArrowBackUp, IconChevronRight, IconCircleCheck, IconClipboardList, IconInbox, IconProgress, IconSearch } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import { useServerTable } from "@/hooks/useServerTable";
@@ -17,8 +17,9 @@ import { apiMessage } from "../settings/nhf-rates/types";
 import { dateTime } from "../list/types";
 import { QsRow, gbp } from "./types";
 
-type Tile = "todo" | "review" | "rework" | "done";
+type Tile = "all" | "todo" | "review" | "rework" | "done";
 const TILES: { key: Tile; label: string; hint: string; icon: React.ReactNode; color: keyof typeof CARD_TONE }[] = [
+  { key: "all", label: "All", hint: "Every survey sent to the QS", icon: <IconClipboardList size={22} />, color: "secondary" },
   { key: "todo", label: "To review", hint: "Submitted by the surveyor, waiting for the QS", icon: <IconInbox size={22} />, color: "warning" },
   { key: "review", label: "In review", hint: "The QS is pricing", icon: <IconProgress size={22} />, color: "primary" },
   { key: "rework", label: "Sent back", hint: "Sent back to the surveyor for rework", icon: <IconArrowBackUp size={22} />, color: "error" },
@@ -30,8 +31,8 @@ const columnHelper = createColumnHelper<QsRow>();
 const QsList: React.FC = () => {
   const router = useRouter();
   const [data, setData] = useState<QsRow[]>([]);
-  const [counts, setCounts] = useState<Record<Tile, number>>({ todo: 0, review: 0, rework: 0, done: 0 });
-  const [tile, setTile] = useState<Tile>("todo");
+  const [counts, setCounts] = useState<Record<Tile, number>>({ all: 0, todo: 0, review: 0, rework: 0, done: 0 });
+  const [tile, setTile] = useState<Tile>("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const open = (id: number) => router.push(`/apps/surveys/qs/${id}`);
@@ -155,8 +156,8 @@ const QsList: React.FC = () => {
       </Box>
       <Grid container spacing={2} sx={{ px: 2, pt: 2, pb: 1 }}>
         {TILES.map((t) => (
-          <Grid key={t.key} size={{ xs: 6, md: 3 }}>
-            <StatCard icon={t.icon} tone={CARD_TONE[t.color]} value={counts[t.key] ?? 0} label={t.label} hint={t.hint} active={tile === t.key} title={t.hint} onClick={() => setTile(t.key)} />
+          <Grid key={t.key} size={{ xs: 6, sm: 4, md: "grow" }}>
+            <StatCard icon={t.icon} tone={CARD_TONE[t.color]} value={counts[t.key] ?? 0} label={t.label} hint={t.hint} active={tile === t.key} title={tile === t.key && t.key !== "all" ? "Show all" : t.hint} onClick={() => setTile(tile === t.key ? "all" : t.key)} />
           </Grid>
         ))}
       </Grid>
@@ -175,7 +176,7 @@ const QsList: React.FC = () => {
         <Box sx={{ py: 6, textAlign: "center" }}>
           <Box component="img" src="/images/no-data.png" alt="" sx={{ width: 120, opacity: 0.8, mb: 1 }} />
           <Typography color="textSecondary">
-            {search.trim() ? "No survey matches the search." : tile === "todo" ? "No survey is waiting for the QS." : "Nothing here."}
+            {search.trim() ? "No survey matches the search." : tile === "all" ? "No survey has been submitted to the QS yet." : tile === "todo" ? "No survey is waiting for the QS." : "Nothing here."}
           </Typography>
         </Box>
       ) : (
