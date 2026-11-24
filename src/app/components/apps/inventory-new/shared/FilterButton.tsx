@@ -1,6 +1,9 @@
 "use client";
 import React, { useState } from "react";
 import {
+  Autocomplete,
+  Avatar,
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -10,13 +13,24 @@ import {
   MenuItem,
   Stack,
   TextField,
+  Typography,
 } from "@mui/material";
 import { IconFilter, IconX } from "@tabler/icons-react";
+
+export interface FilterOption {
+  value: string | number;
+  label: string;
+  image?: string | null; // used when the field has avatar
+}
 
 export interface FilterField {
   key: string;
   label: string;
-  options: { value: string | number; label: string }[];
+  options: FilterOption[];
+  // Searchable dropdown (like the Expenses filters) instead of a plain select.
+  searchable?: boolean;
+  // Searchable dropdown with each user's photo (implies searchable).
+  avatar?: boolean;
 }
 
 export type FilterValues = Record<string, string>;
@@ -101,7 +115,59 @@ const FilterButton: React.FC<FilterButtonProps> = ({
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
-            {fields.map((field) => (
+            {fields.map((field) =>
+              field.searchable || field.avatar ? (
+                <Autocomplete
+                  key={field.key}
+                  options={field.options}
+                  getOptionLabel={(o) => o.label}
+                  getOptionKey={(o) => String(o.value)}
+                  isOptionEqualToValue={(o, v) => String(o.value) === String(v.value)}
+                  value={field.options.find((o) => String(o.value) === tempFilters[field.key]) ?? null}
+                  onChange={(_, o) => setTempFilters({ ...tempFilters, [field.key]: o ? String(o.value) : "" })}
+                  renderOption={(props, o) => {
+                    const { key, ...rest } = props as React.HTMLAttributes<HTMLLIElement> & { key: string };
+                    return (
+                      <Box component="li" key={key} {...rest}>
+                        <Stack direction="row" alignItems="center" spacing={1.5} minWidth={0}>
+                          {field.avatar && (
+                            <Avatar src={o.image || "/images/users/user.png"} alt={o.label} sx={{ width: 36, height: 36 }} />
+                          )}
+                          <Typography component="span" className="f-14" noWrap>
+                            {o.label}
+                          </Typography>
+                        </Stack>
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => {
+                    const selected = field.avatar
+                      ? field.options.find((o) => String(o.value) === tempFilters[field.key])
+                      : undefined;
+                    return (
+                      <TextField
+                        {...params}
+                        label={field.label}
+                        placeholder={ALL}
+                        fullWidth
+                        InputLabelProps={{ ...params.InputLabelProps, shrink: true }}
+                        InputProps={{
+                            ...params.InputProps,
+                            startAdornment: selected ? (
+                              <Avatar
+                                src={selected.image || "/images/users/user.png"}
+                                alt={selected.label}
+                                sx={{ width: 24, height: 24, ml: 0.5 }}
+                              />
+                            ) : (
+                              params.InputProps.startAdornment
+                            ),
+                        }}
+                      />
+                    );
+                  }}
+                />
+              ) : (
               <TextField
                 key={field.key}
                 select
@@ -123,7 +189,8 @@ const FilterButton: React.FC<FilterButtonProps> = ({
                   </MenuItem>
                 ))}
               </TextField>
-            ))}
+              ),
+            )}
           </Stack>
         </DialogContent>
 
