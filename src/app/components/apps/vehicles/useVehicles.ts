@@ -603,7 +603,6 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
   const saveDailyCheck = async (item: {
     id?: number;
     title: string;
-    is_critical: boolean;
     all_drivers: boolean;
     driver_ids: number[];
   }) => {

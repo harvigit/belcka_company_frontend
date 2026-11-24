@@ -34,7 +34,7 @@ import { DriverOption, useVehicles } from "./useVehicles";
 import { useDrivers } from "./useDrivers";
 import { DriverName, NoCompany } from "./shared";
 
-type DailyCheckForm = { id?: number; title: string; is_critical: boolean; all_drivers: boolean; driver_ids: number[] };
+type DailyCheckForm = { id?: number; title: string; all_drivers: boolean; driver_ids: number[] };
 
 type NumberRule = Exclude<keyof FleetRules, "odometerEveryFill" | "motValidMonths">;
 
@@ -302,7 +302,7 @@ const SettingsPage: React.FC = () => {
             <Button
               variant="contained"
               startIcon={<IconPlus size={16} />}
-              onClick={() => setEditingCheck({ title: "", is_critical: false, all_drivers: true, driver_ids: [] })}
+              onClick={() => setEditingCheck({ title: "", all_drivers: true, driver_ids: [] })}
             >
               Add check
             </Button>
@@ -330,15 +330,6 @@ const SettingsPage: React.FC = () => {
                     <Box sx={{ maxWidth: 420 }}>
                       <Typography variant="body2">{c.drivers.map((d) => d.name).join(", ")}</Typography>
                     </Box>
-                  ),
-              },
-              {
-                header: "Defect level",
-                render: (c) =>
-                  c.is_critical ? (
-                    <Chip size="small" color="error" variant="outlined" label="Critical" />
-                  ) : (
-                    <Chip size="small" variant="outlined" label="Major" />
                   ),
               },
               {
@@ -370,7 +361,6 @@ const SettingsPage: React.FC = () => {
                             setEditingCheck({
                               id: c.id,
                               title: c.title,
-                              is_critical: c.is_critical,
                               all_drivers: c.all_drivers,
                               driver_ids: c.drivers.map((d) => d.id),
                             })
@@ -683,7 +673,6 @@ const DailyCheckDrawer: React.FC<{
   onSave: (c: DailyCheckForm) => Promise<void>;
 }> = ({ value, employees, names, onClose, onSave }) => {
   const [title, setTitle] = useState("");
-  const [critical, setCritical] = useState(false);
   const [allDrivers, setAllDrivers] = useState(true);
   const [driverIds, setDriverIds] = useState<number[]>([]);
   const [showErrors, setShowErrors] = useState(false);
@@ -692,7 +681,6 @@ const DailyCheckDrawer: React.FC<{
   useEffect(() => {
     if (value) {
       setTitle(value.title);
-      setCritical(value.is_critical);
       setAllDrivers(value.all_drivers);
       setDriverIds(value.driver_ids);
       setShowErrors(false);
@@ -718,7 +706,7 @@ const DailyCheckDrawer: React.FC<{
     }
     setSaving(true);
     try {
-      await onSave({ id: value.id, title: title.trim(), is_critical: critical, all_drivers: allDrivers, driver_ids: allDrivers ? [] : driverIds });
+      await onSave({ id: value.id, title: title.trim(), all_drivers: allDrivers, driver_ids: allDrivers ? [] : driverIds });
     } finally {
       setSaving(false);
     }
@@ -778,17 +766,6 @@ const DailyCheckDrawer: React.FC<{
           />
         )}
       </FormField>
-      <FormControlLabel
-        control={<Switch checked={critical} onChange={(e) => setCritical(e.target.checked)} />}
-        label={
-          <Box>
-            <Typography variant="body2">Critical</Typography>
-            <Typography variant="caption" color="textSecondary">
-              A defect on this check is critical, for example brakes, tyres or lights.
-            </Typography>
-          </Box>
-        }
-      />
       {value.id && <Alert severity="info">Checks already sent keep the old name.</Alert>}
     </FormDrawer>
   );
