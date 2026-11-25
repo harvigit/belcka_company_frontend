@@ -16,7 +16,7 @@ import {
   Typography,
 } from "@mui/material";
 import Alert from "@/app/components/apps/surveys/shared/SurveyAlert";
-import { IconCheck, IconSearch, IconX } from "@tabler/icons-react";
+import { IconCheck, IconListSearch, IconPencil, IconSearch, IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
@@ -25,6 +25,14 @@ import FormField from "@/app/components/apps/inventory-new/shared/FormField";
 import { NhfSheet, UOM_OPTIONS, apiMessage, money, uomLabel } from "../nhf-rates/types";
 import { NhfHit, TemplateDetail, TplElement, TplNode, TplSkipped, pathOf } from "./types";
 import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
+import { Highlight, matchGroup, queryWords } from "@/app/components/apps/surveys/shared/Highlight";
+
+// Two-option switch: the chosen option is filled in the primary colour, the other stays plain.
+const toggleSx = {
+  "& .MuiToggleButton-root": { gap: 0.75, textTransform: "none", fontWeight: 500, color: "text.secondary", borderColor: "divider", py: 0.9 },
+  "& .MuiToggleButton-root.Mui-selected": { bgcolor: "primary.main", color: "#fff", fontWeight: 600, borderColor: "primary.main" },
+  "& .MuiToggleButton-root.Mui-selected:hover": { bgcolor: "primary.dark" },
+} as const;
 
 // ---------- one name: new template, rename template, add / rename a room or group ----------
 export const NameDrawer: React.FC<{
@@ -189,7 +197,7 @@ export const ElementDrawer: React.FC<{
   const skipped = template.skipped.filter((s) => skAll || s.room_name === room?.name);
   const applySkipped = async (s: TplSkipped) => {
     setSkId(s.id);
-    setF((x) => ({ ...x, name: s.name, uom: s.uom ?? "it", default_qty: s.qty === null ? "" : String(s.qty), vo_main: s.vo_main, comment: s.comment ?? "" }));
+    setF((x) => ({ ...x, name: s.name, uom: s.uom ?? "it", default_qty: "", vo_main: s.vo_main, comment: s.comment ?? "" }));
     if (s.in_nhf && s.code) {
       setMode("nhf");
       try {
@@ -221,7 +229,6 @@ export const ElementDrawer: React.FC<{
     const er: Record<string, string> = {};
     if (!f.name.trim()) er.name = "Enter the works name";
     if (mode === "nhf" && !picked) er.pick = "Pick an NHF code, or switch to Custom";
-    if (f.default_qty !== "" && (Number.isNaN(Number(f.default_qty)) || Number(f.default_qty) < 0)) er.default_qty = "Enter a number";
     if (mode === "custom" && f.addTo) {
       if (!f.code.trim()) er.code = "Enter a code to add it to NHF rates";
       if (f.rate.trim() === "" || Number.isNaN(Number(f.rate))) er.rate = "Enter the base rate";
@@ -250,7 +257,8 @@ export const ElementDrawer: React.FC<{
         name: f.name.trim(),
         code,
         uom: mode === "nhf" ? picked?.uom ?? f.uom : f.uom,
-        default_qty: f.default_qty === "" ? undefined : Number(f.default_qty),
+        // no qty on the form: a new element starts at 0, an edit keeps the qty it has (e.g. from an Excel import)
+        default_qty: f.default_qty === "" ? 0 : Number(f.default_qty),
         vo_main: f.vo_main,
         comment: f.comment.trim() || undefined,
         description: mode === "custom" ? f.description.trim() || undefined : undefined,
@@ -266,6 +274,14 @@ export const ElementDrawer: React.FC<{
       else toast.error(m);
     }
     setBusy(false);
+  };
+
+  // switching to Custom: drop the NHF pick and the name it filled in, so the form starts clean
+  const changeMode = (v: Mode) => {
+    if (v === "custom" && picked && f.name === (picked.short_name || picked.code)) setF((x) => ({ ...x, name: "" }));
+    if (v === "custom") setPicked(null);
+    setErr({});
+    setMode(v);
   };
 
   const field = (k: keyof typeof emptyForm, label: string, opts: { ph?: string; hint?: string; multiline?: boolean } = {}) => (
@@ -302,7 +318,7 @@ export const ElementDrawer: React.FC<{
               {template.skipped.filter((s) => s.room_name === room?.name).length} in {room?.name}
             </Typography>
             <Button size="small" sx={{ ml: "auto" }} onClick={() => setSkAll((x) => !x)}>
-              {skAll ? "This room only" : `Show all (${template.skipped.length})`}
+              {skAll ? "This area only" : `Show all (${template.skipped.length})`}
             </Button>
           </Stack>
           <Typography variant="caption" color="textSecondary" sx={{ px: 1.5, display: "block", pb: 1 }}>
@@ -340,10 +356,15 @@ export const ElementDrawer: React.FC<{
         </FormField>
       )}
 
-      <ToggleButtonGroup exclusive size="small" value={mode} onChange={(_, v) => v && setMode(v)} fullWidth>
-        <ToggleButton value="nhf">Pick NHF code</ToggleButton>
-        <ToggleButton value="custom">Custom</ToggleButton>
-      </ToggleButtonGroup>
+      <Box>
+        <ToggleButtonGroup exclusive size="small" value={mode} onChange={(_, v) => v && changeMode(v)} fullWidth sx={toggleSx}>
+          <ToggleButton value="nhf"><IconListSearch size={17} />Pick NHF code</ToggleButton>
+          <ToggleButton value="custom"><IconPencil size={17} />Custom</ToggleButton>
+        </ToggleButtonGroup>
+        <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 0.75 }}>
+          {mode === "nhf" ? "Choose a code from NHF rates: the name, UOM and rate come from it." : "For a work that has no NHF code yet: type its name and, if you know it, the code and rate."}
+        </Typography>
+      </Box>
 
       {mode === "nhf" &&
         (picked ? (
@@ -374,25 +395,32 @@ export const ElementDrawer: React.FC<{
                 fullWidth
                 size="small"
                 autoFocus
-                placeholder="Code (e.g. 4600) or words (e.g. carpet, door closer)"
+                placeholder="Code, words or both, e.g. 4600, door closer, 4328 carpet"
                 value={q}
                 onChange={(e: any) => setQ(e.target.value)}
                 error={!!err.pick}
-                helperText={err.pick || (q.trim().length < 2 ? "Type at least 2 characters." : undefined)}
+                helperText={err.pick || (q.trim().length < 2 ? "Type at least 2 characters. Words can be in any order; a small typo is fine." : undefined)}
                 InputProps={{ endAdornment: <InputAdornment position="end">{searching ? <CircularProgress size={16} /> : <IconSearch size={16} />}</InputAdornment> }}
               />
             </FormField>
             {hits && (
               <Box sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-                {hits.map((h) => (
-                  <Stack key={h.code} direction="row" alignItems="center" gap={1.5} onClick={() => pick(h)} sx={{ px: 1.5, py: 1, cursor: "pointer", borderBottom: 1, borderColor: "divider", "&:last-child": { borderBottom: 0 }, "&:hover": { bgcolor: "#f8fafc" } }}>
-                    <Typography className="f-14" fontWeight={600} sx={{ minWidth: 70 }}>{h.code}</Typography>
+                {hits.map((h, i) => (
+                  <React.Fragment key={h.code}>
+                  {queryWords(q).length > 1 && (i === 0 || hits[i - 1].match !== h.match) && (
+                    <Typography variant="caption" fontWeight={700} color="textSecondary" display="block" sx={{ px: 1.5, py: 0.5, bgcolor: "#f4f6f8", borderBottom: 1, borderColor: "divider" }}>
+                      {matchGroup(h)}
+                    </Typography>
+                  )}
+                  <Stack direction="row" alignItems="center" gap={1.5} onClick={() => pick(h)} sx={{ px: 1.5, py: 1, cursor: "pointer", borderBottom: 1, borderColor: "divider", "&:last-child": { borderBottom: 0 }, "&:hover": { bgcolor: "#f8fafc" } }}>
+                    <Typography className="f-14" fontWeight={600} sx={{ minWidth: 70 }}><Highlight text={h.code} words={queryWords(q)} /></Typography>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography className="f-14" noWrap>{h.short_name || "-"}</Typography>
+                      <Typography className="f-14" noWrap><Highlight text={h.short_name || "-"} words={queryWords(q)} /></Typography>
                       <Typography variant="caption" color="textSecondary">{h.element_1 || "–"} · {uomLabel(h.uom)}{sheets.length > 1 ? ` · ${h.sheet_name}` : ""}</Typography>
                     </Box>
                     <Typography className="f-14" fontWeight={600}>{money(h.rate)}</Typography>
                   </Stack>
+                  </React.Fragment>
                 ))}
                 {!hits.length && (
                   <Alert severity="info" sx={{ borderRadius: 0 }}>No code matches “{q.trim()}”. Switch to <b>Custom</b> to add it by hand.</Alert>
@@ -402,48 +430,52 @@ export const ElementDrawer: React.FC<{
           </>
         ))}
 
-      {mode === "custom" && sheets.length > 0 && (
-        <FormField
-          label="Add this code to NHF sheet"
-          hint={f.addTo ? "The code is added with its rate, so every template and the QS can use it." : "The rate is kept on this element only. The QS sets the price later."}
-        >
-          <CustomTextField select fullWidth size="small" value={f.addTo} onChange={(e: any) => set("addTo", e.target.value)} SelectProps={{ displayEmpty: true }}>
-            <MenuItem value="">No, this template only</MenuItem>
-            {sheets.map((s) => (
-              <MenuItem key={s.id} value={String(s.id)}>{s.name}</MenuItem>
-            ))}
-          </CustomTextField>
-        </FormField>
-      )}
-
       {(mode === "custom" || picked) && (
         <>
-          {mode === "custom" && (
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6 }}>{field("code", f.addTo ? "Code *" : "Code", { ph: f.addTo ? "e.g. DCK120" : "Optional" })}</Grid>
-              <Grid size={{ xs: 6 }}>{field("rate", f.addTo ? "Base rate (£) *" : "Rate (£)", { ph: "0.00", hint: f.addTo ? "No uplift: it is added per project" : "Optional" })}</Grid>
-            </Grid>
-          )}
           {field("name", "Works name *", { ph: "e.g. renew letterplate", hint: "Short name the surveyor sees" })}
           {mode === "custom" && field("description", "Description", { ph: "Optional", multiline: true })}
+          {mode === "custom" && (
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6 }}>{field("code", f.addTo ? "Code *" : "Code", { ph: f.addTo ? "e.g. DCK120" : "Optional" })}</Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>{field("rate", f.addTo ? "Base rate (£) *" : "Rate (£)", { ph: "0.00", hint: f.addTo ? "No uplift: it is added per project" : "Optional" })}</Grid>
+            </Grid>
+          )}
+          {mode === "custom" && sheets.length > 0 && (
+            <FormField
+              label="Add this code to NHF sheet"
+              hint={f.addTo ? "The code is added with its rate, so every template and the QS can use it." : "The rate is kept on this element only. The QS sets the price later."}
+            >
+              <CustomTextField select fullWidth size="small" value={f.addTo} onChange={(e: any) => set("addTo", e.target.value)} SelectProps={{ displayEmpty: true }}>
+                <MenuItem value="">No, this template only</MenuItem>
+                {sheets.map((s) => (
+                  <MenuItem key={s.id} value={String(s.id)}>{s.name}</MenuItem>
+                ))}
+              </CustomTextField>
+            </FormField>
+          )}
           <Grid container spacing={2}>
-            <Grid size={{ xs: 6 }}>
-              <FormField label="UOM">
-                <CustomTextField select fullWidth size="small" value={mode === "nhf" ? picked?.uom ?? f.uom : f.uom} disabled={mode === "nhf"} onChange={(e: any) => set("uom", e.target.value)}>
-                  {[...new Set([...UOM_OPTIONS, f.uom, picked?.uom].filter(Boolean) as string[])].map((u) => (
-                    <MenuItem key={u} value={u}>{uomLabel(u)}</MenuItem>
-                  ))}
-                </CustomTextField>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormField label="UOM" hint={mode === "nhf" ? "From the NHF code" : undefined}>
+                {mode === "nhf" ? (
+                  <CustomTextField fullWidth size="small" value={uomLabel(picked?.uom ?? f.uom)} slotProps={{ input: { readOnly: true } }} sx={{ "& .MuiInputBase-root": { bgcolor: "#f4f6f8" } }} />
+                ) : (
+                  <CustomTextField select fullWidth size="small" value={f.uom} onChange={(e: any) => set("uom", e.target.value)}>
+                    {[...new Set([...UOM_OPTIONS, f.uom].filter(Boolean) as string[])].map((u) => (
+                      <MenuItem key={u} value={u}>{uomLabel(u)}</MenuItem>
+                    ))}
+                  </CustomTextField>
+                )}
               </FormField>
             </Grid>
-            <Grid size={{ xs: 6 }}>{field("default_qty", "Default qty", { ph: "Optional" })}</Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormField label="Main or variation">
+                <ToggleButtonGroup exclusive size="small" fullWidth value={f.vo_main} onChange={(_, v) => v && set("vo_main", v)} sx={toggleSx}>
+                  <ToggleButton value="Main">Main</ToggleButton>
+                  <ToggleButton value="VO">VO (variation)</ToggleButton>
+                </ToggleButtonGroup>
+              </FormField>
+            </Grid>
           </Grid>
-          <FormField label="Main or variation">
-            <ToggleButtonGroup exclusive size="small" value={f.vo_main} onChange={(_, v) => v && set("vo_main", v)}>
-              <ToggleButton value="Main">Main</ToggleButton>
-              <ToggleButton value="VO">VO (variation)</ToggleButton>
-            </ToggleButtonGroup>
-          </FormField>
           {field("comment", "Comment", { ph: "e.g. 3 keys for each", multiline: true })}
         </>
       )}

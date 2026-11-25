@@ -68,7 +68,7 @@ const Where: React.FC<{ room: string; path: string[]; element: string }> = ({ ro
       {room}
     </Typography>
     <Typography variant="caption" color="textSecondary">
-      {[...(path.length ? path : ["In the room"]), element].join(" › ")}
+      {[...(path.length ? path : ["In the area"]), element].join(" › ")}
     </Typography>
   </Box>
 );
@@ -76,7 +76,7 @@ const Where: React.FC<{ room: string; path: string[]; element: string }> = ({ ro
 // ---------- Overview ----------
 export const OverviewTab: React.FC<{ s: SurveyDetail; ins: InspectionData | null; onTab: (t: string) => void }> = ({ s, ins, onTab }) => {
   const workCols: Column<InsWork & { id: number }>[] = [
-    { header: "Room / element", render: (w) => <Where room={w.room} path={w.path} element={w.element} /> },
+    { header: "Area / element", render: (w) => <Where room={w.room} path={w.path} element={w.element} /> },
     {
       header: "Work",
       render: (w) => (
@@ -117,7 +117,7 @@ export const OverviewTab: React.FC<{ s: SurveyDetail; ins: InspectionData | null
     { header: "Photos", render: (w) => (w.photos.length ? <PhotoThumbs photos={urls(w.photos)} size={40} /> : <Muted>–</Muted>) },
   ];
   const naCols: Column<InspectionData["not_accessible"][number] & { id: number }>[] = [
-    { header: "Room / element", render: (n) => <Where room={n.room} path={n.path} element={n.element} /> },
+    { header: "Area / element", render: (n) => <Where room={n.room} path={n.path} element={n.element} /> },
     { header: "Reason", render: (n) => <Typography className="f-14">{n.reason || "–"}</Typography> },
     { header: "Note", render: (n) => <Typography className="f-14" color="textSecondary">{n.note || "–"}</Typography> },
     { header: "Photos", render: (n) => (n.photos.length ? <PhotoThumbs photos={urls(n.photos)} size={40} /> : <Muted>–</Muted>) },
@@ -155,7 +155,7 @@ export const OverviewTab: React.FC<{ s: SurveyDetail; ins: InspectionData | null
               <Field label="Template">
                 {s.template_name ?? "–"}
                 <Typography variant="caption" color="textSecondary" display="block">
-                  {s.counts.rooms} rooms · {s.counts.elements} elements
+                  {s.counts.rooms} areas · {s.counts.elements} elements
                 </Typography>
               </Field>
               <Field label="Property detail">
@@ -209,7 +209,7 @@ export const OverviewTab: React.FC<{ s: SurveyDetail; ins: InspectionData | null
                   ))}
                 </Grid>
                 <Typography className="f-14" fontWeight={700} mt={2.5} mb={1}>
-                  Rooms
+                  Areas
                 </Typography>
                 <Stack spacing={1.25}>
                   {ins.rooms.map((r) => {
@@ -231,7 +231,7 @@ export const OverviewTab: React.FC<{ s: SurveyDetail; ins: InspectionData | null
                       </Stack>
                     );
                   })}
-                  {!ins.rooms.length && <Muted>No rooms.</Muted>}
+                  {!ins.rooms.length && <Muted>No areas.</Muted>}
                 </Stack>
               </>
             )}
@@ -530,7 +530,7 @@ export const InspectionTab: React.FC<{ s: SurveyDetail; ins: InspectionData | nu
   if (!ins.tree.length)
     return (
       <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, borderStyle: "dashed", textAlign: "center" }}>
-        <Typography color="textSecondary">No rooms on this survey.</Typography>
+        <Typography color="textSecondary">No areas on this survey.</Typography>
       </Paper>
     );
   // keep the tree, drop elements that do not match the filter

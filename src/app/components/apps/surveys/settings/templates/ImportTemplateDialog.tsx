@@ -59,7 +59,7 @@ type Act = { act: "add" | "norate" | "skip"; rate: string };
 
 const countEls = (n: SowNode): number => n.elements.length + n.children.reduce((a, c) => a + countEls(c), 0);
 const SINGLE: { key: keyof Mapping; label: string; required?: boolean }[] = [
-  { key: "room", label: "Location (room)", required: true },
+  { key: "room", label: "Location (area)", required: true },
   { key: "works", label: "Works name", required: true },
   { key: "code", label: "Code" },
   { key: "uom", label: "UOM" },
@@ -191,7 +191,7 @@ const ImportTemplateDialog: React.FC<Props> = ({ open, templateNames, onClose, o
         {step === 0 && (
           <Stack spacing={2}>
             <Alert severity="info">
-              Use your Scope of Works sheet. Only the <b>rooms, groups and elements</b> are imported (works name, code, qty, UOM, VO/Main, comments).
+              Use your Scope of Works sheet. Only the <b>areas, groups and elements</b> are imported (works name, code, qty, UOM, VO/Main, comments).
               Descriptions and rates come from <b>NHF rates</b> through the code.
             </Alert>
             <Box component="label" sx={{ border: "1.5px dashed", borderColor: "divider", borderRadius: 2, p: 4, textAlign: "center", cursor: "pointer", "&:hover": { borderColor: "primary.main", bgcolor: "primary.light" } }}>
@@ -282,7 +282,7 @@ const ImportTemplateDialog: React.FC<Props> = ({ open, templateNames, onClose, o
               <Alert severity="error">Choose the <b>Location</b> and <b>Works name</b> columns to continue.</Alert>
             ) : (
               <Alert severity="success">
-                Found {p.stats.rooms} rooms, {p.stats.groups} groups and {p.stats.elements.toLocaleString("en-GB")} elements with this mapping.
+                Found {p.stats.rooms} areas, {p.stats.groups} groups and {p.stats.elements.toLocaleString("en-GB")} elements with this mapping.
               </Alert>
             )}
           </Stack>
@@ -315,7 +315,7 @@ const ImportTemplateDialog: React.FC<Props> = ({ open, templateNames, onClose, o
               )}
             </Grid>
             <Grid container spacing={1.5}>
-              <Grid size={{ xs: 6, sm: 3 }}>{tile("Rooms", p.stats.rooms, "from Location")}</Grid>
+              <Grid size={{ xs: 6, sm: 3 }}>{tile("Areas", p.stats.rooms, "from Location")}</Grid>
               <Grid size={{ xs: 6, sm: 3 }}>{tile("Groups", p.stats.groups, "incl. sub-groups")}</Grid>
               <Grid size={{ xs: 6, sm: 3 }}>{tile("Elements", p.stats.elements, "works")}</Grid>
               <Grid size={{ xs: 6, sm: 3 }}>{tile("Duplicates", p.stats.duplicates, "same name + code, skipped")}</Grid>

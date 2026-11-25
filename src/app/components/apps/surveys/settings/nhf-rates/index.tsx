@@ -46,6 +46,7 @@ import FilterButton from "@/app/components/apps/inventory-new/shared/FilterButto
 import ConfirmDialog from "@/app/components/apps/inventory-new/shared/ConfirmDialog";
 import ImportDialog from "./ImportDialog";
 import { CodeDrawer, SheetDrawer, VersionsDialog } from "./Dialogs";
+import MultiCodeDialog from "./MultiCodeDialog";
 import { NhfCode, NhfSheet, apiMessage, money, shortDate, uomLabel } from "./types";
 import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
 
@@ -84,6 +85,7 @@ const NhfRates: React.FC = () => {
   // dialogs / drawers
   const [importFor, setImportFor] = useState<NhfSheet | null | undefined>(undefined);
   const [codeDrawer, setCodeDrawer] = useState<{ code: NhfCode | null } | null>(null);
+  const [multiOpen, setMultiOpen] = useState(false);
   const [sheetDrawer, setSheetDrawer] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [toDelete, setToDelete] = useState<{ kind: "sheet" } | { kind: "code"; code: NhfCode } | null>(null);
@@ -283,7 +285,7 @@ const NhfRates: React.FC = () => {
                 {sheet.current_version?.note ? ` · ${sheet.current_version.note}` : ""}
               </Typography>
               <Typography className="f-14" color="textSecondary">
-                Used by <b>{sheet.used_by_template_lines}</b> template lines
+                Used by <b>{sheet.used_by_template_lines}</b> template {sheet.used_by_template_lines === 1 ? "line" : "lines"}
               </Typography>
             </Stack>
           </>
@@ -305,7 +307,7 @@ const NhfRates: React.FC = () => {
             <li><b>The code is the link.</b> Templates keep only the code; the description, UOM and rate are read from here, so a change here shows in every template at once.</li>
             <li><b>Base rate only.</b> The sheet’s UPLIFT and PRICE columns are not imported. Uplift is set on each project (Project › Settings).</li>
             <li><b>Versions, nothing is lost.</b> Uploading the same sheet again makes a new version (v1 → v2). Old versions stay under ⋮ › Versions and can be restored.</li>
-            <li><b>Two sheets, same code?</b> The sheet with the later effective date is used. Codes without a rate in the file (e.g. DCK105) are skipped; add them with ⋮ › Add element.</li>
+            <li><b>Two sheets, same code?</b> The sheet with the later effective date is used. Codes without a rate in the file (e.g. DCK105) are skipped; add them with <b>Add element</b>.</li>
           </Box>
         </Alert>
       </Collapse>
@@ -351,12 +353,14 @@ const NhfRates: React.FC = () => {
               )}
             </Grid>
             <Stack direction="row" alignItems="center" justifyContent="end">
+              <Button variant="contained" startIcon={<IconPlus width={18} />} onClick={() => setMultiOpen(true)} sx={{ mr: 1, whiteSpace: "nowrap" }}>
+                Add element
+              </Button>
               <ColumnVisibilityButton table={table} />
               <IconButton onClick={(e) => setMenuAnchor(e.currentTarget)}>
                 <IconDotsVertical width={18} />
               </IconButton>
               <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={() => setMenuAnchor(null)}>
-                {menuItem(<IconPlus width={18} />, "Add element", () => setCodeDrawer({ code: null }))}
                 {menuItem(<IconFileImport width={18} />, "Import again", () => setImportFor(sheet))}
                 {menuItem(<IconClock width={18} />, `Versions${sheet && sheet.versions_count > 1 ? ` (${sheet.versions_count})` : ""}`, () => setVersionsOpen(true))}
                 {menuItem(<IconEdit width={18} />, "Edit name and date", () => setSheetDrawer(true))}
@@ -381,6 +385,20 @@ const NhfRates: React.FC = () => {
           setSearchTerm("");
           setFilters({ element_1: "" });
           await refresh(id);
+        }}
+      />
+      <MultiCodeDialog
+        open={multiOpen}
+        sheet={sheet}
+        onClose={() => setMultiOpen(false)}
+        onSaved={async (m) => {
+          toast.success(m);
+          setMultiOpen(false);
+          await refresh();
+        }}
+        onMoreOptions={() => {
+          setMultiOpen(false);
+          setCodeDrawer({ code: null });
         }}
       />
       <CodeDrawer
@@ -427,7 +445,7 @@ const NhfRates: React.FC = () => {
       >
         {toDelete?.kind === "sheet" && !!sheet?.used_by_template_lines && (
           <Alert severity="warning" sx={{ mt: 2 }}>
-            {sheet.used_by_template_lines} template lines read their rate from this sheet. They will show <b>no rate</b> unless another sheet has the same codes.
+            {sheet.used_by_template_lines} template {sheet.used_by_template_lines === 1 ? "line reads its" : "lines read their"} rate from this sheet. They will show <b>no rate</b> unless another sheet has the same codes.
           </Alert>
         )}
       </ConfirmDialog>

@@ -539,9 +539,9 @@ const SurveyForm: React.FC<{
                     errors.template_id ??
                     (template
                       ? isEdit
-                        ? "Changing the template replaces the rooms and elements of this survey."
+                        ? "Changing the template replaces the areas and elements of this survey."
                         : undefined
-                      : "The rooms and elements the surveyor inspects")
+                      : "The areas and elements the surveyor inspects")
                   }
                 />
               )}
@@ -552,7 +552,7 @@ const SurveyForm: React.FC<{
                   template.rooms.map((r, i) => <Chip key={`${r}${i}`} size="small" variant="outlined" icon={<IconDoor size={14} />} label={r} />)
                 ) : (
                   <Typography variant="caption" color={WARN_TEXT}>
-                    This template has no rooms yet.
+                    This template has no areas yet.
                   </Typography>
                 )}
               </Stack>

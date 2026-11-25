@@ -67,6 +67,8 @@ export type NhfHit = {
   rate: number | null;
   sheet_id: number;
   sheet_name: string;
+  /** best = every searched word found, close = some words */
+  match?: "best" | "close";
 };
 
 export const countEls = (n: TplNode): number => n.elements.length + n.children.reduce((a, c) => a + countEls(c), 0);

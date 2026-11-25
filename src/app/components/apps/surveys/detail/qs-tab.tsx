@@ -44,14 +44,14 @@ const QsPricingTab: React.FC<{ surveyId: number }> = ({ surveyId }) => {
   const t = d.totals;
   const cols: Column<QsLine & { id: number }>[] = [
     {
-      header: "Room / element",
+      header: "Area / element",
       render: (l) => (
         <Box>
           <Typography className="f-14" fontWeight={600}>
             {l.room}
           </Typography>
           <Typography variant="caption" color="textSecondary">
-            {[...(l.path.length ? l.path : ["In the room"]), l.element].join(" › ")}
+            {[...(l.path.length ? l.path : ["In the area"]), l.element].join(" › ")}
           </Typography>
         </Box>
       ),

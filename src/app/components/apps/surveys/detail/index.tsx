@@ -163,7 +163,7 @@ const SurveyPage: React.FC<{ surveyId: number }> = ({ surveyId }) => {
               <StatTile
                 label="Elements inspected"
                 value={ins ? `${ins.progress.inspected} / ${ins.progress.total}` : "–"}
-                sub={ins ? `${ins.rooms.length} ${ins.rooms.length === 1 ? "room" : "rooms"}` : undefined}
+                sub={ins ? `${ins.rooms.length} ${ins.rooms.length === 1 ? "area" : "areas"}` : undefined}
               />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>

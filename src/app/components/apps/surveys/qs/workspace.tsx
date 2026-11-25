@@ -49,6 +49,7 @@ import { dateTime } from "../list/types";
 import { LINE_META, QsDetail, QsLine, RATE_SOURCE, gbp } from "./types";
 import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
 import { WARN_TEXT } from "@/app/components/apps/surveys/shared/colors";
+import { Highlight, matchGroup, queryWords } from "@/app/components/apps/surveys/shared/Highlight";
 
 type Filter = "all" | "pending" | "approved" | "excluded" | "no_rate" | "changed";
 const qtyText = (q: number | null, u: string | null) => (q === null ? "–" : `${q.toLocaleString("en-GB")} ${uomLabel(u)}`);
@@ -190,14 +191,15 @@ const LineDrawer: React.FC<{ line: QsLine | null; uplift: number; onClose: () =>
             getOptionLabel={(o) => `${o.code} · ${o.short_name ?? ""}`}
             isOptionEqualToValue={(a, b) => a.code === b.code && a.sheet_id === b.sheet_id}
             getOptionKey={(o) => `${o.sheet_id}-${o.code}`}
-            noOptionsText={codeText.trim().length < 2 ? "Type a code or words" : "No NHF code found"}
+            groupBy={queryWords(codeText).length > 1 ? matchGroup : undefined}
+            noOptionsText={codeText.trim().length < 2 ? "Type a code, words, or both (e.g. 4328 carpet)" : "No NHF code found. Try fewer or other words."}
             renderOption={(props, o) => {
               const { key: _k, ...rest } = props as any;
               return (
                 <Box component="li" key={`${o.sheet_id}-${o.code}`} {...rest}>
                   <Box>
                     <Typography className="f-14" fontWeight={600}>
-                      {o.code} · {o.short_name}
+                      <Highlight text={o.code} words={queryWords(codeText)} /> · <Highlight text={o.short_name} words={queryWords(codeText)} />
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
                       {gbp(o.rate)} / {uomLabel(o.uom)} · {o.sheet_name}
@@ -640,7 +642,7 @@ const QsWorkspace: React.FC<{ surveyId: number }> = ({ surveyId }) => {
                           <TableCell sx={{ minWidth: 150 }}>
                             <Typography className="f-14">{l.element}</Typography>
                             <Typography variant="caption" color="textSecondary">
-                              {l.path.length ? l.path.join(" › ") : "In the room"}
+                              {l.path.length ? l.path.join(" › ") : "In the area"}
                             </Typography>
                           </TableCell>
                           <TableCell sx={{ minWidth: 200 }}>

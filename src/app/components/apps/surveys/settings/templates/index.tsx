@@ -73,7 +73,7 @@ const Templates: React.FC = () => {
         </Box>
       ),
     }),
-    columnHelper.accessor("rooms", { header: "Rooms", cell: ({ getValue }) => num(getValue()) }),
+    columnHelper.accessor("rooms", { header: "Areas", cell: ({ getValue }) => num(getValue()) }),
     columnHelper.accessor("groups", { header: "Groups", cell: ({ getValue }) => num(getValue()) }),
     columnHelper.accessor("elements", { header: "Elements", cell: ({ getValue }) => num(getValue()) }),
     columnHelper.display({
@@ -179,7 +179,7 @@ const Templates: React.FC = () => {
         title={nameDlg?.row ? "Rename template" : "Add template"}
         label="Template name"
         placeholder="e.g. Camden Voids SOW"
-        hint={nameDlg?.row ? undefined : "Then add the rooms, groups and elements, or import them from Excel."}
+        hint={nameDlg?.row ? undefined : "Then add the areas, groups and elements, or import them from Excel."}
         initial={nameDlg?.row?.name ?? ""}
         submitLabel={nameDlg?.row ? "Save" : "Add template"}
         onClose={() => setNameDlg(null)}
@@ -202,7 +202,7 @@ const Templates: React.FC = () => {
         busy={deleting}
         onClose={() => setToDelete(null)}
         onConfirm={doDelete}
-        message={toDelete ? <>Delete the template <b>{toDelete.name}</b> with {plural(toDelete.rooms, "room")} and {plural(toDelete.elements, "element")}?</> : ""}
+        message={toDelete ? <>Delete the template <b>{toDelete.name}</b> with {plural(toDelete.rooms, "area")} and {plural(toDelete.elements, "element")}?</> : ""}
       />
     </Box>
   );
