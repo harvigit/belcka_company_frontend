@@ -23,7 +23,8 @@ import {
 import { IconListSearch, IconPencil, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import Alert from "@/app/components/apps/surveys/shared/SurveyAlert";
-import { NhfSheet, UOM_OPTIONS, apiMessage, money, uomLabel } from "../nhf-rates/types";
+import { NhfSheet, apiMessage, money, uomLabel } from "../nhf-rates/types";
+import { defaultUnit, unitFromText, useUnits } from "@/app/components/apps/surveys/shared/units";
 import { NhfHit, TemplateDetail, TplNode, pathOf } from "./types";
 import { Highlight, matchGroup, queryWords } from "@/app/components/apps/surveys/shared/Highlight";
 
@@ -46,18 +47,12 @@ type Row = {
 };
 
 let seq = 0;
-const newRow = (type: RowType = "nhf"): Row => ({ key: `r${++seq}`, type, name: "", code: "", uom: "it", vo: "Main", rate: "", hit: null, state: "none" });
+const newRow = (type: RowType = "nhf"): Row => ({ key: `r${++seq}`, type, name: "", code: "", uom: defaultUnit(), vo: "Main", rate: "", hit: null, state: "none" });
 const isBlank = (r: Row) => !r.name.trim() && !r.code.trim() && !r.rate.trim();
 const keyOf = (s: string) => s.trim().toLowerCase();
 /** One word with a digit in it, e.g. 432805 or DCK120: looks like a code rather than a name. */
 const looksLikeCode = (s: string) => /^[a-z]*\d[\w-]*$/i.test(s.trim());
 
-// "m2" / "m²" / "item" / "nr" … → the app's UOM codes
-const UOM_ALIAS: Record<string, string> = { m2: "sm", "m²": "sm", sqm: "sm", m: "lm", lm: "lm", item: "it", items: "it", nr: "no", no: "no", hrs: "hr", hour: "hr", week: "wk", pair: "pr" };
-const toUom = (v: string) => {
-  const k = v.trim().toLowerCase();
-  return UOM_OPTIONS.includes(k) ? k : UOM_ALIAS[k] ?? "it";
-};
 const isNum = (s: string) => s.trim() !== "" && !Number.isNaN(Number(s.replace(/[£,\s]/g, "")));
 const toNum = (s: string) => Number(s.replace(/[£,\s]/g, ""));
 
@@ -99,6 +94,7 @@ const MultiAddDialog: React.FC<{
   const nameRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const focusKey = useRef<string | null>(null);
   const places = useMemo(() => allPlaces(template.rooms), [template]);
+  const { codes } = useUnits();
 
   useEffect(() => {
     if (!open) return;
@@ -180,7 +176,7 @@ const MultiAddDialog: React.FC<{
       const old = cells.length >= 5 && isNum(cells[3]) && /^(main|vo)$/i.test(cells[4]);
       const vo = (old ? cells[4] : cells[3]) ?? "";
       const rate = old ? "" : (cells[4] ?? "").replace(/[£,\s]/g, "");
-      return { ...newRow(code ? "nhf" : "custom"), name, code, uom: uom ? toUom(uom) : "it", vo: /^vo$/i.test(vo) ? "VO" : "Main", rate } as Row;
+      return { ...newRow(code ? "nhf" : "custom"), name, code, uom: uom ? unitFromText(uom) || uom.trim().toLowerCase() : defaultUnit(), vo: /^vo$/i.test(vo) ? "VO" : "Main", rate } as Row;
     });
     setRows((rs) => {
       const at = rs.findIndex((r) => r.key === key);
@@ -210,6 +206,7 @@ const MultiAddDialog: React.FC<{
       const k = `${keyOf(r.name)}|${keyOf(code)}`;
       if (!r.name.trim()) errs[r.key] = "Enter the works name";
       else if (r.type === "nhf" && !r.hit) errs[r.key] = "Pick a code from the list, or switch this row to Custom";
+      else if (!(r.type === "nhf" && r.hit) && !codes.includes(r.uom)) errs[r.key] = `Unit “${r.uom}” is not in Survey settings › Units. Add it there, or pick another unit.`;
       else if (r.type === "custom" && r.rate.trim() && !isNum(r.rate)) errs[r.key] = "The rate must be a number";
       else if (addToNhf && r.type === "custom" && r.code.trim() && !r.rate.trim()) errs[r.key] = "Enter the rate to add this code to NHF";
       else if (here.has(k)) errs[r.key] = `“${r.name.trim()}” is already in ${target.name}`;
@@ -363,7 +360,7 @@ const MultiAddDialog: React.FC<{
                     </Tooltip>
                   ) : (
                     <TextField select size="small" value={r.uom} onChange={(e) => update(r.key, { uom: e.target.value })} sx={{ width: 90, flexShrink: 0 }}>
-                      {UOM_OPTIONS.map((u) => <MenuItem key={u} value={u}>{uomLabel(u)}</MenuItem>)}
+                      {[...new Set([...codes, r.uom])].map((u) => <MenuItem key={u} value={u}>{codes.includes(u) ? uomLabel(u) : `${u} · not in the list`}</MenuItem>)}
                     </TextField>
                   )}
                   <TextField select size="small" value={r.vo} onChange={(e) => update(r.key, { vo: e.target.value as Row["vo"] })} sx={{ width: 96, flexShrink: 0 }}>

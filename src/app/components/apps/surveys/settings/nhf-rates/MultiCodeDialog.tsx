@@ -4,18 +4,14 @@ import React, { useEffect, useRef, useState } from "react";
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Link, MenuItem, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import { NhfCode, NhfSheet, UOM_OPTIONS, apiMessage, uomLabel } from "./types";
+import { NhfCode, NhfSheet, apiMessage, uomLabel } from "./types";
+import { defaultUnit, unitFromText, useUnits } from "@/app/components/apps/surveys/shared/units";
 
 type Row = { key: string; code: string; short_name: string; uom: string; rate: string; element_1: string; err?: string; note?: string; checking?: boolean };
 
 let seq = 0;
-const newRow = (): Row => ({ key: `c${++seq}`, code: "", short_name: "", uom: "it", rate: "", element_1: "" });
+const newRow = (): Row => ({ key: `c${++seq}`, code: "", short_name: "", uom: defaultUnit(), rate: "", element_1: "" });
 const isBlank = (r: Row) => !r.code.trim() && !r.short_name.trim() && !r.rate.trim() && !r.element_1.trim();
-const UOM_ALIAS: Record<string, string> = { m2: "sm", "m²": "sm", sqm: "sm", m: "lm", item: "it", items: "it", nr: "no", hrs: "hr", hour: "hr", week: "wk", pair: "pr" };
-const toUom = (v: string) => {
-  const k = v.trim().toLowerCase();
-  return UOM_OPTIONS.includes(k) ? k : UOM_ALIAS[k] ?? "it";
-};
 const keyOf = (code: string) => code.trim().toLowerCase();
 
 /** NHF rates › Add element: several codes at once. Each code must be new in this sheet (checked as you type). */
@@ -31,6 +27,7 @@ const MultiCodeDialog: React.FC<{
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState("");
   const [inSheet, setInSheet] = useState<Record<string, boolean>>({});
+  const { codes } = useUnits();
   const refs = useRef<Record<string, HTMLInputElement | null>>({});
   const focusKey = useRef<string | null>(null);
 
@@ -102,7 +99,7 @@ const MultiCodeDialog: React.FC<{
       .filter((l) => l.trim())
       .map((l) => {
         const [code = "", short_name = "", uom = "", rate = "", element_1 = ""] = l.split("\t").map((c) => c.trim());
-        return { ...newRow(), code, short_name, uom: uom ? toUom(uom) : "it", rate: rate.replace(/[£,\s]/g, ""), element_1 };
+        return { ...newRow(), code, short_name, uom: uom ? unitFromText(uom) || uom.trim().toLowerCase() : defaultUnit(), rate: rate.replace(/[£,\s]/g, ""), element_1 };
       });
     setRows((rs) => {
       const at = rs.findIndex((r) => r.key === key);
@@ -133,7 +130,9 @@ const MultiCodeDialog: React.FC<{
             ? "Enter a short name"
             : r.rate.trim() === "" || Number.isNaN(Number(r.rate))
               ? "Enter the base rate as a number"
-              : liveErr(r);
+              : !codes.includes(r.uom)
+                ? `Unit “${r.uom}” is not in Survey settings › Units. Add it there, or pick another unit.`
+                : liveErr(r);
         if (err) bad = true;
         return { ...r, err };
       }),
@@ -204,7 +203,7 @@ const MultiCodeDialog: React.FC<{
                     />
                     <TextField size="small" sx={{ flex: 1 }} placeholder="e.g. towel rail: renew heated" value={r.short_name} onChange={(e) => update(r.key, { short_name: e.target.value })} onPaste={onPaste(r.key)} onKeyDown={enterNext(i)} />
                     <TextField select size="small" value={r.uom} onChange={(e) => update(r.key, { uom: e.target.value })} sx={{ width: 90, flexShrink: 0 }}>
-                      {UOM_OPTIONS.map((u) => <MenuItem key={u} value={u}>{uomLabel(u)}</MenuItem>)}
+                      {[...new Set([...codes, r.uom])].map((u) => <MenuItem key={u} value={u}>{codes.includes(u) ? uomLabel(u) : `${u} · not in the list`}</MenuItem>)}
                     </TextField>
                     <TextField size="small" placeholder="0.00" value={r.rate} onChange={(e) => update(r.key, { rate: e.target.value })} onKeyDown={enterNext(i)} sx={{ width: 120, flexShrink: 0 }} slotProps={{ htmlInput: { inputMode: "decimal" } }} />
                     <TextField size="small" placeholder="Optional" value={r.element_1} onChange={(e) => update(r.key, { element_1: e.target.value })} onKeyDown={enterNext(i)} sx={{ width: 180, flexShrink: 0 }} />

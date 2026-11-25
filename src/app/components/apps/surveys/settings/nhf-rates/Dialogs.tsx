@@ -25,7 +25,8 @@ import api from "@/utils/axios";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import FormDrawer from "@/app/components/apps/inventory-new/shared/FormDrawer";
 import FormField from "@/app/components/apps/inventory-new/shared/FormField";
-import { NhfCode, NhfSheet, NhfVersion, UOM_OPTIONS, apiMessage, shortDate, uomLabel } from "./types";
+import { NhfCode, NhfSheet, NhfVersion, apiMessage, shortDate, uomLabel } from "./types";
+import { defaultUnit, useUnits } from "@/app/components/apps/surveys/shared/units";
 import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
 
 // ---------- Add / edit an element (code) of the selected sheet: right-hand drawer like the other forms ----------
@@ -36,9 +37,10 @@ export const CodeDrawer: React.FC<{
   onClose: () => void;
   onSaved: () => void;
 }> = ({ open, sheet, code, onClose, onSaved }) => {
-  const empty = { code: "", short_name: "", long_description: "", element_1: "", element_2: "", element_3: "", uom: "it", rate: "" };
+  const empty = { code: "", short_name: "", long_description: "", element_1: "", element_2: "", element_3: "", uom: defaultUnit(), rate: "" };
   const [f, setF] = useState<Record<string, string>>(empty);
   const [err, setErr] = useState<Record<string, string>>({});
+  const { codes } = useUnits();
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export const CodeDrawer: React.FC<{
             element_1: code.element_1 ?? "",
             element_2: code.element_2 ?? "",
             element_3: code.element_3 ?? "",
-            uom: code.uom ?? "it",
+            uom: code.uom ?? defaultUnit(),
             rate: code.rate === null ? "" : String(code.rate),
           }
         : empty,
@@ -121,8 +123,8 @@ export const CodeDrawer: React.FC<{
         <Grid size={{ xs: 6 }}>
           <FormField label="UOM">
             <CustomTextField select fullWidth size="small" value={f.uom} onChange={(e: any) => set("uom", e.target.value)}>
-              {UOM_OPTIONS.map((u) => (
-                <MenuItem key={u} value={u}>{uomLabel(u)}</MenuItem>
+              {[...new Set([...codes, f.uom].filter(Boolean))].map((u) => (
+                <MenuItem key={u} value={u}>{codes.includes(u) ? uomLabel(u) : `${u} · not in the list`}</MenuItem>
               ))}
             </CustomTextField>
           </FormField>

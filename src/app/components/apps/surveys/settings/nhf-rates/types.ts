@@ -1,3 +1,4 @@
+import { unitLabel } from "@/app/components/apps/surveys/shared/units";
 // Survey › Settings › NHF rates: shared types and helpers.
 
 export type NhfSheet = {
@@ -36,21 +37,8 @@ export type NhfVersion = {
   current: boolean;
 };
 
-// Units as written in the NHF sheet → how they are shown.
-export const UOM_LABELS: Record<string, string> = {
-  it: "item",
-  no: "no",
-  nr: "no",
-  sm: "m²",
-  lm: "m",
-  cm: "m³",
-  hr: "hour",
-  pr: "pair",
-  wk: "week",
-  kg: "kg",
-};
-export const uomLabel = (u?: string | null) => (u ? UOM_LABELS[u] ?? u : "–");
-export const UOM_OPTIONS = ["it", "no", "sm", "lm", "cm", "hr", "pr", "wk", "kg"];
+// Unit code → label, from Survey settings › Units (see shared/units.ts).
+export const uomLabel = (u?: string | null) => unitLabel(u);
 
 export const money = (n?: number | null) =>
   n === null || n === undefined || Number.isNaN(n)

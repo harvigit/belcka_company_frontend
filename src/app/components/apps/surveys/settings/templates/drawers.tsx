@@ -22,7 +22,8 @@ import api from "@/utils/axios";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import FormDrawer from "@/app/components/apps/inventory-new/shared/FormDrawer";
 import FormField from "@/app/components/apps/inventory-new/shared/FormField";
-import { NhfSheet, UOM_OPTIONS, apiMessage, money, uomLabel } from "../nhf-rates/types";
+import { NhfSheet, apiMessage, money, uomLabel } from "../nhf-rates/types";
+import { defaultUnit, useUnits } from "@/app/components/apps/surveys/shared/units";
 import { NhfHit, TemplateDetail, TplElement, TplNode, TplSkipped, pathOf } from "./types";
 import Chip from "@/app/components/apps/surveys/shared/SurveyChip";
 import { Highlight, matchGroup, queryWords } from "@/app/components/apps/surveys/shared/Highlight";
@@ -86,7 +87,7 @@ export const NameDrawer: React.FC<{
 
 // ---------- add / edit an element ----------
 type Mode = "nhf" | "custom";
-const emptyForm = { name: "", uom: "it", default_qty: "", vo_main: "Main" as "Main" | "VO", comment: "", description: "", code: "", rate: "", addTo: "" };
+const emptyForm = { name: "", uom: "", default_qty: "", vo_main: "Main" as "Main" | "VO", comment: "", description: "", code: "", rate: "", addTo: "" };
 
 export const ElementDrawer: React.FC<{
   open: boolean;
@@ -100,6 +101,7 @@ export const ElementDrawer: React.FC<{
   onSkippedChanged: () => void;
 }> = ({ open, template, nodeId, element, sheets, onClose, onSaved, onSkippedChanged }) => {
   const [mode, setMode] = useState<Mode>("nhf");
+  const units = useUnits();
   const [place, setPlace] = useState<number | null>(null);
   const [sheetFilter, setSheetFilter] = useState<string>("");
   const [q, setQ] = useState("");
@@ -141,7 +143,7 @@ export const ElementDrawer: React.FC<{
       setPicked(found ? { code: element.code as string, short_name: found.short_name, element_1: null, uom: found.uom, rate: found.rate, sheet_id: found.sheet_id, sheet_name: found.sheet_name } : null);
       setF({
         name: element.name,
-        uom: element.uom ?? "it",
+        uom: element.uom ?? defaultUnit(),
         default_qty: element.default_qty === null ? "" : String(element.default_qty),
         vo_main: element.vo_main,
         comment: element.comment ?? "",
@@ -154,7 +156,7 @@ export const ElementDrawer: React.FC<{
       setPlace(nodeId);
       setMode("nhf");
       setPicked(null);
-      setF({ ...emptyForm, addTo: newestSheet ? String(newestSheet.id) : "" });
+      setF({ ...emptyForm, uom: defaultUnit(), addTo: newestSheet ? String(newestSheet.id) : "" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, element, nodeId]);
@@ -197,7 +199,7 @@ export const ElementDrawer: React.FC<{
   const skipped = template.skipped.filter((s) => skAll || s.room_name === room?.name);
   const applySkipped = async (s: TplSkipped) => {
     setSkId(s.id);
-    setF((x) => ({ ...x, name: s.name, uom: s.uom ?? "it", default_qty: "", vo_main: s.vo_main, comment: s.comment ?? "" }));
+    setF((x) => ({ ...x, name: s.name, uom: s.uom ?? defaultUnit(), default_qty: "", vo_main: s.vo_main, comment: s.comment ?? "" }));
     if (s.in_nhf && s.code) {
       setMode("nhf");
       try {
@@ -460,8 +462,8 @@ export const ElementDrawer: React.FC<{
                   <CustomTextField fullWidth size="small" value={uomLabel(picked?.uom ?? f.uom)} slotProps={{ input: { readOnly: true } }} sx={{ "& .MuiInputBase-root": { bgcolor: "#f4f6f8" } }} />
                 ) : (
                   <CustomTextField select fullWidth size="small" value={f.uom} onChange={(e: any) => set("uom", e.target.value)}>
-                    {[...new Set([...UOM_OPTIONS, f.uom].filter(Boolean) as string[])].map((u) => (
-                      <MenuItem key={u} value={u}>{uomLabel(u)}</MenuItem>
+                    {[...new Set([...units.codes, f.uom].filter(Boolean) as string[])].map((u) => (
+                      <MenuItem key={u} value={u}>{units.codes.includes(u) ? uomLabel(u) : `${u} · not in the list`}</MenuItem>
                     ))}
                   </CustomTextField>
                 )}
@@ -494,8 +496,9 @@ export const AddToNhfDrawer: React.FC<{
 }> = ({ open, template, element, sheets, onClose, onSaved }) => {
   const newest = sheets.length ? [...sheets].sort((a, b) => (b.effective_date ?? "").localeCompare(a.effective_date ?? ""))[0] : null;
   const [sheet, setSheet] = useState("");
+  const units = useUnits();
   const [name, setName] = useState("");
-  const [uom, setUom] = useState("it");
+  const [uom, setUom] = useState(defaultUnit());
   const [rate, setRate] = useState("");
   const [err, setErr] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -503,7 +506,7 @@ export const AddToNhfDrawer: React.FC<{
     if (open && element) {
       setSheet(newest ? String(newest.id) : "");
       setName(element.description || element.name);
-      setUom(element.uom ?? "it");
+      setUom(element.uom ?? defaultUnit());
       setRate(element.custom_rate === null ? "" : String(element.custom_rate));
       setErr({});
     }
@@ -552,8 +555,8 @@ export const AddToNhfDrawer: React.FC<{
             <Grid size={{ xs: 6 }}>
               <FormField label="UOM">
                 <CustomTextField select fullWidth size="small" value={uom} onChange={(e: any) => setUom(e.target.value)}>
-                  {[...new Set([...UOM_OPTIONS, uom])].map((u) => (
-                    <MenuItem key={u} value={u}>{uomLabel(u)}</MenuItem>
+                  {[...new Set([...units.codes, uom])].map((u) => (
+                    <MenuItem key={u} value={u}>{units.codes.includes(u) ? uomLabel(u) : `${u} · not in the list`}</MenuItem>
                   ))}
                 </CustomTextField>
               </FormField>

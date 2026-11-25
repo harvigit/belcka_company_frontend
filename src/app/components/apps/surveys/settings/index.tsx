@@ -2,14 +2,16 @@
 
 import React, { useState } from "react";
 import { Box, Drawer, IconButton, Typography } from "@mui/material";
-import { IconCurrencyPound, IconSettings, IconTemplate, IconX } from "@tabler/icons-react";
+import { IconCurrencyPound, IconRuler, IconSettings, IconTemplate, IconX } from "@tabler/icons-react";
 import NhfRates from "./nhf-rates";
 import Templates from "./templates";
+import Units from "./units";
 
 // Survey settings (bottom drawer, like Time Clock settings): section menu on the left, section on the right.
 const SECTIONS = [
   { key: "templates", icon: <IconTemplate size={18} />, label: "Templates" },
   { key: "nhf", icon: <IconCurrencyPound size={18} />, label: "NHF rates" },
+  { key: "units", icon: <IconRuler size={18} />, label: "Units (UOM)" },
 ];
 
 interface Props {
@@ -73,7 +75,8 @@ const SurveySettings: React.FC<Props> = ({ open, onClose }) => {
           ))}
         </Box>
         <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", pt: 2, bgcolor: "#fff", display: "flex", flexDirection: "column" }}>{active === "templates" && <Templates />}
-          {active === "nhf" && <NhfRates />}</Box>
+          {active === "nhf" && <NhfRates />}
+          {active === "units" && <Units />}</Box>
       </Box>
     </Drawer>
   );
