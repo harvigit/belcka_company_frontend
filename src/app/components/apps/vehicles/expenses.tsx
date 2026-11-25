@@ -398,7 +398,7 @@ const Expenses: React.FC = () => {
                   ? [["Claim", `${open.claim_miles} business miles × ${open.claim_rate}p per mile`]]
                   : [["Supplier", open.supplier || "-"]]),
                 ["Note", open.note || "-"],
-                ["Receipt", open.file_name ?? (open.kind === "mileage_claim" ? "Not needed" : "Missing")],
+                ["Receipt", open.file_name ?? (open.photos?.length ? "Photo" : open.kind === "mileage_claim" ? "Not needed" : "Missing")],
               ].map(([label, value]) => (
                 <Stack key={label} direction="row" justifyContent="space-between" spacing={2}>
                   <Typography variant="body2" color="textSecondary">
@@ -410,7 +410,7 @@ const Expenses: React.FC = () => {
                 </Stack>
               ))}
             </Stack>
-            {!open.file_name && open.kind !== "mileage_claim" && open.status === "pending" && (
+            {!open.file_name && !open.photos?.length && open.kind !== "mileage_claim" && open.status === "pending" && (
               <Alert severity="warning" sx={{ mt: 2 }}>
                 No receipt photo. Ask the driver for one before approving.
               </Alert>
