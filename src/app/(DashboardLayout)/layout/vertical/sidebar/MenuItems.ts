@@ -385,14 +385,14 @@ const MenuItems: NavGroup[] = [
   //   icon: IconServer,
   //   href: "/apps/inventory-new/stock/list",
   // },
-  // {
-  //   id: uniqueId(),
-  //   title: "Vehicles",
-  //   slug: "vehicles",
-  //   icon: IconCar,
-  //   href: "/apps/vehicles/list",
-  //   matchRoutes: ["/apps/vehicles"],
-  // },
+  {
+    id: uniqueId(),
+    title: "Vehicles",
+    slug: "vehicles",
+    icon: IconCar,
+    href: "/apps/vehicles/list",
+    matchRoutes: ["/apps/vehicles"],
+  },
     
   // Settings stays last: SidebarItems pins the "settings" slug to the bottom of the sidebar.
   {
