@@ -10,6 +10,7 @@ import FormField from "../../inventory-new/shared/FormField";
 import { countsAsCost, EventKind, EVENT_KINDS, formatDate, INVOICE_KINDS, money, Vehicle, VehicleEvent } from "../types";
 import { NewEvent } from "../useVehicles";
 import { RecordTable, Section, StatTile } from "./common";
+import { FileLink } from "../shared";
 
 const MAX_MB = 5;
 
@@ -165,9 +166,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({ vehicle, events, readOnly, on
                     <IconFileText size={16} />
                     <Typography variant="body2" noWrap sx={{ maxWidth: 160 }}>
                       {e.file_url ? (
-                        <a href={e.file_url} target="_blank" rel="noopener noreferrer">
-                          {e.file_name}
-                        </a>
+                        <FileLink url={e.file_url} name={e.file_name} />
                       ) : (
                         e.file_name
                       )}

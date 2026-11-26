@@ -10,6 +10,7 @@ import ConfirmDialog from "../../inventory-new/shared/ConfirmDialog";
 import { DOCUMENT_KINDS, dueState, DUE_CHIP, formatDate, Vehicle, VehicleDocument } from "../types";
 import { NewDocument } from "../useVehicles";
 import { RecordTable, Section } from "./common";
+import { FileLink } from "../shared";
 
 const MAX_MB = 5;
 
@@ -100,9 +101,7 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ vehicle, documents, readOnl
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
                       {d.file_url ? (
-                        <a href={d.file_url} target="_blank" rel="noopener noreferrer">
-                          {d.file_name}
-                        </a>
+                        <FileLink url={d.file_url} name={d.file_name} />
                       ) : (
                         d.file_name
                       )}

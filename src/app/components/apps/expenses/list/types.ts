@@ -46,6 +46,21 @@ export type ExpenseApiRow = {
     sent_by?: number | null;
     sent_by_name?: string | null;
     sent_at?: string | null;
+    // "vehicle": a vehicle expense from the driver app (its id is made negative in the list)
+    source?: 'expense' | 'vehicle';
+    vehicle?: VehicleExpenseInfo;
+};
+
+export type VehicleExpenseInfo = {
+    event_id: number;
+    vehicle_id: number;
+    registration: string;
+    kind: string;
+    kind_label: string;
+    supplier?: string | null;
+    reject_reason?: string | null;
+    photos: string[];
+    file?: { name: string; url: string } | null;
 };
 
 export type ExpenseListItem = {
@@ -77,6 +92,7 @@ export type ExpenseListItem = {
     sentByName?: string | null;
     sentAt?: string | null;
     timesheetDate?: string | null;
+    vehicle?: VehicleExpenseInfo;
 };
 
 export type ExpenseActivityLog = {

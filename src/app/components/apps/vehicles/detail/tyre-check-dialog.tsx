@@ -173,15 +173,16 @@ const TyreCheckDialog: React.FC<{
     odo === null ? (tried ? "Enter the odometer reading." : "") : odo < lastReading ? `Can't be lower than ${formatMiles(lastReading)}.` : "";
   const atLimit = (w: TyreWheel) => treadOk(wheels[w].tread) && Number(wheels[w].tread) <= limit;
   const stateOf = (w: TyreWheel): TyreState => (atLimit(w) ? "replace" : wheels[w].state);
-  const missing = TYRE_WHEELS.filter(([w]) => !treadOk(wheels[w].tread));
+  // Only the tyres that need checking are filled in; at least one is required.
+  const checked = TYRE_WHEELS.filter(([w]) => treadOk(wheels[w].tread));
   const toReplace = TYRE_WHEELS.filter(([w]) => treadOk(wheels[w].tread) && stateOf(w) === "replace").map(([, l]) => l);
 
   const setWheel = (w: TyreWheel, patch: Partial<WheelForm>) => setWheels((prev) => ({ ...prev, [w]: { ...prev[w], ...patch } }));
 
   const save = async () => {
     setTried(true);
-    if (missing.length) {
-      toast.error("Enter the tread for all four tyres.");
+    if (!checked.length) {
+      toast.error("Enter the tread for at least one tyre.");
       return;
     }
     if (odo === null || odoError) {
@@ -199,11 +200,11 @@ const TyreCheckDialog: React.FC<{
         supplier: "",
         invoice_no: "",
         note: note.trim(),
-        tread: Object.fromEntries(TYRE_WHEELS.map(([w]) => [w, Number(wheels[w].tread)])),
-        wheels: Object.fromEntries(TYRE_WHEELS.map(([w]) => [w, { state: stateOf(w) }])),
+        tread: Object.fromEntries(checked.map(([w]) => [w, Number(wheels[w].tread)])),
+        wheels: Object.fromEntries(checked.map(([w]) => [w, { state: stateOf(w) }])),
         // uploaded after the check is saved, labelled with the wheel
         photo_files: [
-          ...TYRE_WHEELS.flatMap(([w]) => (wheels[w].photo ? [{ file: wheels[w].photo as File, label: w }] : [])),
+          ...checked.flatMap(([w]) => (wheels[w].photo ? [{ file: wheels[w].photo as File, label: w }] : [])),
           ...(extraPhoto ? [{ file: extraPhoto, label: "extra" }] : []),
         ],
       });
@@ -223,12 +224,12 @@ const TyreCheckDialog: React.FC<{
       <DialogTitle>Tyre check · {vehicle.registration}</DialogTitle>
       <DialogContent>
         <Typography color="textSecondary" mb={2}>
-          Enter the tread for each tyre. A photo is optional: take one where something looks wrong.
+          Enter the tread for the tyres you checked; leave the others empty. A photo is optional: take one where something looks wrong.
         </Typography>
 
         <WheelLayout
           render={(w, label) => {
-            const error = tried && !treadOk(wheels[w].tread);
+            const error = tried && !checked.length;
             return (
               <Stack spacing={1.25}>
                 <CustomTextField

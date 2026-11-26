@@ -25,6 +25,7 @@ import {
   ACTIVITY_AREA,
   dueItems,
   DriverLog,
+  eventImages,
   EventKind,
   EVENT_KINDS,
   FLEET_RULES,
@@ -83,9 +84,9 @@ const noteCol = (header = "Note"): Column<VehicleEvent> => ({
   render: (e) => (
     <Box sx={{ maxWidth: 280 }}>
       <Typography variant="body2">{e.note || "-"}</Typography>
-      {!!e.photos?.length && (
+      {!!eventImages(e).length && (
         <Box mt={0.75}>
-          <PhotoThumbs photos={e.photos} size={40} />
+          <PhotoThumbs photos={eventImages(e)} size={40} />
         </Box>
       )}
     </Box>
@@ -613,7 +614,11 @@ export const MileageTab: React.FC<TabProps> = (props) => {
     .filter((e) => e.mileage)
     .sort((a, b) => a.date.localeCompare(b.date) || (a.mileage ?? 0) - (b.mileage ?? 0));
   const withDiff = readings
-    .map((e, i) => ({ ...e, diff: i > 0 ? (e.mileage ?? 0) - (readings[i - 1].mileage ?? 0) : null }))
+    .map((e, i) => ({
+      ...e,
+      previous: i > 0 ? (readings[i - 1].mileage ?? null) : null,
+      diff: i > 0 ? (e.mileage ?? 0) - (readings[i - 1].mileage ?? 0) : null,
+    }))
     .reverse();
   const since = (days: number) => {
     const from = dayjs().subtract(days, "day").format("YYYY-MM-DD");
@@ -646,6 +651,7 @@ export const MileageTab: React.FC<TabProps> = (props) => {
           empty="No readings yet."
           columns={[
             dateCol,
+            { header: "Previous", render: (e) => formatMiles(e.previous) },
             { header: "Odometer", render: (e) => formatMiles(e.mileage) },
             { header: "Since previous", render: (e) => (e.diff === null ? "-" : `+${formatMiles(e.diff)}`) },
             { header: "Came with", render: (e) => EVENT_KINDS[e.kind].label },
@@ -657,13 +663,37 @@ export const MileageTab: React.FC<TabProps> = (props) => {
   );
 };
 
+// For mileage records: the counted reading just before each one (pending and rejected ones don't count).
+const previousReadings = (events: VehicleEvent[]) => {
+  const counted = events
+    .filter((e) => e.mileage && (!e.status || e.status === "approved"))
+    .sort((a, b) => a.date.localeCompare(b.date) || (a.mileage ?? 0) - (b.mileage ?? 0) || a.id - b.id);
+  const map = new Map<number, number | null>();
+
+  counted.forEach((e, i) => {
+    if (e.kind === "mileage") map.set(e.id, i > 0 ? (counted[i - 1].mileage ?? null) : null);
+  });
+  return map;
+};
+
 export const ActivityTab: React.FC<{
   events: VehicleEvent[];
   driverLogs: DriverLog[];
   changes: Activity[];
   onOpenLog: () => void;
 }> = ({ events, driverLogs, changes, onOpenLog }) => {
-  type Row = { id: string; date: string; what: React.ReactNode; detail: string; photos?: string[]; mileage: number | null; by: string };
+  type Row = {
+    id: string;
+    date: string;
+    what: React.ReactNode;
+    detail: string;
+    photos?: string[];
+    mileage: number | null;
+    // mileage records: the reading before this one
+    previous?: number | null;
+    by: string;
+  };
+  const previous = previousReadings(events);
   const rows: Row[] = [
     ...events.map((e) => ({
       id: `e${e.id}`,
@@ -679,9 +709,9 @@ export const ActivityTab: React.FC<{
       detail: [e.supplier, e.note, e.cost ? money(e.cost) : "", e.litres ? `${e.litres} L` : ""]
         .filter(Boolean)
         .join(" · "),
-      // accident and photo check photos
-      photos: e.photos,
+      photos: eventImages(e),
       mileage: e.mileage,
+      previous: previous.get(e.id) ?? null,
       by: e.created_by,
     })),
     ...driverLogs.flatMap((l) => [
@@ -716,7 +746,17 @@ export const ActivityTab: React.FC<{
               </Box>
             ),
           },
-          { header: "Mileage", render: (r) => formatMiles(r.mileage) },
+          {
+            header: "Mileage",
+            render: (r) =>
+              r.previous !== undefined && r.previous !== null ? (
+                <Typography variant="body2" noWrap>
+                  {formatMiles(r.previous)} → {formatMiles(r.mileage)}
+                </Typography>
+              ) : (
+                formatMiles(r.mileage)
+              ),
+          },
           { header: "By", render: (r) => <Typography variant="body2" color="textSecondary">{r.by}</Typography> },
         ]}
       />

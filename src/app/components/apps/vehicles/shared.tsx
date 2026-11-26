@@ -1,6 +1,7 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { Autocomplete, Avatar, Box, Chip, Stack, Typography } from "@mui/material";
+import PhotoViewer, { fileNameOf, SafeImage } from "./photo-viewer";
 import { IconCamera } from "@tabler/icons-react";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { DueItem, DUE_CHIP, formatDate } from "./types";
@@ -120,45 +121,100 @@ export const NoCompany: React.FC = () => (
   </Box>
 );
 
-// Non-link values (no photo file) show as plain tiles
-export const PhotoThumbs: React.FC<{ photos: string[]; size?: number }> = ({ photos, size = 72 }) =>
-  photos.length ? (
-    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-      {photos.map((p, i) => {
-        const tile = {
-          width: size,
-          height: size,
-          borderRadius: 1.5,
-          border: "1px solid",
-          borderColor: "grey.300",
-          backgroundColor: "grey.100",
-        } as const;
-        return /^https?:\/\//.test(p) ? (
-          <Box key={`${p}${i}`} component="a" href={p} target="_blank" rel="noopener noreferrer" title={`Photo ${i + 1}`} sx={{ ...tile, overflow: "hidden", display: "block" }}>
-            <Box component="img" src={p} alt={`Photo ${i + 1}`} sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          </Box>
-        ) : (
-          <Box
-            key={`${p}${i}`}
-            title={p}
-            sx={{
-              ...tile,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "text.secondary",
-              gap: 0.25,
-            }}
-          >
-            <IconCamera size={20} />
-            <Typography variant="caption">Photo {i + 1}</Typography>
-          </Box>
-        );
-      })}
-    </Stack>
-  ) : (
-    <Typography variant="caption" color="warning.dark">
-      No photo sent
-    </Typography>
+const isLink = (p: string) => /^https?:\/\//.test(p);
+
+export const isImageFile = (name?: string | null) => !!name && /\.(jpe?g|png|gif|webp|heic|bmp)(\?|$)/i.test(name);
+
+// Photos open in a popup with previous / next and download. Non-link values (no photo file) show as plain tiles.
+export const PhotoThumbs: React.FC<{ photos: string[]; size?: number }> = ({ photos, size = 72 }) => {
+  const [openAt, setOpenAt] = useState<number | null>(null);
+  const links = photos.filter(isLink);
+
+  if (!photos.length) {
+    return (
+      <Typography variant="caption" color="warning.dark">
+        No photo sent
+      </Typography>
+    );
+  }
+
+  const tile = {
+    width: size,
+    height: size,
+    borderRadius: 1.5,
+    border: "1px solid",
+    borderColor: "grey.300",
+    backgroundColor: "grey.100",
+  } as const;
+
+  return (
+    <>
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        {photos.map((p, i) =>
+          isLink(p) ? (
+            <Box
+              key={`${p}${i}`}
+              component="button"
+              type="button"
+              title={`Photo ${i + 1}`}
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                setOpenAt(links.indexOf(p));
+              }}
+              sx={{ ...tile, p: 0, overflow: "hidden", display: "block", cursor: "zoom-in" }}
+            >
+              <SafeImage src={p} alt={`Photo ${i + 1}`} iconSize={Math.max(16, Math.round(size * 0.45))} />
+            </Box>
+          ) : (
+            <Box
+              key={`${p}${i}`}
+              title={p}
+              sx={{
+                ...tile,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "text.secondary",
+                gap: 0.25,
+              }}
+            >
+              <IconCamera size={20} />
+              <Typography variant="caption">Photo {i + 1}</Typography>
+            </Box>
+          ),
+        )}
+      </Stack>
+      <PhotoViewer photos={links.map((src) => ({ src, name: fileNameOf(src) }))} index={openAt} onClose={() => setOpenAt(null)} />
+    </>
   );
+};
+
+// An attached file: an image opens in the photo popup, anything else (PDF...) in a new tab.
+export const FileLink: React.FC<{ url: string; name: string }> = ({ url, name }) => {
+  const [open, setOpen] = useState(false);
+
+  if (!isImageFile(name) && !isImageFile(url)) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer">
+        {name}
+      </a>
+    );
+  }
+
+  return (
+    <>
+      <a
+        href={url}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(true);
+        }}
+      >
+        {name}
+      </a>
+      <PhotoViewer photos={[{ src: url, name: name || fileNameOf(url) }]} index={open ? 0 : null} onClose={() => setOpen(false)} />
+    </>
+  );
+};

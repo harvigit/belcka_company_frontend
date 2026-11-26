@@ -81,6 +81,7 @@ import {
     normalizeExpenseStatus,
 } from './types';
 import ExpenseDetailsDrawer from './components/ExpenseDetailsDrawer';
+import VehicleExpenseDialog from './components/VehicleExpenseDialog';
 import ExpenseStatusBadge from './components/ExpenseStatusBadge';
 import BookkeeperStatusBadge from '@/app/components/common/BookkeeperStatusBadge';
 
@@ -185,8 +186,16 @@ const mapApiRowToListItem = (row: ExpenseRow): ExpenseListItem => {
         sentByName: row.sent_by_name ?? null,
         sentAt: row.sent_at ?? null,
         timesheetDate: row.timesheet_date ?? null,
+        vehicle: row.vehicle,
     };
 };
+
+// Vehicle expense rows have negative ids so they never mix with company expense ids.
+const isVehicleId = (id: number) => id < 0;
+const splitExpenseIds = (ids: number[]) => ({
+    expenseIds: ids.filter((id) => !isVehicleId(id)),
+    vehicleIds: ids.filter(isVehicleId),
+});
 
 const ExpenseList = ({
     projectId,
@@ -307,7 +316,13 @@ const ExpenseList = ({
         new Set(),
     );
 
+    const [vehicleExpense, setVehicleExpense] = useState<ExpenseListItem | null>(null);
+
     const openExpenseDetail = (expenseId: number) => {
+        if (isVehicleId(expenseId)) {
+            setVehicleExpense(listItems.find((item) => item.id === expenseId) ?? null);
+            return;
+        }
         setSelectedExpenseId(expenseId);
         setDetailOpen(true);
     };
@@ -318,6 +333,10 @@ const ExpenseList = ({
     };
 
     const openExpenseDetailsDrawer = (expense: ExpenseListItem) => {
+        if (expense.vehicle) {
+            setVehicleExpense(expense);
+            return;
+        }
         setDetailsExpense(expense);
         setDetailsOpen(true);
     };
@@ -329,6 +348,7 @@ const ExpenseList = ({
 
     // Inline amount edit is blocked only for sent records, not by timesheet lock (can_edit).
     const canInlineEditAmount = (row: ExpenseRow) => {
+        if (row.vehicle) return false;
         const status = normalizeExpenseStatus(row.status);
         return status !== 'sent';
     };
@@ -823,7 +843,7 @@ const ExpenseList = ({
                                 <IconEye size={18}/>
                             </IconButton>
                         </Tooltip>
-                        {isAdmin && (
+                        {isAdmin && !expense.vehicle && (
                             <Tooltip title="Delete">
                                 <IconButton
                                     size="small"
@@ -876,7 +896,9 @@ const ExpenseList = ({
 
             const res = await api.get(url);
             if (res.data) {
-                const responseData = Array.isArray(res.data.info) ? res.data.info : [];
+                const responseData: ExpenseRow[] = (Array.isArray(res.data.info) ? res.data.info : []).map(
+                    (row: ExpenseRow) => (row.source === 'vehicle' ? {...row, id: -row.id} : row),
+                );
                 setData(responseData);
 
                 if (!projectId && res.data.filters) {
@@ -1339,9 +1361,22 @@ const ExpenseList = ({
             return;
         }
 
+        // vehicle expenses are approved on the vehicle records (pending ones only)
+        const {expenseIds, vehicleIds} = splitExpenseIds(ids);
+        const pendingVehicleIds = vehicleIds.filter(
+            (id) => listItems.find((item) => item.id === id)?.status === 'pending',
+        );
+
         try {
-            const res = await api.post('expense/approve', {ids});
-            toast.success(res.data?.message || 'Expense approved successfully');
+            const res = expenseIds.length ? await api.post('expense/approve', {ids: expenseIds}) : null;
+            if (pendingVehicleIds.length) {
+                await api.post('vehicles/events/decide', {
+                    event_ids: pendingVehicleIds.map((id) => -id).join(','),
+                    approve: true,
+                });
+            }
+            toast.success(res?.data?.message || 'Expense approved successfully');
+            setVehicleExpense(null);
             await refreshAfterAction();
         } catch (error: any) {
             toast.error(
@@ -1374,14 +1409,34 @@ const ExpenseList = ({
             return;
         }
 
+        const trimmedNote = note?.trim() || '';
+        const {expenseIds, vehicleIds} = splitExpenseIds(ids);
+        const pendingVehicleIds = vehicleIds.filter(
+            (id) => listItems.find((item) => item.id === id)?.status === 'pending',
+        );
+
+        if (pendingVehicleIds.length && !trimmedNote) {
+            toast.error('Please add a reason for rejecting vehicle expenses');
+            return;
+        }
+
         setIsRejecting(true);
         try {
-            const trimmedNote = note?.trim() || '';
-            const res = await api.post('expense/reject', {
-                ids,
-                note: trimmedNote || undefined,
-            });
-            toast.success(res.data?.message || 'Expense rejected successfully');
+            const res = expenseIds.length
+                ? await api.post('expense/reject', {
+                    ids: expenseIds,
+                    note: trimmedNote || undefined,
+                })
+                : null;
+            if (pendingVehicleIds.length) {
+                await api.post('vehicles/events/decide', {
+                    event_ids: pendingVehicleIds.map((id) => -id).join(','),
+                    approve: false,
+                    reason: trimmedNote,
+                });
+            }
+            toast.success(res?.data?.message || 'Expense rejected successfully');
+            setVehicleExpense(null);
             setRejectDialogOpen(false);
             setRejectExpenseIds([]);
             setRejectNote('');
@@ -1397,10 +1452,16 @@ const ExpenseList = ({
         handleRejectExpenses(rejectExpenseIds, rejectNote);
     };
 
-    const openDeleteDialog = (ids: number[] = getActionExpenseIds()) => {
+    const openDeleteDialog = (selectedIds: number[] = getActionExpenseIds()) => {
         if (!isAdmin) return;
+        // vehicle expenses are removed from the vehicle records
+        const ids = splitExpenseIds(selectedIds).expenseIds;
         if (ids.length === 0) {
-            toast.error('Please select at least one expense');
+            toast.error(
+                selectedIds.length
+                    ? 'Vehicle expenses can only be removed from the vehicle records'
+                    : 'Please select at least one expense',
+            );
             return;
         }
         setDeleteExpenseIds(ids);
@@ -1485,7 +1546,12 @@ const ExpenseList = ({
 
         setIsUnapproving(true);
         try {
-            const res = await api.post('expense/unapprove', {ids});
+            const {expenseIds, vehicleIds} = splitExpenseIds(ids);
+            // a vehicle expense goes back to pending on the vehicle records
+            await Promise.all(vehicleIds.map((id) => api.post('vehicles/events/reopen', {id: -id})));
+            const res = expenseIds.length
+                ? await api.post('expense/unapprove', {ids: expenseIds})
+                : {data: {IsSuccess: true, message: ''}};
             if (res.data?.IsSuccess === false) {
                 toast.error(res.data?.message || 'Failed to unapprove expenses');
                 return;
@@ -1508,7 +1574,8 @@ const ExpenseList = ({
     };
 
     const handleSendToBookkeeper = async () => {
-        const ids = getApprovedActionExpenseIds();
+        // vehicle expenses are not sent to the bookkeeper
+        const ids = splitExpenseIds(getApprovedActionExpenseIds()).expenseIds;
         if (ids.length === 0) {
             toast.error('Please select at least one approved expense');
             return;
@@ -1570,7 +1637,11 @@ const ExpenseList = ({
                 if (filters.team_id) payload.team_id = filters.team_id;
                 if (activeTab !== 'all') payload.status = activeTab;
             } else {
-                payload.ids = Array.from(selectedRowIds);
+                payload.ids = splitExpenseIds(Array.from(selectedRowIds)).expenseIds;
+                if (!payload.ids.length) {
+                    toast.error('Vehicle expense photos open from the expense details');
+                    return;
+                }
             }
 
             const response = await api.post(
@@ -2696,6 +2767,13 @@ const ExpenseList = ({
                 addresses={addresses}
                 categories={categories}
                 onSaved={refreshAfterAction}
+            />
+
+            <VehicleExpenseDialog
+                expense={vehicleExpense}
+                onClose={() => setVehicleExpense(null)}
+                onApprove={(id) => handleApproveExpenses([id])}
+                onReject={(id) => openRejectDialog([id])}
             />
 
             <ExpenseAttachmentsDrawer

@@ -865,6 +865,18 @@ export const nextDue = (v: Vehicle): DueItem | null => {
 export const formatDate = (date?: string | null) =>
   date ? dayjs(date).format("DD/MM/YYYY") : "-";
 
+// Every image on a record: tyre photos, the extra photo, other photos and an attached invoice photo.
+export const eventImages = (e: VehicleEvent): string[] => {
+  const isImage = (name?: string) => !!name && /\.(jpe?g|png|gif|webp|heic|bmp)(\?|$)/i.test(name);
+
+  return [
+    ...Object.values(e.wheels ?? {}).flatMap((w) => (w?.photo ? [w.photo] : [])),
+    ...(e.extra_photo ? [e.extra_photo] : []),
+    ...(e.photos ?? []),
+    ...(e.file_url && (isImage(e.file_name) || isImage(e.file_url)) ? [e.file_url] : []),
+  ];
+};
+
 export const formatMiles = (miles?: number | null) =>
   miles === null || miles === undefined
     ? "-"
