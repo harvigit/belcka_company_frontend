@@ -266,9 +266,6 @@ const SignContractDialog: React.FC<SignContractDialogProps> = ({contractId, mess
         <Dialog open={Boolean(contractId)} onClose={submitting ? undefined : onClose} fullWidth maxWidth="md">
             <DialogTitle>
                 {contract?.title || 'Sign your contract'}
-                {contract?.company_name && (
-                    <Typography variant="body2" color="text.secondary">{contract.company_name}</Typography>
-                )}
             </DialogTitle>
             <DialogContent
                 dividers

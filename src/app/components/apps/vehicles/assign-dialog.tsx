@@ -43,6 +43,9 @@ const AssignDriverDialog: React.FC<AssignDriverDialogProps> = ({
   const unchanged = driverId === vehicle.driver_id;
   const otherVehicle = driverId ? busyDriverIds.get(driverId) : undefined;
   const drivesOther = otherVehicle && otherVehicle !== vehicle.registration;
+  // A private car always belongs to an employee, so its owner can only be changed, not removed.
+  const isPrivate = vehicle.type === "private";
+  const canRemove = !!vehicle.driver_id && !isPrivate;
 
   const save = async () => {
     setSaving(true);
@@ -90,15 +93,20 @@ const AssignDriverDialog: React.FC<AssignDriverDialogProps> = ({
               The vehicle appears in the employee&apos;s Belcka app straight away.
             </Alert>
           )}
-          {vehicle.driver_id && (
+          {canRemove && (
             <Typography variant="caption" color="textSecondary">
               &quot;Remove driver&quot; takes the vehicle out of {vehicle.driver_name}&apos;s app.
+            </Typography>
+          )}
+          {isPrivate && vehicle.driver_id && (
+            <Typography variant="caption" color="textSecondary">
+              A private car always needs the employee who owns it. You can change the owner, but not remove it.
             </Typography>
           )}
         </Stack>
       </DialogContent>
       <DialogActions>
-        {vehicle.driver_id && (
+        {canRemove && (
           <Button
             color="error"
             disabled={saving}
