@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, createElement, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import api from "@/utils/axios";
 import {
   DailyChecklist,
@@ -155,7 +155,7 @@ export type NewPermit = Pick<ParkingPermit, "vehicle_id" | "zone" | "issuer" | "
 
 const info = <T,>(res: { data?: { info?: T } }, fallback: T): T => res.data?.info ?? fallback;
 
-export function useVehicles(companyId?: number | null, _userName = "You") {
+function useVehiclesStore(companyId?: number | null) {
   const [data, setData] = useState<FleetData>(emptyData);
   const [loading, setLoading] = useState(true);
   const activityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -823,4 +823,21 @@ export function useVehicles(companyId?: number | null, _userName = "You") {
     removeDocument,
     findByRegistration,
   };
+}
+
+export type VehicleStore = ReturnType<typeof useVehiclesStore>;
+
+const VehicleStoreContext = createContext<VehicleStore | null>(null);
+
+// Loads the fleet once for every Vehicles tab, so switching tabs keeps the data.
+export function VehicleStoreProvider({ companyId, children }: { companyId?: number | null; children: ReactNode }) {
+  const store = useVehiclesStore(companyId);
+  return createElement(VehicleStoreContext.Provider, { value: store }, children);
+}
+
+// Inside the Vehicles layout this is the shared store; elsewhere it loads its own.
+export function useVehicles(companyId?: number | null, _userName = "You") {
+  const shared = useContext(VehicleStoreContext);
+  const own = useVehiclesStore(shared ? undefined : companyId);
+  return shared ?? own;
 }

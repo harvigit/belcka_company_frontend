@@ -156,9 +156,9 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
   return (
     <Stack spacing={2.5} p={2.5}>
       <Box>
-        <Typography variant="h6">Contract status by company</Typography>
+        <Typography variant="h6">Contract status</Typography>
         <Typography variant="body2" color="textSecondary">
-          A contract for one company doesn’t cover another. A company can have several contracts to sign.
+          A user can have several contracts to sign.
           {pendingCount ? ` ${pendingCount} waiting.` : ""}
         </Typography>
       </Box>
@@ -181,17 +181,14 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                 }}
               >
                 <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
-                  <Typography fontWeight={700}>{c.company_name}</Typography>
+                  <Typography fontWeight={700}>
+                    {c.template_title ?? "No contract"}
+                    {c.current_version_no ? ` · v${c.current_version_no}` : ""}
+                  </Typography>
                   <Chip size="small" color={style.color} label={style.label} />
                 </Stack>
 
                 <Stack spacing={0.5}>
-                  {c.template_title && (
-                    <Typography variant="body2" color="textSecondary">
-                      {c.template_title}
-                      {c.current_version_no ? ` · v${c.current_version_no}` : ""}
-                    </Typography>
-                  )}
                   {c.status === "SIGNED" && c.signed && (
                     <>
                       <Typography variant="body2" color="textSecondary">
@@ -219,7 +216,7 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                       )}
                       {c.blocks_start_work && (
                         <Typography variant="body2" color="error.main" fontWeight={600}>
-                          Start work blocked for {c.company_name}
+                          Start work blocked
                         </Typography>
                       )}
                     </>
@@ -312,7 +309,6 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
               <TableRow>
                 <TableCell padding="checkbox" />
                 <TableCell>Signed</TableCell>
-                <TableCell>Company</TableCell>
                 <TableCell>Contract</TableCell>
                 <TableCell>Day rate</TableCell>
                 <TableCell>Status</TableCell>
@@ -336,7 +332,6 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                         </IconButton>
                       </TableCell>
                       <TableCell>{h.signed_at ?? "—"}</TableCell>
-                      <TableCell>{h.company_name}</TableCell>
                       <TableCell>
                         {h.template_title}
                         <Typography variant="caption" color="textSecondary" display="block">
@@ -369,7 +364,7 @@ const UserContracts = ({ userId, active, canEdit }: Props) => {
                               color="primary"
                               disabled={!h.has_pdf || busy === `pdf-${h.id}`}
                               onClick={() => download(h.id, h.template_title)}
-                              aria-label={`Download PDF, ${h.company_name} version ${h.version_no}`}
+                              aria-label={`Download PDF, ${h.template_title} version ${h.version_no}`}
                             >
                               <IconDownload size={18} />
                             </IconButton>

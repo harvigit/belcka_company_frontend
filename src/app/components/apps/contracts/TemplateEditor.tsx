@@ -41,7 +41,7 @@ const card = {
 
 const STARTER_WORDING =
     '<h2>SUBCONTRACTOR AGREEMENT</h2>' +
-    '<p>This agreement is made on {{signing_date}} between {{company_name}} (“the Contractor”), and {{user_name}} of {{user_address}}, ' +
+    '<p>This agreement is made on {{signing_date}} between {{group_name}} (“the Contractor”), and {{user_name}} of {{user_address}}, ' +
     'UTR {{user_utr}}.</p>' +
     '<p>[Add your contract clauses here]</p>';
 
