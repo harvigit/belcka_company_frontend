@@ -105,14 +105,14 @@ const MenuItems: NavGroup[] = [
     icon: IconChartPie,
     href: "/apps/project/list",
   },
-  {
-    id: uniqueId(),
-    title: "Survey",
-    slug: "surveys",
-    icon: IconClipboardCheck,
-    href: "/apps/surveys/list",
-    matchRoutes: ["/apps/surveys", "/surveys"],
-  },
+  // {
+  //   id: uniqueId(),
+  //   title: "Survey",
+  //   slug: "surveys",
+  //   icon: IconClipboardCheck,
+  //   href: "/apps/surveys/list",
+  //   matchRoutes: ["/apps/surveys", "/surveys"],
+  // },
   {
     id: uniqueId(),
     title: "Map",
