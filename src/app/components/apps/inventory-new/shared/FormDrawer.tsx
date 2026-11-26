@@ -34,6 +34,8 @@ const FormDrawer: React.FC<FormDrawerProps> = ({
     sx={{
       width,
       flexShrink: 0,
+      // Same level as dialogs, so a drawer opened from a dialog shows on top of it.
+      zIndex: (theme) => theme.zIndex.modal,
       "& .MuiDrawer-paper": {
         width: { xs: "100%", sm: width },
         backgroundColor: "#f9f9f9",
