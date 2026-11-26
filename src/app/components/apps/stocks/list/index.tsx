@@ -600,7 +600,7 @@ const StockList = () => {
     return data;
   }, [data]);
 
-  const MAX_QTY = 1000.99;
+  const MAX_QTY = 10000.99;
 
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);

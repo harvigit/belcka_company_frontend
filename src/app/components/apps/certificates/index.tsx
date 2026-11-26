@@ -715,7 +715,6 @@ const Certificates = () => {
                     </InputAdornment>
                   ),
                 }}
-                sx={{ width: { xs: "100%", sm: 180 } }}
               />
               <Button
                 variant="contained"
