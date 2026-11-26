@@ -40,7 +40,7 @@ import ConfirmDialog from "../inventory-new/shared/ConfirmDialog";
 import FilterButton from "../inventory-new/shared/FilterButton";
 import { selectColumn } from "../inventory-new/shared/selectColumn";
 import FleetNav from "./fleet-nav";
-import { RegPlate, NoCompany } from "./shared";
+import { FileLink, isImageFile, NoCompany, PhotoThumbs, RegPlate } from "./shared";
 import { StatTile } from "./detail/common";
 import { EVENT_KINDS, EXPENSE_STATUS, ExpenseStatus, formatDate, money, VehicleEvent } from "./types";
 import { useVehicles } from "./useVehicles";
@@ -398,17 +398,37 @@ const Expenses: React.FC = () => {
                   ? [["Claim", `${open.claim_miles} business miles × ${open.claim_rate}p per mile`]]
                   : [["Supplier", open.supplier || "-"]]),
                 ["Note", open.note || "-"],
-                ["Receipt", open.file_name ?? (open.photos?.length ? "Photo" : open.kind === "mileage_claim" ? "Not needed" : "Missing")],
               ].map(([label, value]) => (
                 <Stack key={label} direction="row" justifyContent="space-between" spacing={2}>
                   <Typography variant="body2" color="textSecondary">
                     {label}
                   </Typography>
-                  <Typography variant="body2" fontWeight={600} textAlign="right">
+                  <Typography variant="body2" fontWeight={600} textAlign="right" sx={{ minWidth: 0, overflowWrap: "anywhere" }}>
                     {value}
                   </Typography>
                 </Stack>
               ))}
+            </Stack>
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2} mt={0.75}>
+              <Typography variant="body2" color="textSecondary">
+                Receipt
+              </Typography>
+              {open.file_url && (isImageFile(open.file_name) || isImageFile(open.file_url)) ? (
+                <PhotoThumbs photos={[open.file_url]} size={96} />
+              ) : open.file_url ? (
+                <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+                  <IconFileText size={16} />
+                  <Typography variant="body2" fontWeight={600} noWrap title={open.file_name}>
+                    <FileLink url={open.file_url} name="Open receipt" />
+                  </Typography>
+                </Stack>
+              ) : open.photos?.length ? (
+                <PhotoThumbs photos={open.photos} size={96} />
+              ) : (
+                <Typography variant="body2" fontWeight={600}>
+                  {open.kind === "mileage_claim" ? "Not needed" : "Missing"}
+                </Typography>
+              )}
             </Stack>
             {!open.file_name && !open.photos?.length && open.kind !== "mileage_claim" && open.status === "pending" && (
               <Alert severity="warning" sx={{ mt: 2 }}>

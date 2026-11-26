@@ -39,7 +39,7 @@ import ConfirmDialog from "../inventory-new/shared/ConfirmDialog";
 import FilterButton from "../inventory-new/shared/FilterButton";
 import FleetNav from "./fleet-nav";
 import ImportDialog, { PreviewRow } from "./import-dialog";
-import { normaliseReg, parseAmount, parseDate, pick } from "./csv";
+import { csvDate, downloadCsv, normaliseReg, parseAmount, parseDate, pick } from "./csv";
 import { RecordTable, StatTile } from "./detail/common";
 import { RegPlate, NoCompany } from "./shared";
 import {
@@ -192,29 +192,18 @@ const RoadCostsPage: React.FC = () => {
   });
 
   const exportCsv = () => {
-    const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const lines = [
-      ["Date", "Registration", "Type", "Source", "Place / note", "Reference", "Amount"].map(cell).join(","),
-      ...rows.map((e) =>
-        [
-          formatDate(e.date),
-          byId.get(e.vehicle_id)?.registration ?? "",
-          EVENT_KINDS[e.kind].label,
-          e.supplier,
-          e.note,
-          e.invoice_no,
-          (e.cost ?? 0).toFixed(2),
-        ]
-          .map(cell)
-          .join(","),
-      ),
-    ];
-    const url = URL.createObjectURL(new Blob([lines.join("\r\n")], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `road-costs-${dayjs().format("YYYY-MM-DD")}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`road-costs-${dayjs().format("YYYY-MM-DD")}.csv`, [
+      ["Date", "Registration", "Type", "Source", "Place / note", "Reference", "Amount"],
+      ...rows.map((e) => [
+        csvDate(formatDate(e.date)),
+        byId.get(e.vehicle_id)?.registration ?? "",
+        EVENT_KINDS[e.kind].label,
+        e.supplier,
+        e.note,
+        e.invoice_no,
+        (e.cost ?? 0).toFixed(2),
+      ]),
+    ]);
     toast.success(`${rows.length} row${rows.length === 1 ? "" : "s"} exported.`);
   };
 

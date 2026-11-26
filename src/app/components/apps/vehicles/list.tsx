@@ -54,6 +54,7 @@ import ConfirmDialog from "../inventory-new/shared/ConfirmDialog";
 import { useRouter } from "next/navigation";
 import AssignDriverDialog from "./assign-dialog";
 import { DriverName, DueCell, RegPlate, NoCompany } from "./shared";
+import { csvDate, downloadCsv } from "./csv";
 import {
   countsAsCost,
   dueItems,
@@ -450,12 +451,11 @@ const VehicleList: React.FC = () => {
       toast.error("No vehicles to export.");
       return;
     }
-    const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const due = (v: Vehicle, label: string) => {
       const item = dueItems(v).find((i) => i.label === label);
-      return item ? formatDate(item.date) : "";
+      return item ? csvDate(formatDate(item.date)) : "";
     };
-    const lines = [
+    downloadCsv(`vehicles-${isArchiveView ? "archived-" : ""}${dayjs().format("YYYY-MM-DD")}.csv`, [
       [
         "Registration",
         "Make and model",
@@ -474,9 +474,7 @@ const VehicleList: React.FC = () => {
         `Costs (${range.name})`,
         "Parking permits",
         "GPS tracker",
-      ]
-        .map(cell)
-        .join(","),
+      ],
       ...list.map((v) => {
         const next = nextDue(v);
         return [
@@ -497,17 +495,9 @@ const VehicleList: React.FC = () => {
           (usage.get(v.id)?.costs ?? 0).toFixed(2),
           permitsOf(v).length,
           v.gps_tracker,
-        ]
-          .map(cell)
-          .join(",");
+        ];
       }),
-    ];
-    const url = URL.createObjectURL(new Blob([lines.join("\r\n")], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `vehicles-${isArchiveView ? "archived-" : ""}${dayjs().format("YYYY-MM-DD")}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    ]);
     toast.success(`${list.length} vehicle${list.length === 1 ? "" : "s"} exported.`);
   };
 

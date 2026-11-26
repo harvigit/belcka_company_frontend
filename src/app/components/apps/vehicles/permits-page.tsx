@@ -45,6 +45,7 @@ import { selectColumn } from "../inventory-new/shared/selectColumn";
 import FleetNav from "./fleet-nav";
 import { CARD_TONE, StatCard } from "./detail/common";
 import { NoCompany, RegPlate } from "./shared";
+import { csvDate, downloadCsv } from "./csv";
 import { PERMIT_ORDER, PermitDrawer, PermitRejectDialog } from "./permit-forms";
 import { formatDate, ParkingPermit, PERMIT_STATE, PermitState, permitState } from "./types";
 import { useVehicles } from "./useVehicles";
@@ -114,30 +115,19 @@ const PermitsPage: React.FC = () => {
       toast.error("No permits to export.");
       return;
     }
-    const cell = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
-    const lines = [
-      ["Registration", "Zone / car park", "Issued by", "Reference", "Valid from", "Valid until", "Status", "Approved by"].map(cell).join(","),
-      ...list.map((p) =>
-        [
-          byId.get(p.vehicle_id)?.registration ?? "",
-          p.zone,
-          p.issuer,
-          p.reference,
-          formatDate(p.valid_from),
-          formatDate(p.valid_until),
-          PERMIT_STATE[permitState(p)].label,
-          p.status === "pending" ? "" : p.decided_by,
-        ]
-          .map(cell)
-          .join(","),
-      ),
-    ];
-    const url = URL.createObjectURL(new Blob([lines.join("\r\n")], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `parking-permits-${dayjs().format("YYYY-MM-DD")}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`parking-permits-${dayjs().format("YYYY-MM-DD")}.csv`, [
+      ["Registration", "Zone / car park", "Issued by", "Reference", "Valid from", "Valid until", "Status", "Approved by"],
+      ...list.map((p) => [
+        byId.get(p.vehicle_id)?.registration ?? "",
+        p.zone,
+        p.issuer,
+        p.reference,
+        csvDate(formatDate(p.valid_from)),
+        csvDate(formatDate(p.valid_until)),
+        PERMIT_STATE[permitState(p)].label,
+        p.status === "pending" ? "" : p.decided_by,
+      ]),
+    ]);
     toast.success(`${list.length} permit${list.length === 1 ? "" : "s"} exported.`);
   };
 
