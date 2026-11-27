@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Box, Button, Grid, LinearProgress, Paper, Stack, Typography } from "@mui/material";
 import { IconChevronRight } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import { Column, RecordTable, StatTile } from "@/app/components/apps/vehicles/detail/common";
+import { Column, RecordTable, StatTile } from "@/app/components/apps/vehicles/shared/common";
 import { uomLabel } from "../settings/nhf-rates/types";
 import { dateTime } from "../list/types";
 import { LINE_META, QsDetail, QsLine, RATE_SOURCE, gbp } from "../qs/types";

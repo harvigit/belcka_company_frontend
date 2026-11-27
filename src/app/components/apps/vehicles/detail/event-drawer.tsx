@@ -7,8 +7,8 @@ import toast from 'react-hot-toast';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import FormDrawer from '../../inventory-new/shared/FormDrawer';
 import FormField from '../../inventory-new/shared/FormField';
-import {EventKind, EVENT_KINDS, FLEET_RULES, formatMiles, StationPlace, Vehicle, VehicleEvent} from '../types';
-import {NewEvent} from '../useVehicles';
+import {EventKind, EVENT_KINDS, FLEET_RULES, formatMiles, StationPlace, Vehicle, VehicleEvent} from '../lib/types';
+import {NewEvent} from '../hooks/useVehicles';
 import StationField from './station-field';
 
 interface FormState {
@@ -42,22 +42,24 @@ const blank = (): FormState => ({
 });
 
 // Fields per record type; invoice-only costs use the Invoices tab form.
-const FIELDS: Partial<Record<
-    EventKind,
-    {
-        title: string;
-        mileage: 'required' | 'optional' | 'none';
-        cost: boolean;
-        supplier?: string;
-        invoice?: boolean;
-        note: string;
-        noteRequired?: boolean;
-        notePlaceholder?: string;
-        // optional photos (accident)
-        photos?: boolean;
-        info?: string;
-    }
->> = {
+const FIELDS: Partial<
+    Record<
+        EventKind,
+        {
+            title: string;
+            mileage: 'required' | 'optional' | 'none';
+            cost: boolean;
+            supplier?: string;
+            invoice?: boolean;
+            note: string;
+            noteRequired?: boolean;
+            notePlaceholder?: string;
+            // optional photos (accident)
+            photos?: boolean;
+            info?: string;
+        }
+    >
+> = {
     service: {
         title: 'Add service',
         mileage: 'required',
@@ -141,11 +143,11 @@ interface EventDrawerProps {
 }
 
 /** Pick up to `max` photos; they are uploaded with the record. */
-const PhotoUpload: React.FC<{ value: File[]; onChange: (photos: File[]) => void; max: number }> = ({
-                                                                                                       value,
-                                                                                                       onChange,
-                                                                                                       max,
-                                                                                                   }) => {
+const PhotoUpload: React.FC<{value: File[]; onChange: (photos: File[]) => void; max: number}> = ({
+    value,
+    onChange,
+    max,
+}) => {
     const input = useRef<HTMLInputElement>(null);
     return (
         <Stack spacing={1} alignItems="flex-start">
@@ -159,7 +161,10 @@ const PhotoUpload: React.FC<{ value: File[]; onChange: (photos: File[]) => void;
                     const files = Array.from(e.target.files ?? []);
                     const images = files.filter((f) => f.type.startsWith('image/'));
                     if (images.length < files.length) toast.error('Only photos can be added.');
-                    const next = [...value, ...images.filter((f) => !value.some((v) => v.name === f.name))].slice(0, max);
+                    const next = [...value, ...images.filter((f) => !value.some((v) => v.name === f.name))].slice(
+                        0,
+                        max,
+                    );
                     if (value.length + images.length > max) toast.error(`Up to ${max} photos.`);
                     onChange(next);
                     e.target.value = '';
@@ -170,7 +175,7 @@ const PhotoUpload: React.FC<{ value: File[]; onChange: (photos: File[]) => void;
                     {value.map((file) => (
                         <Chip
                             key={file.name}
-                            icon={<IconPhoto size={16}/>}
+                            icon={<IconPhoto size={16} />}
                             label={file.name}
                             variant="outlined"
                             onDelete={() => onChange(value.filter((f) => f !== file))}
@@ -180,7 +185,7 @@ const PhotoUpload: React.FC<{ value: File[]; onChange: (photos: File[]) => void;
                 </Stack>
             )}
             {value.length < max && (
-                <Button variant="outlined" startIcon={<IconUpload size={16}/>} onClick={() => input.current?.click()}>
+                <Button variant="outlined" startIcon={<IconUpload size={16} />} onClick={() => input.current?.click()}>
                     {value.length ? 'Add more photos' : 'Upload photos'}
                 </Button>
             )}
@@ -190,13 +195,7 @@ const PhotoUpload: React.FC<{ value: File[]; onChange: (photos: File[]) => void;
 
 const decimal = (value: string, max = 7) => new RegExp(`^\\d{0,${max}}(\\.\\d{0,2})?$`).test(value);
 
-const EventDrawer: React.FC<EventDrawerProps> = ({
-                                                     kind: newKind,
-                                                     editing,
-                                                     vehicle,
-                                                     onClose,
-                                                     onSave
-                                                 }) => {
+const EventDrawer: React.FC<EventDrawerProps> = ({kind: newKind, editing, vehicle, onClose, onSave}) => {
     const kind = editing?.kind ?? newKind;
     const [form, setForm] = useState<FormState>(blank);
     const [showErrors, setShowErrors] = useState(false);
@@ -235,7 +234,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
 
     const errors: Partial<Record<'date' | 'mileage' | 'litres' | 'cost' | 'note' | 'lowest_tread', string>> = {};
     if (!form.date) errors.date = 'Choose a date.';
-    else if (form.date > dayjs().format('YYYY-MM-DD')) errors.date = 'The date can\'t be in the future.';
+    else if (form.date > dayjs().format('YYYY-MM-DD')) errors.date = "The date can't be in the future.";
     if (mileage === null && mileageRequired && showErrors) errors.mileage = 'Enter the odometer reading.';
     // Any reading is allowed, only not a negative one.
     if (mileage !== null && mileage < 0) errors.mileage = 'The odometer reading cannot be negative.';
@@ -275,7 +274,8 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
                 note: form.note.trim(),
                 litres: kind === 'fuel' ? Number(form.litres) : null,
                 passed: kind === 'mot' ? form.passed === 'yes' : undefined,
-                lowest_tread: kind === 'tyre_change' && form.lowest_tread !== '' ? Number(form.lowest_tread) : undefined,
+                lowest_tread:
+                    kind === 'tyre_change' && form.lowest_tread !== '' ? Number(form.lowest_tread) : undefined,
                 photo_files: cfg.photos && form.photos.length ? form.photos.map((file) => ({file})) : undefined,
             });
             toast.success(`${EVENT_KINDS[kind].label} ${editing ? 'updated' : 'saved'} for ${vehicle.registration}.`);
@@ -288,9 +288,13 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
     };
 
     return (
-        <FormDrawer open
-                    title={`${editing ? `Edit ${EVENT_KINDS[kind].label.toLowerCase()}` : cfg.title} · ${vehicle.registration}`}
-                    onClose={onClose} onSubmit={submit} isSaving={saving}>
+        <FormDrawer
+            open
+            title={`${editing ? `Edit ${EVENT_KINDS[kind].label.toLowerCase()}` : cfg.title} · ${vehicle.registration}`}
+            onClose={onClose}
+            onSubmit={submit}
+            isSaving={saving}
+        >
             {cfg.info && <Alert severity="info">{cfg.info}</Alert>}
             {editing && (
                 <Alert severity="warning">
@@ -413,11 +417,13 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
                                     <StationField
                                         name={form.supplier}
                                         place={form.station}
-                                        onChange={(name, station) => setForm((prev) => ({
-                                            ...prev,
-                                            supplier: name,
-                                            station
-                                        }))}
+                                        onChange={(name, station) =>
+                                            setForm((prev) => ({
+                                                ...prev,
+                                                supplier: name,
+                                                station,
+                                            }))
+                                        }
                                     />
                                 ) : (
                                     <CustomTextField
@@ -469,7 +475,7 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
 
             {cfg.photos && (
                 <FormField label="Photos · optional" hint="Damage, the other vehicle, the place. Up to 5 photos.">
-                    <PhotoUpload value={form.photos} onChange={(photos) => set('photos', photos)} max={5}/>
+                    <PhotoUpload value={form.photos} onChange={(photos) => set('photos', photos)} max={5} />
                 </FormField>
             )}
         </FormDrawer>

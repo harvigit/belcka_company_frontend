@@ -21,12 +21,12 @@ import {User} from 'next-auth';
 import toast from 'react-hot-toast';
 import BlankCard from '@/app/components/shared/BlankCard';
 import ConfirmDialog from '../../inventory-new/shared/ConfirmDialog';
-import AssignDriverDialog from '../assign-dialog';
+import AssignDriverDialog from '../shared/assign-dialog';
 import {NoCompany, RegPlate} from '../shared';
-import {DUE_CHIP, EventKind, formatDate, fuelLabel, nextDue, statusInfo, typeLabel} from '../types';
-import {DriverOption, useVehicles} from '../useVehicles';
-import {useDrivers} from '../useDrivers';
-import {useVehicleEditor} from '../useVehicleEditor';
+import {DUE_CHIP, EventKind, formatDate, fuelLabel, nextDue, statusInfo, typeLabel} from '../lib/types';
+import {DriverOption, useVehicles} from '../hooks/useVehicles';
+import {useDrivers} from '../hooks/useDrivers';
+import {useVehicleEditor} from '../hooks/useVehicleEditor';
 import Overview from './overview';
 import {ActivityTab, FuelTab, MaintenanceTab, MileageTab, TyresTab} from './history';
 import DocumentsTab from './documents';
@@ -55,11 +55,11 @@ const TABS = [
 
 type TabValue = (typeof TABS)[number]['value'];
 
-const VehicleDetail: React.FC<{ vehicleId: number }> = ({vehicleId}) => {
+const VehicleDetail: React.FC<{vehicleId: number}> = ({vehicleId}) => {
     const router = useRouter();
     const searchParams = useSearchParams();
     const session = useSession();
-    const user = session.data?.user as User & { company_id?: number | null; name?: string | null };
+    const user = session.data?.user as User & {company_id?: number | null; name?: string | null};
     const companyId = user?.company_id;
 
     const store = useVehicles(companyId, user?.name || 'You');
@@ -88,12 +88,12 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({vehicleId}) => {
         router.replace(`/apps/vehicles/${vehicleId}${value === 'overview' ? '' : `?tab=${value}`}`, {scroll: false});
     };
 
-    if (store.noCompany) return <NoCompany/>;
+    if (store.noCompany) return <NoCompany />;
 
     if (loading || !companyId) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
-                <CircularProgress/>
+                <CircularProgress />
             </Box>
         );
     }
@@ -135,7 +135,11 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({vehicleId}) => {
         } catch {
             return;
         }
-        toast.success(driver ? `${vehicle.registration} assigned to ${driver.name}.` : `Driver removed from ${vehicle.registration}.`);
+        toast.success(
+            driver
+                ? `${vehicle.registration} assigned to ${driver.name}.`
+                : `Driver removed from ${vehicle.registration}.`,
+        );
         setAssignOpen(false);
     };
 
@@ -153,16 +157,16 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({vehicleId}) => {
                     <Stack direction="row" alignItems="center" spacing={1.5}>
                         <Tooltip title="Back to vehicles">
                             <IconButton onClick={() => router.push('/apps/vehicles/list')}>
-                                <IconArrowLeft/>
+                                <IconArrowLeft />
                             </IconButton>
                         </Tooltip>
-                        <RegPlate registration={vehicle.registration} size="medium"/>
+                        <RegPlate registration={vehicle.registration} size="medium" />
                         <Box>
                             <Typography variant="h5" fontWeight={700} lineHeight={1.2}>
                                 {vehicle.make_model}
                             </Typography>
                             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" mt={0.5}>
-                                <Chip size="small" color={status.color} label={status.label}/>
+                                <Chip size="small" color={status.color} label={status.label} />
                                 <Typography variant="body2" color="textSecondary">
                                     {typeLabel(vehicle.type)} · {fuelLabel(vehicle.fuel_type)}
                                 </Typography>
@@ -180,22 +184,28 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({vehicleId}) => {
 
                     {!readOnly && (
                         <Stack direction="row" spacing={1} flexWrap="wrap">
-                            <Button variant="outlined" startIcon={<IconEdit size={16}/>}
-                                    onClick={() => editor.openEdit(vehicle)}>
+                            <Button
+                                variant="outlined"
+                                startIcon={<IconEdit size={16} />}
+                                onClick={() => editor.openEdit(vehicle)}
+                            >
                                 Edit
                             </Button>
-                            <Button variant="outlined" startIcon={<IconUserPlus size={16}/>}
-                                    onClick={() => setAssignOpen(true)}>
+                            <Button
+                                variant="outlined"
+                                startIcon={<IconUserPlus size={16} />}
+                                onClick={() => setAssignOpen(true)}
+                            >
                                 {vehicle.driver_id ? 'Change driver' : 'Assign driver'}
                             </Button>
                             <Tooltip title="Archive (sold or removed)">
                                 <IconButton color="error" onClick={() => setArchiveOpen(true)}>
-                                    <IconArchive size={20}/>
+                                    <IconArchive size={20} />
                                 </IconButton>
                             </Tooltip>
                             <Tooltip title="Delete">
                                 <IconButton color="error" onClick={() => setDeleteOpen(true)}>
-                                    <IconTrash size={20}/>
+                                    <IconTrash size={20} />
                                 </IconButton>
                             </Tooltip>
                         </Stack>
@@ -211,7 +221,7 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({vehicleId}) => {
                                 <Button
                                     color="inherit"
                                     size="small"
-                                    startIcon={<IconArrowBackUp size={16}/>}
+                                    startIcon={<IconArrowBackUp size={16} />}
                                     onClick={async () => {
                                         try {
                                             await store.restore([vehicle.id]);
@@ -223,8 +233,12 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({vehicleId}) => {
                                 >
                                     Restore
                                 </Button>
-                                <Button color="error" size="small" startIcon={<IconTrash size={16}/>}
-                                        onClick={() => setDeleteOpen(true)}>
+                                <Button
+                                    color="error"
+                                    size="small"
+                                    startIcon={<IconTrash size={16} />}
+                                    onClick={() => setDeleteOpen(true)}
+                                >
                                     Delete
                                 </Button>
                             </Stack>
@@ -249,10 +263,10 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({vehicleId}) => {
                                 <Stack direction="row" spacing={0.75} alignItems="center">
                                     <span>{t.label}</span>
                                     {t.value === 'permits' && pendingPermits > 0 && (
-                                        <Chip size="small" color="warning" label={pendingPermits} sx={{height: 20}}/>
+                                        <Chip size="small" color="warning" label={pendingPermits} sx={{height: 20}} />
                                     )}
                                     {t.value === 'onboarding' && openSteps > 0 && (
-                                        <Chip size="small" color="primary" label={openSteps} sx={{height: 20}}/>
+                                        <Chip size="small" color="primary" label={openSteps} sx={{height: 20}} />
                                     )}
                                     {t.value === 'documents' && docs.length > 0 && (
                                         <Typography component="span" variant="body2" color="textSecondary">
@@ -284,10 +298,12 @@ const VehicleDetail: React.FC<{ vehicleId: number }> = ({vehicleId}) => {
                         <FuelTab
                             {...tabProps}
                             onSetLimit={(litres) => store.updateVehicle(vehicle.id, {weekly_fuel_limit: litres})}
-                            onSetRange={(min, max) => store.updateVehicle(vehicle.id, {
-                                fuel_use_min: min,
-                                fuel_use_max: max
-                            })}
+                            onSetRange={(min, max) =>
+                                store.updateVehicle(vehicle.id, {
+                                    fuel_use_min: min,
+                                    fuel_use_max: max,
+                                })
+                            }
                         />
                     )}
                     {tab === 'mileage' && <MileageTab {...tabProps} />}

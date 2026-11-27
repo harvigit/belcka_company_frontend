@@ -3,7 +3,7 @@
 import React from "react";
 import PageContainer from "@/app/components/container/PageContainer";
 import BlankCard from "@/app/components/shared/BlankCard";
-import MapPage from "@/app/components/apps/vehicles/map-page";
+import MapPage from "@/app/components/apps/vehicles/map";
 
 const VehicleMapPage = () => (
   <PageContainer title="Vehicle map" description="Where drivers last recorded something">

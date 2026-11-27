@@ -7,9 +7,18 @@ import toast from 'react-hot-toast';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import FormDrawer from '../../inventory-new/shared/FormDrawer';
 import FormField from '../../inventory-new/shared/FormField';
-import {countsAsCost, EVENT_KINDS, EventKind, formatDate, INVOICE_KINDS, money, Vehicle, VehicleEvent} from '../types';
-import {NewEvent} from '../useVehicles';
-import {RecordTable, Section, StatTile} from './common';
+import {
+    countsAsCost,
+    EVENT_KINDS,
+    EventKind,
+    formatDate,
+    INVOICE_KINDS,
+    money,
+    Vehicle,
+    VehicleEvent,
+} from '../lib/types';
+import {NewEvent} from '../hooks/useVehicles';
+import {RecordTable, Section, StatTile} from '../shared/common';
 import {FileLink} from '../shared';
 
 const MAX_MB = 5;
@@ -36,12 +45,12 @@ const blank = () => ({
 });
 
 // Photo or PDF, uploaded with the cost (or straight away for "Attach").
-const FilePicker: React.FC<{ label: string; onPick: (file: File) => void; onError: (msg: string) => void }> = ({
-                                                                                                                   label,
-                                                                                                                   onPick,
-                                                                                                                   onError,
-                                                                                                               }) => (
-    <Button variant="outlined" component="label" size="small" startIcon={<IconPaperclip size={16}/>}>
+const FilePicker: React.FC<{label: string; onPick: (file: File) => void; onError: (msg: string) => void}> = ({
+    label,
+    onPick,
+    onError,
+}) => (
+    <Button variant="outlined" component="label" size="small" startIcon={<IconPaperclip size={16} />}>
         {label}
         <input
             hidden
@@ -63,9 +72,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({vehicle, events, readOnly, onA
     const [form, setForm] = useState(blank);
     const [showErrors, setShowErrors] = useState(false);
 
-    const costs = events
-        .filter(countsAsCost)
-        .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+    const costs = events.filter(countsAsCost).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
     const yearStart = dayjs().startOf('year').format('YYYY-MM-DD');
     const total = costs.reduce((s, e) => s + (e.cost ?? 0), 0);
     const thisYear = costs.filter((e) => e.date >= yearStart).reduce((s, e) => s + (e.cost ?? 0), 0);
@@ -73,7 +80,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({vehicle, events, readOnly, onA
 
     const errors = {
         cost: showErrors && !(Number(form.cost) > 0) ? 'Enter the amount.' : '',
-        date: form.date > dayjs().format('YYYY-MM-DD') ? 'The date can\'t be in the future.' : '',
+        date: form.date > dayjs().format('YYYY-MM-DD') ? "The date can't be in the future." : '',
     };
 
     const submit = async (e: React.FormEvent) => {
@@ -104,16 +111,17 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({vehicle, events, readOnly, onA
         <Box display="flex" flexDirection="column" gap={3}>
             <Grid container spacing={2}>
                 <Grid size={{xs: 12, sm: 4}}>
-                    <StatTile tone="blue" label="All costs" value={money(total)} sub={`${costs.length} records`}/>
+                    <StatTile tone="blue" label="All costs" value={money(total)} sub={`${costs.length} records`} />
                 </Grid>
                 <Grid size={{xs: 6, sm: 4}}>
-                    <StatTile tone="purple" label="This year" value={money(thisYear)}/>
+                    <StatTile tone="purple" label="This year" value={money(thisYear)} />
                 </Grid>
                 <Grid size={{xs: 6, sm: 4}}>
-                    <StatTile tone="green"
-                              label="With an invoice file"
-                              value={`${withFile} / ${costs.length}`}
-                              sub={costs.length > withFile ? 'Attach the missing files below' : 'All costs have a file'}
+                    <StatTile
+                        tone="green"
+                        label="With an invoice file"
+                        value={`${withFile} / ${costs.length}`}
+                        sub={costs.length > withFile ? 'Attach the missing files below' : 'All costs have a file'}
                     />
                 </Grid>
             </Grid>
@@ -125,7 +133,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({vehicle, events, readOnly, onA
                     !readOnly && (
                         <Button
                             variant="contained"
-                            startIcon={<IconPlus size={16}/>}
+                            startIcon={<IconPlus size={16} />}
                             onClick={() => {
                                 setForm(blank());
                                 setShowErrors(false);
@@ -145,8 +153,12 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({vehicle, events, readOnly, onA
                         {
                             header: 'Type',
                             render: (e) => (
-                                <Chip size="small" variant="outlined" color={EVENT_KINDS[e.kind].color}
-                                      label={EVENT_KINDS[e.kind].label}/>
+                                <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    color={EVENT_KINDS[e.kind].color}
+                                    label={EVENT_KINDS[e.kind].label}
+                                />
                             ),
                         },
                         {header: 'Supplier', render: (e) => e.supplier || '-'},
@@ -164,10 +176,10 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({vehicle, events, readOnly, onA
                             render: (e) =>
                                 e.file_name ? (
                                     <Stack direction="row" spacing={0.5} alignItems="center">
-                                        <IconFileText size={16}/>
+                                        <IconFileText size={16} />
                                         <Typography variant="body2" noWrap sx={{maxWidth: 160}}>
                                             {e.file_url ? (
-                                                <FileLink url={e.file_url} name={e.file_name}/>
+                                                <FileLink url={e.file_url} name={e.file_name} />
                                             ) : (
                                                 e.file_name
                                             )}
@@ -273,10 +285,13 @@ const InvoicesTab: React.FC<InvoicesTabProps> = ({vehicle, events, readOnly, onA
                     <CustomTextField
                         fullWidth
                         value={form.cost}
-                        onChange={(e: any) => /^\d{0,7}(\.\d{0,2})?$/.test(e.target.value) && setForm((f) => ({
-                            ...f,
-                            cost: e.target.value
-                        }))}
+                        onChange={(e: any) =>
+                            /^\d{0,7}(\.\d{0,2})?$/.test(e.target.value) &&
+                            setForm((f) => ({
+                                ...f,
+                                cost: e.target.value,
+                            }))
+                        }
                         error={!!errors.cost}
                         helperText={errors.cost}
                         slotProps={{htmlInput: {inputMode: 'decimal'}}}

@@ -164,6 +164,8 @@ export interface ContractTemplateDetail extends ContractRules {
 export interface ContractSigner {
     user_id: number;
     name: string | null;
+    user_image: string | null;
+    user_thumb_image: string | null;
     contract_id: number;
     version_no: number | null;
     signed_at: string | null;
@@ -185,6 +187,8 @@ export interface ContractUserRow {
     name: string;
     trade: string | null;
     team: string | null;
+    user_image: string | null;
+    user_thumb_image: string | null;
     must_sign: boolean;
     contract_status: 'SIGNED' | 'PENDING' | 'NOT_SIGNED' | 'NOT_REQUIRED';
     requirement: { id: number; type: string; reason: string | null; valid_until: string | null } | null;

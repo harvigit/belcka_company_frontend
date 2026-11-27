@@ -18,7 +18,7 @@ import { IconChevronDown, IconChevronRight, IconDoor, IconFolder, IconRefresh, I
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import { PhotoThumbs, DriverName } from "@/app/components/apps/vehicles/shared";
-import { Column, RecordTable, Section } from "@/app/components/apps/vehicles/detail/common";
+import { Column, RecordTable, Section } from "@/app/components/apps/vehicles/shared/common";
 import ConfirmDialog from "@/app/components/apps/inventory-new/shared/ConfirmDialog";
 import { apiMessage, uomLabel } from "../settings/nhf-rates/types";
 import { PdDetails, PdFileCard } from "../list/PropertyDetail";

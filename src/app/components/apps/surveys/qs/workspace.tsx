@@ -41,7 +41,7 @@ import CustomTextField from "@/app/components/forms/theme-elements/CustomTextFie
 import FormDrawer from "@/app/components/apps/inventory-new/shared/FormDrawer";
 import FormField from "@/app/components/apps/inventory-new/shared/FormField";
 import ConfirmDialog from "@/app/components/apps/inventory-new/shared/ConfirmDialog";
-import { StatTile } from "@/app/components/apps/vehicles/detail/common";
+import { StatTile } from "@/app/components/apps/vehicles/shared/common";
 import { PhotoThumbs } from "@/app/components/apps/vehicles/shared";
 import { apiMessage, uomLabel } from "../settings/nhf-rates/types";
 import { NhfHit } from "../settings/templates/types";

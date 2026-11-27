@@ -7,7 +7,7 @@ import { IconArrowLeft, IconEdit, IconTrash, IconUsers } from "@tabler/icons-rea
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import BlankCard from "@/app/components/shared/BlankCard";
-import { StatTile } from "@/app/components/apps/vehicles/detail/common";
+import { StatTile } from "@/app/components/apps/vehicles/shared/common";
 import ConfirmDialog from "@/app/components/apps/inventory-new/shared/ConfirmDialog";
 import { apiMessage } from "../settings/nhf-rates/types";
 import SurveyForm from "../list/SurveyForm";

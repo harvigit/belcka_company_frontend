@@ -513,9 +513,11 @@ const ContractsSettings = () => {
                                             '&:last-child': {borderBottom: 0}
                                         }}
                                     >
-                                        <Avatar sx={{width: 30, height: 30, fontSize: 12}}>
-                                            {(s.name ?? '?').split(' ').map((p) => p[0]).join('').slice(0, 2)}
-                                        </Avatar>
+                                        <Avatar
+                                            src={s.user_thumb_image || s.user_image || '/images/users/user.png'}
+                                            alt={s.name ?? ''}
+                                            sx={{width: 30, height: 30}}
+                                        />
                                         <Box minWidth={0}>
                                             <Typography variant="body2" fontWeight={600} noWrap>
                                                 {s.name ?? `User ${s.user_id}`}

@@ -303,9 +303,11 @@ const PublishDialog = ({
                                             onChange={() => toggle(u.user_id)}
                                             inputProps={{'aria-label': `Assign to ${u.name}`}}
                                         />
-                                        <Avatar sx={{width: 30, height: 30, fontSize: 12}}>
-                                            {u.name.split(' ').map((p) => p[0]).join('').slice(0, 2)}
-                                        </Avatar>
+                                        <Avatar
+                                            src={u.user_thumb_image || u.user_image || '/images/users/user.png'}
+                                            alt={u.name}
+                                            sx={{width: 30, height: 30}}
+                                        />
                                         <Box minWidth={0}>
                                             <Typography variant="body2" fontWeight={600} noWrap>
                                                 {u.name}

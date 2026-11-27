@@ -4,8 +4,8 @@ import {Button, Chip, Typography} from '@mui/material';
 import {IconUserPlus} from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import {DriverName} from '../shared';
-import {DriverLog, formatDate, formatMiles, Vehicle, VehicleEvent} from '../types';
-import {RecordTable, Section} from './common';
+import {DriverLog, formatDate, formatMiles, Vehicle, VehicleEvent} from '../lib/types';
+import {RecordTable, Section} from '../shared/common';
 
 interface DriversTabProps {
     vehicle: Vehicle;
@@ -37,7 +37,7 @@ const DriversTab: React.FC<DriversTabProps> = ({vehicle, logs, events, readOnly,
             subtitle="Who had this vehicle and when. A new row starts every time the driver changes."
             actions={
                 !readOnly && (
-                    <Button variant="contained" startIcon={<IconUserPlus size={16}/>} onClick={onAssign}>
+                    <Button variant="contained" startIcon={<IconUserPlus size={16} />} onClick={onAssign}>
                         {vehicle.driver_id ? 'Change driver' : 'Assign driver'}
                     </Button>
                 )
@@ -49,12 +49,13 @@ const DriversTab: React.FC<DriversTabProps> = ({vehicle, logs, events, readOnly,
                 columns={[
                     {
                         header: 'Driver',
-                        render: (r) => <DriverName name={r.driver_name} image={r.driver_image}/>,
+                        render: (r) => <DriverName name={r.driver_name} image={r.driver_image} />,
                     },
                     {header: 'From', render: (r) => formatDate(r.from)},
                     {
                         header: 'To',
-                        render: (r) => (r.to ? formatDate(r.to) : <Chip size="small" color="success" label="Current"/>),
+                        render: (r) =>
+                            r.to ? formatDate(r.to) : <Chip size="small" color="success" label="Current" />,
                     },
                     {header: 'Days', render: (r) => r.days},
                     {header: 'Miles recorded', render: (r) => (r.miles === null ? '-' : formatMiles(r.miles))},

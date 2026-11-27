@@ -15,7 +15,7 @@ import {
 import {IconFileText} from '@tabler/icons-react';
 import {ExpenseListItem} from '../types';
 import ExpenseStatusBadge from './ExpenseStatusBadge';
-import PhotoViewer, {SafeImage} from '@/app/components/apps/vehicles/photo-viewer';
+import PhotoViewer, {SafeImage} from '@/app/components/apps/vehicles/shared/photo-viewer';
 
 const isImage = (name?: string | null) => !!name && /\.(jpe?g|png|gif|webp|heic|bmp)(\?|$)/i.test(name);
 const fileNameOf = (url: string) => decodeURIComponent(url.split('?')[0].split('/').pop() || '');

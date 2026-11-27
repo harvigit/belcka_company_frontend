@@ -1,7 +1,7 @@
 'use client';
 import React, {useState} from 'react';
 import {Box, Button, Chip, Divider, Grid, Link, Paper, Stack, Typography} from '@mui/material';
-import {IconCarCrash, IconEdit, IconGauge, IconMapPin, IconUserPlus,} from '@tabler/icons-react';
+import {IconCarCrash, IconEdit, IconGauge, IconMapPin, IconUserPlus} from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
@@ -20,13 +20,13 @@ import {
     typeLabel,
     Vehicle,
     VehicleEvent,
-} from '../types';
-import {RecordTable, Section, StatTile, toneAt} from './common';
+} from '../lib/types';
+import {RecordTable, Section, StatTile, toneAt} from '../shared/common';
 import ParkingDialog from './parking-dialog';
 
 type DetailsForm = Pick<Vehicle, 'vin' | 'first_registered' | 'v5c_reference' | 'registered_keeper' | 'engine'>;
 
-const Row: React.FC<{ label: string; value?: React.ReactNode }> = ({label, value}) => (
+const Row: React.FC<{label: string; value?: React.ReactNode}> = ({label, value}) => (
     <Stack direction="row" justifyContent="space-between" spacing={2} py={0.75}>
         <Typography variant="body2" color="textSecondary">
             {label}
@@ -49,15 +49,15 @@ interface OverviewProps {
 }
 
 const Overview: React.FC<OverviewProps> = ({
-                                               vehicle,
-                                               events,
-                                               readOnly,
-                                               onAssign,
-                                               onEdit,
-                                               onUpdate,
-                                               onUpdateMileage,
-                                               onAddAccident,
-                                           }) => {
+    vehicle,
+    events,
+    readOnly,
+    onAssign,
+    onEdit,
+    onUpdate,
+    onUpdateMileage,
+    onAddAccident,
+}) => {
     const [parkingOpen, setParkingOpen] = useState(false);
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [details, setDetails] = useState<DetailsForm>({});
@@ -73,7 +73,9 @@ const Overview: React.FC<OverviewProps> = ({
         return base ? Math.max(0, vehicle.mileage - (base.mileage ?? 0)) : 0;
     };
     const yearStart = dayjs().startOf('year').format('YYYY-MM-DD');
-    const costThisYear = events.filter((e) => e.date >= yearStart && countsAsCost(e)).reduce((s, e) => s + (e.cost ?? 0), 0);
+    const costThisYear = events
+        .filter((e) => e.date >= yearStart && countsAsCost(e))
+        .reduce((s, e) => s + (e.cost ?? 0), 0);
     const mpg = fuelUse(events).mpg;
     const due = dueItems(vehicle);
     const parking = vehicle.parking;
@@ -113,11 +115,15 @@ const Overview: React.FC<OverviewProps> = ({
         setDetailsOpen(false);
     };
 
-    const field = (name: keyof DetailsForm, label: string, opts: {
-        type?: string;
-        hint?: string;
-        max?: number
-    } = {}) => (
+    const field = (
+        name: keyof DetailsForm,
+        label: string,
+        opts: {
+            type?: string;
+            hint?: string;
+            max?: number;
+        } = {},
+    ) => (
         <FormField label={label} hint={opts.hint}>
             <CustomTextField
                 type={opts.type}
@@ -125,7 +131,10 @@ const Overview: React.FC<OverviewProps> = ({
                 onChange={(ev: any) => {
                     let value = ev.target.value;
                     if (name === 'vin') {
-                        value = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 17);
+                        value = value
+                            .toUpperCase()
+                            .replace(/[^A-Z0-9]/g, '')
+                            .slice(0, 17);
                         setVinError('');
                     }
                     setDetails((d) => ({...d, [name]: opts.max ? value.slice(0, opts.max) : value}));
@@ -137,11 +146,14 @@ const Overview: React.FC<OverviewProps> = ({
         </FormField>
     );
 
-    const tiles: { label: string; value: React.ReactNode; sub?: React.ReactNode }[] = [
+    const tiles: {label: string; value: React.ReactNode; sub?: React.ReactNode}[] = [
         {
             label: 'Assigned to',
-            value: vehicle.driver_name ?
-                <DriverName name={vehicle.driver_name} image={vehicle.driver_image}/> : 'No driver',
+            value: vehicle.driver_name ? (
+                <DriverName name={vehicle.driver_name} image={vehicle.driver_image} />
+            ) : (
+                'No driver'
+            ),
         },
         {label: 'Type', value: typeLabel(vehicle.type)},
         {label: 'Mileage', value: formatMiles(vehicle.mileage)},
@@ -177,15 +189,18 @@ const Overview: React.FC<OverviewProps> = ({
                 {tiles.map((t, i) => (
                     // 5 per row on wide screens: 9 tiles fit in 2 rows
                     <Grid key={t.label} size={{xs: 6, sm: 4, md: 2.4}}>
-                        <StatTile label={t.label} value={t.value} sub={t.sub} tone={toneAt(i)}/>
+                        <StatTile label={t.label} value={t.value} sub={t.sub} tone={toneAt(i)} />
                     </Grid>
                 ))}
             </Grid>
 
             {!readOnly && (
                 <Box>
-                    <Button variant="contained" startIcon={<IconMapPin size={18}/>}
-                            onClick={() => setParkingOpen(true)}>
+                    <Button
+                        variant="contained"
+                        startIcon={<IconMapPin size={18} />}
+                        onClick={() => setParkingOpen(true)}
+                    >
                         {parking?.name ? 'Update parking place' : 'Add parking place'}
                     </Button>
                 </Box>
@@ -200,8 +215,9 @@ const Overview: React.FC<OverviewProps> = ({
                         {header: 'Date', render: (d) => formatDate(d.date)},
                         {
                             header: 'State',
-                            render: (d) => <Chip size="small" color={DUE_CHIP[d.state].color}
-                                                 label={DUE_CHIP[d.state].label}/>,
+                            render: (d) => (
+                                <Chip size="small" color={DUE_CHIP[d.state].color} label={DUE_CHIP[d.state].label} />
+                            ),
                         },
                     ]}
                 />
@@ -209,16 +225,16 @@ const Overview: React.FC<OverviewProps> = ({
 
             {!readOnly && (
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    <Button variant="outlined" startIcon={<IconEdit size={16}/>} onClick={onEdit}>
+                    <Button variant="outlined" startIcon={<IconEdit size={16} />} onClick={onEdit}>
                         Edit vehicle
                     </Button>
-                    <Button variant="outlined" startIcon={<IconUserPlus size={16}/>} onClick={onAssign}>
+                    <Button variant="outlined" startIcon={<IconUserPlus size={16} />} onClick={onAssign}>
                         {vehicle.driver_id ? 'Change driver' : 'Assign driver'}
                     </Button>
-                    <Button variant="outlined" startIcon={<IconGauge size={16}/>} onClick={onUpdateMileage}>
+                    <Button variant="outlined" startIcon={<IconGauge size={16} />} onClick={onUpdateMileage}>
                         Update mileage
                     </Button>
-                    <Button variant="outlined" startIcon={<IconCarCrash size={16}/>} onClick={onAddAccident}>
+                    <Button variant="outlined" startIcon={<IconCarCrash size={16} />} onClick={onAddAccident}>
                         Accident
                     </Button>
                 </Stack>
@@ -229,24 +245,26 @@ const Overview: React.FC<OverviewProps> = ({
                 subtitle="From the V5C logbook"
                 actions={
                     !readOnly && (
-                        <Button variant="outlined" startIcon={<IconEdit size={16}/>} onClick={openDetails}>
+                        <Button variant="outlined" startIcon={<IconEdit size={16} />} onClick={openDetails}>
                             Edit
                         </Button>
                     )
                 }
             >
                 <Paper variant="outlined" sx={{borderRadius: 2, px: 2, py: 1, maxWidth: 640}}>
-                    <Row label="VIN" value={vehicle.vin}/>
-                    <Row label="First registered"
-                         value={vehicle.first_registered ? formatDate(vehicle.first_registered) : ''}/>
-                    <Row label="V5C reference" value={vehicle.v5c_reference}/>
-                    <Row label="Registered keeper" value={vehicle.registered_keeper}/>
-                    <Row label="Engine" value={vehicle.engine}/>
-                    <Row label="GPS tracker" value={vehicle.gps_tracker}/>
+                    <Row label="VIN" value={vehicle.vin} />
+                    <Row
+                        label="First registered"
+                        value={vehicle.first_registered ? formatDate(vehicle.first_registered) : ''}
+                    />
+                    <Row label="V5C reference" value={vehicle.v5c_reference} />
+                    <Row label="Registered keeper" value={vehicle.registered_keeper} />
+                    <Row label="Engine" value={vehicle.engine} />
+                    <Row label="GPS tracker" value={vehicle.gps_tracker} />
                     {vehicle.notes && (
                         <>
-                            <Divider sx={{my: 0.5}}/>
-                            <Row label="Notes" value={vehicle.notes}/>
+                            <Divider sx={{my: 0.5}} />
+                            <Row label="Notes" value={vehicle.notes} />
                         </>
                     )}
                 </Paper>

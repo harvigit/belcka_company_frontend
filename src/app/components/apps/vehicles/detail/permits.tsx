@@ -4,11 +4,11 @@ import {Alert, Box, Button, Chip, IconButton, Stack, Tooltip, Typography} from '
 import {IconCheck, IconPlus, IconTrash, IconX} from '@tabler/icons-react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from '../../inventory-new/shared/ConfirmDialog';
-import {formatDate, ParkingPermit, PERMIT_STATE, permitState, Vehicle} from '../types';
-import {NewPermit} from '../useVehicles';
-import {PERMIT_ORDER, PermitDrawer, PermitRejectDialog} from '../permit-forms';
+import {formatDate, ParkingPermit, PERMIT_STATE, permitState, Vehicle} from '../lib/types';
+import {NewPermit} from '../hooks/useVehicles';
+import {PERMIT_ORDER, PermitDrawer, PermitRejectDialog} from '../shared/permit-forms';
 import {PersonInline} from '../shared';
-import {RecordTable, Section} from './common';
+import {RecordTable, Section} from '../shared/common';
 
 interface PermitsTabProps {
     vehicle: Vehicle;
@@ -25,7 +25,8 @@ const PermitsTab: React.FC<PermitsTabProps> = ({vehicle, permits, readOnly, onAd
     const [toRemove, setToRemove] = useState<ParkingPermit | null>(null);
 
     const rows = [...permits].sort(
-        (a, b) => PERMIT_ORDER[permitState(a)] - PERMIT_ORDER[permitState(b)] || b.valid_until.localeCompare(a.valid_until),
+        (a, b) =>
+            PERMIT_ORDER[permitState(a)] - PERMIT_ORDER[permitState(b)] || b.valid_until.localeCompare(a.valid_until),
     );
     const pending = permits.filter((p) => p.status === 'pending');
 
@@ -33,8 +34,8 @@ const PermitsTab: React.FC<PermitsTabProps> = ({vehicle, permits, readOnly, onAd
         <Box display="flex" flexDirection="column" gap={2}>
             {pending.length > 0 && !readOnly && (
                 <Alert severity="warning">
-                    {pending.length} permit request{pending.length > 1 ? 's' : ''} from the driver
-                    app {pending.length > 1 ? 'are' : 'is'} waiting for your approval.
+                    {pending.length} permit request{pending.length > 1 ? 's' : ''} from the driver app{' '}
+                    {pending.length > 1 ? 'are' : 'is'} waiting for your approval.
                 </Alert>
             )}
             <Section
@@ -42,11 +43,7 @@ const PermitsTab: React.FC<PermitsTabProps> = ({vehicle, permits, readOnly, onAd
                 subtitle="Council, workplace or resident permits for this registration. A renewal reminder shows 30 days before a permit ends."
                 actions={
                     !readOnly && (
-                        <Button
-                            variant="contained"
-                            startIcon={<IconPlus size={16}/>}
-                            onClick={() => setOpen(true)}
-                        >
+                        <Button variant="contained" startIcon={<IconPlus size={16} />} onClick={() => setOpen(true)}>
                             Add permit
                         </Button>
                     )
@@ -77,8 +74,13 @@ const PermitsTab: React.FC<PermitsTabProps> = ({vehicle, permits, readOnly, onAd
                                 const s = PERMIT_STATE[permitState(p)];
                                 return (
                                     <Tooltip
-                                        title={p.status === 'rejected' && p.reject_reason ? `Reason: ${p.reject_reason}` : ''}>
-                                        <Chip size="small" color={s.color} label={s.label}/>
+                                        title={
+                                            p.status === 'rejected' && p.reject_reason
+                                                ? `Reason: ${p.reject_reason}`
+                                                : ''
+                                        }
+                                    >
+                                        <Chip size="small" color={s.color} label={s.label} />
                                     </Tooltip>
                                 );
                             },
@@ -89,12 +91,14 @@ const PermitsTab: React.FC<PermitsTabProps> = ({vehicle, permits, readOnly, onAd
                                 <Typography variant="body2" color="textSecondary">
                                     {p.status === 'pending' ? (
                                         <>
-                                            Requested by <PersonInline name={p.requested_by} image={p.requested_by_image}/>
+                                            Requested by{' '}
+                                            <PersonInline name={p.requested_by} image={p.requested_by_image} />
                                         </>
                                     ) : (
                                         <>
                                             {p.status === 'approved' ? 'Approved' : 'Rejected'} by{' '}
-                                            <PersonInline name={p.decided_by} image={p.decided_by_image}/> · {formatDate(p.decided_at)}
+                                            <PersonInline name={p.decided_by} image={p.decided_by_image} /> ·{' '}
+                                            {formatDate(p.decided_at)}
                                         </>
                                     )}
                                 </Typography>
@@ -121,7 +125,7 @@ const PermitsTab: React.FC<PermitsTabProps> = ({vehicle, permits, readOnly, onAd
                                                             toast.success(`${p.zone} approved.`);
                                                         }}
                                                     >
-                                                        <IconCheck size={18}/>
+                                                        <IconCheck size={18} />
                                                     </IconButton>
                                                 </Tooltip>
                                                 <Tooltip title="Reject">
@@ -130,14 +134,14 @@ const PermitsTab: React.FC<PermitsTabProps> = ({vehicle, permits, readOnly, onAd
                                                         size="small"
                                                         onClick={() => setToReject(p)}
                                                     >
-                                                        <IconX size={18}/>
+                                                        <IconX size={18} />
                                                     </IconButton>
                                                 </Tooltip>
                                             </>
                                         )}
                                         <Tooltip title="Remove">
                                             <IconButton color="error" size="small" onClick={() => setToRemove(p)}>
-                                                <IconTrash size={16}/>
+                                                <IconTrash size={16} />
                                             </IconButton>
                                         </Tooltip>
                                     </Stack>
@@ -147,7 +151,7 @@ const PermitsTab: React.FC<PermitsTabProps> = ({vehicle, permits, readOnly, onAd
                 />
             </Section>
 
-            <PermitDrawer open={open} vehicle={vehicle} onClose={() => setOpen(false)} onAdd={onAdd}/>
+            <PermitDrawer open={open} vehicle={vehicle} onClose={() => setOpen(false)} onAdd={onAdd} />
 
             <PermitRejectDialog
                 permit={toReject}

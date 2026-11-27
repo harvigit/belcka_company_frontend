@@ -18,8 +18,8 @@ import toast from 'react-hot-toast';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import ConfirmDialog from '../../inventory-new/shared/ConfirmDialog';
 import {DriverName, PersonInline} from '../shared';
-import {defaultTemplateFor, formatDate, ONBOARDING_TEMPLATES, Vehicle, VehicleOnboarding} from '../types';
-import {Section} from './common';
+import {defaultTemplateFor, formatDate, ONBOARDING_TEMPLATES, Vehicle, VehicleOnboarding} from '../lib/types';
+import {Section} from '../shared/common';
 
 interface OnboardingTabProps {
     vehicle: Vehicle;
@@ -42,13 +42,9 @@ const OnboardingTab: React.FC<OnboardingTabProps> = ({vehicle, onboardings, read
     }
 
     const current = vehicle.driver_id
-        ? onboardings
-            .filter((o) => o.driver_id === vehicle.driver_id)
-            .sort((a, b) => b.id - a.id)[0]
+        ? onboardings.filter((o) => o.driver_id === vehicle.driver_id).sort((a, b) => b.id - a.id)[0]
         : undefined;
-    const earlier = onboardings
-        .filter((o) => o !== current)
-        .sort((a, b) => b.started_at.localeCompare(a.started_at));
+    const earlier = onboardings.filter((o) => o !== current).sort((a, b) => b.started_at.localeCompare(a.started_at));
 
     const progress = (o: VehicleOnboarding) => {
         const done = o.steps.filter((s) => s.done_at).length;
@@ -65,12 +61,12 @@ const OnboardingTab: React.FC<OnboardingTabProps> = ({vehicle, onboardings, read
                         parking and toll accounts, handover photos.
                     </Typography>
                     {!readOnly && (
-                        <Button variant="contained" startIcon={<IconUserPlus size={16}/>} onClick={onAssign}>
+                        <Button variant="contained" startIcon={<IconUserPlus size={16} />} onClick={onAssign}>
                             Assign driver
                         </Button>
                     )}
                 </Paper>
-                {earlier.length > 0 && <EarlierLists list={earlier} progress={progress}/>}
+                {earlier.length > 0 && <EarlierLists list={earlier} progress={progress} />}
             </Stack>
         );
     }
@@ -132,7 +128,7 @@ const OnboardingTab: React.FC<OnboardingTabProps> = ({vehicle, onboardings, read
                     <Paper variant="outlined" sx={{borderRadius: 2}}>
                         <Stack direction={{xs: 'column', sm: 'row'}} justifyContent="space-between" spacing={2} p={2}>
                             <Box>
-                                <DriverName name={current.driver_name} image={current.driver_image}/>
+                                <DriverName name={current.driver_name} image={current.driver_image} />
                                 <Typography variant="caption" color="textSecondary">
                                     {current.template_name} list · started {formatDate(current.started_at)}
                                 </Typography>
@@ -146,8 +142,9 @@ const OnboardingTab: React.FC<OnboardingTabProps> = ({vehicle, onboardings, read
                                                 <Typography variant="body2" fontWeight={600}>
                                                     {p.done} of {p.total} done
                                                 </Typography>
-                                                {p.done === p.total &&
-                                                    <Chip size="small" color="success" label="Complete"/>}
+                                                {p.done === p.total && (
+                                                    <Chip size="small" color="success" label="Complete" />
+                                                )}
                                             </Stack>
                                             <LinearProgress
                                                 variant="determinate"
@@ -160,10 +157,10 @@ const OnboardingTab: React.FC<OnboardingTabProps> = ({vehicle, onboardings, read
                                 })()}
                             </Box>
                         </Stack>
-                        <Divider/>
+                        <Divider />
                         {current.steps.map((s, i) => (
                             <React.Fragment key={s.id}>
-                                {i > 0 && <Divider/>}
+                                {i > 0 && <Divider />}
                                 <Stack direction="row" alignItems="center" spacing={1} px={1} py={0.5}>
                                     <Checkbox
                                         checked={!!s.done_at}
@@ -179,7 +176,8 @@ const OnboardingTab: React.FC<OnboardingTabProps> = ({vehicle, onboardings, read
                                     </Typography>
                                     {s.done_at && (
                                         <Typography variant="caption" color="textSecondary" sx={{pr: 1}}>
-                                            {formatDate(s.done_at)} · <PersonInline name={s.done_by} image={s.done_by_image}/>
+                                            {formatDate(s.done_at)} ·{' '}
+                                            <PersonInline name={s.done_by} image={s.done_by_image} />
                                         </Typography>
                                     )}
                                 </Stack>
@@ -189,7 +187,7 @@ const OnboardingTab: React.FC<OnboardingTabProps> = ({vehicle, onboardings, read
                 )}
             </Section>
 
-            {earlier.length > 0 && <EarlierLists list={earlier} progress={progress}/>}
+            {earlier.length > 0 && <EarlierLists list={earlier} progress={progress} />}
 
             <ConfirmDialog
                 open={switchTo !== null}
@@ -213,7 +211,7 @@ const OnboardingTab: React.FC<OnboardingTabProps> = ({vehicle, onboardings, read
 
 const EarlierLists: React.FC<{
     list: VehicleOnboarding[];
-    progress: (o: VehicleOnboarding) => { done: number; total: number };
+    progress: (o: VehicleOnboarding) => {done: number; total: number};
 }> = ({list, progress}) => (
     <Section title="Earlier drivers" subtitle="Start lists of people who had this vehicle before.">
         <Paper variant="outlined" sx={{borderRadius: 2}}>
@@ -221,9 +219,9 @@ const EarlierLists: React.FC<{
                 const p = progress(o);
                 return (
                     <React.Fragment key={o.id}>
-                        {i > 0 && <Divider/>}
+                        {i > 0 && <Divider />}
                         <Stack direction="row" justifyContent="space-between" alignItems="center" px={2} py={1.25}>
-                            <DriverName name={o.driver_name} image={o.driver_image}/>
+                            <DriverName name={o.driver_name} image={o.driver_image} />
                             <Typography variant="body2" color="textSecondary">
                                 {o.template_name} · {p.done}/{p.total} done · {formatDate(o.started_at)}
                             </Typography>

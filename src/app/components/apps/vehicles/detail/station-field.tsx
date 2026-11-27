@@ -19,7 +19,7 @@ import {
     GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
     PLACES_AUTOCOMPLETE_DEBOUNCE_MS,
 } from '@/utils/googleMaps';
-import {StationPlace} from '../types';
+import {StationPlace} from '../lib/types';
 
 interface Option {
     place_id: string;
@@ -104,7 +104,7 @@ const StationField: React.FC<StationFieldProps> = ({name, place, onChange}) => {
     const findNearby = () => {
         if (!ready) return;
         if (!navigator.geolocation) {
-            setMessage('This browser can\'t share your location. Search by name instead.');
+            setMessage("This browser can't share your location. Search by name instead.");
             return;
         }
         setLocating(true);
@@ -142,7 +142,7 @@ const StationField: React.FC<StationFieldProps> = ({name, place, onChange}) => {
                 setMessage(
                     err.code === err.PERMISSION_DENIED
                         ? 'Location is blocked in your browser. Allow it, or search by name.'
-                        : 'Couldn\'t get your location. Search by name instead.',
+                        : "Couldn't get your location. Search by name instead.",
                 );
             },
             {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000},
@@ -210,12 +210,16 @@ const StationField: React.FC<StationFieldProps> = ({name, place, onChange}) => {
             filterOptions={(o) => o}
             getOptionLabel={(o) => (typeof o === 'string' ? o : o.name)}
             isOptionEqualToValue={(a, b) => a.place_id === b.place_id}
-            value={place ? {
-                place_id: place.place_id,
-                name: place.name,
-                address: place.address,
-                is_station: true
-            } : null}
+            value={
+                place
+                    ? {
+                          place_id: place.place_id,
+                          name: place.name,
+                          address: place.address,
+                          is_station: true,
+                      }
+                    : null
+            }
             inputValue={name}
             onInputChange={(_, text, reason) => {
                 if (reason === 'reset') return;
@@ -232,7 +236,7 @@ const StationField: React.FC<StationFieldProps> = ({name, place, onChange}) => {
             renderOption={({key, ...props}, o) => (
                 <li key={o.place_id || key} {...props}>
                     <Stack direction="row" spacing={1.5} alignItems="center" width="100%">
-                        {o.is_station ? <IconGasStation size={18}/> : <IconMapPin size={18}/>}
+                        {o.is_station ? <IconGasStation size={18} /> : <IconMapPin size={18} />}
                         <Box flex={1} minWidth={0}>
                             <Typography variant="body2" fontWeight={600} noWrap>
                                 {o.name}
@@ -259,12 +263,12 @@ const StationField: React.FC<StationFieldProps> = ({name, place, onChange}) => {
                         ...params.InputProps,
                         startAdornment: (
                             <InputAdornment position="start">
-                                <IconGasStation size={18} color={place ? '#2e7d32' : '#888'}/>
+                                <IconGasStation size={18} color={place ? '#2e7d32' : '#888'} />
                             </InputAdornment>
                         ),
                         endAdornment: (
                             <>
-                                {searching && <CircularProgress size={16} sx={{mr: 1}}/>}
+                                {searching && <CircularProgress size={16} sx={{mr: 1}} />}
                                 <InputAdornment position="end">
                                     {name && (
                                         <Tooltip title="Clear">
@@ -276,16 +280,25 @@ const StationField: React.FC<StationFieldProps> = ({name, place, onChange}) => {
                                                     setMessage('');
                                                 }}
                                             >
-                                                <IconX size={16}/>
+                                                <IconX size={16} />
                                             </IconButton>
                                         </Tooltip>
                                     )}
                                     <Tooltip title="Stations near my location">
-                    <span>
-                      <IconButton size="small" onClick={findNearby} disabled={locating} color="primary">
-                        {locating ? <CircularProgress size={16}/> : <IconCurrentLocation size={18}/>}
-                      </IconButton>
-                    </span>
+                                        <span>
+                                            <IconButton
+                                                size="small"
+                                                onClick={findNearby}
+                                                disabled={locating}
+                                                color="primary"
+                                            >
+                                                {locating ? (
+                                                    <CircularProgress size={16} />
+                                                ) : (
+                                                    <IconCurrentLocation size={18} />
+                                                )}
+                                            </IconButton>
+                                        </span>
                                     </Tooltip>
                                 </InputAdornment>
                             </>

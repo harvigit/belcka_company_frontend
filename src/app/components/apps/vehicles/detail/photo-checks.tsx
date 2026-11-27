@@ -5,8 +5,8 @@ import {IconCameraUp} from '@tabler/icons-react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from '../../inventory-new/shared/ConfirmDialog';
 import {DueCell, PersonInline, PhotoThumbs} from '../shared';
-import {dueItems, FLEET_RULES, formatDate, formatMiles, PHOTO_SHOTS, Vehicle, VehicleEvent} from '../types';
-import {Section, StatTile} from './common';
+import {dueItems, FLEET_RULES, formatDate, formatMiles, PHOTO_SHOTS, Vehicle, VehicleEvent} from '../lib/types';
+import {Section, StatTile} from '../shared/common';
 
 /** Driver photographs the whole vehicle every few months; office can ask anytime. */
 const PhotoChecksTab: React.FC<{
@@ -34,7 +34,7 @@ const PhotoChecksTab: React.FC<{
         <Box display="flex" flexDirection="column" gap={3}>
             <Grid container spacing={2}>
                 <Grid size={{xs: 12, sm: 6, md: 4}}>
-                    <StatTile label="Next photo check" value={formatDate(next?.date)} sub={<DueCell item={next}/>}/>
+                    <StatTile label="Next photo check" value={formatDate(next?.date)} sub={<DueCell item={next} />} />
                 </Grid>
                 <Grid size={{xs: 12, sm: 6, md: 4}}>
                     <StatTile
@@ -43,7 +43,7 @@ const PhotoChecksTab: React.FC<{
                         sub={
                             checks[0] ? (
                                 <>
-                                    <PersonInline name={checks[0].created_by} image={checks[0].created_by_image}/> ·{' '}
+                                    <PersonInline name={checks[0].created_by} image={checks[0].created_by_image} /> ·{' '}
                                     {formatMiles(checks[0].mileage)}
                                 </>
                             ) : (
@@ -68,7 +68,7 @@ const PhotoChecksTab: React.FC<{
                     !readOnly && (
                         <Button
                             variant="outlined"
-                            startIcon={<IconCameraUp size={16}/>}
+                            startIcon={<IconCameraUp size={16} />}
                             onClick={() => setAsking(true)}
                             disabled={!vehicle.driver_id}
                             title={vehicle.driver_id ? undefined : 'Assign a driver first'}
@@ -86,25 +86,38 @@ const PhotoChecksTab: React.FC<{
                     <Stack spacing={1.5}>
                         {checks.map((c) => (
                             <Paper key={c.id} variant="outlined" sx={{p: 2, borderRadius: 2}}>
-                                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap
-                                       mb={1}>
+                                <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    alignItems="center"
+                                    flexWrap="wrap"
+                                    useFlexGap
+                                    mb={1}
+                                >
                                     <Typography fontWeight={700}>{formatDate(c.date)}</Typography>
                                     <Typography variant="body2" color="textSecondary">
-                                        · <PersonInline name={c.created_by} image={c.created_by_image}/> · {formatMiles(c.mileage)}
+                                        · <PersonInline name={c.created_by} image={c.created_by_image} /> ·{' '}
+                                        {formatMiles(c.mileage)}
                                     </Typography>
                                     {typeof c.lowest_tread === 'number' && (
-                                        <Chip size="small" variant="outlined"
-                                              label={`Lowest tread ${c.lowest_tread} mm`}/>
+                                        <Chip
+                                            size="small"
+                                            variant="outlined"
+                                            label={`Lowest tread ${c.lowest_tread} mm`}
+                                        />
                                     )}
-                                    <Chip size="small" variant="outlined"
-                                          label={`${c.photos?.length ?? 0} / ${PHOTO_SHOTS.length} photos`}/>
+                                    <Chip
+                                        size="small"
+                                        variant="outlined"
+                                        label={`${c.photos?.length ?? 0} / ${PHOTO_SHOTS.length} photos`}
+                                    />
                                 </Stack>
                                 {c.note && (
                                     <Typography variant="body2" mb={1}>
                                         {c.note}
                                     </Typography>
                                 )}
-                                <PhotoThumbs photos={c.photos ?? []} size={72}/>
+                                <PhotoThumbs photos={c.photos ?? []} size={72} />
                             </Paper>
                         ))}
                     </Stack>

@@ -14,7 +14,7 @@ import {IconCurrentLocation} from '@tabler/icons-react';
 import toast from 'react-hot-toast';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import FormField from '../../inventory-new/shared/FormField';
-import {ParkingPlace, Vehicle} from '../types';
+import {ParkingPlace, Vehicle} from '../lib/types';
 
 const coord = (v: string) => /^-?\d{0,3}(\.\d{0,7})?$/.test(v);
 
@@ -56,7 +56,7 @@ const ParkingDialog: React.FC<{
 
     const locate = () => {
         if (!navigator.geolocation) {
-            setNote('This browser can\'t share your position. Enter it by hand.');
+            setNote("This browser can't share your position. Enter it by hand.");
             return;
         }
         setLocating(true);
@@ -76,7 +76,7 @@ const ParkingDialog: React.FC<{
                 setNote(
                     err.code === err.PERMISSION_DENIED
                         ? 'Location is blocked in your browser. Allow it, or enter the position by hand.'
-                        : 'Couldn\'t get your position. Enter it by hand.',
+                        : "Couldn't get your position. Enter it by hand.",
                 );
             },
             {enableHighAccuracy: true, timeout: 10000},
@@ -133,10 +133,13 @@ const ParkingDialog: React.FC<{
                             <CustomTextField
                                 fullWidth
                                 value={form.lat}
-                                onChange={(e: any) => coord(e.target.value) && setForm((f) => ({
-                                    ...f,
-                                    lat: e.target.value
-                                }))}
+                                onChange={(e: any) =>
+                                    coord(e.target.value) &&
+                                    setForm((f) => ({
+                                        ...f,
+                                        lat: e.target.value,
+                                    }))
+                                }
                                 error={!!errors.lat || !!errors.pair}
                                 helperText={errors.lat}
                                 slotProps={{htmlInput: {inputMode: 'decimal'}}}
@@ -146,10 +149,13 @@ const ParkingDialog: React.FC<{
                             <CustomTextField
                                 fullWidth
                                 value={form.lng}
-                                onChange={(e: any) => coord(e.target.value) && setForm((f) => ({
-                                    ...f,
-                                    lng: e.target.value
-                                }))}
+                                onChange={(e: any) =>
+                                    coord(e.target.value) &&
+                                    setForm((f) => ({
+                                        ...f,
+                                        lng: e.target.value,
+                                    }))
+                                }
                                 error={!!errors.lng || !!errors.pair}
                                 helperText={errors.lng}
                                 slotProps={{htmlInput: {inputMode: 'decimal'}}}
@@ -166,7 +172,7 @@ const ParkingDialog: React.FC<{
                             variant="outlined"
                             onClick={locate}
                             disabled={locating}
-                            startIcon={locating ? <CircularProgress size={16}/> : <IconCurrentLocation size={16}/>}
+                            startIcon={locating ? <CircularProgress size={16} /> : <IconCurrentLocation size={16} />}
                         >
                             Use current position
                         </Button>

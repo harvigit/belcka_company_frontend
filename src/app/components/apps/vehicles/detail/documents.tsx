@@ -7,9 +7,9 @@ import CustomTextField from '@/app/components/forms/theme-elements/CustomTextFie
 import FormDrawer from '../../inventory-new/shared/FormDrawer';
 import FormField from '../../inventory-new/shared/FormField';
 import ConfirmDialog from '../../inventory-new/shared/ConfirmDialog';
-import {DOCUMENT_KINDS, dueState, DUE_CHIP, formatDate, Vehicle, VehicleDocument} from '../types';
-import {NewDocument} from '../useVehicles';
-import {RecordTable, Section} from './common';
+import {DOCUMENT_KINDS, dueState, DUE_CHIP, formatDate, Vehicle, VehicleDocument} from '../lib/types';
+import {NewDocument} from '../hooks/useVehicles';
+import {RecordTable, Section} from '../shared/common';
 import {FileLink, PersonInline} from '../shared';
 
 const MAX_MB = 5;
@@ -80,7 +80,7 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({vehicle, documents, readOnly
                 subtitle="Logbook, insurance, MOT certificates and lease papers for this vehicle."
                 actions={
                     !readOnly && (
-                        <Button variant="contained" startIcon={<IconPlus size={16}/>} onClick={() => openAdd()}>
+                        <Button variant="contained" startIcon={<IconPlus size={16} />} onClick={() => openAdd()}>
                             Upload document
                         </Button>
                     )
@@ -94,14 +94,14 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({vehicle, documents, readOnly
                             header: 'Document',
                             render: (d) => (
                                 <Stack direction="row" spacing={1} alignItems="center">
-                                    <IconFileText size={18}/>
+                                    <IconFileText size={18} />
                                     <Box>
                                         <Typography variant="body2" fontWeight={600}>
                                             {d.kind}
                                         </Typography>
                                         <Typography variant="caption" color="textSecondary">
                                             {d.file_url ? (
-                                                <FileLink url={d.file_url} name={d.file_name}/>
+                                                <FileLink url={d.file_url} name={d.file_name} />
                                             ) : (
                                                 d.file_name
                                             )}
@@ -120,8 +120,9 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({vehicle, documents, readOnly
                                 return (
                                     <Stack direction="row" spacing={1} alignItems="center">
                                         <span>{formatDate(d.expires_on)}</span>
-                                        {chip.color !== 'success' &&
-                                            <Chip size="small" color={chip.color} label={chip.label}/>}
+                                        {chip.color !== 'success' && (
+                                            <Chip size="small" color={chip.color} label={chip.label} />
+                                        )}
                                     </Stack>
                                 );
                             },
@@ -130,7 +131,8 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({vehicle, documents, readOnly
                             header: 'Uploaded',
                             render: (d) => (
                                 <Typography variant="body2" color="textSecondary">
-                                    {formatDate(d.uploaded_at)} · <PersonInline name={d.uploaded_by} image={d.uploaded_by_image}/>
+                                    {formatDate(d.uploaded_at)} ·{' '}
+                                    <PersonInline name={d.uploaded_by} image={d.uploaded_by_image} />
                                 </Typography>
                             ),
                         },
@@ -141,7 +143,7 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({vehicle, documents, readOnly
                                 readOnly ? null : (
                                     <Tooltip title="Remove">
                                         <IconButton color="error" size="small" onClick={() => setToRemove(d)}>
-                                            <IconTrash size={16}/>
+                                            <IconTrash size={16} />
                                         </IconButton>
                                     </Tooltip>
                                 ),

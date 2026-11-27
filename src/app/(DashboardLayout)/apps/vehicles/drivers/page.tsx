@@ -3,7 +3,7 @@
 import React from "react";
 import PageContainer from "@/app/components/container/PageContainer";
 import BlankCard from "@/app/components/shared/BlankCard";
-import DriversPage from "@/app/components/apps/vehicles/drivers-page";
+import DriversPage from "@/app/components/apps/vehicles/drivers";
 
 const VehicleDriversPage = () => (
   <PageContainer title="Drivers" description="Drivers, licences and reimbursement">

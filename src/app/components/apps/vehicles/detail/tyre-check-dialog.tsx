@@ -27,28 +27,23 @@ import {
     TyreWheel,
     Vehicle,
     VehicleEvent,
-} from '../types';
-import {NewEvent} from '../useVehicles';
+} from '../lib/types';
+import {NewEvent} from '../hooks/useVehicles';
 
 export const CarTop: React.FC = () => (
-    <Box
-        component="svg"
-        viewBox="0 0 100 200"
-        sx={{width: 84, color: 'text.primary', display: 'block'}}
-        aria-hidden
-    >
-        <rect x="8" y="34" width="12" height="34" rx="4" fill="currentColor"/>
-        <rect x="80" y="34" width="12" height="34" rx="4" fill="currentColor"/>
-        <rect x="8" y="132" width="12" height="34" rx="4" fill="currentColor"/>
-        <rect x="80" y="132" width="12" height="34" rx="4" fill="currentColor"/>
-        <rect x="18" y="6" width="64" height="188" rx="28" fill="#e3ece7" stroke="currentColor" strokeWidth="4"/>
-        <rect x="28" y="52" width="44" height="38" rx="9" fill="#fff" stroke="currentColor" strokeWidth="3"/>
-        <rect x="30" y="134" width="40" height="28" rx="9" fill="#fff" stroke="currentColor" strokeWidth="3"/>
+    <Box component="svg" viewBox="0 0 100 200" sx={{width: 84, color: 'text.primary', display: 'block'}} aria-hidden>
+        <rect x="8" y="34" width="12" height="34" rx="4" fill="currentColor" />
+        <rect x="80" y="34" width="12" height="34" rx="4" fill="currentColor" />
+        <rect x="8" y="132" width="12" height="34" rx="4" fill="currentColor" />
+        <rect x="80" y="132" width="12" height="34" rx="4" fill="currentColor" />
+        <rect x="18" y="6" width="64" height="188" rx="28" fill="#e3ece7" stroke="currentColor" strokeWidth="4" />
+        <rect x="28" y="52" width="44" height="38" rx="9" fill="#fff" stroke="currentColor" strokeWidth="3" />
+        <rect x="30" y="134" width="40" height="28" rx="9" fill="#fff" stroke="currentColor" strokeWidth="3" />
     </Box>
 );
 
 /** Four wheel boxes (FL, FR left/right on top, RL, RR below) with the car in the middle. */
-export const WheelLayout: React.FC<{ render: (wheel: TyreWheel, label: string) => React.ReactNode }> = ({render}) => {
+export const WheelLayout: React.FC<{render: (wheel: TyreWheel, label: string) => React.ReactNode}> = ({render}) => {
     const cell = (w: TyreWheel) => {
         const label = TYRE_WHEELS.find(([k]) => k === w)?.[1] ?? w;
         return (
@@ -72,7 +67,7 @@ export const WheelLayout: React.FC<{ render: (wheel: TyreWheel, label: string) =
         >
             <Box sx={{gridArea: 'fl'}}>{cell('FL')}</Box>
             <Box sx={{gridArea: 'car', display: {xs: 'none', sm: 'flex'}, justifyContent: 'center', px: 1}}>
-                <CarTop/>
+                <CarTop />
             </Box>
             <Box sx={{gridArea: 'fr'}}>{cell('FR')}</Box>
             <Box sx={{gridArea: 'rl'}}>{cell('RL')}</Box>
@@ -81,11 +76,11 @@ export const WheelLayout: React.FC<{ render: (wheel: TyreWheel, label: string) =
     );
 };
 
-const PhotoPick: React.FC<{ value: File | null; onChange: (file: File | null) => void; label?: string }> = ({
-                                                                                                                value,
-                                                                                                                onChange,
-                                                                                                                label = 'Add photo',
-                                                                                                            }) => {
+const PhotoPick: React.FC<{value: File | null; onChange: (file: File | null) => void; label?: string}> = ({
+    value,
+    onChange,
+    label = 'Add photo',
+}) => {
     const input = useRef<HTMLInputElement>(null);
     return (
         <>
@@ -107,10 +102,10 @@ const PhotoPick: React.FC<{ value: File | null; onChange: (file: File | null) =>
             />
             {value ? (
                 <Chip
-                    icon={<IconCamera size={16}/>}
+                    icon={<IconCamera size={16} />}
                     label={value.name}
                     onDelete={() => onChange(null)}
-                    deleteIcon={<IconX size={14}/>}
+                    deleteIcon={<IconX size={14} />}
                     variant="outlined"
                     sx={{maxWidth: '100%'}}
                 />
@@ -119,7 +114,7 @@ const PhotoPick: React.FC<{ value: File | null; onChange: (file: File | null) =>
                     size="small"
                     variant="outlined"
                     color="inherit"
-                    startIcon={<IconCamera size={16}/>}
+                    startIcon={<IconCamera size={16} />}
                     onClick={() => input.current?.click()}
                     sx={{color: 'text.secondary', borderColor: 'divider'}}
                 >
@@ -130,7 +125,7 @@ const PhotoPick: React.FC<{ value: File | null; onChange: (file: File | null) =>
     );
 };
 
-type WheelForm = { tread: string; state: TyreState; photo: File | null };
+type WheelForm = {tread: string; state: TyreState; photo: File | null};
 const emptyWheels = (): Record<TyreWheel, WheelForm> => ({
     FL: {tread: '', state: 'ok', photo: null},
     FR: {tread: '', state: 'ok', photo: null},
@@ -169,17 +164,26 @@ const TyreCheckDialog: React.FC<{
     const lastReading = Math.max(vehicle.mileage, ...events.filter((e) => e.mileage).map((e) => e.mileage as number));
     const odo = mileage === '' ? null : Number(mileage);
     const odoError =
-        odo === null ? (tried ? 'Enter the odometer reading.' : '') : odo < 0 ? 'The odometer reading cannot be negative.' : '';
+        odo === null
+            ? tried
+                ? 'Enter the odometer reading.'
+                : ''
+            : odo < 0
+              ? 'The odometer reading cannot be negative.'
+              : '';
     const atLimit = (w: TyreWheel) => treadOk(wheels[w].tread) && Number(wheels[w].tread) <= limit;
     const stateOf = (w: TyreWheel): TyreState => (atLimit(w) ? 'replace' : wheels[w].state);
     // Only the tyres that need checking are filled in; at least one is required.
     const checked = TYRE_WHEELS.filter(([w]) => treadOk(wheels[w].tread));
-    const toReplace = TYRE_WHEELS.filter(([w]) => treadOk(wheels[w].tread) && stateOf(w) === 'replace').map(([, l]) => l);
+    const toReplace = TYRE_WHEELS.filter(([w]) => treadOk(wheels[w].tread) && stateOf(w) === 'replace').map(
+        ([, l]) => l,
+    );
 
-    const setWheel = (w: TyreWheel, patch: Partial<WheelForm>) => setWheels((prev) => ({
-        ...prev,
-        [w]: {...prev[w], ...patch}
-    }));
+    const setWheel = (w: TyreWheel, patch: Partial<WheelForm>) =>
+        setWheels((prev) => ({
+            ...prev,
+            [w]: {...prev[w], ...patch},
+        }));
 
     const save = async () => {
         setTried(true);
@@ -211,7 +215,9 @@ const TyreCheckDialog: React.FC<{
                 ],
             });
             toast.success(
-                toReplace.length ? `Saved. To replace: ${toReplace.join(', ')}.` : `Tyre check saved for ${vehicle.registration}.`,
+                toReplace.length
+                    ? `Saved. To replace: ${toReplace.join(', ')}.`
+                    : `Tyre check saved for ${vehicle.registration}.`,
             );
             onClose();
         } catch {
@@ -242,15 +248,22 @@ const TyreCheckDialog: React.FC<{
                                     value={wheels[w].tread}
                                     onChange={(e: any) => {
                                         const v = e.target.value;
-                                        if (/^\d{0,2}(\.\d?)?$/.test(v) && (v === '' || Number(v) <= 12)) setWheel(w, {tread: v});
+                                        if (/^\d{0,2}(\.\d?)?$/.test(v) && (v === '' || Number(v) <= 12))
+                                            setWheel(w, {tread: v});
                                     }}
                                     error={error}
-                                    helperText={error ? 'Enter 0–12 mm' : atLimit(w) ? `At or below ${limit} mm: replace` : undefined}
+                                    helperText={
+                                        error
+                                            ? 'Enter 0–12 mm'
+                                            : atLimit(w)
+                                              ? `At or below ${limit} mm: replace`
+                                              : undefined
+                                    }
                                     FormHelperTextProps={{
                                         sx: {
                                             color: atLimit(w) && !error ? 'error.main' : undefined,
-                                            mx: 0
-                                        }
+                                            mx: 0,
+                                        },
                                     }}
                                     slotProps={{htmlInput: {inputMode: 'decimal', 'aria-label': `${label} tread, mm`}}}
                                 />
@@ -269,7 +282,7 @@ const TyreCheckDialog: React.FC<{
                                         </MenuItem>
                                     ))}
                                 </CustomTextField>
-                                <PhotoPick value={wheels[w].photo} onChange={(photo) => setWheel(w, {photo})}/>
+                                <PhotoPick value={wheels[w].photo} onChange={(photo) => setWheel(w, {photo})} />
                             </Stack>
                         );
                     }}
@@ -297,7 +310,7 @@ const TyreCheckDialog: React.FC<{
                             Photo from any side · optional
                         </Typography>
                         <Box sx={{minHeight: 44, display: 'flex', alignItems: 'center'}}>
-                            <PhotoPick value={extraPhoto} onChange={setExtraPhoto} label="Add photo"/>
+                            <PhotoPick value={extraPhoto} onChange={setExtraPhoto} label="Add photo" />
                         </Box>
                     </Box>
                 </Stack>
@@ -306,8 +319,11 @@ const TyreCheckDialog: React.FC<{
                     <Typography variant="subtitle2" fontWeight={600} mb={0.75}>
                         Note
                     </Typography>
-                    <CustomTextField fullWidth value={note}
-                                     onChange={(e: any) => setNote(e.target.value.slice(0, 160))}/>
+                    <CustomTextField
+                        fullWidth
+                        value={note}
+                        onChange={(e: any) => setNote(e.target.value.slice(0, 160))}
+                    />
                 </Box>
 
                 {toReplace.length > 0 && (

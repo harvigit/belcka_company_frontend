@@ -10,7 +10,7 @@ import api from "@/utils/axios";
 import { useServerTable } from "@/hooks/useServerTable";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import InventoryTable from "@/app/components/apps/inventory-new/shared/InventoryTable";
-import { CARD_TONE, StatCard } from "@/app/components/apps/vehicles/detail/common";
+import { CARD_TONE, StatCard } from "@/app/components/apps/vehicles/shared/common";
 import { DriverName } from "@/app/components/apps/vehicles/shared";
 import SurveyNav from "../nav";
 import { apiMessage } from "../settings/nhf-rates/types";

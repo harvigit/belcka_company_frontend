@@ -42,8 +42,8 @@ import {
     Vehicle,
     VehicleEvent,
     wheelState,
-} from '../types';
-import {Column, RecordTable, Section, StatTile, toneAt} from './common';
+} from '../lib/types';
+import {Column, RecordTable, Section, StatTile, toneAt} from '../shared/common';
 import {WheelLayout} from './tyre-check-dialog';
 
 interface TabProps {
@@ -56,14 +56,14 @@ interface TabProps {
 const newestFirst = (a: VehicleEvent, b: VehicleEvent) =>
     b.date.localeCompare(a.date) || (b.mileage ?? 0) - (a.mileage ?? 0) || b.id - a.id;
 
-const AddButton: React.FC<{ label: string; onClick: () => void; primary?: boolean; hidden?: boolean }> = ({
-                                                                                                              label,
-                                                                                                              onClick,
-                                                                                                              primary,
-                                                                                                              hidden,
-                                                                                                          }) =>
+const AddButton: React.FC<{label: string; onClick: () => void; primary?: boolean; hidden?: boolean}> = ({
+    label,
+    onClick,
+    primary,
+    hidden,
+}) =>
     hidden ? null : (
-        <Button variant={primary ? 'contained' : 'outlined'} startIcon={<IconPlus size={16}/>} onClick={onClick}>
+        <Button variant={primary ? 'contained' : 'outlined'} startIcon={<IconPlus size={16} />} onClick={onClick}>
             {label}
         </Button>
     );
@@ -73,7 +73,7 @@ const mileageCol: Column<VehicleEvent> = {header: 'Mileage', render: (e) => form
 const costCol: Column<VehicleEvent> = {header: 'Cost', render: (e) => money(e.cost), align: 'right'};
 const byCol: Column<VehicleEvent> = {
     header: 'Added by',
-    render: (e) => (e.created_by ? <DriverName name={e.created_by} image={e.created_by_image}/> : '-'),
+    render: (e) => (e.created_by ? <DriverName name={e.created_by} image={e.created_by_image} /> : '-'),
 };
 const noteCol = (header = 'Note'): Column<VehicleEvent> => ({
     header,
@@ -82,7 +82,7 @@ const noteCol = (header = 'Note'): Column<VehicleEvent> => ({
             <Typography variant="body2">{e.note || '-'}</Typography>
             {!!eventImages(e).length && (
                 <Box mt={0.75}>
-                    <PhotoThumbs photos={eventImages(e)} size={40}/>
+                    <PhotoThumbs photos={eventImages(e)} size={40} />
                 </Box>
             )}
         </Box>
@@ -99,8 +99,12 @@ export const MaintenanceTab: React.FC<TabProps> = (props) => {
             <Grid container spacing={2}>
                 {due.map((d, i) => (
                     <Grid key={d.label} size={{xs: 12, sm: 6, md: 3}}>
-                        <StatTile tone={toneAt(i)} label={d.label} value={formatDate(d.date)}
-                                  sub={<DueCell item={d}/>}/>
+                        <StatTile
+                            tone={toneAt(i)}
+                            label={d.label}
+                            value={formatDate(d.date)}
+                            sub={<DueCell item={d} />}
+                        />
                     </Grid>
                 ))}
             </Grid>
@@ -113,10 +117,13 @@ export const MaintenanceTab: React.FC<TabProps> = (props) => {
                 }
                 actions={
                     <>
-                        <AddButton label="MOT" onClick={() => onAdd('mot')} primary hidden={readOnly}/>
-                        <AddButton label="Service" onClick={() => onAdd('service')}
-                                   hidden={readOnly || vehicle.type === 'private'}/>
-                        <AddButton label="Other cost" onClick={() => onAdd('other_cost')} hidden={readOnly}/>
+                        <AddButton label="MOT" onClick={() => onAdd('mot')} primary hidden={readOnly} />
+                        <AddButton
+                            label="Service"
+                            onClick={() => onAdd('service')}
+                            hidden={readOnly || vehicle.type === 'private'}
+                        />
+                        <AddButton label="Other cost" onClick={() => onAdd('other_cost')} hidden={readOnly} />
                     </>
                 }
             >
@@ -132,7 +139,11 @@ export const MaintenanceTab: React.FC<TabProps> = (props) => {
                                     size="small"
                                     variant="outlined"
                                     color={EVENT_KINDS[e.kind].color}
-                                    label={e.kind === 'mot' ? `MOT · ${e.passed ? 'Pass' : 'Fail'}` : EVENT_KINDS[e.kind].label}
+                                    label={
+                                        e.kind === 'mot'
+                                            ? `MOT · ${e.passed ? 'Pass' : 'Fail'}`
+                                            : EVENT_KINDS[e.kind].label
+                                    }
                                 />
                             ),
                         },
@@ -160,29 +171,35 @@ export const TyresTab: React.FC<TabProps> = (props) => {
         <Box display="flex" flexDirection="column" gap={3}>
             <Grid container spacing={2}>
                 <Grid size={{xs: 12, sm: 4}}>
-                    <StatTile tone="blue" label="Next tyre check" value={formatDate(next?.date)}
-                              sub={<DueCell item={next}/>}/>
-                </Grid>
-                <Grid size={{xs: 12, sm: 4}}>
-                    <StatTile tone="purple"
-                              label="Lowest tread"
-                              value={lowest === null ? '-' : `${lowest} mm`}
-                              sub={
-                                  lowest !== null && lowest <= FLEET_RULES.treadLimitMm ? (
-                                      <Chip size="small" color="error" label="Replace now"/>
-                                  ) : last ? (
-                                      `Measured ${formatDate(last.date)}`
-                                  ) : (
-                                      'Not measured yet'
-                                  )
-                              }
+                    <StatTile
+                        tone="blue"
+                        label="Next tyre check"
+                        value={formatDate(next?.date)}
+                        sub={<DueCell item={next} />}
                     />
                 </Grid>
                 <Grid size={{xs: 12, sm: 4}}>
-                    <StatTile tone="green"
-                              label="Rule"
-                              value={`${FLEET_RULES.tyreCheckMonths} months`}
-                              sub={`or ${FLEET_RULES.tyreCheckMiles.toLocaleString('en-GB')} mi · replace at ${FLEET_RULES.treadLimitMm} mm`}
+                    <StatTile
+                        tone="purple"
+                        label="Lowest tread"
+                        value={lowest === null ? '-' : `${lowest} mm`}
+                        sub={
+                            lowest !== null && lowest <= FLEET_RULES.treadLimitMm ? (
+                                <Chip size="small" color="error" label="Replace now" />
+                            ) : last ? (
+                                `Measured ${formatDate(last.date)}`
+                            ) : (
+                                'Not measured yet'
+                            )
+                        }
+                    />
+                </Grid>
+                <Grid size={{xs: 12, sm: 4}}>
+                    <StatTile
+                        tone="green"
+                        label="Rule"
+                        value={`${FLEET_RULES.tyreCheckMonths} months`}
+                        sub={`or ${FLEET_RULES.tyreCheckMiles.toLocaleString('en-GB')} mi · replace at ${FLEET_RULES.treadLimitMm} mm`}
                     />
                 </Grid>
             </Grid>
@@ -191,7 +208,7 @@ export const TyresTab: React.FC<TabProps> = (props) => {
                     title={`Last tyre check · ${formatDate(lastCheck.date)}`}
                     subtitle={
                         <>
-                            <PersonInline name={lastCheck.created_by} image={lastCheck.created_by_image}/>
+                            <PersonInline name={lastCheck.created_by} image={lastCheck.created_by_image} />
                             {`${lastCheck.mileage ? ` · ${formatMiles(lastCheck.mileage)}` : ''}${lastCheck.note ? ` · ${lastCheck.note}` : ''}`}
                         </>
                     }
@@ -204,15 +221,22 @@ export const TyresTab: React.FC<TabProps> = (props) => {
                                 const photo = lastCheck.wheels?.[w]?.photo;
                                 return (
                                     <Stack spacing={1}>
-                                        <Stack direction="row" spacing={1} alignItems="center"
-                                               justifyContent="space-between">
+                                        <Stack
+                                            direction="row"
+                                            spacing={1}
+                                            alignItems="center"
+                                            justifyContent="space-between"
+                                        >
                                             <Typography fontWeight={700} sx={{fontVariantNumeric: 'tabular-nums'}}>
                                                 {typeof tread === 'number' ? `${tread} mm` : '-'}
                                             </Typography>
-                                            <Chip size="small" color={TYRE_STATE[state].color}
-                                                  label={TYRE_STATE[state].label}/>
+                                            <Chip
+                                                size="small"
+                                                color={TYRE_STATE[state].color}
+                                                label={TYRE_STATE[state].label}
+                                            />
                                         </Stack>
-                                        {photo && <PhotoThumbs photos={[photo]} size={56}/>}
+                                        {photo && <PhotoThumbs photos={[photo]} size={56} />}
                                     </Stack>
                                 );
                             }}
@@ -222,7 +246,7 @@ export const TyresTab: React.FC<TabProps> = (props) => {
                                 <Typography variant="caption" color="textSecondary" display="block" mb={0.5}>
                                     Photo from any side
                                 </Typography>
-                                <PhotoThumbs photos={[lastCheck.extra_photo]} size={56}/>
+                                <PhotoThumbs photos={[lastCheck.extra_photo]} size={56} />
                             </Box>
                         )}
                     </Box>
@@ -233,8 +257,8 @@ export const TyresTab: React.FC<TabProps> = (props) => {
                 title="Tyre history"
                 actions={
                     <>
-                        <AddButton label="Tyre check" onClick={() => onAdd('tyre_check')} primary hidden={readOnly}/>
-                        <AddButton label="Tyre change" onClick={() => onAdd('tyre_change')} hidden={readOnly}/>
+                        <AddButton label="Tyre check" onClick={() => onAdd('tyre_check')} primary hidden={readOnly} />
+                        <AddButton label="Tyre change" onClick={() => onAdd('tyre_change')} hidden={readOnly} />
                     </>
                 }
             >
@@ -267,7 +291,10 @@ export const TyresTab: React.FC<TabProps> = (props) => {
                                         color={low !== null && low <= FLEET_RULES.treadLimitMm ? 'error' : undefined}
                                         fontWeight={low !== null && low <= FLEET_RULES.treadLimitMm ? 700 : undefined}
                                     >
-                                        {(['FL', 'FR', 'RL', 'RR'] as const).map((w) => e.tread?.[w] ?? '-').join(' / ')} mm
+                                        {(['FL', 'FR', 'RL', 'RR'] as const)
+                                            .map((w) => e.tread?.[w] ?? '-')
+                                            .join(' / ')}{' '}
+                                        mm
                                     </Typography>
                                 );
                             },
@@ -295,17 +322,17 @@ const periodFrom = (p: FuelPeriod) =>
     p === 'all'
         ? ''
         : p === 'year'
-            ? dayjs().startOf('year').format('YYYY-MM-DD')
-            : dayjs().subtract(Number(p), 'day').format('YYYY-MM-DD');
+          ? dayjs().startOf('year').format('YYYY-MM-DD')
+          : dayjs().subtract(Number(p), 'day').format('YYYY-MM-DD');
 
 // "7.5" style number with up to 1 decimal, or "" (empty = not set)
 const rangeInput = (value: string) => /^\d{0,2}(\.\d?)?$/.test(value);
 
 export const FuelTab: React.FC<
     TabProps & {
-    onSetLimit: (litres: number) => Promise<void>;
-    onSetRange: (min: number | null, max: number | null) => Promise<void>;
-}
+        onSetLimit: (litres: number) => Promise<void>;
+        onSetRange: (min: number | null, max: number | null) => Promise<void>;
+    }
 > = (props) => {
     const {vehicle, events, onAdd, readOnly, onSetLimit, onSetRange} = props;
     const [limitOpen, setLimitOpen] = useState(false);
@@ -319,7 +346,9 @@ export const FuelTab: React.FC<
     const yearStart = dayjs().startOf('year').format('YYYY-MM-DD');
     const thisYear = fuelUse(events, yearStart);
     // Monday of the current week (dayjs weeks start on Sunday)
-    const weekStart = dayjs().subtract((dayjs().day() + 6) % 7, 'day').format('YYYY-MM-DD');
+    const weekStart = dayjs()
+        .subtract((dayjs().day() + 6) % 7, 'day')
+        .format('YYYY-MM-DD');
     // the weekly limit counts fuel waiting for approval too: it is already in the tank
     const weekLitres = fills
         .filter((f) => f.date >= weekStart && f.status !== 'rejected')
@@ -332,7 +361,7 @@ export const FuelTab: React.FC<
     const readings = events
         .filter((e) => e.mileage)
         .sort((a, b) => a.date.localeCompare(b.date) || (a.mileage ?? 0) - (b.mileage ?? 0));
-    const startReading = from ? [...readings].reverse().find((r) => r.date <= from) ?? readings[0] : readings[0];
+    const startReading = from ? ([...readings].reverse().find((r) => r.date <= from) ?? readings[0]) : readings[0];
     const milesDriven = startReading ? Math.max(0, vehicle.mileage - (startReading.mileage ?? 0)) : 0;
     const rangeState = fuelRangeState(vehicle, use.l100);
 
@@ -340,45 +369,51 @@ export const FuelTab: React.FC<
     const rangeMax = range.max === '' ? null : Number(range.max);
     const rangeError =
         rangeMin !== null && rangeMax !== null && rangeMin > rangeMax
-            ? 'The lowest can\'t be higher than the highest.'
+            ? "The lowest can't be higher than the highest."
             : (rangeMin !== null && rangeMin <= 0) || (rangeMax !== null && rangeMax <= 0)
-                ? 'Use a number above 0, or leave it empty.'
-                : '';
+              ? 'Use a number above 0, or leave it empty.'
+              : '';
     const allUse = fuelUse(events);
 
     return (
         <Box display="flex" flexDirection="column" gap={3}>
             <Grid container spacing={2}>
                 <Grid size={{xs: 12, sm: 4}}>
-                    <StatTile tone="blue" label="Fuel this year" value={money(thisYear.cost)}
-                              sub={`${thisYear.litres.toFixed(1)} L`}/>
-                </Grid>
-                <Grid size={{xs: 6, sm: 4}}>
-                    <StatTile tone="purple"
-                              label="Average price"
-                              value={thisYear.litres > 0 ? `£${(thisYear.cost / thisYear.litres).toFixed(3)}` : '-'}
-                              sub="per litre this year"
+                    <StatTile
+                        tone="blue"
+                        label="Fuel this year"
+                        value={money(thisYear.cost)}
+                        sub={`${thisYear.litres.toFixed(1)} L`}
                     />
                 </Grid>
                 <Grid size={{xs: 6, sm: 4}}>
-                    <StatTile tone="green"
-                              label="This week"
-                              value={`${weekLitres.toFixed(1)} L`}
-                              sub={
-                                  weeklyLimit > 0 ? (
-                                      <Box>
-                                          <LinearProgress
-                                              variant="determinate"
-                                              color={overLimit ? 'error' : 'primary'}
-                                              value={Math.min(100, (weekLitres / weeklyLimit) * 100)}
-                                              sx={{my: 0.5, borderRadius: 1}}
-                                          />
-                                          {overLimit ? `Over the ${weeklyLimit} L limit` : `Limit ${weeklyLimit} L (Mon–Sun)`}
-                                      </Box>
-                                  ) : (
-                                      'No weekly limit'
-                                  )
-                              }
+                    <StatTile
+                        tone="purple"
+                        label="Average price"
+                        value={thisYear.litres > 0 ? `£${(thisYear.cost / thisYear.litres).toFixed(3)}` : '-'}
+                        sub="per litre this year"
+                    />
+                </Grid>
+                <Grid size={{xs: 6, sm: 4}}>
+                    <StatTile
+                        tone="green"
+                        label="This week"
+                        value={`${weekLitres.toFixed(1)} L`}
+                        sub={
+                            weeklyLimit > 0 ? (
+                                <Box>
+                                    <LinearProgress
+                                        variant="determinate"
+                                        color={overLimit ? 'error' : 'primary'}
+                                        value={Math.min(100, (weekLitres / weeklyLimit) * 100)}
+                                        sx={{my: 0.5, borderRadius: 1}}
+                                    />
+                                    {overLimit ? `Over the ${weeklyLimit} L limit` : `Limit ${weeklyLimit} L (Mon–Sun)`}
+                                </Box>
+                            ) : (
+                                'No weekly limit'
+                            )
+                        }
                     />
                 </Grid>
             </Grid>
@@ -422,49 +457,59 @@ export const FuelTab: React.FC<
             >
                 <Grid container spacing={2}>
                     <Grid size={{xs: 6, md: 2}}>
-                        <StatTile tone="blue" label="Miles driven" value={formatMiles(milesDriven)}
-                                  sub="from odometer readings"/>
-                    </Grid>
-                    <Grid size={{xs: 6, md: 2}}>
-                        <StatTile tone="purple"
-                                  label="Fuel filled"
-                                  value={`${use.litres.toFixed(1)} L`}
-                                  sub={`${use.fills} fill${use.fills === 1 ? '' : 's'}`}
+                        <StatTile
+                            tone="blue"
+                            label="Miles driven"
+                            value={formatMiles(milesDriven)}
+                            sub="from odometer readings"
                         />
                     </Grid>
                     <Grid size={{xs: 6, md: 2}}>
-                        <StatTile tone="green" label="Fuel cost" value={money(use.cost)}/>
-                    </Grid>
-                    <Grid size={{xs: 6, md: 2}}>
-                        <StatTile tone="pink"
-                                  label="Fuel use"
-                                  value={use.l100 ? `${use.l100.toFixed(1)} L/100 km` : '-'}
-                                  sub={use.mpg ? `${use.mpg.toFixed(1)} mpg` : 'Needs two fills with odometer'}
+                        <StatTile
+                            tone="purple"
+                            label="Fuel filled"
+                            value={`${use.litres.toFixed(1)} L`}
+                            sub={`${use.fills} fill${use.fills === 1 ? '' : 's'}`}
                         />
                     </Grid>
                     <Grid size={{xs: 6, md: 2}}>
-                        <StatTile tone="orange"
-                                  label="Cost per mile"
-                                  value={use.measured_miles > 0 ? `£${(use.measured_cost / use.measured_miles).toFixed(2)}` : '-'}
-                                  sub="fuel only"
+                        <StatTile tone="green" label="Fuel cost" value={money(use.cost)} />
+                    </Grid>
+                    <Grid size={{xs: 6, md: 2}}>
+                        <StatTile
+                            tone="pink"
+                            label="Fuel use"
+                            value={use.l100 ? `${use.l100.toFixed(1)} L/100 km` : '-'}
+                            sub={use.mpg ? `${use.mpg.toFixed(1)} mpg` : 'Needs two fills with odometer'}
                         />
                     </Grid>
                     <Grid size={{xs: 6, md: 2}}>
-                        <StatTile tone="teal"
-                                  label="Normal range"
-                                  value={<Typography fontWeight={700}>{fuelRangeText(vehicle)}</Typography>}
-                                  sub={
-                                      rangeState !== 'not_set' ? (
-                                          <Chip
-                                              size="small"
-                                              sx={{mt: 0.5}}
-                                              color={FUEL_RANGE_STATE[rangeState].color}
-                                              label={FUEL_RANGE_STATE[rangeState].label}
-                                          />
-                                      ) : (
-                                          'Set it to get warnings'
-                                      )
-                                  }
+                        <StatTile
+                            tone="orange"
+                            label="Cost per mile"
+                            value={
+                                use.measured_miles > 0 ? `£${(use.measured_cost / use.measured_miles).toFixed(2)}` : '-'
+                            }
+                            sub="fuel only"
+                        />
+                    </Grid>
+                    <Grid size={{xs: 6, md: 2}}>
+                        <StatTile
+                            tone="teal"
+                            label="Normal range"
+                            value={<Typography fontWeight={700}>{fuelRangeText(vehicle)}</Typography>}
+                            sub={
+                                rangeState !== 'not_set' ? (
+                                    <Chip
+                                        size="small"
+                                        sx={{mt: 0.5}}
+                                        color={FUEL_RANGE_STATE[rangeState].color}
+                                        label={FUEL_RANGE_STATE[rangeState].label}
+                                    />
+                                ) : (
+                                    'Set it to get warnings'
+                                )
+                            }
                         />
                     </Grid>
                 </Grid>
@@ -474,7 +519,7 @@ export const FuelTab: React.FC<
                 title="Fuel log"
                 actions={
                     <>
-                        <AddButton label="Log fuel" onClick={() => onAdd('fuel')} primary hidden={readOnly}/>
+                        <AddButton label="Log fuel" onClick={() => onAdd('fuel')} primary hidden={readOnly} />
                         {!readOnly && (
                             <Button
                                 variant="outlined"
@@ -549,7 +594,9 @@ export const FuelTab: React.FC<
                             } catch {
                                 return;
                             }
-                            toast.success(Number(limit) > 0 ? `Weekly limit set to ${limit} L.` : 'Weekly limit removed.');
+                            toast.success(
+                                Number(limit) > 0 ? `Weekly limit set to ${limit} L.` : 'Weekly limit removed.',
+                            );
                             setLimitOpen(false);
                         }}
                     >
@@ -563,8 +610,7 @@ export const FuelTab: React.FC<
                 <DialogContent>
                     <Typography color="textSecondary" mb={2}>
                         The lowest and highest normal use for this vehicle, in litres per 100 km. Outside this range it
-                        shows a
-                        warning here and in the Action Centre. Leave both empty to switch it off.
+                        shows a warning here and in the Action Centre. Leave both empty to switch it off.
                     </Typography>
                     {allUse.l100 && (
                         <Alert severity="info" sx={{mb: 2}}>
@@ -578,12 +624,19 @@ export const FuelTab: React.FC<
                                 label={k === 'min' ? 'Lowest (L/100 km)' : 'Highest (L/100 km)'}
                                 fullWidth
                                 value={range[k]}
-                                onChange={(e: any) => rangeInput(e.target.value) && setRange({
-                                    ...range,
-                                    [k]: e.target.value
-                                })}
+                                onChange={(e: any) =>
+                                    rangeInput(e.target.value) &&
+                                    setRange({
+                                        ...range,
+                                        [k]: e.target.value,
+                                    })
+                                }
                                 error={rangeTried && !!rangeError}
-                                helperText={range[k] && Number(range[k]) > 0 ? `${l100ToMpg(Number(range[k])).toFixed(1)} mpg` : ' '}
+                                helperText={
+                                    range[k] && Number(range[k]) > 0
+                                        ? `${l100ToMpg(Number(range[k])).toFixed(1)} mpg`
+                                        : ' '
+                                }
                                 slotProps={{htmlInput: {inputMode: 'decimal'}}}
                             />
                         ))}
@@ -644,21 +697,32 @@ export const MileageTab: React.FC<TabProps> = (props) => {
         <Box display="flex" flexDirection="column" gap={3}>
             <Grid container spacing={2}>
                 <Grid size={{xs: 12, sm: 4}}>
-                    <StatTile tone="blue" label="Odometer" value={formatMiles(vehicle.mileage)}
-                              sub={readings.length ? `Last reading ${formatDate(readings[readings.length - 1].date)}` : undefined}/>
+                    <StatTile
+                        tone="blue"
+                        label="Odometer"
+                        value={formatMiles(vehicle.mileage)}
+                        sub={
+                            readings.length
+                                ? `Last reading ${formatDate(readings[readings.length - 1].date)}`
+                                : undefined
+                        }
+                    />
                 </Grid>
                 <Grid size={{xs: 6, sm: 4}}>
-                    <StatTile tone="purple" label="Last 30 days" value={last30 === null ? '-' : formatMiles(last30)}/>
+                    <StatTile tone="purple" label="Last 30 days" value={last30 === null ? '-' : formatMiles(last30)} />
                 </Grid>
                 <Grid size={{xs: 6, sm: 4}}>
-                    <StatTile tone="green" label="Last 12 months"
-                              value={last365 === null ? '-' : formatMiles(last365)}/>
+                    <StatTile
+                        tone="green"
+                        label="Last 12 months"
+                        value={last365 === null ? '-' : formatMiles(last365)}
+                    />
                 </Grid>
             </Grid>
             <Section
                 title="Odometer readings"
                 subtitle="Readings come from fuel, service, MOT and tyre records, or are added here."
-                actions={<AddButton label="Add reading" onClick={() => onAdd('mileage')} primary hidden={readOnly}/>}
+                actions={<AddButton label="Add reading" onClick={() => onAdd('mileage')} primary hidden={readOnly} />}
             >
                 <RecordTable
                     rows={withDiff}
@@ -706,7 +770,7 @@ export const ActivityTab: React.FC<{
         // mileage records: the reading before this one
         previous?: number | null;
         // driver logs: the driver, shown with their avatar
-        person?: { name: string; image?: string | null };
+        person?: {name: string; image?: string | null};
         by: string;
         by_image?: string | null;
     };
@@ -736,22 +800,24 @@ export const ActivityTab: React.FC<{
             {
                 id: `d${l.id}`,
                 date: l.from,
-                what: <Chip size="small" variant="outlined" label="Driver assigned"/>,
+                what: <Chip size="small" variant="outlined" label="Driver assigned" />,
                 detail: l.driver_name,
                 person: {name: l.driver_name, image: l.driver_image},
                 mileage: null,
-                by: '-'
+                by: '-',
             },
             ...(l.to
-                ? [{
-                    id: `u${l.id}`,
-                    date: l.to,
-                    what: <Chip size="small" variant="outlined" label="Driver removed"/>,
-                    detail: l.driver_name,
-                    person: {name: l.driver_name, image: l.driver_image},
-                    mileage: null,
-                    by: '-'
-                }]
+                ? [
+                      {
+                          id: `u${l.id}`,
+                          date: l.to,
+                          what: <Chip size="small" variant="outlined" label="Driver removed" />,
+                          detail: l.driver_name,
+                          person: {name: l.driver_name, image: l.driver_image},
+                          mileage: null,
+                          by: '-',
+                      },
+                  ]
                 : []),
         ]),
     ].sort((a, b) => b.date.localeCompare(a.date));
@@ -772,13 +838,13 @@ export const ActivityTab: React.FC<{
                             render: (r) => (
                                 <Box>
                                     {r.person ? (
-                                        <DriverName name={r.person.name} image={r.person.image}/>
+                                        <DriverName name={r.person.name} image={r.person.image} />
                                     ) : (
                                         <Typography variant="body2">{r.detail || '-'}</Typography>
                                     )}
                                     {!!r.photos?.length && (
                                         <Box mt={0.75}>
-                                            <PhotoThumbs photos={r.photos} size={40}/>
+                                            <PhotoThumbs photos={r.photos} size={40} />
                                         </Box>
                                     )}
                                 </Box>
@@ -799,9 +865,11 @@ export const ActivityTab: React.FC<{
                             header: 'By',
                             render: (r) =>
                                 r.by && r.by !== '-' ? (
-                                    <DriverName name={r.by} image={r.by_image}/>
+                                    <DriverName name={r.by} image={r.by_image} />
                                 ) : (
-                                    <Typography variant="body2" color="textSecondary">-</Typography>
+                                    <Typography variant="body2" color="textSecondary">
+                                        -
+                                    </Typography>
                                 ),
                         },
                     ]}
@@ -823,9 +891,9 @@ export const ActivityTab: React.FC<{
                     columns={[
                         {
                             header: 'When',
-                            render: (a) => `${dayjs(a.at).format('DD/MM/YYYY')} · ${dayjs(a.at).format('HH:mm')}`
+                            render: (a) => `${dayjs(a.at).format('DD/MM/YYYY')} · ${dayjs(a.at).format('HH:mm')}`,
                         },
-                        {header: 'Who', render: (a) => (a.by ? <DriverName name={a.by} image={a.by_image}/> : '-')},
+                        {header: 'Who', render: (a) => (a.by ? <DriverName name={a.by} image={a.by_image} /> : '-')},
                         {
                             header: 'What',
                             render: (a) => (

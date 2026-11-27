@@ -3,7 +3,7 @@
 import React from "react";
 import PageContainer from "@/app/components/container/PageContainer";
 import BlankCard from "@/app/components/shared/BlankCard";
-import FuelCardsPage from "@/app/components/apps/vehicles/fuel-cards-page";
+import FuelCardsPage from "@/app/components/apps/vehicles/fuel-cards";
 
 const VehicleFuelCardsPage = () => (
   <PageContainer title="Fuel cards" description="Fuel cards and fuel report imports">

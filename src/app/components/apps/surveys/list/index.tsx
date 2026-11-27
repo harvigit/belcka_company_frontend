@@ -42,7 +42,7 @@ import InventoryTable from "@/app/components/apps/inventory-new/shared/Inventory
 import ColumnVisibilityButton from "@/app/components/apps/inventory-new/shared/ColumnVisibilityButton";
 import FilterButton from "@/app/components/apps/inventory-new/shared/FilterButton";
 import ConfirmDialog from "@/app/components/apps/inventory-new/shared/ConfirmDialog";
-import { CARD_TONE, StatCard } from "@/app/components/apps/vehicles/detail/common";
+import { CARD_TONE, StatCard } from "@/app/components/apps/vehicles/shared/common";
 import { DriverName } from "@/app/components/apps/vehicles/shared";
 import SurveySettings from "../settings";
 import SurveyNav from "../nav";
