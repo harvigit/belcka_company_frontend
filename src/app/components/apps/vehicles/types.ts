@@ -153,11 +153,13 @@ export interface VehicleEvent {
     // app expenses/claims await approval; web records have no status
     status?: ExpenseStatus;
     submitted_by?: string;
+    submitted_by_image?: string | null;
     project?: string;
     // mileage claims: business miles and pence per mile
     claim_miles?: number;
     claim_rate?: number;
     decided_by?: string;
+    decided_by_image?: string | null;
     decided_at?: string;
     reject_reason?: string;
     // set on imported rows so the import can be undone
@@ -168,6 +170,7 @@ export interface VehicleEvent {
     station?: StationPlace | null;
     from_api?: boolean;
     created_by: string;
+    created_by_image?: string | null;
     created_at: string;
 }
 
@@ -186,6 +189,7 @@ export interface FuelCard {
     holder: string;
     driver_id: number | null;
     driver_name: string | null;
+    driver_image?: string | null;
     group: string;
     expires: string; // YYYY-MM
     blocked: boolean;
@@ -216,6 +220,7 @@ export interface Connection {
     connected: boolean;
     account: string;
     connected_by: string;
+    connected_by_image?: string | null;
     connected_at: string;
 }
 
@@ -236,6 +241,7 @@ export interface ImportBatch {
     litres: number;
     total: number;
     imported_by: string;
+    imported_by_image?: string | null;
     imported_at: string;
     undone_by?: string;
     undone_at?: string;
@@ -248,6 +254,7 @@ export interface DriverLocation {
     id: number;
     driver_id: number;
     driver_name: string;
+    driver_image?: string | null;
     vehicle_id: number | null;
     at: string; // ISO date and time
     lat: number;
@@ -296,6 +303,7 @@ export interface FleetPlace {
     lng: number;
     note: string;
     created_by: string;
+    created_by_image?: string | null;
     created_at: string;
 }
 
@@ -353,6 +361,7 @@ export interface Activity {
     id: number;
     at: string; // ISO date and time
     by: string;
+    by_image?: string | null;
     area: ActivityArea;
     vehicle_id: number | null;
     action: string;
@@ -380,6 +389,7 @@ export interface ImportConflict {
     resolved: boolean;
     note: string;
     resolved_by: string;
+    resolved_by_image?: string | null;
     resolved_at: string;
     // saved via the API; others still live in this browser
     from_api?: boolean;
@@ -482,7 +492,7 @@ export interface DailyCheckItem {
     id: number;
     title: string;
     all_drivers: boolean;
-    drivers: { id: number; name: string }[];
+    drivers: { id: number; name: string; image?: string | null }[];
 }
 
 export const dailyChecksFor = (driverId: number, items: DailyCheckItem[]) =>
@@ -519,6 +529,7 @@ export interface Defect {
     // defect: the driver's note; accident: "What happened?"
     description: string;
     reported_by: string;
+    reported_by_image?: string | null;
     reported_at: string;
     // defects only; accidents have no checklist
     checklist_id?: number | null;
@@ -526,6 +537,7 @@ export interface Defect {
     owner: string;
     resolution: string;
     updated_by: string;
+    updated_by_image?: string | null;
     updated_at: string;
 }
 
@@ -533,6 +545,7 @@ export interface DailyChecklist {
     id: number;
     vehicle_id: number;
     driver_name: string;
+    driver_image?: string | null;
     date: string;
     submitted_at?: string;
     mileage: number;
@@ -595,7 +608,9 @@ export interface ParkingPermit {
     valid_until: string;
     status: PermitStatus;
     requested_by: string;
+    requested_by_image?: string | null;
     decided_by: string;
+    decided_by_image?: string | null;
     decided_at: string;
     reject_reason: string;
 }
@@ -666,10 +681,11 @@ export interface VehicleOnboarding {
     vehicle_id: number;
     driver_id: number;
     driver_name: string;
+    driver_image?: string | null;
     template_id: number;
     template_name: string;
     started_at: string;
-    steps: { id: number; title: string; done_at: string | null; done_by: string | null }[];
+    steps: { id: number; title: string; done_at: string | null; done_by: string | null; done_by_image?: string | null }[];
 }
 
 export const DOCUMENT_KINDS = [
@@ -691,6 +707,7 @@ export interface VehicleDocument {
     file_name: string;
     file_url?: string;
     uploaded_by: string;
+    uploaded_by_image?: string | null;
     uploaded_at: string;
 }
 
@@ -699,6 +716,7 @@ export interface DriverLog {
     vehicle_id: number;
     driver_id: number;
     driver_name: string;
+    driver_image?: string | null;
     from: string;
     to: string | null;
 }

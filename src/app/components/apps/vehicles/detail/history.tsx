@@ -19,7 +19,7 @@ import {IconPlus} from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
-import {DueCell, PhotoThumbs} from '../shared';
+import {DriverName, DueCell, PersonInline, PhotoThumbs} from '../shared';
 import {
     Activity,
     ACTIVITY_AREA,
@@ -73,11 +73,7 @@ const mileageCol: Column<VehicleEvent> = {header: 'Mileage', render: (e) => form
 const costCol: Column<VehicleEvent> = {header: 'Cost', render: (e) => money(e.cost), align: 'right'};
 const byCol: Column<VehicleEvent> = {
     header: 'Added by',
-    render: (e) => (
-        <Typography variant="body2" color="textSecondary" noWrap>
-            {e.created_by}
-        </Typography>
-    ),
+    render: (e) => (e.created_by ? <DriverName name={e.created_by} image={e.created_by_image}/> : '-'),
 };
 const noteCol = (header = 'Note'): Column<VehicleEvent> => ({
     header,
@@ -193,7 +189,12 @@ export const TyresTab: React.FC<TabProps> = (props) => {
             {lastCheck && (
                 <Section
                     title={`Last tyre check · ${formatDate(lastCheck.date)}`}
-                    subtitle={`${lastCheck.created_by}${lastCheck.mileage ? ` · ${formatMiles(lastCheck.mileage)}` : ''}${lastCheck.note ? ` · ${lastCheck.note}` : ''}`}
+                    subtitle={
+                        <>
+                            <PersonInline name={lastCheck.created_by} image={lastCheck.created_by_image}/>
+                            {`${lastCheck.mileage ? ` · ${formatMiles(lastCheck.mileage)}` : ''}${lastCheck.note ? ` · ${lastCheck.note}` : ''}`}
+                        </>
+                    }
                 >
                     <Box maxWidth={620}>
                         <WheelLayout
@@ -704,7 +705,10 @@ export const ActivityTab: React.FC<{
         mileage: number | null;
         // mileage records: the reading before this one
         previous?: number | null;
+        // driver logs: the driver, shown with their avatar
+        person?: { name: string; image?: string | null };
         by: string;
+        by_image?: string | null;
     };
     const previous = previousReadings(events);
     const rows: Row[] = [
@@ -726,6 +730,7 @@ export const ActivityTab: React.FC<{
             mileage: e.mileage,
             previous: previous.get(e.id) ?? null,
             by: e.created_by,
+            by_image: e.created_by_image,
         })),
         ...driverLogs.flatMap((l) => [
             {
@@ -733,6 +738,7 @@ export const ActivityTab: React.FC<{
                 date: l.from,
                 what: <Chip size="small" variant="outlined" label="Driver assigned"/>,
                 detail: l.driver_name,
+                person: {name: l.driver_name, image: l.driver_image},
                 mileage: null,
                 by: '-'
             },
@@ -742,6 +748,7 @@ export const ActivityTab: React.FC<{
                     date: l.to,
                     what: <Chip size="small" variant="outlined" label="Driver removed"/>,
                     detail: l.driver_name,
+                    person: {name: l.driver_name, image: l.driver_image},
                     mileage: null,
                     by: '-'
                 }]
@@ -764,7 +771,11 @@ export const ActivityTab: React.FC<{
                             header: 'Details',
                             render: (r) => (
                                 <Box>
-                                    <Typography variant="body2">{r.detail || '-'}</Typography>
+                                    {r.person ? (
+                                        <DriverName name={r.person.name} image={r.person.image}/>
+                                    ) : (
+                                        <Typography variant="body2">{r.detail || '-'}</Typography>
+                                    )}
                                     {!!r.photos?.length && (
                                         <Box mt={0.75}>
                                             <PhotoThumbs photos={r.photos} size={40}/>
@@ -786,7 +797,12 @@ export const ActivityTab: React.FC<{
                         },
                         {
                             header: 'By',
-                            render: (r) => <Typography variant="body2" color="textSecondary">{r.by}</Typography>
+                            render: (r) =>
+                                r.by && r.by !== '-' ? (
+                                    <DriverName name={r.by} image={r.by_image}/>
+                                ) : (
+                                    <Typography variant="body2" color="textSecondary">-</Typography>
+                                ),
                         },
                     ]}
                 />
@@ -809,7 +825,7 @@ export const ActivityTab: React.FC<{
                             header: 'When',
                             render: (a) => `${dayjs(a.at).format('DD/MM/YYYY')} · ${dayjs(a.at).format('HH:mm')}`
                         },
-                        {header: 'Who', render: (a) => a.by},
+                        {header: 'Who', render: (a) => (a.by ? <DriverName name={a.by} image={a.by_image}/> : '-')},
                         {
                             header: 'What',
                             render: (a) => (

@@ -32,9 +32,9 @@ import ConfirmDialog from '../inventory-new/shared/ConfirmDialog';
 import FilterButton from '../inventory-new/shared/FilterButton';
 import FleetNav from './fleet-nav';
 import ImportDialog, {PreviewRow} from './import-dialog';
-import {csvDate, downloadCsv, normaliseReg, parseAmount, parseDate, pick} from './csv';
+import {downloadExcel, normaliseReg, parseAmount, parseDate, pick} from './csv';
 import {RecordTable, StatTile} from './detail/common';
-import {NoCompany, RegPlate} from './shared';
+import {NoCompany, PersonInline, RegPlate} from './shared';
 import {
     CONFLICT_TYPE,
     Connection,
@@ -142,7 +142,15 @@ const RoadCostsPage: React.FC = () => {
                 <Box sx={{pl: 1}}>
                     <Typography className="f-14">{row.original.supplier || '-'}</Typography>
                     <Typography variant="caption" color="textSecondary">
-                        {row.original.import_id ? 'Imported' : row.original.submitted_by ? `From ${row.original.submitted_by}` : 'Added by hand'}
+                        {row.original.import_id ? (
+                            'Imported'
+                        ) : row.original.submitted_by ? (
+                            <>
+                                From <PersonInline name={row.original.submitted_by} image={row.original.submitted_by_image}/>
+                            </>
+                        ) : (
+                            'Added by hand'
+                        )}
                     </Typography>
                 </Box>
             ),
@@ -185,19 +193,27 @@ const RoadCostsPage: React.FC = () => {
         autoResetPageIndex: true,
     });
 
-    const exportCsv = () => {
-        downloadCsv(`road-costs-${dayjs().format('YYYY-MM-DD')}.csv`, [
-            ['Date', 'Registration', 'Type', 'Source', 'Place / note', 'Reference', 'Amount'],
-            ...rows.map((e) => [
-                csvDate(formatDate(e.date)),
+    const exportCsv = async () => {
+        if (!rows.length) {
+            toast.error('No road costs to export.');
+            return;
+        }
+        try {
+            await downloadExcel(`road-costs-${dayjs().format('YYYY-MM-DD')}`,
+                ['Date', 'Registration', 'Type', 'Source', 'Place / note', 'Reference', 'Amount'],
+                rows.map((e) => [
+                formatDate(e.date),
                 byId.get(e.vehicle_id)?.registration ?? '',
                 EVENT_KINDS[e.kind].label,
                 e.supplier,
                 e.note,
                 e.invoice_no,
                 (e.cost ?? 0).toFixed(2),
-            ]),
-        ]);
+            ]), {moneyColumns: [6]});
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message || 'Export failed. Please try again.');
+            return;
+        }
         toast.success(`${rows.length} row${rows.length === 1 ? '' : 's'} exported.`);
     };
 
@@ -402,7 +418,7 @@ const RoadCostsPage: React.FC = () => {
                         </Stack>
                         <Button variant="outlined" startIcon={<IconDownload size={18}/>} disabled={!rows.length}
                                 onClick={exportCsv}>
-                            Export CSV
+                            Export Excel
                         </Button>
                     </Stack>
                     <Divider/>
@@ -434,7 +450,14 @@ const RoadCostsPage: React.FC = () => {
                         rows={chargeImports}
                         empty="No files imported yet."
                         columns={[
-                            {header: 'Imported', render: (i) => `${formatDate(i.imported_at)} · ${i.imported_by}`},
+                            {
+                                header: 'Imported',
+                                render: (i) => (
+                                    <>
+                                        {formatDate(i.imported_at)} · <PersonInline name={i.imported_by} image={i.imported_by_image}/>
+                                    </>
+                                ),
+                            },
                             {
                                 header: 'File',
                                 render: (i) => (
@@ -606,7 +629,7 @@ const RoadCostsPage: React.FC = () => {
                         />
                         {resolving.resolved && (
                             <Typography variant="caption" color="textSecondary" display="block" mt={1}>
-                                Resolved by {resolving.resolved_by} on {formatDate(resolving.resolved_at)}
+                                Resolved by <PersonInline name={resolving.resolved_by} image={resolving.resolved_by_image}/> on {formatDate(resolving.resolved_at)}
                             </Typography>
                         )}
                     </DialogContent>

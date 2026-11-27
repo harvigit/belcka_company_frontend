@@ -12,7 +12,6 @@ import {
     InputAdornment,
     MenuItem,
     Stack,
-    Switch,
     Tab,
     Tabs,
     TextField,
@@ -28,6 +27,7 @@ import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
+import IOSSwitch from '@/app/components/common/IOSSwitch';
 import InventoryTable from '../inventory-new/shared/InventoryTable';
 import FormDrawer from '../inventory-new/shared/FormDrawer';
 import FormField from '../inventory-new/shared/FormField';
@@ -36,7 +36,7 @@ import FleetNav from './fleet-nav';
 import ImportDialog, {PreviewRow} from './import-dialog';
 import {normaliseReg, parseAmount, parseDate, pick} from './csv';
 import {RecordTable, StatTile} from './detail/common';
-import {DriverName, DriverPicker, NoCompany, RegPlate} from './shared';
+import {DriverName, DriverPicker, NoCompany, PersonInline, RegPlate} from './shared';
 import {CARD_GROUPS, cardState, Connection, formatDate, FuelCard, ImportBatch, money} from './types';
 import {useVehicles} from './useVehicles';
 import {useDrivers} from './useDrivers';
@@ -114,7 +114,7 @@ const FuelCardsPage: React.FC = () => {
             header: 'Person',
             cell: ({row}) =>
                 row.original.driver_name ? (
-                    <DriverName name={row.original.driver_name}/>
+                    <DriverName name={row.original.driver_name} image={row.original.driver_image}/>
                 ) : (
                     <Chip size="small" color="warning" variant="outlined" label="Not linked"/>
                 ),
@@ -411,7 +411,14 @@ const FuelCardsPage: React.FC = () => {
                         rows={fuelImports}
                         empty="No fuel reports imported yet."
                         columns={[
-                            {header: 'Imported', render: (i) => `${formatDate(i.imported_at)} · ${i.imported_by}`},
+                            {
+                                header: 'Imported',
+                                render: (i) => (
+                                    <>
+                                        {formatDate(i.imported_at)} · <PersonInline name={i.imported_by} image={i.imported_by_image}/>
+                                    </>
+                                ),
+                            },
                             {
                                 header: 'File',
                                 render: (i) => (
@@ -598,7 +605,8 @@ const CardDrawer: React.FC<{
                     onChange={(d) => setForm((f) => (f ? {
                         ...f,
                         driver_id: d?.id ?? null,
-                        driver_name: d?.name ?? null
+                        driver_name: d?.name ?? null,
+                        driver_image: d?.image ?? null
                     } : f))}
                 />
             </FormField>
@@ -613,8 +621,8 @@ const CardDrawer: React.FC<{
                 </CustomTextField>
             </FormField>
             <FormControlLabel
-                control={<Switch checked={form.blocked} onChange={(e) => set('blocked', e.target.checked)}
-                                 color="error"/>}
+                control={<IOSSwitch sx={{mx: 1}} checked={form.blocked} onChange={(e) => set('blocked', e.target.checked)}
+                                 />}
                 label="Card blocked (lost, stolen or cancelled)"
             />
         </FormDrawer>

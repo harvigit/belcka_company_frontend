@@ -37,8 +37,8 @@ import FilterButton from '../inventory-new/shared/FilterButton';
 import {selectColumn} from '../inventory-new/shared/selectColumn';
 import FleetNav from './fleet-nav';
 import {CARD_TONE, StatCard} from './detail/common';
-import {NoCompany, RegPlate} from './shared';
-import {csvDate, downloadCsv} from './csv';
+import {DriverName, NoCompany, RegPlate} from './shared';
+import {downloadExcel} from './csv';
 import {PERMIT_ORDER, PermitDrawer, PermitRejectDialog} from './permit-forms';
 import {formatDate, ParkingPermit, PERMIT_STATE, PermitState, permitState} from './types';
 import {useVehicles} from './useVehicles';
@@ -102,25 +102,29 @@ const PermitsPage: React.FC = () => {
 
     const openVehicle = (p: ParkingPermit) => router.push(`/apps/vehicles/${p.vehicle_id}?tab=permits`);
 
-    const exportCsv = () => {
+    const exportCsv = async () => {
         const list = selected.size ? rows.filter((p) => selected.has(p.id)) : rows;
         if (!list.length) {
             toast.error('No permits to export.');
             return;
         }
-        downloadCsv(`parking-permits-${dayjs().format('YYYY-MM-DD')}.csv`, [
-            ['Registration', 'Zone / car park', 'Issued by', 'Reference', 'Valid from', 'Valid until', 'Status', 'Approved by'],
-            ...list.map((p) => [
+        try {
+            await downloadExcel(`parking-permits-${dayjs().format('YYYY-MM-DD')}`,
+                ['Registration', 'Zone / car park', 'Issued by', 'Reference', 'Valid from', 'Valid until', 'Status', 'Approved by'],
+                list.map((p) => [
                 byId.get(p.vehicle_id)?.registration ?? '',
                 p.zone,
                 p.issuer,
                 p.reference,
-                csvDate(formatDate(p.valid_from)),
-                csvDate(formatDate(p.valid_until)),
+                formatDate(p.valid_from),
+                formatDate(p.valid_until),
                 PERMIT_STATE[permitState(p)].label,
                 p.status === 'pending' ? '' : p.decided_by,
-            ]),
-        ]);
+            ]));
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message || 'Export failed. Please try again.');
+            return;
+        }
         toast.success(`${list.length} permit${list.length === 1 ? '' : 's'} exported.`);
     };
 
@@ -205,11 +209,17 @@ const PermitsPage: React.FC = () => {
             header: 'Requested / approved by',
             cell: ({row}) => {
                 const p = row.original;
+                const name = p.status === 'pending' ? p.requested_by : p.decided_by;
+                const image = p.status === 'pending' ? p.requested_by_image : p.decided_by_image;
                 return (
                     <Box sx={{pl: 1}}>
-                        <Typography className="f-14" noWrap>
-                            {p.status === 'pending' ? p.requested_by : p.decided_by || '-'}
-                        </Typography>
+                        {name ? (
+                            <DriverName name={name} image={image}/>
+                        ) : (
+                            <Typography className="f-14" noWrap>
+                                -
+                            </Typography>
+                        )}
                         <Typography variant="caption" color="textSecondary">
                             {p.status === 'pending'
                                 ? 'Requested in the app'
@@ -380,7 +390,7 @@ const PermitsPage: React.FC = () => {
                 </Stack>
                 <Stack direction="row" spacing={1}>
                     <Button variant="outlined" startIcon={<IconDownload size={18}/>} onClick={exportCsv}>
-                        {selected.size ? `Export ${selected.size} selected` : 'Export CSV'}
+                        {selected.size ? `Export ${selected.size} selected` : 'Export Excel'}
                     </Button>
                     <Button variant="contained" startIcon={<IconPlus size={18}/>} onClick={() => setAdding(true)}
                             disabled={!fleet.length}>

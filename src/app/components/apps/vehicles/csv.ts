@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import api from '@/utils/axios';
 
 // Reads a CSV export into rows keyed by lower-case header. Handles quoted values with commas.
 export function parseCsv(text: string): Record<string, string>[] {
@@ -51,17 +52,27 @@ export const parseAmount = (value: string) => {
 
 export const normaliseReg = (value: string) => value.toUpperCase().replace(/\s+/g, '');
 
-// Excel keeps this as text, so a date shows as written instead of "####" in a column too narrow for it.
-export const csvDate = (value: string) => (value && value !== '-' ? `="${value}"` : '');
-
-// Saves rows as a CSV file. The BOM makes Excel read it as UTF-8 (otherwise "·" and "£" come out garbled).
-export function downloadCsv(fileName: string, rows: (string | number)[][]) {
-    const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const text = '﻿' + rows.map((r) => r.map(cell).join(',')).join('\r\n');
-    const url = URL.createObjectURL(new Blob([text], {type: 'text/csv;charset=utf-8'}));
+// Builds the file on the server (same Excel layout as the time clock export) and downloads it.
+// numberColumns / moneyColumns are column indexes saved as numbers (money with 2 decimals).
+export async function downloadExcel(
+    fileName: string,
+    columns: string[],
+    rows: (string | number | null | undefined)[][],
+    options: { numberColumns?: number[]; moneyColumns?: number[] } = {},
+) {
+    const res = await api.post('vehicles/export', {
+        file_name: fileName,
+        columns,
+        rows: rows.map((r) => r.map((v) => v ?? '')),
+        number_columns: options.numberColumns ?? [],
+        money_columns: options.moneyColumns ?? [],
+    });
+    const {file, filename, contentType} = res.data.data;
+    const bytes = Uint8Array.from(atob(file), (c) => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], {type: contentType}));
     const a = document.createElement('a');
     a.href = url;
-    a.download = fileName;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
 }

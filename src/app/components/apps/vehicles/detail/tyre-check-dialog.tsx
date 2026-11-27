@@ -166,11 +166,10 @@ const TyreCheckDialog: React.FC<{
     if (!open) return null;
 
     const limit = FLEET_RULES.treadLimitMm;
-    // The odometer can't go below the highest reading so far.
     const lastReading = Math.max(vehicle.mileage, ...events.filter((e) => e.mileage).map((e) => e.mileage as number));
     const odo = mileage === '' ? null : Number(mileage);
     const odoError =
-        odo === null ? (tried ? 'Enter the odometer reading.' : '') : odo < lastReading ? `Can't be lower than ${formatMiles(lastReading)}.` : '';
+        odo === null ? (tried ? 'Enter the odometer reading.' : '') : odo < 0 ? 'The odometer reading cannot be negative.' : '';
     const atLimit = (w: TyreWheel) => treadOk(wheels[w].tread) && Number(wheels[w].tread) <= limit;
     const stateOf = (w: TyreWheel): TyreState => (atLimit(w) ? 'replace' : wheels[w].state);
     // Only the tyres that need checking are filled in; at least one is required.

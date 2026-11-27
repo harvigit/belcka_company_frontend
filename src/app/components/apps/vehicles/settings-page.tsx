@@ -15,7 +15,6 @@ import {
     Radio,
     RadioGroup,
     Stack,
-    Switch,
     Tooltip,
     Typography,
 } from '@mui/material';
@@ -24,6 +23,7 @@ import toast from 'react-hot-toast';
 import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
+import IOSSwitch from '@/app/components/common/IOSSwitch';
 import FormDrawer from '../inventory-new/shared/FormDrawer';
 import FormField from '../inventory-new/shared/FormField';
 import ConfirmDialog from '../inventory-new/shared/ConfirmDialog';
@@ -40,7 +40,7 @@ import {
 } from './types';
 import {DriverOption, useVehicles} from './useVehicles';
 import {useDrivers} from './useDrivers';
-import {DriverName, NoCompany} from './shared';
+import {DriverName, NoCompany, PersonInline} from './shared';
 
 type DailyCheckForm = { id?: number; title: string; all_drivers: boolean; driver_ids: number[] };
 
@@ -233,7 +233,7 @@ const SettingsPage: React.FC = () => {
                                         })}
                                         {g.group === 'Checks and reminders' && (
                                             <FormControlLabel
-                                                control={<Switch checked={odometer}
+                                                control={<IOSSwitch sx={{mx: 1}} checked={odometer}
                                                                  onChange={(e) => setOdometer(e.target.checked)}/>}
                                                 label={
                                                     <Typography variant="body2">
@@ -353,9 +353,12 @@ const SettingsPage: React.FC = () => {
                                     c.all_drivers ? (
                                         <Chip size="small" variant="outlined" color="primary" label="All drivers"/>
                                     ) : (
-                                        <Box sx={{maxWidth: 420}}>
-                                            <Typography
-                                                variant="body2">{c.drivers.map((d) => d.name).join(', ')}</Typography>
+                                        <Box sx={{maxWidth: 420, display: 'flex', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.5}}>
+                                            {c.drivers.map((d) => (
+                                                <Typography key={d.id} variant="body2" component="span">
+                                                    <PersonInline name={d.name} image={d.image}/>
+                                                </Typography>
+                                            ))}
                                         </Box>
                                     ),
                             },
@@ -445,7 +448,14 @@ const SettingsPage: React.FC = () => {
                                         <Typography variant="caption" color="textSecondary">
                                             {CONNECTION_KIND[c.kind]}
                                             {c.connected && c.account ? ` · ${c.account}` : ''}
-                                            {c.connected ? ` · connected by ${c.connected_by}, ${formatDate(c.connected_at)}` : ''}
+                                            {c.connected ? (
+                                                <>
+                                                    {' · connected by '}
+                                                    <PersonInline name={c.connected_by} image={c.connected_by_image}/>, {formatDate(c.connected_at)}
+                                                </>
+                                            ) : (
+                                                ''
+                                            )}
                                         </Typography>
                                         <Box>
                                             {c.kind === 'server' ? (

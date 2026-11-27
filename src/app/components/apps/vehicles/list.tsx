@@ -54,7 +54,7 @@ import ConfirmDialog from '../inventory-new/shared/ConfirmDialog';
 import {useRouter} from 'next/navigation';
 import AssignDriverDialog from './assign-dialog';
 import {DriverName, DueCell, NoCompany, RegPlate} from './shared';
-import {csvDate, downloadCsv} from './csv';
+import {downloadExcel} from './csv';
 import {
     countsAsCost,
     dueItems,
@@ -454,7 +454,7 @@ const VehicleList: React.FC = () => {
     });
 
     // Visible vehicles (search, filters, tiles applied), sorted like the table.
-    const exportCsv = () => {
+    const exportCsv = async () => {
         const list = table.getSortedRowModel().rows.map((r) => r.original);
         if (!list.length) {
             toast.error('No vehicles to export.');
@@ -462,10 +462,10 @@ const VehicleList: React.FC = () => {
         }
         const due = (v: Vehicle, label: string) => {
             const item = dueItems(v).find((i) => i.label === label);
-            return item ? csvDate(formatDate(item.date)) : '';
+            return item ? formatDate(item.date) : '';
         };
-        downloadCsv(`vehicles-${isArchiveView ? 'archived-' : ''}${dayjs().format('YYYY-MM-DD')}.csv`, [
-            [
+        try {
+            await downloadExcel(`vehicles-${isArchiveView ? 'archived-' : ''}${dayjs().format('YYYY-MM-DD')}`, [
                 'Registration',
                 'Make and model',
                 'Type',
@@ -483,8 +483,7 @@ const VehicleList: React.FC = () => {
                 `Costs (${range.name})`,
                 'Parking permits',
                 'GPS tracker',
-            ],
-            ...list.map((v) => {
+            ], list.map((v) => {
                 const next = nextDue(v);
                 return [
                     v.registration,
@@ -499,14 +498,17 @@ const VehicleList: React.FC = () => {
                     due(v, 'Insurance'),
                     due(v, 'Road tax'),
                     due(v, 'Tyre check'),
-                    next ? `${next.label} · ${formatDate(next.date)}` : '',
+                    next ? (next.date ? `${next.label} · ${formatDate(next.date)}` : next.label) : '',
                     usage.get(v.id)?.miles ?? 0,
                     (usage.get(v.id)?.costs ?? 0).toFixed(2),
                     permitsOf(v).length,
                     v.gps_tracker,
                 ];
-            }),
-        ]);
+            }), {numberColumns: [6, 13, 15], moneyColumns: [14]});
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message || 'Export failed. Please try again.');
+            return;
+        }
         toast.success(`${list.length} vehicle${list.length === 1 ? '' : 's'} exported.`);
     };
 
@@ -733,7 +735,7 @@ const VehicleList: React.FC = () => {
                             </ToggleButton>
                         </ToggleButtonGroup>
                         <Button variant="outlined" startIcon={<IconDownload size={18}/>} onClick={exportCsv}>
-                            Export CSV
+                            Export Excel
                         </Button>
                         {!isArchiveView && (
                             <Button variant="contained" startIcon={<IconPlus size={18}/>} onClick={openCreate}>

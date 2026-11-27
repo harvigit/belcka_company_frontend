@@ -4,7 +4,7 @@ import {Box, Button, Chip, Grid, Paper, Stack, Typography} from '@mui/material';
 import {IconCameraUp} from '@tabler/icons-react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from '../../inventory-new/shared/ConfirmDialog';
-import {DueCell, PhotoThumbs} from '../shared';
+import {DueCell, PersonInline, PhotoThumbs} from '../shared';
 import {dueItems, FLEET_RULES, formatDate, formatMiles, PHOTO_SHOTS, Vehicle, VehicleEvent} from '../types';
 import {Section, StatTile} from './common';
 
@@ -40,7 +40,16 @@ const PhotoChecksTab: React.FC<{
                     <StatTile
                         label="Last photo check"
                         value={checks[0] ? formatDate(checks[0].date) : '-'}
-                        sub={checks[0] ? `${checks[0].created_by} · ${formatMiles(checks[0].mileage)}` : 'None yet'}
+                        sub={
+                            checks[0] ? (
+                                <>
+                                    <PersonInline name={checks[0].created_by} image={checks[0].created_by_image}/> ·{' '}
+                                    {formatMiles(checks[0].mileage)}
+                                </>
+                            ) : (
+                                'None yet'
+                            )
+                        }
                     />
                 </Grid>
                 <Grid size={{xs: 12, md: 4}}>
@@ -81,7 +90,7 @@ const PhotoChecksTab: React.FC<{
                                        mb={1}>
                                     <Typography fontWeight={700}>{formatDate(c.date)}</Typography>
                                     <Typography variant="body2" color="textSecondary">
-                                        · {c.created_by} · {formatMiles(c.mileage)}
+                                        · <PersonInline name={c.created_by} image={c.created_by_image}/> · {formatMiles(c.mileage)}
                                     </Typography>
                                     {typeof c.lowest_tread === 'number' && (
                                         <Chip size="small" variant="outlined"

@@ -69,7 +69,7 @@ export const StatTile: React.FC<{
 
 export const Section: React.FC<{
     title: string;
-    subtitle?: string;
+    subtitle?: React.ReactNode;
     actions?: React.ReactNode;
     children: React.ReactNode;
 }> = ({title, subtitle, actions, children}) => (

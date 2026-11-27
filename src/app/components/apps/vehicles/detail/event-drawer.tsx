@@ -194,13 +194,10 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
                                                      kind: newKind,
                                                      editing,
                                                      vehicle,
-                                                     events: allEvents,
                                                      onClose,
                                                      onSave
                                                  }) => {
     const kind = editing?.kind ?? newKind;
-    // the record being edited doesn't count against itself
-    const events = editing ? allEvents.filter((e) => e.id !== editing.id) : allEvents;
     const [form, setForm] = useState<FormState>(blank);
     const [showErrors, setShowErrors] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -234,25 +231,14 @@ const EventDrawer: React.FC<EventDrawerProps> = ({
     const set = <K extends keyof FormState>(name: K, value: FormState[K]) =>
         setForm((prev) => ({...prev, [name]: value}));
 
-    // Odometer can't go below the highest reading on or before this date.
-    const readingBefore = Math.max(
-        0,
-        ...events.filter((e) => e.date <= form.date && e.mileage).map((e) => e.mileage as number),
-        !editing && form.date >= dayjs().format('YYYY-MM-DD') ? vehicle.mileage : 0,
-    );
-    // ...and a back-dated reading can't be higher than a later one.
-    const later = events.filter((e) => e.date > form.date && e.mileage).map((e) => e.mileage as number);
-    const readingAfter = later.length ? Math.min(...later) : null;
     const mileage = form.mileage === '' ? null : Number(form.mileage);
 
     const errors: Partial<Record<'date' | 'mileage' | 'litres' | 'cost' | 'note' | 'lowest_tread', string>> = {};
     if (!form.date) errors.date = 'Choose a date.';
     else if (form.date > dayjs().format('YYYY-MM-DD')) errors.date = 'The date can\'t be in the future.';
     if (mileage === null && mileageRequired && showErrors) errors.mileage = 'Enter the odometer reading.';
-    if (mileage !== null && mileage < readingBefore)
-        errors.mileage = `Can't be lower than the last reading (${formatMiles(readingBefore)}).`;
-    else if (mileage !== null && readingAfter !== null && mileage > readingAfter)
-        errors.mileage = `Can't be higher than a later reading (${formatMiles(readingAfter)}).`;
+    // Any reading is allowed, only not a negative one.
+    if (mileage !== null && mileage < 0) errors.mileage = 'The odometer reading cannot be negative.';
     if (kind === 'fuel' && showErrors) {
         if (!(Number(form.litres) > 0)) errors.litres = 'Enter the litres.';
         if (!(Number(form.cost) > 0)) errors.cost = 'Enter the cost.';

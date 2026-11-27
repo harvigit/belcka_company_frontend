@@ -65,7 +65,14 @@ const DriverChecksToday: React.FC<{
                         },
                         {
                             header: 'Driver',
-                            render: (r) => <DriverName name={r.checklist?.driver_name ?? r.vehicle.driver_name ?? '-'}/>
+                            render: (r) =>
+                                r.checklist?.driver_name ? (
+                                    <DriverName name={r.checklist.driver_name} image={r.checklist.driver_image}/>
+                                ) : r.vehicle.driver_name ? (
+                                    <DriverName name={r.vehicle.driver_name} image={r.vehicle.driver_image}/>
+                                ) : (
+                                    '-'
+                                ),
                         },
                         {
                             header: 'Submitted',

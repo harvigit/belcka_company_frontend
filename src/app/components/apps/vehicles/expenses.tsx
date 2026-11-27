@@ -33,7 +33,7 @@ import ConfirmDialog from '../inventory-new/shared/ConfirmDialog';
 import FilterButton from '../inventory-new/shared/FilterButton';
 import {selectColumn} from '../inventory-new/shared/selectColumn';
 import FleetNav from './fleet-nav';
-import {FileLink, isImageFile, NoCompany, PhotoThumbs, RegPlate} from './shared';
+import {DriverName, FileLink, isImageFile, NoCompany, PersonInline, PhotoThumbs, RegPlate} from './shared';
 import {StatTile} from './detail/common';
 import {EVENT_KINDS, EXPENSE_STATUS, ExpenseStatus, formatDate, money, VehicleEvent} from './types';
 import {useVehicles} from './useVehicles';
@@ -133,11 +133,16 @@ const Expenses: React.FC = () => {
         columnHelper.accessor((e) => e.submitted_by ?? '', {
             id: 'driver',
             header: 'Sent by',
-            cell: ({row}) => (
-                <Typography className="f-14" sx={{pl: 1}} noWrap>
-                    {row.original.submitted_by ?? '-'}
-                </Typography>
-            ),
+            cell: ({row}) =>
+                row.original.submitted_by ? (
+                    <Box sx={{pl: 1}}>
+                        <DriverName name={row.original.submitted_by} image={row.original.submitted_by_image}/>
+                    </Box>
+                ) : (
+                    <Typography className="f-14" sx={{pl: 1}}>
+                        -
+                    </Typography>
+                ),
         }),
         columnHelper.accessor('kind', {
             header: 'Type',
@@ -389,15 +394,15 @@ const Expenses: React.FC = () => {
                             {money(open.cost)}
                         </Typography>
                         <Stack spacing={0.75}>
-                            {[
+                            {([
                                 ['Date', formatDate(open.date)],
-                                ['Sent by', open.submitted_by ?? '-'],
+                                ['Sent by', open.submitted_by ? <PersonInline name={open.submitted_by} image={open.submitted_by_image}/> : '-'],
                                 ['Project', open.project ?? '-'],
                                 ...(open.kind === 'mileage_claim'
                                     ? [['Claim', `${open.claim_miles} business miles × ${open.claim_rate}p per mile`]]
                                     : [['Supplier', open.supplier || '-']]),
                                 ['Note', open.note || '-'],
-                            ].map(([label, value]) => (
+                            ] as [string, React.ReactNode][]).map(([label, value]) => (
                                 <Stack key={label} direction="row" justifyContent="space-between" spacing={2}>
                                     <Typography variant="body2" color="textSecondary">
                                         {label}
@@ -438,7 +443,7 @@ const Expenses: React.FC = () => {
                         )}
                         {open.status !== 'pending' && (
                             <Alert severity={open.status === 'approved' ? 'success' : 'error'} sx={{mt: 2}}>
-                                {EXPENSE_STATUS[open.status ?? 'pending'].label} by {open.decided_by} · {formatDate(open.decided_at)}
+                                {EXPENSE_STATUS[open.status ?? 'pending'].label} by <PersonInline name={open.decided_by} image={open.decided_by_image}/> · {formatDate(open.decided_at)}
                                 {open.reject_reason ? `. Reason: ${open.reject_reason}` : ''}
                             </Alert>
                         )}

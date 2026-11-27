@@ -12,7 +12,7 @@ import {
     Typography,
 } from '@mui/material';
 import {IconCheck, IconX} from '@tabler/icons-react';
-import {PhotoThumbs, RegPlate} from './shared';
+import {PersonInline, PhotoThumbs, RegPlate} from './shared';
 import {checklistSafe, DailyChecklist, formatDate, formatMiles, Vehicle} from './types';
 
 const ChecklistDialog: React.FC<{
@@ -33,7 +33,7 @@ const ChecklistDialog: React.FC<{
             <DialogContent>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
                     <Typography variant="body2" color="textSecondary">
-                        {formatDate(checklist.date)} · {checklist.driver_name} · {formatMiles(checklist.mileage)}
+                        {formatDate(checklist.date)} · <PersonInline name={checklist.driver_name} image={checklist.driver_image}/> · {formatMiles(checklist.mileage)}
                     </Typography>
                     <Chip size="small" color={safe ? 'success' : 'error'}
                           label={safe ? 'Safe to drive' : 'Defects found'}/>

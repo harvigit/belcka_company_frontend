@@ -12,7 +12,6 @@ import {
     IconButton,
     Paper,
     Stack,
-    Switch,
     Tooltip,
     Typography,
 } from '@mui/material';
@@ -45,10 +44,11 @@ import {useRouter} from 'next/navigation';
 import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
+import IOSSwitch from '@/app/components/common/IOSSwitch';
 import {GOOGLE_MAPS_SHARED_LOADER_OPTIONS} from '@/utils/googleMaps';
 import ChecklistDialog from './checklist-dialog';
 import FleetNav from './fleet-nav';
-import {DriverName, NoCompany, RegPlate} from './shared';
+import {DriverName, NoCompany, PersonInline, RegPlate} from './shared';
 import {DriverLocation, FleetPlace, LOCATION_KIND, LocationKind, PLACE_KIND} from './types';
 import {PlaceBadge, PlaceDialog, PlaceDraft, PlacePin} from './map-places';
 import ConfirmDialog from '../inventory-new/shared/ConfirmDialog';
@@ -295,7 +295,7 @@ const MapPage: React.FC = () => {
                 </Box>
                 <Stack direction="row" spacing={1} alignItems="center" flexShrink={0}>
                     <FormControlLabel
-                        control={<Switch checked={showPlaces} onChange={(e) => setShowPlaces(e.target.checked)}/>}
+                        control={<IOSSwitch sx={{mx: 1}} checked={showPlaces} onChange={(e) => setShowPlaces(e.target.checked)}/>}
                         label={`Places (${places.length})`}
                         sx={{mr: 0.5}}
                     />
@@ -374,7 +374,7 @@ const MapPage: React.FC = () => {
                                     >
                                         <Stack spacing={0.75} width="100%">
                                             <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                                <DriverName name={p.driver_name}/>
+                                                <DriverName name={p.driver_name} image={p.driver_image}/>
                                                 {plate(p.vehicle_id) &&
                                                     <RegPlate registration={plate(p.vehicle_id) as string}/>}
                                             </Stack>
@@ -608,7 +608,7 @@ const MapPage: React.FC = () => {
                                                     </Typography>
                                                 )}
                                                 <Typography variant="body2" color="textSecondary" lineHeight={1.4}>
-                                                    {p.driver_name}
+                                                    <PersonInline name={p.driver_name} image={p.driver_image}/>
                                                     {plate(p.vehicle_id) ? ` · ${plate(p.vehicle_id)}` : ''}
                                                 </Typography>
                                                 <Typography variant="caption" color="textSecondary" display="block">

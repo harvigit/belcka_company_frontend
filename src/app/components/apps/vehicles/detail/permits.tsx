@@ -7,6 +7,7 @@ import ConfirmDialog from '../../inventory-new/shared/ConfirmDialog';
 import {formatDate, ParkingPermit, PERMIT_STATE, permitState, Vehicle} from '../types';
 import {NewPermit} from '../useVehicles';
 import {PERMIT_ORDER, PermitDrawer, PermitRejectDialog} from '../permit-forms';
+import {PersonInline} from '../shared';
 import {RecordTable, Section} from './common';
 
 interface PermitsTabProps {
@@ -86,9 +87,16 @@ const PermitsTab: React.FC<PermitsTabProps> = ({vehicle, permits, readOnly, onAd
                             header: 'Requested / approved',
                             render: (p) => (
                                 <Typography variant="body2" color="textSecondary">
-                                    {p.status === 'pending'
-                                        ? `Requested by ${p.requested_by}`
-                                        : `${p.status === 'approved' ? 'Approved' : 'Rejected'} by ${p.decided_by} · ${formatDate(p.decided_at)}`}
+                                    {p.status === 'pending' ? (
+                                        <>
+                                            Requested by <PersonInline name={p.requested_by} image={p.requested_by_image}/>
+                                        </>
+                                    ) : (
+                                        <>
+                                            {p.status === 'approved' ? 'Approved' : 'Rejected'} by{' '}
+                                            <PersonInline name={p.decided_by} image={p.decided_by_image}/> · {formatDate(p.decided_at)}
+                                        </>
+                                    )}
                                 </Typography>
                             ),
                         },

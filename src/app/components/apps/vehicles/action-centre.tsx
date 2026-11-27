@@ -36,7 +36,7 @@ import {ACTION_CATEGORY, ActionRow, buildActions, PRIORITY} from './actions';
 import {DefectReviewDrawer} from './defect-drawer';
 import ChecklistDialog from './checklist-dialog';
 import {CARD_TONE, RecordTable, StatCard} from './detail/common';
-import {NoCompany, RegPlate} from './shared';
+import {DriverName, NoCompany, PersonInline, RegPlate} from './shared';
 import {
     checklistSafe,
     DailyChecklist,
@@ -164,7 +164,11 @@ const ActionCentre: React.FC = () => {
                     <Stack spacing={0.5} alignItems="flex-start" sx={{pl: 1}}>
                         <RegPlate registration={row.original.vehicle.registration}/>
                         <Typography variant="caption" color="textSecondary" noWrap>
-                            {row.original.vehicle.driver_name ?? 'No driver'}
+                            {row.original.vehicle.driver_name ? (
+                                <PersonInline name={row.original.vehicle.driver_name} image={row.original.vehicle.driver_image}/>
+                            ) : (
+                                'No driver'
+                            )}
                         </Typography>
                     </Stack>
                 ) : (
@@ -368,9 +372,9 @@ const ActionCentre: React.FC = () => {
                                                         label={!c ? 'Not done yet' : safe ? 'Safe to drive' : 'Defects found'}
                                                     />
                                                 </Stack>
-                                                <Typography variant="body2" fontWeight={600} mt={1.5}>
-                                                    {v.driver_name}
-                                                </Typography>
+                                                <Box mt={1.5} mb={0.5}>
+                                                    {v.driver_name && <DriverName name={v.driver_name} image={v.driver_image}/>}
+                                                </Box>
                                                 <Typography variant="caption" color="textSecondary">
                                                     {c ? `Sent ${formatDate(c.date)} · ${formatMiles(c.mileage)}` : 'Waiting for the driver to send it'}
                                                 </Typography>
@@ -417,7 +421,7 @@ const ActionCentre: React.FC = () => {
                                     render: (c) => <RegPlate
                                         registration={byId.get(c.vehicle_id)?.registration ?? '-'}/>
                                 },
-                                {header: 'Driver', render: (c) => c.driver_name},
+                                {header: 'Driver', render: (c) => <DriverName name={c.driver_name} image={c.driver_image}/>},
                                 {header: 'Odometer', render: (c) => formatMiles(c.mileage)},
                                 {
                                     header: 'Result',
@@ -462,7 +466,14 @@ const ActionCentre: React.FC = () => {
                         rows={register}
                         empty={registerFilter === 'open' ? 'No open defects or accidents.' : 'No defects reported yet.'}
                         columns={[
-                            {header: 'Reported', render: (d) => `${formatDate(d.reported_at)} · ${d.reported_by}`},
+                            {
+                                header: 'Reported',
+                                render: (d) => (
+                                    <>
+                                        {formatDate(d.reported_at)} · <PersonInline name={d.reported_by} image={d.reported_by_image}/>
+                                    </>
+                                ),
+                            },
                             {
                                 header: 'Vehicle',
                                 render: (d) => <RegPlate registration={byId.get(d.vehicle_id)?.registration ?? '-'}/>

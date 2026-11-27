@@ -34,7 +34,7 @@ import FormDrawer from '../inventory-new/shared/FormDrawer';
 import FormField from '../inventory-new/shared/FormField';
 import FleetNav from './fleet-nav';
 import {CARD_TONE, RecordTable, StatCard} from './detail/common';
-import {DriverName, DriverPicker, NoCompany, RegPlate} from './shared';
+import {DriverName, DriverPicker, NoCompany, PersonInline, RegPlate} from './shared';
 import {
     countsAsCost,
     DriverLicence,
@@ -124,7 +124,7 @@ const DriversPage: React.FC = () => {
             return {
                 id,
                 name,
-                image: emp?.image,
+                image: emp?.image ?? logs.find((l) => l.driver_image)?.driver_image,
                 current: vehicles.filter((v) => v.driver_id === id && v.status !== 'archived'),
                 licence,
                 licenceState: licenceState(licence),
@@ -423,7 +423,11 @@ const DriversPage: React.FC = () => {
                                                              label={LICENCE_STATE[open.licenceState].label}/>],
                                             ['Categories', open.licence.categories],
                                             ['Valid until', formatDate(open.licence.valid_until)],
-                                            ['Checked', `${formatDate(open.licence.checked_on)} · ${open.licence.checked_by}`],
+                                            ['Checked', open.licence.checked_by ? (
+                                                <React.Fragment key="c">
+                                                    {formatDate(open.licence.checked_on)} · <PersonInline name={open.licence.checked_by}/>
+                                                </React.Fragment>
+                                            ) : formatDate(open.licence.checked_on)],
                                             ['Reference', open.licence.reference || '-'],
                                         ].map(([label, value]) => (
                                             <Stack key={String(label)} direction="row" justifyContent="space-between">
@@ -607,7 +611,8 @@ const LicenceDrawer: React.FC<{
             <FormField label="Employee *">
                 {target.driverId ? (
                     <DriverName
-                        name={employees.find((x) => x.id === driverId)?.name ?? existing?.driver_name ?? 'Employee'}/>
+                        name={employees.find((x) => x.id === driverId)?.name ?? existing?.driver_name ?? 'Employee'}
+                        image={employees.find((x) => x.id === driverId)?.image}/>
                 ) : (
                     <DriverPicker drivers={employees} value={driverId} onChange={(d) => setDriverId(d?.id ?? null)}
                                   error={errors.driver}/>

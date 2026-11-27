@@ -74,7 +74,7 @@ const ActivityPage: React.FC = () => {
         }),
         columnHelper.accessor('by', {
             header: 'Who',
-            cell: ({row}) => <DriverName name={row.original.by}/>,
+            cell: ({row}) => <DriverName name={row.original.by} image={row.original.by_image}/>,
         }),
         columnHelper.accessor('action', {
             header: 'What',

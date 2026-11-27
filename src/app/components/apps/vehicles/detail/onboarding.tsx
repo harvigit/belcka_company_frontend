@@ -17,7 +17,7 @@ import {IconUserPlus} from '@tabler/icons-react';
 import toast from 'react-hot-toast';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import ConfirmDialog from '../../inventory-new/shared/ConfirmDialog';
-import {DriverName} from '../shared';
+import {DriverName, PersonInline} from '../shared';
 import {defaultTemplateFor, formatDate, ONBOARDING_TEMPLATES, Vehicle, VehicleOnboarding} from '../types';
 import {Section} from './common';
 
@@ -132,7 +132,7 @@ const OnboardingTab: React.FC<OnboardingTabProps> = ({vehicle, onboardings, read
                     <Paper variant="outlined" sx={{borderRadius: 2}}>
                         <Stack direction={{xs: 'column', sm: 'row'}} justifyContent="space-between" spacing={2} p={2}>
                             <Box>
-                                <DriverName name={current.driver_name}/>
+                                <DriverName name={current.driver_name} image={current.driver_image}/>
                                 <Typography variant="caption" color="textSecondary">
                                     {current.template_name} list · started {formatDate(current.started_at)}
                                 </Typography>
@@ -179,7 +179,7 @@ const OnboardingTab: React.FC<OnboardingTabProps> = ({vehicle, onboardings, read
                                     </Typography>
                                     {s.done_at && (
                                         <Typography variant="caption" color="textSecondary" sx={{pr: 1}}>
-                                            {formatDate(s.done_at)} · {s.done_by}
+                                            {formatDate(s.done_at)} · <PersonInline name={s.done_by} image={s.done_by_image}/>
                                         </Typography>
                                     )}
                                 </Stack>
@@ -223,7 +223,7 @@ const EarlierLists: React.FC<{
                     <React.Fragment key={o.id}>
                         {i > 0 && <Divider/>}
                         <Stack direction="row" justifyContent="space-between" alignItems="center" px={2} py={1.25}>
-                            <DriverName name={o.driver_name}/>
+                            <DriverName name={o.driver_name} image={o.driver_image}/>
                             <Typography variant="body2" color="textSecondary">
                                 {o.template_name} · {p.done}/{p.total} done · {formatDate(o.started_at)}
                             </Typography>

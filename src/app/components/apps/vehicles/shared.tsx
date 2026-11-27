@@ -7,6 +7,7 @@ import CustomTextField from '@/app/components/forms/theme-elements/CustomTextFie
 import {DUE_CHIP, DueItem, formatDate} from './types';
 import {DriverOption} from './useVehicles';
 
+// A neutral plate chip: theme colours with a slim accent band, so it reads as a plate without a loud yellow.
 export const RegPlate: React.FC<{ registration: string; size?: 'small' | 'medium' }> = ({
                                                                                             registration,
                                                                                             size = 'small',
@@ -14,22 +15,34 @@ export const RegPlate: React.FC<{ registration: string; size?: 'small' | 'medium
     <Box
         component="span"
         sx={{
-            display: 'inline-block',
-            px: size === 'small' ? 1 : 1.5,
-            py: size === 'small' ? 0.25 : 0.5,
+            display: 'inline-flex',
+            alignItems: 'stretch',
             borderRadius: 1,
             border: '1px solid',
-            borderColor: 'grey.300',
-            backgroundColor: '#FFD43B',
-            color: '#1a1a1a',
-            fontWeight: 700,
-            fontSize: size === 'small' ? 13 : 16,
-            letterSpacing: 1,
+            borderColor: 'divider',
+            backgroundColor: 'background.paper',
+            overflow: 'hidden',
             whiteSpace: 'nowrap',
-            lineHeight: 1.4,
+            verticalAlign: 'middle',
+            boxShadow: '0 1px 2px rgba(16, 24, 40, 0.06)',
         }}
     >
-        {registration}
+        <Box component="span" sx={{width: size === 'small' ? 4 : 6, backgroundColor: 'primary.main', flexShrink: 0}}/>
+        <Box
+            component="span"
+            sx={{
+                px: size === 'small' ? 1 : 1.5,
+                py: size === 'small' ? 0.25 : 0.5,
+                color: 'text.primary',
+                fontWeight: 700,
+                fontSize: size === 'small' ? 13 : 16,
+                letterSpacing: 1,
+                lineHeight: 1.4,
+                fontVariantNumeric: 'tabular-nums',
+            }}
+        >
+            {registration}
+        </Box>
     </Box>
 );
 
@@ -45,8 +58,8 @@ export const DriverName: React.FC<{ name: string; image?: string | null }> = ({
                                                                                   name,
                                                                                   image,
                                                                               }) => (
-    <Stack direction="row" spacing={1} alignItems="center">
-        <Avatar src={image ?? undefined} sx={{width: 28, height: 28, fontSize: 12}}>
+    <Stack direction="row" spacing={1} alignItems="center" sx={{minWidth: 0}}>
+        <Avatar src={image ?? undefined} alt={name} sx={{width: 28, height: 28, fontSize: 12}}>
             {initials(name)}
         </Avatar>
         <Typography className="f-14" noWrap>
@@ -55,12 +68,30 @@ export const DriverName: React.FC<{ name: string; image?: string | null }> = ({
     </Stack>
 );
 
+// Small avatar + name that sits inside a line of text, e.g. "12/03/2026 · (JB) Jo Bloggs".
+// Spans only, so it can go inside a Typography paragraph.
+export const PersonInline: React.FC<{ name?: string | null; image?: string | null }> = ({name, image}) =>
+    name ? (
+        <Box
+            component="span"
+            sx={{display: 'inline-flex', alignItems: 'center', gap: 0.5, verticalAlign: 'middle', maxWidth: '100%', minWidth: 0}}
+        >
+            <Avatar component="span" src={image ?? undefined} alt={name} sx={{width: 18, height: 18, fontSize: 9}}>
+                {initials(name)}
+            </Avatar>
+            <Box component="span" sx={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                {name}
+            </Box>
+        </Box>
+    ) : null;
+
 export const DueCell: React.FC<{ item: DueItem | null }> = ({item}) => {
     if (!item) return <Typography className="f-14">-</Typography>;
     const chip = DUE_CHIP[item.state];
     return (
         <Stack direction="row" spacing={1} alignItems="center">
-            <Chip size="small" color={chip.color} label={chip.label}/>
+            {/* Same width for every state so the labels beside it line up down the column. */}
+            <Chip size="small" color={chip.color} label={chip.label} sx={{width: 76, flexShrink: 0}}/>
             <Box>
                 <Typography className="f-14" fontWeight={600} lineHeight={1.2}>
                     {item.label}

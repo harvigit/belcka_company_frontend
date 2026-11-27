@@ -2,7 +2,7 @@
 import React, {useMemo, useState} from 'react';
 import toast from 'react-hot-toast';
 import VehicleDrawer from './form';
-import {emptyVehicle, formatMiles, Vehicle, VehicleForm, VehicleFormErrors} from './types';
+import {emptyVehicle, Vehicle, VehicleForm, VehicleFormErrors} from './types';
 import {DriverOption} from './useVehicles';
 
 interface Options {
@@ -44,7 +44,6 @@ export function useVehicleEditor({vehicles, drivers, save, findByRegistration}: 
         return map;
     }, [vehicles]);
 
-    const savedMileage = formData.id ? vehicles.find((v) => v.id === formData.id)?.mileage ?? 0 : 0;
 
     // Wrong values show while typing; missing required ones after first save
     const validate = (f: VehicleForm, showMissing: boolean): VehicleFormErrors => {
@@ -67,8 +66,8 @@ export function useVehicleEditor({vehicles, drivers, save, findByRegistration}: 
         if (model && model.length < 2) e.make_model = 'Enter the full make and model.';
         else if (showMissing && !model) e.make_model = 'Enter the make and model.';
 
-        if (f.id && f.mileage !== '' && Number(f.mileage) < savedMileage) {
-            e.mileage = `Can't be lower than ${formatMiles(savedMileage)}.`;
+        if (f.mileage !== '' && Number(f.mileage) < 0) {
+            e.mileage = 'Mileage cannot be negative.';
         } else if (showMissing && f.mileage === '') {
             e.mileage = f.id ? 'Enter the mileage.' : 'Enter the odometer reading today.';
         }

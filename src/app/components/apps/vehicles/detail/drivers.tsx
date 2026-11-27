@@ -49,7 +49,7 @@ const DriversTab: React.FC<DriversTabProps> = ({vehicle, logs, events, readOnly,
                 columns={[
                     {
                         header: 'Driver',
-                        render: (r) => <DriverName name={r.driver_name}/>,
+                        render: (r) => <DriverName name={r.driver_name} image={r.driver_image}/>,
                     },
                     {header: 'From', render: (r) => formatDate(r.from)},
                     {

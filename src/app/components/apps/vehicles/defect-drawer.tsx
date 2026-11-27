@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import FormDrawer from '../inventory-new/shared/FormDrawer';
 import FormField from '../inventory-new/shared/FormField';
-import {PhotoThumbs, RegPlate} from './shared';
+import {PersonInline, PhotoThumbs, RegPlate} from './shared';
 import {
     DailyChecklist,
     Defect,
@@ -120,7 +120,7 @@ export const DefectReviewDrawer: React.FC<ReviewProps> = ({
                 <Divider sx={{my: 1}}/>
                 <Info label="Reported">
                     <Typography variant="body2">
-                        {formatDate(defect.reported_at)} · {defect.reported_by}
+                        {formatDate(defect.reported_at)} · <PersonInline name={defect.reported_by} image={defect.reported_by_image}/>
                     </Typography>
                 </Info>
                 {vehicle && (
@@ -238,7 +238,7 @@ export const DefectReviewDrawer: React.FC<ReviewProps> = ({
             </FormField>
             {defect.updated_at !== defect.reported_at && (
                 <Typography variant="caption" color="textSecondary">
-                    Last updated {formatDate(defect.updated_at)} by {defect.updated_by}
+                    Last updated {formatDate(defect.updated_at)} by <PersonInline name={defect.updated_by} image={defect.updated_by_image}/>
                 </Typography>
             )}
         </FormDrawer>

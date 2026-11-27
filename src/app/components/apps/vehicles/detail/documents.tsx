@@ -10,7 +10,7 @@ import ConfirmDialog from '../../inventory-new/shared/ConfirmDialog';
 import {DOCUMENT_KINDS, dueState, DUE_CHIP, formatDate, Vehicle, VehicleDocument} from '../types';
 import {NewDocument} from '../useVehicles';
 import {RecordTable, Section} from './common';
-import {FileLink} from '../shared';
+import {FileLink, PersonInline} from '../shared';
 
 const MAX_MB = 5;
 
@@ -130,7 +130,7 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({vehicle, documents, readOnly
                             header: 'Uploaded',
                             render: (d) => (
                                 <Typography variant="body2" color="textSecondary">
-                                    {formatDate(d.uploaded_at)} · {d.uploaded_by}
+                                    {formatDate(d.uploaded_at)} · <PersonInline name={d.uploaded_by} image={d.uploaded_by_image}/>
                                 </Typography>
                             ),
                         },
