@@ -13,7 +13,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import {createColumnHelper, SortingState, useReactTable,} from '@tanstack/react-table';
+import {createColumnHelper, SortingState, useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel} from '@tanstack/react-table';
 import {
     IconAlertTriangle,
     IconCheck,

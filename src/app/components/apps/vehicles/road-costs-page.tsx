@@ -18,7 +18,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import {createColumnHelper, SortingState, useReactTable,} from '@tanstack/react-table';
+import {createColumnHelper, SortingState, useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel} from '@tanstack/react-table';
 import {IconArrowBackUp, IconDownload, IconFileImport, IconSearch} from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
