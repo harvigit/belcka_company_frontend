@@ -28,6 +28,8 @@ import {
 import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS, findZoneForPoint, getDistanceToZone } from "@/utils/googleMaps";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import { EvidenceFile, EvidenceFileList } from '@/app/components/common/EvidenceFilesDrawer';
+import EvidenceFilePicker from '@/app/components/common/EvidenceFilePicker';
 
 interface ChecklogsPageProps {
     worklogId: number;
@@ -39,6 +41,7 @@ interface ChecklogsPageProps {
 
 interface PenaltyItem {
     appeal_note: string;
+    files?: EvidenceFile[];
     penalty_id?: number;
     payable_hours?: string | number | null;
     formatted_start_time?: string;
@@ -446,6 +449,12 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditingPenaltyTime, setIsEditingPenaltyTime] = useState(false);
     const [isAppealingPenalty, setIsAppealingPenalty] = useState(false);
+    // "Appeal Remove" popup: note (required) + evidence, the appeal is only sent on Submit.
+    const [appealPenalty, setAppealPenalty] = useState<PenaltyItem | null>(null);
+    const [appealNote, setAppealNote] = useState('');
+    const [appealNoteError, setAppealNoteError] = useState(false);
+    const [appealFiles, setAppealFiles] = useState<File[]>([]);
+    const [appealFilesError, setAppealFilesError] = useState(false);
     const [processingAppealId, setProcessingAppealId] = useState<number | null>(null);
 
     // Admin note dialog state
@@ -625,9 +634,39 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
         }
     };
 
-    const handleAppealPenaltyRemove = async (penalty: PenaltyItem) => {
+    const openAppealDialog = (penalty: PenaltyItem) => {
         if (!penalty?.penalty_id) {
             toast.error('Penalty ID not found');
+            return;
+        }
+        setAppealPenalty(penalty);
+        setAppealNote('');
+        setAppealNoteError(false);
+        setAppealFiles([]);
+        setAppealFilesError(false);
+    };
+
+    const closeAppealDialog = () => {
+        if (isAppealingPenalty) return;
+        setAppealPenalty(null);
+        setAppealNote('');
+        setAppealNoteError(false);
+        setAppealFiles([]);
+        setAppealFilesError(false);
+    };
+
+    const handleAppealPenaltyRemove = async () => {
+        const penalty = appealPenalty;
+        if (!penalty?.penalty_id) return;
+
+        const note = appealNote.trim();
+        if (!note) {
+            setAppealNoteError(true);
+            return;
+        }
+
+        if (appealFiles.length === 0) {
+            setAppealFilesError(true);
             return;
         }
 
@@ -636,18 +675,41 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
             const res = await api.post('time-clock/appeal-penalty', {
                 worklog_id: worklogId,
                 penalty_id: penalty.penalty_id,
-                appeal_note: 'Penalty remove request from time tracking',
+                appeal_note: note,
             });
 
             if (res.data?.IsSuccess) {
-                toast.success('Penalty remove appeal request submitted successfully');
+                // Evidence goes to the penalty (time-clock/add-penalty-files). The appeal already
+                // exists at this point, so an upload failure only warns.
+                let filesFailed = false;
+                if (appealFiles.length > 0) {
+                    const formData = new FormData();
+                    formData.append('penalty_id', String(res.data?.penalty_id ?? penalty.penalty_id));
+                    appealFiles.forEach((file) => formData.append('files', file));
+                    try {
+                        await api.post('time-clock/add-penalty-files', formData, {
+                            headers: {'Content-Type': 'multipart/form-data'},
+                        });
+                    } catch (uploadError: any) {
+                        filesFailed = true;
+                        toast.error(
+                            `Appeal submitted, but evidence files were not uploaded: ${uploadError?.response?.data?.message || 'please try again'}`,
+                        );
+                    }
+                }
+
+                if (!filesFailed) toast.success('Penalty remove appeal request submitted successfully');
+                setAppealPenalty(null);
+                setAppealNote('');
+                setAppealFiles([]);
+                setAppealFilesError(false);
                 await fetchPenalties();
                 await onMutated?.();
             } else {
                 toast.error(res.data?.message || 'Failed to submit penalty remove request');
             }
-        } catch {
-            toast.error('Something went wrong');
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Something went wrong');
         } finally {
             setIsAppealingPenalty(false);
         }
@@ -825,7 +887,7 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
                                             color="warning"
                                             size="small"
                                             disabled={isAppealingPenalty || penalty.is_requested}
-                                            onClick={() => handleAppealPenaltyRemove(penalty)}
+                                            onClick={() => openAppealDialog(penalty)}
                                             sx={{borderRadius: 2, textTransform: 'none'}}
                                         >
                                             Appeal Remove
@@ -882,6 +944,18 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
                                 </Box>
                             </Box>
 
+                            {(penalty.files?.length ?? 0) > 0 && (
+                                <Box
+                                    sx={{
+                                        p: 1.25,
+                                        borderRadius: 2,
+                                        border: '1px solid #e2e8f0',
+                                    }}
+                                >
+                                    <EvidenceFileList files={penalty.files ?? []} variant="grid" />
+                                </Box>
+                            )}
+
                             {penalty.is_penalty_appeal && penalty.appeal_note && (
                                 <Box
                                     sx={{
@@ -913,6 +987,56 @@ export default function Penalties({worklogId, onClose, onMutated, requestOnly = 
                     <Typography color="text.secondary">No penalties found.</Typography>
                 </Box>
             )}
+
+            {/* Appeal Remove: note + evidence, submitted together */}
+            <Dialog open={Boolean(appealPenalty)} onClose={closeAppealDialog} fullWidth maxWidth="xs">
+                <DialogTitle>Appeal penalty remove</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
+                        Add a note before submitting this appeal.
+                    </Typography>
+                    <TextField
+                        label="Note"
+                        value={appealNote}
+                        onChange={(event) => {
+                            setAppealNote(event.target.value);
+                            if (event.target.value.trim()) setAppealNoteError(false);
+                        }}
+                        required
+                        multiline
+                        minRows={3}
+                        fullWidth
+                        autoFocus
+                        disabled={isAppealingPenalty}
+                        error={appealNoteError}
+                        helperText={appealNoteError ? 'Note is required to submit the appeal.' : ''}
+                    />
+                    <Typography variant="body2" fontWeight={600} sx={{mt: 2, mb: 1}}>
+                        Evidence
+                    </Typography>
+                    <EvidenceFilePicker
+                        files={appealFiles}
+                        onChange={(files) => {
+                            setAppealFiles(files);
+                            if (files.length) setAppealFilesError(false);
+                        }}
+                        disabled={isAppealingPenalty}
+                        error={appealFilesError}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeAppealDialog} disabled={isAppealingPenalty}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleAppealPenaltyRemove}
+                        disabled={!appealNote.trim() || appealFiles.length === 0 || isAppealingPenalty}
+                    >
+                        {isAppealingPenalty ? <CircularProgress size={20} sx={{color: 'white'}}/> : 'Submit'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Admin Note Dialog */}
             <Dialog

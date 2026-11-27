@@ -11,7 +11,7 @@ import {
     ToggleButtonGroup,
     Typography,
 } from '@mui/material';
-import {createColumnHelper, getCoreRowModel, getPaginationRowModel, getSortedRowModel, SortingState, useReactTable,} from '@tanstack/react-table';
+import {createColumnHelper, SortingState, useReactTable,} from '@tanstack/react-table';
 import {IconSearch} from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import {useRouter} from 'next/navigation';

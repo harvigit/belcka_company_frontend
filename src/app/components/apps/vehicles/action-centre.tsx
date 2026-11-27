@@ -14,7 +14,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import {createColumnHelper, getCoreRowModel, getPaginationRowModel, getSortedRowModel, useReactTable,} from '@tanstack/react-table';
+import {createColumnHelper, useReactTable,} from '@tanstack/react-table';
 import {
     IconAlertOctagon,
     IconCalendarDue,

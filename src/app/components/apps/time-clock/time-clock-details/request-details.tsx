@@ -25,6 +25,7 @@ import {
     IconCheck,
     IconClock,
     IconMapPin,
+    IconPaperclip,
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { AxiosResponse } from 'axios';
@@ -34,6 +35,7 @@ import { DateTime } from 'luxon';
 import { useSession } from 'next-auth/react';
 import { User } from 'next-auth';
 import LocationMapDrawer, { LocationPoint } from '../components/LocationMapDrawer';
+import EvidenceFilesDrawer, { EvidenceFile } from '@/app/components/common/EvidenceFilesDrawer';
 
 interface WorkLocation {
     latitude: string | number | null;
@@ -85,6 +87,7 @@ interface RequestItem {
         start?: WorkLocation | null;
         stop?: WorkLocation | null;
     } | null;
+    files?: EvidenceFile[];
 }
 
 interface RequestListResponse {
@@ -201,10 +204,11 @@ const RequestCard = React.memo<{
     onAutoUpdate: (id: number, edit: RequestTimeEdit) => Promise<boolean>;
     onTimeEditChange: (id: number, edit: RequestTimeEdit) => void;
     onOpenMap: (request: RequestItem) => void;
+    onOpenFiles: (request: RequestItem) => void;
     formatHour: (val: string | number | null | undefined, isPricework?: boolean) => string;
     formatDate: (val: string | number | null | undefined) => string;
     canAction: boolean;
-}>(({ request, isProcessing, onApprove, onReject, onAutoUpdate, onTimeEditChange, onOpenMap, formatHour, formatDate, canAction }) => {
+}>(({ request, isProcessing, onApprove, onReject, onAutoUpdate, onTimeEditChange, onOpenMap, onOpenFiles, formatHour, formatDate, canAction }) => {
 
     const formatPayableHour = (val: string | number | null | undefined, isPricework: boolean = false): string => {
         if (val === null || val === undefined) return isPricework ? '--' : '00:00';
@@ -311,6 +315,8 @@ const RequestCard = React.memo<{
         if (!location) return false;
         return location.latitude !== null && location.latitude !== undefined && location.longitude !== null && location.longitude !== undefined;
     };
+
+    const fileCount = request.files?.length ?? 0;
 
     const canShowMap =
         request.is_edit_worklog_request &&
@@ -502,6 +508,19 @@ const RequestCard = React.memo<{
                                 </IconButton>
                             </Tooltip>
                         )}
+                        {fileCount > 0 && (
+                            <Tooltip title="View evidence">
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => onOpenFiles(request)}
+                                    startIcon={<IconPaperclip size={16} />}
+                                    sx={{ textTransform: 'none', fontWeight: 500, borderRadius: 2 }}
+                                >
+                                    Evidence ({fileCount})
+                                </Button>
+                            </Tooltip>
+                        )}
                         {request.status === PENDING_STATUS && canAction ? (
                             <>
                                 <Button
@@ -596,6 +615,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
     const [requestList, setRequestList] = useState<RequestItem[]>([]);
     const [requestTimeEdits, setRequestTimeEdits] = useState<Record<number, RequestTimeEdit>>({});
     const [mapRequest, setMapRequest] = useState<RequestItem | null>(null);
+    const [filesRequest, setFilesRequest] = useState<RequestItem | null>(null);
     const [loading, setLoading] = useState(false);
     const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
     const [alert, setAlert] = useState<AlertState>({
@@ -902,6 +922,14 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
         setMapRequest(null);
     }, []);
 
+    const handleOpenFiles = useCallback((request: RequestItem) => {
+        setFilesRequest(request);
+    }, []);
+
+    const handleCloseFiles = useCallback(() => {
+        setFilesRequest(null);
+    }, []);
+
     const handleApproveAll = useCallback(() => handleBulkAction('approve'), [handleBulkAction]);
 
     const handleRejectAll = useCallback(() => {
@@ -1041,6 +1069,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
                                 onAutoUpdate={handleUpdateRequestTime}
                                 onTimeEditChange={handleRequestTimeEditChange}
                                 onOpenMap={handleOpenMap}
+                                onOpenFiles={handleOpenFiles}
                                 formatHour={formatHour}
                                 formatDate={formatDate}
                                 canAction={actionUsers.includes(user?.id)}
@@ -1214,6 +1243,14 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({ open, timeClock, user_i
                 shiftName={mapRequest?.shift_name}
                 locations={mapLocations}
                 isWorking={false}
+            />
+            <EvidenceFilesDrawer
+                open={Boolean(filesRequest)}
+                onClose={handleCloseFiles}
+                files={filesRequest?.files ?? []}
+                userName={filesRequest?.user_name}
+                userImage={filesRequest?.user_thumb_image || filesRequest?.user_image}
+                date={filesRequest ? formatDate(filesRequest.date) : undefined}
             />
         </Box>
     );

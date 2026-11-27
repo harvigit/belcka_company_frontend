@@ -325,6 +325,15 @@ const MenuItems: NavGroup[] = [
     href: "/apps/collect/list",
   },
 
+  {
+    id: uniqueId(),
+    title: "Vehicles",
+    slug: "vehicles",
+    icon: IconCar,
+    href: "/apps/vehicles/list",
+    matchRoutes: ["/apps/vehicles"],
+  },
+    
   // {
   //   navlabel: true,
   //   subheader: "Inventory New",
@@ -385,14 +394,6 @@ const MenuItems: NavGroup[] = [
   //   icon: IconServer,
   //   href: "/apps/inventory-new/stock/list",
   // },
-  {
-    id: uniqueId(),
-    title: "Vehicles",
-    slug: "vehicles",
-    icon: IconCar,
-    href: "/apps/vehicles/list",
-    matchRoutes: ["/apps/vehicles"],
-  },
     
   // Settings stays last: SidebarItems pins the "settings" slug to the bottom of the sidebar.
   {

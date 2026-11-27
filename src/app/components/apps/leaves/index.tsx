@@ -78,6 +78,7 @@ import TablePaginationFooter from '@/app/components/common/TablePaginationFooter
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import GeneralSetting from '@/app/components/apps/leaves/settings/general';
 import Link from 'next/link';
+import EvidenceFilesDrawer, { EvidenceButton } from '@/app/components/common/EvidenceFilesDrawer';
 import { getUserDetailsHref } from '@/utils/userDetailsRoute';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import Image from 'next/image';
@@ -550,6 +551,7 @@ function LeaveDetailsDrawer({
     loading?: boolean;
     onOpenUser: (leave: any) => void;
 }) {
+    const [evidenceLeave, setEvidenceLeave] = useState<any | null>(null);
     const sortedLeaves = [...leaves].sort((first, second) => {
         const firstDate = parseLeaveDate(first.start_date ?? first.date ?? first.date_formatted);
         const secondDate = parseLeaveDate(second.start_date ?? second.date ?? second.date_formatted);
@@ -683,6 +685,11 @@ function LeaveDetailsDrawer({
                                                 Approval note: {leave.approval_note}
                                             </Typography>
                                         )}
+                                        {(leave.files?.length ?? 0) > 0 && (
+                                            <Box display="flex" justifyContent="flex-end" mt={1}>
+                                                <EvidenceButton count={leave.files.length} onClick={() => setEvidenceLeave(leave)} />
+                                            </Box>
+                                        )}
                                     </Box>
                                 )}
                             </Box>
@@ -713,6 +720,15 @@ function LeaveDetailsDrawer({
                     <Typography color="text.secondary">No leave records found.</Typography>
                 </Box>
             )}
+
+            <EvidenceFilesDrawer
+                open={Boolean(evidenceLeave)}
+                onClose={() => setEvidenceLeave(null)}
+                files={evidenceLeave?.files ?? []}
+                userName={evidenceLeave?.user_name}
+                userImage={evidenceLeave?.user_thumb_image || evidenceLeave?.user_image}
+                date={evidenceLeave ? `${evidenceLeave.leave_date ?? evidenceLeave.start_date ?? ''}${evidenceLeave.leave_name ? ` · ${evidenceLeave.leave_name}` : ''}` : undefined}
+            />
         </Drawer>
     );
 }
