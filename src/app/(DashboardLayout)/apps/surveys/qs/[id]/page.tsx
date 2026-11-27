@@ -4,19 +4,15 @@ import React from "react";
 import { useParams } from "next/navigation";
 import PageContainer from "@/app/components/container/PageContainer";
 import PermissionGuard from "@/app/auth/PermissionGuard";
-import SurveyQSWorkspace from "@/app/components/apps/surveys/qs";
+import QsWorkspace from "@/app/components/apps/surveys/qs/workspace";
 
-export default function SurveyQSPage() {
-  const params = useParams();
-  const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string) || "";
-
+/** QS review of one survey: price, approve or exclude each work line. */
+export default function QsWorkspacePage() {
+  const params = useParams<{ id: string }>();
   return (
-    <PageContainer
-      title="Commercial QS Assessment Workspace"
-      description="Scope of Rates, defect rate matching, whole-scope adjustments, and baseline lock"
-    >
+    <PageContainer title="QS review" description="Price the works of a survey">
       <PermissionGuard permissions={["Surveys", "Survey", "surveys"]} requireAll={false}>
-        <SurveyQSWorkspace id={id} />
+        <QsWorkspace surveyId={Number(params?.id)} />
       </PermissionGuard>
     </PageContainer>
   );

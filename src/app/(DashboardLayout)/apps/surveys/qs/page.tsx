@@ -4,14 +4,15 @@ import React from "react";
 import PageContainer from "@/app/components/container/PageContainer";
 import BlankCard from "@/app/components/shared/BlankCard";
 import PermissionGuard from "@/app/auth/PermissionGuard";
-import CreateSurveyWizard from "@/app/components/apps/surveys/create";
+import QsList from "@/app/components/apps/surveys/qs";
 
-export default function CreateSurveyPage() {
+/** QS review: company admins, or users with the Surveys permission (roles are finalised later). */
+export default function QsListPage() {
   return (
-    <PageContainer title="Create Survey" description="Create a new property survey scope">
+    <PageContainer title="QS review" description="Price the works of submitted surveys">
       <PermissionGuard permissions={["Surveys", "Survey", "surveys"]} requireAll={false}>
         <BlankCard>
-          <CreateSurveyWizard />
+          <QsList />
         </BlankCard>
       </PermissionGuard>
     </PageContainer>
