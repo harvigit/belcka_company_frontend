@@ -28,6 +28,7 @@ import {
     IconCircleCheck,
     IconLayoutList,
     IconBriefcase,
+    IconCalendarEvent,
     IconClockPlus,
     IconCoin,
     IconCreditCard,
@@ -101,6 +102,13 @@ const REQUEST_TYPES = [
         slug: 'project_cap_request',
         group: 'limits',
         icon: IconBriefcase,
+    },
+    {
+        name: 'Weekend work',
+        description: 'A request to let workers work on a project on Saturday or Sunday',
+        slug: 'project_weekend_work_request',
+        group: 'limits',
+        icon: IconCalendarEvent,
     },
 ];
 
